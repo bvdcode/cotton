@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>0944ae36-b540-443b-bda8-1974c0e216ff</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <SpaRoot>..\cotton.client</SpaRoot>
+    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
+    <SpaProxyServerUrl>https://localhost:51856</SpaProxyServerUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
+      <Version>9.*-*</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\cotton.client\cotton.client.esproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>
