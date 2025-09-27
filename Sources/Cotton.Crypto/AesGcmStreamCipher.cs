@@ -32,77 +32,123 @@ namespace Cotton.Crypto
             _keyId = keyId;
         }
 
-        public Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
+        public async Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
         {
-            AesGcmKeyHeader keyHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
+            ArgumentNullException.ThrowIfNull(input);
+            ArgumentNullException.ThrowIfNull(output);
+            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
+            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
 
-            using var gcm = new AesGcm(_masterKey.Span, TagSize);
+            // Read master/file key header and unwrap file key
+            AesGcmKeyHeader keyHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
             byte[] fileKey = new byte[32];
-            gcm.Decrypt(keyHeader.Nonce, keyHeader.EncryptedKey, keyHeader.Tag, fileKey);
+            using (var gcm = new AesGcm(_masterKey.Span, TagSize))
+            {
+                gcm.Decrypt(keyHeader.Nonce, keyHeader.EncryptedKey, keyHeader.Tag, fileKey);
+            }
 
             using var fileGcm = new AesGcm(fileKey, TagSize);
-            byte[] chunkNonce = new byte[NonceSize];
-            byte[] tag = new byte[TagSize];
-            byte[] buffer = new byte[DefaultChunkSize];
-            int bytesRead;
-            while ((bytesRead = input.Read(chunkNonce, 0, chunkNonce.Length)) > 0)
+
+            // Read chunks until EOF
+            while (true)
             {
-                if (bytesRead < NonceSize)
+                ct.ThrowIfCancellationRequested();
+
+                if (input.CanSeek && input.Position >= input.Length)
                 {
-                    throw new InvalidDataException("Incomplete nonce read from stream.");
+                    break; // normal end of stream
                 }
-                bytesRead = input.Read(tag, 0, tag.Length);
-                if (bytesRead < TagSize)
+
+                // Each chunk is preceded by a header with Nonce/Tag and dataLength = ciphertext length
+                AesGcmKeyHeader chunkHeader;
+                try
                 {
-                    throw new InvalidDataException("Incomplete tag read from stream.");
+                    chunkHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
                 }
-                bytesRead = input.Read(buffer, 0, buffer.Length);
-                if (bytesRead == 0)
+                catch (EndOfStreamException)
                 {
-                    break; // End of stream
+                    break; // reached end cleanly
                 }
-                byte[] decryptedChunk = new byte[bytesRead];
-                // public void Decrypt(ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> tag, Span<byte> plaintext, ReadOnlySpan<byte> associatedData = default);
-                fileGcm.Decrypt(chunkNonce, buffer.AsSpan(0, bytesRead), tag, decryptedChunk);
-                output.Write(decryptedChunk, 0, decryptedChunk.Length);
+
+                if (chunkHeader.DataLength < 0 || chunkHeader.DataLength > MaxChunkSize)
+                {
+                    throw new InvalidDataException("Invalid chunk length in header.");
+                }
+
+                int cipherLen = (int)chunkHeader.DataLength;
+                byte[] ciphertext = new byte[cipherLen];
+                ReadExactly(input, ciphertext, 0, cipherLen);
+
+                byte[] plaintext = new byte[cipherLen];
+                fileGcm.Decrypt(chunkHeader.Nonce, ciphertext, chunkHeader.Tag, plaintext);
+                await output.WriteAsync(plaintext, ct).ConfigureAwait(false);
             }
-            return Task.CompletedTask;
         }
 
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
         {
+            ArgumentNullException.ThrowIfNull(input);
+            ArgumentNullException.ThrowIfNull(output);
+            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
+            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
             {
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
             }
 
-            byte[] nonce = RandomHelpers.GetRandomBytes(12);
-            using var gcm = new AesGcm(_masterKey.Span, TagSize);
+            // Generate per-file key and wrap it using master key
+            byte[] fileKey = RandomHelpers.GetRandomBytes(32);
+            byte[] fileKeyNonce = RandomHelpers.GetRandomBytes(NonceSize);
+            byte[] encryptedFileKey = new byte[fileKey.Length];
+            byte[] fileKeyTag = new byte[TagSize];
+            using (var gcm = new AesGcm(_masterKey.Span, TagSize))
+            {
+                gcm.Encrypt(fileKeyNonce, fileKey, encryptedFileKey, fileKeyTag);
+            }
 
-            AesGcmKeyHeader keyHeader = EncryptFileKey(gcm, nonce);
-            output.Write(keyHeader.ToBytes().Span);
+            long remainingLength = 0;
+            if (input.CanSeek)
+            {
+                remainingLength = Math.Max(0, input.Length - input.Position);
+            }
 
+            // Write master/file key header
+            AesGcmKeyHeader keyHeader = new(_keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, remainingLength);
+            await output.WriteAsync(keyHeader.ToBytes(), ct).ConfigureAwait(false);
+
+            // Encrypt and write chunks
+            using var fileGcm = new AesGcm(fileKey, TagSize);
             byte[] buffer = new byte[chunkSize];
             int bytesRead;
-            while ((bytesRead = input.Read(buffer, 0, buffer.Length)) > 0)
+            while ((bytesRead = await input.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
             {
+                ct.ThrowIfCancellationRequested();
+
                 byte[] chunkNonce = RandomHelpers.GetRandomBytes(NonceSize);
                 byte[] tag = new byte[TagSize];
                 byte[] encryptedChunk = new byte[bytesRead];
-                gcm.Encrypt(chunkNonce, buffer.AsSpan(0, bytesRead), encryptedChunk, tag);
+                fileGcm.Encrypt(chunkNonce, buffer.AsSpan(0, bytesRead), encryptedChunk, tag);
+
+                // Chunk header: contains nonce/tag and declares the following ciphertext length
                 AesGcmKeyHeader chunkHeader = new(_keyId, chunkNonce, tag, [], bytesRead);
-                output.Write(chunkHeader.ToBytes().Span);
-                await output.WriteAsync(encryptedChunk, ct);
+                await output.WriteAsync(chunkHeader.ToBytes(), ct).ConfigureAwait(false);
+                await output.WriteAsync(encryptedChunk, ct).ConfigureAwait(false);
             }
         }
 
-        private AesGcmKeyHeader EncryptFileKey(AesGcm gcm, byte[] nonce)
+        private static void ReadExactly(Stream stream, byte[] buffer, int offset, int count)
         {
-            byte[] fileKey = RandomHelpers.GetRandomBytes(32);
-            byte[] encryptedFileKey = new byte[fileKey.Length];
-            byte[] tag = new byte[TagSize];
-            gcm.Encrypt(nonce, fileKey, encryptedFileKey, tag);
-            return new AesGcmKeyHeader(KeyId: _keyId, Nonce: nonce, Tag: tag, EncryptedKey: encryptedFileKey);
+            int total = 0;
+            while (total < count)
+            {
+                int read = stream.Read(buffer, offset + total, count - total);
+                if (read == 0)
+                {
+                    throw new EndOfStreamException("Unexpected end of stream.");
+                }
+                total += read;
+            }
         }
     }
 }
