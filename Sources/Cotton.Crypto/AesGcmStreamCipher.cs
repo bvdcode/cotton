@@ -45,37 +45,40 @@ namespace Cotton.Crypto
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            
+            if (!input.CanRead) 
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            
+            if (!output.CanWrite) 
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
 
-            // Read master/file key header and unwrap file key
-            var keyHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
-            var fileKey = BufferPool.Rent(KeySize);
+            AesGcmKeyHeader keyHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
+            byte[] fileKey = BufferPool.Rent(KeySize);
 
             try
             {
-                using (var gcm = new AesGcm(_masterKey.Span, TagSize))
+                using (AesGcm gcm = new AesGcm(_masterKey.Span, TagSize))
                 {
                     gcm.Decrypt(keyHeader.Nonce, keyHeader.EncryptedKey, keyHeader.Tag, fileKey.AsSpan(0, KeySize));
                 }
 
-                using var fileGcm = new AesGcm(fileKey.AsSpan(0, KeySize), TagSize);
+                using AesGcm fileGcm = new AesGcm(fileKey.AsSpan(0, KeySize), TagSize);
                 
-                // For small files or non-seekable streams, use sequential processing
                 if (!input.CanSeek || (keyHeader.DataLength > 0 && keyHeader.DataLength <= DefaultChunkSize))
                 {
                     await DecryptSequentialAsync(input, output, fileGcm, ct).ConfigureAwait(false);
                 }
                 else
                 {
-                    // For large files, we still process sequentially to maintain order
-                    // but with optimized buffer management
                     await DecryptSequentialAsync(input, output, fileGcm, ct).ConfigureAwait(false);
                 }
             }
             finally
             {
-                // Clear sensitive data before returning to pool
                 Array.Clear(fileKey, 0, KeySize);
                 BufferPool.Return(fileKey);
             }
@@ -85,28 +88,37 @@ namespace Cotton.Crypto
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            
+            if (!input.CanRead) 
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            
+            if (!output.CanWrite) 
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
 
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
             {
-                throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
+                throw new ArgumentOutOfRangeException(nameof(chunkSize), 
+                    $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
             }
 
-            // Generate per-file key and wrap it using master key  
-            var fileKey = BufferPool.Rent(KeySize);
+            byte[] fileKey = BufferPool.Rent(KeySize);
 
             try
             {
-                // Generate file key directly into rented buffer
-                using var rng = RandomNumberGenerator.Create();
-                rng.GetBytes(fileKey.AsSpan(0, KeySize));
+                using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+                {
+                    rng.GetBytes(fileKey.AsSpan(0, KeySize));
+                }
 
-                var fileKeyNonce = RandomHelpers.GetRandomBytes(NonceSize);
-                var encryptedFileKey = new byte[KeySize];
-                var fileKeyTag = new byte[TagSize];
+                byte[] fileKeyNonce = RandomHelpers.GetRandomBytes(NonceSize);
+                byte[] encryptedFileKey = new byte[KeySize];
+                byte[] fileKeyTag = new byte[TagSize];
 
-                using (var gcm = new AesGcm(_masterKey.Span, TagSize))
+                using (AesGcm gcm = new AesGcm(_masterKey.Span, TagSize))
                 {
                     gcm.Encrypt(fileKeyNonce, fileKey.AsSpan(0, KeySize), encryptedFileKey, fileKeyTag);
                 }
@@ -117,23 +129,18 @@ namespace Cotton.Crypto
                     remainingLength = Math.Max(0, input.Length - input.Position);
                 }
 
-                // Write master/file key header
-                var keyHeader = new AesGcmKeyHeader(_keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, remainingLength);
-                var headerBytes = keyHeader.ToBytes();
+                AesGcmKeyHeader keyHeader = new AesGcmKeyHeader(_keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, remainingLength);
+                ReadOnlyMemory<byte> headerBytes = keyHeader.ToBytes();
                 await output.WriteAsync(headerBytes, ct).ConfigureAwait(false);
 
-                // Choose encryption method based on file size and stream type  
-                var fileKeyArray = new byte[KeySize];
+                byte[] fileKeyArray = new byte[KeySize];
                 Array.Copy(fileKey, fileKeyArray, KeySize);
                 
-                // For now, use sequential processing for stability
-                // TODO: Re-enable parallel processing after fixing channel issues
-                using var sequentialGcm = new AesGcm(fileKey.AsSpan(0, KeySize), TagSize);
+                using AesGcm sequentialGcm = new AesGcm(fileKey.AsSpan(0, KeySize), TagSize);
                 await EncryptSequentialAsync(input, output, sequentialGcm, chunkSize, ct).ConfigureAwait(false);
             }
             finally
             {
-                // Clear sensitive data before returning to pool
                 Array.Clear(fileKey, 0, KeySize);
                 BufferPool.Return(fileKey);
             }
@@ -141,8 +148,8 @@ namespace Cotton.Crypto
 
         private async Task DecryptSequentialAsync(Stream input, Stream output, AesGcm fileGcm, CancellationToken ct)
         {
-            var cipherBuffer = BufferPool.Rent(MaxChunkSize);
-            var plainBuffer = BufferPool.Rent(MaxChunkSize);
+            byte[] cipherBuffer = BufferPool.Rent(MaxChunkSize);
+            byte[] plainBuffer = BufferPool.Rent(MaxChunkSize);
 
             try
             {
@@ -184,8 +191,8 @@ namespace Cotton.Crypto
 
         private async Task EncryptSequentialAsync(Stream input, Stream output, AesGcm fileGcm, int chunkSize, CancellationToken ct)
         {
-            var readBuffer = BufferPool.Rent(chunkSize);
-            var encryptedBuffer = BufferPool.Rent(chunkSize);
+            byte[] readBuffer = BufferPool.Rent(chunkSize);
+            byte[] encryptedBuffer = BufferPool.Rent(chunkSize);
 
             try
             {
@@ -234,7 +241,7 @@ namespace Cotton.Crypto
                 try
                 {
                     int chunkIndex = 0;
-                    var readBuffer = BufferPool.Rent(chunkSize);
+                    byte[] readBuffer = BufferPool.Rent(chunkSize);
                     
                     try
                     {
@@ -274,7 +281,7 @@ namespace Cotton.Crypto
                     {
                         ct.ThrowIfCancellationRequested();
 
-                        var encryptedBuffer = BufferPool.Rent(job.DataLength);
+                        byte[] encryptedBuffer = BufferPool.Rent(job.DataLength);
                         try
                         {
                             var nonce = new byte[NonceSize];
