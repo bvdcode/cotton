@@ -1,16 +1,16 @@
 ﻿using Cotton.Crypto.Abstractions;
+using Cotton.Crypto.Helpers;
 
 namespace Cotton.Crypto.Tests
 {
     public class StreamCipherTests
     {
-        private readonly byte[] _masterKey = new byte[32];
+        private readonly byte[] _masterKey = RandomHelpers.GetRandomBytes(32);
         private readonly MemoryStream _plainTextStream = new();
 
         [SetUp]
         public void Setup()
         {
-            Random.Shared.NextBytes(_masterKey);
             byte[] plainText = new byte[1024 * 1024];
             Random.Shared.NextBytes(plainText);
             _plainTextStream.Write(plainText, 0, plainText.Length);
