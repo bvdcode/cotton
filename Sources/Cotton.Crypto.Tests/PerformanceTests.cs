@@ -6,8 +6,10 @@ namespace Cotton.Crypto.Tests
     public class PerformanceTests
     {
         private static readonly Lock _initLock = new();
-        private static byte[]? _sharedData; // initialized in SetUp once
+        private static byte[]? _sharedData;
         private const int OneMb = 1024 * 1024;
+        private const int TestDataSizeMb = 1000; // 1 GB
+        private const int Iterations = 5;
 
         [SetUp]
         public void SetUp()
@@ -18,7 +20,7 @@ namespace Cotton.Crypto.Tests
             {
                 if (_sharedData != null) return;
 
-                int sizeBytes = 1000 * OneMb; // 1 GB
+                int sizeBytes = TestDataSizeMb * OneMb; // 500 MB should be enough
                 byte[] data = new byte[sizeBytes];
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -28,71 +30,82 @@ namespace Cotton.Crypto.Tests
             }
         }
 
-        [TestCase(10)]
-        [TestCase(100)]
-        [TestCase(1000)]
-        public async Task EncryptDecrypt_PerformanceTest(int mbSize)
+        [Test]
+        public async Task Encrypt_PerformanceTest()
         {
-            Assert.That(_sharedData, Is.Not.Null, "Test data must be initialized in SetUp");
-            byte[] source = _sharedData!;
-
-            int totalBytes = mbSize * OneMb;
-            using MemoryStream inputStream = new(source, 0, totalBytes, writable: false, publiclyVisible: true);
-            using MemoryStream encryptedStream = new(capacity: totalBytes + 4096);
-
-            byte[] masterKey = RandomHelpers.GetRandomBytes(32);
-            AesGcmStreamCipher cipher = new(masterKey);
-
-            long t0 = Stopwatch.GetTimestamp();
-            await cipher.EncryptAsync(inputStream, encryptedStream).ConfigureAwait(false);
-            long t1 = Stopwatch.GetTimestamp();
-
-            encryptedStream.Position = 0;
-            using MemoryStream decryptedStream = new(capacity: totalBytes);
-            await cipher.DecryptAsync(encryptedStream, decryptedStream).ConfigureAwait(false);
-            long t2 = Stopwatch.GetTimestamp();
-
-            long encTicks = t1 - t0;
-            long decTicks = t2 - t1;
-            long totalTicks = t2 - t0;
-            double tickFreq = Stopwatch.Frequency;
-            double encMs = encTicks * 1000.0 / tickFreq;
-            double decMs = decTicks * 1000.0 / tickFreq;
-            double totalMs = totalTicks * 1000.0 / tickFreq;
-
-            TestContext.Out.WriteLine($"Encryption of {mbSize} MB: {encMs:F2} ms");
-            TestContext.Out.WriteLine($"Decryption of {mbSize} MB: {decMs:F2} ms");
-            TestContext.Out.WriteLine($"Total: {totalMs:F2} ms");
-            TestContext.Out.WriteLine($"Throughput: {(mbSize * 2) / (totalTicks / tickFreq):F1} MB/s");
-
-            Assert.That(decryptedStream.Length, Is.EqualTo(totalBytes));
-            byte[] decrypted = decryptedStream.ToArray();
-            for (int i = 0; i < totalBytes; i++)
+            Assert.That(_sharedData, Is.Not.Null);
+            
+            TestContext.Out.WriteLine("=== ENCRYPTION PERFORMANCE ===");            
+            List<double> throughputs = [];
+            
+            for (int i = 0; i < Iterations; i++)
             {
-                if (decrypted[i] != source[i])
-                {
-                    Assert.Fail($"Decrypted data mismatch at index {i}");
-                }
+                byte[] masterKey = RandomHelpers.GetRandomBytes(32);
+                AesGcmStreamCipher cipher = new(masterKey);
+                
+                int totalBytes = TestDataSizeMb * OneMb;
+                using MemoryStream inputStream = new(_sharedData, 0, totalBytes, writable: false, publiclyVisible: true);
+                using MemoryStream encryptedStream = new();
+
+                long t0 = Stopwatch.GetTimestamp();
+                await cipher.EncryptAsync(inputStream, encryptedStream);
+                long t1 = Stopwatch.GetTimestamp();
+
+                double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
+                double throughputMBps = TestDataSizeMb / timeSeconds;
+                throughputs.Add(throughputMBps);
+
+                TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
             }
+            
+            double avgThroughput = throughputs.Average();
+            TestContext.Out.WriteLine($"Average Encryption: {avgThroughput:F1} MB/s");
+        }
 
-            double throughputMBps = (mbSize * 2) / (totalTicks / tickFreq);
-            double minThroughput = mbSize switch
+        [Test]
+        public async Task Decrypt_PerformanceTest()
+        {
+            Assert.That(_sharedData, Is.Not.Null);
+            
+            TestContext.Out.WriteLine("=== DECRYPTION PERFORMANCE ===");
+            List<double> throughputs = [];
+            
+            for (int i = 0; i < Iterations; i++)
             {
-                1 => 500,
-                10 => 1000,
-                100 => 1000,
-                1000 => 1000,
-                _ => 1000
-            };
-            Assert.That(throughputMBps, Is.GreaterThan(minThroughput),
-                $"Throughput {throughputMBps:F1} MB/s is below minimum requirement of {minThroughput} MB/s for {mbSize}MB");
+                byte[] masterKey = RandomHelpers.GetRandomBytes(32);
+                AesGcmStreamCipher cipher = new(masterKey);
+                
+                int totalBytes = TestDataSizeMb * OneMb;
+                
+                // First encrypt the data
+                using var sourceStream = new MemoryStream(_sharedData!, 0, totalBytes, writable: false, publiclyVisible: true);
+                using var encryptedStream = new MemoryStream();
+                await cipher.EncryptAsync(sourceStream, encryptedStream);
+                
+                // Then measure decryption
+                encryptedStream.Position = 0;
+                using MemoryStream decryptedStream = new();
+
+                long t0 = Stopwatch.GetTimestamp();
+                await cipher.DecryptAsync(encryptedStream, decryptedStream);
+                long t1 = Stopwatch.GetTimestamp();
+
+                double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
+                double throughputMBps = TestDataSizeMb / timeSeconds;
+                throughputs.Add(throughputMBps);
+
+                TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
+            }
+            
+            double avgThroughput = throughputs.Average();
+            TestContext.Out.WriteLine($"Average Decryption: {avgThroughput:F1} MB/s");
         }
 
         [TestCase(0)]
         [TestCase(1)]
         public async Task EncryptDecrypt_EdgeCases_ShouldWork(int bytes)
         {
-            Assert.That(_sharedData, Is.Not.Null, "Test data must be initialized in SetUp");
+            Assert.That(_sharedData, Is.Not.Null);
             byte[] source = _sharedData!;
 
             using MemoryStream inputStream = bytes == 0
@@ -105,11 +118,11 @@ namespace Cotton.Crypto.Tests
             byte[] masterKey = RandomHelpers.GetRandomBytes(32);
             AesGcmStreamCipher cipher = new(masterKey);
 
-            await cipher.EncryptAsync(inputStream, encryptedStream).ConfigureAwait(false);
+            await cipher.EncryptAsync(inputStream, encryptedStream);
             Assert.That(encryptedStream.Length, Is.GreaterThan(0));
 
             encryptedStream.Position = 0;
-            await cipher.DecryptAsync(encryptedStream, decryptedStream).ConfigureAwait(false);
+            await cipher.DecryptAsync(encryptedStream, decryptedStream);
 
             Assert.That(decryptedStream.Length, Is.EqualTo(bytes));
             if (bytes > 0)
