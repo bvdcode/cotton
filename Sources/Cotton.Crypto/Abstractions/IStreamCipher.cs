@@ -2,8 +2,8 @@
 {
     public interface IStreamCipher
     {
-        Task EncryptAsync(Stream input, Stream output, ReadOnlyMemory<byte> masterKey, int chunkSize, CancellationToken ct = default);
+        Task EncryptAsync(Stream input, Stream output, int chunkSize = 1_048_576, CancellationToken ct = default);
 
-        Task DecryptAsync(Stream input, Stream output, ReadOnlySpan<byte> masterKey, CancellationToken ct = default);
+        Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default);
     }
 }
