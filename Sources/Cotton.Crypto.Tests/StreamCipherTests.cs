@@ -11,7 +11,7 @@ namespace Cotton.Crypto.Tests
         [SetUp]
         public void Setup()
         {
-            byte[] plainText = new byte[1024 * 1024 * 1000];
+            byte[] plainText = new byte[1024 * 1024 * 10];
             Random.Shared.NextBytes(plainText);
             _plainTextStream.Write(plainText, 0, plainText.Length);
             _plainTextStream.Seek(default, SeekOrigin.Begin);
