@@ -1,6 +1,6 @@
 ﻿namespace Cotton.Crypto.Models
 {
-    public readonly record struct AesGcmKeyHeader(int KeyId, byte[] Nonce, byte[] Tag, byte[] EncryptedKey, long dataLength = 0)
+    public readonly record struct AesGcmKeyHeader(int KeyId, byte[] Nonce, byte[] Tag, byte[] EncryptedKey, long DataLength = 0)
     {
         public const string Magic = "CTN1";
 
@@ -20,7 +20,7 @@
             using BinaryWriter writer = new(ms);
             writer.Write(magicBytes);
             writer.Write(headerLength);
-            writer.Write(dataLength);
+            writer.Write(DataLength);
             writer.Write(KeyId);
             writer.Write(Nonce);
             writer.Write(Tag);

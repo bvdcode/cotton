@@ -11,7 +11,7 @@ namespace Cotton.Crypto.Tests
         [SetUp]
         public void Setup()
         {
-            byte[] plainText = new byte[1024 * 1024];
+            byte[] plainText = new byte[1024 * 1024 * 1000];
             Random.Shared.NextBytes(plainText);
             _plainTextStream.Write(plainText, 0, plainText.Length);
             _plainTextStream.Seek(default, SeekOrigin.Begin);
@@ -44,7 +44,7 @@ namespace Cotton.Crypto.Tests
                 Assert.That(parsedHeader.Nonce, Is.EqualTo(expectedHeader.Nonce));
                 Assert.That(parsedHeader.Tag, Is.EqualTo(expectedHeader.Tag));
                 Assert.That(parsedHeader.EncryptedKey, Is.EqualTo(expectedHeader.EncryptedKey));
-                Assert.That(parsedHeader.dataLength, Is.EqualTo(expectedHeader.dataLength));
+                Assert.That(parsedHeader.DataLength, Is.EqualTo(expectedHeader.DataLength));
             });
         }
     }
