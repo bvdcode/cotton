@@ -28,5 +28,28 @@
             writer.Flush();
             return ms.ToArray();
         }
+
+        public static AesGcmKeyHeader FromStream(Stream stream, int nonceSize, int tagSize)
+        {
+            using BinaryReader reader = new(stream, System.Text.Encoding.ASCII, leaveOpen: true);
+            byte[] magicBytes = reader.ReadBytes(Magic.Length);
+            string magic = System.Text.Encoding.ASCII.GetString(magicBytes);
+            if (magic != Magic)
+            {
+                throw new InvalidDataException("Invalid magic number in header.");
+            }
+            int headerLength = reader.ReadInt32();
+            long dataLength = reader.ReadInt64();
+            int keyId = reader.ReadInt32();
+            byte[] nonce = reader.ReadBytes(nonceSize);
+            byte[] tag = reader.ReadBytes(tagSize);
+            int encryptedKeyLength = headerLength - (sizeof(int) + sizeof(long) + sizeof(int) + nonceSize + tagSize + Magic.Length);
+            byte[] encryptedKey = reader.ReadBytes(encryptedKeyLength);
+            if (nonce.Length != nonceSize || tag.Length != tagSize || encryptedKey.Length != encryptedKeyLength)
+            {
+                throw new InvalidDataException("Invalid header format.");
+            }
+            return new AesGcmKeyHeader(keyId, nonce, tag, encryptedKey, dataLength);
+        }
     }
 }
