@@ -1,148 +1,148 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="6f40596c-b24f-4af3-af03-cb6bb197476c" name="BigBl@VADIM-PC 2025-09-27 16:33:15" runUser="VADIM-PC\BigBl" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2025-09-27T16:33:15.5983628-07:00" queuing="2025-09-27T16:33:15.5983630-07:00" start="2025-09-27T16:33:15.2195578-07:00" finish="2025-09-27T16:33:21.8751962-07:00" />
-  <TestSettings name="default" id="7d62c879-236f-4489-9b62-f64d73f0fb6d">
-    <Deployment runDeploymentRoot="BigBl_VADIM-PC_2025-09-27_16_33_15" />
+<TestRun id="bdf76af2-fa70-4df8-9a91-6e2a7ff1e842" name="BigBl@VADIM-PC 2025-09-27 16:44:01" runUser="VADIM-PC\BigBl" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2025-09-27T16:44:01.1414145-07:00" queuing="2025-09-27T16:44:01.1414147-07:00" start="2025-09-27T16:44:00.7521324-07:00" finish="2025-09-27T16:44:07.6465083-07:00" />
+  <TestSettings name="default" id="c00bb905-09ed-4be4-9e83-40361edaf35b">
+    <Deployment runDeploymentRoot="BigBl_VADIM-PC_2025-09-27_16_44_01" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="7802a6c3-6e5c-4333-80f6-a64e6a517533" testId="47e39621-a5d7-9867-c7c6-165502a2430e" testName="Encrypt_Cancellation_Throws" computerName="VADIM-PC" duration="00:00:00.0044150" startTime="2025-09-27T16:33:15.4929396-07:00" endTime="2025-09-27T16:33:15.4973544-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7802a6c3-6e5c-4333-80f6-a64e6a517533" />
-    <UnitTestResult executionId="7cb1df6b-9133-4c79-a7f4-b0a9227155ff" testId="33c1059a-25d5-5806-8b5f-3ca6f0334901" testName="Decrypt_Fails_OnTamperedCiphertext" computerName="VADIM-PC" duration="00:00:00.0074860" startTime="2025-09-27T16:33:15.4854453-07:00" endTime="2025-09-27T16:33:15.4929309-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7cb1df6b-9133-4c79-a7f4-b0a9227155ff" />
-    <UnitTestResult executionId="1c8a1000-e8f1-4b2f-95bd-d694be163d9b" testId="b1653f76-126d-9611-84fc-f2ac87d6e765" testName="EncryptDecrypt_Correctness_RoundTrip_ShouldMatch" computerName="VADIM-PC" duration="00:00:00.0018950" startTime="2025-09-27T16:33:15.8887441-07:00" endTime="2025-09-27T16:33:15.8906390-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1c8a1000-e8f1-4b2f-95bd-d694be163d9b" />
-    <UnitTestResult executionId="2ef8ccb2-f6c7-4393-94f9-433781d6ca17" testId="1ce72018-a2d7-8f94-349d-27d326200991" testName="Decrypt_PerformanceTest" computerName="VADIM-PC" duration="00:00:02.5323490" startTime="2025-09-27T16:33:15.8913878-07:00" endTime="2025-09-27T16:33:18.4237368-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2ef8ccb2-f6c7-4393-94f9-433781d6ca17">
-      <Output>
-        <StdOut>=== DECRYPTION PERFORMANCE ===&#xD;
-Run 1: 4565.1 MB/s&#xD;
-Run 2: 4537.3 MB/s&#xD;
-Run 3: 4479.7 MB/s&#xD;
-Run 4: 4458.0 MB/s&#xD;
-Run 5: 4487.8 MB/s&#xD;
-Average Decryption: 4505.5 MB/s</StdOut>
-      </Output>
-    </UnitTestResult>
-    <UnitTestResult executionId="4908634b-bdeb-487c-837c-e33837b8a335" testId="16b3c844-576b-202a-9361-4b799f366e25" testName="Encrypt_InvalidChunkSize_Throws_BelowMin" computerName="VADIM-PC" duration="00:00:00.0002370" startTime="2025-09-27T16:33:15.4976590-07:00" endTime="2025-09-27T16:33:15.4978957-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4908634b-bdeb-487c-837c-e33837b8a335" />
-    <UnitTestResult executionId="c7a44a13-6ffc-4b16-8042-55bb038ca6f1" testId="c54ec6f2-07c6-d518-6fd8-5e3646ef4e95" testName="RoundTrip_SmallData_DefaultChunk" computerName="VADIM-PC" duration="00:00:00.0005010" startTime="2025-09-27T16:33:15.8877523-07:00" endTime="2025-09-27T16:33:15.8882526-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c7a44a13-6ffc-4b16-8042-55bb038ca6f1" />
-    <UnitTestResult executionId="b3ea9ee8-deb4-499f-8dba-cc53cfb397ce" testId="1b69fddf-61f6-2075-a988-9fd34f9f6301" testName="EncryptStream_ValidParameters_ShouldParseAndValidateHeader" computerName="VADIM-PC" duration="00:00:00.0046380" startTime="2025-09-27T16:33:21.7301398-07:00" endTime="2025-09-27T16:33:21.7347770-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b3ea9ee8-deb4-499f-8dba-cc53cfb397ce" />
-    <UnitTestResult executionId="eba37cf2-14f0-4226-850a-a81db5308bcc" testId="26667d28-a7fa-530f-b121-4d1760c4375a" testName="Encrypt_WritesHeader_NonSeekable_DataLengthZero" computerName="VADIM-PC" duration="00:00:00.0027430" startTime="2025-09-27T16:33:15.4979049-07:00" endTime="2025-09-27T16:33:15.5006478-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eba37cf2-14f0-4226-850a-a81db5308bcc" />
-    <UnitTestResult executionId="aafacbfc-a129-470e-b2cc-de06fef9eb74" testId="315bcf3f-7a06-ebf8-1fdc-3fea2c9b0179" testName="EncryptStream_ValidParameters_ShouldDecryptSuccessfully" computerName="VADIM-PC" duration="00:00:00.7873770" startTime="2025-09-27T16:33:20.9427284-07:00" endTime="2025-09-27T16:33:21.7301043-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="aafacbfc-a129-470e-b2cc-de06fef9eb74" />
-    <UnitTestResult executionId="d84a90a4-81c4-46ec-9608-3740688ca9ae" testId="6c143ffb-06cf-f04e-2b03-78b6fbbd6730" testName="RoundTrip_LargeData_CustomChunkSizes(131072)" computerName="VADIM-PC" duration="00:00:00.1074160" startTime="2025-09-27T16:33:15.5646332-07:00" endTime="2025-09-27T16:33:15.6720492-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d84a90a4-81c4-46ec-9608-3740688ca9ae" />
-    <UnitTestResult executionId="4e0cff2e-5480-49ef-96fd-2bb3b0272d91" testId="5672e01e-76c8-3284-76f0-cdecf7b14488" testName="RoundTrip_LargeData_CustomChunkSizes(1048576)" computerName="VADIM-PC" duration="00:00:00.2149770" startTime="2025-09-27T16:33:15.6720708-07:00" endTime="2025-09-27T16:33:15.8870470-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4e0cff2e-5480-49ef-96fd-2bb3b0272d91" />
-    <UnitTestResult executionId="1a5370e0-bf15-4ac1-b3fb-d605105cfbfb" testId="39bbb08b-27f8-9b0c-9c3a-f2b995510f17" testName="Constructor_InvalidMasterKey_Throws" computerName="VADIM-PC" duration="00:00:00.0001310" startTime="2025-09-27T16:33:15.4853042-07:00" endTime="2025-09-27T16:33:15.4854349-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1a5370e0-bf15-4ac1-b3fb-d605105cfbfb" />
-    <UnitTestResult executionId="ca2a9545-7471-47ae-9da9-0f221b362f24" testId="b85b14af-b949-7c49-1c3b-4d83120f9415" testName="Encrypt_InvalidChunkSize_Throws_AboveMax" computerName="VADIM-PC" duration="00:00:00.0002799" startTime="2025-09-27T16:33:15.4973686-07:00" endTime="2025-09-27T16:33:15.4976486-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ca2a9545-7471-47ae-9da9-0f221b362f24" />
-    <UnitTestResult executionId="6f615b9b-0f0f-4845-99fc-cda29ed337c9" testId="2ec1fee0-e5b8-1157-79eb-0832ab86a7ff" testName="RoundTrip_LargeData_CustomChunkSizes(65536)" computerName="VADIM-PC" duration="00:00:00.0615700" startTime="2025-09-27T16:33:15.5030415-07:00" endTime="2025-09-27T16:33:15.5646115-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6f615b9b-0f0f-4845-99fc-cda29ed337c9" />
-    <UnitTestResult executionId="9957cfbb-9623-47b6-90a1-0144ecf3c98e" testId="c0f5975f-a288-8ae9-5b85-1dbe19ed44b4" testName="EncryptDecrypt_EdgeCases_ShouldWork(0)" computerName="VADIM-PC" duration="00:00:00.0004540" startTime="2025-09-27T16:33:15.8906692-07:00" endTime="2025-09-27T16:33:15.8911228-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9957cfbb-9623-47b6-90a1-0144ecf3c98e" />
-    <UnitTestResult executionId="3b3fd302-9564-4ec2-af16-3cf18540eb42" testId="fdc5462a-5b04-071c-3a2e-b722ea9a47e0" testName="Encrypt_WritesHeader_WithKeyId_AndDataLength" computerName="VADIM-PC" duration="00:00:00.0023540" startTime="2025-09-27T16:33:15.5006612-07:00" endTime="2025-09-27T16:33:15.5030155-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3b3fd302-9564-4ec2-af16-3cf18540eb42" />
-    <UnitTestResult executionId="6b916aed-99d5-477d-838f-ab69f8b0782c" testId="3f4b5343-e0c1-afe9-223a-07983e39b80b" testName="Encrypt_PerformanceTest" computerName="VADIM-PC" duration="00:00:02.5186240" startTime="2025-09-27T16:33:18.4237668-07:00" endTime="2025-09-27T16:33:20.9423900-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6b916aed-99d5-477d-838f-ab69f8b0782c">
+    <UnitTestResult executionId="cd17f987-c4c3-466b-85c6-2f78596ce7f5" testId="33c1059a-25d5-5806-8b5f-3ca6f0334901" testName="Decrypt_Fails_OnTamperedCiphertext" computerName="VADIM-PC" duration="00:00:00.0141030" startTime="2025-09-27T16:44:01.0164545-07:00" endTime="2025-09-27T16:44:01.0305576-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cd17f987-c4c3-466b-85c6-2f78596ce7f5" />
+    <UnitTestResult executionId="ce8969e0-6749-46ff-8419-394e5bf6ec18" testId="3f4b5343-e0c1-afe9-223a-07983e39b80b" testName="Encrypt_PerformanceTest" computerName="VADIM-PC" duration="00:00:02.5331530" startTime="2025-09-27T16:44:04.1718249-07:00" endTime="2025-09-27T16:44:06.7049771-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ce8969e0-6749-46ff-8419-394e5bf6ec18">
       <Output>
         <StdOut>=== ENCRYPTION PERFORMANCE ===&#xD;
-Run 1: 2758.6 MB/s&#xD;
-Run 2: 2771.3 MB/s&#xD;
-Run 3: 1993.4 MB/s&#xD;
-Run 4: 2454.9 MB/s&#xD;
-Run 5: 2561.9 MB/s&#xD;
-Average Encryption: 2508.1 MB/s</StdOut>
+Run 1: 2805.3 MB/s&#xD;
+Run 2: 2809.9 MB/s&#xD;
+Run 3: 2008.0 MB/s&#xD;
+Run 4: 2476.2 MB/s&#xD;
+Run 5: 2306.0 MB/s&#xD;
+Average Encryption: 2481.1 MB/s</StdOut>
       </Output>
     </UnitTestResult>
-    <UnitTestResult executionId="962a05c8-23d9-485b-a321-285912011051" testId="525cfe8f-eea5-016f-e686-96777022078b" testName="Constructor_InvalidKeyId_Throws" computerName="VADIM-PC" duration="00:00:00.0033550" startTime="2025-09-27T16:33:15.4815283-07:00" endTime="2025-09-27T16:33:15.4848628-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="962a05c8-23d9-485b-a321-285912011051" />
-    <UnitTestResult executionId="6f0bd974-6ec5-43f3-962c-fcf72ddd1e52" testId="03dbc998-6296-3a10-5ef3-e538e0f15fd9" testName="EncryptDecrypt_EdgeCases_ShouldWork(1)" computerName="VADIM-PC" duration="00:00:00.0001240" startTime="2025-09-27T16:33:15.8911381-07:00" endTime="2025-09-27T16:33:15.8912625-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6f0bd974-6ec5-43f3-962c-fcf72ddd1e52" />
+    <UnitTestResult executionId="112a1a04-1ef1-4b37-9a84-8304a3adfa13" testId="39bbb08b-27f8-9b0c-9c3a-f2b995510f17" testName="Constructor_InvalidMasterKey_Throws" computerName="VADIM-PC" duration="00:00:00.0001299" startTime="2025-09-27T16:44:01.0163184-07:00" endTime="2025-09-27T16:44:01.0164481-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="112a1a04-1ef1-4b37-9a84-8304a3adfa13" />
+    <UnitTestResult executionId="1e925585-f71d-4716-aa49-ba0604616aa1" testId="c0f5975f-a288-8ae9-5b85-1dbe19ed44b4" testName="EncryptDecrypt_EdgeCases_ShouldWork(0)" computerName="VADIM-PC" duration="00:00:00.0006260" startTime="2025-09-27T16:44:01.6745425-07:00" endTime="2025-09-27T16:44:01.6751686-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1e925585-f71d-4716-aa49-ba0604616aa1" />
+    <UnitTestResult executionId="35e1be83-ec6c-4106-9456-93603533abe0" testId="525cfe8f-eea5-016f-e686-96777022078b" testName="Constructor_InvalidKeyId_Throws" computerName="VADIM-PC" duration="00:00:00.0033360" startTime="2025-09-27T16:44:01.0125843-07:00" endTime="2025-09-27T16:44:01.0159011-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="35e1be83-ec6c-4106-9456-93603533abe0" />
+    <UnitTestResult executionId="6ff725f4-9e18-4b2d-b536-bb6460d9e700" testId="c54ec6f2-07c6-d518-6fd8-5e3646ef4e95" testName="RoundTrip_SmallData_DefaultChunk" computerName="VADIM-PC" duration="00:00:00.0006260" startTime="2025-09-27T16:44:01.6711836-07:00" endTime="2025-09-27T16:44:01.6718097-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6ff725f4-9e18-4b2d-b536-bb6460d9e700" />
+    <UnitTestResult executionId="670967bd-38e3-4a26-b53f-6712b9d415b3" testId="2ec1fee0-e5b8-1157-79eb-0832ab86a7ff" testName="RoundTrip_LargeData_CustomChunkSizes(65536)" computerName="VADIM-PC" duration="00:00:00.0633580" startTime="2025-09-27T16:44:01.0398585-07:00" endTime="2025-09-27T16:44:01.1032159-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="670967bd-38e3-4a26-b53f-6712b9d415b3" />
+    <UnitTestResult executionId="0312cad5-9238-46c8-9b27-e52f81fa62b2" testId="26667d28-a7fa-530f-b121-4d1760c4375a" testName="Encrypt_WritesHeader_NonSeekable_DataLengthZero" computerName="VADIM-PC" duration="00:00:00.0038180" startTime="2025-09-27T16:44:01.0334352-07:00" endTime="2025-09-27T16:44:01.0372533-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0312cad5-9238-46c8-9b27-e52f81fa62b2" />
+    <UnitTestResult executionId="ad636b0b-6a0b-4943-bad9-33fa0c978cfe" testId="fdc5462a-5b04-071c-3a2e-b722ea9a47e0" testName="Encrypt_WritesHeader_WithKeyId_AndDataLength" computerName="VADIM-PC" duration="00:00:00.0025650" startTime="2025-09-27T16:44:01.0372643-07:00" endTime="2025-09-27T16:44:01.0398294-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ad636b0b-6a0b-4943-bad9-33fa0c978cfe" />
+    <UnitTestResult executionId="141e8aab-d593-47ca-a0ff-33913428570f" testId="03dbc998-6296-3a10-5ef3-e538e0f15fd9" testName="EncryptDecrypt_EdgeCases_ShouldWork(1)" computerName="VADIM-PC" duration="00:00:00.0002220" startTime="2025-09-27T16:44:01.6751800-07:00" endTime="2025-09-27T16:44:01.6754014-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="141e8aab-d593-47ca-a0ff-33913428570f" />
+    <UnitTestResult executionId="43b74411-b391-4fdf-8713-471e83d2d8cd" testId="1b69fddf-61f6-2075-a988-9fd34f9f6301" testName="EncryptStream_ValidParameters_ShouldParseAndValidateHeader" computerName="VADIM-PC" duration="00:00:00.0076990" startTime="2025-09-27T16:44:07.5103857-07:00" endTime="2025-09-27T16:44:07.5180847-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="43b74411-b391-4fdf-8713-471e83d2d8cd" />
+    <UnitTestResult executionId="8e1d15af-cc52-496d-a342-528608a4bf88" testId="b1653f76-126d-9611-84fc-f2ac87d6e765" testName="EncryptDecrypt_Correctness_RoundTrip_ShouldMatch" computerName="VADIM-PC" duration="00:00:00.0021820" startTime="2025-09-27T16:44:01.6723342-07:00" endTime="2025-09-27T16:44:01.6745156-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8e1d15af-cc52-496d-a342-528608a4bf88" />
+    <UnitTestResult executionId="e081fa96-118f-4c53-97b9-b7adaccffedf" testId="16b3c844-576b-202a-9361-4b799f366e25" testName="Encrypt_InvalidChunkSize_Throws_BelowMin" computerName="VADIM-PC" duration="00:00:00.0002420" startTime="2025-09-27T16:44:01.0331833-07:00" endTime="2025-09-27T16:44:01.0334257-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e081fa96-118f-4c53-97b9-b7adaccffedf" />
+    <UnitTestResult executionId="01254351-9dab-4837-962d-5d29b14ef7f0" testId="1ce72018-a2d7-8f94-349d-27d326200991" testName="Decrypt_PerformanceTest" computerName="VADIM-PC" duration="00:00:02.4962340" startTime="2025-09-27T16:44:01.6755617-07:00" endTime="2025-09-27T16:44:04.1717955-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="01254351-9dab-4837-962d-5d29b14ef7f0">
+      <Output>
+        <StdOut>=== DECRYPTION PERFORMANCE ===&#xD;
+Run 1: 4413.8 MB/s&#xD;
+Run 2: 4564.0 MB/s&#xD;
+Run 3: 4629.8 MB/s&#xD;
+Run 4: 4579.9 MB/s&#xD;
+Run 5: 4641.3 MB/s&#xD;
+Average Decryption: 4565.7 MB/s</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="8e1b41d2-45cc-48dc-aef9-3b7a8505a472" testId="315bcf3f-7a06-ebf8-1fdc-3fea2c9b0179" testName="EncryptStream_ValidParameters_ShouldDecryptSuccessfully" computerName="VADIM-PC" duration="00:00:00.8050240" startTime="2025-09-27T16:44:06.7053331-07:00" endTime="2025-09-27T16:44:07.5103566-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8e1b41d2-45cc-48dc-aef9-3b7a8505a472" />
+    <UnitTestResult executionId="8af5cbe7-fae2-46f8-8625-cccf87e70a2a" testId="6c143ffb-06cf-f04e-2b03-78b6fbbd6730" testName="RoundTrip_LargeData_CustomChunkSizes(131072)" computerName="VADIM-PC" duration="00:00:00.1121350" startTime="2025-09-27T16:44:01.1032375-07:00" endTime="2025-09-27T16:44:01.2153722-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8af5cbe7-fae2-46f8-8625-cccf87e70a2a" />
+    <UnitTestResult executionId="b7972d30-f1c7-48e1-8219-9d4eb01a956c" testId="5672e01e-76c8-3284-76f0-cdecf7b14488" testName="RoundTrip_LargeData_CustomChunkSizes(1048576)" computerName="VADIM-PC" duration="00:00:00.4550410" startTime="2025-09-27T16:44:01.2153972-07:00" endTime="2025-09-27T16:44:01.6704367-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b7972d30-f1c7-48e1-8219-9d4eb01a956c" />
+    <UnitTestResult executionId="bdc8f1d5-6240-4e1c-a948-c125d93165d6" testId="47e39621-a5d7-9867-c7c6-165502a2430e" testName="Encrypt_Cancellation_Throws" computerName="VADIM-PC" duration="00:00:00.0023190" startTime="2025-09-27T16:44:01.0305705-07:00" endTime="2025-09-27T16:44:01.0328899-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bdc8f1d5-6240-4e1c-a948-c125d93165d6" />
+    <UnitTestResult executionId="2b2b63e3-2a8c-47ad-8a54-713d09684a43" testId="b85b14af-b949-7c49-1c3b-4d83120f9415" testName="Encrypt_InvalidChunkSize_Throws_AboveMax" computerName="VADIM-PC" duration="00:00:00.0002690" startTime="2025-09-27T16:44:01.0329038-07:00" endTime="2025-09-27T16:44:01.0331729-07:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b2b63e3-2a8c-47ad-8a54-713d09684a43" />
   </Results>
   <TestDefinitions>
     <UnitTest name="Encrypt_InvalidChunkSize_Throws_BelowMin" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="16b3c844-576b-202a-9361-4b799f366e25">
-      <Execution id="4908634b-bdeb-487c-837c-e33837b8a335" />
+      <Execution id="e081fa96-118f-4c53-97b9-b7adaccffedf" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Encrypt_InvalidChunkSize_Throws_BelowMin" />
     </UnitTest>
     <UnitTest name="RoundTrip_LargeData_CustomChunkSizes(1048576)" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="5672e01e-76c8-3284-76f0-cdecf7b14488">
-      <Execution id="4e0cff2e-5480-49ef-96fd-2bb3b0272d91" />
+      <Execution id="b7972d30-f1c7-48e1-8219-9d4eb01a956c" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="RoundTrip_LargeData_CustomChunkSizes(1048576)" />
     </UnitTest>
     <UnitTest name="RoundTrip_SmallData_DefaultChunk" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="c54ec6f2-07c6-d518-6fd8-5e3646ef4e95">
-      <Execution id="c7a44a13-6ffc-4b16-8042-55bb038ca6f1" />
+      <Execution id="6ff725f4-9e18-4b2d-b536-bb6460d9e700" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="RoundTrip_SmallData_DefaultChunk" />
     </UnitTest>
     <UnitTest name="EncryptStream_ValidParameters_ShouldParseAndValidateHeader" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="1b69fddf-61f6-2075-a988-9fd34f9f6301">
-      <Execution id="b3ea9ee8-deb4-499f-8dba-cc53cfb397ce" />
+      <Execution id="43b74411-b391-4fdf-8713-471e83d2d8cd" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.StreamCipherTests" name="EncryptStream_ValidParameters_ShouldParseAndValidateHeader" />
     </UnitTest>
     <UnitTest name="Encrypt_WritesHeader_WithKeyId_AndDataLength" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="fdc5462a-5b04-071c-3a2e-b722ea9a47e0">
-      <Execution id="3b3fd302-9564-4ec2-af16-3cf18540eb42" />
+      <Execution id="ad636b0b-6a0b-4943-bad9-33fa0c978cfe" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Encrypt_WritesHeader_WithKeyId_AndDataLength" />
     </UnitTest>
     <UnitTest name="RoundTrip_LargeData_CustomChunkSizes(65536)" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="2ec1fee0-e5b8-1157-79eb-0832ab86a7ff">
-      <Execution id="6f615b9b-0f0f-4845-99fc-cda29ed337c9" />
+      <Execution id="670967bd-38e3-4a26-b53f-6712b9d415b3" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="RoundTrip_LargeData_CustomChunkSizes(65536)" />
     </UnitTest>
     <UnitTest name="Decrypt_Fails_OnTamperedCiphertext" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="33c1059a-25d5-5806-8b5f-3ca6f0334901">
-      <Execution id="7cb1df6b-9133-4c79-a7f4-b0a9227155ff" />
+      <Execution id="cd17f987-c4c3-466b-85c6-2f78596ce7f5" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Decrypt_Fails_OnTamperedCiphertext" />
     </UnitTest>
     <UnitTest name="Encrypt_InvalidChunkSize_Throws_AboveMax" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="b85b14af-b949-7c49-1c3b-4d83120f9415">
-      <Execution id="ca2a9545-7471-47ae-9da9-0f221b362f24" />
+      <Execution id="2b2b63e3-2a8c-47ad-8a54-713d09684a43" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Encrypt_InvalidChunkSize_Throws_AboveMax" />
     </UnitTest>
     <UnitTest name="Constructor_InvalidMasterKey_Throws" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="39bbb08b-27f8-9b0c-9c3a-f2b995510f17">
-      <Execution id="1a5370e0-bf15-4ac1-b3fb-d605105cfbfb" />
+      <Execution id="112a1a04-1ef1-4b37-9a84-8304a3adfa13" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Constructor_InvalidMasterKey_Throws" />
     </UnitTest>
     <UnitTest name="EncryptDecrypt_EdgeCases_ShouldWork(1)" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="03dbc998-6296-3a10-5ef3-e538e0f15fd9">
-      <Execution id="6f0bd974-6ec5-43f3-962c-fcf72ddd1e52" />
+      <Execution id="141e8aab-d593-47ca-a0ff-33913428570f" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests_EdgesAndCorrectness" name="EncryptDecrypt_EdgeCases_ShouldWork(1)" />
     </UnitTest>
     <UnitTest name="Decrypt_PerformanceTest" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="1ce72018-a2d7-8f94-349d-27d326200991">
-      <Execution id="2ef8ccb2-f6c7-4393-94f9-433781d6ca17" />
+      <Execution id="01254351-9dab-4837-962d-5d29b14ef7f0" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.PerformanceTests" name="Decrypt_PerformanceTest" />
     </UnitTest>
     <UnitTest name="Encrypt_PerformanceTest" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="3f4b5343-e0c1-afe9-223a-07983e39b80b">
-      <Execution id="6b916aed-99d5-477d-838f-ab69f8b0782c" />
+      <Execution id="ce8969e0-6749-46ff-8419-394e5bf6ec18" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.PerformanceTests" name="Encrypt_PerformanceTest" />
     </UnitTest>
     <UnitTest name="Encrypt_WritesHeader_NonSeekable_DataLengthZero" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="26667d28-a7fa-530f-b121-4d1760c4375a">
-      <Execution id="eba37cf2-14f0-4226-850a-a81db5308bcc" />
+      <Execution id="0312cad5-9238-46c8-9b27-e52f81fa62b2" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Encrypt_WritesHeader_NonSeekable_DataLengthZero" />
     </UnitTest>
     <UnitTest name="RoundTrip_LargeData_CustomChunkSizes(131072)" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="6c143ffb-06cf-f04e-2b03-78b6fbbd6730">
-      <Execution id="d84a90a4-81c4-46ec-9608-3740688ca9ae" />
+      <Execution id="8af5cbe7-fae2-46f8-8625-cccf87e70a2a" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="RoundTrip_LargeData_CustomChunkSizes(131072)" />
     </UnitTest>
     <UnitTest name="EncryptDecrypt_EdgeCases_ShouldWork(0)" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="c0f5975f-a288-8ae9-5b85-1dbe19ed44b4">
-      <Execution id="9957cfbb-9623-47b6-90a1-0144ecf3c98e" />
+      <Execution id="1e925585-f71d-4716-aa49-ba0604616aa1" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests_EdgesAndCorrectness" name="EncryptDecrypt_EdgeCases_ShouldWork(0)" />
     </UnitTest>
     <UnitTest name="Encrypt_Cancellation_Throws" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="47e39621-a5d7-9867-c7c6-165502a2430e">
-      <Execution id="7802a6c3-6e5c-4333-80f6-a64e6a517533" />
+      <Execution id="bdc8f1d5-6240-4e1c-a948-c125d93165d6" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Encrypt_Cancellation_Throws" />
     </UnitTest>
     <UnitTest name="EncryptStream_ValidParameters_ShouldDecryptSuccessfully" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="315bcf3f-7a06-ebf8-1fdc-3fea2c9b0179">
-      <Execution id="aafacbfc-a129-470e-b2cc-de06fef9eb74" />
+      <Execution id="8e1b41d2-45cc-48dc-aef9-3b7a8505a472" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.StreamCipherTests" name="EncryptStream_ValidParameters_ShouldDecryptSuccessfully" />
     </UnitTest>
     <UnitTest name="Constructor_InvalidKeyId_Throws" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="525cfe8f-eea5-016f-e686-96777022078b">
-      <Execution id="962a05c8-23d9-485b-a321-285912011051" />
+      <Execution id="35e1be83-ec6c-4106-9456-93603533abe0" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests" name="Constructor_InvalidKeyId_Throws" />
     </UnitTest>
     <UnitTest name="EncryptDecrypt_Correctness_RoundTrip_ShouldMatch" storage="x:\github\cotton\sources\cotton.crypto.tests\bin\debug\net9.0\cotton.crypto.tests.dll" id="b1653f76-126d-9611-84fc-f2ac87d6e765">
-      <Execution id="1c8a1000-e8f1-4b2f-95bd-d694be163d9b" />
+      <Execution id="8e1d15af-cc52-496d-a342-528608a4bf88" />
       <TestMethod codeBase="X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Cotton.Crypto.Tests.AesGcmStreamCipherTests_EdgesAndCorrectness" name="EncryptDecrypt_Correctness_RoundTrip_ShouldMatch" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="47e39621-a5d7-9867-c7c6-165502a2430e" executionId="7802a6c3-6e5c-4333-80f6-a64e6a517533" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="33c1059a-25d5-5806-8b5f-3ca6f0334901" executionId="7cb1df6b-9133-4c79-a7f4-b0a9227155ff" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="b1653f76-126d-9611-84fc-f2ac87d6e765" executionId="1c8a1000-e8f1-4b2f-95bd-d694be163d9b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="1ce72018-a2d7-8f94-349d-27d326200991" executionId="2ef8ccb2-f6c7-4393-94f9-433781d6ca17" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="16b3c844-576b-202a-9361-4b799f366e25" executionId="4908634b-bdeb-487c-837c-e33837b8a335" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="c54ec6f2-07c6-d518-6fd8-5e3646ef4e95" executionId="c7a44a13-6ffc-4b16-8042-55bb038ca6f1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="1b69fddf-61f6-2075-a988-9fd34f9f6301" executionId="b3ea9ee8-deb4-499f-8dba-cc53cfb397ce" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="26667d28-a7fa-530f-b121-4d1760c4375a" executionId="eba37cf2-14f0-4226-850a-a81db5308bcc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="315bcf3f-7a06-ebf8-1fdc-3fea2c9b0179" executionId="aafacbfc-a129-470e-b2cc-de06fef9eb74" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="6c143ffb-06cf-f04e-2b03-78b6fbbd6730" executionId="d84a90a4-81c4-46ec-9608-3740688ca9ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="5672e01e-76c8-3284-76f0-cdecf7b14488" executionId="4e0cff2e-5480-49ef-96fd-2bb3b0272d91" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="39bbb08b-27f8-9b0c-9c3a-f2b995510f17" executionId="1a5370e0-bf15-4ac1-b3fb-d605105cfbfb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="b85b14af-b949-7c49-1c3b-4d83120f9415" executionId="ca2a9545-7471-47ae-9da9-0f221b362f24" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="2ec1fee0-e5b8-1157-79eb-0832ab86a7ff" executionId="6f615b9b-0f0f-4845-99fc-cda29ed337c9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="c0f5975f-a288-8ae9-5b85-1dbe19ed44b4" executionId="9957cfbb-9623-47b6-90a1-0144ecf3c98e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="fdc5462a-5b04-071c-3a2e-b722ea9a47e0" executionId="3b3fd302-9564-4ec2-af16-3cf18540eb42" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="3f4b5343-e0c1-afe9-223a-07983e39b80b" executionId="6b916aed-99d5-477d-838f-ab69f8b0782c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="525cfe8f-eea5-016f-e686-96777022078b" executionId="962a05c8-23d9-485b-a321-285912011051" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="03dbc998-6296-3a10-5ef3-e538e0f15fd9" executionId="6f0bd974-6ec5-43f3-962c-fcf72ddd1e52" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="33c1059a-25d5-5806-8b5f-3ca6f0334901" executionId="cd17f987-c4c3-466b-85c6-2f78596ce7f5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3f4b5343-e0c1-afe9-223a-07983e39b80b" executionId="ce8969e0-6749-46ff-8419-394e5bf6ec18" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="39bbb08b-27f8-9b0c-9c3a-f2b995510f17" executionId="112a1a04-1ef1-4b37-9a84-8304a3adfa13" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c0f5975f-a288-8ae9-5b85-1dbe19ed44b4" executionId="1e925585-f71d-4716-aa49-ba0604616aa1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="525cfe8f-eea5-016f-e686-96777022078b" executionId="35e1be83-ec6c-4106-9456-93603533abe0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c54ec6f2-07c6-d518-6fd8-5e3646ef4e95" executionId="6ff725f4-9e18-4b2d-b536-bb6460d9e700" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2ec1fee0-e5b8-1157-79eb-0832ab86a7ff" executionId="670967bd-38e3-4a26-b53f-6712b9d415b3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="26667d28-a7fa-530f-b121-4d1760c4375a" executionId="0312cad5-9238-46c8-9b27-e52f81fa62b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fdc5462a-5b04-071c-3a2e-b722ea9a47e0" executionId="ad636b0b-6a0b-4943-bad9-33fa0c978cfe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03dbc998-6296-3a10-5ef3-e538e0f15fd9" executionId="141e8aab-d593-47ca-a0ff-33913428570f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1b69fddf-61f6-2075-a988-9fd34f9f6301" executionId="43b74411-b391-4fdf-8713-471e83d2d8cd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b1653f76-126d-9611-84fc-f2ac87d6e765" executionId="8e1d15af-cc52-496d-a342-528608a4bf88" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="16b3c844-576b-202a-9361-4b799f366e25" executionId="e081fa96-118f-4c53-97b9-b7adaccffedf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1ce72018-a2d7-8f94-349d-27d326200991" executionId="01254351-9dab-4837-962d-5d29b14ef7f0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="315bcf3f-7a06-ebf8-1fdc-3fea2c9b0179" executionId="8e1b41d2-45cc-48dc-aef9-3b7a8505a472" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6c143ffb-06cf-f04e-2b03-78b6fbbd6730" executionId="8af5cbe7-fae2-46f8-8625-cccf87e70a2a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5672e01e-76c8-3284-76f0-cdecf7b14488" executionId="b7972d30-f1c7-48e1-8219-9d4eb01a956c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="47e39621-a5d7-9867-c7c6-165502a2430e" executionId="bdc8f1d5-6240-4e1c-a948-c125d93165d6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b85b14af-b949-7c49-1c3b-4d83120f9415" executionId="2b2b63e3-2a8c-47ad-8a54-713d09684a43" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
@@ -155,20 +155,20 @@ Average Encryption: 2508.1 MB/s</StdOut>
 Running all tests in X:\Github\cotton\Sources\Cotton.Crypto.Tests\bin\Debug\net9.0\Cotton.Crypto.Tests.dll&#xD;
    NUnit3TestExecutor discovered 19 of 19 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
 === DECRYPTION PERFORMANCE ===&#xD;
-Run 1: 4565.1 MB/s&#xD;
-Run 2: 4537.3 MB/s&#xD;
-Run 3: 4479.7 MB/s&#xD;
-Run 4: 4458.0 MB/s&#xD;
-Run 5: 4487.8 MB/s&#xD;
-Average Decryption: 4505.5 MB/s&#xD;
+Run 1: 4413.8 MB/s&#xD;
+Run 2: 4564.0 MB/s&#xD;
+Run 3: 4629.8 MB/s&#xD;
+Run 4: 4579.9 MB/s&#xD;
+Run 5: 4641.3 MB/s&#xD;
+Average Decryption: 4565.7 MB/s&#xD;
 &#xD;
 === ENCRYPTION PERFORMANCE ===&#xD;
-Run 1: 2758.6 MB/s&#xD;
-Run 2: 2771.3 MB/s&#xD;
-Run 3: 1993.4 MB/s&#xD;
-Run 4: 2454.9 MB/s&#xD;
-Run 5: 2561.9 MB/s&#xD;
-Average Encryption: 2508.1 MB/s&#xD;
+Run 1: 2805.3 MB/s&#xD;
+Run 2: 2809.9 MB/s&#xD;
+Run 3: 2008.0 MB/s&#xD;
+Run 4: 2476.2 MB/s&#xD;
+Run 5: 2306.0 MB/s&#xD;
+Average Encryption: 2481.1 MB/s&#xD;
 &#xD;
 NUnit Adapter 4.6.0.0: Test execution complete&#xD;
 </StdOut>
