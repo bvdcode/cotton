@@ -23,6 +23,7 @@
     <ProjectReference Include="..\cotton.client\cotton.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+    <ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
   </ItemGroup>
 
 </Project>
