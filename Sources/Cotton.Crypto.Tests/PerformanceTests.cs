@@ -3,6 +3,7 @@ using Cotton.Crypto.Helpers;
 
 namespace Cotton.Crypto.Tests
 {
+    [NonParallelizable]
     public class PerformanceTests
     {
         private static readonly Lock _initLock = new();
@@ -20,7 +21,7 @@ namespace Cotton.Crypto.Tests
             {
                 if (_sharedData != null) return;
 
-                int sizeBytes = TestDataSizeMb * OneMb; // 500 MB should be enough
+                int sizeBytes = TestDataSizeMb * OneMb; // 1 GB
                 byte[] data = new byte[sizeBytes];
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -34,18 +35,49 @@ namespace Cotton.Crypto.Tests
         public async Task Encrypt_PerformanceTest()
         {
             Assert.That(_sharedData, Is.Not.Null);
-            
-            TestContext.Out.WriteLine("=== ENCRYPTION PERFORMANCE ===");            
+            byte[] source = _sharedData!;
+
+            // Edge cases inside main test
+            foreach (int bytes in new[] { 0, 1 })
+            {
+                byte[] masterKeyEdge = RandomHelpers.GetRandomBytes(32);
+                AesGcmStreamCipher cipherEdge = new(masterKeyEdge);
+
+                using MemoryStream inputStream = bytes == 0
+                    ? new MemoryStream([])
+                    : new MemoryStream(source, 0, bytes, writable: false, publiclyVisible: true);
+                using MemoryStream encryptedStream = new();
+                using MemoryStream decryptedStream = new();
+
+                await cipherEdge.EncryptAsync(inputStream, encryptedStream);
+                encryptedStream.Position = 0;
+                await cipherEdge.DecryptAsync(encryptedStream, decryptedStream);
+
+                Assert.That(decryptedStream.Length, Is.EqualTo(bytes));
+                if (bytes > 0)
+                {
+                    byte[] decrypted = decryptedStream.ToArray();
+                    for (int i = 0; i < bytes; i++)
+                    {
+                        if (decrypted[i] != source[i])
+                        {
+                            Assert.Fail($"Decrypted data mismatch at index {i}");
+                        }
+                    }
+                }
+            }
+
+            TestContext.Out.WriteLine("=== ENCRYPTION PERFORMANCE ===");
             List<double> throughputs = [];
-            
+
             for (int i = 0; i < Iterations; i++)
             {
                 byte[] masterKey = RandomHelpers.GetRandomBytes(32);
                 AesGcmStreamCipher cipher = new(masterKey);
-                
+
                 int totalBytes = TestDataSizeMb * OneMb;
-                using MemoryStream inputStream = new(_sharedData, 0, totalBytes, writable: false, publiclyVisible: true);
-                using MemoryStream encryptedStream = new();
+                using MemoryStream inputStream = new(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                using MemoryStream encryptedStream = new(capacity: totalBytes + 4096);
 
                 long t0 = Stopwatch.GetTimestamp();
                 await cipher.EncryptAsync(inputStream, encryptedStream);
@@ -57,7 +89,7 @@ namespace Cotton.Crypto.Tests
 
                 TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
             }
-            
+
             double avgThroughput = throughputs.Average();
             TestContext.Out.WriteLine($"Average Encryption: {avgThroughput:F1} MB/s");
         }
@@ -66,25 +98,54 @@ namespace Cotton.Crypto.Tests
         public async Task Decrypt_PerformanceTest()
         {
             Assert.That(_sharedData, Is.Not.Null);
-            
+            byte[] source = _sharedData!;
+
+            // Edge cases inside main test
+            foreach (int bytes in new[] { 0, 1 })
+            {
+                byte[] masterKeyEdge = RandomHelpers.GetRandomBytes(32);
+                AesGcmStreamCipher cipherEdge = new(masterKeyEdge);
+
+                using MemoryStream inputStream = bytes == 0
+                    ? new MemoryStream([])
+                    : new MemoryStream(source, 0, bytes, writable: false, publiclyVisible: true);
+                using MemoryStream encryptedStream = new();
+                using MemoryStream decryptedStream = new();
+
+                await cipherEdge.EncryptAsync(inputStream, encryptedStream);
+                encryptedStream.Position = 0;
+                await cipherEdge.DecryptAsync(encryptedStream, decryptedStream);
+
+                Assert.That(decryptedStream.Length, Is.EqualTo(bytes));
+                if (bytes > 0)
+                {
+                    byte[] decrypted = decryptedStream.ToArray();
+                    for (int i = 0; i < bytes; i++)
+                    {
+                        if (decrypted[i] != source[i])
+                        {
+                            Assert.Fail($"Decrypted data mismatch at index {i}");
+                        }
+                    }
+                }
+            }
+
             TestContext.Out.WriteLine("=== DECRYPTION PERFORMANCE ===");
             List<double> throughputs = [];
-            
+
             for (int i = 0; i < Iterations; i++)
             {
                 byte[] masterKey = RandomHelpers.GetRandomBytes(32);
                 AesGcmStreamCipher cipher = new(masterKey);
-                
+
                 int totalBytes = TestDataSizeMb * OneMb;
-                
-                // First encrypt the data
-                using var sourceStream = new MemoryStream(_sharedData!, 0, totalBytes, writable: false, publiclyVisible: true);
-                using var encryptedStream = new MemoryStream();
+
+                using var sourceStream = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                using var encryptedStream = new MemoryStream(capacity: totalBytes + 4096);
                 await cipher.EncryptAsync(sourceStream, encryptedStream);
-                
-                // Then measure decryption
+
                 encryptedStream.Position = 0;
-                using MemoryStream decryptedStream = new();
+                using MemoryStream decryptedStream = new(capacity: totalBytes);
 
                 long t0 = Stopwatch.GetTimestamp();
                 await cipher.DecryptAsync(encryptedStream, decryptedStream);
@@ -96,46 +157,9 @@ namespace Cotton.Crypto.Tests
 
                 TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
             }
-            
+
             double avgThroughput = throughputs.Average();
             TestContext.Out.WriteLine($"Average Decryption: {avgThroughput:F1} MB/s");
-        }
-
-        [TestCase(0)]
-        [TestCase(1)]
-        public async Task EncryptDecrypt_EdgeCases_ShouldWork(int bytes)
-        {
-            Assert.That(_sharedData, Is.Not.Null);
-            byte[] source = _sharedData!;
-
-            using MemoryStream inputStream = bytes == 0
-                ? new MemoryStream([])
-                : new MemoryStream(source, 0, bytes, writable: false, publiclyVisible: true);
-
-            using MemoryStream encryptedStream = new();
-            using MemoryStream decryptedStream = new();
-
-            byte[] masterKey = RandomHelpers.GetRandomBytes(32);
-            AesGcmStreamCipher cipher = new(masterKey);
-
-            await cipher.EncryptAsync(inputStream, encryptedStream);
-            Assert.That(encryptedStream.Length, Is.GreaterThan(0));
-
-            encryptedStream.Position = 0;
-            await cipher.DecryptAsync(encryptedStream, decryptedStream);
-
-            Assert.That(decryptedStream.Length, Is.EqualTo(bytes));
-            if (bytes > 0)
-            {
-                byte[] decrypted = decryptedStream.ToArray();
-                for (int i = 0; i < bytes; i++)
-                {
-                    if (decrypted[i] != source[i])
-                    {
-                        Assert.Fail($"Decrypted data mismatch at index {i}");
-                    }
-                }
-            }
         }
     }
 }
