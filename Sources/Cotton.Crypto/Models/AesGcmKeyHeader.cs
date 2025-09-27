@@ -3,52 +3,84 @@
     public readonly record struct AesGcmKeyHeader(int KeyId, byte[] Nonce, byte[] Tag, byte[] EncryptedKey, long DataLength = 0)
     {
         public const string Magic = "CTN1";
+        private static readonly byte[] MagicBytes = System.Text.Encoding.ASCII.GetBytes(Magic);
 
         public ReadOnlyMemory<byte> ToBytes()
         {
-            // Magic (4 bytes)
-            // Header Length (4 bytes)
-            // Data Length (8 bytes)
-            // Key ID (4 bytes)
-            // Nonce (12 bytes)
-            // Tag (16 bytes)
-            // Encrypted Key (32 bytes)
-
-            byte[] magicBytes = System.Text.Encoding.ASCII.GetBytes(Magic);
-            int headerLength = magicBytes.Length + sizeof(int) + sizeof(long) + sizeof(int) + Nonce.Length + Tag.Length + EncryptedKey.Length;
-            using MemoryStream ms = new(headerLength);
-            using BinaryWriter writer = new(ms);
-            writer.Write(magicBytes);
-            writer.Write(headerLength);
-            writer.Write(DataLength);
-            writer.Write(KeyId);
-            writer.Write(Nonce);
-            writer.Write(Tag);
-            writer.Write(EncryptedKey);
-            writer.Flush();
-            return ms.ToArray();
+            // Magic (4 bytes) + Header Length (4 bytes) + Data Length (8 bytes) + Key ID (4 bytes) + Nonce + Tag + EncryptedKey
+            int headerLength = MagicBytes.Length + sizeof(int) + sizeof(long) + sizeof(int) + Nonce.Length + Tag.Length + EncryptedKey.Length;
+            byte[] buffer = new byte[headerLength];
+            
+            int offset = 0;
+            
+            // Write Magic
+            MagicBytes.CopyTo(buffer, offset);
+            offset += MagicBytes.Length;
+            
+            // Write Header Length
+            BitConverter.TryWriteBytes(buffer.AsSpan(offset), headerLength);
+            offset += sizeof(int);
+            
+            // Write Data Length
+            BitConverter.TryWriteBytes(buffer.AsSpan(offset), DataLength);
+            offset += sizeof(long);
+            
+            // Write Key ID
+            BitConverter.TryWriteBytes(buffer.AsSpan(offset), KeyId);
+            offset += sizeof(int);
+            
+            // Write Nonce
+            Nonce.CopyTo(buffer, offset);
+            offset += Nonce.Length;
+            
+            // Write Tag
+            Tag.CopyTo(buffer, offset);
+            offset += Tag.Length;
+            
+            // Write Encrypted Key
+            EncryptedKey.CopyTo(buffer, offset);
+            
+            return buffer;
         }
 
         public static AesGcmKeyHeader FromStream(Stream stream, int nonceSize, int tagSize)
         {
-            using BinaryReader reader = new(stream, System.Text.Encoding.ASCII, leaveOpen: true);
-            byte[] magicBytes = reader.ReadBytes(Magic.Length);
-            string magic = System.Text.Encoding.ASCII.GetString(magicBytes);
-            if (magic != Magic)
+            Span<byte> intBuffer = stackalloc byte[sizeof(int)];
+            Span<byte> longBuffer = stackalloc byte[sizeof(long)];
+            
+            // Read and verify magic
+            byte[] magicBytes = new byte[Magic.Length];
+            int bytesRead = stream.Read(magicBytes);
+            if (bytesRead != Magic.Length || !magicBytes.AsSpan().SequenceEqual(MagicBytes))
             {
                 throw new InvalidDataException("Invalid magic number in header.");
             }
-            int headerLength = reader.ReadInt32();
-            long dataLength = reader.ReadInt64();
-            int keyId = reader.ReadInt32();
-            byte[] nonce = reader.ReadBytes(nonceSize);
-            byte[] tag = reader.ReadBytes(tagSize);
+            
+            // Read header length
+            stream.ReadExactly(intBuffer);
+            int headerLength = BitConverter.ToInt32(intBuffer);
+            
+            // Read data length
+            stream.ReadExactly(longBuffer);
+            long dataLength = BitConverter.ToInt64(longBuffer);
+            
+            // Read key ID
+            stream.ReadExactly(intBuffer);
+            int keyId = BitConverter.ToInt32(intBuffer);
+            
+            // Read nonce
+            byte[] nonce = new byte[nonceSize];
+            stream.ReadExactly(nonce);
+            
+            // Read tag
+            byte[] tag = new byte[tagSize];
+            stream.ReadExactly(tag);
+            
+            // Read encrypted key
             int encryptedKeyLength = headerLength - (sizeof(int) + sizeof(long) + sizeof(int) + nonceSize + tagSize + Magic.Length);
-            byte[] encryptedKey = reader.ReadBytes(encryptedKeyLength);
-            if (nonce.Length != nonceSize || tag.Length != tagSize || encryptedKey.Length != encryptedKeyLength)
-            {
-                throw new InvalidDataException("Invalid header format.");
-            }
+            byte[] encryptedKey = new byte[encryptedKeyLength];
+            stream.ReadExactly(encryptedKey);
+            
             return new AesGcmKeyHeader(keyId, nonce, tag, encryptedKey, dataLength);
         }
     }
