@@ -1,7 +1,7 @@
-﻿using Cotton.Crypto.Helpers;
+﻿using Cotton.Crypto.Models;
+using Cotton.Crypto.Helpers;
 using Cotton.Crypto.Abstractions;
 using System.Security.Cryptography;
-using Cotton.Crypto.Models;
 
 namespace Cotton.Crypto
 {
@@ -37,28 +37,41 @@ namespace Cotton.Crypto
             throw new NotImplementedException();
         }
 
-        public Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
+        public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
         {
+            if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
+            {
+                throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
+            }
+
             byte[] nonce = RandomHelpers.GetRandomBytes(12);
             using var gcm = new AesGcm(_masterKey.Span, TagSize);
             gcm.Encrypt(nonce, _masterKey.Span, nonce, nonce);
 
+            AesGcmKeyHeader keyHeader = EncryptFileKey(gcm, nonce);
+            output.Write(keyHeader.ToBytes().Span);
 
-
-            byte[] encryptedFileKey = EncryptFileKey(gcm, nonce);
-            CryptoHeader header = new(KeyId: _keyId, Nonce: nonce, EncryptedFileKey: encryptedFileKey);
-
-
-
+            byte[] buffer = new byte[chunkSize];
+            int bytesRead;
+            while ((bytesRead = input.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                byte[] chunkNonce = RandomHelpers.GetRandomBytes(NonceSize);
+                byte[] tag = new byte[TagSize];
+                byte[] encryptedChunk = new byte[bytesRead];
+                gcm.Encrypt(chunkNonce, buffer.AsSpan(0, bytesRead), encryptedChunk, tag);
+                await output.WriteAsync(chunkNonce, ct);
+                await output.WriteAsync(tag, ct);
+                await output.WriteAsync(encryptedChunk, ct);
+            }
         }
 
-        private static byte[] EncryptFileKey(AesGcm gcm, byte[] nonce)
+        private AesGcmKeyHeader EncryptFileKey(AesGcm gcm, byte[] nonce)
         {
             byte[] fileKey = RandomHelpers.GetRandomBytes(32);
             byte[] encryptedFileKey = new byte[fileKey.Length];
             byte[] tag = new byte[TagSize];
             gcm.Encrypt(nonce, fileKey, encryptedFileKey, tag);
-            return encryptedFileKey;
+            return new AesGcmKeyHeader(KeyId: _keyId, Nonce: nonce, Tag: tag, EncryptedKey: encryptedFileKey);
         }
     }
 }
