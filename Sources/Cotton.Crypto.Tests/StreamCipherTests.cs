@@ -1,4 +1,4 @@
-﻿using Cotton.Crypto.Abstractions;
+﻿using Cotton.Crypto.Models;
 using Cotton.Crypto.Helpers;
 
 namespace Cotton.Crypto.Tests
@@ -29,6 +29,23 @@ namespace Cotton.Crypto.Tests
             decryptedStream.Seek(default, SeekOrigin.Begin);
             Assert.That(decryptedStream.Length, Is.EqualTo(_plainTextStream.Length));
             Assert.That(decryptedStream.ToArray(), Is.EqualTo(_plainTextStream.ToArray()));
+        }
+
+        [Test]
+        public void EncryptStream_ValidParameters_ShouldParseAndValidateHeader()
+        {
+            AesGcmKeyHeader expectedHeader = new(123, [1, 2, 3], [4, 5, 6], [7, 8, 9], 12345);
+            ReadOnlyMemory<byte> headerBytes = expectedHeader.ToBytes();
+            using MemoryStream ms = new(headerBytes.ToArray());
+            AesGcmKeyHeader parsedHeader = AesGcmKeyHeader.FromStream(ms, 3, 3);
+            Assert.Multiple(() =>
+            {
+                Assert.That(parsedHeader.KeyId, Is.EqualTo(expectedHeader.KeyId));
+                Assert.That(parsedHeader.Nonce, Is.EqualTo(expectedHeader.Nonce));
+                Assert.That(parsedHeader.Tag, Is.EqualTo(expectedHeader.Tag));
+                Assert.That(parsedHeader.EncryptedKey, Is.EqualTo(expectedHeader.EncryptedKey));
+                Assert.That(parsedHeader.dataLength, Is.EqualTo(expectedHeader.dataLength));
+            });
         }
     }
 }

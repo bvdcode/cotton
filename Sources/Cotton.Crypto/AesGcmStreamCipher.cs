@@ -34,7 +34,39 @@ namespace Cotton.Crypto
 
         public Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
         {
-            throw new NotImplementedException();
+            AesGcmKeyHeader keyHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
+
+            using var gcm = new AesGcm(_masterKey.Span, TagSize);
+            byte[] fileKey = new byte[32];
+            gcm.Decrypt(keyHeader.Nonce, keyHeader.EncryptedKey, keyHeader.Tag, fileKey);
+
+            using var fileGcm = new AesGcm(fileKey, TagSize);
+            byte[] chunkNonce = new byte[NonceSize];
+            byte[] tag = new byte[TagSize];
+            byte[] buffer = new byte[DefaultChunkSize];
+            int bytesRead;
+            while ((bytesRead = input.Read(chunkNonce, 0, chunkNonce.Length)) > 0)
+            {
+                if (bytesRead < NonceSize)
+                {
+                    throw new InvalidDataException("Incomplete nonce read from stream.");
+                }
+                bytesRead = input.Read(tag, 0, tag.Length);
+                if (bytesRead < TagSize)
+                {
+                    throw new InvalidDataException("Incomplete tag read from stream.");
+                }
+                bytesRead = input.Read(buffer, 0, buffer.Length);
+                if (bytesRead == 0)
+                {
+                    break; // End of stream
+                }
+                byte[] decryptedChunk = new byte[bytesRead];
+                // public void Decrypt(ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> tag, Span<byte> plaintext, ReadOnlySpan<byte> associatedData = default);
+                fileGcm.Decrypt(chunkNonce, buffer.AsSpan(0, bytesRead), tag, decryptedChunk);
+                output.Write(decryptedChunk, 0, decryptedChunk.Length);
+            }
+            return Task.CompletedTask;
         }
 
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
@@ -46,7 +78,6 @@ namespace Cotton.Crypto
 
             byte[] nonce = RandomHelpers.GetRandomBytes(12);
             using var gcm = new AesGcm(_masterKey.Span, TagSize);
-            gcm.Encrypt(nonce, _masterKey.Span, nonce, nonce);
 
             AesGcmKeyHeader keyHeader = EncryptFileKey(gcm, nonce);
             output.Write(keyHeader.ToBytes().Span);
@@ -59,8 +90,8 @@ namespace Cotton.Crypto
                 byte[] tag = new byte[TagSize];
                 byte[] encryptedChunk = new byte[bytesRead];
                 gcm.Encrypt(chunkNonce, buffer.AsSpan(0, bytesRead), encryptedChunk, tag);
-                await output.WriteAsync(chunkNonce, ct);
-                await output.WriteAsync(tag, ct);
+                AesGcmKeyHeader chunkHeader = new(_keyId, chunkNonce, tag, [], bytesRead);
+                output.Write(chunkHeader.ToBytes().Span);
                 await output.WriteAsync(encryptedChunk, ct);
             }
         }
