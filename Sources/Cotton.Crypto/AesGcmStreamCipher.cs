@@ -61,12 +61,12 @@ namespace Cotton.Crypto
 
             try
             {
-                using (AesGcm gcm = new AesGcm(_masterKey.Span, TagSize))
+                using (AesGcm gcm = new(_masterKey.Span, TagSize))
                 {
                     gcm.Decrypt(keyHeader.Nonce, keyHeader.EncryptedKey, keyHeader.Tag, fileKey.AsSpan(0, KeySize));
                 }
 
-                using AesGcm fileGcm = new AesGcm(fileKey.AsSpan(0, KeySize), TagSize);
+                using AesGcm fileGcm = new(fileKey.AsSpan(0, KeySize), TagSize);
                 
                 if (!input.CanSeek || (keyHeader.DataLength > 0 && keyHeader.DataLength <= DefaultChunkSize))
                 {
@@ -118,7 +118,7 @@ namespace Cotton.Crypto
                 byte[] encryptedFileKey = new byte[KeySize];
                 byte[] fileKeyTag = new byte[TagSize];
 
-                using (AesGcm gcm = new AesGcm(_masterKey.Span, TagSize))
+                using (AesGcm gcm = new(_masterKey.Span, TagSize))
                 {
                     gcm.Encrypt(fileKeyNonce, fileKey.AsSpan(0, KeySize), encryptedFileKey, fileKeyTag);
                 }
@@ -129,14 +129,14 @@ namespace Cotton.Crypto
                     remainingLength = Math.Max(0, input.Length - input.Position);
                 }
 
-                AesGcmKeyHeader keyHeader = new AesGcmKeyHeader(_keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, remainingLength);
+                AesGcmKeyHeader keyHeader = new(_keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, remainingLength);
                 ReadOnlyMemory<byte> headerBytes = keyHeader.ToBytes();
                 await output.WriteAsync(headerBytes, ct).ConfigureAwait(false);
 
                 byte[] fileKeyArray = new byte[KeySize];
                 Array.Copy(fileKey, fileKeyArray, KeySize);
                 
-                using AesGcm sequentialGcm = new AesGcm(fileKey.AsSpan(0, KeySize), TagSize);
+                using AesGcm sequentialGcm = new(fileKey.AsSpan(0, KeySize), TagSize);
                 await EncryptSequentialAsync(input, output, sequentialGcm, chunkSize, ct).ConfigureAwait(false);
             }
             finally
@@ -146,7 +146,7 @@ namespace Cotton.Crypto
             }
         }
 
-        private async Task DecryptSequentialAsync(Stream input, Stream output, AesGcm fileGcm, CancellationToken ct)
+        private static async Task DecryptSequentialAsync(Stream input, Stream output, AesGcm fileGcm, CancellationToken ct)
         {
             byte[] cipherBuffer = BufferPool.Rent(MaxChunkSize);
             byte[] plainBuffer = BufferPool.Rent(MaxChunkSize);
