@@ -82,7 +82,7 @@ namespace Cotton.Crypto.Tests
             {
                 using MemoryStream warmInput = new(source, 0, TestDataSizeMb * OneMb, writable: false, publiclyVisible: true);
                 using MemoryStream warmEncrypted = new();
-                AesGcmStreamCipher warmCipher = new(masterKey);
+                AesGcmStreamCipher warmCipher = new(masterKey, threads: null);
                 await warmCipher.EncryptAsync(warmInput, warmEncrypted);
             }
 

@@ -16,7 +16,7 @@ namespace Cotton.Crypto
         private const int KeySize = 32;      // 256-bit key size (32 bytes)
         // Chunk size bounds (can be tuned for performance vs. memory)
         private const int MinChunkSize = 64 * 1024;      // 64 KB
-        private const int MaxChunkSize = 32 * 1024 * 1024; // 32 MB
+        private const int MaxChunkSize = 64 * 1024 * 1024; // 64 MB
         private const int DefaultChunkSize = 24 * 1024 * 1024; // 24 MB (default)
         // Magic header marker
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
