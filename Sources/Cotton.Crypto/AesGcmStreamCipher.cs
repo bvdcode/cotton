@@ -342,8 +342,15 @@ namespace Cotton.Crypto
                         if (input.CanSeek)
                         {
                             long bytesRemaining = input.Length - input.Position;
-                            if (bytesRemaining < (4 + 4 + 8 + 4 + NonceSize + TagSize))
-                                break; // not enough bytes for another chunk header, end of file
+                            int minHeader = 4 + 4 + 8 + 4 + NonceSize + TagSize;
+                            if (bytesRemaining == 0)
+                            {
+                                break; // clean EOF
+                            }    
+                            if (bytesRemaining < minHeader)
+                            {
+                                throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
+                            }
                         }
                         // Read and parse the next chunk header
                         ChunkHeader chunkHeader;
