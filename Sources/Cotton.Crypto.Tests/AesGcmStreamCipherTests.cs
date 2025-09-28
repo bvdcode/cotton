@@ -1,6 +1,7 @@
 using System.Text;
 using Cotton.Crypto.Models;
 using System.Security.Cryptography;
+using Cotton.Crypto.Tests.TestUtils;
 
 namespace Cotton.Crypto.Tests;
 
@@ -221,40 +222,6 @@ public class AesGcmStreamCipherTests
         cts.Cancel();
 
         Assert.ThrowsAsync<TaskCanceledException>(async () => await cipher.EncryptAsync(input, output, chunkSize: 65_536, ct: cts.Token));
-    }
-
-    private class NonSeekableReadStream(Stream inner) : Stream
-    {
-        private readonly Stream _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-
-        public override bool CanRead => _inner.CanRead;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => throw new NotSupportedException();
-        public override long Position
-        {
-            get => _inner.Position;
-            set => throw new NotSupportedException();
-        }
-
-        public override void Flush() => _inner.Flush();
-
-        public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-            => await _inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-
-        protected override void Dispose(bool disposing)
-        {
-            base.Dispose(disposing);
-            // Do not dispose inner to mimic typical stream wrappers unless needed
-        }
     }
 }
 
