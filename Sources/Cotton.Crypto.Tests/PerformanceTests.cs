@@ -38,6 +38,33 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
+        public void Synthetic_RamCopy_Test()
+        {
+            Assert.That(_sharedData, Is.Not.Null);
+            byte[] source = _sharedData!;
+            byte[] destination = new byte[source.Length];
+            TestContext.Out.WriteLine("=== SYNTHETIC RAM COPY PERFORMANCE ===");
+            // Warm-up (not measured)
+            {
+                Buffer.BlockCopy(source, 0, destination, 0, source.Length);
+            }
+            List<double> throughputs = [];
+            for (int i = 0; i < Iterations; i++)
+            {
+                int totalBytes = TestDataSizeMb * OneMb;
+                long t0 = Stopwatch.GetTimestamp();
+                Buffer.BlockCopy(source, 0, destination, 0, totalBytes);
+                long t1 = Stopwatch.GetTimestamp();
+                double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
+                double throughputMBps = TestDataSizeMb / timeSeconds;
+                throughputs.Add(throughputMBps);
+                TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
+            }
+            double avgThroughput = throughputs.Average();
+            TestContext.Out.WriteLine($"Average RAM Copy: {avgThroughput:F1} MB/s");
+        }
+
+        [Test]
         public async Task Encrypt_PerformanceTest()
         {
             Assert.Multiple(() =>
