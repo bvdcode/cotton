@@ -10,14 +10,17 @@ namespace Cotton.Crypto
     {
         private readonly int _keyId;
         private readonly byte[] _masterKeyBytes;  // Master key as byte array for AesGcm
+
         // Cryptographic constants
-        private const int NonceSize = 12;    // 96-bit nonce for AES-GCM
-        private const int TagSize = 16;      // 128-bit authentication tag
-        private const int KeySize = 32;      // 256-bit key size (32 bytes)
+        public const int NonceSize = 12;    // 96-bit nonce for AES-GCM
+        public const int TagSize = 16;      // 128-bit authentication tag
+        public const int KeySize = 32;      // 256-bit key size (32 bytes)
+
         // Chunk size bounds (can be tuned for performance vs. memory)
-        private const int MinChunkSize = 64 * 1024;      // 64 KB
-        private const int MaxChunkSize = 64 * 1024 * 1024; // 64 MB
-        private const int DefaultChunkSize = 24 * 1024 * 1024; // 24 MB (default)
+        public const int MinChunkSize = 64 * 1024;      // 64 KB
+        public const int MaxChunkSize = 64 * 1024 * 1024; // 64 MB
+        public const int DefaultChunkSize = 24 * 1024 * 1024; // 24 MB (default)
+
         // Magic header marker
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
         // Shared buffer pool to reuse byte arrays and reduce GC pressure
