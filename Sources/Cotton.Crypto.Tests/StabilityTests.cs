@@ -1,7 +1,7 @@
-using System;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Cotton.Crypto.Models;
+using Cotton.Crypto.Tests.TestUtils;
 
 namespace Cotton.Crypto.Tests
 {
@@ -155,8 +155,8 @@ namespace Cotton.Crypto.Tests
 
             // Truncate inside ciphertext of first chunk
             var (_, chunks) = ParseAllHeaders(full);
-            Assert.That(chunks.Count, Is.GreaterThan(0));
-            int cut = chunks[0].cipherOffset + (int)chunks[0].hdr.DataLength / 2;
+            Assert.That(chunks, Is.Not.Empty);
+            int cut = chunks[0].cipherOffset + (int)(chunks[0].hdr.DataLength / 2);
             using var truncated1 = new MemoryStream(full.AsSpan(0, cut).ToArray(), writable: false);
             using var dec1 = new MemoryStream();
             Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated1, dec1));
@@ -180,7 +180,7 @@ namespace Cotton.Crypto.Tests
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
 
-            Assert.That(chunks.Count, Is.GreaterThan(0));
+            Assert.That(chunks, Is.Not.Empty);
 
             for (int i = 0; i < chunks.Count; i++)
             {
@@ -224,38 +224,9 @@ namespace Cotton.Crypto.Tests
             outEnc.Position = 0;
             using var slow = new SlowWriteStream(new MemoryStream(), delayMs: 1);
             await cipher.DecryptAsync(outEnc, slow);
-            slow.Inner.Position = 0;
-            Assert.That(slow.Inner.ToArray(), Is.EqualTo(data));
-        }
-
-        private class SlowWriteStream : Stream
-        {
-            public readonly Stream Inner;
-            private readonly int _delayMs;
-            public SlowWriteStream(Stream inner, int delayMs)
-            {
-                Inner = inner;
-                _delayMs = delayMs;
-            }
-            public override bool CanRead => false;
-            public override bool CanSeek => Inner.CanSeek;
-            public override bool CanWrite => true;
-            public override long Length => Inner.Length;
-            public override long Position { get => Inner.Position; set => Inner.Position = value; }
-            public override void Flush() => Inner.Flush();
-            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-            public override long Seek(long offset, SeekOrigin origin) => Inner.Seek(offset, origin);
-            public override void SetLength(long value) => Inner.SetLength(value);
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                Thread.Sleep(_delayMs);
-                Inner.Write(buffer, offset, count);
-            }
-            public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            {
-                await Task.Delay(_delayMs, cancellationToken).ConfigureAwait(false);
-                await Inner.WriteAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
-            }
+            var innerMs = (MemoryStream)slow.Inner;
+            innerMs.Position = 0;
+            Assert.That(innerMs.ToArray(), Is.EqualTo(data));
         }
     }
 }
