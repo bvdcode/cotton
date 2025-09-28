@@ -54,6 +54,12 @@ namespace Cotton.Crypto.Tests.TestUtils
             Inner.Write(buffer, offset, count);
         }
 
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+            await Inner.WriteAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
+        }
+
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
             await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
