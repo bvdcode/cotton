@@ -11,8 +11,7 @@ namespace Cotton.Crypto.Tests
         private static byte[]? _masterKey;
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000; // 1 GB
-        private const int Iterations = 5;
-        private const int ChunkSize = 1_048_576; // 1 MB fixed chunk size
+        private const int Iterations = 20;
 
         [SetUp]
         public void SetUp()
@@ -57,7 +56,7 @@ namespace Cotton.Crypto.Tests
                 using MemoryStream warmInput = new(source, 0, TestDataSizeMb * OneMb, writable: false, publiclyVisible: true);
                 using MemoryStream warmEncrypted = new();
                 AesGcmStreamCipher warmCipher = new(masterKey);
-                await warmCipher.EncryptAsync(warmInput, warmEncrypted, ChunkSize);
+                await warmCipher.EncryptAsync(warmInput, warmEncrypted);
             }
 
             List<double> throughputs = [];
@@ -71,7 +70,7 @@ namespace Cotton.Crypto.Tests
                 using MemoryStream encryptedStream = new(capacity: totalBytes + 4096);
 
                 long t0 = Stopwatch.GetTimestamp();
-                await cipher.EncryptAsync(inputStream, encryptedStream, ChunkSize);
+                await cipher.EncryptAsync(inputStream, encryptedStream);
                 long t1 = Stopwatch.GetTimestamp();
 
                 double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
@@ -104,7 +103,7 @@ namespace Cotton.Crypto.Tests
                 AesGcmStreamCipher cipher = new(masterKey);
                 using MemoryStream input = new(source, 0, totalBytes, writable: false, publiclyVisible: true);
                 using MemoryStream encrypted = new(capacity: totalBytes + 4096);
-                await cipher.EncryptAsync(input, encrypted, ChunkSize);
+                await cipher.EncryptAsync(input, encrypted);
                 encryptedPayload = encrypted.ToArray();
             }
 

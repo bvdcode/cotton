@@ -1,28 +1,6 @@
-// PSEUDOCODE PLAN
-// - Define constants: NonceSize=12, TagSize=16, MinChunkSize=65536, MaxChunkSize=16777216.
-// - Helper methods:
-//   - CreateRandomBytes(int size): returns deterministic random bytes for reproducibility.
-//   - CreateCipher(byte[] masterKey, int keyId=1): wraps masterKey in AesGcmStreamCipher.
-//   - EncryptToMemoryAsync(AesGcmStreamCipher cipher, Stream input, int chunkSize): returns MemoryStream with ciphertext.
-//   - DecryptToMemoryAsync(AesGcmStreamCipher cipher, Stream input): returns MemoryStream with plaintext.
-//   - ParseHeaders(byte[] encrypted): reads file header and first chunk header using AesGcmKeyHeader.FromStream.
-//   - NonSeekableStream wrapper over an inner stream with CanSeek=false.
-// - Tests:
-//   - Constructor_InvalidMasterKey_Throws: masterKey length != 32 => ArgumentException.
-//   - Constructor_InvalidKeyId_Throws: keyId <= 0 => ArgumentOutOfRangeException.
-//   - Encrypt_InvalidChunkSize_Throws_BelowMin and _AboveMax: ArgumentOutOfRangeException.
-//   - RoundTrip_SmallData_DefaultChunk: small plaintext round-trip.
-//   - RoundTrip_LargeData_CustomChunkSizes: parameterized for several chunk sizes, produce multi-chunk data.
-//   - Encrypt_WritesHeader_WithKeyId_AndDataLength: assert KeyId and DataLength in file header for seekable input.
-//   - Encrypt_WritesHeader_NonSeekable_DataLengthZero: non-seekable input => DataLength==0.
-//   - Decrypt_Fails_OnTamperedCiphertext: flip a byte in first chunk ciphertext => CryptographicException.
-//   - Encrypt_Cancellation_Throws: cancel token before encrypt => OperationCanceledException.
-
-using Cotton.Crypto;
+using System.Text;
 using Cotton.Crypto.Models;
 using System.Security.Cryptography;
-using System.Text;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Cotton.Crypto.Tests;
 
