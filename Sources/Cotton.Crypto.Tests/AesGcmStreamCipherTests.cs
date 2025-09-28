@@ -6,10 +6,10 @@ namespace Cotton.Crypto.Tests;
 
 public class AesGcmStreamCipherTests
 {
-    private const int NonceSize = 12;
-    private const int TagSize = 16;
-    private const int MinChunkSize = 65_536;
-    private const int MaxChunkSize = 16_777_216;
+    private const int TagSize = AesGcmStreamCipher.TagSize;
+    private const int NonceSize = AesGcmStreamCipher.NonceSize;
+    private const int MinChunkSize = AesGcmStreamCipher.MinChunkSize;
+    private const int MaxChunkSize = AesGcmStreamCipher.MaxChunkSize;
 
     private static byte[] CreateRandomBytes(int size, int seed = 12345)
     {

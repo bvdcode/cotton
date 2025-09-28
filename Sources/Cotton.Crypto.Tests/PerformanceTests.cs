@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Cotton.Crypto.Helpers;
+using Cotton.Crypto;
 
 namespace Cotton.Crypto.Tests
 {
@@ -11,7 +12,8 @@ namespace Cotton.Crypto.Tests
         private static byte[]? _masterKey;
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000; // 1 GB
-        private const int Iterations = 10;
+        private const int Iterations = 5; // Fewer iterations for sweeps
+        private static readonly int[] sourceArray = [1, 2, 4, 8, 16, 32, 64];
 
         [SetUp]
         public void SetUp()
@@ -38,81 +40,7 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
-        public void Synthetic_RamCopy_Test()
-        {
-            Assert.That(_sharedData, Is.Not.Null);
-            byte[] source = _sharedData!;
-            byte[] destination = new byte[source.Length];
-            TestContext.Out.WriteLine("=== SYNTHETIC RAM COPY PERFORMANCE ===");
-            // Warm-up (not measured)
-            {
-                Buffer.BlockCopy(source, 0, destination, 0, source.Length);
-            }
-            List<double> throughputs = [];
-            for (int i = 0; i < Iterations; i++)
-            {
-                int totalBytes = TestDataSizeMb * OneMb;
-                long t0 = Stopwatch.GetTimestamp();
-                Buffer.BlockCopy(source, 0, destination, 0, totalBytes);
-                long t1 = Stopwatch.GetTimestamp();
-                double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
-                double throughputMBps = TestDataSizeMb / timeSeconds;
-                throughputs.Add(throughputMBps);
-                TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
-            }
-            double avgThroughput = throughputs.Average();
-            TestContext.Out.WriteLine($"Average RAM Copy: {avgThroughput:F1} MB/s");
-        }
-
-        [Test]
-        public async Task Encrypt_PerformanceTest()
-        {
-            Assert.Multiple(() =>
-            {
-                Assert.That(_sharedData, Is.Not.Null);
-                Assert.That(_masterKey, Is.Not.Null);
-            });
-
-            byte[] source = _sharedData!;
-            byte[] masterKey = _masterKey!;
-
-            TestContext.Out.WriteLine("=== ENCRYPTION PERFORMANCE ===");
-
-            // Warm-up (not measured)
-            {
-                using MemoryStream warmInput = new(source, 0, TestDataSizeMb * OneMb, writable: false, publiclyVisible: true);
-                using MemoryStream warmEncrypted = new();
-                AesGcmStreamCipher warmCipher = new(masterKey, threads: null);
-                await warmCipher.EncryptAsync(warmInput, warmEncrypted);
-            }
-
-            List<double> throughputs = [];
-
-            for (int i = 0; i < Iterations; i++)
-            {
-                AesGcmStreamCipher cipher = new(masterKey);
-
-                int totalBytes = TestDataSizeMb * OneMb;
-                using MemoryStream inputStream = new(source, 0, totalBytes, writable: false, publiclyVisible: true);
-                using MemoryStream encryptedStream = new(capacity: totalBytes + 4096);
-
-                long t0 = Stopwatch.GetTimestamp();
-                await cipher.EncryptAsync(inputStream, encryptedStream);
-                long t1 = Stopwatch.GetTimestamp();
-
-                double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
-                double throughputMBps = TestDataSizeMb / timeSeconds;
-                throughputs.Add(throughputMBps);
-
-                TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
-            }
-
-            double avgThroughput = throughputs.Average();
-            TestContext.Out.WriteLine($"Average Encryption: {avgThroughput:F1} MB/s");
-        }
-
-        [Test]
-        public async Task Decrypt_PerformanceTest()
+        public async Task Encrypt_ThreadSweep_ChunkSweep()
         {
             Assert.Multiple(() =>
             {
@@ -124,48 +52,104 @@ namespace Cotton.Crypto.Tests
             byte[] masterKey = _masterKey!;
             int totalBytes = TestDataSizeMb * OneMb;
 
-            // Prepare one ciphertext with the fixed key to reuse between iterations (not measured)
+            int[] threadCounts = GetThreadSweep();
+            int[] chunkSizes = GetChunkSweep();
+
+            TestContext.Out.WriteLine("=== ENCRYPTION THREAD/CHUNK SWEEP ===");
+            TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
+            TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => x / OneMb + "MB"))}");
+            TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
+
+            foreach (int threads in threadCounts)
+            {
+                foreach (int chunkSize in chunkSizes)
+                {
+                    List<double> throughputs = [];
+                    for (int i = 0; i < Iterations; i++)
+                    {
+                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
+                        using var inputStream = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                        using var encryptedStream = new MemoryStream(capacity: totalBytes + 4096);
+                        long t0 = Stopwatch.GetTimestamp();
+                        await cipher.EncryptAsync(inputStream, encryptedStream, chunkSize: chunkSize);
+                        long t1 = Stopwatch.GetTimestamp();
+                        double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
+                        double throughputMBps = TestDataSizeMb / timeSeconds;
+                        throughputs.Add(throughputMBps);
+                    }
+                    double avg = throughputs.Average();
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / OneMb,7} | {avg,9:F1}");
+                }
+            }
+        }
+
+        [Test]
+        public async Task Decrypt_ThreadSweep_ChunkSweep()
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(_sharedData, Is.Not.Null);
+                Assert.That(_masterKey, Is.Not.Null);
+            });
+
+            byte[] source = _sharedData!;
+            byte[] masterKey = _masterKey!;
+            int totalBytes = TestDataSizeMb * OneMb;
+
+            // Prepare one ciphertext for all decrypt sweeps
             byte[] encryptedPayload;
             {
-                AesGcmStreamCipher cipher = new(masterKey);
-                using MemoryStream input = new(source, 0, totalBytes, writable: false, publiclyVisible: true);
-                using MemoryStream encrypted = new(capacity: totalBytes + 4096);
+                var cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
+                using var input = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
+                using var encrypted = new MemoryStream(capacity: totalBytes + 4096);
                 await cipher.EncryptAsync(input, encrypted);
                 encryptedPayload = encrypted.ToArray();
             }
 
-            // Warm-up decrypt (not measured)
+            int[] threadCounts = GetThreadSweep();
+            int[] chunkSizes = GetChunkSweep();
+
+            TestContext.Out.WriteLine("=== DECRYPTION THREAD/CHUNK SWEEP ===");
+            TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
+            TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => x / OneMb + "MB"))}");
+            TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
+
+            foreach (int threads in threadCounts)
             {
-                AesGcmStreamCipher warmCipher = new(masterKey);
-                using MemoryStream warmEncrypted = new(encryptedPayload, writable: false);
-                using MemoryStream warmDecrypted = new(capacity: totalBytes);
-                await warmCipher.DecryptAsync(warmEncrypted, warmDecrypted);
+                foreach (int chunkSize in chunkSizes)
+                {
+                    List<double> throughputs = [];
+                    for (int i = 0; i < Iterations; i++)
+                    {
+                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
+                        using var encryptedStream = new MemoryStream(encryptedPayload, writable: false);
+                        using var decryptedStream = new MemoryStream(capacity: totalBytes);
+                        long t0 = Stopwatch.GetTimestamp();
+                        await cipher.DecryptAsync(encryptedStream, decryptedStream);
+                        long t1 = Stopwatch.GetTimestamp();
+                        double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
+                        double throughputMBps = TestDataSizeMb / timeSeconds;
+                        throughputs.Add(throughputMBps);
+                    }
+                    double avg = throughputs.Average();
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / OneMb,7} | {avg,9:F1}");
+                }
             }
+        }
 
-            TestContext.Out.WriteLine("=== DECRYPTION PERFORMANCE ===");
+        private static int[] GetThreadSweep()
+        {
+            int maxThreads = Environment.ProcessorCount;
+            var values = new List<int> { 1, 2, 4, 8, 16 };
+            if (!values.Contains(maxThreads)) values.Add(maxThreads);
+            return [.. values.Where(x => x <= maxThreads).Distinct().OrderBy(x => x)];
+        }
 
-            List<double> throughputs = [];
-
-            for (int i = 0; i < Iterations; i++)
-            {
-                AesGcmStreamCipher cipher = new(masterKey);
-
-                using MemoryStream encryptedStream = new(encryptedPayload, writable: false);
-                using MemoryStream decryptedStream = new(capacity: totalBytes);
-
-                long t0 = Stopwatch.GetTimestamp();
-                await cipher.DecryptAsync(encryptedStream, decryptedStream);
-                long t1 = Stopwatch.GetTimestamp();
-
-                double timeSeconds = (t1 - t0) / (double)Stopwatch.Frequency;
-                double throughputMBps = TestDataSizeMb / timeSeconds;
-                throughputs.Add(throughputMBps);
-
-                TestContext.Out.WriteLine($"Run {i + 1}: {throughputMBps:F1} MB/s");
-            }
-
-            double avgThroughput = throughputs.Average();
-            TestContext.Out.WriteLine($"Average Decryption: {avgThroughput:F1} MB/s");
+        private static int[] GetChunkSweep()
+        {
+            return [.. sourceArray.Select(x => x * OneMb)];
         }
     }
 }
