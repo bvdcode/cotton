@@ -17,16 +17,16 @@ namespace Cotton.Crypto
         public const int KeySize = 32;      // 256-bit key size (32 bytes)
 
         // Chunk size bounds (can be tuned for performance vs. memory)
-        public const int MinChunkSize = 64 * 1024;      // 64 KB
-        public const int MaxChunkSize = 64 * 1024 * 1024; // 64 MB
-        public const int DefaultChunkSize = 16 * 1024 * 1024; // 24 MB (default)
+        public const int MinChunkSize = 1 * 1024 * 1024;        // 1 MB
+        public const int MaxChunkSize = 64 * 1024 * 1024;       // 64 MB
+        public const int DefaultChunkSize = 16 * 1024 * 1024;   // 16 MB (default)
 
         // Magic header marker
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
         // Shared buffer pool to reuse byte arrays and reduce GC pressure
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         // Concurrency level (number of parallel workers)
-        private readonly int ConcurrencyLevel = Math.Max(2, Environment.ProcessorCount);
+        private readonly int ConcurrencyLevel = Math.Min(4, Environment.ProcessorCount);
 
         public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1, int? threads = null)
         {
