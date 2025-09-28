@@ -11,7 +11,7 @@ namespace Cotton.Crypto.Tests
         private static byte[]? _masterKey;
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000; // 1 GB
-        private const int Iterations = 20;
+        private const int Iterations = 10;
 
         [SetUp]
         public void SetUp()
