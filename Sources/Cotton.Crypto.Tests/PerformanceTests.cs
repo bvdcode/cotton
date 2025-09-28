@@ -12,7 +12,7 @@ namespace Cotton.Crypto.Tests
         private static byte[]? _masterKey;
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000; // 1 GB
-        private const int Iterations = 5;
+        private const int Iterations = 10;
         private static readonly int[] sourceArray = [1, 2, 4, 8, 16, 32, 64];
 
         [SetUp]
