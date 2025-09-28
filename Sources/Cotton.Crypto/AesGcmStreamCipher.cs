@@ -19,7 +19,7 @@ namespace Cotton.Crypto
         // Chunk size bounds (can be tuned for performance vs. memory)
         public const int MinChunkSize = 64 * 1024;      // 64 KB
         public const int MaxChunkSize = 64 * 1024 * 1024; // 64 MB
-        public const int DefaultChunkSize = 24 * 1024 * 1024; // 24 MB (default)
+        public const int DefaultChunkSize = 16 * 1024 * 1024; // 24 MB (default)
 
         // Magic header marker
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
@@ -31,9 +31,13 @@ namespace Cotton.Crypto
         public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1, int? threads = null)
         {
             if (masterKey.Length != KeySize)
+            {
                 throw new ArgumentException($"Master key must be {KeySize} bytes ({KeySize * 8} bits) long.", nameof(masterKey));
+            }
             if (keyId <= 0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(keyId), "Key ID must be a positive integer.");
+            }    
 
             // Store master key as byte array for AesGcm usage
             _masterKeyBytes = masterKey.ToArray();
@@ -219,6 +223,9 @@ namespace Cotton.Crypto
                 workerTasks[i] = Task.Run(async () =>
                 {
                     using var gcm = new AesGcm(fileKey, TagSize);
+                    // Allocate nonce and tag buffers once per worker, outside the loop
+                    byte[] nonceBuffer = new byte[NonceSize];
+                    byte[] tagBuffer = new byte[TagSize];
                     await foreach (EncryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
@@ -226,15 +233,10 @@ namespace Cotton.Crypto
                         EncryptionResult result;
                         try
                         {
-                            // All stackalloc and crypto logic in a local block before any await
-                            Span<byte> nonceSpan = stackalloc byte[NonceSize];
-                            Span<byte> tagSpan = stackalloc byte[TagSize];
-                            {
-                                ComposeNonce(nonceSpan, _keyId, job.Index);
-                                gcm.Encrypt(nonceSpan, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagSpan);
-                                var tagStruct = new Tag128(BitConverter.ToUInt64(tagSpan[..8]), BitConverter.ToUInt64(tagSpan.Slice(8, 8)));
-                                result = new EncryptionResult(job.Index, tagStruct, cipherBuffer, job.DataLength);
-                            }
+                            ComposeNonce(nonceBuffer, _keyId, job.Index);
+                            gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagBuffer);
+                            var tagStruct = new Tag128(BitConverter.ToUInt64(tagBuffer, 0), BitConverter.ToUInt64(tagBuffer, 8));
+                            result = new EncryptionResult(job.Index, tagStruct, cipherBuffer, job.DataLength);
                             await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
                         }
                         catch
