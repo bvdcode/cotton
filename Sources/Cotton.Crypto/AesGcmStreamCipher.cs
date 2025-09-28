@@ -1,12 +1,8 @@
-﻿using Cotton.Crypto.Abstractions;
-using System;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Buffers.Binary;
-using System.IO;
-using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
+using Cotton.Crypto.Abstractions;
+using System.Security.Cryptography;
 
 namespace Cotton.Crypto
 {
@@ -20,16 +16,16 @@ namespace Cotton.Crypto
         private const int KeySize = 32;      // 256-bit key size (32 bytes)
         // Chunk size bounds (can be tuned for performance vs. memory)
         private const int MinChunkSize = 64 * 1024;      // 64 KB
-        private const int MaxChunkSize = 16 * 1024 * 1024; // 16 MB
-        private const int DefaultChunkSize = 8 * 1024 * 1024; // 8 MB (default)
+        private const int MaxChunkSize = 32 * 1024 * 1024; // 32 MB
+        private const int DefaultChunkSize = 24 * 1024 * 1024; // 24 MB (default)
         // Magic header marker
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
         // Shared buffer pool to reuse byte arrays and reduce GC pressure
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         // Concurrency level (number of parallel workers)
-        private static readonly int ConcurrencyLevel = Math.Max(2, Environment.ProcessorCount / 2);
+        private readonly int ConcurrencyLevel = Math.Max(2, Environment.ProcessorCount);
 
-        public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1)
+        public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1, int? threads = null)
         {
             if (masterKey.Length != KeySize)
                 throw new ArgumentException($"Master key must be {KeySize} bytes ({KeySize * 8} bits) long.", nameof(masterKey));
@@ -39,16 +35,28 @@ namespace Cotton.Crypto
             // Store master key as byte array for AesGcm usage
             _masterKeyBytes = masterKey.ToArray();
             _keyId = keyId;
+            if (threads.HasValue && threads.Value > 0)
+            {
+                ConcurrencyLevel = threads.Value;
+            }
         }
 
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
         {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (output == null) throw new ArgumentNullException(nameof(output));
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            ArgumentNullException.ThrowIfNull(input);
+            ArgumentNullException.ThrowIfNull(output);
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            if (!output.CanWrite)
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
+            {
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
+            }
 
             // Generate a random file-specific key (256-bit) and encrypt it with the master key
             byte[] fileKey = BufferPool.Rent(KeySize);
@@ -60,7 +68,7 @@ namespace Cotton.Crypto
                 byte[] fileKeyTag = new byte[TagSize];
                 RandomNumberGenerator.Fill(fileKeyNonce);
                 byte[] encryptedFileKey = new byte[KeySize];
-                using (var gcm = new AesGcm(_masterKeyBytes))
+                using (var gcm = new AesGcm(_masterKeyBytes, TagSize))
                 {
                     gcm.Encrypt(fileKeyNonce, fileKey.AsSpan(0, KeySize), encryptedFileKey, fileKeyTag);
                 }
@@ -88,10 +96,16 @@ namespace Cotton.Crypto
 
         public async Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
         {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (output == null) throw new ArgumentNullException(nameof(output));
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            ArgumentNullException.ThrowIfNull(input);
+            ArgumentNullException.ThrowIfNull(output);
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            if (!output.CanWrite)
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
 
             // Read and parse the file header to obtain encrypted file key and parameters
             FileHeader header = await ReadFileHeaderAsync(input, ct).ConfigureAwait(false);
@@ -104,7 +118,7 @@ namespace Cotton.Crypto
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
             {
-                using (var gcm = new AesGcm(_masterKeyBytes))
+                using (var gcm = new AesGcm(_masterKeyBytes, TagSize))
                 {
                     // Decrypt the 32-byte encrypted file key to retrieve the actual file key
                     gcm.Decrypt(header.Nonce, header.EncryptedKey, header.Tag, fileKey.AsSpan(0, KeySize));
@@ -149,7 +163,7 @@ namespace Cotton.Crypto
             {
                 try
                 {
-                    byte[] buffer = null;
+                    byte[]? buffer = null;
                     while (true)
                     {
                         ct.ThrowIfCancellationRequested();
@@ -201,7 +215,7 @@ namespace Cotton.Crypto
             {
                 workerTasks[i] = Task.Run(async () =>
                 {
-                    using var gcm = new AesGcm(fileKey);
+                    using var gcm = new AesGcm(fileKey, TagSize);
                     await foreach (EncryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
@@ -210,15 +224,12 @@ namespace Cotton.Crypto
                         try
                         {
                             // All stackalloc and crypto logic in a local block before any await
+                            Span<byte> nonceSpan = stackalloc byte[NonceSize];
+                            Span<byte> tagSpan = stackalloc byte[TagSize];
                             {
-                                Span<byte> nonceSpan = stackalloc byte[NonceSize];
-                                Span<byte> tagSpan = stackalloc byte[TagSize];
                                 ComposeNonce(nonceSpan, _keyId, job.Index);
                                 gcm.Encrypt(nonceSpan, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagSpan);
-                                var tagStruct = new Tag128(
-                                    BitConverter.ToUInt64(tagSpan.Slice(0, 8)),
-                                    BitConverter.ToUInt64(tagSpan.Slice(8, 8))
-                                );
+                                var tagStruct = new Tag128(BitConverter.ToUInt64(tagSpan[..8]), BitConverter.ToUInt64(tagSpan.Slice(8, 8)));
                                 result = new EncryptionResult(job.Index, tagStruct, cipherBuffer, job.DataLength);
                             }
                             await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
@@ -367,7 +378,7 @@ namespace Cotton.Crypto
             {
                 workerTasks[i] = Task.Run(async () =>
                 {
-                    using var gcm = new AesGcm(fileKey);
+                    using var gcm = new AesGcm(fileKey, TagSize);
                     await foreach (DecryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
@@ -498,11 +509,11 @@ namespace Cotton.Crypto
         private static void ComposeNonce(Span<byte> destination, int keyId, long chunkIndex)
         {
             BinaryPrimitives.WriteUInt32LittleEndian(destination, unchecked((uint)keyId));
-            BinaryPrimitives.WriteUInt64LittleEndian(destination.Slice(4), unchecked((ulong)chunkIndex));
+            BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
         }
 
         // Parse the initial file header from input stream (magic, lengths, key info)
-        private async Task<FileHeader> ReadFileHeaderAsync(Stream input, CancellationToken ct)
+        private static async Task<FileHeader> ReadFileHeaderAsync(Stream input, CancellationToken ct)
         {
             // Read magic (4 bytes) and header length (4 bytes)
             byte[] headerPrefix = new byte[8];
@@ -537,7 +548,7 @@ namespace Cotton.Crypto
         }
 
         // Parse a chunk header (48 bytes) for the next encrypted chunk
-        private async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, CancellationToken ct)
+        private static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, CancellationToken ct)
         {
             // Read magic + header length + plaintext length + keyId + nonce + tag (total 48 bytes expected)
             byte[] header = new byte[4 + 4 + 8 + 4 + NonceSize + TagSize];
@@ -578,99 +589,58 @@ namespace Cotton.Crypto
         }
 
         // Structs to represent parsed headers and job/result data
-        private readonly struct FileHeader
+        private readonly struct FileHeader(long totalLength, int keyId, byte[] nonce, byte[] tag, byte[] encryptedKey)
         {
-            public long TotalPlaintextLength { get; }
-            public int KeyId { get; }
-            public byte[] Nonce { get; }
-            public byte[] Tag { get; }
-            public byte[] EncryptedKey { get; }
-            public FileHeader(long totalLength, int keyId, byte[] nonce, byte[] tag, byte[] encryptedKey)
-            {
-                TotalPlaintextLength = totalLength;
-                KeyId = keyId;
-                Nonce = nonce;
-                Tag = tag;
-                EncryptedKey = encryptedKey;
-            }
+            public long TotalPlaintextLength { get; } = totalLength;
+            public int KeyId { get; } = keyId;
+            public byte[] Nonce { get; } = nonce;
+            public byte[] Tag { get; } = tag;
+            public byte[] EncryptedKey { get; } = encryptedKey;
         }
-        private readonly struct ChunkHeader
+
+        private readonly struct ChunkHeader(long length, int keyId, byte[] nonce, byte[] tag)
         {
-            public long PlaintextLength { get; }
-            public int KeyId { get; }
-            public byte[] Nonce { get; }
-            public byte[] Tag { get; }
-            public ChunkHeader(long length, int keyId, byte[] nonce, byte[] tag)
-            {
-                PlaintextLength = length;
-                KeyId = keyId;
-                Nonce = nonce;
-                Tag = tag;
-            }
+            public long PlaintextLength { get; } = length;
+            public int KeyId { get; } = keyId;
+            public byte[] Nonce { get; } = nonce;
+            public byte[] Tag { get; } = tag;
         }
-        private readonly struct EncryptionJob
+
+        private readonly struct EncryptionJob(long index, byte[] dataBuffer, int dataLength)
         {
-            public long Index { get; }
-            public byte[] DataBuffer { get; }
-            public int DataLength { get; }
-            public EncryptionJob(long index, byte[] dataBuffer, int dataLength)
-            {
-                Index = index;
-                DataBuffer = dataBuffer;
-                DataLength = dataLength;
-            }
+            public long Index { get; } = index;
+            public byte[] DataBuffer { get; } = dataBuffer;
+            public int DataLength { get; } = dataLength;
         }
-        private readonly struct EncryptionResult
+
+        private readonly struct EncryptionResult(long index, AesGcmStreamCipher.Tag128 tag, byte[] data, int dataLength)
         {
-            public long Index { get; }
-            public Tag128 Tag { get; }
-            public byte[] Data { get; }
-            public int DataLength { get; }
-            public EncryptionResult(long index, Tag128 tag, byte[] data, int dataLength)
-            {
-                Index = index;
-                Tag = tag;
-                Data = data;
-                DataLength = dataLength;
-            }
+            public long Index { get; } = index;
+            public Tag128 Tag { get; } = tag;
+            public byte[] Data { get; } = data;
+            public int DataLength { get; } = dataLength;
         }
-        private readonly struct DecryptionJob
+
+        private readonly struct DecryptionJob(long index, byte[] nonce, byte[] tag, byte[] cipherBuffer, int dataLength)
         {
-            public long Index { get; }
-            public byte[] Nonce { get; }
-            public byte[] Tag { get; }
-            public byte[] Cipher { get; }
-            public int DataLength { get; }
-            public DecryptionJob(long index, byte[] nonce, byte[] tag, byte[] cipherBuffer, int dataLength)
-            {
-                Index = index;
-                Nonce = nonce;
-                Tag = tag;
-                Cipher = cipherBuffer;
-                DataLength = dataLength;
-            }
+            public long Index { get; } = index;
+            public byte[] Nonce { get; } = nonce;
+            public byte[] Tag { get; } = tag;
+            public byte[] Cipher { get; } = cipherBuffer;
+            public int DataLength { get; } = dataLength;
         }
-        private readonly struct DecryptionResult
+
+        private readonly struct DecryptionResult(long index, byte[] data, int dataLength)
         {
-            public long Index { get; }
-            public byte[] Data { get; }
-            public int DataLength { get; }
-            public DecryptionResult(long index, byte[] data, int dataLength)
-            {
-                Index = index;
-                Data = data;
-                DataLength = dataLength;
-            }
+            public long Index { get; } = index;
+            public byte[] Data { get; } = data;
+            public int DataLength { get; } = dataLength;
         }
-        private readonly struct Tag128
+
+        private readonly struct Tag128(ulong low, ulong high)
         {
-            public ulong Low { get; }
-            public ulong High { get; }
-            public Tag128(ulong low, ulong high)
-            {
-                Low = low;
-                High = high;
-            }
+            public ulong Low { get; } = low;
+            public ulong High { get; } = high;
         }
     }
 }
