@@ -1,107 +1,116 @@
-﻿using System.Buffers;
-using Cotton.Crypto.Models;
-using Cotton.Crypto.Helpers;
-using Cotton.Crypto.Abstractions;
-using System.Security.Cryptography;
-using System.Collections.Concurrent;
-using System.Threading.Channels;
+﻿using Cotton.Crypto.Abstractions;
+using System;
+using System.Buffers;
 using System.Buffers.Binary;
+using System.IO;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace Cotton.Crypto
 {
     public class AesGcmStreamCipher : IStreamCipher
     {
         private readonly int _keyId;
-        private readonly ReadOnlyMemory<byte> _masterKey;
-
+        private readonly byte[] _masterKeyBytes;  // Master key as byte array for AesGcm
         // Cryptographic constants
-        private const int NonceSize = 12; // 96 bits
-        private const int TagSize = 16; // 128 bits
-        private const int KeySize = 32; // 256 bits AES key
-
-        // Optimized chunk sizes - use maximum allowed for better performance
-        private const int DefaultChunkSize = 8_388_608; // 8 MB
-        private const int MinChunkSize = 65_536; // 64 KB
-        private const int MaxChunkSize = 16_777_216; // 16 MB
-
-        // Performance optimization: Use shared buffer pools
-        private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
-        private static readonly int ConcurrencyLevel = Math.Max(2, Environment.ProcessorCount);
-        private const int ReorderWindow = 256; // fixed-size window to avoid dictionary allocations
-
-        // Magic header bytes (ASCII for "CTN1")
+        private const int NonceSize = 12;    // 96-bit nonce for AES-GCM
+        private const int TagSize = 16;      // 128-bit authentication tag
+        private const int KeySize = 32;      // 256-bit key size (32 bytes)
+        // Chunk size bounds (can be tuned for performance vs. memory)
+        private const int MinChunkSize = 64 * 1024;      // 64 KB
+        private const int MaxChunkSize = 16 * 1024 * 1024; // 16 MB
+        private const int DefaultChunkSize = 8 * 1024 * 1024; // 8 MB (default)
+        // Magic header marker
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
+        // Shared buffer pool to reuse byte arrays and reduce GC pressure
+        private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
+        // Concurrency level (number of parallel workers)
+        private static readonly int ConcurrencyLevel = Math.Max(2, Environment.ProcessorCount / 2);
 
         public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1)
         {
             if (masterKey.Length != KeySize)
-            {
                 throw new ArgumentException($"Master key must be {KeySize} bytes ({KeySize * 8} bits) long.", nameof(masterKey));
-            }
-            _masterKey = masterKey;
             if (keyId <= 0)
-            {
                 throw new ArgumentOutOfRangeException(nameof(keyId), "Key ID must be a positive integer.");
-            }
-            _keyId = keyId;
-        }
 
-        public async Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
-        {
-            ArgumentNullException.ThrowIfNull(input);
-            ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead)
-                throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite)
-                throw new ArgumentException("Output stream must be writable.", nameof(output));
-            AesGcmKeyHeader keyHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
-            byte[] fileKey = BufferPool.Rent(KeySize);
-            try
-            {
-                using (AesGcm gcm = new(_masterKey.Span, TagSize))
-                {
-                    gcm.Decrypt(keyHeader.Nonce, keyHeader.EncryptedKey, keyHeader.Tag, fileKey.AsSpan(0, KeySize));
-                }
-                // Pass the pooled fileKey directly (no ToArray clone)
-                await DecryptParallelAsync(input, output, fileKey, ct).ConfigureAwait(false);
-            }
-            finally
-            {
-                Array.Clear(fileKey, 0, KeySize);
-                BufferPool.Return(fileKey);
-            }
+            // Store master key as byte array for AesGcm usage
+            _masterKeyBytes = masterKey.ToArray();
+            _keyId = keyId;
         }
 
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
         {
-            ArgumentNullException.ThrowIfNull(input);
-            ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead)
-                throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite)
-                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            if (input == null) throw new ArgumentNullException(nameof(input));
+            if (output == null) throw new ArgumentNullException(nameof(output));
+            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
+            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
+
+            // Generate a random file-specific key (256-bit) and encrypt it with the master key
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
             {
                 RandomNumberGenerator.Fill(fileKey.AsSpan(0, KeySize));
+                // Encrypt the fileKey using master key to produce an encrypted key and authentication tag
                 byte[] fileKeyNonce = new byte[NonceSize];
                 byte[] fileKeyTag = new byte[TagSize];
                 RandomNumberGenerator.Fill(fileKeyNonce);
                 byte[] encryptedFileKey = new byte[KeySize];
-                using (AesGcm gcm = new(_masterKey.Span, TagSize))
+                using (var gcm = new AesGcm(_masterKeyBytes))
                 {
                     gcm.Encrypt(fileKeyNonce, fileKey.AsSpan(0, KeySize), encryptedFileKey, fileKeyTag);
                 }
-                long remainingLength = 0;
+
+                // Determine total plaintext length if known (for header information)
+                long totalPlaintextLength = 0;
                 if (input.CanSeek)
                 {
-                    remainingLength = Math.Max(0, input.Length - input.Position);
+                    totalPlaintextLength = Math.Max(0, input.Length - input.Position);
                 }
-                WriteFileHeader(output, _keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, remainingLength);
-                // Pass the pooled fileKey directly (no extra copy)
-                await EncryptParallelAsync(input, output, fileKey, chunkSize, remainingLength, ct).ConfigureAwait(false);
+
+                // Write the file header (magic + header length + total length + keyId + fileKey nonce/tag + encrypted fileKey)
+                WriteFileHeader(output, _keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, totalPlaintextLength);
+
+                // Encrypt data chunks in parallel using the generated fileKey
+                await EncryptChunksParallelAsync(input, output, fileKey, chunkSize, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Zero out and return the fileKey buffer to pool
+                Array.Clear(fileKey, 0, KeySize);
+                BufferPool.Return(fileKey);
+            }
+        }
+
+        public async Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
+        {
+            if (input == null) throw new ArgumentNullException(nameof(input));
+            if (output == null) throw new ArgumentNullException(nameof(output));
+            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
+            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+
+            // Read and parse the file header to obtain encrypted file key and parameters
+            FileHeader header = await ReadFileHeaderAsync(input, ct).ConfigureAwait(false);
+            if (header.KeyId != _keyId)
+            {
+                throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
+            }
+
+            // Decrypt the file-specific key using the master key
+            byte[] fileKey = BufferPool.Rent(KeySize);
+            try
+            {
+                using (var gcm = new AesGcm(_masterKeyBytes))
+                {
+                    // Decrypt the 32-byte encrypted file key to retrieve the actual file key
+                    gcm.Decrypt(header.Nonce, header.EncryptedKey, header.Tag, fileKey.AsSpan(0, KeySize));
+                }
+                // Decrypt data chunks in parallel using the recovered fileKey
+                await DecryptChunksParallelAsync(input, output, fileKey, ct).ConfigureAwait(false);
             }
             finally
             {
@@ -110,351 +119,558 @@ namespace Cotton.Crypto
             }
         }
 
-        private async Task EncryptParallelAsync(Stream input, Stream output, byte[] fileKey, int chunkSize, long totalSize, CancellationToken ct)
+        private async Task EncryptChunksParallelAsync(Stream input, Stream output, byte[] fileKey, int chunkSize, CancellationToken ct)
         {
-            var channel = Channel.CreateBounded<EncryptionJob>(ConcurrencyLevel * 2);
-            var writer = channel.Writer;
-            var reader = channel.Reader;
+            // Create bounded channels for job queue and results, with capacity to buffer some chunks
+            var jobChannel = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 2)
+            {
+                SingleWriter = true,   // only one producer reading from input
+                SingleReader = false,  // multiple consumer workers
+                FullMode = BoundedChannelFullMode.Wait
+            });
+            var resultChannel = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(ConcurrencyLevel * 2)
+            {
+                SingleWriter = false,  // multiple producers (worker tasks) writing results
+                SingleReader = true,   // single consumer writing output
+                FullMode = BoundedChannelFullMode.Wait
+            });
 
-            var resultsChannel = Channel.CreateBounded<EncryptionResult>(ConcurrencyLevel * 2);
-            var resultsWriter = resultsChannel.Writer;
-            var resultsReader = resultsChannel.Reader;
+            ChannelWriter<EncryptionJob> jobWriter = jobChannel.Writer;
+            ChannelReader<EncryptionJob> jobReader = jobChannel.Reader;
+            ChannelWriter<EncryptionResult> resultWriter = resultChannel.Writer;
+            ChannelReader<EncryptionResult> resultReader = resultChannel.Reader;
 
-            var producerTask = Task.Run(async () =>
+            // Track next chunk index for ordering
+            // Note: use long to avoid overflow for very large files
+            long chunkIndex = 0;
+
+            // Producer task: read input stream, partition into chunks, and enqueue encryption jobs
+            var producer = Task.Run(async () =>
             {
                 try
                 {
-                    int chunkIndex = 0;
+                    byte[] buffer = null;
                     while (true)
                     {
                         ct.ThrowIfCancellationRequested();
-                        byte[] buffer = BufferPool.Rent(chunkSize);
+                        // Rent a buffer for the chunk
+                        buffer = BufferPool.Rent(chunkSize);
                         int bytesRead = 0;
                         try
                         {
+                            // Read up to chunkSize bytes from input
                             bytesRead = await input.ReadAsync(buffer.AsMemory(0, chunkSize), ct).ConfigureAwait(false);
-                            if (bytesRead <= 0)
-                            {
-                                BufferPool.Return(buffer);
-                                break;
-                            }
-                            var job = new EncryptionJob(chunkIndex++, buffer, bytesRead);
-                            await writer.WriteAsync(job, ct).ConfigureAwait(false);
                         }
                         catch
                         {
-                            if (bytesRead <= 0 && buffer is not null)
+                            // If an exception occurs during read, ensure buffer is returned
+                            if (buffer != null)
                             {
                                 BufferPool.Return(buffer);
+                                buffer = null;
                             }
                             throw;
                         }
+
+                        if (bytesRead <= 0)
+                        {
+                            // Reached end of input stream
+                            if (buffer != null)
+                            {
+                                BufferPool.Return(buffer);
+                            }
+                            break;
+                        }
+
+                        // Create a job for this chunk (includes index and the buffer + length)
+                        var job = new EncryptionJob(index: chunkIndex++, dataBuffer: buffer, dataLength: bytesRead);
+                        // Enqueue the job (will wait if channel is full, applying backpressure)
+                        await jobWriter.WriteAsync(job, ct).ConfigureAwait(false);
                     }
                 }
                 finally
                 {
-                    writer.Complete();
+                    // Signal that no more jobs will be produced
+                    jobWriter.TryComplete();
                 }
             }, ct);
 
-            var workerTasks = new List<Task>();
+            // Worker tasks: encrypt chunks in parallel
+            var workerTasks = new Task[ConcurrencyLevel];
             for (int i = 0; i < ConcurrencyLevel; i++)
             {
-                workerTasks.Add(Task.Run(async () =>
+                workerTasks[i] = Task.Run(async () =>
                 {
-                    using var workerGcm = new AesGcm(fileKey, TagSize);
-                    Span<byte> nonce = stackalloc byte[NonceSize];
-                    Span<byte> tagBytes = stackalloc byte[TagSize];
-                    await foreach (var job in reader.ReadAllAsync(ct))
+                    using var gcm = new AesGcm(fileKey);
+                    await foreach (EncryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
-                        byte[] encryptedBuffer = BufferPool.Rent(job.DataLength);
+                        byte[] cipherBuffer = BufferPool.Rent(job.DataLength);
+                        EncryptionResult result;
                         try
                         {
-                            // Deterministic nonce: 32-bit keyId prefix + 64-bit LE chunk index
-                            ComposeNonce(nonce, _keyId, job.Index);
-
-                            // Tag in stackalloc, then store as value type
-                            workerGcm.Encrypt(nonce, job.Data.AsSpan(0, job.DataLength), encryptedBuffer.AsSpan(0, job.DataLength), tagBytes);
-
-                            var tag = new Tag128(
-                                BinaryPrimitives.ReadUInt64LittleEndian(tagBytes),
-                                BinaryPrimitives.ReadUInt64LittleEndian(tagBytes[8..])
-                            );
-
-                            var result = new EncryptionResult(job.Index, tag, encryptedBuffer, job.DataLength);
-                            await resultsWriter.WriteAsync(result, ct).ConfigureAwait(false);
+                            // All stackalloc and crypto logic in a local block before any await
+                            {
+                                Span<byte> nonceSpan = stackalloc byte[NonceSize];
+                                Span<byte> tagSpan = stackalloc byte[TagSize];
+                                ComposeNonce(nonceSpan, _keyId, job.Index);
+                                gcm.Encrypt(nonceSpan, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagSpan);
+                                var tagStruct = new Tag128(
+                                    BitConverter.ToUInt64(tagSpan.Slice(0, 8)),
+                                    BitConverter.ToUInt64(tagSpan.Slice(8, 8))
+                                );
+                                result = new EncryptionResult(job.Index, tagStruct, cipherBuffer, job.DataLength);
+                            }
+                            await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
                         }
                         catch
                         {
-                            BufferPool.Return(encryptedBuffer);
+                            BufferPool.Return(cipherBuffer);
                             throw;
                         }
                         finally
                         {
-                            BufferPool.Return(job.Data);
+                            BufferPool.Return(job.DataBuffer);
                         }
                     }
-                }, ct));
+                }, ct);
             }
 
-            var consumerTask = Task.Run(async () =>
+            // Consumer task: take encrypted results and write to output in order
+            var consumer = Task.Run(async () =>
             {
-                // Fixed-size reordering window to avoid dictionary/hash overhead
-                var window = new EncryptionResult[ReorderWindow];
-                var present = new bool[ReorderWindow];
-                int expectedIndex = 0;
-
-                Span<byte> nonce = stackalloc byte[NonceSize];
-                Span<byte> tagBytes = stackalloc byte[TagSize];
-                await foreach (var result in resultsReader.ReadAllAsync(ct))
+                // Buffer for out-of-order results
+                var waiting = new SortedDictionary<long, EncryptionResult>();
+                long nextToWrite = 0;
+                await foreach (EncryptionResult result in resultReader.ReadAllAsync(ct))
                 {
-                    int slot = result.Index % ReorderWindow;
-                    window[slot] = result;
-                    present[slot] = true;
-
-                    // Drain in order while available
-                    while (true)
+                    if (result.Index == nextToWrite)
                     {
-                        int expectedSlot = expectedIndex % ReorderWindow;
-                        if (!present[expectedSlot]) break;
-                        var nextResult = window[expectedSlot];
-                        if (nextResult.Index != expectedIndex) break; // slot holds a different cycle; wait
-                        try
+                        // This is the next expected chunk - write it immediately
+                        WriteChunkHeader(output, _keyId, result.Index, result.Tag, result.DataLength);
+                        await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+                        // Return cipher buffer after writing
+                        BufferPool.Return(result.Data);
+                        nextToWrite++;
+                        // Write any subsequently ready chunks from the waiting buffer
+                        while (waiting.TryGetValue(nextToWrite, out EncryptionResult nextRes))
                         {
-                            // Reconstruct nonce deterministically
-                            ComposeNonce(nonce, _keyId, expectedIndex);
-
-                            // Materialize tag bytes on stack
-                            BinaryPrimitives.WriteUInt64LittleEndian(tagBytes, nextResult.Tag.Lo);
-                            BinaryPrimitives.WriteUInt64LittleEndian(tagBytes[8..], nextResult.Tag.Hi);
-
-                            WriteChunkHeader(output, _keyId, nonce, tagBytes, nextResult.DataLength);
-                            await output.WriteAsync(nextResult.Data.AsMemory(0, nextResult.DataLength), ct).ConfigureAwait(false);
+                            waiting.Remove(nextToWrite);
+                            WriteChunkHeader(output, _keyId, nextRes.Index, nextRes.Tag, nextRes.DataLength);
+                            await output.WriteAsync(nextRes.Data.AsMemory(0, nextRes.DataLength), ct).ConfigureAwait(false);
+                            BufferPool.Return(nextRes.Data);
+                            nextToWrite++;
                         }
-                        finally
-                        {
-                            BufferPool.Return(nextResult.Data);
-                            present[expectedSlot] = false;
-                        }
-                        expectedIndex++;
                     }
+                    else
+                    {
+                        // Out-of-order result, store it until its turn comes
+                        waiting[result.Index] = result;
+                    }
+                }
+
+                // After channel completion, ensure no leftover results waiting (should not happen if all chunks written)
+                if (waiting.Count > 0)
+                {
+                    throw new InvalidDataException("Missing chunks in output ordering. File may be incomplete or corrupted.");
                 }
             }, ct);
 
+            // Wait for producer and all workers to finish, then complete the result channel
             try
             {
-                await producerTask.ConfigureAwait(false);
+                await producer.ConfigureAwait(false);
                 await Task.WhenAll(workerTasks).ConfigureAwait(false);
             }
             finally
             {
-                resultsWriter.TryComplete();
+                // Signal that no more results will be produced
+                resultWriter.TryComplete();
             }
-            await consumerTask.ConfigureAwait(false);
+            // Wait for the consumer to finish writing all data
+            await consumer.ConfigureAwait(false);
         }
 
-        private static async Task DecryptParallelAsync(Stream input, Stream output, byte[] fileKey, CancellationToken ct)
+        private async Task DecryptChunksParallelAsync(Stream input, Stream output, byte[] fileKey, CancellationToken ct)
         {
-            var channel = Channel.CreateBounded<DecryptionJob>(ConcurrencyLevel * 2);
-            var writer = channel.Writer;
-            var reader = channel.Reader;
+            // Setup channels for decryption jobs and results
+            var jobChannel = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 2)
+            {
+                SingleWriter = true,    // one producer reading input
+                SingleReader = false,   // multiple decryption workers
+                FullMode = BoundedChannelFullMode.Wait
+            });
+            var resultChannel = Channel.CreateBounded<DecryptionResult>(new BoundedChannelOptions(ConcurrencyLevel * 2)
+            {
+                SingleWriter = false,   // multiple producers (workers)
+                SingleReader = true,    // one consumer writing output
+                FullMode = BoundedChannelFullMode.Wait
+            });
 
-            var resultsChannel = Channel.CreateBounded<DecryptionResult>(ConcurrencyLevel * 2);
-            var resultsWriter = resultsChannel.Writer;
-            var resultsReader = resultsChannel.Reader;
+            var jobWriter = jobChannel.Writer;
+            var jobReader = jobChannel.Reader;
+            var resultWriter = resultChannel.Writer;
+            var resultReader = resultChannel.Reader;
 
-            var producerTask = Task.Run(async () =>
+            long chunkIndex = 0;
+
+            // Producer: read each chunk header + ciphertext from input and queue decryption jobs
+            var producer = Task.Run(async () =>
             {
                 try
                 {
-                    int chunkIndex = 0;
                     while (true)
                     {
-                        if (ct.IsCancellationRequested)
-                        {
-                            break;
-                        }
-                        // Check if enough bytes remain for a valid header
+                        ct.ThrowIfCancellationRequested();
+                        // If we can determine stream length, break if not enough for even a header
                         if (input.CanSeek)
                         {
-                            long bytesLeft = input.Length - input.Position;
-                            int minHeaderSize = 4 + 4 + 8 + 4 + NonceSize + TagSize;
-                            if (bytesLeft < minHeaderSize)
-                            {
-                                break;
-                            }
+                            long bytesRemaining = input.Length - input.Position;
+                            if (bytesRemaining < (4 + 4 + 8 + 4 + NonceSize + TagSize))
+                                break; // not enough bytes for another chunk header, end of file
                         }
-                        AesGcmKeyHeader chunkHeader;
+                        // Read and parse the next chunk header
+                        ChunkHeader chunkHeader;
                         try
                         {
-                            chunkHeader = AesGcmKeyHeader.FromStream(input, NonceSize, TagSize);
+                            chunkHeader = await ReadChunkHeaderAsync(input, ct).ConfigureAwait(false);
                         }
                         catch (EndOfStreamException)
                         {
+                            // Cleanly handle EOF
                             break;
                         }
-                        if (chunkHeader.DataLength <= 0 || chunkHeader.DataLength > MaxChunkSize)
+                        // Validate chunk length
+                        if (chunkHeader.PlaintextLength < 0 || chunkHeader.PlaintextLength > MaxChunkSize)
                         {
-                            throw new InvalidDataException("Invalid chunk length in header.");
+                            throw new InvalidDataException("Invalid chunk length in encrypted file.");
                         }
-                        int cipherLen = (int)chunkHeader.DataLength;
-                        byte[] cipherBuffer = BufferPool.Rent(cipherLen);
-                        ReadExactly(input, cipherBuffer, cipherLen);
-                        var job = new DecryptionJob(chunkIndex++, chunkHeader.Nonce, chunkHeader.Tag, cipherBuffer, cipherLen);
-                        await writer.WriteAsync(job, ct).ConfigureAwait(false);
+                        // The chunk length in header indicates how many ciphertext bytes to read
+                        int cipherLength = (int)chunkHeader.PlaintextLength;
+                        byte[] cipherBuffer = BufferPool.Rent(cipherLength);
+                        // Read the ciphertext bytes exactly
+                        await ReadExactlyAsync(input, cipherBuffer, cipherLength, ct).ConfigureAwait(false);
+                        // Enqueue the decryption job
+                        var job = new DecryptionJob(index: chunkIndex++, nonce: chunkHeader.Nonce, tag: chunkHeader.Tag, cipherBuffer: cipherBuffer, dataLength: cipherLength);
+                        await jobWriter.WriteAsync(job, ct).ConfigureAwait(false);
                     }
                 }
                 finally
                 {
-                    writer.Complete();
+                    jobWriter.TryComplete();
                 }
             }, ct);
 
-            var workerTasks = new List<Task>();
+            // Worker tasks: perform decryption in parallel
+            var workerTasks = new Task[ConcurrencyLevel];
             for (int i = 0; i < ConcurrencyLevel; i++)
             {
-                workerTasks.Add(Task.Run(async () =>
+                workerTasks[i] = Task.Run(async () =>
                 {
-                    using var workerGcm = new AesGcm(fileKey, TagSize);
-                    await foreach (var job in reader.ReadAllAsync(ct))
+                    using var gcm = new AesGcm(fileKey);
+                    await foreach (DecryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
+                        // Rent buffer for plaintext output
                         byte[] plainBuffer = BufferPool.Rent(job.DataLength);
                         try
                         {
-                            workerGcm.Decrypt(job.Nonce, job.Cipher.AsSpan(0, job.DataLength), job.Tag, plainBuffer.AsSpan(default, job.DataLength));
+                            // Perform AES-GCM decryption; will throw if authentication fails
+                            gcm.Decrypt(job.Nonce, job.Cipher.AsSpan(0, job.DataLength), job.Tag, plainBuffer.AsSpan(0, job.DataLength));
                             var result = new DecryptionResult(job.Index, plainBuffer, job.DataLength);
-                            await resultsWriter.WriteAsync(result, ct).ConfigureAwait(false);
+                            await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
                         }
                         catch
                         {
                             BufferPool.Return(plainBuffer);
-                            throw;
+                            throw; // propagate error (e.g., authentication tag mismatch)
                         }
                         finally
                         {
+                            // Return cipher buffer to pool
                             BufferPool.Return(job.Cipher);
                         }
                     }
-                }, ct));
+                }, ct);
             }
 
-            var consumerTask = Task.Run(async () =>
+            // Consumer: write plaintext chunks in correct order
+            var consumer = Task.Run(async () =>
             {
-                // Fixed-size reordering window for decryption as well
-                var window = new DecryptionResult[ReorderWindow];
-                var present = new bool[ReorderWindow];
-                int expectedIndex = 0;
-                await foreach (var result in resultsReader.ReadAllAsync(ct))
+                var waiting = new SortedDictionary<long, DecryptionResult>();
+                long nextToWrite = 0;
+                await foreach (DecryptionResult result in resultReader.ReadAllAsync(ct))
                 {
-                    int slot = result.Index % ReorderWindow;
-                    window[slot] = result;
-                    present[slot] = true;
-
-                    while (true)
+                    if (result.Index == nextToWrite)
                     {
-                        int expectedSlot = expectedIndex % ReorderWindow;
-                        if (!present[expectedSlot]) break;
-                        var nextResult = window[expectedSlot];
-                        if (nextResult.Index != expectedIndex) break;
-                        try
+                        // Write plaintext chunk directly to output
+                        await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+                        BufferPool.Return(result.Data);
+                        nextToWrite++;
+                        // Flush any buffered subsequent chunks that are now in order
+                        while (waiting.TryGetValue(nextToWrite, out DecryptionResult nextRes))
                         {
-                            await output.WriteAsync(nextResult.Data.AsMemory(0, nextResult.DataLength), ct).ConfigureAwait(false);
+                            waiting.Remove(nextToWrite);
+                            await output.WriteAsync(nextRes.Data.AsMemory(0, nextRes.DataLength), ct).ConfigureAwait(false);
+                            BufferPool.Return(nextRes.Data);
+                            nextToWrite++;
                         }
-                        finally
-                        {
-                            BufferPool.Return(nextResult.Data);
-                            present[expectedSlot] = false;
-                        }
-                        expectedIndex++;
                     }
+                    else
+                    {
+                        waiting[result.Index] = result;
+                    }
+                }
+                if (waiting.Count > 0)
+                {
+                    throw new InvalidDataException("Decryption output missing chunks. The encrypted data may be incomplete or corrupted.");
                 }
             }, ct);
 
+            // Coordinate completion
             try
             {
-                await producerTask.ConfigureAwait(false);
+                await producer.ConfigureAwait(false);
                 await Task.WhenAll(workerTasks).ConfigureAwait(false);
             }
             finally
             {
-                resultsWriter.TryComplete();
+                resultWriter.TryComplete();
             }
-            await consumerTask.ConfigureAwait(false);
+            await consumer.ConfigureAwait(false);
         }
 
-        private static void WriteFileHeader(Stream output, int keyId, byte[] nonce, byte[] tag, byte[] encryptedKey, long dataLength)
+        // Write the initial file header (metadata about file encryption)
+        private void WriteFileHeader(Stream output, int keyId, byte[] fileKeyNonce, byte[] fileKeyTag, byte[] encryptedFileKey, long totalPlaintextLength)
         {
-            const int headerLength = 4 + 4 + 8 + 4 + NonceSize + TagSize + KeySize;
-            Span<byte> header = stackalloc byte[headerLength];
+            // Calculate header length (includes magic + all header fields)
+            const int HeaderLen = 4 + 4 + 8 + 4 + NonceSize + TagSize + KeySize;
+            Span<byte> header = stackalloc byte[HeaderLen];
             int offset = 0;
+            // Magic "CTN1"
             MagicBytes.CopyTo(header[offset..]);
-            offset += MagicBytes.Length;
-            BitConverter.TryWriteBytes(header[offset..], headerLength);
-            offset += sizeof(int);
-            BitConverter.TryWriteBytes(header[offset..], dataLength);
-            offset += sizeof(long);
+            offset += MagicBytes.Length;                        // 4 bytes
+            BitConverter.TryWriteBytes(header[offset..], HeaderLen);
+            offset += sizeof(int);                              // 4 bytes (header length)
+            BitConverter.TryWriteBytes(header[offset..], totalPlaintextLength);
+            offset += sizeof(long);                             // 8 bytes (total plaintext length)
             BitConverter.TryWriteBytes(header[offset..], keyId);
-            offset += sizeof(int);
-            nonce.CopyTo(header[offset..]);
+            offset += sizeof(int);                              // 4 bytes (key ID)
+            // Copy file key nonce (12 bytes) and tag (16 bytes)
+            fileKeyNonce.CopyTo(header[offset..]);
             offset += NonceSize;
-            tag.CopyTo(header[offset..]);
+            fileKeyTag.CopyTo(header[offset..]);
             offset += TagSize;
-            encryptedKey.CopyTo(header[offset..]);
+            // Copy encrypted file key (32 bytes)
+            encryptedFileKey.CopyTo(header[offset..]);
+            // Write the header to output
             output.Write(header);
         }
 
-        private static void WriteChunkHeader(Stream output, int keyId, ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> tag, int dataLength)
+        // Write a chunk header before each encrypted chunk in the output
+        private void WriteChunkHeader(Stream output, int keyId, long chunkIndex, Tag128 tag, int plaintextLength)
         {
-            const int headerLength = 4 + 4 + 8 + 4 + NonceSize + TagSize;
-            Span<byte> header = stackalloc byte[headerLength];
+            // Each chunk header length (no encrypted key included)
+            const int HeaderLen = 4 + 4 + 8 + 4 + NonceSize + TagSize;  // should equal 48
+            Span<byte> header = stackalloc byte[HeaderLen];
             int offset = 0;
             MagicBytes.CopyTo(header[offset..]);
-            offset += MagicBytes.Length;
-            BitConverter.TryWriteBytes(header[offset..], headerLength);
-            offset += sizeof(int);
-            BitConverter.TryWriteBytes(header[offset..], (long)dataLength);
-            offset += sizeof(long);
+            offset += MagicBytes.Length;                        // 4 bytes
+            BitConverter.TryWriteBytes(header[offset..], HeaderLen);
+            offset += sizeof(int);                              // 4 bytes (header length)
+            BitConverter.TryWriteBytes(header[offset..], (long)plaintextLength);
+            offset += sizeof(long);                             // 8 bytes (ciphertext/plaintext length of chunk)
             BitConverter.TryWriteBytes(header[offset..], keyId);
-            offset += sizeof(int);
-            nonce.CopyTo(header[offset..]);
+            offset += sizeof(int);                              // 4 bytes (key ID)
+            // Reconstruct the 12-byte nonce for this chunk (keyId + chunkIndex)
+            Span<byte> nonceSpan = stackalloc byte[NonceSize];
+            ComposeNonce(nonceSpan, keyId, chunkIndex);
+            nonceSpan.CopyTo(header[offset..]);
             offset += NonceSize;
-            tag.CopyTo(header[offset..]);
+            // Write the 16-byte authentication tag from the Tag128 struct
+            BinaryPrimitives.WriteUInt64LittleEndian(header[offset..], tag.Low);
+            BinaryPrimitives.WriteUInt64LittleEndian(header[(offset + 8)..], tag.High);
+            offset += TagSize;
             output.Write(header);
         }
 
-        private static void WriteChunkHeader(Stream output, int keyId, byte[] nonce, byte[] tag, int dataLength)
+        // Compose a 12-byte nonce (IV) for AES-GCM from a 4-byte keyId and 8-byte chunk index (both little-endian)
+        private static void ComposeNonce(Span<byte> destination, int keyId, long chunkIndex)
         {
-            // Backward-compatible overload
-            WriteChunkHeader(output, keyId, (ReadOnlySpan<byte>)nonce, (ReadOnlySpan<byte>)tag, dataLength);
+            BinaryPrimitives.WriteUInt32LittleEndian(destination, unchecked((uint)keyId));
+            BinaryPrimitives.WriteUInt64LittleEndian(destination.Slice(4), unchecked((ulong)chunkIndex));
         }
 
-        private static void ReadExactly(Stream stream, byte[] buffer, int count)
+        // Parse the initial file header from input stream (magic, lengths, key info)
+        private async Task<FileHeader> ReadFileHeaderAsync(Stream input, CancellationToken ct)
         {
-            int totalBytesRead = 0;
-            while (totalBytesRead < count)
+            // Read magic (4 bytes) and header length (4 bytes)
+            byte[] headerPrefix = new byte[8];
+            await ReadExactlyAsync(input, headerPrefix, 8, ct).ConfigureAwait(false);
+            // Verify magic bytes
+            if (!headerPrefix.AsSpan(0, 4).SequenceEqual(MagicBytes))
             {
-                int bytesRead = stream.Read(buffer, totalBytesRead, count - totalBytesRead);
+                throw new InvalidDataException("Invalid file format: magic header not found.");
+            }
+            int headerLength = BitConverter.ToInt32(headerPrefix, 4);
+            if (headerLength != (4 + 4 + 8 + 4 + NonceSize + TagSize + KeySize))
+            {
+                throw new InvalidDataException("Unsupported file header format (unexpected header length).");
+            }
+            // Read remaining header bytes (after the first 8 bytes we already read)
+            int remainingHeader = headerLength - 8;
+            byte[] headerData = new byte[remainingHeader];
+            await ReadExactlyAsync(input, headerData, remainingHeader, ct).ConfigureAwait(false);
+            // Parse file header fields
+            long totalLength = BitConverter.ToInt64(headerData, 0);
+            int keyId = BitConverter.ToInt32(headerData, 8);
+            // Next 12 bytes: file key nonce
+            byte[] nonce = new byte[NonceSize];
+            Array.Copy(headerData, 12, nonce, 0, NonceSize);
+            // Next 16 bytes: file key tag
+            byte[] tag = new byte[TagSize];
+            Array.Copy(headerData, 12 + NonceSize, tag, 0, TagSize);
+            // Next 32 bytes: encrypted file key
+            byte[] encryptedKey = new byte[KeySize];
+            Array.Copy(headerData, 12 + NonceSize + TagSize, encryptedKey, 0, KeySize);
+            return new FileHeader(totalLength, keyId, nonce, tag, encryptedKey);
+        }
+
+        // Parse a chunk header (48 bytes) for the next encrypted chunk
+        private async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, CancellationToken ct)
+        {
+            // Read magic + header length + plaintext length + keyId + nonce + tag (total 48 bytes expected)
+            byte[] header = new byte[4 + 4 + 8 + 4 + NonceSize + TagSize];
+            await ReadExactlyAsync(input, header, header.Length, ct).ConfigureAwait(false);
+            // Verify magic
+            if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
+            {
+                throw new InvalidDataException("Chunk magic bytes missing or corrupted.");
+            }
+            int headerLength = BitConverter.ToInt32(header, 4);
+            if (headerLength != header.Length)
+            {
+                throw new InvalidDataException("Invalid chunk header length.");
+            }
+            long plaintextLength = BitConverter.ToInt64(header, 8);
+            int keyId = BitConverter.ToInt32(header, 16);
+            // If keyId mismatches the file header's keyId, that's an error (we can optionally check this outside)
+            byte[] nonce = new byte[NonceSize];
+            Array.Copy(header, 20, nonce, 0, NonceSize);
+            byte[] tag = new byte[TagSize];
+            Array.Copy(header, 20 + NonceSize, tag, 0, TagSize);
+            return new ChunkHeader(plaintextLength, keyId, nonce, tag);
+        }
+
+        // Read exactly 'count' bytes from stream into buffer or throw if unable to fill
+        private static async Task ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
+        {
+            int offset = 0;
+            while (offset < count)
+            {
+                int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, count - offset), ct).ConfigureAwait(false);
                 if (bytesRead == 0)
                 {
                     throw new EndOfStreamException("Unexpected end of stream.");
                 }
-                totalBytesRead += bytesRead;
+                offset += bytesRead;
             }
         }
 
-        private static void ComposeNonce(Span<byte> destination, int keyId, long chunkIndex)
+        // Structs to represent parsed headers and job/result data
+        private readonly struct FileHeader
         {
-            // 32-bit prefix from keyId + 64-bit little-endian chunk index
-            BinaryPrimitives.WriteUInt32LittleEndian(destination, unchecked((uint)keyId));
-            BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
+            public long TotalPlaintextLength { get; }
+            public int KeyId { get; }
+            public byte[] Nonce { get; }
+            public byte[] Tag { get; }
+            public byte[] EncryptedKey { get; }
+            public FileHeader(long totalLength, int keyId, byte[] nonce, byte[] tag, byte[] encryptedKey)
+            {
+                TotalPlaintextLength = totalLength;
+                KeyId = keyId;
+                Nonce = nonce;
+                Tag = tag;
+                EncryptedKey = encryptedKey;
+            }
         }
-
-        private readonly record struct EncryptionJob(int Index, byte[] Data, int DataLength);
-        private readonly record struct Tag128(ulong Lo, ulong Hi);
-        private readonly record struct EncryptionResult(int Index, Tag128 Tag, byte[] Data, int DataLength);
-        private readonly record struct DecryptionJob(int Index, byte[] Nonce, byte[] Tag, byte[] Cipher, int DataLength);
-        private readonly record struct DecryptionResult(int Index, byte[] Data, int DataLength);
+        private readonly struct ChunkHeader
+        {
+            public long PlaintextLength { get; }
+            public int KeyId { get; }
+            public byte[] Nonce { get; }
+            public byte[] Tag { get; }
+            public ChunkHeader(long length, int keyId, byte[] nonce, byte[] tag)
+            {
+                PlaintextLength = length;
+                KeyId = keyId;
+                Nonce = nonce;
+                Tag = tag;
+            }
+        }
+        private readonly struct EncryptionJob
+        {
+            public long Index { get; }
+            public byte[] DataBuffer { get; }
+            public int DataLength { get; }
+            public EncryptionJob(long index, byte[] dataBuffer, int dataLength)
+            {
+                Index = index;
+                DataBuffer = dataBuffer;
+                DataLength = dataLength;
+            }
+        }
+        private readonly struct EncryptionResult
+        {
+            public long Index { get; }
+            public Tag128 Tag { get; }
+            public byte[] Data { get; }
+            public int DataLength { get; }
+            public EncryptionResult(long index, Tag128 tag, byte[] data, int dataLength)
+            {
+                Index = index;
+                Tag = tag;
+                Data = data;
+                DataLength = dataLength;
+            }
+        }
+        private readonly struct DecryptionJob
+        {
+            public long Index { get; }
+            public byte[] Nonce { get; }
+            public byte[] Tag { get; }
+            public byte[] Cipher { get; }
+            public int DataLength { get; }
+            public DecryptionJob(long index, byte[] nonce, byte[] tag, byte[] cipherBuffer, int dataLength)
+            {
+                Index = index;
+                Nonce = nonce;
+                Tag = tag;
+                Cipher = cipherBuffer;
+                DataLength = dataLength;
+            }
+        }
+        private readonly struct DecryptionResult
+        {
+            public long Index { get; }
+            public byte[] Data { get; }
+            public int DataLength { get; }
+            public DecryptionResult(long index, byte[] data, int dataLength)
+            {
+                Index = index;
+                Data = data;
+                DataLength = dataLength;
+            }
+        }
+        private readonly struct Tag128
+        {
+            public ulong Low { get; }
+            public ulong High { get; }
+            public Tag128(ulong low, ulong high)
+            {
+                Low = low;
+                High = high;
+            }
+        }
     }
 }
