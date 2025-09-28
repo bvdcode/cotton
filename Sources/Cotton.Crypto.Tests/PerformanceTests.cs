@@ -11,7 +11,7 @@ namespace Cotton.Crypto.Tests
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000; // 1 GB
         private const int Iterations = 10;
-        private static readonly int[] sourceArray = [1, 2, 4, 8, 16, 32, 64];
+        private static readonly int[] chunkSizes = [1, 2, 4, 8, 16, 20, 24, 32, 64];
 
         [SetUp]
         public void SetUp()
@@ -50,7 +50,7 @@ namespace Cotton.Crypto.Tests
             byte[] masterKey = _masterKey!;
             int totalBytes = TestDataSizeMb * OneMb;
 
-            int[] threadCounts = GetThreadSweep();
+            int[] threadCounts = [.. GetThreadSweep()];
             int[] chunkSizes = GetChunkSweep();
 
             TestContext.Out.WriteLine("=== ENCRYPTION THREAD/CHUNK SWEEP ===");
@@ -105,7 +105,7 @@ namespace Cotton.Crypto.Tests
                 encryptedPayload = encrypted.ToArray();
             }
 
-            int[] threadCounts = GetThreadSweep();
+            int[] threadCounts = [.. GetThreadSweep()];
             int[] chunkSizes = GetChunkSweep();
 
             TestContext.Out.WriteLine("=== DECRYPTION THREAD/CHUNK SWEEP ===");
@@ -137,17 +137,20 @@ namespace Cotton.Crypto.Tests
             }
         }
 
-        private static int[] GetThreadSweep()
+        private static IEnumerable<int> GetThreadSweep()
         {
-            int maxThreads = Environment.ProcessorCount;
-            var values = new List<int> { 1, 2, 4, 8, 16 };
-            if (!values.Contains(maxThreads)) values.Add(maxThreads);
-            return [.. values.Where(x => x <= maxThreads).Distinct().OrderBy(x => x)];
+            for (int i = 0; i < Environment.ProcessorCount; i++)
+            {
+                if ((i & (i - 1)) == 0) // power of two
+                {
+                    yield return i;
+                }
+            }
         }
 
         private static int[] GetChunkSweep()
         {
-            return [.. sourceArray.Select(x => x * OneMb)];
+            return [.. chunkSizes.Select(x => x * OneMb)];
         }
     }
 }
