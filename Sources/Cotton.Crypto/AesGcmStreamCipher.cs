@@ -5,6 +5,7 @@ using Cotton.Crypto.Abstractions;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using System.Buffers.Binary;
 
 namespace Cotton.Crypto
 {
@@ -26,6 +27,7 @@ namespace Cotton.Crypto
         // Performance optimization: Use shared buffer pools
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         private static readonly int ConcurrencyLevel = Math.Max(2, Environment.ProcessorCount);
+        private const int ReorderWindow = 256; // fixed-size window to avoid dictionary allocations
 
         // Magic header bytes (ASCII for "CTN1")
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
@@ -60,7 +62,8 @@ namespace Cotton.Crypto
                 {
                     gcm.Decrypt(keyHeader.Nonce, keyHeader.EncryptedKey, keyHeader.Tag, fileKey.AsSpan(0, KeySize));
                 }
-                await DecryptParallelAsync(input, output, fileKey.AsSpan(0, KeySize).ToArray(), ct).ConfigureAwait(false);
+                // Pass the pooled fileKey directly (no ToArray clone)
+                await DecryptParallelAsync(input, output, fileKey, ct).ConfigureAwait(false);
             }
             finally
             {
@@ -97,9 +100,8 @@ namespace Cotton.Crypto
                     remainingLength = Math.Max(0, input.Length - input.Position);
                 }
                 WriteFileHeader(output, _keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, remainingLength);
-                byte[] fileKeyArray = new byte[KeySize];
-                Array.Copy(fileKey, fileKeyArray, KeySize);
-                await EncryptParallelAsync(input, output, fileKeyArray, chunkSize, remainingLength, ct).ConfigureAwait(false);
+                // Pass the pooled fileKey directly (no extra copy)
+                await EncryptParallelAsync(input, output, fileKey, chunkSize, remainingLength, ct).ConfigureAwait(false);
             }
             finally
             {
@@ -123,22 +125,30 @@ namespace Cotton.Crypto
                 try
                 {
                     int chunkIndex = 0;
-                    byte[] readBuffer = BufferPool.Rent(chunkSize);
-                    try
+                    while (true)
                     {
-                        int bytesRead;
-                        while ((bytesRead = input.Read(readBuffer, 0, chunkSize)) > 0)
+                        ct.ThrowIfCancellationRequested();
+                        byte[] buffer = BufferPool.Rent(chunkSize);
+                        int bytesRead = 0;
+                        try
                         {
-                            ct.ThrowIfCancellationRequested();
-                            byte[] chunkData = BufferPool.Rent(bytesRead);
-                            Buffer.BlockCopy(readBuffer, 0, chunkData, 0, bytesRead);
-                            var job = new EncryptionJob(chunkIndex++, chunkData, bytesRead);
+                            bytesRead = await input.ReadAsync(buffer.AsMemory(0, chunkSize), ct).ConfigureAwait(false);
+                            if (bytesRead <= 0)
+                            {
+                                BufferPool.Return(buffer);
+                                break;
+                            }
+                            var job = new EncryptionJob(chunkIndex++, buffer, bytesRead);
                             await writer.WriteAsync(job, ct).ConfigureAwait(false);
                         }
-                    }
-                    finally
-                    {
-                        BufferPool.Return(readBuffer);
+                        catch
+                        {
+                            if (bytesRead <= 0 && buffer is not null)
+                            {
+                                BufferPool.Return(buffer);
+                            }
+                            throw;
+                        }
                     }
                 }
                 finally
@@ -153,17 +163,26 @@ namespace Cotton.Crypto
                 workerTasks.Add(Task.Run(async () =>
                 {
                     using var workerGcm = new AesGcm(fileKey, TagSize);
+                    Span<byte> nonce = stackalloc byte[NonceSize];
+                    Span<byte> tagBytes = stackalloc byte[TagSize];
                     await foreach (var job in reader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
-                        byte[] nonce = new byte[NonceSize];
-                        byte[] tag = new byte[TagSize];
-                        RandomNumberGenerator.Fill(nonce);
                         byte[] encryptedBuffer = BufferPool.Rent(job.DataLength);
                         try
                         {
-                            workerGcm.Encrypt(nonce, job.Data.AsSpan(0, job.DataLength), encryptedBuffer.AsSpan(0, job.DataLength), tag);
-                            var result = new EncryptionResult(job.Index, nonce, tag, encryptedBuffer, job.DataLength);
+                            // Deterministic nonce: 32-bit keyId prefix + 64-bit LE chunk index
+                            ComposeNonce(nonce, _keyId, job.Index);
+
+                            // Tag in stackalloc, then store as value type
+                            workerGcm.Encrypt(nonce, job.Data.AsSpan(0, job.DataLength), encryptedBuffer.AsSpan(0, job.DataLength), tagBytes);
+
+                            var tag = new Tag128(
+                                BinaryPrimitives.ReadUInt64LittleEndian(tagBytes),
+                                BinaryPrimitives.ReadUInt64LittleEndian(tagBytes[8..])
+                            );
+
+                            var result = new EncryptionResult(job.Index, tag, encryptedBuffer, job.DataLength);
                             await resultsWriter.WriteAsync(result, ct).ConfigureAwait(false);
                         }
                         catch
@@ -181,23 +200,43 @@ namespace Cotton.Crypto
 
             var consumerTask = Task.Run(async () =>
             {
-                var pendingResults = new Dictionary<int, EncryptionResult>();
+                // Fixed-size reordering window to avoid dictionary/hash overhead
+                var window = new EncryptionResult[ReorderWindow];
+                var present = new bool[ReorderWindow];
                 int expectedIndex = 0;
+
+                Span<byte> nonce = stackalloc byte[NonceSize];
+                Span<byte> tagBytes = stackalloc byte[TagSize];
                 await foreach (var result in resultsReader.ReadAllAsync(ct))
                 {
-                    pendingResults[result.Index] = result;
-                    while (pendingResults.TryGetValue(expectedIndex, out var nextResult))
+                    int slot = result.Index % ReorderWindow;
+                    window[slot] = result;
+                    present[slot] = true;
+
+                    // Drain in order while available
+                    while (true)
                     {
+                        int expectedSlot = expectedIndex % ReorderWindow;
+                        if (!present[expectedSlot]) break;
+                        var nextResult = window[expectedSlot];
+                        if (nextResult.Index != expectedIndex) break; // slot holds a different cycle; wait
                         try
                         {
-                            WriteChunkHeader(output, _keyId, nextResult.Nonce, nextResult.Tag, nextResult.DataLength);
+                            // Reconstruct nonce deterministically
+                            ComposeNonce(nonce, _keyId, expectedIndex);
+
+                            // Materialize tag bytes on stack
+                            BinaryPrimitives.WriteUInt64LittleEndian(tagBytes, nextResult.Tag.Lo);
+                            BinaryPrimitives.WriteUInt64LittleEndian(tagBytes[8..], nextResult.Tag.Hi);
+
+                            WriteChunkHeader(output, _keyId, nonce, tagBytes, nextResult.DataLength);
                             await output.WriteAsync(nextResult.Data.AsMemory(0, nextResult.DataLength), ct).ConfigureAwait(false);
                         }
                         finally
                         {
                             BufferPool.Return(nextResult.Data);
+                            present[expectedSlot] = false;
                         }
-                        pendingResults.Remove(expectedIndex);
                         expectedIndex++;
                     }
                 }
@@ -215,7 +254,7 @@ namespace Cotton.Crypto
             await consumerTask.ConfigureAwait(false);
         }
 
-        private async Task DecryptParallelAsync(Stream input, Stream output, byte[] fileKey, CancellationToken ct)
+        private static async Task DecryptParallelAsync(Stream input, Stream output, byte[] fileKey, CancellationToken ct)
         {
             var channel = Channel.CreateBounded<DecryptionJob>(ConcurrencyLevel * 2);
             var writer = channel.Writer;
@@ -230,13 +269,22 @@ namespace Cotton.Crypto
                 try
                 {
                     int chunkIndex = 0;
-                    while (!ct.IsCancellationRequested)
+                    while (true)
                     {
-                        if (input.CanSeek && input.Position >= input.Length)
+                        if (ct.IsCancellationRequested)
+                        {
                             break;
-                        long bytesLeft = input.CanSeek ? (input.Length - input.Position) : 1;
-                        if (input.CanSeek && bytesLeft < (4 + 4 + 8 + 4 + NonceSize + TagSize))
-                            break;
+                        }
+                        // Check if enough bytes remain for a valid header
+                        if (input.CanSeek)
+                        {
+                            long bytesLeft = input.Length - input.Position;
+                            int minHeaderSize = 4 + 4 + 8 + 4 + NonceSize + TagSize;
+                            if (bytesLeft < minHeaderSize)
+                            {
+                                break;
+                            }
+                        }
                         AesGcmKeyHeader chunkHeader;
                         try
                         {
@@ -275,7 +323,7 @@ namespace Cotton.Crypto
                         byte[] plainBuffer = BufferPool.Rent(job.DataLength);
                         try
                         {
-                            workerGcm.Decrypt(job.Nonce, job.Cipher.AsSpan(0, job.DataLength), job.Tag, plainBuffer.AsSpan(0, job.DataLength));
+                            workerGcm.Decrypt(job.Nonce, job.Cipher.AsSpan(0, job.DataLength), job.Tag, plainBuffer.AsSpan(default, job.DataLength));
                             var result = new DecryptionResult(job.Index, plainBuffer, job.DataLength);
                             await resultsWriter.WriteAsync(result, ct).ConfigureAwait(false);
                         }
@@ -294,13 +342,22 @@ namespace Cotton.Crypto
 
             var consumerTask = Task.Run(async () =>
             {
-                var pendingResults = new Dictionary<int, DecryptionResult>();
+                // Fixed-size reordering window for decryption as well
+                var window = new DecryptionResult[ReorderWindow];
+                var present = new bool[ReorderWindow];
                 int expectedIndex = 0;
                 await foreach (var result in resultsReader.ReadAllAsync(ct))
                 {
-                    pendingResults[result.Index] = result;
-                    while (pendingResults.TryGetValue(expectedIndex, out var nextResult))
+                    int slot = result.Index % ReorderWindow;
+                    window[slot] = result;
+                    present[slot] = true;
+
+                    while (true)
                     {
+                        int expectedSlot = expectedIndex % ReorderWindow;
+                        if (!present[expectedSlot]) break;
+                        var nextResult = window[expectedSlot];
+                        if (nextResult.Index != expectedIndex) break;
                         try
                         {
                             await output.WriteAsync(nextResult.Data.AsMemory(0, nextResult.DataLength), ct).ConfigureAwait(false);
@@ -308,8 +365,8 @@ namespace Cotton.Crypto
                         finally
                         {
                             BufferPool.Return(nextResult.Data);
+                            present[expectedSlot] = false;
                         }
-                        pendingResults.Remove(expectedIndex);
                         expectedIndex++;
                     }
                 }
@@ -348,7 +405,7 @@ namespace Cotton.Crypto
             output.Write(header);
         }
 
-        private static void WriteChunkHeader(Stream output, int keyId, byte[] nonce, byte[] tag, int dataLength)
+        private static void WriteChunkHeader(Stream output, int keyId, ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> tag, int dataLength)
         {
             const int headerLength = 4 + 4 + 8 + 4 + NonceSize + TagSize;
             Span<byte> header = stackalloc byte[headerLength];
@@ -367,6 +424,12 @@ namespace Cotton.Crypto
             output.Write(header);
         }
 
+        private static void WriteChunkHeader(Stream output, int keyId, byte[] nonce, byte[] tag, int dataLength)
+        {
+            // Backward-compatible overload
+            WriteChunkHeader(output, keyId, (ReadOnlySpan<byte>)nonce, (ReadOnlySpan<byte>)tag, dataLength);
+        }
+
         private static void ReadExactly(Stream stream, byte[] buffer, int count)
         {
             int totalBytesRead = 0;
@@ -381,8 +444,16 @@ namespace Cotton.Crypto
             }
         }
 
+        private static void ComposeNonce(Span<byte> destination, int keyId, long chunkIndex)
+        {
+            // 32-bit prefix from keyId + 64-bit little-endian chunk index
+            BinaryPrimitives.WriteUInt32LittleEndian(destination, unchecked((uint)keyId));
+            BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
+        }
+
         private readonly record struct EncryptionJob(int Index, byte[] Data, int DataLength);
-        private readonly record struct EncryptionResult(int Index, byte[] Nonce, byte[] Tag, byte[] Data, int DataLength);
+        private readonly record struct Tag128(ulong Lo, ulong Hi);
+        private readonly record struct EncryptionResult(int Index, Tag128 Tag, byte[] Data, int DataLength);
         private readonly record struct DecryptionJob(int Index, byte[] Nonce, byte[] Tag, byte[] Cipher, int DataLength);
         private readonly record struct DecryptionResult(int Index, byte[] Data, int DataLength);
     }
