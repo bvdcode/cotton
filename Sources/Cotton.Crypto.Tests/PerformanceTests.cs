@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics;
-using Cotton.Crypto.Helpers;
-using Cotton.Crypto;
 
 namespace Cotton.Crypto.Tests
 {
