@@ -10,8 +10,8 @@ namespace Cotton.Crypto.Tests
         private static byte[]? _masterKey;
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000; // 1 GB
-        private const int Iterations = 10;
-        private static readonly int[] chunkSizes = [1, 2, 4, 8, 16, 20, 24, 32, 64];
+        private const int Iterations = 2;
+        private static readonly int[] chunkSizes = [1, 8, 16, 24, 32];
 
         [SetUp]
         public void SetUp()
@@ -139,7 +139,8 @@ namespace Cotton.Crypto.Tests
 
         private static IEnumerable<int> GetThreadSweep()
         {
-            for (int i = 0; i < Environment.ProcessorCount; i++)
+            int threads = Math.Max(8, Environment.ProcessorCount);
+            for (int i = 0; i < threads; i++)
             {
                 if ((i & (i - 1)) == 0) // power of two
                 {

@@ -223,7 +223,7 @@ public class AesGcmStreamCipherTests
         Assert.ThrowsAsync<TaskCanceledException>(async () => await cipher.EncryptAsync(input, output, chunkSize: 65_536, ct: cts.Token));
     }
 
-    private sealed class NonSeekableReadStream(Stream inner) : Stream
+    private class NonSeekableReadStream(Stream inner) : Stream
     {
         private readonly Stream _inner = inner ?? throw new ArgumentNullException(nameof(inner));
 
