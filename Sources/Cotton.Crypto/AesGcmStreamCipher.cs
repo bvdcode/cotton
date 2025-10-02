@@ -491,7 +491,7 @@ namespace Cotton.Crypto
         }
 
         // Write a chunk header before each encrypted chunk in the output
-        private void WriteChunkHeader(Stream output, int keyId, long chunkIndex, Tag128 tag, int plaintextLength)
+        private void WriteChunkHeader(Stream output, int keyId, long chunkIndex, Tag128 tag, int textLength)
         {
             // Each chunk header length (no encrypted key included)
             const int HeaderLen = 4 + 4 + 8 + 4 + NonceSize + TagSize;  // should equal 48
@@ -501,7 +501,7 @@ namespace Cotton.Crypto
             offset += MagicBytes.Length;                        // 4 bytes
             BitConverter.TryWriteBytes(header[offset..], HeaderLen);
             offset += sizeof(int);                              // 4 bytes (header length)
-            BitConverter.TryWriteBytes(header[offset..], (long)plaintextLength);
+            BitConverter.TryWriteBytes(header[offset..], (long)textLength);
             offset += sizeof(long);                             // 8 bytes (ciphertext/plaintext length of chunk)
             BitConverter.TryWriteBytes(header[offset..], keyId);
             offset += sizeof(int);                              // 4 bytes (key ID)
