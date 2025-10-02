@@ -8,10 +8,10 @@ namespace Cotton.Crypto.Internals
         public int DataLength { get; } = dataLength;
     }
 
-    internal readonly struct EncryptionResult(long index, Tag128 tag, byte[] data, int dataLength)
+    internal readonly struct EncryptionResult(long index, byte[] tag, byte[] data, int dataLength)
     {
         public long Index { get; } = index;
-        public Tag128 Tag { get; } = tag;
+        public byte[] Tag { get; } = tag; // raw 16 bytes, do not reinterpret endianness
         public byte[] Data { get; } = data;
         public int DataLength { get; } = dataLength;
     }
