@@ -296,15 +296,21 @@ namespace Cotton.Crypto
                             break;
                         }
                         if (chunkHeader.PlaintextLength < 0 || chunkHeader.PlaintextLength > MaxChunkSize)
-                            throw new InvalidDataException("Invalid chunk length in encrypted file.");
+                        {
+                            throw new AuthenticationTagMismatchException("Invalid chunk length in encrypted file.");
+                        }
                         // Validate keyId in chunk header matches expected
                         if (chunkHeader.KeyId != _keyId)
-                            throw new InvalidDataException("Chunk key ID mismatch.");
+                        {
+                            throw new AuthenticationTagMismatchException("Chunk key ID mismatch.");
+                        }
                         // Validate nonce in chunk header matches deterministic composition
                         byte[] expectedNonce = new byte[NonceSize];
                         AesGcmStreamFormat.ComposeNonce(expectedNonce, _keyId, chunkIndex);
                         if (!expectedNonce.AsSpan().SequenceEqual(chunkHeader.Nonce))
-                            throw new InvalidDataException("Chunk nonce mismatch.");
+                        {
+                            throw new AuthenticationTagMismatchException("Chunk nonce mismatch.");
+                        }
 
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipherBuffer = BufferPool.Rent(cipherLength);
