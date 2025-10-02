@@ -12,7 +12,7 @@ namespace Cotton.Crypto.Internals
         public byte[] EncryptedKey { get; } = encryptedKey;
     }
 
-    // Internal representation of a per-chunk header
+    // Internal representation of a per-chunk header (nonce stored in header for compatibility)
     internal readonly struct ChunkHeader(long length, int keyId, byte[] nonce, byte[] tag)
     {
         public long PlaintextLength { get; } = length;
@@ -26,11 +26,29 @@ namespace Cotton.Crypto.Internals
         // Magic header marker shared across file and chunk headers
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
 
-        // Compose a 12-byte nonce (IV) for AES-GCM from a 4-byte keyId and 8-byte chunk index (both little-endian)
         public static void ComposeNonce(Span<byte> destination, int keyId, long chunkIndex)
         {
             BinaryPrimitives.WriteUInt32LittleEndian(destination, unchecked((uint)keyId));
             BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
+        }
+
+        // Build canonical 32-byte AAD in Little-Endian order
+        // Layout: [0..3] Magic, [4..7] Version(1), [8..11] KeyId, [12..19] ChunkIndex, [20..27] PlainLen, [28..31] Flags(0)
+        public static void BuildChunkAad(Span<byte> aad32, int keyId, long chunkIndex, long plainLength)
+        {
+            if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
+            // Magic (raw bytes)
+            MagicBytes.CopyTo(aad32[..4]);
+            // Version = 1
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 1);
+            // KeyId
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(8, 4), keyId);
+            // ChunkIndex
+            BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(12, 8), chunkIndex);
+            // Plaintext length
+            BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(20, 8), plainLength);
+            // Flags (reserved = 0 for now)
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(28, 4), 0);
         }
 
         public static void WriteFileHeader(Stream output, int keyId, byte[] fileKeyNonce, byte[] fileKeyTag, byte[] encryptedFileKey, long totalPlaintextLength, int nonceSize, int tagSize, int keySize)
@@ -59,9 +77,10 @@ namespace Cotton.Crypto.Internals
             output.Write(header);
         }
 
-        public static void WriteChunkHeader(Stream output, int keyId, long chunkIndex, ReadOnlySpan<byte> tag, int textLength, int nonceSize, int tagSize)
+        // Include nonce in chunk header for compatibility
+        public static void WriteChunkHeader(Stream output, int keyId, long chunkIndex, ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> tag, int textLength, int nonceSize, int tagSize)
         {
-            int headerLen = 4 + 4 + 8 + 4 + nonceSize + tagSize;  // should equal 48 for 12/16 sizes
+            int headerLen = 4 + 4 + 8 + 4 + nonceSize + tagSize;  // magic + headerLen + plainLen + keyId + tag
             Span<byte> header = stackalloc byte[headerLen];
             int offset = 0;
             MagicBytes.CopyTo(header[offset..]);
@@ -72,10 +91,7 @@ namespace Cotton.Crypto.Internals
             offset += sizeof(long);                             // 8 bytes (length of chunk)
             BinaryPrimitives.WriteInt32LittleEndian(header[offset..], keyId);
             offset += sizeof(int);                              // 4 bytes (key ID)
-            // Reconstruct the 12-byte nonce for this chunk (keyId + chunkIndex) and write as raw bytes
-            Span<byte> nonceSpan = stackalloc byte[nonceSize];
-            ComposeNonce(nonceSpan, keyId, chunkIndex);
-            nonceSpan.CopyTo(header[offset..]);
+            nonce.CopyTo(header[offset..]);
             offset += nonceSize;
             // Copy the authentication tag as raw bytes, do not reinterpret endianness
             tag.CopyTo(header[offset..]);

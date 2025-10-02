@@ -11,25 +11,24 @@ namespace Cotton.Crypto.Internals
     internal readonly struct EncryptionResult(long index, byte[] tag, byte[] data, int dataLength)
     {
         public long Index { get; } = index;
-        public byte[] Tag { get; } = tag; // raw 16 bytes, do not reinterpret endianness
-        public byte[] Data { get; } = data;
+        public byte[] Tag { get; } = tag; // raw 16 bytes, rented from pool
+        public byte[] Data { get; } = data; // ciphertext buffer, rented from pool
         public int DataLength { get; } = dataLength;
     }
 
     // Work queue and results for decryption pipeline
-    internal readonly struct DecryptionJob(long index, byte[] nonce, byte[] tag, byte[] cipherBuffer, int dataLength)
+    internal readonly struct DecryptionJob(long index, byte[] tag, byte[] cipherBuffer, int dataLength)
     {
         public long Index { get; } = index;
-        public byte[] Nonce { get; } = nonce;
-        public byte[] Tag { get; } = tag;
-        public byte[] Cipher { get; } = cipherBuffer;
+        public byte[] Tag { get; } = tag; // raw 16 bytes
+        public byte[] Cipher { get; } = cipherBuffer; // rented from pool
         public int DataLength { get; } = dataLength;
     }
 
     internal readonly struct DecryptionResult(long index, byte[] data, int dataLength)
     {
         public long Index { get; } = index;
-        public byte[] Data { get; } = data;
+        public byte[] Data { get; } = data; // rented from pool
         public int DataLength { get; } = dataLength;
     }
 }
