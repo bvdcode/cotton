@@ -154,13 +154,12 @@ namespace Cotton.Crypto
                 FullMode = BoundedChannelFullMode.Wait
             });
 
-            ChannelWriter<EncryptionJob> jobWriter = jobChannel.Writer;
-            ChannelReader<EncryptionJob> jobReader = jobChannel.Reader;
-            ChannelWriter<EncryptionResult> resultWriter = resultChannel.Writer;
-            ChannelReader<EncryptionResult> resultReader = resultChannel.Reader;
+            var jobWriter = jobChannel.Writer;
+            var jobReader = jobChannel.Reader;
+            var resultWriter = resultChannel.Writer;
+            var resultReader = resultChannel.Reader;
 
             // Track next chunk index for ordering
-            // Note: use long to avoid overflow for very large files
             long chunkIndex = 0;
 
             // Producer task: read input stream, partition into chunks, and enqueue encryption jobs
@@ -228,14 +227,11 @@ namespace Cotton.Crypto
                     {
                         ct.ThrowIfCancellationRequested();
                         byte[] cipherBuffer = BufferPool.Rent(job.DataLength);
-                        EncryptionResult result;
                         try
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, _keyId, job.Index);
                             gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagBuffer);
-                            var tagStruct = new Tag128(BitConverter.ToUInt64(tagBuffer, 0), BitConverter.ToUInt64(tagBuffer, 8));
-                            result = new EncryptionResult(job.Index, tagStruct, cipherBuffer, job.DataLength);
-                            await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
+                            await resultWriter.WriteAsync(new EncryptionResult(job.Index, [.. tagBuffer], cipherBuffer, job.DataLength), ct).ConfigureAwait(false);
                         }
                         catch
                         {
