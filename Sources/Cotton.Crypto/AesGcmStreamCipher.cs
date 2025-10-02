@@ -208,7 +208,6 @@ namespace Cotton.Crypto
                 {
                     if (result.Index == nextToWrite)
                     {
-                        // write chunk header with nonce included for compatibility
                         byte[] nonce = new byte[NonceSize];
                         AesGcmStreamFormat.ComposeNonce(nonce, _keyId, result.Index);
                         AesGcmStreamFormat.WriteChunkHeader(output, _keyId, result.Index, nonce, result.Tag, result.DataLength, NonceSize, TagSize);
@@ -298,6 +297,15 @@ namespace Cotton.Crypto
                         }
                         if (chunkHeader.PlaintextLength < 0 || chunkHeader.PlaintextLength > MaxChunkSize)
                             throw new InvalidDataException("Invalid chunk length in encrypted file.");
+                        // Validate keyId in chunk header matches expected
+                        if (chunkHeader.KeyId != _keyId)
+                            throw new InvalidDataException("Chunk key ID mismatch.");
+                        // Validate nonce in chunk header matches deterministic composition
+                        byte[] expectedNonce = new byte[NonceSize];
+                        AesGcmStreamFormat.ComposeNonce(expectedNonce, _keyId, chunkIndex);
+                        if (!expectedNonce.AsSpan().SequenceEqual(chunkHeader.Nonce))
+                            throw new InvalidDataException("Chunk nonce mismatch.");
+
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipherBuffer = BufferPool.Rent(cipherLength);
                         await AesGcmStreamFormat.ReadExactlyAsync(input, cipherBuffer, cipherLength, ct).ConfigureAwait(false);

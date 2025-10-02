@@ -140,7 +140,7 @@ namespace Cotton.Crypto.Tests
         private static IEnumerable<int> GetThreadSweep()
         {
             int threads = Math.Max(8, Environment.ProcessorCount);
-            for (int i = 0; i < threads; i++)
+            for (int i = 1; i < threads; i++)
             {
                 if ((i & (i - 1)) == 0) // power of two
                 {
