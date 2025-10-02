@@ -1,5 +1,5 @@
 ﻿using System.Buffers;
-using System.Buffers.Binary;
+using Cotton.Crypto.Internals;
 using System.Threading.Channels;
 using Cotton.Crypto.Abstractions;
 using System.Security.Cryptography;
@@ -21,8 +21,6 @@ namespace Cotton.Crypto
         public const int MaxChunkSize = 64 * 1024 * 1024;       // 64 MB
         public const int DefaultChunkSize = 16 * 1024 * 1024;   // 16 MB (default)
 
-        // Magic header marker
-        private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
         // Shared buffer pool to reuse byte arrays and reduce GC pressure
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         // Concurrency level (number of parallel workers)
@@ -88,7 +86,7 @@ namespace Cotton.Crypto
                 }
 
                 // Write the file header (magic + header length + total length + keyId + fileKey nonce/tag + encrypted fileKey)
-                WriteFileHeader(output, _keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, totalPlaintextLength);
+                AesGcmStreamFormat.WriteFileHeader(output, _keyId, fileKeyNonce, fileKeyTag, encryptedFileKey, totalPlaintextLength, NonceSize, TagSize, KeySize);
 
                 // Encrypt data chunks in parallel using the generated fileKey
                 await EncryptChunksParallelAsync(input, output, fileKey, chunkSize, ct).ConfigureAwait(false);
@@ -115,7 +113,7 @@ namespace Cotton.Crypto
             }
 
             // Read and parse the file header to obtain encrypted file key and parameters
-            FileHeader header = await ReadFileHeaderAsync(input, ct).ConfigureAwait(false);
+            FileHeader header = await AesGcmStreamFormat.ReadFileHeaderAsync(input, NonceSize, TagSize, KeySize, ct).ConfigureAwait(false);
             if (header.KeyId != _keyId)
             {
                 throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
@@ -233,7 +231,7 @@ namespace Cotton.Crypto
                         EncryptionResult result;
                         try
                         {
-                            ComposeNonce(nonceBuffer, _keyId, job.Index);
+                            AesGcmStreamFormat.ComposeNonce(nonceBuffer, _keyId, job.Index);
                             gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagBuffer);
                             var tagStruct = new Tag128(BitConverter.ToUInt64(tagBuffer, 0), BitConverter.ToUInt64(tagBuffer, 8));
                             result = new EncryptionResult(job.Index, tagStruct, cipherBuffer, job.DataLength);
@@ -263,7 +261,7 @@ namespace Cotton.Crypto
                     if (result.Index == nextToWrite)
                     {
                         // This is the next expected chunk - write it immediately
-                        WriteChunkHeader(output, _keyId, result.Index, result.Tag, result.DataLength);
+                        AesGcmStreamFormat.WriteChunkHeader(output, _keyId, result.Index, result.Tag, result.DataLength, NonceSize, TagSize);
                         await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
                         // Return cipher buffer after writing
                         BufferPool.Return(result.Data);
@@ -272,7 +270,7 @@ namespace Cotton.Crypto
                         while (waiting.TryGetValue(nextToWrite, out EncryptionResult nextRes))
                         {
                             waiting.Remove(nextToWrite);
-                            WriteChunkHeader(output, _keyId, nextRes.Index, nextRes.Tag, nextRes.DataLength);
+                            AesGcmStreamFormat.WriteChunkHeader(output, _keyId, nextRes.Index, nextRes.Tag, nextRes.DataLength, NonceSize, TagSize);
                             await output.WriteAsync(nextRes.Data.AsMemory(0, nextRes.DataLength), ct).ConfigureAwait(false);
                             BufferPool.Return(nextRes.Data);
                             nextToWrite++;
@@ -356,7 +354,7 @@ namespace Cotton.Crypto
                         ChunkHeader chunkHeader;
                         try
                         {
-                            chunkHeader = await ReadChunkHeaderAsync(input, ct).ConfigureAwait(false);
+                            chunkHeader = await AesGcmStreamFormat.ReadChunkHeaderAsync(input, NonceSize, TagSize, ct).ConfigureAwait(false);
                         }
                         catch (EndOfStreamException)
                         {
@@ -372,7 +370,7 @@ namespace Cotton.Crypto
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipherBuffer = BufferPool.Rent(cipherLength);
                         // Read the ciphertext bytes exactly
-                        await ReadExactlyAsync(input, cipherBuffer, cipherLength, ct).ConfigureAwait(false);
+                        await AesGcmStreamFormat.ReadExactlyAsync(input, cipherBuffer, cipherLength, ct).ConfigureAwait(false);
                         // Enqueue the decryption job
                         var job = new DecryptionJob(index: chunkIndex++, nonce: chunkHeader.Nonce, tag: chunkHeader.Tag, cipherBuffer: cipherBuffer, dataLength: cipherLength);
                         await jobWriter.WriteAsync(job, ct).ConfigureAwait(false);
@@ -461,198 +459,6 @@ namespace Cotton.Crypto
                 resultWriter.TryComplete();
             }
             await consumer.ConfigureAwait(false);
-        }
-
-        // Write the initial file header (metadata about file encryption)
-        private void WriteFileHeader(Stream output, int keyId, byte[] fileKeyNonce, byte[] fileKeyTag, byte[] encryptedFileKey, long totalPlaintextLength)
-        {
-            // Calculate header length (includes magic + all header fields)
-            const int HeaderLen = 4 + 4 + 8 + 4 + NonceSize + TagSize + KeySize;
-            Span<byte> header = stackalloc byte[HeaderLen];
-            int offset = 0;
-            // Magic "CTN1"
-            MagicBytes.CopyTo(header[offset..]);
-            offset += MagicBytes.Length;                        // 4 bytes
-            BitConverter.TryWriteBytes(header[offset..], HeaderLen);
-            offset += sizeof(int);                              // 4 bytes (header length)
-            BitConverter.TryWriteBytes(header[offset..], totalPlaintextLength);
-            offset += sizeof(long);                             // 8 bytes (total plaintext length)
-            BitConverter.TryWriteBytes(header[offset..], keyId);
-            offset += sizeof(int);                              // 4 bytes (key ID)
-            // Copy file key nonce (12 bytes) and tag (16 bytes)
-            fileKeyNonce.CopyTo(header[offset..]);
-            offset += NonceSize;
-            fileKeyTag.CopyTo(header[offset..]);
-            offset += TagSize;
-            // Copy encrypted file key (32 bytes)
-            encryptedFileKey.CopyTo(header[offset..]);
-            // Write the header to output
-            output.Write(header);
-        }
-
-        // Write a chunk header before each encrypted chunk in the output
-        private void WriteChunkHeader(Stream output, int keyId, long chunkIndex, Tag128 tag, int textLength)
-        {
-            // Each chunk header length (no encrypted key included)
-            const int HeaderLen = 4 + 4 + 8 + 4 + NonceSize + TagSize;  // should equal 48
-            Span<byte> header = stackalloc byte[HeaderLen];
-            int offset = 0;
-            MagicBytes.CopyTo(header[offset..]);
-            offset += MagicBytes.Length;                        // 4 bytes
-            BitConverter.TryWriteBytes(header[offset..], HeaderLen);
-            offset += sizeof(int);                              // 4 bytes (header length)
-            BitConverter.TryWriteBytes(header[offset..], (long)textLength);
-            offset += sizeof(long);                             // 8 bytes (ciphertext/plaintext length of chunk)
-            BitConverter.TryWriteBytes(header[offset..], keyId);
-            offset += sizeof(int);                              // 4 bytes (key ID)
-            // Reconstruct the 12-byte nonce for this chunk (keyId + chunkIndex)
-            Span<byte> nonceSpan = stackalloc byte[NonceSize];
-            ComposeNonce(nonceSpan, keyId, chunkIndex);
-            nonceSpan.CopyTo(header[offset..]);
-            offset += NonceSize;
-            // Write the 16-byte authentication tag from the Tag128 struct
-            BinaryPrimitives.WriteUInt64LittleEndian(header[offset..], tag.Low);
-            BinaryPrimitives.WriteUInt64LittleEndian(header[(offset + 8)..], tag.High);
-            offset += TagSize;
-            output.Write(header);
-        }
-
-        // Compose a 12-byte nonce (IV) for AES-GCM from a 4-byte keyId and 8-byte chunk index (both little-endian)
-        private static void ComposeNonce(Span<byte> destination, int keyId, long chunkIndex)
-        {
-            BinaryPrimitives.WriteUInt32LittleEndian(destination, unchecked((uint)keyId));
-            BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
-        }
-
-        // Parse the initial file header from input stream (magic, lengths, key info)
-        private static async Task<FileHeader> ReadFileHeaderAsync(Stream input, CancellationToken ct)
-        {
-            // Read magic (4 bytes) and header length (4 bytes)
-            byte[] headerPrefix = new byte[8];
-            await ReadExactlyAsync(input, headerPrefix, 8, ct).ConfigureAwait(false);
-            // Verify magic bytes
-            if (!headerPrefix.AsSpan(0, 4).SequenceEqual(MagicBytes))
-            {
-                throw new InvalidDataException("Invalid file format: magic header not found.");
-            }
-            int headerLength = BitConverter.ToInt32(headerPrefix, 4);
-            if (headerLength != (4 + 4 + 8 + 4 + NonceSize + TagSize + KeySize))
-            {
-                throw new InvalidDataException("Unsupported file header format (unexpected header length).");
-            }
-            // Read remaining header bytes (after the first 8 bytes we already read)
-            int remainingHeader = headerLength - 8;
-            byte[] headerData = new byte[remainingHeader];
-            await ReadExactlyAsync(input, headerData, remainingHeader, ct).ConfigureAwait(false);
-            // Parse file header fields
-            long totalLength = BitConverter.ToInt64(headerData, 0);
-            int keyId = BitConverter.ToInt32(headerData, 8);
-            // Next 12 bytes: file key nonce
-            byte[] nonce = new byte[NonceSize];
-            Array.Copy(headerData, 12, nonce, 0, NonceSize);
-            // Next 16 bytes: file key tag
-            byte[] tag = new byte[TagSize];
-            Array.Copy(headerData, 12 + NonceSize, tag, 0, TagSize);
-            // Next 32 bytes: encrypted file key
-            byte[] encryptedKey = new byte[KeySize];
-            Array.Copy(headerData, 12 + NonceSize + TagSize, encryptedKey, 0, KeySize);
-            return new FileHeader(totalLength, keyId, nonce, tag, encryptedKey);
-        }
-
-        // Parse a chunk header (48 bytes) for the next encrypted chunk
-        private static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, CancellationToken ct)
-        {
-            // Read magic + header length + plaintext length + keyId + nonce + tag (total 48 bytes expected)
-            byte[] header = new byte[4 + 4 + 8 + 4 + NonceSize + TagSize];
-            await ReadExactlyAsync(input, header, header.Length, ct).ConfigureAwait(false);
-            // Verify magic
-            if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
-            {
-                throw new InvalidDataException("Chunk magic bytes missing or corrupted.");
-            }
-            int headerLength = BitConverter.ToInt32(header, 4);
-            if (headerLength != header.Length)
-            {
-                throw new InvalidDataException("Invalid chunk header length.");
-            }
-            long plaintextLength = BitConverter.ToInt64(header, 8);
-            int keyId = BitConverter.ToInt32(header, 16);
-            // If keyId mismatches the file header's keyId, that's an error (we can optionally check this outside)
-            byte[] nonce = new byte[NonceSize];
-            Array.Copy(header, 20, nonce, 0, NonceSize);
-            byte[] tag = new byte[TagSize];
-            Array.Copy(header, 20 + NonceSize, tag, 0, TagSize);
-            return new ChunkHeader(plaintextLength, keyId, nonce, tag);
-        }
-
-        // Read exactly 'count' bytes from stream into buffer or throw if unable to fill
-        private static async Task ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
-        {
-            int offset = 0;
-            while (offset < count)
-            {
-                int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, count - offset), ct).ConfigureAwait(false);
-                if (bytesRead == 0)
-                {
-                    throw new EndOfStreamException("Unexpected end of stream.");
-                }
-                offset += bytesRead;
-            }
-        }
-
-        // Structs to represent parsed headers and job/result data
-        private readonly struct FileHeader(long totalLength, int keyId, byte[] nonce, byte[] tag, byte[] encryptedKey)
-        {
-            public long TotalPlaintextLength { get; } = totalLength;
-            public int KeyId { get; } = keyId;
-            public byte[] Nonce { get; } = nonce;
-            public byte[] Tag { get; } = tag;
-            public byte[] EncryptedKey { get; } = encryptedKey;
-        }
-
-        private readonly struct ChunkHeader(long length, int keyId, byte[] nonce, byte[] tag)
-        {
-            public long PlaintextLength { get; } = length;
-            public int KeyId { get; } = keyId;
-            public byte[] Nonce { get; } = nonce;
-            public byte[] Tag { get; } = tag;
-        }
-
-        private readonly struct EncryptionJob(long index, byte[] dataBuffer, int dataLength)
-        {
-            public long Index { get; } = index;
-            public byte[] DataBuffer { get; } = dataBuffer;
-            public int DataLength { get; } = dataLength;
-        }
-
-        private readonly struct EncryptionResult(long index, AesGcmStreamCipher.Tag128 tag, byte[] data, int dataLength)
-        {
-            public long Index { get; } = index;
-            public Tag128 Tag { get; } = tag;
-            public byte[] Data { get; } = data;
-            public int DataLength { get; } = dataLength;
-        }
-
-        private readonly struct DecryptionJob(long index, byte[] nonce, byte[] tag, byte[] cipherBuffer, int dataLength)
-        {
-            public long Index { get; } = index;
-            public byte[] Nonce { get; } = nonce;
-            public byte[] Tag { get; } = tag;
-            public byte[] Cipher { get; } = cipherBuffer;
-            public int DataLength { get; } = dataLength;
-        }
-
-        private readonly struct DecryptionResult(long index, byte[] data, int dataLength)
-        {
-            public long Index { get; } = index;
-            public byte[] Data { get; } = data;
-            public int DataLength { get; } = dataLength;
-        }
-
-        private readonly struct Tag128(ulong low, ulong high)
-        {
-            public ulong Low { get; } = low;
-            public ulong High { get; } = high;
         }
     }
 }
