@@ -6,6 +6,6 @@ namespace Cotton.Server.Database
 {
     public class CottonDbContext(DbContextOptions options) : AuditedDbContext(options)
     {
-        public DbSet<FileDescriptor> FileDescriptors => Set<FileDescriptor>();
+        public DbSet<Chunk> Chunks => Set<Chunk>();
     }
 }
