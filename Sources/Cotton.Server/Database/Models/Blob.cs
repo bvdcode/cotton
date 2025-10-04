@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using EasyExtensions.EntityFrameworkCore.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
 {
@@ -25,7 +26,8 @@ namespace Cotton.Server.Database.Models
         [Column("size_bytes")]
         public long SizeBytes { get; set; }
 
-        [Column("file_sha256", TypeName = "BINARY(32)")]
+        [MaxLength(32)]
+        [Column("file_sha256")]
         public byte[] FileSha256 { get; set; } = null!;
 
         public virtual ICollection<BlobChunk> BlobChunks { get; set; } = [];
