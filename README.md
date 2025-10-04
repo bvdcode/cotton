@@ -1,5 +1,12 @@
 # Cotton Cloud — a real cloud that doesn’t suck
 
+[![CI](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml)
+[![Release](https://img.shields.io/github/v/release/bvdcode/cotton?sort=semver)](https://github.com/bvdcode/cotton/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/bvdcode/cotton)](https://hub.docker.com/r/bvdcode/cotton)
+[![Image Size](https://img.shields.io/docker/image-size/bvdcode/cotton/latest)](https://hub.docker.com/r/bvdcode/cotton/tags)
+[![License](https://img.shields.io/github/license/bvdcode/cotton)](LICENSE)
+[![CodeFactor](https://www.codefactor.io/repository/github/bvdcode/cotton/badge)](https://www.codefactor.io/repository/github/bvdcode/cotton)
+
 > **Files. Snapshots. Search. Stream. Restore.**
 > One container. Two faces: simple up top, full control under the hood.
 > Built with **.NET / C#** because performance and sanity matter.
