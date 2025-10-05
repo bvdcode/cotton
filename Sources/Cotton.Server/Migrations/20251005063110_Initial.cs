@@ -12,6 +12,30 @@ namespace Cotton.Server.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "chunks",
+                columns: table => new
+                {
+                    sha256 = table.Column<byte[]>(type: "bytea", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_chunks", x => x.sha256);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_users", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "blobs",
                 columns: table => new
                 {
@@ -28,17 +52,12 @@ namespace Cotton.Server.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_blobs", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "chunks",
-                columns: table => new
-                {
-                    sha256 = table.Column<byte[]>(type: "bytea", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_chunks", x => x.sha256);
+                    table.ForeignKey(
+                        name: "FK_blobs_users_owner_id",
+                        column: x => x.owner_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -72,7 +91,7 @@ namespace Cotton.Server.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_blob_chunks_blob_id_chunk_order",
                 table: "blob_chunks",
-                columns: ["blob_id", "chunk_order"],
+                columns: new[] { "blob_id", "chunk_order" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -83,18 +102,12 @@ namespace Cotton.Server.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_blobs_owner_id_folder",
                 table: "blobs",
-                columns: ["owner_id", "folder"]);
+                columns: new[] { "owner_id", "folder" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_blobs_owner_id_folder_name",
                 table: "blobs",
-                columns: ["owner_id", "folder", "name"],
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_blobs_owner_id_sha256_size_bytes",
-                table: "blobs",
-                columns: ["owner_id", "sha256", "size_bytes"],
+                columns: new[] { "owner_id", "folder", "name" },
                 unique: true);
         }
 
@@ -109,6 +122,9 @@ namespace Cotton.Server.Migrations
 
             migrationBuilder.DropTable(
                 name: "chunks");
+
+            migrationBuilder.DropTable(
+                name: "users");
         }
     }
 }

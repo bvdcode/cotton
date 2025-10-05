@@ -7,7 +7,6 @@ namespace Cotton.Server.Database.Models
     [Table("blobs")]
     [Index(nameof(OwnerId), nameof(Folder))]
     [Index(nameof(OwnerId), nameof(Folder), nameof(Name), IsUnique = true)]
-    [Index(nameof(OwnerId), nameof(Sha256), nameof(SizeBytes), IsUnique = true)]
     public class Blob : BaseEntity<Guid>
     {
         [Column("owner_id")]
@@ -27,6 +26,8 @@ namespace Cotton.Server.Database.Models
 
         [Column("sha256")]
         public byte[] Sha256 { get; set; } = null!;
+
+        public virtual User Owner { get; set; } = null!;
 
         public virtual ICollection<BlobChunk> BlobChunks { get; set; } = [];
     }

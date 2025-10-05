@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Server.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251005012525_Initial")]
+    [Migration("20251005063110_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -78,9 +78,6 @@ namespace Cotton.Server.Migrations
                     b.HasIndex("OwnerId", "Folder", "Name")
                         .IsUnique();
 
-                    b.HasIndex("OwnerId", "Sha256", "SizeBytes")
-                        .IsUnique();
-
                     b.ToTable("blobs");
                 });
 
@@ -131,6 +128,37 @@ namespace Cotton.Server.Migrations
                     b.HasKey("Sha256");
 
                     b.ToTable("chunks");
+                });
+
+            modelBuilder.Entity("Cotton.Server.Database.Models.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("users");
+                });
+
+            modelBuilder.Entity("Cotton.Server.Database.Models.Blob", b =>
+                {
+                    b.HasOne("Cotton.Server.Database.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Cotton.Server.Database.Models.BlobChunk", b =>
