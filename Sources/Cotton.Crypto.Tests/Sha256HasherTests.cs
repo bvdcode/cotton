@@ -65,24 +65,24 @@ namespace Cotton.Crypto.Tests
                                                 "27ae41e4649b934ca495991b7852b855"));
         }
 
-        private static void CallSpanWithEmptyDest(IHasher hasher)
+        private static void CallSpanWithEmptyDest(Sha256Hasher hasher)
         {
             hasher.ComputeHash([], []); // should throw
         }
 
-        private static void CallStreamWithSmallDest(IHasher hasher)
+        private static void CallStreamWithSmallDest(Sha256Hasher hasher)
         {
             using var ms = new MemoryStream();
             Span<byte> small = stackalloc byte[16];
             hasher.ComputeHash(ms, small); // should throw
         }
 
-        private static void CallStreamNull(IHasher hasher)
+        private static void CallStreamNull(Sha256Hasher hasher)
         {
             hasher.ComputeHash((Stream)null!); // should throw
         }
 
-        private static void CallStreamNullDest(IHasher hasher)
+        private static void CallStreamNullDest(Sha256Hasher hasher)
         {
             Span<byte> dest = stackalloc byte[32];
             hasher.ComputeHash((Stream)null!, dest); // should throw
