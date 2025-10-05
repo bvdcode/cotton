@@ -7,7 +7,6 @@ namespace Cotton.Server.Database.Models
     public class Chunk
     {
         [Key]
-        [MaxLength(32)]
         [Column("sha256")]
         public byte[] Sha256 { get; set; } = null!;
     }
