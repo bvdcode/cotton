@@ -8,9 +8,12 @@ namespace Cotton.Server
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            builder.Services.AddControllers();
-            builder.Services.AddOpenApi()
-                .AddPostgresDbContext<CottonDbContext>(builder.Configuration);
+            builder.Services
+                .AddOpenApi()
+                .AddPostgresDbContext<CottonDbContext>(
+                    builder.Configuration,
+                    x => x.ContextLifetime = ServiceLifetime.Scoped)
+                .AddControllers();
 
             var app = builder.Build();
             app.UseDefaultFiles();
