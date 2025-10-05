@@ -67,7 +67,7 @@ namespace Cotton.Crypto.Tests
         [Repeat(20)]
         public async Task Fuzz_RoundTrip_RandomizedChunks_AndThreads()
         {
-            int seed = TestContext.CurrentContext.CurrentRepeatCount * 12345 + 7;
+            int seed = (TestContext.CurrentContext.CurrentRepeatCount * 12345) + 7;
             int dataLen = new Random(seed).Next(0, 1_000_000); // up to ~1MB
             int chunk = Math.Max(MinChunk, new Random(seed + 1).Next(MinChunk, MinChunk * 4));
             int threads = Math.Max(2, Math.Min(Environment.ProcessorCount, new Random(seed + 2).Next(1, 8)));
@@ -127,7 +127,7 @@ namespace Cotton.Crypto.Tests
         {
             int keyId = 21;
             var cipher = Cipher(keyId, threads: 3);
-            byte[] data = RandomBytes(MinChunk * 2 + 111, 99);
+            byte[] data = RandomBytes((MinChunk * 2) + 111, 99);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
             await cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk);
@@ -171,7 +171,7 @@ namespace Cotton.Crypto.Tests
         public void Tamper_EachChunk_ShouldFail()
         {
             var cipher = Cipher(keyId: 8);
-            byte[] data = RandomBytes(MinChunk * 2 + 50_000, 222);
+            byte[] data = RandomBytes((MinChunk * 2) + 50_000, 222);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
             cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
@@ -322,7 +322,7 @@ namespace Cotton.Crypto.Tests
         public void Tamper_Reorder_FirstTwoChunks_ShouldFail()
         {
             var cipher = Cipher(keyId: 16);
-            byte[] data = RandomBytes(MinChunk * 2 + 123, 104);
+            byte[] data = RandomBytes((MinChunk * 2) + 123, 104);
             using var input = new MemoryStream(data);
             using var outEnc = new MemoryStream();
             cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
