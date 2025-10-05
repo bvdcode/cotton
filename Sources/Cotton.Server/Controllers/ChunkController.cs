@@ -1,10 +1,12 @@
 using Cotton.Server.Database;
 using Cotton.Server.Settings;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Crypto.Abstractions;
 
 namespace Cotton.Server.Controllers
 {
-    public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings) : ControllerBase
+    public class ChunkController(CottonDbContext _dbContext,
+        CottonSettings _settings, IHasher _hasher) : ControllerBase
     {
         [HttpPost(Routes.Chunks)]
         public async Task<CottonResult> UploadChunk(IFormFile file, string hash)
@@ -17,9 +19,9 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest($"File size exceeds maximum chunk size of {_settings.ChunkSizeBytes} bytes.");
             }
-            if (string.IsNullOrWhiteSpace(hash) || hash.Length != 64 || !System.Text.RegularExpressions.Regex.IsMatch(hash, "^[a-fA-F0-9]{64}$"))
+            if (string.IsNullOrWhiteSpace(hash) || hash.Length != _hasher.HashSize)
             {
-                return CottonResult.BadRequest("Invalid SHA-256 hash format.");
+                return CottonResult.BadRequest("Invalid hash format.");
             }
 
             return CottonResult.Success("", "");
