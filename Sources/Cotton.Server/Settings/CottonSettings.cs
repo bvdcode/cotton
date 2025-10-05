@@ -3,5 +3,8 @@
     public class CottonSettings
     {
         public int ChunkSizeBytes { get; set; }
+        public string? MasterEncryptionKey { get; set; }
+        public int MasterEncryptionKeyId { get; set; }
+        public int? EncryptionThreads { get; set; }
     }
 }
