@@ -1,15 +1,18 @@
 ﻿using Cotton.Server.Settings;
 using Cotton.Server.Abstractions;
+using Cotton.Crypto.Abstractions;
 
 namespace Cotton.Server.Services
 {
     public class FileStorage : IStorage
     {
         private readonly string _basePath;
+        private readonly IStreamCipher _cipher;
         private readonly CottonSettings _settings;
 
-        public FileStorage(CottonSettings settings)
+        public FileStorage(CottonSettings settings, IStreamCipher cipher)
         {
+            _cipher = cipher;
             _settings = settings;
             _basePath = Path.Combine(AppContext.BaseDirectory, "chunks");
             Directory.CreateDirectory(_basePath);
@@ -22,20 +25,22 @@ namespace Cotton.Server.Services
                 throw new ArgumentException("Hash required", nameof(hash));
             }
             ArgumentNullException.ThrowIfNull(stream);
-            var path = Path.Combine(_basePath, hash);
-            await using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true);
-            long written = 0;
-            byte[] buffer = new byte[128 * 1024];
-            int read;
-            while ((read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0)
+            string p1 = hash[..2];
+            string p2 = hash[2..4];
+            string dirPath = Path.Combine(_basePath, p1, p2);
+            Directory.CreateDirectory(dirPath);
+            string filePath = Path.Combine(dirPath, hash[4..]);
+            if (File.Exists(filePath))
             {
-                await fs.WriteAsync(buffer.AsMemory(0, read));
-                written += read;
-                if (written > _settings.ChunkSizeBytes)
-                {
-                    throw new InvalidOperationException($"Chunk exceeds configured size {_settings.ChunkSizeBytes} bytes");
-                }
+                // TODO: Read and verify existing file integrity
             }
+            await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 81920, useAsync: true);
+            if (stream.CanSeek)
+            {
+                stream.Seek(default, SeekOrigin.Begin);
+            }
+            await _cipher.EncryptAsync(stream, fileStream, _settings.CipherChunkSizeBytes);
+            await fileStream.FlushAsync();
         }
     }
 }
