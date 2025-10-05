@@ -224,5 +224,3 @@ public class AesGcmStreamCipherTests
         Assert.ThrowsAsync<TaskCanceledException>(async () => await cipher.EncryptAsync(input, output, chunkSize: 65_536, ct: cts.Token));
     }
 }
-
-// Moved class AesGcmStreamCipherTests_EdgesAndCorrectness to its own file to satisfy single type per file guideline.
