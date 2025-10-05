@@ -18,10 +18,10 @@ namespace Cotton.Server.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     owner_id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
-                    parent = table.Column<string>(type: "text", nullable: false),
+                    folder = table.Column<string>(type: "text", nullable: false),
                     content_type = table.Column<string>(type: "text", nullable: false),
                     size_bytes = table.Column<long>(type: "bigint", nullable: false),
-                    file_sha256 = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: false),
+                    sha256 = table.Column<byte[]>(type: "bytea", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -34,7 +34,7 @@ namespace Cotton.Server.Migrations
                 name: "chunks",
                 columns: table => new
                 {
-                    sha256 = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: false)
+                    sha256 = table.Column<byte[]>(type: "bytea", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -48,7 +48,7 @@ namespace Cotton.Server.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     chunk_order = table.Column<int>(type: "integer", nullable: false),
                     blob_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    chunk_sha256 = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: false),
+                    chunk_sha256 = table.Column<byte[]>(type: "bytea", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -72,7 +72,7 @@ namespace Cotton.Server.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_blob_chunks_blob_id_chunk_order",
                 table: "blob_chunks",
-                columns: new[] { "blob_id", "chunk_order" },
+                columns: ["blob_id", "chunk_order"],
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -81,20 +81,20 @@ namespace Cotton.Server.Migrations
                 column: "chunk_sha256");
 
             migrationBuilder.CreateIndex(
-                name: "IX_blobs_owner_id_file_sha256_size_bytes",
+                name: "IX_blobs_owner_id_folder",
                 table: "blobs",
-                columns: new[] { "owner_id", "file_sha256", "size_bytes" },
+                columns: ["owner_id", "folder"]);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_blobs_owner_id_folder_name",
+                table: "blobs",
+                columns: ["owner_id", "folder", "name"],
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_blobs_owner_id_parent",
+                name: "IX_blobs_owner_id_sha256_size_bytes",
                 table: "blobs",
-                columns: new[] { "owner_id", "parent" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_blobs_owner_id_parent_name",
-                table: "blobs",
-                columns: new[] { "owner_id", "parent", "name" },
+                columns: ["owner_id", "sha256", "size_bytes"],
                 unique: true);
         }
 
