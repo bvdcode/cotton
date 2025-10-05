@@ -47,63 +47,63 @@ namespace Cotton.Crypto
     public class AesGcmStreamCipher : IStreamCipher
     {
         /// <summary>
-        /// Logical identifier for the master key used to wrap per-file keys, enabling rotation / multi-key scenarios.
+        /// Key identifier associated with the master key used to wrap file keys and build AAD.
         /// </summary>
         private readonly int _keyId;
 
         /// <summary>
-        /// Raw master key bytes (32 bytes). Copied from provided memory to avoid unintended aliasing.
+        /// Raw master key bytes (32 bytes) used to wrap / unwrap per-file content encryption keys.
         /// </summary>
         private readonly byte[] _masterKeyBytes;
 
         /// <summary>
-        /// Size in bytes of per-chunk AES-GCM nonce (96 bits per NIST recommendation).
+        /// AES-GCM nonce size in bytes (96-bit IV as recommended for GCM).
         /// </summary>
         public const int NonceSize = 12;
 
         /// <summary>
-        /// Size in bytes of AES-GCM authentication tag (128 bits).
+        /// AES-GCM authentication tag size in bytes (128-bit tag).
         /// </summary>
         public const int TagSize = 16;
 
         /// <summary>
-        /// Size in bytes of the AES-256 key (file key and master key).
+        /// AES-256 key size in bytes.
         /// </summary>
         public const int KeySize = 32;
 
         /// <summary>
-        /// Minimum allowed chunk size (64 KiB).
+        /// Minimum allowed chunk size (64 KiB) to balance overhead and throughput.
         /// </summary>
         public const int MinChunkSize = 64 * 1024;
 
         /// <summary>
-        /// Maximum allowed chunk size (64 MiB) to limit memory pressure.
+        /// Maximum allowed chunk size (64 MiB) to avoid excessive single-buffer allocations.
         /// </summary>
         public const int MaxChunkSize = 64 * 1024 * 1024;
 
         /// <summary>
-        /// Default chunk size (16 MiB) tuned for throughput / memory balance.
+        /// Default chunk size (16 MiB) chosen for high sequential throughput without large memory spikes.
         /// </summary>
         public const int DefaultChunkSize = 16 * 1024 * 1024;
 
         /// <summary>
-        /// Shared buffer pool for renting large arrays to reduce GC pressure.
+        /// Shared <see cref="ArrayPool{T}"/> for renting / returning temporary buffers.
         /// </summary>
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
 
         /// <summary>
-        /// Degree of parallelism (worker count) used in the chunk pipeline.
+        /// Degree of parallelism for worker tasks. Initialized from CPU count or user override.
         /// </summary>
         private readonly int ConcurrencyLevel = Math.Min(4, Environment.ProcessorCount);
 
         /// <summary>
-        /// Creates a new streaming AES-GCM cipher instance.
+        /// Initializes a new instance of the <see cref="AesGcmStreamCipher"/> class.
         /// </summary>
-        /// <param name="masterKey">32-byte master key (AES-256) used to wrap per-file keys.</param>
-        /// <param name="keyId">Positive identifier associated with the master key.</param>
+        /// <param name="masterKey">32-byte master key used to wrap per-file keys.</param>
+        /// <param name="keyId">Positive integer identifying the master key (embedded in headers / AAD).</param>
         /// <param name="threads">Optional override for parallel worker count (must be &gt; 0).</param>
-        /// <exception cref="ArgumentException">If <paramref name="masterKey"/> is not 32 bytes.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">If <paramref name="keyId"/> or <paramref name="threads"/> are invalid.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="masterKey"/> is not 32 bytes.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="keyId"/> is not positive.</exception>
         public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1, int? threads = null)
         {
             if (masterKey.Length != KeySize)
@@ -124,22 +124,17 @@ namespace Cotton.Crypto
         }
 
         /// <summary>
-        /// Encrypts data from <paramref name="input"/> to <paramref name="output"/> in authenticated chunks.
+        /// Encrypts data from a readable <paramref name="input"/> stream and writes the encrypted
+        /// stream (file header + chunk sequence) to a writable <paramref name="output"/> stream.
         /// </summary>
-        /// <param name="input">Readable stream containing plaintext.</param>
-        /// <param name="output">Writable stream that receives ciphertext (with headers).</param>
-        /// <param name="chunkSize">Chunk size in bytes (bounded by <see cref="MinChunkSize"/> and <see cref="MaxChunkSize"/>).</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>A task representing the asynchronous encryption operation.</returns>
-        /// <remarks>
-        /// Output Format:
-        /// [File Header] [Chunk Header + Chunk Ciphertext]*.
-        /// Each chunk header includes nonce + tag + metadata; nonce also redundantly stored to aid external tooling.
-        /// </remarks>
-        /// <exception cref="ArgumentNullException">If streams are null.</exception>
-        /// <exception cref="ArgumentException">If stream capabilities are insufficient.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">If <paramref name="chunkSize"/> is invalid.</exception>
-        /// <exception cref="OperationCanceledException">If cancelled.</exception>
+        /// <param name="input">Readable plaintext source stream.</param>
+        /// <param name="output">Writable destination stream for encrypted bytes.</param>
+        /// <param name="chunkSize">Chunk size in bytes (validated between <see cref="MinChunkSize"/> and <see cref="MaxChunkSize"/>).</param>
+        /// <param name="ct">Cancellation token to abort the operation.</param>
+        /// <returns>A task representing the asynchronous encryption pipeline.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="input"/> or <paramref name="output"/> is null.</exception>
+        /// <exception cref="ArgumentException">If streams do not support required capabilities.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">If <paramref name="chunkSize"/> is outside valid bounds.</exception>
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(input);
@@ -175,17 +170,17 @@ namespace Cotton.Crypto
         }
 
         /// <summary>
-        /// Decrypts previously encrypted stream data produced by <see cref="EncryptAsync"/>
+        /// Decrypts an encrypted stream produced by <see cref="EncryptAsync"/> and writes plaintext
+        /// bytes to the provided <paramref name="output"/> stream.
         /// </summary>
-        /// <param name="input">Readable stream containing the encrypted file format.</param>
-        /// <param name="output">Writable stream receiving plaintext.</param>
+        /// <param name="input">Readable encrypted stream (position at file header).</param>
+        /// <param name="output">Writable plaintext destination stream.</param>
         /// <param name="ct">Cancellation token.</param>
-        /// <returns>A task representing the asynchronous decryption operation.</returns>
-        /// <exception cref="ArgumentNullException">If streams are null.</exception>
-        /// <exception cref="ArgumentException">If stream capabilities are insufficient.</exception>
-        /// <exception cref="InvalidDataException">If master key id mismatches file header.</exception>
-        /// <exception cref="AuthenticationTagMismatchException">If integrity/authentication fails.</exception>
-        /// <exception cref="OperationCanceledException">If cancelled.</exception>
+        /// <returns>A task representing the asynchronous decryption pipeline.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="input"/> or <paramref name="output"/> is null.</exception>
+        /// <exception cref="ArgumentException">If streams do not support required capabilities.</exception>
+        /// <exception cref="InvalidDataException">If file header key id mismatches this instance.</exception>
+        /// <exception cref="CryptographicException">If authentication fails (e.g., modified header or key wrap failure).</exception>
         public async Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(input);
@@ -214,20 +209,17 @@ namespace Cotton.Crypto
         }
 
         /// <summary>
-        /// Internal encryption pipeline: reads plaintext chunks, encrypts in parallel, writes ordered output.
+        /// Runs the parallel encryption pipeline (producer -> workers -> consumer).
         /// </summary>
-        /// <param name="input">Plaintext source stream.</param>
-        /// <param name="output">Ciphertext target stream.</param>
-        /// <param name="fileKey">Per-file AES-256 key.</param>
-        /// <param name="chunkSize">Chunk size.</param>
+        /// <param name="input">Plaintext source stream positioned at first byte.</param>
+        /// <param name="output">Encrypted destination stream (header already written).</param>
+        /// <param name="fileKey">Unwrapped per-file key (rented buffer content).</param>
+        /// <param name="chunkSize">Chunk size used for segmentation.</param>
         /// <param name="ct">Cancellation token.</param>
+        /// <returns>Task that completes when all chunks are written.</returns>
         /// <remarks>
-        /// Uses two channels:
-        /// - Job channel (plaintext chunks)
-        /// - Result channel (ciphertext + tag)
-        /// Reorders by chunk index before writing to ensure deterministic output order.
+        /// Ensures output ordering via a reordering buffer while allowing workers to complete out of order.
         /// </remarks>
-        /// <exception cref="OperationCanceledException">If cancelled.</exception>
         private async Task EncryptChunksParallelAsync(Stream input, Stream output, byte[] fileKey, int chunkSize, CancellationToken ct)
         {
             var jobChannel = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 2)
@@ -376,17 +368,10 @@ namespace Cotton.Crypto
         }
 
         /// <summary>
-        /// Internal decryption pipeline: reads serialized chunk headers + ciphertext, decrypts in parallel, emits ordered plaintext.
+        /// Creates bounded channels used for the decryption pipeline (jobs and results).
         /// </summary>
-        /// <param name="input">Ciphertext input stream (formatted by <see cref="EncryptAsync"/>).</param>
-        /// <param name="output">Plaintext destination stream.</param>
-        /// <param name="fileKey">Recovered per-file key.</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <exception cref="AuthenticationTagMismatchException">If header or per-chunk integrity fails.</exception>
-        /// <exception cref="InvalidDataException">If chunk ordering inconsistencies are detected at completion.</exception>
-        /// <exception cref="EndOfStreamException">If truncated data is encountered mid-header.</exception>
-        /// <exception cref="OperationCanceledException">If cancelled.</exception>
-        private async Task DecryptChunksParallelAsync(Stream input, Stream output, byte[] fileKey, CancellationToken ct)
+        /// <returns>Tuple containing the job channel and result channel.</returns>
+        private (Channel<DecryptionJob> jobChannel, Channel<DecryptionResult> resultChannel) CreateDecryptionChannels()
         {
             var jobChannel = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 2)
             {
@@ -400,16 +385,21 @@ namespace Cotton.Crypto
                 SingleReader = true,
                 FullMode = BoundedChannelFullMode.Wait
             });
+            return (jobChannel, resultChannel);
+        }
 
-            var jobWriter = jobChannel.Writer;
-            var jobReader = jobChannel.Reader;
-            var resultWriter = resultChannel.Writer;
-            var resultReader = resultChannel.Reader;
-
-            long chunkIndex = 0;
-
-            var producer = Task.Run(async () =>
+        /// <summary>
+        /// Starts the producer that reads chunk headers and ciphertext from the encrypted stream and posts decryption jobs.
+        /// </summary>
+        /// <param name="input">Encrypted input stream (position at first chunk header).</param>
+        /// <param name="writer">Channel writer for decryption jobs.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>A task representing the producer loop.</returns>
+        private Task StartDecryptionProducer(Stream input, ChannelWriter<DecryptionJob> writer, CancellationToken ct)
+        {
+            return Task.Run(async () =>
             {
+                long chunkIndex = 0;
                 try
                 {
                     while (true)
@@ -418,7 +408,7 @@ namespace Cotton.Crypto
                         if (input.CanSeek)
                         {
                             long bytesRemaining = input.Length - input.Position;
-                            int minHeader = 4 + 4 + 8 + 4 + NonceSize + TagSize;
+                            int minHeader = 4 + 4 + 8 + 4 + NonceSize + TagSize; // Conservative lower bound check
                             if (bytesRemaining == 0) break;
                             if (bytesRemaining < minHeader)
                                 throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
@@ -430,42 +420,58 @@ namespace Cotton.Crypto
                         }
                         catch (EndOfStreamException)
                         {
-                            break;
+                            break; // graceful end
                         }
-                        if (chunkHeader.PlaintextLength < 0 || chunkHeader.PlaintextLength > MaxChunkSize)
-                        {
-                            throw new AuthenticationTagMismatchException("Invalid chunk length in encrypted file.");
-                        }
-                        // Validate keyId in chunk header matches expected
-                        if (chunkHeader.KeyId != _keyId)
-                        {
-                            throw new AuthenticationTagMismatchException("Chunk key ID mismatch.");
-                        }
-                        // Validate nonce in chunk header matches deterministic composition
-                        byte[] expectedNonce = new byte[NonceSize];
-                        AesGcmStreamFormat.ComposeNonce(expectedNonce, _keyId, chunkIndex);
-                        if (!expectedNonce.AsSpan().SequenceEqual(chunkHeader.Nonce))
-                        {
-                            throw new AuthenticationTagMismatchException("Chunk nonce mismatch.");
-                        }
+                        ValidateChunkHeader(chunkHeader, chunkIndex);
 
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipherBuffer = BufferPool.Rent(cipherLength);
                         await AesGcmStreamFormat.ReadExactlyAsync(input, cipherBuffer, cipherLength, ct).ConfigureAwait(false);
                         var job = new DecryptionJob(index: chunkIndex++, tag: chunkHeader.Tag, cipherBuffer: cipherBuffer, dataLength: cipherLength);
-                        await jobWriter.WriteAsync(job, ct).ConfigureAwait(false);
+                        await writer.WriteAsync(job, ct).ConfigureAwait(false);
                     }
                 }
                 finally
                 {
-                    jobWriter.TryComplete();
+                    writer.TryComplete();
                 }
             }, ct);
+        }
 
-            var workerTasks = new Task[ConcurrencyLevel];
+        /// <summary>
+        /// Validates integrity of a chunk header before it is scheduled for decryption.
+        /// </summary>
+        /// <param name="header">Chunk header read from the stream.</param>
+        /// <param name="expectedIndex">Expected sequential chunk index.</param>
+        /// <exception cref="AuthenticationTagMismatchException">
+        /// Thrown if any structural metadata (length, key id, nonce) does not match deterministic expectations.
+        /// </exception>
+        private void ValidateChunkHeader(ChunkHeader header, long expectedIndex)
+        {
+            if (header.PlaintextLength < 0 || header.PlaintextLength > MaxChunkSize)
+                throw new AuthenticationTagMismatchException("Invalid chunk length in encrypted file.");
+            if (header.KeyId != _keyId)
+                throw new AuthenticationTagMismatchException("Chunk key ID mismatch.");
+            byte[] expectedNonce = new byte[NonceSize];
+            AesGcmStreamFormat.ComposeNonce(expectedNonce, _keyId, expectedIndex);
+            if (!expectedNonce.AsSpan().SequenceEqual(header.Nonce))
+                throw new AuthenticationTagMismatchException("Chunk nonce mismatch.");
+        }
+
+        /// <summary>
+        /// Starts worker tasks that decrypt chunks in parallel and post results to the result channel.
+        /// </summary>
+        /// <param name="fileKey">Unwrapped file key.</param>
+        /// <param name="jobReader">Reader for pending decryption jobs.</param>
+        /// <param name="resultWriter">Writer for decrypted chunk payloads.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>Array of started worker tasks.</returns>
+        private Task[] StartDecryptionWorkers(byte[] fileKey, ChannelReader<DecryptionJob> jobReader, ChannelWriter<DecryptionResult> resultWriter, CancellationToken ct)
+        {
+            var workers = new Task[ConcurrencyLevel];
             for (int i = 0; i < ConcurrencyLevel; i++)
             {
-                workerTasks[i] = Task.Run(async () =>
+                workers[i] = Task.Run(async () =>
                 {
                     using var gcm = new AesGcm(fileKey, TagSize);
                     byte[] nonceBuffer = new byte[NonceSize];
@@ -494,12 +500,23 @@ namespace Cotton.Crypto
                     }
                 }, ct);
             }
+            return workers;
+        }
 
-            var consumer = Task.Run(async () =>
+        /// <summary>
+        /// Starts the consumer that reorders decrypted results and writes them sequentially to the output stream.
+        /// </summary>
+        /// <param name="output">Plaintext output stream.</param>
+        /// <param name="reader">Result channel reader.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>Task that completes when all results are flushed.</returns>
+        private static Task StartDecryptionConsumer(Stream output, ChannelReader<DecryptionResult> reader, CancellationToken ct)
+        {
+            return Task.Run(async () =>
             {
                 var waiting = new SortedDictionary<long, DecryptionResult>();
                 long nextToWrite = 0;
-                await foreach (DecryptionResult result in resultReader.ReadAllAsync(ct))
+                await foreach (DecryptionResult result in reader.ReadAllAsync(ct))
                 {
                     if (result.Index == nextToWrite)
                     {
@@ -524,16 +541,33 @@ namespace Cotton.Crypto
                     throw new InvalidDataException("Decryption output missing chunks. The encrypted data may be incomplete or corrupted.");
                 }
             }, ct);
+        }
+
+        /// <summary>
+        /// Orchestrates parallel decryption (producer, workers, consumer) for all remaining chunk records.
+        /// </summary>
+        /// <param name="input">Encrypted input stream positioned at first chunk header.</param>
+        /// <param name="output">Writable plaintext stream.</param>
+        /// <param name="fileKey">Unwrapped file key bytes.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>Task that completes when all chunks have been processed.</returns>
+        private async Task DecryptChunksParallelAsync(Stream input, Stream output, byte[] fileKey, CancellationToken ct)
+        {
+            var (jobChannel, resultChannel) = CreateDecryptionChannels();
+            var producer = StartDecryptionProducer(input, jobChannel.Writer, ct);
+            var workers = StartDecryptionWorkers(fileKey, jobChannel.Reader, resultChannel.Writer, ct);
+            var consumer = StartDecryptionConsumer(output, resultChannel.Reader, ct);
 
             try
             {
                 await producer.ConfigureAwait(false);
-                await Task.WhenAll(workerTasks).ConfigureAwait(false);
+                await Task.WhenAll(workers).ConfigureAwait(false);
             }
             finally
             {
-                resultWriter.TryComplete();
+                resultChannel.Writer.TryComplete();
             }
+
             await consumer.ConfigureAwait(false);
         }
     }
