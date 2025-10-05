@@ -35,6 +35,5 @@ namespace Cotton.Crypto.Tests.TestUtils
             await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
             await Inner.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
         }
-
     }
 }
