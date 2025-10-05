@@ -124,7 +124,7 @@ public class AesGcmStreamCipherTests
         var mk = ValidMasterKey();
         var cipher = CreateCipher(mk, keyId: 3);
 
-        int dataLen = (int)(chunkSize * 2.5) + 123; // guarantee multiple chunks
+        int dataLen = (int)((chunkSize * 2.5) + 123); // guarantee multiple chunks
         var data = CreateRandomBytes(dataLen);
         using var input = new MemoryStream(data);
 

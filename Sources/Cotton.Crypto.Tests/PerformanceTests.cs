@@ -56,7 +56,7 @@ namespace Cotton.Crypto.Tests
             TestContext.Out.WriteLine("=== ENCRYPTION THREAD/CHUNK SWEEP ===");
             TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
             TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => x / OneMb + "MB"))}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / OneMb}MB"))}");
             TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
@@ -111,7 +111,7 @@ namespace Cotton.Crypto.Tests
             TestContext.Out.WriteLine("=== DECRYPTION THREAD/CHUNK SWEEP ===");
             TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
             TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => x / OneMb + "MB"))}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / OneMb}MB"))}");
             TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
