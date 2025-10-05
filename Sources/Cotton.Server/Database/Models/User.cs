@@ -6,6 +6,5 @@ namespace Cotton.Server.Database.Models
     [Table("users")]
     public class User : BaseEntity<Guid>
     {
-
     }
 }
