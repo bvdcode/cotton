@@ -3,7 +3,7 @@ using Cotton.Server.Abstractions;
 
 namespace Cotton.Server.Services
 {
-    public class FileStorage(I) : IStorage
+    public class FileStorage : IStorage
     {
         private readonly string _basePath;
         private readonly CottonSettings _settings;
@@ -23,7 +23,6 @@ namespace Cotton.Server.Services
             }
             ArgumentNullException.ThrowIfNull(stream);
             var path = Path.Combine(_basePath, hash);
-            // Overwrite existing.
             await using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true);
             long written = 0;
             byte[] buffer = new byte[128 * 1024];
