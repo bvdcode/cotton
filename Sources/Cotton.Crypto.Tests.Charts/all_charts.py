@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 import importlib
+import logging
 from pathlib import Path
 
 # Ensure non-interactive backend for matplotlib in child modules before they import pyplot
@@ -18,8 +19,8 @@ def _run_module_main(module_name: str) -> None:
     if hasattr(mod, "plt") and hasattr(mod.plt, "show"):
         try:
             mod.plt.show = lambda *args, **kwargs: None  # type: ignore[attr-defined]
-        except Exception:
-            pass
+        except Exception as exc:  # pragma: no cover - defensive logging only
+            logging.debug("Failed to patch plt.show for %s: %s", module_name, exc)
     # Call module main()
     if hasattr(mod, "main"):
         mod.main()
