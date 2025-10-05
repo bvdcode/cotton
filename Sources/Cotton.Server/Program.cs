@@ -1,4 +1,10 @@
+using Cotton.Crypto;
 using Cotton.Server.Database;
+using Cotton.Server.Settings;
+using Cotton.Server.Services;
+using Cotton.Server.Abstractions;
+using Cotton.Crypto.Abstractions;
+using Microsoft.Extensions.Options;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 
 namespace Cotton.Server
@@ -8,7 +14,13 @@ namespace Cotton.Server
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            builder.Services
+
+            // Bind CottonSettings (root-level keys allowed). Provide defaults & validation.
+            builder.Services.AddOptions<CottonSettings>()
+                .Bind(builder.Configuration).Services
+                .AddScoped<IStreamCipher, AesGcmStreamCipher>()
+                .AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value)
+                .AddSingleton<IStorage, FileStorage>()
                 .AddOpenApi()
                 .AddPostgresDbContext<CottonDbContext>(
                     builder.Configuration,
