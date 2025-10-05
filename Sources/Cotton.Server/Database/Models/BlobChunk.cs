@@ -1,7 +1,6 @@
-﻿using EasyExtensions.EntityFrameworkCore.Abstractions;
-using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
+using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
 {
@@ -16,7 +15,6 @@ namespace Cotton.Server.Database.Models
         [Column("blob_id")]
         public Guid BlobId { get; set; }
 
-        [MaxLength(32)]
         [Column("chunk_sha256")]
         public byte[] ChunkSha256 { get; set; } = null!;
 

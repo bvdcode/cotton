@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Server.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251004091751_Initial")]
+    [Migration("20251005012525_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -44,11 +44,10 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("FileSha256")
+                    b.Property<string>("Folder")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("bytea")
-                        .HasColumnName("file_sha256");
+                        .HasColumnType("text")
+                        .HasColumnName("folder");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -59,10 +58,10 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("owner_id");
 
-                    b.Property<string>("Parent")
+                    b.Property<byte[]>("Sha256")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("parent");
+                        .HasColumnType("bytea")
+                        .HasColumnName("sha256");
 
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
@@ -74,12 +73,12 @@ namespace Cotton.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId", "Parent");
+                    b.HasIndex("OwnerId", "Folder");
 
-                    b.HasIndex("OwnerId", "FileSha256", "SizeBytes")
+                    b.HasIndex("OwnerId", "Folder", "Name")
                         .IsUnique();
 
-                    b.HasIndex("OwnerId", "Parent", "Name")
+                    b.HasIndex("OwnerId", "Sha256", "SizeBytes")
                         .IsUnique();
 
                     b.ToTable("blobs");
@@ -98,7 +97,6 @@ namespace Cotton.Server.Migrations
 
                     b.Property<byte[]>("ChunkSha256")
                         .IsRequired()
-                        .HasMaxLength(32)
                         .HasColumnType("bytea")
                         .HasColumnName("chunk_sha256");
 
@@ -127,7 +125,6 @@ namespace Cotton.Server.Migrations
             modelBuilder.Entity("Cotton.Server.Database.Models.Chunk", b =>
                 {
                     b.Property<byte[]>("Sha256")
-                        .HasMaxLength(32)
                         .HasColumnType("bytea")
                         .HasColumnName("sha256");
 
