@@ -169,6 +169,11 @@ namespace Cotton.Crypto
             }
         }
 
+        public Task<Stream> DecryptToStreamAsync(Stream input, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Decrypts an encrypted stream produced by <see cref="EncryptAsync"/> and writes plaintext
         /// bytes to the provided <paramref name="output"/> stream.
