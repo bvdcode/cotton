@@ -2,6 +2,6 @@
 {
     public interface IStorage
     {
-        Task WriteChunkAsync(string hash, Stream stream);
+        Task WriteChunkAsync(string hash, Stream stream, CancellationToken ct = default);
     }
 }
