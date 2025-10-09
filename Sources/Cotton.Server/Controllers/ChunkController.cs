@@ -36,37 +36,29 @@ namespace Cotton.Server.Controllers
             await using var tmp = new MemoryStream(capacity: (int)file.Length);
             await stream.CopyToAsync(tmp);
 
-            var existingChunk = await _dbContext.Chunks.FindAsync(hashBytes);
-            if (existingChunk != null)
-            {
-                // TODO: Verify if it's safe to return OK here without ownership checks. I think it is, because writing the chunk is very fast.
-                await _storage.WriteChunkAsync(hash, tmp);
-                return CottonResult.Ok("Chunk was uploaded successfully.");
-            }
             byte[] computedHash = await SHA256.HashDataAsync(tmp);
             if (!computedHash.SequenceEqual(hashBytes))
             {
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
             }
 
-            var chunk = new Chunk
+            var chunk = await _dbContext.Chunks.FindAsync(hashBytes);
+            chunk ??= new Chunk
             {
                 Sha256 = hashBytes,
             };
-            await _dbContext.Chunks.AddAsync(chunk);
-            await _dbContext.SaveChangesAsync();
+
 
             tmp.Seek(default, SeekOrigin.Begin);
             try
             {
                 await _storage.WriteChunkAsync(hash, tmp);
+                await _dbContext.Chunks.AddAsync(chunk);
+                await _dbContext.SaveChangesAsync();
                 return CottonResult.Ok("Chunk was uploaded successfully.");
             }
             catch (Exception ex)
             {
-                // Rollback DB entry if storage write fails
-                _dbContext.Chunks.Remove(chunk);
-                await _dbContext.SaveChangesAsync();
                 return CottonResult.InternalError("Failed to store the uploaded chunk.", ex);
             }
         }
