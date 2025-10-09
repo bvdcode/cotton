@@ -1,4 +1,6 @@
 ﻿using System.Buffers;
+using Cotton.Crypto.Models;
+using Cotton.Crypto.Streams;
 using Cotton.Crypto.Internals;
 using System.Threading.Channels;
 using Cotton.Crypto.Abstractions;
@@ -26,7 +28,7 @@ namespace Cotton.Crypto
     /// - Nonce uniqueness: Guaranteed as long as <c>chunkIndex</c> does not repeat for the same master key / file key pair.
     ///   A per-file random key plus deterministic per-chunk nonces eliminates nonce reuse across files.
     /// - Integrity: AES-GCM tag per file key (header) and per chunk (chunk tag).
-    /// - AAD binds structural metadata (key id, chunk index, plaintext length) preventing header tampering / cut-and-paste.
+    /// - AAD binds structural metadata (key id, chunk index, and plaintext length) preventing header tampering / cut-and-paste.
     /// 
     /// Limits:
     /// - Chunk index is <see cref="long"/>; practical limit is governed by memory / file size. Nonce derivation must not overflow.
@@ -139,10 +141,18 @@ namespace Cotton.Crypto
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            if (!output.CanWrite)
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
+            {
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
+            }
 
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
@@ -169,9 +179,81 @@ namespace Cotton.Crypto
             }
         }
 
-        public Task<Stream> DecryptToStreamAsync(Stream input, CancellationToken ct = default)
+        public async Task<Stream> DecryptToStreamAsync(Stream input, CancellationToken ct = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(input);
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+
+            FileHeader header = await AesGcmStreamFormat.ReadFileHeaderAsync(input, NonceSize, TagSize, KeySize, ct).ConfigureAwait(false);
+            if (header.KeyId != _keyId)
+            {
+                throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
+            }
+
+            byte[] fileKey = BufferPool.Rent(KeySize);
+            try
+            {
+                using (var gcm = new AesGcm(_masterKeyBytes, TagSize))
+                {
+                    gcm.Decrypt(header.Nonce, header.EncryptedKey, header.Tag, fileKey.AsSpan(0, KeySize));
+                }
+
+                var channel = Channel.CreateBounded<ByteChunk>(new BoundedChannelOptions(ConcurrencyLevel * 2)
+                {
+                    SingleWriter = true,
+                    SingleReader = true,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
+
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                var writerStream = new ChannelWriteStream(channel.Writer, BufferPool);
+
+                var pipelineTask = RunDecryptionPipelineAsync(input, writerStream, fileKey, linkedCts.Token);
+
+                var readStream = new ChannelReadStream(
+                    channel.Reader,
+                    input,
+                    fileKey,
+                    pipelineTask,
+                    linkedCts,
+                    BufferPool,
+                    leaveInputOpen: false);
+
+                return readStream;
+            }
+            catch
+            {
+                Array.Clear(fileKey, 0, KeySize);
+                BufferPool.Return(fileKey);
+                throw;
+            }
+        }
+
+        private async Task RunDecryptionPipelineAsync(Stream input, ChannelWriteStream writerStream, byte[] fileKey, CancellationToken ct)
+        {
+            try
+            {
+                await DecryptChunksParallelAsync(input, writerStream, fileKey, ct).ConfigureAwait(false);
+                writerStream.Complete(null);
+            }
+            catch (Exception ex)
+            {
+                writerStream.Complete(ex);
+                throw;
+            }
+            finally
+            {
+                try
+                {
+                    await writerStream.DisposeAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                }
+            }
         }
 
         /// <summary>
@@ -190,12 +272,20 @@ namespace Cotton.Crypto
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            if (!output.CanWrite)
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
 
             FileHeader header = await AesGcmStreamFormat.ReadFileHeaderAsync(input, NonceSize, TagSize, KeySize, ct).ConfigureAwait(false);
             if (header.KeyId != _keyId)
+            {
                 throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
+            }
 
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
@@ -416,7 +506,9 @@ namespace Cotton.Crypto
                             int minHeader = 4 + 4 + 8 + 4 + NonceSize + TagSize; // Conservative lower bound check
                             if (bytesRemaining == 0) break;
                             if (bytesRemaining < minHeader)
+                            {
                                 throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
+                            }
                         }
                         ChunkHeader chunkHeader;
                         try
@@ -454,13 +546,19 @@ namespace Cotton.Crypto
         private void ValidateChunkHeader(ChunkHeader header, long expectedIndex)
         {
             if (header.PlaintextLength < 0 || header.PlaintextLength > MaxChunkSize)
+            {
                 throw new AuthenticationTagMismatchException("Invalid chunk length in encrypted file.");
+            }
             if (header.KeyId != _keyId)
+            {
                 throw new AuthenticationTagMismatchException("Chunk key ID mismatch.");
+            }
             byte[] expectedNonce = new byte[NonceSize];
             AesGcmStreamFormat.ComposeNonce(expectedNonce, _keyId, expectedIndex);
             if (!expectedNonce.AsSpan().SequenceEqual(header.Nonce))
+            {
                 throw new AuthenticationTagMismatchException("Chunk nonce mismatch.");
+            }
         }
 
         /// <summary>
