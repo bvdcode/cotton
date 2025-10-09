@@ -1,4 +1,5 @@
-﻿using Cotton.Server.Settings;
+﻿using System.Buffers;
+using Cotton.Server.Settings;
 using Cotton.Server.Abstractions;
 using Cotton.Crypto.Abstractions;
 
@@ -9,38 +10,106 @@ namespace Cotton.Server.Services
         private readonly string _basePath;
         private readonly IStreamCipher _cipher;
         private readonly CottonSettings _settings;
+        private readonly ILogger<FileStorage> _logger;
 
-        public FileStorage(CottonSettings settings, IStreamCipher cipher)
+        private const string ChunkFileExtension = ".ctn";
+        private const string BaseDirectoryName = "chunks";
+
+        public FileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<FileStorage> logger)
         {
+            _logger = logger;
             _cipher = cipher;
             _settings = settings;
-            _basePath = Path.Combine(AppContext.BaseDirectory, "chunks");
+            _basePath = Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
             Directory.CreateDirectory(_basePath);
         }
 
-        public async Task WriteChunkAsync(string hash, Stream stream)
+        public async Task WriteChunkAsync(string hash, Stream stream, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(hash))
-            {
                 throw new ArgumentException("Hash required", nameof(hash));
-            }
             ArgumentNullException.ThrowIfNull(stream);
+
             string p1 = hash[..2];
             string p2 = hash[2..4];
             string dirPath = Path.Combine(_basePath, p1, p2);
             Directory.CreateDirectory(dirPath);
-            string filePath = Path.Combine(dirPath, hash[4..]);
+
+            string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
             if (File.Exists(filePath))
             {
-                // TODO: Read and verify existing file integrity
+                return;
             }
-            await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 81920, useAsync: true);
-            if (stream.CanSeek)
+
+            string tmpFilePath = Path.Combine(dirPath, $"{hash[4..]}.{Guid.NewGuid():N}.tmp");
+
+            var fso = new FileStreamOptions
             {
-                stream.Seek(default, SeekOrigin.Begin);
+                Share = FileShare.None,
+                Mode = FileMode.CreateNew,
+                Access = FileAccess.Write,
+                Options = FileOptions.Asynchronous | FileOptions.WriteThrough
+            };
+
+            await using var tmp = new FileStream(tmpFilePath, fso);
+
+            try
+            {
+                if (stream.CanSeek)
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                }
+
+                await _cipher.EncryptAsync(stream, tmp, _settings.CipherChunkSizeBytes, ct).ConfigureAwait(false);
+                await tmp.FlushAsync(ct).ConfigureAwait(false);
+                tmp.Flush(true);
             }
-            await _cipher.EncryptAsync(stream, fileStream, _settings.CipherChunkSizeBytes);
-            await fileStream.FlushAsync();
+            catch
+            {
+                TryDelete(tmpFilePath);
+                throw;
+            }
+
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    TryDelete(tmpFilePath);
+                    return;
+                }
+
+                File.Move(tmpFilePath, filePath);
+            }
+            catch (IOException)
+            {
+                if (File.Exists(filePath))
+                {
+                    TryDelete(tmpFilePath);
+                    return;
+                }
+                TryDelete(tmpFilePath);
+                throw;
+            }
+            catch
+            {
+                TryDelete(tmpFilePath);
+                throw;
+            }
+        }
+
+        private void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete temporary file {Path}", path);
+            }
         }
     }
 }
