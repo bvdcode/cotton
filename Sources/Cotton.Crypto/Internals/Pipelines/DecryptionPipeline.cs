@@ -96,7 +96,16 @@ namespace Cotton.Crypto.Internals.Pipelines
 
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipher = scope.Rent(cipherLength);
-                        await AesGcmStreamFormat.ReadExactlyAsync(_input, cipher, cipherLength, ct).ConfigureAwait(false);
+                        try
+                        {
+                            await AesGcmStreamFormat.ReadExactlyAsync(_input, cipher, cipherLength, ct).ConfigureAwait(false);
+                        }
+                        catch (EndOfStreamException eof)
+                        {
+                            scope.Recycle(cipher);
+                            // Map truncation inside ciphertext chunk to auth failure semantics
+                            throw new AuthenticationTagMismatchException("Ciphertext truncated before chunk end.", eof);
+                        }
                         if (unchecked((ulong)idx) == ulong.MaxValue)
                         {
                             scope.Recycle(cipher);

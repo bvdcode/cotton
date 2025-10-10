@@ -130,6 +130,11 @@ namespace Cotton.Crypto.Internals
             try
             {
                 await ReadExactlyAsync(input, header, headerLen, ct).ConfigureAwait(false);
+                // Explicit magic check for fast-fail on wrong magic
+                if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
+                {
+                    throw new InvalidDataException("Invalid or unsupported chunk magic.");
+                }
                 if (!ChunkHeader.TryRead(header, tagSize, out var ch))
                 {
                     throw new InvalidDataException("Invalid or corrupted chunk header.");
