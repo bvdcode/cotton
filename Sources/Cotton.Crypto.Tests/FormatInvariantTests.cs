@@ -3,6 +3,8 @@ using Cotton.Crypto.Internals;
 
 namespace Cotton.Crypto.Tests;
 
+[Category("Format")]
+
 public class FormatInvariantTests
 {
     [Test]

@@ -345,7 +345,7 @@ namespace Cotton.Crypto
             return (jobChannel, resultChannel);
         }
 
-        private Task StartDecryptionProducer(Stream input, ChannelWriter<DecryptionJob> writer, uint fileNoncePrefix, CancellationToken ct)
+        private Task StartDecryptionProducer(Stream input, ChannelWriter<DecryptionJob> writer, CancellationToken ct)
         {
             return Task.Run(async () =>
             {
@@ -554,7 +554,7 @@ namespace Cotton.Crypto
         private async Task DecryptChunksParallelAsync(Stream input, Stream output, byte[] fileKey, uint fileNoncePrefix, CancellationToken ct)
         {
             var (jobChannel, resultChannel) = CreateDecryptionChannels();
-            var producer = StartDecryptionProducer(input, jobChannel.Writer, fileNoncePrefix, ct);
+            var producer = StartDecryptionProducer(input, jobChannel.Writer, ct);
             var workers = StartDecryptionWorkers(fileKey, jobChannel.Reader, resultChannel.Writer, fileNoncePrefix, ct);
             var consumer = StartDecryptionConsumer(output, resultChannel.Reader, ct);
 

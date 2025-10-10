@@ -2,6 +2,7 @@ using Cotton.Crypto.Models;
 
 namespace Cotton.Crypto.Tests
 {
+    [Category("Format")]
     public class AesGcmKeyHeaderTests
     {
         [Test]
