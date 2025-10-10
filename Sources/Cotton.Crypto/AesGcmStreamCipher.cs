@@ -78,15 +78,15 @@ namespace Cotton.Crypto
                 }
                 finally
                 {
-                    BufferPool.Return(headerBuf);
+                    BufferPool.Return(headerBuf, clearArray: false);
                 }
 
                 await EncryptChunksParallelAsync(input, output, fileKey, fileNoncePrefix, chunkSize, ct).ConfigureAwait(false);
             }
             finally
             {
-                Array.Clear(fileKey, 0, KeySize);
-                BufferPool.Return(fileKey);
+                CryptographicOperations.ZeroMemory(fileKey);
+                BufferPool.Return(fileKey, clearArray: false);
             }
         }
 
@@ -114,8 +114,8 @@ namespace Cotton.Crypto
             }
             finally
             {
-                Array.Clear(fileKey, 0, KeySize);
-                BufferPool.Return(fileKey);
+                CryptographicOperations.ZeroMemory(fileKey);
+                BufferPool.Return(fileKey, clearArray: false);
             }
         }
 
@@ -159,7 +159,7 @@ namespace Cotton.Crypto
                         {
                             if (buffer != null)
                             {
-                                BufferPool.Return(buffer);
+                                BufferPool.Return(buffer, clearArray: false);
                                 buffer = null;
                             }
                             throw;
@@ -169,7 +169,7 @@ namespace Cotton.Crypto
                         {
                             if (buffer != null)
                             {
-                                BufferPool.Return(buffer);
+                                BufferPool.Return(buffer, clearArray: false);
                             }
                             break;
                         }
@@ -208,12 +208,12 @@ namespace Cotton.Crypto
                         }
                         catch
                         {
-                            BufferPool.Return(cipherBuffer);
+                            BufferPool.Return(cipherBuffer, clearArray: false);
                             throw;
                         }
                         finally
                         {
-                            BufferPool.Return(job.DataBuffer);
+                            BufferPool.Return(job.DataBuffer, clearArray: false);
                         }
                     }
                 }, ct);
@@ -244,10 +244,10 @@ namespace Cotton.Crypto
                             }
                             finally
                             {
-                                BufferPool.Return(headerBuf);
+                                BufferPool.Return(headerBuf, clearArray: false);
                             }
                             await output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
-                            BufferPool.Return(res.Data);
+                            BufferPool.Return(res.Data, clearArray: false);
                             filled[slot] = false;
                             nextToWrite++;
                         }
@@ -271,10 +271,10 @@ namespace Cotton.Crypto
                         }
                         finally
                         {
-                            BufferPool.Return(headerBuf);
+                            BufferPool.Return(headerBuf, clearArray: false);
                         }
                         await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
-                        BufferPool.Return(result.Data);
+                        BufferPool.Return(result.Data, clearArray: false);
                         nextToWrite++;
                         await FlushReadyAsync().ConfigureAwait(false);
                     }
@@ -298,7 +298,7 @@ namespace Cotton.Crypto
                 {
                     if (filled[i])
                     {
-                        BufferPool.Return(ring[i].Data);
+                        BufferPool.Return(ring[i].Data, clearArray: false);
                         throw new InvalidDataException("Missing chunks in output ordering. File may be incomplete or corrupted.");
                     }
                 }
@@ -402,12 +402,12 @@ namespace Cotton.Crypto
                         }
                         catch
                         {
-                            BufferPool.Return(plainBuffer);
+                            BufferPool.Return(plainBuffer, clearArray: false);
                             throw;
                         }
                         finally
                         {
-                            BufferPool.Return(job.Cipher);
+                            BufferPool.Return(job.Cipher, clearArray: false);
                         }
                     }
                 }, ct);
@@ -447,7 +447,7 @@ namespace Cotton.Crypto
                         {
                             var res = ring[slot];
                             await output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
-                            BufferPool.Return(res.Data);
+                            BufferPool.Return(res.Data, clearArray: false);
                             filled[slot] = false;
                             nextToWrite++;
                         }
@@ -463,7 +463,7 @@ namespace Cotton.Crypto
                     if (result.Index == nextToWrite)
                     {
                         await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
-                        BufferPool.Return(result.Data);
+                        BufferPool.Return(result.Data, clearArray: false);
                         nextToWrite++;
                         await FlushReadyAsync();
                     }
@@ -471,7 +471,7 @@ namespace Cotton.Crypto
                     {
                         if (result.Index < nextToWrite)
                         {
-                            BufferPool.Return(result.Data);
+                            BufferPool.Return(result.Data, clearArray: false);
                             throw new InvalidDataException("Received duplicate or out-of-order chunk behind the write cursor.");
                         }
                         EnsureCapacity(result.Index);
@@ -489,7 +489,7 @@ namespace Cotton.Crypto
                 {
                     if (filled[i])
                     {
-                        BufferPool.Return(ring[i].Data);
+                        BufferPool.Return(ring[i].Data, clearArray: false);
                         throw new InvalidDataException("Decryption output missing chunks. The encrypted data may be incomplete or corrupted.");
                     }
                 }
