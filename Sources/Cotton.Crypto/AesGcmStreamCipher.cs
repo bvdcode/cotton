@@ -7,6 +7,11 @@ using System.Security.Cryptography;
 
 namespace Cotton.Crypto
 {
+    /// <summary>
+    /// AES-GCM streaming cipher with per-file key wrapping and per-chunk authentication.
+    /// Nonce layout: 12-byte IV = 4-byte file prefix || 8-byte chunk counter.
+    /// The maximum number of chunks per file is 2^64-1; exceeding this throws InvalidOperationException to avoid IV reuse.
+    /// </summary>
     public class AesGcmStreamCipher : IStreamCipher
     {
         private readonly int _keyId;
@@ -174,6 +179,11 @@ namespace Cotton.Crypto
                             break;
                         }
 
+                        if (unchecked((ulong)chunkIndex) == ulong.MaxValue)
+                        {
+                            BufferPool.Return(buffer, clearArray: false);
+                            throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
+                        }
                         var job = new EncryptionJob(index: chunkIndex++, dataBuffer: buffer, dataLength: bytesRead);
                         await jobWriter.WriteAsync(job, ct).ConfigureAwait(false);
                     }
@@ -361,9 +371,32 @@ namespace Cotton.Crypto
                             break;
                         }
 
+                        // Validate header fields before reading payload to fail fast on tampering
+                        if (chunkHeader.KeyId != _keyId)
+                        {
+                            throw new InvalidDataException("Chunk key ID does not match file key ID.");
+                        }
+                        if (chunkHeader.PlaintextLength <= 0 || chunkHeader.PlaintextLength > MaxChunkSize)
+                        {
+                            throw new InvalidDataException("Invalid chunk length in header.");
+                        }
+                        if (input.CanSeek)
+                        {
+                            long remaining = input.Length - input.Position;
+                            if (remaining < chunkHeader.PlaintextLength)
+                            {
+                                throw new EndOfStreamException("Unexpected end of stream while reading chunk ciphertext.");
+                            }
+                        }
+
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipherBuffer = BufferPool.Rent(cipherLength);
                         await AesGcmStreamFormat.ReadExactlyAsync(input, cipherBuffer, cipherLength, ct).ConfigureAwait(false);
+                        if (unchecked((ulong)chunkIndex) == ulong.MaxValue)
+                        {
+                            BufferPool.Return(cipherBuffer, clearArray: false);
+                            throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
+                        }
                         var job = new DecryptionJob(index: chunkIndex++, tag: chunkHeader.Tag, cipherBuffer: cipherBuffer, dataLength: cipherLength);
                         await writer.WriteAsync(job, ct).ConfigureAwait(false);
                     }

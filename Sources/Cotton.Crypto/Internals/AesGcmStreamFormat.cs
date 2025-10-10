@@ -28,8 +28,22 @@ namespace Cotton.Crypto.Internals
         // Keep version number 1 per requirements; magic remains CTN1
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
 
+        /// <summary>
+        /// Compose the 12-byte nonce as: [4 bytes file prefix][8 bytes chunk counter].
+        /// The chunk counter space is 64-bit. To avoid IV reuse, the maximum number of chunks per file is 2^64 - 1.
+        /// If the counter equals ulong.MaxValue, this method throws InvalidOperationException.
+        /// </summary>
+        /// <param name="destination">Destination 12-byte buffer.</param>
+        /// <param name="fileNoncePrefix">Per-file 4-byte prefix.</param>
+        /// <param name="chunkIndex">Zero-based chunk index.</param>
         public static void ComposeNonce(Span<byte> destination, uint fileNoncePrefix, long chunkIndex)
         {
+            // Guard: prevent wrapping the 64-bit counter in the nonce
+            if (unchecked((ulong)chunkIndex) == ulong.MaxValue)
+            {
+                throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
+            }
+
             BinaryPrimitives.WriteUInt32LittleEndian(destination, fileNoncePrefix);
             BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
         }
