@@ -13,7 +13,9 @@ namespace Cotton.Crypto.Models
             int keySize = EncryptedKey.Length;
             int totalLen = FileHeader.ComputeLength(nonceSize, tagSize, keySize);
             byte[] buffer = new byte[totalLen];
-            var fh = new FileHeader(KeyId, 0u, Nonce, Tag128.FromSpan(Tag), EncryptedKey, DataLength);
+            // For file header we only support 16-byte authentication tag
+            if (tagSize != 16) throw new ArgumentException("Tag span must be 16 bytes", nameof(Tag));
+            var fh = new FileHeader(KeyId, 0u, Nonce, Tag128.FromSpan(Tag.AsSpan(0, 16)), EncryptedKey, DataLength);
             if (!FileHeader.TryWrite(buffer, fh, nonceSize, tagSize, keySize))
                 throw new InvalidOperationException("Failed to serialize header.");
             return buffer;
@@ -55,7 +57,7 @@ namespace Cotton.Crypto.Models
                 throw new InvalidDataException("Unsupported header layout or length.");
             byte[] tagOnly = new byte[tagSize];
             ch.Tag.CopyTo(tagOnly);
-            return new AesGcmKeyHeader(ch.KeyId, Array.Empty<byte>(), tagOnly, Array.Empty<byte>(), ch.PlaintextLength);
+            return new AesGcmKeyHeader(ch.KeyId, [], tagOnly, [], ch.PlaintextLength);
         }
     }
 }
