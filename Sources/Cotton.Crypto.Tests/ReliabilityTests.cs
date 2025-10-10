@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Cotton.Crypto;
 using Cotton.Crypto.Models;
@@ -8,11 +8,11 @@ using NUnit.Framework;
 namespace Cotton.Crypto.Tests;
 
 [Category("Reliability")]
-public class P0ReliabilityTests
+public class ReliabilityTests
 {
     private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
 
-    // 10. Non-seekable ?????? ????
+    // 10. Non-seekable пустой файл
     [Test]
     public void NonSeekable_EmptyFile_RoundTrip_NoChunks()
     {
@@ -34,7 +34,7 @@ public class P0ReliabilityTests
         Assert.That(outDec.Length, Is.EqualTo(0));
     }
 
-    // 11. ????? chunkSize
+    // 11. Грани chunkSize
     [Test]
     public void ChunkSize_Boundaries_Min_And_Max()
     {
@@ -61,7 +61,7 @@ public class P0ReliabilityTests
         Assert.That(lengthsMax.Last(), Is.EqualTo(data.Length % max == 0 ? max : data.Length % max));
     }
 
-    // 12. Wrong magic ? chunk-header
+    // 12. Wrong magic в chunk-header
     [Test]
     public void Decrypt_WrongMagic_FailsFast()
     {
