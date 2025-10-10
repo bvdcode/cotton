@@ -25,7 +25,8 @@ namespace Cotton.Crypto.Internals
 
     internal static class AesGcmStreamFormat
     {
-        private static ReadOnlySpan<byte> MagicBytes => "CTN2"u8; // bump format version for chunk header layout change
+        // Keep version number 1 per requirements; magic remains CTN1
+        private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
 
         public static void ComposeNonce(Span<byte> destination, uint fileNoncePrefix, long chunkIndex)
         {
@@ -37,7 +38,7 @@ namespace Cotton.Crypto.Internals
         {
             if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
             MagicBytes.CopyTo(aad32[..4]);
-            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 2); // version 2
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 1); // version stays 1
             BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(8, 4), keyId);
         }
 
@@ -77,7 +78,7 @@ namespace Cotton.Crypto.Internals
         }
 
         public static int ComputeChunkHeaderLength(int tagSize)
-            => 4 + 4 + 8 + 4 + tagSize; // magic + headerLen + plainLen + keyId + tag (no nonce in v2)
+            => 4 + 4 + 8 + 4 + tagSize; // magic + headerLen + plainLen + keyId + tag
 
         public static void BuildChunkHeader(Span<byte> header, int keyId, long chunkIndex, Tag128 tag, int textLength, int tagSize)
         {
@@ -155,7 +156,6 @@ namespace Cotton.Crypto.Internals
                 }
                 long plaintextLength = BinaryPrimitives.ReadInt64LittleEndian(header.AsSpan(8));
                 int keyId = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(16));
-                // v2: nonce not stored
                 Tag128 tag = Tag128.FromSpan(header.AsSpan(20, tagSize));
                 return new ChunkHeader(plaintextLength, keyId, tag);
             }
