@@ -15,7 +15,7 @@ namespace Cotton.Crypto.Internals
         public byte[] EncryptedKey { get; } = encryptedKey;
     }
 
-    // Internal representation of a per-chunk header (nonce validated on read; not stored)
+    // chunk header no longer stores nonce; only keyId + tag + length
     internal readonly struct ChunkHeader(long length, int keyId, Tag128 tag)
     {
         public long PlaintextLength { get; } = length;
@@ -52,7 +52,7 @@ namespace Cotton.Crypto.Internals
         public static int ComputeFileHeaderLength(int nonceSize, int tagSize, int keySize)
             => 4 + 4 + 8 + 4 + 4 + nonceSize + tagSize + keySize;
 
-        public static void BuildFileHeader(Span<byte> header, int keyId, uint noncePrefix, ReadOnlySpan<byte> fileKeyNonce, ReadOnlySpan<byte> fileKeyTag, ReadOnlySpan<byte> encryptedFileKey, long totalPlaintextLength, int nonceSize, int tagSize, int keySize)
+        public static void BuildFileHeader(Span<byte> header, int keyId, uint noncePrefix, ReadOnlySpan<byte> fileKeyNonce, Tag128 fileKeyTag, ReadOnlySpan<byte> encryptedFileKey, long totalPlaintextLength, int nonceSize, int tagSize, int keySize)
         {
             int required = ComputeFileHeaderLength(nonceSize, tagSize, keySize);
             if (header.Length < required) throw new ArgumentException("Header buffer too small", nameof(header));
@@ -69,17 +69,19 @@ namespace Cotton.Crypto.Internals
             offset += sizeof(uint);
             fileKeyNonce.CopyTo(header[offset..]);
             offset += nonceSize;
-            fileKeyTag.CopyTo(header[offset..]);
+            // write Tag128 directly
+            Span<byte> tagDest = header[offset..(offset + tagSize)];
+            fileKeyTag.CopyTo(tagDest);
             offset += tagSize;
             encryptedFileKey.CopyTo(header[offset..]);
         }
 
-        public static int ComputeChunkHeaderLength(int nonceSize, int tagSize)
-            => 4 + 4 + 8 + 4 + nonceSize + tagSize;
+        public static int ComputeChunkHeaderLength(int tagSize)
+            => 4 + 4 + 8 + 4 + tagSize; // magic + headerLen + plainLen + keyId + tag (no nonce in v2)
 
-        public static void BuildChunkHeader(Span<byte> header, int keyId, long chunkIndex, ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> tag, int textLength, int nonceSize, int tagSize)
+        public static void BuildChunkHeader(Span<byte> header, int keyId, long chunkIndex, Tag128 tag, int textLength, int tagSize)
         {
-            int required = ComputeChunkHeaderLength(nonceSize, tagSize);
+            int required = ComputeChunkHeaderLength(tagSize);
             if (header.Length < required) throw new ArgumentException("Header buffer too small", nameof(header));
             int offset = 0;
             MagicBytes.CopyTo(header[offset..]);
@@ -90,9 +92,8 @@ namespace Cotton.Crypto.Internals
             offset += sizeof(long);
             BinaryPrimitives.WriteInt32LittleEndian(header[offset..], keyId);
             offset += sizeof(int);
-            nonce.CopyTo(header[offset..]);
-            offset += nonceSize;
-            tag.CopyTo(header[offset..]);
+            // write tag
+            tag.CopyTo(header[offset..(offset + tagSize)]);
         }
 
         public static async Task<FileHeader> ReadFileHeaderAsync(Stream input, int nonceSize, int tagSize, int keySize, CancellationToken ct)
@@ -136,9 +137,9 @@ namespace Cotton.Crypto.Internals
             }
         }
 
-        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int nonceSize, int tagSize, uint fileNoncePrefix, long expectedIndex, CancellationToken ct)
+        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int tagSize, uint fileNoncePrefix, long expectedIndex, CancellationToken ct)
         {
-            int headerLen = ComputeChunkHeaderLength(nonceSize, tagSize);
+            int headerLen = ComputeChunkHeaderLength(tagSize);
             byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
             try
             {
@@ -154,13 +155,7 @@ namespace Cotton.Crypto.Internals
                 }
                 long plaintextLength = BinaryPrimitives.ReadInt64LittleEndian(header.AsSpan(8));
                 int keyId = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(16));
-                Span<byte> expectedNonce = stackalloc byte[nonceSize];
-                ComposeNonce(expectedNonce, fileNoncePrefix, expectedIndex);
-                if (!expectedNonce.SequenceEqual(header.AsSpan(20, nonceSize)))
-                {
-                    throw new AuthenticationTagMismatchException("Chunk nonce mismatch.");
-                }
-                Tag128 tag = Tag128.FromSpan(header.AsSpan(20 + nonceSize, tagSize));
+                Tag128 tag = Tag128.FromSpan(header.AsSpan(20, tagSize));
                 return new ChunkHeader(plaintextLength, keyId, tag);
             }
             finally

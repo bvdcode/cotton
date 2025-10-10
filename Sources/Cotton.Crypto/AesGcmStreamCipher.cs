@@ -73,7 +73,7 @@ namespace Cotton.Crypto
                 byte[] headerBuf = BufferPool.Rent(headerLen);
                 try
                 {
-                    AesGcmStreamFormat.BuildFileHeader(headerBuf.AsSpan(0, headerLen), _keyId, fileNoncePrefix, fileKeyNonce, fileKeyTag.AsSpan, encryptedFileKey, totalPlaintextLength, NonceSize, TagSize, KeySize);
+                    AesGcmStreamFormat.BuildFileHeader(headerBuf.AsSpan(0, headerLen), _keyId, fileNoncePrefix, fileKeyNonce, fileKeyTag, encryptedFileKey, totalPlaintextLength, NonceSize, TagSize, KeySize);
                     await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                 }
                 finally
@@ -106,7 +106,9 @@ namespace Cotton.Crypto
             {
                 using (var gcm = new AesGcm(_masterKeyBytes, TagSize))
                 {
-                    gcm.Decrypt(header.Nonce, header.EncryptedKey, header.Tag.AsSpan, fileKey.AsSpan(0, KeySize));
+                    Span<byte> tagSpan = stackalloc byte[TagSize];
+                    header.Tag.CopyTo(tagSpan);
+                    gcm.Decrypt(header.Nonce, header.EncryptedKey, tagSpan, fileKey.AsSpan(0, KeySize));
                 }
                 await DecryptChunksParallelAsync(input, output, fileKey, header.NoncePrefix, ct).ConfigureAwait(false);
             }
@@ -122,12 +124,12 @@ namespace Cotton.Crypto
             var jobChannel = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
                 SingleWriter = true,
-                SingleReader = false,
+                SingleReader = true,
                 FullMode = BoundedChannelFullMode.Wait
             });
             var resultChannel = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
-                SingleWriter = false,
+                SingleWriter = true,
                 SingleReader = true,
                 FullMode = BoundedChannelFullMode.Wait
             });
@@ -233,13 +235,11 @@ namespace Cotton.Crypto
                         if (filled[slot] && slotIndex[slot] == nextToWrite)
                         {
                             var res = ring[slot];
-                            Span<byte> nonce = stackalloc byte[NonceSize];
-                            AesGcmStreamFormat.ComposeNonce(nonce, fileNoncePrefix, res.Index);
-                            int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(NonceSize, TagSize);
+                            int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(TagSize);
                             byte[] headerBuf = BufferPool.Rent(headerLen);
                             try
                             {
-                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, res.Index, nonce, res.Tag.AsSpan, res.DataLength, NonceSize, TagSize);
+                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, res.Index, res.Tag, res.DataLength, TagSize);
                                 await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                             }
                             finally
@@ -262,13 +262,11 @@ namespace Cotton.Crypto
                 {
                     if (result.Index == nextToWrite)
                     {
-                        Span<byte> nonce = stackalloc byte[NonceSize];
-                        AesGcmStreamFormat.ComposeNonce(nonce, fileNoncePrefix, result.Index);
-                        int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(NonceSize, TagSize);
+                        int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(TagSize);
                         byte[] headerBuf = BufferPool.Rent(headerLen);
                         try
                         {
-                            AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, result.Index, nonce, result.Tag.AsSpan, result.DataLength, NonceSize, TagSize);
+                            AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, result.Index, result.Tag, result.DataLength, TagSize);
                             await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                         }
                         finally
@@ -296,7 +294,6 @@ namespace Cotton.Crypto
 
                 await FlushReadyAsync().ConfigureAwait(false);
 
-                // All results drained; ensure no gaps
                 for (int i = 0; i < window; i++)
                 {
                     if (filled[i])
@@ -324,12 +321,12 @@ namespace Cotton.Crypto
             var jobChannel = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
                 SingleWriter = true,
-                SingleReader = false,
+                SingleReader = true,
                 FullMode = BoundedChannelFullMode.Wait
             });
             var resultChannel = Channel.CreateBounded<DecryptionResult>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
-                SingleWriter = false,
+                SingleWriter = true,
                 SingleReader = true,
                 FullMode = BoundedChannelFullMode.Wait
             });
@@ -349,7 +346,7 @@ namespace Cotton.Crypto
                         if (input.CanSeek)
                         {
                             long bytesRemaining = input.Length - input.Position;
-                            int minHeader = 4 + 4 + 8 + 4 + NonceSize + TagSize;
+                            int minHeader = 4 + 4 + 8 + 4 + TagSize;
                             if (bytesRemaining == 0) break;
                             if (bytesRemaining < minHeader)
                                 throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
@@ -357,7 +354,7 @@ namespace Cotton.Crypto
                         ChunkHeader chunkHeader;
                         try
                         {
-                            chunkHeader = await AesGcmStreamFormat.ReadChunkHeaderAsync(input, NonceSize, TagSize, fileNoncePrefix, chunkIndex, ct).ConfigureAwait(false);
+                            chunkHeader = await AesGcmStreamFormat.ReadChunkHeaderAsync(input, TagSize, fileNoncePrefix, chunkIndex, ct).ConfigureAwait(false);
                         }
                         catch (EndOfStreamException)
                         {
@@ -397,7 +394,9 @@ namespace Cotton.Crypto
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, fileNoncePrefix, job.Index);
                             AesGcmStreamFormat.FillAadMutable(aad, job.Index, job.DataLength);
-                            gcm.Decrypt(nonceBuffer, job.Cipher.AsSpan(0, job.DataLength), job.Tag.AsSpan, plainBuffer.AsSpan(0, job.DataLength), aad);
+                            Span<byte> tagSpan = stackalloc byte[TagSize];
+                            job.Tag.CopyTo(tagSpan);
+                            gcm.Decrypt(nonceBuffer, job.Cipher.AsSpan(0, job.DataLength), tagSpan, plainBuffer.AsSpan(0, job.DataLength), aad);
                             var result = new DecryptionResult(job.Index, plainBuffer, job.DataLength);
                             await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
                         }
