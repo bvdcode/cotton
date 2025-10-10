@@ -49,6 +49,19 @@ namespace Cotton.Crypto.Internals.Pipelines
                 await producer.ConfigureAwait(false);
                 await Task.WhenAll(workers).ConfigureAwait(false);
             }
+            catch (Exception ex)
+            {
+                if (ex is AggregateException agg)
+                {
+                    ex = agg.Flatten().InnerExceptions.FirstOrDefault() ?? ex;
+                }
+                if (ex is AuthenticationTagMismatchException)
+                {
+                    // Reclassify as format/order failure for clearer diagnostics at API level
+                    throw new InvalidDataException("Chunk authentication failed. Possible duplicate or out-of-order chunk.", ex);
+                }
+                throw;
+            }
             finally
             {
                 resCh.Writer.TryComplete();
@@ -91,7 +104,8 @@ namespace Cotton.Crypto.Internals.Pipelines
                         if (_input.CanSeek)
                         {
                             long remaining = _input.Length - _input.Position;
-                            if (remaining < chunkHeader.PlaintextLength) throw new EndOfStreamException("Unexpected end of stream while reading chunk ciphertext.");
+                            if (remaining < chunkHeader.PlaintextLength)
+                                throw new AuthenticationTagMismatchException("Ciphertext truncated before chunk end.");
                         }
 
                         int cipherLength = (int)chunkHeader.PlaintextLength;
@@ -147,6 +161,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                         catch (CryptographicException ex)
                         {
                             scope.Recycle(plain);
+                            // bubble up; classification happens at top
                             throw new AuthenticationTagMismatchException("Chunk authentication failed.", ex);
                         }
                         finally
