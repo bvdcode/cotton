@@ -314,7 +314,7 @@ namespace Cotton.Crypto.Tests
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
 
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
 
             for (int i = 0; i < chunks.Count; i++)
             {
@@ -438,7 +438,7 @@ namespace Cotton.Crypto.Tests
 
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
 
             int headerLen = 4 + 4 + 8 + 4 + TagSize; // compact chunk header (no nonce)
             int chunk0HeaderStart = chunks[0].cipherOffset - headerLen;

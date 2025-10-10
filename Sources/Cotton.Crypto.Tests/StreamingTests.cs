@@ -5,7 +5,7 @@ namespace Cotton.Crypto.Tests;
 
 public class StreamingTests
 {
-    private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
+    private static byte[] Key() => Enumerable.Range(0, 32).Select(i => (byte)i).ToArray();
 
     [Test]
     public async Task EncryptDecrypt_WithNonSeekable_Streams()
@@ -54,7 +54,7 @@ public class StreamingTests
         var enc = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
         var dec = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
         // Use more data to ensure decrypt runs long enough to observe cancellation reliably
-        byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 32).Select(i => (byte)(i & 0xFF))];
+        byte[] data = Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 32).Select(i => (byte)(i & 0xFF)).ToArray();
         using var input = new MemoryStream(data);
         using var ciphertext = new MemoryStream();
         enc.EncryptAsync(input, ciphertext, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
