@@ -1,83 +1,61 @@
-﻿namespace Cotton.Crypto.Models
+﻿using System.Buffers.Binary;
+using Cotton.Crypto.Internals;
+
+namespace Cotton.Crypto.Models
 {
+    // DTO projection for external use; (de)serialization delegates to Internals.*
     public readonly record struct AesGcmKeyHeader(int KeyId, byte[] Nonce, byte[] Tag, byte[] EncryptedKey, long DataLength = 0)
     {
-        public const string Magic = "CTN1"; // stay at version 1
-        private static readonly byte[] MagicBytes = System.Text.Encoding.ASCII.GetBytes(Magic);
-
         public ReadOnlyMemory<byte> ToBytes()
         {
-            // Magic (4) + Header Length (4) + Data Length (8) + Key ID (4) + NoncePrefix (4) + Nonce + Tag + EncryptedKey
-            int headerLength = MagicBytes.Length + sizeof(int) + sizeof(long) + sizeof(int) + sizeof(uint) + Nonce.Length + Tag.Length + EncryptedKey.Length;
-            byte[] buffer = new byte[headerLength];
-            int offset = 0;
-            MagicBytes.CopyTo(buffer, offset);
-            offset += MagicBytes.Length;
-            BitConverter.TryWriteBytes(buffer.AsSpan(offset), headerLength);
-            offset += sizeof(int);
-            BitConverter.TryWriteBytes(buffer.AsSpan(offset), DataLength);
-            offset += sizeof(long);
-            BitConverter.TryWriteBytes(buffer.AsSpan(offset), KeyId);
-            offset += sizeof(int);
-            // Nonce prefix placeholder (0)
-            BitConverter.TryWriteBytes(buffer.AsSpan(offset), (uint)0);
-            offset += sizeof(uint);
-            Nonce.CopyTo(buffer, offset);
-            offset += Nonce.Length;
-            Tag.CopyTo(buffer, offset);
-            offset += Tag.Length;
-            EncryptedKey.CopyTo(buffer, offset);
+            int nonceSize = Nonce.Length;
+            int tagSize = Tag.Length;
+            int keySize = EncryptedKey.Length;
+            int totalLen = FileHeader.ComputeLength(nonceSize, tagSize, keySize);
+            byte[] buffer = new byte[totalLen];
+            var fh = new FileHeader(KeyId, 0u, Nonce, Tag128.FromSpan(Tag), EncryptedKey, DataLength);
+            if (!FileHeader.TryWrite(buffer, fh, nonceSize, tagSize, keySize))
+                throw new InvalidOperationException("Failed to serialize header.");
             return buffer;
         }
 
         public static AesGcmKeyHeader FromStream(Stream stream, int nonceSize, int tagSize)
         {
-            Span<byte> intBuffer = stackalloc byte[sizeof(int)];
-            Span<byte> longBuffer = stackalloc byte[sizeof(long)];
-
-            byte[] magicBytes = new byte[MagicBytes.Length];
-            int bytesRead = stream.Read(magicBytes);
-            if (bytesRead != MagicBytes.Length || !magicBytes.AsSpan().SequenceEqual(MagicBytes))
-            {
+            // Peek prefix and full header length
+            Span<byte> prefix = stackalloc byte[8];
+            stream.ReadExactly(prefix);
+            if (!prefix[..4].SequenceEqual(FormatConstants.MagicBytes))
                 throw new InvalidDataException("Invalid magic number in header.");
-            }
+            int headerLength = BinaryPrimitives.ReadInt32LittleEndian(prefix.Slice(4, 4));
 
-            stream.ReadExactly(intBuffer);
-            int headerLength = BitConverter.ToInt32(intBuffer);
+            byte[] rest = new byte[headerLength - 8];
+            stream.ReadExactly(rest);
 
-            stream.ReadExactly(longBuffer);
-            long dataLength = BitConverter.ToInt64(longBuffer);
-
-            stream.ReadExactly(intBuffer);
-            int keyId = BitConverter.ToInt32(intBuffer);
-
-            int fixedPrefix = MagicBytes.Length + sizeof(int) + sizeof(long) + sizeof(int);
-            int remaining = headerLength - fixedPrefix;
-
-            if (remaining == tagSize)
+            // Build full header and try parse as FileHeader
+            byte[] full = new byte[headerLength];
+            prefix.CopyTo(full);
+            rest.CopyTo(full.AsSpan(8));
+            // Best-effort: encrypted key length is dynamic; try plausible sizes
+            // First try: treat as file header with encrypted key length = remaining - (uint + nonceSize + tagSize)
+            int remaining = headerLength - (4 + 4 + 8 + 4); // after magic+len+dataLen+keyId
+            if (remaining >= (sizeof(uint) + nonceSize + tagSize))
             {
-                byte[] tag = new byte[tagSize];
-                stream.ReadExactly(tag);
-                return new AesGcmKeyHeader(keyId, [], tag, [], dataLength);
-            }
-            else if (remaining > (sizeof(uint) + nonceSize + tagSize))
-            {
-                // Read file header with dynamic encrypted key length
-                stream.ReadExactly(intBuffer); // noncePrefix (uint)
-                byte[] nonce = new byte[nonceSize];
-                stream.ReadExactly(nonce);
-                byte[] tag = new byte[tagSize];
-                stream.ReadExactly(tag);
                 int encKeyLen = remaining - (sizeof(uint) + nonceSize + tagSize);
-                if (encKeyLen <= 0) throw new InvalidDataException("Invalid encrypted key length in header.");
-                byte[] encryptedKey = new byte[encKeyLen];
-                stream.ReadExactly(encryptedKey);
-                return new AesGcmKeyHeader(keyId, nonce, tag, encryptedKey, dataLength);
+                if (encKeyLen >= 0 && FileHeader.TryRead(full, nonceSize, tagSize, encKeyLen, out var fh))
+                {
+                    // DTO
+                    byte[] tagBytes = new byte[tagSize];
+                    fh.Tag.CopyTo(tagBytes);
+                    return new AesGcmKeyHeader(fh.KeyId, fh.Nonce, tagBytes, fh.EncryptedKey, fh.TotalPlaintextLength);
+                }
             }
-            else
-            {
+
+            // Fallback: compact chunk header (no nonce, no encrypted key)
+            if (!ChunkHeader.TryRead(full, tagSize, out var ch))
                 throw new InvalidDataException("Unsupported header layout or length.");
-            }
+            byte[] tagOnly = new byte[tagSize];
+            ch.Tag.CopyTo(tagOnly);
+            return new AesGcmKeyHeader(ch.KeyId, Array.Empty<byte>(), tagOnly, Array.Empty<byte>(), ch.PlaintextLength);
         }
     }
 }
