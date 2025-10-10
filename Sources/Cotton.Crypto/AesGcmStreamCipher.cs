@@ -233,11 +233,42 @@ namespace Cotton.Crypto
 
             var consumer = Task.Run(async () =>
             {
-                int window = Math.Max(4, ConcurrencyLevel * 4);
+                const int minWindow = 4;
+                int window = Math.Max(minWindow, ConcurrencyLevel * 4);
                 var ring = new EncryptionResult[window];
                 var filled = new bool[window];
                 var slotIndex = new long[window];
                 long nextToWrite = 0;
+
+                void EnsureCapacity(long neededIndex)
+                {
+                    if (neededIndex - nextToWrite < window) return;
+
+                    int newWindow = window * 2;
+                    while (neededIndex - nextToWrite >= newWindow)
+                    {
+                        newWindow *= 2;
+                    }
+
+                    var newRing = new EncryptionResult[newWindow];
+                    var newFilled = new bool[newWindow];
+                    var newSlotIndex = new long[newWindow];
+
+                    for (int i = 0; i < window; i++)
+                    {
+                        if (!filled[i]) continue;
+                        long idx = slotIndex[i];
+                        int newSlot = (int)(idx % newWindow);
+                        newRing[newSlot] = ring[i];
+                        newFilled[newSlot] = true;
+                        newSlotIndex[newSlot] = idx;
+                    }
+
+                    ring = newRing;
+                    filled = newFilled;
+                    slotIndex = newSlotIndex;
+                    window = newWindow;
+                }
 
                 async Task FlushReadyAsync()
                 {
@@ -292,11 +323,12 @@ namespace Cotton.Crypto
                     }
                     else
                     {
-                        long distance = result.Index - nextToWrite;
-                        if (distance < 0 || distance >= window)
+                        if (result.Index < nextToWrite)
                         {
-                            throw new InvalidDataException("Reordering window overflow or invalid chunk index.");
+                            BufferPool.Return(result.Data, clearArray: false);
+                            throw new InvalidDataException("Received duplicate or out-of-order chunk behind the write cursor.");
                         }
+                        EnsureCapacity(result.Index);
                         int slot = (int)(result.Index % window);
                         ring[slot] = result;
                         slotIndex[slot] = result.Index;
