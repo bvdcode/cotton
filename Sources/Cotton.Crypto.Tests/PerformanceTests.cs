@@ -3,6 +3,7 @@ using System.Diagnostics;
 
 namespace Cotton.Crypto.Tests
 {
+    [Category("Performance")]
     [NonParallelizable]
     public class PerformanceTests
     {
@@ -12,7 +13,7 @@ namespace Cotton.Crypto.Tests
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000; // 1 GB
         private const int Iterations = 2;
-        private static readonly int[] chunkSizes = [1, 8, 16, 24, 32];
+        private static readonly int[] chunkSizes = [1, 4, 8, 16, 24];
 
         [SetUp]
         public void SetUp()
