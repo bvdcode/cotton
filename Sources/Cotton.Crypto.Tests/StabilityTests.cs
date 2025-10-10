@@ -118,7 +118,7 @@ namespace Cotton.Crypto.Tests
 
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
-            Assert.That(chunks.Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(chunks, Has.Count.GreaterThanOrEqualTo(2));
 
             int headerLen = 4 + 4 + 8 + 4 + TagSize;
             int c0Start = chunks[0].cipherOffset - headerLen;
@@ -150,7 +150,7 @@ namespace Cotton.Crypto.Tests
 
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
-            Assert.That(chunks.Count, Is.GreaterThanOrEqualTo(3));
+            Assert.That(chunks, Has.Count.GreaterThanOrEqualTo(3));
 
             int headerLen = 4 + 4 + 8 + 4 + TagSize;
             int c0Start = chunks[0].cipherOffset - headerLen;
@@ -272,7 +272,7 @@ namespace Cotton.Crypto.Tests
             // In compact format nonce is not serialized per chunk; ensure it's omitted
             for (int i = 0; i < chunks.Count; i++)
             {
-                Assert.That(chunks[i].hdr.Nonce.Length, Is.EqualTo(0), $"Chunk {i} nonce should not be present in compact header");
+                Assert.That(chunks[i].hdr.Nonce, Is.Empty, $"Chunk {i} nonce should not be present in compact header");
             }
         }
 

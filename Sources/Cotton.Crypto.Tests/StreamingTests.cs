@@ -5,14 +5,14 @@ namespace Cotton.Crypto.Tests;
 
 public class StreamingTests
 {
-    private static byte[] Key() => Enumerable.Range(0, 32).Select(i => (byte)i).ToArray();
+    private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
 
     [Test]
     public async Task EncryptDecrypt_WithNonSeekable_Streams()
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 7, threads: 2);
-        byte[] data = Enumerable.Range(0, 500_000).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, 500_000).Select(i => (byte)(i & 0xFF))];
 
         using var inner = new MemoryStream(data);
         using var nonSeek = new NonSeekableReadStream(inner);
@@ -31,7 +31,7 @@ public class StreamingTests
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 5, threads: 2);
-        byte[] data = Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 3).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 3).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var slowOut = new SlowWriteStream(new MemoryStream(), delayMs: 10);
         using var cts = new CancellationTokenSource();
@@ -54,7 +54,7 @@ public class StreamingTests
         var enc = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
         var dec = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
         // Use more data to ensure decrypt runs long enough to observe cancellation reliably
-        byte[] data = Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 32).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 32).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var ciphertext = new MemoryStream();
         enc.EncryptAsync(input, ciphertext, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
@@ -93,7 +93,7 @@ public class StreamingTests
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 9, threads: 2);
-        byte[] data = Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var output = new DevNullStream();
 
