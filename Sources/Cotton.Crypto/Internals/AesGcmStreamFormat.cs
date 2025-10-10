@@ -1,7 +1,6 @@
-using System.Buffers.Binary;
 using System.Buffers;
-using Cotton.Crypto;
-using System.Security.Cryptography; // for AuthenticationTagMismatchException
+using System.Buffers.Binary;
+using System.Security.Cryptography;
 
 namespace Cotton.Crypto.Internals
 {
@@ -26,7 +25,6 @@ namespace Cotton.Crypto.Internals
 
     internal static class AesGcmStreamFormat
     {
-        // Magic header marker shared across file and chunk headers
         private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
 
         public static void ComposeNonce(Span<byte> destination, uint fileNoncePrefix, long chunkIndex)
@@ -35,31 +33,17 @@ namespace Cotton.Crypto.Internals
             BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
         }
 
-        // Pre-initialize constant part of 32-byte AAD: Magic, Version, KeyId
         public static void InitAadPrefix(Span<byte> aad32, int keyId)
-        {
-            if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
-            MagicBytes.CopyTo(aad32[..4]);
-            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 1); // Version
-            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(8, 4), keyId); // KeyId
-        }
-
-        // Fill per-chunk mutable part of AAD: ChunkIndex, PlainLen, Flags
-        public static void FillAadMutable(Span<byte> aad32, long chunkIndex, long plainLength)
-        {
-            if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
-            BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(12, 8), chunkIndex);
-            BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(20, 8), plainLength);
-            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(28, 4), 0); // Flags
-        }
-
-        // Build canonical 32-byte AAD in Little-Endian order
-        public static void BuildChunkAad(Span<byte> aad32, int keyId, long chunkIndex, long plainLength)
         {
             if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
             MagicBytes.CopyTo(aad32[..4]);
             BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 1);
             BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(8, 4), keyId);
+        }
+
+        public static void FillAadMutable(Span<byte> aad32, long chunkIndex, long plainLength)
+        {
+            if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
             BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(12, 8), chunkIndex);
             BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(20, 8), plainLength);
             BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(28, 4), 0);
