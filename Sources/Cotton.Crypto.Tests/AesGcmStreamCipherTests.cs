@@ -160,7 +160,8 @@ public class AesGcmStreamCipherTests
         });
         Assert.Multiple(() =>
         {
-            Assert.That(firstChunkHeader!.Value.Nonce, Has.Length.EqualTo(NonceSize));
+            // Compact chunk header: nonce is not serialized
+            Assert.That(firstChunkHeader!.Value.Nonce, Has.Length.EqualTo(0));
             Assert.That(firstChunkHeader!.Value.Tag, Has.Length.EqualTo(TagSize));
             Assert.That(firstChunkHeader!.Value.DataLength, Is.GreaterThan(0));
         });
