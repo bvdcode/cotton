@@ -16,6 +16,7 @@ namespace Cotton.Crypto.Internals
 
         public static bool TryWrite(Span<byte> destination, in FileHeader header, int nonceSize, int tagSize, int keySize)
         {
+            if (tagSize != 16) return false; // only 16-byte tags supported for file header
             int required = ComputeLength(nonceSize, tagSize, keySize);
             if (destination.Length < required) return false;
             int offset = 0;
@@ -33,6 +34,7 @@ namespace Cotton.Crypto.Internals
         public static bool TryRead(ReadOnlySpan<byte> source, int nonceSize, int tagSize, int keySize, out FileHeader header)
         {
             header = default;
+            if (tagSize != 16) return false; // only 16-byte tags supported for file header
             if (source.Length < 8) return false;
             if (!source[..4].SequenceEqual(FormatConstants.MagicBytes)) return false;
             int expected = ComputeLength(nonceSize, tagSize, keySize);
