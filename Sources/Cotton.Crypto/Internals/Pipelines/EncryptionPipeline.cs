@@ -13,9 +13,17 @@ namespace Cotton.Crypto.Internals.Pipelines
             var jobCh = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(threads * 4) { SingleWriter = true, SingleReader = false, FullMode = BoundedChannelFullMode.Wait });
             var resCh = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(threads * 4) { SingleWriter = false, SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
 
-            var producer = ProduceAsync(jobCh.Writer, ct);
-            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, ct);
-            var consumer = ConsumeAsync(resCh.Reader, ct);
+            // Compute conservative upper bounds based on channel capacities and write window
+            int jobCap = threads * 4;
+            int resCap = threads * 4;
+            int window = Math.Max(4, threads * 4);
+            int maxCount = jobCap + threads + resCap + window + 8; // safety headroom
+            long maxBytes = (long)chunkSize * maxCount * 4; // account for ArrayPool oversizing
+            using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
+
+            var producer = ProduceAsync(jobCh.Writer, scope, ct);
+            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, ct);
+            var consumer = ConsumeAsync(resCh.Reader, scope, ct);
 
             try
             {
@@ -30,7 +38,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             await consumer.ConfigureAwait(false);
         }
 
-        private Task ProduceAsync(ChannelWriter<EncryptionJob> writer, CancellationToken ct)
+        private Task ProduceAsync(ChannelWriter<EncryptionJob> writer, BufferScope scope, CancellationToken ct)
         {
             return Task.Run(async () =>
             {
@@ -40,7 +48,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                     while (true)
                     {
                         ct.ThrowIfCancellationRequested();
-                        byte[] buffer = pool.Rent(chunkSize);
+                        byte[] buffer = scope.Rent(chunkSize);
                         int read = 0;
                         try
                         {
@@ -48,17 +56,17 @@ namespace Cotton.Crypto.Internals.Pipelines
                         }
                         catch
                         {
-                            pool.Return(buffer, clearArray: false);
+                            scope.Recycle(buffer);
                             throw;
                         }
                         if (read <= 0)
                         {
-                            pool.Return(buffer, clearArray: false);
+                            scope.Recycle(buffer);
                             break;
                         }
                         if (unchecked((ulong)idx) == ulong.MaxValue)
                         {
-                            pool.Return(buffer, clearArray: false);
+                            scope.Recycle(buffer);
                             throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
                         }
                         await writer.WriteAsync(new EncryptionJob(idx++, buffer, read), ct).ConfigureAwait(false);
@@ -71,7 +79,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             }, ct);
         }
 
-        private Task[] StartWorkersAsync(ChannelReader<EncryptionJob> reader, ChannelWriter<EncryptionResult> writer, CancellationToken ct)
+        private Task[] StartWorkersAsync(ChannelReader<EncryptionJob> reader, ChannelWriter<EncryptionResult> writer, BufferScope scope, CancellationToken ct)
         {
             var tasks = new Task[threads];
             for (int i = 0; i < threads; i++)
@@ -85,7 +93,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                     await foreach (var job in reader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
-                        byte[] cipher = pool.Rent(job.DataLength);
+                        byte[] cipher = scope.Rent(job.DataLength);
                         try
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, noncePrefix, job.Index);
@@ -95,14 +103,9 @@ namespace Cotton.Crypto.Internals.Pipelines
                             gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipher.AsSpan(0, job.DataLength), tagSpan, aad);
                             await writer.WriteAsync(new EncryptionResult(job.Index, tag, cipher, job.DataLength), ct).ConfigureAwait(false);
                         }
-                        catch
-                        {
-                            pool.Return(cipher, clearArray: false);
-                            throw;
-                        }
                         finally
                         {
-                            pool.Return(job.DataBuffer, clearArray: false);
+                            scope.Recycle(job.DataBuffer);
                         }
                     }
                 }, ct);
@@ -110,7 +113,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             return tasks;
         }
 
-        private Task ConsumeAsync(ChannelReader<EncryptionResult> reader, CancellationToken ct)
+        private Task ConsumeAsync(ChannelReader<EncryptionResult> reader, BufferScope scope, CancellationToken ct)
         {
             return Task.Run(async () =>
             {
@@ -161,7 +164,8 @@ namespace Cotton.Crypto.Internals.Pipelines
                                 pool.Return(headerBuf, clearArray: false);
                             }
                             await output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
-                            pool.Return(res.Data, clearArray: false);
+                            // release cipher buffer back to scope for reuse and to drop accounting
+                            scope.Recycle(res.Data);
                             filled[slot] = false;
                             nextToWrite++;
                         }
@@ -185,17 +189,14 @@ namespace Cotton.Crypto.Internals.Pipelines
                             pool.Return(headerBuf, clearArray: false);
                         }
                         await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
-                        pool.Return(result.Data, clearArray: false);
+                        scope.Recycle(result.Data);
                         nextToWrite++;
                         await FlushReadyAsync().ConfigureAwait(false);
                     }
                     else
                     {
                         if (result.Index < nextToWrite)
-                        {
-                            pool.Return(result.Data, clearArray: false);
                             throw new InvalidDataException("Received duplicate or out-of-order chunk behind the write cursor.");
-                        }
                         EnsureCapacity(result.Index);
                         int slot = (int)(result.Index % window);
                         ring[slot] = result; slotIndex[slot] = result.Index; filled[slot] = true;
@@ -207,7 +208,6 @@ namespace Cotton.Crypto.Internals.Pipelines
                 {
                     if (filled[i])
                     {
-                        pool.Return(ring[i].Data, clearArray: false);
                         throw new InvalidDataException("Missing chunks in output ordering. File may be incomplete or corrupted.");
                     }
                 }
