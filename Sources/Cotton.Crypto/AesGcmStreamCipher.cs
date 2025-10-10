@@ -293,6 +293,8 @@ namespace Cotton.Crypto
                     using var gcm = new AesGcm(fileKey, TagSize);
                     byte[] nonceBuffer = new byte[NonceSize];
                     byte[] aad = new byte[32];
+                    // Pre-initialize AAD constant part once per worker
+                    AesGcmStreamFormat.InitAadPrefix(aad, _keyId);
                     await foreach (EncryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
@@ -301,7 +303,7 @@ namespace Cotton.Crypto
                         try
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, _keyId, job.Index);
-                            AesGcmStreamFormat.BuildChunkAad(aad, _keyId, job.Index, job.DataLength);
+                            AesGcmStreamFormat.FillAadMutable(aad, job.Index, job.DataLength);
                             gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagOwned.AsSpan(0, TagSize), aad);
                             await resultWriter.WriteAsync(new EncryptionResult(job.Index, tagOwned, cipherBuffer, job.DataLength), ct).ConfigureAwait(false);
                         }
@@ -321,8 +323,36 @@ namespace Cotton.Crypto
 
             var consumer = Task.Run(async () =>
             {
-                var waiting = new SortedDictionary<long, EncryptionResult>();
+                int window = Math.Max(4, ConcurrencyLevel * 4);
+                var ring = new EncryptionResult[window];
+                var filled = new bool[window];
+                var slotIndex = new long[window];
                 long nextToWrite = 0;
+
+                void FlushReady()
+                {
+                    while (true)
+                    {
+                        int slot = (int)(nextToWrite % window);
+                        if (filled[slot] && slotIndex[slot] == nextToWrite)
+                        {
+                            var res = ring[slot];
+                            Span<byte> nonce = stackalloc byte[NonceSize];
+                            AesGcmStreamFormat.ComposeNonce(nonce, _keyId, res.Index);
+                            AesGcmStreamFormat.WriteChunkHeader(output, _keyId, res.Index, nonce, res.Tag.AsSpan(0, TagSize), res.DataLength, NonceSize, TagSize);
+                            output.Write(res.Data, 0, res.DataLength);
+                            BufferPool.Return(res.Tag);
+                            BufferPool.Return(res.Data);
+                            filled[slot] = false;
+                            nextToWrite++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+
                 await foreach (EncryptionResult result in resultReader.ReadAllAsync(ct))
                 {
                     if (result.Index == nextToWrite)
@@ -334,27 +364,34 @@ namespace Cotton.Crypto
                         BufferPool.Return(result.Tag);
                         BufferPool.Return(result.Data);
                         nextToWrite++;
-                        while (waiting.TryGetValue(nextToWrite, out EncryptionResult nextRes))
-                        {
-                            waiting.Remove(nextToWrite);
-                            Span<byte> nonce2 = stackalloc byte[NonceSize];
-                            AesGcmStreamFormat.ComposeNonce(nonce2, _keyId, nextRes.Index);
-                            AesGcmStreamFormat.WriteChunkHeader(output, _keyId, nextRes.Index, nonce2, nextRes.Tag.AsSpan(0, TagSize), nextRes.DataLength, NonceSize, TagSize);
-                            await output.WriteAsync(nextRes.Data.AsMemory(0, nextRes.DataLength), ct).ConfigureAwait(false);
-                            BufferPool.Return(nextRes.Tag);
-                            BufferPool.Return(nextRes.Data);
-                            nextToWrite++;
-                        }
+                        FlushReady();
                     }
                     else
                     {
-                        waiting[result.Index] = result;
+                        long distance = result.Index - nextToWrite;
+                        if (distance < 0 || distance >= window)
+                        {
+                            throw new InvalidDataException("Reordering window overflow or invalid chunk index.");
+                        }
+                        int slot = (int)(result.Index % window);
+                        ring[slot] = result;
+                        slotIndex[slot] = result.Index;
+                        filled[slot] = true;
                     }
                 }
 
-                if (waiting.Count > 0)
+                FlushReady();
+
+                // All results drained; ensure no gaps
+                for (int i = 0; i < window; i++)
                 {
-                    throw new InvalidDataException("Missing chunks in output ordering. File may be incomplete or corrupted.");
+                    if (filled[i])
+                    {
+                        // Clean up any leftover buffers to avoid leaks
+                        BufferPool.Return(ring[i].Tag);
+                        BufferPool.Return(ring[i].Data);
+                        throw new InvalidDataException("Missing chunks in output ordering. File may be incomplete or corrupted.");
+                    }
                 }
             }, ct);
 
@@ -411,7 +448,7 @@ namespace Cotton.Crypto
                         if (input.CanSeek)
                         {
                             long bytesRemaining = input.Length - input.Position;
-                            int minHeader = 4 + 4 + 8 + 4 + NonceSize + TagSize; // Conservative lower bound check
+                            int minHeader = 4 + 4 + 8 + 4 + NonceSize + TagSize; // lower bound
                             if (bytesRemaining == 0) break;
                             if (bytesRemaining < minHeader)
                                 throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
@@ -479,6 +516,8 @@ namespace Cotton.Crypto
                     using var gcm = new AesGcm(fileKey, TagSize);
                     byte[] nonceBuffer = new byte[NonceSize];
                     byte[] aad = new byte[32];
+                    // Pre-initialize AAD constant part once per worker
+                    AesGcmStreamFormat.InitAadPrefix(aad, _keyId);
                     await foreach (DecryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
@@ -486,7 +525,7 @@ namespace Cotton.Crypto
                         try
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, _keyId, job.Index);
-                            AesGcmStreamFormat.BuildChunkAad(aad, _keyId, job.Index, job.DataLength);
+                            AesGcmStreamFormat.FillAadMutable(aad, job.Index, job.DataLength);
                             gcm.Decrypt(nonceBuffer, job.Cipher.AsSpan(0, job.DataLength), job.Tag, plainBuffer.AsSpan(0, job.DataLength), aad);
                             var result = new DecryptionResult(job.Index, plainBuffer, job.DataLength);
                             await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
@@ -517,8 +556,47 @@ namespace Cotton.Crypto
         {
             return Task.Run(async () =>
             {
-                var waiting = new SortedDictionary<long, DecryptionResult>();
+                // NOTE: decryption reordering window mirrors encryption side for consistency
+                const int minWindow = 4;
+                int window = minWindow; // Will resize on demand below using observed indices
+                var ring = new DecryptionResult[window];
+                var filled = new bool[window];
+                var slotIndex = new long[window];
                 long nextToWrite = 0;
+
+                void EnsureCapacity(long neededIndex)
+                {
+                    // Resize if incoming index falls outside of [nextToWrite, nextToWrite + window)
+                    if (neededIndex - nextToWrite < window) return;
+                    int newWindow = window * 2;
+                    while (neededIndex - nextToWrite >= newWindow)
+                        newWindow *= 2;
+                    Array.Resize(ref ring, newWindow);
+                    Array.Resize(ref filled, newWindow);
+                    Array.Resize(ref slotIndex, newWindow);
+                    window = newWindow;
+                }
+
+                async Task FlushReadyAsync()
+                {
+                    while (true)
+                    {
+                        int slot = (int)(nextToWrite % window);
+                        if (filled[slot] && slotIndex[slot] == nextToWrite)
+                        {
+                            var res = ring[slot];
+                            await output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
+                            BufferPool.Return(res.Data);
+                            filled[slot] = false;
+                            nextToWrite++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+
                 await foreach (DecryptionResult result in reader.ReadAllAsync(ct))
                 {
                     if (result.Index == nextToWrite)
@@ -526,22 +604,34 @@ namespace Cotton.Crypto
                         await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
                         BufferPool.Return(result.Data);
                         nextToWrite++;
-                        while (waiting.TryGetValue(nextToWrite, out DecryptionResult nextRes))
-                        {
-                            waiting.Remove(nextToWrite);
-                            await output.WriteAsync(nextRes.Data.AsMemory(0, nextRes.DataLength), ct).ConfigureAwait(false);
-                            BufferPool.Return(nextRes.Data);
-                            nextToWrite++;
-                        }
+                        await FlushReadyAsync();
                     }
                     else
                     {
-                        waiting[result.Index] = result;
+                        if (result.Index < nextToWrite)
+                        {
+                            // Late duplicate or corruption
+                            BufferPool.Return(result.Data);
+                            throw new InvalidDataException("Received duplicate or out-of-order chunk behind the write cursor.");
+                        }
+                        EnsureCapacity(result.Index);
+                        int slot = (int)(result.Index % window);
+                        ring[slot] = result;
+                        slotIndex[slot] = result.Index;
+                        filled[slot] = true;
                     }
                 }
-                if (waiting.Count > 0)
+
+                await FlushReadyAsync();
+
+                // Validate no leftovers remain
+                for (int i = 0; i < window; i++)
                 {
-                    throw new InvalidDataException("Decryption output missing chunks. The encrypted data may be incomplete or corrupted.");
+                    if (filled[i])
+                    {
+                        BufferPool.Return(ring[i].Data);
+                        throw new InvalidDataException("Decryption output missing chunks. The encrypted data may be incomplete or corrupted.");
+                    }
                 }
             }, ct);
         }
