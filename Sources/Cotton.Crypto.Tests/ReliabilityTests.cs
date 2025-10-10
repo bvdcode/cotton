@@ -1,9 +1,6 @@
-﻿using System.Buffers.Binary;
-using System.Security.Cryptography;
-using Cotton.Crypto;
-using Cotton.Crypto.Models;
+﻿using Cotton.Crypto.Models;
+using System.Buffers.Binary;
 using Cotton.Crypto.Tests.TestUtils;
-using NUnit.Framework;
 
 namespace Cotton.Crypto.Tests;
 
@@ -18,15 +15,18 @@ public class ReliabilityTests
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 10, threads: 1);
-        using var input = new MemoryStream(Array.Empty<byte>());
+        using var input = new MemoryStream([]);
         using var nonSeek = new NonSeekableReadStream(input);
         using var outEnc = new MemoryStream();
         cipher.EncryptAsync(nonSeek, outEnc, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
         outEnc.Position = 0;
         var hdr = AesGcmKeyHeader.FromStream(outEnc, AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize);
-        Assert.That(hdr.DataLength, Is.EqualTo(0));
-        // There should be no more data
-        Assert.That(outEnc.Position, Is.EqualTo(outEnc.Length));
+        Assert.Multiple(() =>
+        {
+            Assert.That(hdr.DataLength, Is.EqualTo(0));
+            // There should be no more data
+            Assert.That(outEnc.Position, Is.EqualTo(outEnc.Length));
+        });
         // Decrypt back and verify 0 bytes
         outEnc.Position = 0;
         using var outDec = new MemoryStream();
@@ -49,16 +49,22 @@ public class ReliabilityTests
         using var enc1 = new MemoryStream();
         cipher.EncryptAsync(input1, enc1, chunkSize: min).GetAwaiter().GetResult();
         var (chunksMin, lengthsMin) = ParseChunks(enc1.ToArray(), out _);
-        Assert.That(chunksMin, Is.EqualTo(data.Length / min + (data.Length % min == 0 ? 0 : 1)));
-        Assert.That(lengthsMin.Last(), Is.EqualTo(data.Length % min == 0 ? min : data.Length % min));
+        Assert.Multiple(() =>
+        {
+            Assert.That(chunksMin, Is.EqualTo(data.Length / min + (data.Length % min == 0 ? 0 : 1)));
+            Assert.That(lengthsMin.Last(), Is.EqualTo(data.Length % min == 0 ? min : data.Length % min));
+        });
 
         // Test with MaxChunkSize
         using var input2 = new MemoryStream(data);
         using var enc2 = new MemoryStream();
         cipher.EncryptAsync(input2, enc2, chunkSize: max).GetAwaiter().GetResult();
         var (chunksMax, lengthsMax) = ParseChunks(enc2.ToArray(), out _);
-        Assert.That(chunksMax, Is.EqualTo(data.Length / max + (data.Length % max == 0 ? 0 : 1)));
-        Assert.That(lengthsMax.Last(), Is.EqualTo(data.Length % max == 0 ? max : data.Length % max));
+        Assert.Multiple(() =>
+        {
+            Assert.That(chunksMax, Is.EqualTo(data.Length / max + (data.Length % max == 0 ? 0 : 1)));
+            Assert.That(lengthsMax.Last(), Is.EqualTo(data.Length % max == 0 ? max : data.Length % max));
+        });
     }
 
     // 12. Wrong magic in chunk-header
@@ -162,11 +168,14 @@ public class ReliabilityTests
         int offset = 0;
         // File header
         if (bytes.Length < 8) throw new InvalidDataException();
-        // Magic
-        Assert.That(bytes[0], Is.EqualTo((byte)'C'));
-        Assert.That(bytes[1], Is.EqualTo((byte)'T'));
-        Assert.That(bytes[2], Is.EqualTo((byte)'N'));
-        Assert.That(bytes[3], Is.EqualTo((byte)'1'));
+        Assert.Multiple(() =>
+        {
+            // Magic
+            Assert.That(bytes[0], Is.EqualTo((byte)'C'));
+            Assert.That(bytes[1], Is.EqualTo((byte)'T'));
+            Assert.That(bytes[2], Is.EqualTo((byte)'N'));
+            Assert.That(bytes[3], Is.EqualTo((byte)'1'));
+        });
         int hdrLen = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4, 4));
         headerLen = hdrLen;
         offset += hdrLen;
@@ -174,11 +183,14 @@ public class ReliabilityTests
         var lens = new List<int>();
         while (offset < bytes.Length)
         {
-            // Chunk header
-            Assert.That(bytes[offset + 0], Is.EqualTo((byte)'C'));
-            Assert.That(bytes[offset + 1], Is.EqualTo((byte)'T'));
-            Assert.That(bytes[offset + 2], Is.EqualTo((byte)'N'));
-            Assert.That(bytes[offset + 3], Is.EqualTo((byte)'1'));
+            Assert.Multiple(() =>
+            {
+                // Chunk header
+                Assert.That(bytes[offset + 0], Is.EqualTo((byte)'C'));
+                Assert.That(bytes[offset + 1], Is.EqualTo((byte)'T'));
+                Assert.That(bytes[offset + 2], Is.EqualTo((byte)'N'));
+                Assert.That(bytes[offset + 3], Is.EqualTo((byte)'1'));
+            });
             int chLen = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(offset + 4, 4));
             long plainLen = BinaryPrimitives.ReadInt64LittleEndian(bytes.AsSpan(offset + 8, 8));
             // skip to ciphertext

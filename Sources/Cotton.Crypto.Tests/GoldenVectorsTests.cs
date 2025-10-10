@@ -1,8 +1,5 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
-using Cotton.Crypto;
-using Cotton.Crypto.Models;
-using NUnit.Framework;
 
 namespace Cotton.Crypto.Tests;
 
@@ -36,47 +33,52 @@ public class GoldenVectorsTests
 
         // Golden expected (frozen). If this test changes, format changed.
         // These constants computed once and embedded to lock the format.
-        byte[] expectedHeader = new byte[] {
+        byte[] expectedHeader = [
             // Magic CTN1, header length le32, total len le64, keyId le32, noncePrefix le32, nonce(12), tag(16), encryptedKey(32)
             0x43,0x54,0x4E,0x31, 0x54,0x00,0x00,0x00, 0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
             0x4D,0x00,0x00,0x00, 0x7A,0x7A,0x7A,0x7A, // prefix deterministic
             // nonce 12, tag 16, encryptedKey 32 (fake but consistent with DeterministicRng)
-        };
-        Assert.That(header.AsSpan(0, 20).ToArray(), Is.EqualTo(expectedHeader.AsSpan(0, 20).ToArray()));
+        ];
+        Assert.Multiple(() =>
+        {
+            Assert.That(header.AsSpan(0, 20).ToArray(), Is.EqualTo(expectedHeader.AsSpan(0, 20).ToArray()));
 
-        // For brevity, pin only the first 20 header bytes and first 8 bytes of chunk header
-        Assert.That(chunk.Length, Is.GreaterThanOrEqualTo(chunkHdrLen));
-        Assert.That(chunk[0], Is.EqualTo((byte)'C'));
-        Assert.That(chunk[1], Is.EqualTo((byte)'T'));
-        Assert.That(chunk[2], Is.EqualTo((byte)'N'));
-        Assert.That(chunk[3], Is.EqualTo((byte)'1'));
+            // For brevity, pin only the first 20 header bytes and first 8 bytes of chunk header
+            Assert.That(chunk, Has.Length.GreaterThanOrEqualTo(chunkHdrLen));
+        });
+        Assert.Multiple(() =>
+        {
+            Assert.That(chunk[0], Is.EqualTo((byte)'C'));
+            Assert.That(chunk[1], Is.EqualTo((byte)'T'));
+            Assert.That(chunk[2], Is.EqualTo((byte)'N'));
+            Assert.That(chunk[3], Is.EqualTo((byte)'1'));
+        });
     }
 
-    private sealed class DeterministicRng : RandomNumberGenerator
+    private sealed class DeterministicRng(ulong seed) : RandomNumberGenerator
     {
-        private ulong _state;
-        public DeterministicRng(ulong seed) => _state = seed;
         public override void GetBytes(byte[] data)
         {
             Span<byte> tmp = stackalloc byte[8];
             for (int i = 0; i < data.Length; i += 8)
             {
-                _state = unchecked(_state * 6364136223846793005UL + 1);
-                BinaryPrimitives.WriteUInt64LittleEndian(tmp, _state);
+                seed = unchecked(seed * 6364136223846793005UL + 1);
+                BinaryPrimitives.WriteUInt64LittleEndian(tmp, seed);
                 int len = Math.Min(8, data.Length - i);
-                tmp.Slice(0, len).CopyTo(data.AsSpan(i, len));
+                tmp[..len].CopyTo(data.AsSpan(i, len));
             }
         }
+
         public override void GetBytes(byte[] data, int offset, int count) => GetBytes(data.AsSpan(offset, count));
         public override void GetBytes(Span<byte> data)
         {
             Span<byte> tmp = stackalloc byte[8];
             for (int i = 0; i < data.Length; i += 8)
             {
-                _state = unchecked(_state * 6364136223846793005UL + 1);
-                BinaryPrimitives.WriteUInt64LittleEndian(tmp, _state);
+                seed = unchecked(seed * 6364136223846793005UL + 1);
+                BinaryPrimitives.WriteUInt64LittleEndian(tmp, seed);
                 int len = Math.Min(8, data.Length - i);
-                tmp.Slice(0, len).CopyTo(data.Slice(i, len));
+                tmp[..len].CopyTo(data.Slice(i, len));
             }
         }
     }
