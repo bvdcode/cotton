@@ -292,22 +292,23 @@ namespace Cotton.Crypto
                 {
                     using var gcm = new AesGcm(fileKey, TagSize);
                     byte[] nonceBuffer = new byte[NonceSize];
-                    byte[] tagBuffer = new byte[TagSize];
                     byte[] aad = new byte[32];
                     await foreach (EncryptionJob job in jobReader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
                         byte[] cipherBuffer = BufferPool.Rent(job.DataLength);
+                        byte[] tagOwned = BufferPool.Rent(TagSize);
                         try
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, _keyId, job.Index);
                             AesGcmStreamFormat.BuildChunkAad(aad, _keyId, job.Index, job.DataLength);
-                            gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagBuffer, aad);
-                            await resultWriter.WriteAsync(new EncryptionResult(job.Index, [.. tagBuffer], cipherBuffer, job.DataLength), ct).ConfigureAwait(false);
+                            gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagOwned.AsSpan(0, TagSize), aad);
+                            await resultWriter.WriteAsync(new EncryptionResult(job.Index, tagOwned, cipherBuffer, job.DataLength), ct).ConfigureAwait(false);
                         }
                         catch
                         {
                             BufferPool.Return(cipherBuffer);
+                            BufferPool.Return(tagOwned);
                             throw;
                         }
                         finally
@@ -326,19 +327,21 @@ namespace Cotton.Crypto
                 {
                     if (result.Index == nextToWrite)
                     {
-                        byte[] nonce = new byte[NonceSize];
+                        Span<byte> nonce = stackalloc byte[NonceSize];
                         AesGcmStreamFormat.ComposeNonce(nonce, _keyId, result.Index);
-                        AesGcmStreamFormat.WriteChunkHeader(output, _keyId, result.Index, nonce, result.Tag, result.DataLength, NonceSize, TagSize);
+                        AesGcmStreamFormat.WriteChunkHeader(output, _keyId, result.Index, nonce, result.Tag.AsSpan(0, TagSize), result.DataLength, NonceSize, TagSize);
                         await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+                        BufferPool.Return(result.Tag);
                         BufferPool.Return(result.Data);
                         nextToWrite++;
                         while (waiting.TryGetValue(nextToWrite, out EncryptionResult nextRes))
                         {
                             waiting.Remove(nextToWrite);
-                            byte[] nonce2 = new byte[NonceSize];
+                            Span<byte> nonce2 = stackalloc byte[NonceSize];
                             AesGcmStreamFormat.ComposeNonce(nonce2, _keyId, nextRes.Index);
-                            AesGcmStreamFormat.WriteChunkHeader(output, _keyId, nextRes.Index, nonce2, nextRes.Tag, nextRes.DataLength, NonceSize, TagSize);
+                            AesGcmStreamFormat.WriteChunkHeader(output, _keyId, nextRes.Index, nonce2, nextRes.Tag.AsSpan(0, TagSize), nextRes.DataLength, NonceSize, TagSize);
                             await output.WriteAsync(nextRes.Data.AsMemory(0, nextRes.DataLength), ct).ConfigureAwait(false);
+                            BufferPool.Return(nextRes.Tag);
                             BufferPool.Return(nextRes.Data);
                             nextToWrite++;
                         }
@@ -452,9 +455,9 @@ namespace Cotton.Crypto
                 throw new AuthenticationTagMismatchException("Invalid chunk length in encrypted file.");
             if (header.KeyId != _keyId)
                 throw new AuthenticationTagMismatchException("Chunk key ID mismatch.");
-            byte[] expectedNonce = new byte[NonceSize];
+            Span<byte> expectedNonce = stackalloc byte[NonceSize];
             AesGcmStreamFormat.ComposeNonce(expectedNonce, _keyId, expectedIndex);
-            if (!expectedNonce.AsSpan().SequenceEqual(header.Nonce))
+            if (!expectedNonce.SequenceEqual(header.Nonce))
                 throw new AuthenticationTagMismatchException("Chunk nonce mismatch.");
         }
 

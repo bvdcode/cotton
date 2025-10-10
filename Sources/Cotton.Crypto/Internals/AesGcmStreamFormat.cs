@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Buffers;
 
 namespace Cotton.Crypto.Internals
 {
@@ -30,6 +31,24 @@ namespace Cotton.Crypto.Internals
         {
             BinaryPrimitives.WriteUInt32LittleEndian(destination, unchecked((uint)keyId));
             BinaryPrimitives.WriteUInt64LittleEndian(destination[4..], unchecked((ulong)chunkIndex));
+        }
+
+        // Pre-initialize constant part of 32-byte AAD: Magic, Version, KeyId
+        public static void InitAadPrefix(Span<byte> aad32, int keyId)
+        {
+            if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
+            MagicBytes.CopyTo(aad32[..4]);
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 1); // Version
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(8, 4), keyId); // KeyId
+        }
+
+        // Fill per-chunk mutable part of AAD: ChunkIndex, PlainLen, Flags
+        public static void FillAadMutable(Span<byte> aad32, long chunkIndex, long plainLength)
+        {
+            if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
+            BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(12, 8), chunkIndex);
+            BinaryPrimitives.WriteInt64LittleEndian(aad32.Slice(20, 8), plainLength);
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(28, 4), 0); // Flags
         }
 
         // Build canonical 32-byte AAD in Little-Endian order
@@ -102,59 +121,80 @@ namespace Cotton.Crypto.Internals
         public static async Task<FileHeader> ReadFileHeaderAsync(Stream input, int nonceSize, int tagSize, int keySize, CancellationToken ct)
         {
             // Read magic (4 bytes) and header length (4 bytes)
-            byte[] headerPrefix = new byte[8];
-            await ReadExactlyAsync(input, headerPrefix, 8, ct).ConfigureAwait(false);
-            // Verify magic bytes
-            if (!headerPrefix.AsSpan(0, 4).SequenceEqual(MagicBytes))
+            byte[] headerPrefix = ArrayPool<byte>.Shared.Rent(8);
+            try
             {
-                throw new InvalidDataException("Invalid file format: magic header not found.");
+                await ReadExactlyAsync(input, headerPrefix, 8, ct).ConfigureAwait(false);
+                // Verify magic bytes
+                if (!headerPrefix.AsSpan(0, 4).SequenceEqual(MagicBytes))
+                {
+                    throw new InvalidDataException("Invalid file format: magic header not found.");
+                }
+                int headerLength = BinaryPrimitives.ReadInt32LittleEndian(headerPrefix.AsSpan(4));
+                if (headerLength != 4 + 4 + 8 + 4 + nonceSize + tagSize + keySize)
+                {
+                    throw new InvalidDataException("Unsupported file header format (unexpected header length).");
+                }
+                // Read remaining header bytes (after the first 8 bytes we already read)
+                int remainingHeader = headerLength - 8;
+                byte[] headerData = ArrayPool<byte>.Shared.Rent(remainingHeader);
+                try
+                {
+                    await ReadExactlyAsync(input, headerData, remainingHeader, ct).ConfigureAwait(false);
+                    // Parse file header fields (LE)
+                    long totalLength = BinaryPrimitives.ReadInt64LittleEndian(headerData.AsSpan(0));
+                    int keyId = BinaryPrimitives.ReadInt32LittleEndian(headerData.AsSpan(8));
+                    // Next nonceSize bytes: file key nonce
+                    byte[] nonce = new byte[nonceSize];
+                    Array.Copy(headerData, 12, nonce, 0, nonceSize);
+                    // Next tagSize bytes: file key tag
+                    byte[] tag = new byte[tagSize];
+                    Array.Copy(headerData, 12 + nonceSize, tag, 0, tagSize);
+                    // Next keySize bytes: encrypted file key
+                    byte[] encryptedKey = new byte[keySize];
+                    Array.Copy(headerData, 12 + nonceSize + tagSize, encryptedKey, 0, keySize);
+                    return new FileHeader(totalLength, keyId, nonce, tag, encryptedKey);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(headerData);
+                }
             }
-            int headerLength = BinaryPrimitives.ReadInt32LittleEndian(headerPrefix.AsSpan(4));
-            if (headerLength != 4 + 4 + 8 + 4 + nonceSize + tagSize + keySize)
+            finally
             {
-                throw new InvalidDataException("Unsupported file header format (unexpected header length).");
+                ArrayPool<byte>.Shared.Return(headerPrefix);
             }
-            // Read remaining header bytes (after the first 8 bytes we already read)
-            int remainingHeader = headerLength - 8;
-            byte[] headerData = new byte[remainingHeader];
-            await ReadExactlyAsync(input, headerData, remainingHeader, ct).ConfigureAwait(false);
-            // Parse file header fields (LE)
-            long totalLength = BinaryPrimitives.ReadInt64LittleEndian(headerData.AsSpan(0));
-            int keyId = BinaryPrimitives.ReadInt32LittleEndian(headerData.AsSpan(8));
-            // Next nonceSize bytes: file key nonce
-            byte[] nonce = new byte[nonceSize];
-            Array.Copy(headerData, 12, nonce, 0, nonceSize);
-            // Next tagSize bytes: file key tag
-            byte[] tag = new byte[tagSize];
-            Array.Copy(headerData, 12 + nonceSize, tag, 0, tagSize);
-            // Next keySize bytes: encrypted file key
-            byte[] encryptedKey = new byte[keySize];
-            Array.Copy(headerData, 12 + nonceSize + tagSize, encryptedKey, 0, keySize);
-            return new FileHeader(totalLength, keyId, nonce, tag, encryptedKey);
         }
 
         public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int nonceSize, int tagSize, CancellationToken ct)
         {
             int headerLen = 4 + 4 + 8 + 4 + nonceSize + tagSize;
-            byte[] header = new byte[headerLen];
-            await ReadExactlyAsync(input, header, header.Length, ct).ConfigureAwait(false);
-            // Verify magic
-            if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
+            byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
+            try
             {
-                throw new InvalidDataException("Chunk magic bytes missing or corrupted.");
+                await ReadExactlyAsync(input, header, headerLen, ct).ConfigureAwait(false);
+                // Verify magic
+                if (!header.AsSpan(0, 4).SequenceEqual(MagicBytes))
+                {
+                    throw new InvalidDataException("Chunk magic bytes missing or corrupted.");
+                }
+                int readHeaderLen = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(4));
+                if (readHeaderLen != headerLen)
+                {
+                    throw new InvalidDataException("Invalid chunk header length.");
+                }
+                long plaintextLength = BinaryPrimitives.ReadInt64LittleEndian(header.AsSpan(8));
+                int keyId = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(16));
+                byte[] nonce = new byte[nonceSize];
+                Array.Copy(header, 20, nonce, 0, nonceSize);
+                byte[] tag = new byte[tagSize];
+                Array.Copy(header, 20 + nonceSize, tag, 0, tagSize);
+                return new ChunkHeader(plaintextLength, keyId, nonce, tag);
             }
-            int readHeaderLen = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(4));
-            if (readHeaderLen != headerLen)
+            finally
             {
-                throw new InvalidDataException("Invalid chunk header length.");
+                ArrayPool<byte>.Shared.Return(header);
             }
-            long plaintextLength = BinaryPrimitives.ReadInt64LittleEndian(header.AsSpan(8));
-            int keyId = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(16));
-            byte[] nonce = new byte[nonceSize];
-            Array.Copy(header, 20, nonce, 0, nonceSize);
-            byte[] tag = new byte[tagSize];
-            Array.Copy(header, 20 + nonceSize, tag, 0, tagSize);
-            return new ChunkHeader(plaintextLength, keyId, nonce, tag);
         }
 
         public static async Task ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
