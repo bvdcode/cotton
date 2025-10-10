@@ -11,7 +11,7 @@ public class DiagnosticsTests
 {
     private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
 
-    // 16. Truncated внутри чанка => CryptographicException
+    // 16. Truncated inside chunk => CryptographicException
     [Test]
     public void Decrypt_TruncatedInsideChunk_MapsToCrypto()
     {
@@ -51,7 +51,7 @@ public class DiagnosticsTests
         Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
     }
 
-    // 18. Duplicate и far out-of-order
+    // 18. Duplicate and far out-of-order
     [Test]
     public void Encrypt_Consumer_OrderDiagnostics()
     {

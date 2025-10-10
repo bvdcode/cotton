@@ -12,7 +12,7 @@ public class ReliabilityTests
 {
     private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
 
-    // 10. Non-seekable пустой файл
+    // 10. Non-seekable empty file
     [Test]
     public void NonSeekable_EmptyFile_RoundTrip_NoChunks()
     {
@@ -34,7 +34,7 @@ public class ReliabilityTests
         Assert.That(outDec.Length, Is.EqualTo(0));
     }
 
-    // 11. Грани chunkSize
+    // 11. ChunkSize boundaries
     [Test]
     public void ChunkSize_Boundaries_Min_And_Max()
     {
@@ -61,7 +61,7 @@ public class ReliabilityTests
         Assert.That(lengthsMax.Last(), Is.EqualTo(data.Length % max == 0 ? max : data.Length % max));
     }
 
-    // 12. Wrong magic в chunk-header
+    // 12. Wrong magic in chunk-header
     [Test]
     public void Decrypt_WrongMagic_FailsFast()
     {
