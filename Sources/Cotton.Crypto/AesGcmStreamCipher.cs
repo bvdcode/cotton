@@ -4,6 +4,7 @@ using Cotton.Crypto.Internals;
 using System.Threading.Channels;
 using Cotton.Crypto.Abstractions;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 
 namespace Cotton.Crypto
 {
@@ -211,9 +212,10 @@ namespace Cotton.Crypto
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, fileNoncePrefix, job.Index);
                             AesGcmStreamFormat.FillAadMutable(aad, job.Index, job.DataLength);
-                            Span<byte> tagSpan = stackalloc byte[TagSize];
+                            // Avoid stackalloc in loop: use Tag128 value and get a byte span over it
+                            Tag128 tag = default;
+                            Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tag, 1));
                             gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipherBuffer.AsSpan(0, job.DataLength), tagSpan, aad);
-                            var tag = Tag128.FromSpan(tagSpan);
                             await resultWriter.WriteAsync(new EncryptionResult(job.Index, tag, cipherBuffer, job.DataLength), ct).ConfigureAwait(false);
                         }
                         catch
@@ -427,8 +429,9 @@ namespace Cotton.Crypto
                         {
                             AesGcmStreamFormat.ComposeNonce(nonceBuffer, fileNoncePrefix, job.Index);
                             AesGcmStreamFormat.FillAadMutable(aad, job.Index, job.DataLength);
-                            Span<byte> tagSpan = stackalloc byte[TagSize];
-                            job.Tag.CopyTo(tagSpan);
+                            // Avoid stackalloc in loop: create a span over local Tag128 copy
+                            Tag128 tagCopy = job.Tag;
+                            Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tagCopy, 1));
                             gcm.Decrypt(nonceBuffer, job.Cipher.AsSpan(0, job.DataLength), tagSpan, plainBuffer.AsSpan(0, job.DataLength), aad);
                             var result = new DecryptionResult(job.Index, plainBuffer, job.DataLength);
                             await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);

@@ -18,9 +18,12 @@ public class FormatInvariantTests
             AesGcmStreamFormat.ComposeNonce(nonce, prefix, i);
             var pfx = BinaryPrimitives.ReadUInt32LittleEndian(nonce[..4]);
             ulong ctr = BinaryPrimitives.ReadUInt64LittleEndian(nonce[4..]);
-            Assert.That(pfx, Is.EqualTo(prefix));
-            Assert.That(seen.Add(ctr), Is.True, "Duplicate counter detected at i=" + i);
-            Assert.That(ctr, Is.EqualTo((ulong)i));
+            Assert.Multiple(() =>
+            {
+                Assert.That(pfx, Is.EqualTo(prefix));
+                Assert.That(seen.Add(ctr), Is.True, "Duplicate counter detected at i=" + i);
+                Assert.That(ctr, Is.EqualTo((ulong)i));
+            });
         }
     }
 
@@ -62,10 +65,13 @@ public class FormatInvariantTests
                 var lenNow = BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(20, 8));
                 var zeroNow = BinaryPrimitives.ReadInt32LittleEndian(aad.Slice(28, 4));
 
-                Assert.That(prefixNow, Is.EqualTo(prefix));
-                Assert.That(idxNow, Is.EqualTo(idx));
-                Assert.That(lenNow, Is.EqualTo(len));
-                Assert.That(zeroNow, Is.EqualTo(0));
+                Assert.Multiple(() =>
+                {
+                    Assert.That(prefixNow, Is.EqualTo(prefix));
+                    Assert.That(idxNow, Is.EqualTo(idx));
+                    Assert.That(lenNow, Is.EqualTo(len));
+                    Assert.That(zeroNow, Is.EqualTo(0));
+                });
             }
         }
     }

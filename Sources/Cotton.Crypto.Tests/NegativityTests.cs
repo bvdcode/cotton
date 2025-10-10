@@ -11,7 +11,7 @@ public class NegativityTests
     private const int NonceSize = AesGcmStreamCipher.NonceSize;
     private const int MinChunk = AesGcmStreamCipher.MinChunkSize;
 
-    private static byte[] ValidMasterKey() => Enumerable.Range(0, 32).Select(i => (byte)i).ToArray();
+    private static byte[] ValidMasterKey() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
 
     private static (AesGcmKeyHeader fileHeader, List<(AesGcmKeyHeader hdr, int cipherOffset)> chunks) ParseAllHeaders(byte[] encrypted)
     {
@@ -41,7 +41,7 @@ public class NegativityTests
     public void Tamper_FileHeader_KeyId_ShouldFailEarly()
     {
         var cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 12);
-        byte[] data = Enumerable.Range(0, MinChunk + 5_000).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, MinChunk + 5_000).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var outEnc = new MemoryStream();
         cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
@@ -59,7 +59,7 @@ public class NegativityTests
     public void Tamper_FileHeader_EncryptedKey_ShouldFail()
     {
         var cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 13);
-        byte[] data = Enumerable.Range(0, MinChunk + 1).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, MinChunk + 1).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var outEnc = new MemoryStream();
         cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
@@ -77,7 +77,7 @@ public class NegativityTests
     public void Tamper_Chunk_Tag_ShouldFail_NoPayload()
     {
         var cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 15);
-        byte[] data = Enumerable.Range(0, MinChunk + 10_000).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, MinChunk + 10_000).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var outEnc = new MemoryStream();
         cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
@@ -101,7 +101,7 @@ public class NegativityTests
     public void Truncation_Fails_OnFileHeader_And_Chunk()
     {
         var cipher = new AesGcmStreamCipher(ValidMasterKey(), keyId: 2);
-        byte[] data = Enumerable.Range(0, MinChunk + 10_000).Select(i => (byte)(i & 0xFF)).ToArray();
+        byte[] data = [.. Enumerable.Range(0, MinChunk + 10_000).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var outEnc = new MemoryStream();
         cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
