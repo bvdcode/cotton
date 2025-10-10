@@ -58,7 +58,7 @@
             {
                 byte[] tag = new byte[tagSize];
                 stream.ReadExactly(tag);
-                return new AesGcmKeyHeader(keyId, Array.Empty<byte>(), tag, Array.Empty<byte>(), dataLength);
+                return new AesGcmKeyHeader(keyId, [], tag, [], dataLength);
             }
             else if (remaining > (sizeof(uint) + nonceSize + tagSize))
             {
