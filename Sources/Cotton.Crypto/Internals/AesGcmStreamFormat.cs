@@ -15,7 +15,7 @@ namespace Cotton.Crypto.Internals
         public byte[] EncryptedKey { get; } = encryptedKey;
     }
 
-    // chunk header no longer stores nonce; only keyId + tag + length
+    // v2: chunk header no longer stores nonce; only keyId + tag + length
     internal readonly struct ChunkHeader(long length, int keyId, Tag128 tag)
     {
         public long PlaintextLength { get; } = length;
@@ -25,7 +25,7 @@ namespace Cotton.Crypto.Internals
 
     internal static class AesGcmStreamFormat
     {
-        private static ReadOnlySpan<byte> MagicBytes => "CTN1"u8;
+        private static ReadOnlySpan<byte> MagicBytes => "CTN2"u8; // bump format version for chunk header layout change
 
         public static void ComposeNonce(Span<byte> destination, uint fileNoncePrefix, long chunkIndex)
         {
@@ -37,7 +37,7 @@ namespace Cotton.Crypto.Internals
         {
             if (aad32.Length < 32) throw new ArgumentException("AAD buffer must be at least 32 bytes", nameof(aad32));
             MagicBytes.CopyTo(aad32[..4]);
-            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 1);
+            BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(4, 4), 2); // version 2
             BinaryPrimitives.WriteInt32LittleEndian(aad32.Slice(8, 4), keyId);
         }
 
@@ -128,12 +128,12 @@ namespace Cotton.Crypto.Internals
                 }
                 finally
                 {
-                    ArrayPool<byte>.Shared.Return(headerData);
+                    ArrayPool<byte>.Shared.Return(headerData, clearArray: false);
                 }
             }
             finally
             {
-                ArrayPool<byte>.Shared.Return(headerPrefix);
+                ArrayPool<byte>.Shared.Return(headerPrefix, clearArray: false);
             }
         }
 
@@ -155,12 +155,13 @@ namespace Cotton.Crypto.Internals
                 }
                 long plaintextLength = BinaryPrimitives.ReadInt64LittleEndian(header.AsSpan(8));
                 int keyId = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(16));
+                // v2: nonce not stored
                 Tag128 tag = Tag128.FromSpan(header.AsSpan(20, tagSize));
                 return new ChunkHeader(plaintextLength, keyId, tag);
             }
             finally
             {
-                ArrayPool<byte>.Shared.Return(header);
+                ArrayPool<byte>.Shared.Return(header, clearArray: false);
             }
         }
 
