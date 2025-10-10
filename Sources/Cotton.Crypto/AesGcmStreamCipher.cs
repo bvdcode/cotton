@@ -429,12 +429,31 @@ namespace Cotton.Crypto
                 void EnsureCapacity(long neededIndex)
                 {
                     if (neededIndex - nextToWrite < window) return;
+
                     int newWindow = window * 2;
                     while (neededIndex - nextToWrite >= newWindow)
+                    {
                         newWindow *= 2;
-                    Array.Resize(ref ring, newWindow);
-                    Array.Resize(ref filled, newWindow);
-                    Array.Resize(ref slotIndex, newWindow);
+                    }
+
+                    // Rehash existing entries into new ring buffers to preserve modulo layout
+                    var newRing = new DecryptionResult[newWindow];
+                    var newFilled = new bool[newWindow];
+                    var newSlotIndex = new long[newWindow];
+
+                    for (int i = 0; i < window; i++)
+                    {
+                        if (!filled[i]) continue;
+                        long idx = slotIndex[i];
+                        int newSlot = (int)(idx % newWindow);
+                        newRing[newSlot] = ring[i];
+                        newFilled[newSlot] = true;
+                        newSlotIndex[newSlot] = idx;
+                    }
+
+                    ring = newRing;
+                    filled = newFilled;
+                    slotIndex = newSlotIndex;
                     window = newWindow;
                 }
 
