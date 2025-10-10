@@ -251,7 +251,7 @@ namespace Cotton.Crypto
                             byte[] headerBuf = BufferPool.Rent(headerLen);
                             try
                             {
-                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, res.Index, res.Tag, res.DataLength, TagSize);
+                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, res.Tag, res.DataLength, TagSize);
                                 await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                             }
                             finally
@@ -278,7 +278,7 @@ namespace Cotton.Crypto
                         byte[] headerBuf = BufferPool.Rent(headerLen);
                         try
                         {
-                            AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, result.Index, result.Tag, result.DataLength, TagSize);
+                            AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), _keyId, result.Tag, result.DataLength, TagSize);
                             await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                         }
                         finally
@@ -366,7 +366,7 @@ namespace Cotton.Crypto
                         ChunkHeader chunkHeader;
                         try
                         {
-                            chunkHeader = await AesGcmStreamFormat.ReadChunkHeaderAsync(input, TagSize, fileNoncePrefix, chunkIndex, ct).ConfigureAwait(false);
+                            chunkHeader = await AesGcmStreamFormat.ReadChunkHeaderAsync(input, TagSize, ct).ConfigureAwait(false);
                         }
                         catch (EndOfStreamException)
                         {
