@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.Runtime.InteropServices;
 
 namespace Cotton.Crypto.Internals
 {
@@ -22,18 +21,6 @@ namespace Cotton.Crypto.Internals
             if (destination.Length < 16) throw new ArgumentException("Destination span must be 16 bytes", nameof(destination));
             BinaryPrimitives.WriteUInt64LittleEndian(destination[..8], Lo);
             BinaryPrimitives.WriteUInt64LittleEndian(destination.Slice(8, 8), Hi);
-        }
-
-        public ReadOnlySpan<byte> AsSpan
-        {
-            get
-            {
-                // Create a read-only byte span over the two ulongs of this struct
-                Span<ulong> tmp = stackalloc ulong[2];
-                tmp[0] = Lo;
-                tmp[1] = Hi;
-                return MemoryMarshal.AsBytes(tmp).ToArray();
-            }
         }
     }
 }
