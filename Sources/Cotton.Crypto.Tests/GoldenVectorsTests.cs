@@ -68,6 +68,16 @@ public class GoldenVectorsTests
             }
         }
         public override void GetBytes(byte[] data, int offset, int count) => GetBytes(data.AsSpan(offset, count));
-        public override void GetBytes(Span<byte> data) => GetBytes(data.ToArray());
+        public override void GetBytes(Span<byte> data)
+        {
+            Span<byte> tmp = stackalloc byte[8];
+            for (int i = 0; i < data.Length; i += 8)
+            {
+                _state = unchecked(_state * 6364136223846793005UL + 1);
+                BinaryPrimitives.WriteUInt64LittleEndian(tmp, _state);
+                int len = Math.Min(8, data.Length - i);
+                tmp.Slice(0, len).CopyTo(data.Slice(i, len));
+            }
+        }
     }
 }
