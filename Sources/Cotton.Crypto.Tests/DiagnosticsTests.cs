@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Cotton.Crypto;
 using Cotton.Crypto.Models;
@@ -7,11 +7,11 @@ using NUnit.Framework;
 namespace Cotton.Crypto.Tests;
 
 [Category("Diagnostics")]
-public class P1DiagnosticsTests
+public class DiagnosticsTests
 {
     private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
 
-    // 16. Truncated ?????? ????? => CryptographicException
+    // 16. Truncated внутри чанка => CryptographicException
     [Test]
     public void Decrypt_TruncatedInsideChunk_MapsToCrypto()
     {
@@ -51,7 +51,7 @@ public class P1DiagnosticsTests
         Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
     }
 
-    // 18. Duplicate ? far out-of-order
+    // 18. Duplicate и far out-of-order
     [Test]
     public void Encrypt_Consumer_OrderDiagnostics()
     {
