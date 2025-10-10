@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 namespace Cotton.Crypto.Internals.Pipelines
 {
     internal class EncryptionPipeline(Stream input, Stream output, byte[] fileKey,
-        uint noncePrefix, int chunkSize, int threads, int keyId, int nonceSize, int tagSize, ArrayPool<byte> pool)
+        uint noncePrefix, int chunkSize, int threads, int keyId, int nonceSize, int tagSize, int windowCap, ArrayPool<byte> pool)
     {
         public async Task RunAsync(CancellationToken ct)
         {
@@ -16,7 +16,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             // Compute conservative upper bounds based on channel capacities and write window
             int jobCap = threads * 4;
             int resCap = threads * 4;
-            int window = Math.Max(4, threads * 4);
+            int window = Math.Min(Math.Max(4, threads * 4), windowCap);
             int maxCount = jobCap + threads + resCap + window + 8; // safety headroom
             long maxBytes = (long)chunkSize * maxCount * 4; // account for ArrayPool oversizing
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
@@ -118,7 +118,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             return Task.Run(async () =>
             {
                 const int minWindow = 4;
-                int window = Math.Max(minWindow, threads * 4);
+                int window = Math.Min(Math.Max(minWindow, threads * 4), windowCap);
                 var ring = new EncryptionResult[window];
                 var filled = new bool[window];
                 var slotIndex = new long[window];
@@ -127,8 +127,8 @@ namespace Cotton.Crypto.Internals.Pipelines
                 void EnsureCapacity(long neededIndex)
                 {
                     if (neededIndex - nextToWrite < window) return;
-                    int newWindow = window * 2;
-                    while (neededIndex - nextToWrite >= newWindow) newWindow *= 2;
+                    int newWindow = Math.Min(window * 2, windowCap);
+                    while (neededIndex - nextToWrite >= newWindow && newWindow < windowCap) newWindow = Math.Min(newWindow * 2, windowCap);
                     var newRing = new EncryptionResult[newWindow];
                     var newFilled = new bool[newWindow];
                     var newSlotIndex = new long[newWindow];
@@ -164,7 +164,6 @@ namespace Cotton.Crypto.Internals.Pipelines
                                 pool.Return(headerBuf, clearArray: false);
                             }
                             await output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
-                            // release cipher buffer back to scope for reuse and to drop accounting
                             scope.Recycle(res.Data);
                             filled[slot] = false;
                             nextToWrite++;
@@ -196,9 +195,15 @@ namespace Cotton.Crypto.Internals.Pipelines
                     else
                     {
                         if (result.Index < nextToWrite)
-                            throw new InvalidDataException("Received duplicate or out-of-order chunk behind the write cursor.");
+                        {
+                            throw new InvalidDataException($"Duplicate chunk index detected. Received {result.Index}, next expected {nextToWrite}.");
+                        }
                         EnsureCapacity(result.Index);
                         int slot = (int)(result.Index % window);
+                        if (filled[slot])
+                        {
+                            throw new InvalidDataException($"Reorder buffer slot collision. Slot {slot} already filled for index {slotIndex[slot]}, tried to place {result.Index}.");
+                        }
                         ring[slot] = result; slotIndex[slot] = result.Index; filled[slot] = true;
                     }
                 }
@@ -208,7 +213,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                 {
                     if (filled[i])
                     {
-                        throw new InvalidDataException("Missing chunks in output ordering. File may be incomplete or corrupted.");
+                        throw new InvalidDataException($"Out-of-order completion left gaps. Next={nextToWrite}, still have chunk with index {slotIndex[i]} in slot {i}.");
                     }
                 }
             }, ct);
