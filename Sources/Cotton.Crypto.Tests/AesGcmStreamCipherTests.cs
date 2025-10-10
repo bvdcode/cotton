@@ -5,6 +5,7 @@ using Cotton.Crypto.Tests.TestUtils;
 
 namespace Cotton.Crypto.Tests;
 
+[Category("Core")]
 public class AesGcmStreamCipherTests
 {
     private const int TagSize = AesGcmStreamCipher.TagSize;

@@ -4,7 +4,6 @@ using Cotton.Crypto.Tests.TestUtils;
 namespace Cotton.Crypto.Tests;
 
 [Category("Streaming")]
-
 public class StreamingTests
 {
     private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
