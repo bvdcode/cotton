@@ -33,9 +33,8 @@ namespace Cotton.Crypto.Internals.Pipelines
             finally
             {
                 resCh.Writer.TryComplete();
+                await consumer.ConfigureAwait(false);
             }
-
-            await consumer.ConfigureAwait(false);
         }
 
         private Task ProduceAsync(ChannelWriter<EncryptionJob> writer, BufferScope scope, CancellationToken ct)
