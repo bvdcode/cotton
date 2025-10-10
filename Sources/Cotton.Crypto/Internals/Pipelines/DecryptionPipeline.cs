@@ -49,19 +49,6 @@ namespace Cotton.Crypto.Internals.Pipelines
                 await producer.ConfigureAwait(false);
                 await Task.WhenAll(workers).ConfigureAwait(false);
             }
-            catch (Exception ex)
-            {
-                if (ex is AggregateException agg)
-                {
-                    ex = agg.Flatten().InnerExceptions.FirstOrDefault() ?? ex;
-                }
-                if (ex is AuthenticationTagMismatchException)
-                {
-                    // Reclassify as format/order failure for clearer diagnostics at API level
-                    throw new InvalidDataException("Chunk authentication failed. Possible duplicate or out-of-order chunk.", ex);
-                }
-                throw;
-            }
             finally
             {
                 resCh.Writer.TryComplete();
@@ -105,21 +92,12 @@ namespace Cotton.Crypto.Internals.Pipelines
                         {
                             long remaining = _input.Length - _input.Position;
                             if (remaining < chunkHeader.PlaintextLength)
-                                throw new AuthenticationTagMismatchException("Ciphertext truncated before chunk end.");
+                                throw new EndOfStreamException("Unexpected end of stream while reading chunk ciphertext.");
                         }
 
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipher = scope.Rent(cipherLength);
-                        try
-                        {
-                            await AesGcmStreamFormat.ReadExactlyAsync(_input, cipher, cipherLength, ct).ConfigureAwait(false);
-                        }
-                        catch (EndOfStreamException eof)
-                        {
-                            scope.Recycle(cipher);
-                            // Map truncation inside ciphertext chunk to auth failure semantics
-                            throw new AuthenticationTagMismatchException("Ciphertext truncated before chunk end.", eof);
-                        }
+                        await AesGcmStreamFormat.ReadExactlyAsync(_input, cipher, cipherLength, ct).ConfigureAwait(false);
                         if (unchecked((ulong)idx) == ulong.MaxValue)
                         {
                             scope.Recycle(cipher);

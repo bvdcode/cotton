@@ -28,7 +28,7 @@ public class DiagnosticsTests
         int cut = headerLen + chunkHdrLen + (AesGcmStreamCipher.MinChunkSize / 2);
         using var truncated = new MemoryStream(bytes.AsSpan(0, cut).ToArray(), writable: false);
         using var outDec = new MemoryStream();
-        Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(truncated, outDec));
+        Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated, outDec));
     }
 
     // 17. Corrupt chunkHeader.Length => InvalidDataException
@@ -72,6 +72,6 @@ public class DiagnosticsTests
         dup.Write(bytes, fh, ch + AesGcmStreamCipher.MinChunkSize);
         dup.Position = 0;
         using var outDec = new MemoryStream();
-        Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(dup, outDec));
+        Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(dup, outDec));
     }
 }
