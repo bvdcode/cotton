@@ -17,8 +17,8 @@ namespace Cotton.Crypto.Internals.Pipelines
             int jobCap = threads * 4;
             int resCap = threads * 4;
             int window = Math.Min(Math.Max(4, threads * 4), windowCap);
-            int maxCount = jobCap + threads + resCap + window + 8; // safety headroom
-            long maxBytes = (long)chunkSize * maxCount * 4; // account for ArrayPool oversizing
+            int maxCount = jobCap + threads + resCap + window + 32; // extra headroom for ring and transient buffers
+            long maxBytes = (long)chunkSize * (window + threads * 2 + 32); // approximate live ciphertext+plaintext buffers
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
             var producer = ProduceAsync(jobCh.Writer, scope, ct);
