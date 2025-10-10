@@ -55,14 +55,6 @@ namespace Cotton.Crypto.Tests
             return (fileHeader, chunks);
         }
 
-        private static byte[] ComposeNonceExpected(int keyId, long chunkIndex)
-        {
-            byte[] nonce = new byte[NonceSize];
-            BinaryPrimitives.WriteUInt32LittleEndian(nonce.AsSpan(0, 4), unchecked((uint)keyId));
-            BinaryPrimitives.WriteUInt64LittleEndian(nonce.AsSpan(4, 8), unchecked((ulong)chunkIndex));
-            return nonce;
-        }
-
         [Test]
         [Repeat(20)]
         public async Task Fuzz_RoundTrip_RandomizedChunks_AndThreads()
@@ -133,11 +125,11 @@ namespace Cotton.Crypto.Tests
             await cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk);
 
             var bytes = outEnc.ToArray();
-            var (_, chunks) = ParseAllHeaders(bytes);
+            var (fileHeader, chunks) = ParseAllHeaders(bytes);
+            // In compact format nonce is not serialized per chunk; ensure it's omitted
             for (int i = 0; i < chunks.Count; i++)
             {
-                var expected = ComposeNonceExpected(keyId, i);
-                Assert.That(chunks[i].hdr.Nonce, Is.EqualTo(expected), $"Chunk {i} nonce mismatch");
+                Assert.That(chunks[i].hdr.Nonce.Length, Is.EqualTo(0), $"Chunk {i} nonce should not be present in compact header");
             }
         }
 
@@ -238,8 +230,7 @@ namespace Cotton.Crypto.Tests
             cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
 
             var bytes = outEnc.ToArray();
-            // Overwrite KeyId in file header (Magic[4] + HeaderLen[4] + DataLen[8] = 16 bytes before KeyId)
-            int keyIdOffset = 4 + 4 + 8; // relative to start
+            int keyIdOffset = 4 + 4 + 8; // magic + headerLen + dataLen
             BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(keyIdOffset, 4), 999);
 
             using var tampered = new MemoryStream(bytes, writable: false);
@@ -257,8 +248,7 @@ namespace Cotton.Crypto.Tests
             cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
 
             var bytes = outEnc.ToArray();
-            // Locate encrypted key start: Magic(4)+HdrLen(4)+DataLen(8)+KeyId(4)+Nonce(12)+Tag(16)=48 bytes
-            int encKeyOffset = 4 + 4 + 8 + 4 + NonceSize + TagSize;
+            int encKeyOffset = 4 + 4 + 8 + 4 + NonceSize + TagSize; // file header layout
             bytes[encKeyOffset] ^= 0xFF;
 
             using var tampered = new MemoryStream(bytes, writable: false);
@@ -307,10 +297,9 @@ namespace Cotton.Crypto.Tests
             var (_, chunks) = ParseAllHeaders(bytes);
             Assert.That(chunks, Is.Not.Empty);
 
-            // Chunk header start = cipherOffset - headerLen
-            int headerLen = 4 + 4 + 8 + 4 + NonceSize + TagSize;
+            int headerLen = 4 + 4 + 8 + 4 + TagSize; // compact chunk header (no nonce)
             int chunk0HeaderStart = chunks[0].cipherOffset - headerLen;
-            int tagOffset = chunk0HeaderStart + 4 + 4 + 8 + 4 + NonceSize;
+            int tagOffset = chunk0HeaderStart + 4 + 4 + 8 + 4; // tag starts right after keyId
             bytes[tagOffset] ^= 0xFF;
 
             using var tampered = new MemoryStream(bytes, writable: false);
@@ -331,20 +320,16 @@ namespace Cotton.Crypto.Tests
             var (_, chunks) = ParseAllHeaders(bytes);
             Assert.That(chunks, Has.Count.GreaterThanOrEqualTo(2), "Need at least 2 chunks for reorder test");
 
-            int headerLen = 4 + 4 + 8 + 4 + NonceSize + TagSize;
+            int headerLen = 4 + 4 + 8 + 4 + TagSize;
             int c0Start = chunks[0].cipherOffset - headerLen;
             int c0Total = headerLen + (int)chunks[0].hdr.DataLength;
             int c1Start = chunks[1].cipherOffset - headerLen;
             int c1Total = headerLen + (int)chunks[1].hdr.DataLength;
 
             var swapped = new byte[bytes.Length];
-            // Copy file header and data before first chunk if any (none expected)
             Array.Copy(bytes, 0, swapped, 0, c0Start);
-            // Place chunk1 first
             Array.Copy(bytes, c1Start, swapped, c0Start, c1Total);
-            // Then chunk0 after chunk1
             Array.Copy(bytes, c0Start, swapped, c0Start + c1Total, c0Total);
-            // Copy remaining after chunk1
             int tailSrc = c1Start + c1Total;
             int tailDst = c0Start + c1Total + c0Total;
             Array.Copy(bytes, tailSrc, swapped, tailDst, bytes.Length - tailSrc);

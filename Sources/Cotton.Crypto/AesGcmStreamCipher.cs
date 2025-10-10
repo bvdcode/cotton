@@ -123,14 +123,14 @@ namespace Cotton.Crypto
         {
             var jobChannel = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
-                SingleWriter = true,
-                SingleReader = true,
+                SingleWriter = true,   // one producer
+                SingleReader = false,  // many workers
                 FullMode = BoundedChannelFullMode.Wait
             });
             var resultChannel = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
-                SingleWriter = true,
-                SingleReader = true,
+                SingleWriter = false,  // many workers
+                SingleReader = true,   // one consumer
                 FullMode = BoundedChannelFullMode.Wait
             });
 
@@ -320,14 +320,14 @@ namespace Cotton.Crypto
         {
             var jobChannel = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
-                SingleWriter = true,
-                SingleReader = true,
+                SingleWriter = true,   // one producer
+                SingleReader = false,  // many workers
                 FullMode = BoundedChannelFullMode.Wait
             });
             var resultChannel = Channel.CreateBounded<DecryptionResult>(new BoundedChannelOptions(ConcurrencyLevel * 4)
             {
-                SingleWriter = true,
-                SingleReader = true,
+                SingleWriter = false,  // many workers
+                SingleReader = true,   // one consumer
                 FullMode = BoundedChannelFullMode.Wait
             });
             return (jobChannel, resultChannel);
