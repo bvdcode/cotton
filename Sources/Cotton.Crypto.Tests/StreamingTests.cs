@@ -68,7 +68,7 @@ public class StreamingTests
         // Kick off decryption; request cancellation soon after to interrupt mid-pipeline
         var task = dec.DecryptAsync(ciphertext, slowOut, ct: cts.Token);
         cts.CancelAfter(50);
-        Assert.ThrowsAsync<OperationCanceledException>(async () => await task);
+        Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
         long after = GC.GetAllocatedBytesForCurrentThread();
         Assert.That(after - before, Is.LessThan(10L * 1024 * 1024));
     }

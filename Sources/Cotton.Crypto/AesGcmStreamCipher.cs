@@ -24,8 +24,13 @@ namespace Cotton.Crypto
         public const int DefaultChunkSize = 16 * 1024 * 1024;
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         private readonly int ConcurrencyLevel = Math.Min(4, Environment.ProcessorCount);
+        private readonly int _threadsMultiplier;
+        private readonly int _maxThreads;
+        private readonly int _windowCap;
+        private readonly bool _strictLengthCheck;
+        private readonly RandomNumberGenerator _rng;
 
-        public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1, int? threads = null)
+        public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1, int? threads = null, int threadsLimitMultiplier = 2, int windowCap = 1024, bool strictLengthCheck = true, RandomNumberGenerator? rng = null)
         {
             if (masterKey.Length != KeySize)
             {
@@ -35,13 +40,31 @@ namespace Cotton.Crypto
             {
                 throw new ArgumentOutOfRangeException(nameof(keyId), "Key ID must be a positive integer.");
             }
+            if (threadsLimitMultiplier < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(threadsLimitMultiplier), "Threads multiplier must be >= 1.");
+            }
+            if (windowCap < 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(windowCap), "Window cap must be >= 4.");
+            }
 
             _masterKeyBytes = masterKey.ToArray();
             _keyId = keyId;
-            if (threads.HasValue && threads.Value > 0)
+            _threadsMultiplier = threadsLimitMultiplier;
+            _maxThreads = Math.Max(1, Environment.ProcessorCount * _threadsMultiplier);
+            _windowCap = windowCap;
+            _strictLengthCheck = strictLengthCheck;
+            _rng = rng ?? RandomNumberGenerator.Create();
+            if (threads.HasValue)
             {
+                if (threads.Value < 1 || threads.Value > _maxThreads)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(threads), $"Threads must be between 1 and {_maxThreads} (CPU * {_threadsMultiplier}).");
+                }
                 ConcurrencyLevel = threads.Value;
             }
+            ConcurrencyLevel = Math.Clamp(ConcurrencyLevel, 1, _maxThreads);
         }
 
         public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
@@ -56,15 +79,15 @@ namespace Cotton.Crypto
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
             {
-                RandomNumberGenerator.Fill(fileKey.AsSpan(0, KeySize));
+                _rng.GetBytes(fileKey.AsSpan(0, KeySize));
                 // Per-file nonce prefix (4 bytes)
                 Span<byte> prefixBytes = stackalloc byte[4];
-                RandomNumberGenerator.Fill(prefixBytes);
+                _rng.GetBytes(prefixBytes);
                 uint fileNoncePrefix = BinaryPrimitives.ReadUInt32LittleEndian(prefixBytes);
 
                 byte[] fileKeyNonce = new byte[NonceSize];
                 Tag128 fileKeyTag;
-                RandomNumberGenerator.Fill(fileKeyNonce);
+                _rng.GetBytes(fileKeyNonce);
                 byte[] encryptedFileKey = new byte[KeySize];
                 using (var gcm = new AesGcm(_masterKeyBytes, TagSize))
                 {
@@ -86,7 +109,7 @@ namespace Cotton.Crypto
                     BufferPool.Return(headerBuf, clearArray: false);
                 }
 
-                var enc = new EncryptionPipeline(input, output, fileKey, fileNoncePrefix, chunkSize, ConcurrencyLevel, _keyId, NonceSize, TagSize, BufferPool);
+                var enc = new EncryptionPipeline(input, output, fileKey, fileNoncePrefix, chunkSize, ConcurrencyLevel, _keyId, NonceSize, TagSize, _windowCap, BufferPool);
                 await enc.RunAsync(ct).ConfigureAwait(false);
             }
             finally
@@ -116,7 +139,7 @@ namespace Cotton.Crypto
                     header.Tag.CopyTo(tagSpan);
                     gcm.Decrypt(header.Nonce, header.EncryptedKey, tagSpan, fileKey.AsSpan(0, KeySize));
                 }
-                var dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, ConcurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, BufferPool);
+                var dec = new DecryptionPipeline(input, output, fileKey, header.NoncePrefix, ConcurrencyLevel, _keyId, NonceSize, TagSize, MaxChunkSize, _windowCap, header.TotalPlaintextLength, _strictLengthCheck, BufferPool);
                 await dec.RunAsync(ct).ConfigureAwait(false);
             }
             finally
