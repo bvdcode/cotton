@@ -8,19 +8,19 @@ namespace Cotton.Crypto.Internals
         public int DataLength { get; } = dataLength;
     }
 
-    internal readonly struct EncryptionResult(long index, byte[] tag, byte[] data, int dataLength)
+    internal readonly struct EncryptionResult(long index, Tag128 tag, byte[] data, int dataLength)
     {
         public long Index { get; } = index;
-        public byte[] Tag { get; } = tag; // raw 16 bytes, rented from pool
+        public Tag128 Tag { get; } = tag; // 16-byte tag, value type
         public byte[] Data { get; } = data; // ciphertext buffer, rented from pool
         public int DataLength { get; } = dataLength;
     }
 
     // Work queue and results for decryption pipeline
-    internal readonly struct DecryptionJob(long index, byte[] tag, byte[] cipherBuffer, int dataLength)
+    internal readonly struct DecryptionJob(long index, Tag128 tag, byte[] cipherBuffer, int dataLength)
     {
         public long Index { get; } = index;
-        public byte[] Tag { get; } = tag; // raw 16 bytes
+        public Tag128 Tag { get; } = tag; // 16-byte tag value
         public byte[] Cipher { get; } = cipherBuffer; // rented from pool
         public int DataLength { get; } = dataLength;
     }
