@@ -12,11 +12,13 @@ public class FormatInvariantTests
         var seen = new HashSet<ulong>(1_000_000);
         Span<byte> nonce = stackalloc byte[AesGcmStreamCipher.NonceSize];
 
+        // We cannot capture stackalloc span in lambdas; run assertions inline
         for (long i = 0; i < 1_000_000; i++)
         {
             AesGcmStreamFormat.ComposeNonce(nonce, prefix, i);
-            Assert.That(BinaryPrimitives.ReadUInt32LittleEndian(nonce[..4]), Is.EqualTo(prefix));
+            var pfx = BinaryPrimitives.ReadUInt32LittleEndian(nonce[..4]);
             ulong ctr = BinaryPrimitives.ReadUInt64LittleEndian(nonce[4..]);
+            Assert.That(pfx, Is.EqualTo(prefix));
             Assert.That(seen.Add(ctr), Is.True, "Duplicate counter detected at i=" + i);
             Assert.That(ctr, Is.EqualTo((ulong)i));
         }
@@ -45,9 +47,8 @@ public class FormatInvariantTests
         int keyId = 123;
         Span<byte> aad = stackalloc byte[32];
         AesGcmStreamFormat.InitAadPrefix(aad, keyId);
-        byte[] prefix = aad.ToArray();
+        byte[] prefix = aad[..12].ToArray();
 
-        // mutate with several values and assert prefix unchanged and fields set
         long[] indices = [0L, 1L, 123456789L];
         long[] lengths = [0L, 1L, 42L, 8_388_608L];
         foreach (var idx in indices)
@@ -55,11 +56,16 @@ public class FormatInvariantTests
             foreach (var len in lengths)
             {
                 AesGcmStreamFormat.FillAadMutable(aad, idx, len);
-                // First 12 bytes: magic(4) + version(4) + keyId(4)
-                Assert.That(aad[..12].ToArray(), Is.EqualTo(prefix[..12]));
-                Assert.That(BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(12, 8)), Is.EqualTo(idx));
-                Assert.That(BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(20, 8)), Is.EqualTo(len));
-                Assert.That(BinaryPrimitives.ReadInt32LittleEndian(aad.Slice(28, 4)), Is.EqualTo(0));
+                // Compute values without lambdas capturing span
+                var prefixNow = aad[..12].ToArray();
+                var idxNow = BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(12, 8));
+                var lenNow = BinaryPrimitives.ReadInt64LittleEndian(aad.Slice(20, 8));
+                var zeroNow = BinaryPrimitives.ReadInt32LittleEndian(aad.Slice(28, 4));
+
+                Assert.That(prefixNow, Is.EqualTo(prefix));
+                Assert.That(idxNow, Is.EqualTo(idx));
+                Assert.That(lenNow, Is.EqualTo(len));
+                Assert.That(zeroNow, Is.EqualTo(0));
             }
         }
     }

@@ -152,7 +152,7 @@ namespace Cotton.Crypto.Internals
             }
         }
 
-        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int tagSize, uint fileNoncePrefix, long expectedIndex, CancellationToken ct)
+        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int tagSize, uint _fileNoncePrefix, long _expectedIndex, CancellationToken ct)
         {
             int headerLen = ComputeChunkHeaderLength(tagSize);
             byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);

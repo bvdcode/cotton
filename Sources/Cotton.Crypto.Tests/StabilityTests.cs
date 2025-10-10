@@ -71,7 +71,7 @@ namespace Cotton.Crypto.Tests
 
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
             int headerLen = 4 + 4 + 8 + 4 + TagSize;
             int c0HeaderStart = chunks[0].cipherOffset - headerLen;
             // Flip the MSB of length (little-endian last byte) to force invalid length
@@ -95,7 +95,7 @@ namespace Cotton.Crypto.Tests
 
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
             int headerLen = 4 + 4 + 8 + 4 + TagSize;
             int c0HeaderStart = chunks[0].cipherOffset - headerLen;
             int keyIdOffset = c0HeaderStart + 4 + 4 + 8; // after magic(4), headerLen(4), length(8)
@@ -289,7 +289,7 @@ namespace Cotton.Crypto.Tests
 
             // Truncate inside ciphertext of first chunk
             var (_, chunks) = ParseAllHeaders(full);
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
             int cut = chunks[0].cipherOffset + (int)(chunks[0].hdr.DataLength / 2);
             using var truncated1 = new MemoryStream(full.AsSpan(0, cut).ToArray(), writable: false);
             using var dec1 = new MemoryStream();
