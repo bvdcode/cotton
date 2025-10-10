@@ -1,0 +1,217 @@
+using System.Buffers;
+using System.Threading.Channels;
+using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+
+namespace Cotton.Crypto.Internals.Pipelines
+{
+    internal class EncryptionPipeline(Stream input, Stream output, byte[] fileKey,
+        uint noncePrefix, int chunkSize, int threads, int keyId, int nonceSize, int tagSize, ArrayPool<byte> pool)
+    {
+        public async Task RunAsync(CancellationToken ct)
+        {
+            var jobCh = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(threads * 4) { SingleWriter = true, SingleReader = false, FullMode = BoundedChannelFullMode.Wait });
+            var resCh = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(threads * 4) { SingleWriter = false, SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
+
+            var producer = ProduceAsync(jobCh.Writer, ct);
+            var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, ct);
+            var consumer = ConsumeAsync(resCh.Reader, ct);
+
+            try
+            {
+                await producer.ConfigureAwait(false);
+                await Task.WhenAll(workers).ConfigureAwait(false);
+            }
+            finally
+            {
+                resCh.Writer.TryComplete();
+            }
+
+            await consumer.ConfigureAwait(false);
+        }
+
+        private Task ProduceAsync(ChannelWriter<EncryptionJob> writer, CancellationToken ct)
+        {
+            return Task.Run(async () =>
+            {
+                long idx = 0;
+                try
+                {
+                    while (true)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        byte[] buffer = pool.Rent(chunkSize);
+                        int read = 0;
+                        try
+                        {
+                            read = await input.ReadAsync(buffer.AsMemory(0, chunkSize), ct).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            pool.Return(buffer, clearArray: false);
+                            throw;
+                        }
+                        if (read <= 0)
+                        {
+                            pool.Return(buffer, clearArray: false);
+                            break;
+                        }
+                        if (unchecked((ulong)idx) == ulong.MaxValue)
+                        {
+                            pool.Return(buffer, clearArray: false);
+                            throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
+                        }
+                        await writer.WriteAsync(new EncryptionJob(idx++, buffer, read), ct).ConfigureAwait(false);
+                    }
+                }
+                finally
+                {
+                    writer.TryComplete();
+                }
+            }, ct);
+        }
+
+        private Task[] StartWorkersAsync(ChannelReader<EncryptionJob> reader, ChannelWriter<EncryptionResult> writer, CancellationToken ct)
+        {
+            var tasks = new Task[threads];
+            for (int i = 0; i < threads; i++)
+            {
+                tasks[i] = Task.Run(async () =>
+                {
+                    using var gcm = new AesGcm(fileKey, tagSize);
+                    byte[] nonceBuffer = new byte[nonceSize];
+                    byte[] aad = new byte[32];
+                    AesGcmStreamFormat.InitAadPrefix(aad, keyId);
+                    await foreach (var job in reader.ReadAllAsync(ct))
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        byte[] cipher = pool.Rent(job.DataLength);
+                        try
+                        {
+                            AesGcmStreamFormat.ComposeNonce(nonceBuffer, noncePrefix, job.Index);
+                            AesGcmStreamFormat.FillAadMutable(aad, job.Index, job.DataLength);
+                            Tag128 tag = default;
+                            Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tag, 1));
+                            gcm.Encrypt(nonceBuffer, job.DataBuffer.AsSpan(0, job.DataLength), cipher.AsSpan(0, job.DataLength), tagSpan, aad);
+                            await writer.WriteAsync(new EncryptionResult(job.Index, tag, cipher, job.DataLength), ct).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            pool.Return(cipher, clearArray: false);
+                            throw;
+                        }
+                        finally
+                        {
+                            pool.Return(job.DataBuffer, clearArray: false);
+                        }
+                    }
+                }, ct);
+            }
+            return tasks;
+        }
+
+        private Task ConsumeAsync(ChannelReader<EncryptionResult> reader, CancellationToken ct)
+        {
+            return Task.Run(async () =>
+            {
+                const int minWindow = 4;
+                int window = Math.Max(minWindow, threads * 4);
+                var ring = new EncryptionResult[window];
+                var filled = new bool[window];
+                var slotIndex = new long[window];
+                long nextToWrite = 0;
+
+                void EnsureCapacity(long neededIndex)
+                {
+                    if (neededIndex - nextToWrite < window) return;
+                    int newWindow = window * 2;
+                    while (neededIndex - nextToWrite >= newWindow) newWindow *= 2;
+                    var newRing = new EncryptionResult[newWindow];
+                    var newFilled = new bool[newWindow];
+                    var newSlotIndex = new long[newWindow];
+                    for (int i = 0; i < window; i++)
+                    {
+                        if (!filled[i]) continue;
+                        long idx = slotIndex[i];
+                        int newSlot = (int)(idx % newWindow);
+                        newRing[newSlot] = ring[i];
+                        newFilled[newSlot] = true;
+                        newSlotIndex[newSlot] = idx;
+                    }
+                    ring = newRing; filled = newFilled; slotIndex = newSlotIndex; window = newWindow;
+                }
+
+                async Task FlushReadyAsync()
+                {
+                    while (true)
+                    {
+                        int slot = (int)(nextToWrite % window);
+                        if (filled[slot] && slotIndex[slot] == nextToWrite)
+                        {
+                            var res = ring[slot];
+                            int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
+                            byte[] headerBuf = pool.Rent(headerLen);
+                            try
+                            {
+                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, res.Tag, res.DataLength, tagSize);
+                                await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+                            }
+                            finally
+                            {
+                                pool.Return(headerBuf, clearArray: false);
+                            }
+                            await output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
+                            pool.Return(res.Data, clearArray: false);
+                            filled[slot] = false;
+                            nextToWrite++;
+                        }
+                        else break;
+                    }
+                }
+
+                await foreach (var result in reader.ReadAllAsync(ct))
+                {
+                    if (result.Index == nextToWrite)
+                    {
+                        int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
+                        byte[] headerBuf = pool.Rent(headerLen);
+                        try
+                        {
+                            AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, result.Tag, result.DataLength, tagSize);
+                            await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            pool.Return(headerBuf, clearArray: false);
+                        }
+                        await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+                        pool.Return(result.Data, clearArray: false);
+                        nextToWrite++;
+                        await FlushReadyAsync().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        if (result.Index < nextToWrite)
+                        {
+                            pool.Return(result.Data, clearArray: false);
+                            throw new InvalidDataException("Received duplicate or out-of-order chunk behind the write cursor.");
+                        }
+                        EnsureCapacity(result.Index);
+                        int slot = (int)(result.Index % window);
+                        ring[slot] = result; slotIndex[slot] = result.Index; filled[slot] = true;
+                    }
+                }
+
+                await FlushReadyAsync().ConfigureAwait(false);
+                for (int i = 0; i < window; i++)
+                {
+                    if (filled[i])
+                    {
+                        pool.Return(ring[i].Data, clearArray: false);
+                        throw new InvalidDataException("Missing chunks in output ordering. File may be incomplete or corrupted.");
+                    }
+                }
+            }, ct);
+        }
+    }
+}
