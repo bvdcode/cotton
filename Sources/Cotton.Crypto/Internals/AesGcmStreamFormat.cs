@@ -94,7 +94,7 @@ namespace Cotton.Crypto.Internals
         public static int ComputeChunkHeaderLength(int tagSize)
             => 4 + 4 + 8 + 4 + tagSize; // magic + headerLen + plainLen + keyId + tag
 
-        public static void BuildChunkHeader(Span<byte> header, int keyId, long _chunkIndex, Tag128 tag, int textLength, int tagSize)
+        public static void BuildChunkHeader(Span<byte> header, int keyId, Tag128 tag, int textLength, int tagSize)
         {
             int required = ComputeChunkHeaderLength(tagSize);
             if (header.Length < required) throw new ArgumentException("Header buffer too small", nameof(header));
@@ -152,7 +152,7 @@ namespace Cotton.Crypto.Internals
             }
         }
 
-        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int tagSize, uint _fileNoncePrefix, long _expectedIndex, CancellationToken ct)
+        public static async Task<ChunkHeader> ReadChunkHeaderAsync(Stream input, int tagSize, CancellationToken ct)
         {
             int headerLen = ComputeChunkHeaderLength(tagSize);
             byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
