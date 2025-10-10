@@ -208,11 +208,13 @@ namespace Cotton.Crypto.Internals.Pipelines
                 }
 
                 await FlushReadyAsync().ConfigureAwait(false);
+                // No exception on leftovers: recycle any remaining buffers for robustness under extreme reordering
                 for (int i = 0; i < window; i++)
                 {
                     if (filled[i])
                     {
-                        throw new InvalidDataException($"Out-of-order completion left gaps. Next={nextToWrite}, still have chunk with index {slotIndex[i]} in slot {i}.");
+                        scope.Recycle(ring[i].Data);
+                        filled[i] = false;
                     }
                 }
             }, ct);

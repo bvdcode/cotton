@@ -5,39 +5,31 @@ using System.Runtime.InteropServices;
 
 namespace Cotton.Crypto.Internals.Pipelines
 {
-    internal sealed class DecryptionPipeline
+    internal sealed class DecryptionPipeline(Stream input, Stream output, 
+        byte[] fileKey, uint noncePrefix, int threads, int keyId, int nonceSize, 
+        int tagSize, int maxChunkSize, int windowCap, long expectedTotal, bool strictLength, ArrayPool<byte> pool)
     {
-        private readonly Stream _input;
-        private readonly Stream _output;
-        private readonly byte[] _fileKey;
-        private readonly uint _noncePrefix;
-        private readonly int _threads;
-        private readonly int _keyId;
-        private readonly int _nonceSize;
-        private readonly int _tagSize;
-        private readonly int _maxChunkSize;
-        private readonly int _windowCap;
-        private readonly long _expectedTotal;
-        private readonly bool _strictLength;
-        private readonly ArrayPool<byte> _pool;
-
-        public DecryptionPipeline(Stream input, Stream output, byte[] fileKey, uint noncePrefix, int threads, int keyId, int nonceSize, int tagSize, int maxChunkSize, int windowCap, long expectedTotal, bool strictLength, ArrayPool<byte> pool)
-        {
-            _input = input; _output = output; _fileKey = fileKey; _noncePrefix = noncePrefix; _threads = threads; _keyId = keyId;
-            _nonceSize = nonceSize; _tagSize = tagSize; _maxChunkSize = maxChunkSize; _windowCap = windowCap; _expectedTotal = expectedTotal; _strictLength = strictLength; _pool = pool;
-        }
-
         public async Task RunAsync(CancellationToken ct)
         {
-            var jobCh = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(_threads * 4) { SingleWriter = true, SingleReader = false, FullMode = BoundedChannelFullMode.Wait });
-            var resCh = Channel.CreateBounded<DecryptionResult>(new BoundedChannelOptions(_threads * 4) { SingleWriter = false, SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
+            var jobCh = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(threads * 4)
+            { 
+                SingleWriter = true,
+                SingleReader = false,
+                FullMode = BoundedChannelFullMode.Wait
+            });
+            var resCh = Channel.CreateBounded<DecryptionResult>(new BoundedChannelOptions(threads * 4)
+            {
+                SingleWriter = false,
+                SingleReader = true,
+                FullMode = BoundedChannelFullMode.Wait
+            });
 
-            int jobCap = _threads * 4;
-            int resCap = _threads * 4;
-            int window = Math.Min(Math.Max(4, _threads * 4), _windowCap);
-            int maxCount = jobCap + _threads + resCap + window + 8;
-            long maxBytes = (long)_maxChunkSize * maxCount * 4;
-            using var scope = new BufferScope(_pool, maxCount: maxCount, maxBytes: maxBytes);
+            int jobCap = threads * 4;
+            int resCap = threads * 4;
+            int window = Math.Min(Math.Max(4, threads * 4), windowCap);
+            int maxCount = jobCap + threads + resCap + window + 8;
+            long maxBytes = (long)maxChunkSize * maxCount * 4;
+            using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
             var producer = ProduceAsync(jobCh.Writer, scope, ct);
             var workers = StartWorkersAsync(jobCh.Reader, resCh.Writer, scope, ct);
@@ -55,8 +47,10 @@ namespace Cotton.Crypto.Internals.Pipelines
                 written = await consumerTask.ConfigureAwait(false);
             }
 
-            if (_strictLength && _expectedTotal > 0 && written != _expectedTotal)
-                throw new InvalidDataException($"Decrypted length mismatch. Expected: {_expectedTotal}, Actual: {written}");
+            if (strictLength && expectedTotal > 0 && written != expectedTotal)
+            {
+                throw new InvalidDataException($"Decrypted length mismatch. Expected: {expectedTotal}, Actual: {written}");
+            }
         }
 
         private Task ProduceAsync(ChannelWriter<DecryptionJob> writer, BufferScope scope, CancellationToken ct)
@@ -69,41 +63,58 @@ namespace Cotton.Crypto.Internals.Pipelines
                     while (true)
                     {
                         ct.ThrowIfCancellationRequested();
-                        if (_input.CanSeek)
+                        if (input.CanSeek)
                         {
-                            long bytesRemaining = _input.Length - _input.Position;
-                            int minHeader = 4 + 4 + 8 + 4 + _tagSize;
+                            long bytesRemaining = input.Length - input.Position;
+                            int minHeader = 4 + 4 + 8 + 4 + tagSize;
                             if (bytesRemaining == 0) break;
-                            if (bytesRemaining < minHeader) throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
+                            if (bytesRemaining < minHeader)
+                            {
+                                throw new EndOfStreamException("Unexpected end of stream while reading chunk header.");
+                            }
                         }
                         ChunkHeader chunkHeader;
                         try
                         {
-                            chunkHeader = await AesGcmStreamFormat.ReadChunkHeaderAsync(_input, _tagSize, ct).ConfigureAwait(false);
+                            chunkHeader = await AesGcmStreamFormat
+                                .ReadChunkHeaderAsync(input, tagSize, ct)
+                                .ConfigureAwait(false);
                         }
                         catch (EndOfStreamException)
                         {
                             break;
                         }
 
-                        if (chunkHeader.KeyId != _keyId) throw new InvalidDataException("Chunk key ID does not match file key ID.");
-                        if (chunkHeader.PlaintextLength <= 0 || chunkHeader.PlaintextLength > _maxChunkSize) throw new InvalidDataException("Invalid chunk length in header.");
-                        if (_input.CanSeek)
+                        if (chunkHeader.KeyId != keyId)
                         {
-                            long remaining = _input.Length - _input.Position;
+                            throw new InvalidDataException("Chunk key ID does not match file key ID.");
+                        }
+                        if (chunkHeader.PlaintextLength <= 0 || chunkHeader.PlaintextLength > maxChunkSize)
+                        {
+                            throw new InvalidDataException("Invalid chunk length in header.");
+                        }
+                        if (input.CanSeek)
+                        {
+                            long remaining = input.Length - input.Position;
                             if (remaining < chunkHeader.PlaintextLength)
+                            {
                                 throw new EndOfStreamException("Unexpected end of stream while reading chunk ciphertext.");
+                            }
                         }
 
                         int cipherLength = (int)chunkHeader.PlaintextLength;
                         byte[] cipher = scope.Rent(cipherLength);
-                        await AesGcmStreamFormat.ReadExactlyAsync(_input, cipher, cipherLength, ct).ConfigureAwait(false);
+                        await AesGcmStreamFormat
+                            .ReadExactlyAsync(input, cipher, cipherLength, ct)
+                            .ConfigureAwait(false);
                         if (unchecked((ulong)idx) == ulong.MaxValue)
                         {
                             scope.Recycle(cipher);
                             throw new InvalidOperationException("Maximum number of chunks per file is 2^64-1. Counter reached ulong.MaxValue.");
                         }
-                        await writer.WriteAsync(new DecryptionJob(idx++, chunkHeader.Tag, cipher, cipherLength), ct).ConfigureAwait(false);
+                        await writer
+                            .WriteAsync(new DecryptionJob(idx++, chunkHeader.Tag, cipher, cipherLength), ct)
+                            .ConfigureAwait(false);
                     }
                 }
                 finally
@@ -113,24 +124,25 @@ namespace Cotton.Crypto.Internals.Pipelines
             }, ct);
         }
 
-        private Task[] StartWorkersAsync(ChannelReader<DecryptionJob> reader, ChannelWriter<DecryptionResult> writer, BufferScope scope, CancellationToken ct)
+        private Task[] StartWorkersAsync(ChannelReader<DecryptionJob> reader,
+            ChannelWriter<DecryptionResult> writer, BufferScope scope, CancellationToken ct)
         {
-            var tasks = new Task[_threads];
-            for (int i = 0; i < _threads; i++)
+            var tasks = new Task[threads];
+            for (int i = 0; i < threads; i++)
             {
                 tasks[i] = Task.Run(async () =>
                 {
-                    using var gcm = new AesGcm(_fileKey, _tagSize);
-                    byte[] nonceBuffer = new byte[_nonceSize];
+                    using var gcm = new AesGcm(fileKey, tagSize);
+                    byte[] nonceBuffer = new byte[nonceSize];
                     byte[] aad = new byte[32];
-                    AesGcmStreamFormat.InitAadPrefix(aad, _keyId);
+                    AesGcmStreamFormat.InitAadPrefix(aad, keyId);
                     await foreach (var job in reader.ReadAllAsync(ct))
                     {
                         ct.ThrowIfCancellationRequested();
                         byte[] plain = scope.Rent(job.DataLength);
                         try
                         {
-                            AesGcmStreamFormat.ComposeNonce(nonceBuffer, _noncePrefix, job.Index);
+                            AesGcmStreamFormat.ComposeNonce(nonceBuffer, noncePrefix, job.Index);
                             AesGcmStreamFormat.FillAadMutable(aad, job.Index, job.DataLength);
                             Tag128 tagCopy = job.Tag; Span<byte> tagSpan = MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref tagCopy, 1));
                             gcm.Decrypt(nonceBuffer, job.Cipher.AsSpan(0, job.DataLength), tagSpan, plain.AsSpan(0, job.DataLength), aad);
@@ -157,7 +169,7 @@ namespace Cotton.Crypto.Internals.Pipelines
             return Task.Run(async () =>
             {
                 const int minWindow = 4;
-                int window = Math.Min(Math.Max(minWindow, _threads * 4), _windowCap);
+                int window = Math.Min(Math.Max(minWindow, threads * 4), windowCap);
                 var ring = new DecryptionResult[window];
                 var filled = new bool[window];
                 var slotIndex = new long[window];
@@ -167,8 +179,11 @@ namespace Cotton.Crypto.Internals.Pipelines
                 void EnsureCapacity(long neededIndex)
                 {
                     if (neededIndex - nextToWrite < window) return;
-                    int newWindow = Math.Min(window * 2, _windowCap);
-                    while (neededIndex - nextToWrite >= newWindow && newWindow < _windowCap) newWindow = Math.Min(newWindow * 2, _windowCap);
+                    int newWindow = Math.Min(window * 2, windowCap);
+                    while (neededIndex - nextToWrite >= newWindow && newWindow < windowCap)
+                    {
+                        newWindow = Math.Min(newWindow * 2, windowCap);
+                    }
                     var newRing = new DecryptionResult[newWindow];
                     var newFilled = new bool[newWindow];
                     var newSlotIndex = new long[newWindow];
@@ -192,7 +207,9 @@ namespace Cotton.Crypto.Internals.Pipelines
                         if (filled[slot] && slotIndex[slot] == nextToWrite)
                         {
                             var res = ring[slot];
-                            await _output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
+                            await output
+                                .WriteAsync(res.Data.AsMemory(0, res.DataLength), ct)
+                                .ConfigureAwait(false);
                             scope.Recycle(res.Data);
                             total += res.DataLength;
                             filled[slot] = false; nextToWrite++;
@@ -205,7 +222,9 @@ namespace Cotton.Crypto.Internals.Pipelines
                 {
                     if (result.Index == nextToWrite)
                     {
-                        await _output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+                        await output
+                            .WriteAsync(result.Data.AsMemory(0, result.DataLength), ct)
+                            .ConfigureAwait(false);
                         scope.Recycle(result.Data);
                         total += result.DataLength;
                         nextToWrite++;

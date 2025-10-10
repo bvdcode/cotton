@@ -1,32 +1,39 @@
-using System.Collections.Concurrent;
 using System.Buffers;
+using System.Collections.Concurrent;
 
 namespace Cotton.Crypto.Internals
 {
-    internal sealed class BufferScope : IDisposable
+    internal class BufferScope(ArrayPool<byte> pool, int maxCount, long maxBytes) : IDisposable
     {
-        private readonly ArrayPool<byte> _pool;
-        private readonly ConcurrentBag<byte[]> _tracked = new();
-        private readonly ConcurrentBag<byte[]> _free = new();
-        private readonly ConcurrentDictionary<byte[], byte?> _active = new(ReferenceEqualityComparer<byte[]>.Instance);
-        private readonly int _maxCount;
-        private readonly long _maxBytes;
         private int _count;
         private long _bytes;
         private int _disposed;
-
-        public BufferScope(ArrayPool<byte> pool, int maxCount, long maxBytes)
-        {
-            _pool = pool ?? throw new ArgumentNullException(nameof(pool));
-            _maxCount = maxCount > 0 ? maxCount : throw new ArgumentOutOfRangeException(nameof(maxCount));
-            _maxBytes = maxBytes > 0 ? maxBytes : throw new ArgumentOutOfRangeException(nameof(maxBytes));
-        }
+        private readonly ConcurrentBag<byte[]> _free = [];
+        private readonly ConcurrentBag<byte[]> _tracked = [];
+        private readonly ArrayPool<byte> _pool = pool ?? throw new ArgumentNullException(nameof(pool));
+        private readonly ConcurrentDictionary<byte[], byte?> _active = new(ReferenceEqualityComparer<byte[]>.Instance);
+        private readonly int _maxCount = maxCount > 0 ? maxCount : throw new ArgumentOutOfRangeException(nameof(maxCount));
+        private readonly long _maxBytes = maxBytes > 0 ? maxBytes : throw new ArgumentOutOfRangeException(nameof(maxBytes));
 
         public byte[] Rent(int minimumLength)
         {
-            if (minimumLength <= 0) throw new ArgumentOutOfRangeException(nameof(minimumLength));
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minimumLength);
             ThrowIfDisposed();
-            // Do not reuse _free opportunistically to avoid size mismatches; rely on ArrayPool for correct sizing.
+            if (_free.TryTake(out var reused))
+            {
+                _active[reused] = null;
+                var newCountReuse = Interlocked.Increment(ref _count);
+                var newBytesReuse = Interlocked.Add(ref _bytes, reused.Length);
+                if (newCountReuse > _maxCount || newBytesReuse > _maxBytes)
+                {
+                    _active.TryRemove(reused, out _);
+                    Interlocked.Decrement(ref _count);
+                    Interlocked.Add(ref _bytes, -reused.Length);
+                    _free.Add(reused);
+                    throw new InvalidOperationException("BufferScope limit exceeded.");
+                }
+                return reused;
+            }
             var arr = _pool.Rent(minimumLength);
             _active[arr] = null;
             var newCount = Interlocked.Increment(ref _count);
@@ -46,7 +53,10 @@ namespace Cotton.Crypto.Internals
         public void Recycle(byte[] buffer)
         {
             ThrowIfDisposed();
-            if (buffer is null) return;
+            if (buffer is null)
+            {
+                return;
+            }
             if (_active.TryRemove(buffer, out _))
             {
                 Interlocked.Decrement(ref _count);
@@ -75,10 +85,7 @@ namespace Cotton.Crypto.Internals
 
         private void ThrowIfDisposed()
         {
-            if (Volatile.Read(ref _disposed) != 0)
-            {
-                throw new ObjectDisposedException(nameof(BufferScope));
-            }
+            ObjectDisposedException.ThrowIf(_disposed != 0, nameof(BufferScope));
         }
     }
 }
