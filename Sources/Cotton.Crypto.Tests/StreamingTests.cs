@@ -53,19 +53,21 @@ public class StreamingTests
         var key = Key();
         var enc = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
         var dec = new AesGcmStreamCipher(key, keyId: 6, threads: 2);
-        byte[] data = Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 3).Select(i => (byte)(i & 0xFF)).ToArray();
+        // Use more data to ensure decrypt runs long enough to observe cancellation reliably
+        byte[] data = [.. Enumerable.Range(0, AesGcmStreamCipher.MinChunkSize * 32).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var ciphertext = new MemoryStream();
         enc.EncryptAsync(input, ciphertext, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
         ciphertext.Position = 0;
 
-        using var slowOut = new SlowWriteStream(new MemoryStream(), delayMs: 10);
+        using var slowOut = new SlowWriteStream(new MemoryStream(), delayMs: 25);
         using var cts = new CancellationTokenSource();
 
         long before = GC.GetAllocatedBytesForCurrentThread();
+        // Kick off decryption; request cancellation soon after to interrupt mid-pipeline
         var task = dec.DecryptAsync(ciphertext, slowOut, ct: cts.Token);
-        Task.Delay(30).ContinueWith(_ => cts.Cancel());
-        Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
+        cts.CancelAfter(50);
+        Assert.ThrowsAsync<OperationCanceledException>(async () => await task);
         long after = GC.GetAllocatedBytesForCurrentThread();
         Assert.That(after - before, Is.LessThan(10L * 1024 * 1024));
     }
