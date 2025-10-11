@@ -51,7 +51,7 @@ public class ReliabilityTests
         var (chunksMin, lengthsMin) = ParseChunks(enc1.ToArray(), out _);
         Assert.Multiple(() =>
         {
-            Assert.That(chunksMin, Is.EqualTo(data.Length / min + (data.Length % min == 0 ? 0 : 1)));
+            Assert.That(chunksMin, Is.EqualTo((data.Length / min) + ((data.Length % min == 0) ? 0 : 1)));
             Assert.That(lengthsMin.Last(), Is.EqualTo(data.Length % min == 0 ? min : data.Length % min));
         });
 
@@ -62,7 +62,7 @@ public class ReliabilityTests
         var (chunksMax, lengthsMax) = ParseChunks(enc2.ToArray(), out _);
         Assert.Multiple(() =>
         {
-            Assert.That(chunksMax, Is.EqualTo(data.Length / max + (data.Length % max == 0 ? 0 : 1)));
+            Assert.That(chunksMax, Is.EqualTo((data.Length / max) + ((data.Length % max == 0) ? 0 : 1)));
             Assert.That(lengthsMax.Last(), Is.EqualTo(data.Length % max == 0 ? max : data.Length % max));
         });
     }
