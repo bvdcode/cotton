@@ -8,19 +8,19 @@ import matplotlib.gridspec as gridspec
 
 
 def parse_test_results(filename):
-    """Парсит результаты тестов производительности из файла"""
+    """Parse performance test results from a file"""
 
     with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Находим секции с результатами
+    # Find result sections
     encrypt_section = re.search(
         r'=== ENCRYPTION THREAD/CHUNK SWEEP ===(.*?)(?===|$)', content, re.DOTALL)
     decrypt_section = re.search(
         r'=== DECRYPTION THREAD/CHUNK SWEEP ===(.*?)(?===|$)', content, re.DOTALL)
 
     def extract_data(section_text):
-        """Извлекает данные из текстовой секции"""
+        """Extract data from a text section"""
         if not section_text:
             return pd.DataFrame()
 
@@ -47,7 +47,7 @@ def parse_test_results(filename):
 
 
 def create_mega_analysis(encrypt_data, decrypt_data):
-    """Создает расширенный набор из 12 графиков с детальным анализом"""
+    """Create an extended set of 12 plots with detailed analysis"""
 
     # Устанавливаем стиль
     plt.style.use('default')
@@ -80,7 +80,7 @@ def create_mega_analysis(encrypt_data, decrypt_data):
     unique_threads = sorted(encrypt_data['Threads'].unique())
     unique_chunks = sorted(encrypt_data['ChunkMB'].unique())
 
-    # 1. Encrypt: throughput vs chunk size (компактная версия)
+    # 1. Encrypt: throughput vs chunk size (compact)
     colors = plt.cm.Set1(np.linspace(0, 1, len(unique_threads)))
     for i, threads in enumerate(unique_threads):
         thread_data = encrypt_data[encrypt_data['Threads']
@@ -94,7 +94,7 @@ def create_mega_analysis(encrypt_data, decrypt_data):
     ax1.legend(ncol=2, fontsize=8)
     ax1.grid(True, alpha=0.3)
 
-    # 2. Decrypt: throughput vs chunk size (компактная версия)
+    # 2. Decrypt: throughput vs chunk size (compact)
     for i, threads in enumerate(unique_threads):
         thread_data = decrypt_data[decrypt_data['Threads']
                                    == threads].sort_values('ChunkMB')
@@ -107,7 +107,7 @@ def create_mega_analysis(encrypt_data, decrypt_data):
     ax2.legend(ncol=2, fontsize=8)
     ax2.grid(True, alpha=0.3)
 
-    # 3. Encrypt: throughput vs threads (компактная версия)
+    # 3. Encrypt: throughput vs threads (compact)
     chunk_colors = plt.cm.tab10(np.linspace(0, 1, len(unique_chunks)))
     for i, chunk_size in enumerate(unique_chunks):
         chunk_data = encrypt_data[encrypt_data['ChunkMB']
@@ -121,7 +121,7 @@ def create_mega_analysis(encrypt_data, decrypt_data):
     ax3.legend(ncol=2, fontsize=8)
     ax3.grid(True, alpha=0.3)
 
-    # 4. Decrypt: throughput vs threads (компактная версия)
+    # 4. Decrypt: throughput vs threads (compact)
     for i, chunk_size in enumerate(unique_chunks):
         chunk_data = decrypt_data[decrypt_data['ChunkMB']
                                   == chunk_size].sort_values('Threads')
@@ -159,7 +159,7 @@ def create_mega_analysis(encrypt_data, decrypt_data):
             text = ax5.text(j, i, f'{combined_data.iloc[i, j]:.0f}',
                             ha="center", va="center", color="white", fontsize=8, fontweight='bold')
 
-    # 6. Эффективность по размерам чанков
+    # 6. Efficiency by chunk size
     encrypt_by_chunk = encrypt_data.groupby('ChunkMB')['Throughput'].agg([
         'mean', 'std', 'max', 'min'])
     decrypt_by_chunk = decrypt_data.groupby('ChunkMB')['Throughput'].agg([
@@ -402,7 +402,7 @@ def create_mega_analysis(encrypt_data, decrypt_data):
 
 
 def print_mega_summary(encrypt_data, decrypt_data, encrypt_best, decrypt_best):
-    """Выводит мега-сводку анализа"""
+    """Print a mega analysis summary"""
 
     print("\n" + "="*70)
     print("🚀 MEGA PERFORMANCE ANALYSIS SUMMARY")
@@ -422,7 +422,7 @@ def print_mega_summary(encrypt_data, decrypt_data, encrypt_best, decrypt_best):
     print(
         f"       Configuration: {decrypt_best['Threads']:.0f} threads × {decrypt_best['ChunkMB']:.0f}MB chunks")
 
-    # Детальная статистика
+    # Detailed statistics
     print(f"\n📈 DETAILED STATISTICS:")
     for op_name, data in [("Encryption", encrypt_data), ("Decryption", decrypt_data)]:
         stats = data['Throughput'].describe()
@@ -434,13 +434,13 @@ def print_mega_summary(encrypt_data, decrypt_data, encrypt_best, decrypt_best):
         print(
             f"      Coefficient of Variation: {(stats['std']/stats['mean']*100):.1f}%")
 
-    # Анализ эффективности
+    # Efficiency analysis
     print(f"\n⚡ EFFICIENCY ANALYSIS:")
     speed_advantage = (decrypt_data['Throughput'].mean(
     ) / encrypt_data['Throughput'].mean() - 1) * 100
     print(f"   Decryption speed advantage: {speed_advantage:.1f}%")
 
-    # Лучшие конфигурации по потокам
+    # Best thread configurations
     print(f"\n🎯 OPTIMAL THREAD COUNTS:")
     for op_name, data in [("Encryption", encrypt_data), ("Decryption", decrypt_data)]:
         thread_performance = data.groupby(
@@ -449,7 +449,7 @@ def print_mega_summary(encrypt_data, decrypt_data, encrypt_best, decrypt_best):
         print(
             f"   {op_name}: {best_threads} threads ({thread_performance.iloc[0]:.1f} MB/s avg)")
 
-    # Лучшие размеры чанков
+    # Best chunk sizes
     print(f"\n🧩 OPTIMAL CHUNK SIZES:")
     for op_name, data in [("Encryption", encrypt_data), ("Decryption", decrypt_data)]:
         chunk_performance = data.groupby(
@@ -468,27 +468,27 @@ def print_mega_summary(encrypt_data, decrypt_data, encrypt_best, decrypt_best):
 
 
 def main():
-    """Основная функция"""
+    """Main function"""
     try:
         # Парсим данные из файла
         encrypt_data, decrypt_data = parse_test_results('input.txt')
 
         if encrypt_data.empty or decrypt_data.empty:
-            print("Ошибка: не удалось найти данные в файле input.txt")
+            print("Error: failed to find data in input.txt")
             return
 
-        print(f"🎯 Загружено данных для MEGA анализа:")
-        print(f"   Encryption: {len(encrypt_data)} записей")
-        print(f"   Decryption: {len(decrypt_data)} записей")
+        print(f"🎯 Data loaded for MEGA analysis:")
+        print(f"   Encryption: {len(encrypt_data)} records")
+        print(f"   Decryption: {len(decrypt_data)} records")
 
         # Создаем мега-анализ с 12 графиками
         fig, encrypt_optimal, decrypt_optimal = create_mega_analysis(
             encrypt_data, decrypt_data)
 
-        # Сохраняем графики
-        fig.savefig('mega_performance_analysis.png',
-                    dpi=300, bbox_inches='tight')
-        print(f"\n💾 MEGA анализ сохранен в mega_performance_analysis.png")
+    # Сохраняем графики
+    fig.savefig('mega_performance_analysis.png',
+            dpi=300, bbox_inches='tight')
+    print(f"\n💾 MEGA analysis saved to mega_performance_analysis.png")
 
         # Выводим детальную сводку
         print_mega_summary(encrypt_data, decrypt_data,
@@ -496,21 +496,21 @@ def main():
 
         plt.show()
 
-        print(f"\n🚀 Создано 12 графиков:")
-        print(f"   1-4. Основные графики зависимостей")
-        print(f"   5. Heat Map матрица производительности")
-        print(f"   6. Столбчатая диаграмма по размерам чанков")
-        print(f"   7. Violin plot распределения")
-        print(f"   8. Анализ эффективности масштабирования")
-        print(f"   9. Карта соотношений скоростей")
-        print(f"   10. Зоны производительности")
-        print(f"   11. Таблица рекомендаций")
-        print(f"   12. Dashboard сводки")
+        print(f"\n🚀 Created 12 plots:")
+        print(f"   1-4. Main dependency plots")
+        print(f"   5. Heat Map performance matrix")
+        print(f"   6. Bar chart by chunk sizes")
+        print(f"   7. Violin plot distributions")
+        print(f"   8. Scaling efficiency analysis")
+        print(f"   9. Speed ratio map")
+        print(f"   10. Performance zones")
+        print(f"   11. Recommendations table")
+        print(f"   12. Summary dashboard")
 
     except FileNotFoundError:
-        print("❌ Ошибка: файл 'input.txt' не найден")
+        print("❌ Error: file 'input.txt' not found")
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
 
