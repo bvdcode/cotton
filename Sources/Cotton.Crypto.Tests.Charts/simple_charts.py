@@ -5,23 +5,23 @@ import numpy as np
 
 
 def parse_test_results(filename):
-    """Парсит результаты тестов производительности из файла"""
+    """Parse performance test results from a file"""
 
     with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Находим секции с результатами
+    # Find result sections
     encrypt_section = re.search(
         r'=== ENCRYPTION THREAD/CHUNK SWEEP ===(.*?)(?===|$)', content, re.DOTALL)
     decrypt_section = re.search(
         r'=== DECRYPTION THREAD/CHUNK SWEEP ===(.*?)(?===|$)', content, re.DOTALL)
 
     def extract_data(section_text):
-        """Извлекает данные из текстовой секции"""
+        """Extract data from a text section"""
         if not section_text:
             return pd.DataFrame()
 
-        # Ищем строки с данными (формат: число | число | число.число)
+    # Find data lines (format: number | number | number.number)
         pattern = r'(\d+)\s*\|\s*(\d+)\s*\|\s*([\d.]+)'
         matches = re.findall(pattern, section_text)
 
@@ -44,9 +44,9 @@ def parse_test_results(filename):
 
 
 def create_plots(encrypt_data, decrypt_data):
-    """Создает четыре графика с улучшенным стилем"""
+    """Create four polished plots"""
 
-    # Настраиваем стиль matplotlib
+    # Configure matplotlib style
     plt.rcParams['figure.facecolor'] = 'white'
     plt.rcParams['axes.facecolor'] = 'white'
     plt.rcParams['axes.grid'] = True
@@ -56,13 +56,13 @@ def create_plots(encrypt_data, decrypt_data):
     fig.suptitle('Performance Analysis: Encryption/Decryption Throughput',
                  fontsize=16, fontweight='bold', y=0.98)
 
-    # Цветовые схемы
+    # Color schemes
     thread_colors = ['#1f77b4', '#ff7f0e',
                      '#2ca02c', '#d62728', '#9467bd', '#8c564b']
     chunk_colors = ['#e41a1c', '#377eb8', '#4daf4a',
                     '#984ea3', '#ff7f00', '#ffff33', '#a65628']
 
-    # График 1: Encrypt - throughput vs chunk size (по разным числам потоков)
+    # Plot 1: Encrypt - throughput vs chunk size (per thread count)
     unique_threads = sorted(encrypt_data['Threads'].unique())
     for i, threads in enumerate(unique_threads):
         thread_data = encrypt_data[encrypt_data['Threads']
@@ -78,12 +78,12 @@ def create_plots(encrypt_data, decrypt_data):
     ax1.legend(frameon=True, fancybox=True, shadow=True)
     ax1.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
 
-    # Добавляем подписи осей с размерами чанков
+    # Add x-axis labels for chunk sizes
     chunk_ticks = sorted(encrypt_data['ChunkMB'].unique())
     ax1.set_xticks(chunk_ticks)
     ax1.set_xticklabels([f'{int(x)}' for x in chunk_ticks])
 
-    # График 2: Decrypt - throughput vs chunk size (по разным числам потоков)
+    # Plot 2: Decrypt - throughput vs chunk size (per thread count)
     for i, threads in enumerate(unique_threads):
         thread_data = decrypt_data[decrypt_data['Threads']
                                    == threads].sort_values('ChunkMB')
@@ -100,7 +100,7 @@ def create_plots(encrypt_data, decrypt_data):
     ax2.set_xticks(chunk_ticks)
     ax2.set_xticklabels([f'{int(x)}' for x in chunk_ticks])
 
-    # График 3: Encrypt - throughput vs threads (по разным размерам чанков)
+    # Plot 3: Encrypt - throughput vs threads (per chunk size)
     unique_chunks = sorted(encrypt_data['ChunkMB'].unique())
 
     for i, chunk_size in enumerate(unique_chunks):
@@ -119,7 +119,7 @@ def create_plots(encrypt_data, decrypt_data):
     ax3.set_xticks(unique_threads)
     ax3.set_xticklabels([str(int(x)) for x in unique_threads])
 
-    # График 4: Decrypt - throughput vs threads (по разным размерам чанков)
+    # Plot 4: Decrypt - throughput vs threads (per chunk size)
     for i, chunk_size in enumerate(unique_chunks):
         chunk_data = decrypt_data[decrypt_data['ChunkMB']
                                   == chunk_size].sort_values('Threads')
@@ -136,7 +136,7 @@ def create_plots(encrypt_data, decrypt_data):
     ax4.set_xticks(unique_threads)
     ax4.set_xticklabels([str(int(x)) for x in unique_threads])
 
-    # Улучшаем внешний вид
+    # Improve visuals
     for ax in [ax1, ax2, ax3, ax4]:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -148,71 +148,71 @@ def create_plots(encrypt_data, decrypt_data):
 
 
 def print_summary(encrypt_data, decrypt_data):
-    """Выводит краткую сводку"""
+    """Print a short summary"""
 
     print("\n" + "="*50)
-    print("КРАТКАЯ СВОДКА АНАЛИЗА")
+    print("BRIEF ANALYSIS SUMMARY")
     print("="*50)
 
     # Находим лучшие результаты
     encrypt_best = encrypt_data.loc[encrypt_data['Throughput'].idxmax()]
     decrypt_best = decrypt_data.loc[decrypt_data['Throughput'].idxmax()]
 
-    print(f"\n🏆 ЛУЧШИЕ РЕЗУЛЬТАТЫ:")
+    print(f"\n🏆 TOP RESULTS:")
     print(f"   Encryption: {encrypt_best['Throughput']:.1f} MB/s")
     print(
-        f"   ({encrypt_best['Threads']:.0f} потоков, {encrypt_best['ChunkMB']:.0f}MB чанки)")
+        f"   ({encrypt_best['Threads']:.0f} threads, {encrypt_best['ChunkMB']:.0f}MB chunks)")
     print(f"   Decryption: {decrypt_best['Throughput']:.1f} MB/s")
     print(
-        f"   ({decrypt_best['Threads']:.0f} потоков, {decrypt_best['ChunkMB']:.0f}MB чанки)")
+        f"   ({decrypt_best['Threads']:.0f} threads, {decrypt_best['ChunkMB']:.0f}MB chunks)")
 
-    print(f"\n📊 СРЕДНИЕ ЗНАЧЕНИЯ:")
+    print(f"\n📊 AVERAGE VALUES:")
     print(f"   Encryption: {encrypt_data['Throughput'].mean():.1f} MB/s")
     print(f"   Decryption: {decrypt_data['Throughput'].mean():.1f} MB/s")
     print(
-        f"   Decryption на {((decrypt_data['Throughput'].mean() / encrypt_data['Throughput'].mean() - 1) * 100):.1f}% быстрее")
+        f"   Decryption is {((decrypt_data['Throughput'].mean() / encrypt_data['Throughput'].mean() - 1) * 100):.1f}% faster")
 
     print("\n" + "="*50)
 
 
 def main():
-    """Основная функция"""
+    """Main function"""
     try:
-        # Парсим данные из файла
+        # Parse data from file
         encrypt_data, decrypt_data = parse_test_results('input.txt')
 
         if encrypt_data.empty or decrypt_data.empty:
-            print("Ошибка: не удалось найти данные в файле input.txt")
+            print("Error: failed to find data in input.txt")
             return
 
-        print(f"✅ Данные успешно загружены:")
-        print(f"   Encryption: {len(encrypt_data)} записей")
-        print(f"   Decryption: {len(decrypt_data)} записей")
+        print(f"✅ Data successfully loaded:")
+        print(f"   Encryption: {len(encrypt_data)} records")
+        print(f"   Decryption: {len(decrypt_data)} records")
 
-        # Создаем графики
+        # Create plots
         fig = create_plots(encrypt_data, decrypt_data)
 
-        # Сохраняем графики
+        # Save plots
         fig.savefig('performance_charts.png', dpi=300, bbox_inches='tight',
                     facecolor='white', edgecolor='none')
-        print(f"\n💾 Графики сохранены в performance_charts.png")
+        print(f"\n💾 Charts saved to performance_charts.png")
 
-        # Выводим сводку
+        # Print summary
         print_summary(encrypt_data, decrypt_data)
 
-        # Показываем графики
+        # Show plots
         plt.show()
 
-        print(f"\n📈 Созданы следующие графики:")
+        print(f"\n📈 The following charts were created:")
         print(f"   1. Encryption: Throughput vs Chunk Size")
         print(f"   2. Decryption: Throughput vs Chunk Size")
         print(f"   3. Encryption: Throughput vs Threads")
         print(f"   4. Decryption: Throughput vs Threads")
 
     except FileNotFoundError:
-        print("❌ Ошибка: файл 'input.txt' не найден")
+        print("❌ Error: file 'input.txt' not found")
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"❌ Error: {e}")
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ public class AesGcmStreamCipherTests_EdgesAndCorrectness
 
     [TestCase(0)]
     [TestCase(1)]
+    [Category("Edge")]
     public async Task EncryptDecrypt_EdgeCases_ShouldWork(int bytes)
     {
         byte[] source = new byte[Math.Max(1, bytes)];
