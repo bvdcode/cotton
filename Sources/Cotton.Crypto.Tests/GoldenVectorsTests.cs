@@ -62,7 +62,7 @@ public class GoldenVectorsTests
             Span<byte> tmp = stackalloc byte[8];
             for (int i = 0; i < data.Length; i += 8)
             {
-                seed = unchecked(seed * 6364136223846793005UL + 1);
+                seed = unchecked((seed * 6364136223846793005UL) + 1);
                 BinaryPrimitives.WriteUInt64LittleEndian(tmp, seed);
                 int len = Math.Min(8, data.Length - i);
                 tmp[..len].CopyTo(data.AsSpan(i, len));
@@ -75,7 +75,7 @@ public class GoldenVectorsTests
             Span<byte> tmp = stackalloc byte[8];
             for (int i = 0; i < data.Length; i += 8)
             {
-                seed = unchecked(seed * 6364136223846793005UL + 1);
+                seed = unchecked((seed * 6364136223846793005UL) + 1);
                 BinaryPrimitives.WriteUInt64LittleEndian(tmp, seed);
                 int len = Math.Min(8, data.Length - i);
                 tmp[..len].CopyTo(data.Slice(i, len));
