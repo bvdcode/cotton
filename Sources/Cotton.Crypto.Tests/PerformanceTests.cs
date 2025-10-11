@@ -13,7 +13,7 @@ namespace Cotton.Crypto.Tests
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000;
         private const int Iterations = 2;
-        private static readonly int[] chunkSizes = [1, 4, 8, 16, 24];
+        private static readonly int[] chunkSizesInKBytes = [128, 512, 1024, 4096, 8192, 16384];
 
         [SetUp]
         public void SetUp()
@@ -58,7 +58,7 @@ namespace Cotton.Crypto.Tests
             TestContext.Out.WriteLine("=== ENCRYPTION THREAD/CHUNK SWEEP ===");
             TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
             TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / OneMb}MB"))}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
             TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
@@ -79,7 +79,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / OneMb,7} | {avg,9:F1}");
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F1} | {avg,9:F1}");
                 }
             }
         }
@@ -113,7 +113,7 @@ namespace Cotton.Crypto.Tests
             TestContext.Out.WriteLine("=== DECRYPTION THREAD/CHUNK SWEEP ===");
             TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
             TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / OneMb}MB"))}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
             TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
@@ -134,7 +134,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / OneMb,7} | {avg,9:F1}");
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F1} | {avg,9:F1}");
                 }
             }
         }
@@ -153,7 +153,7 @@ namespace Cotton.Crypto.Tests
 
         private static int[] GetChunkSweep()
         {
-            return [.. chunkSizes.Select(x => x * OneMb)];
+            return [.. chunkSizesInKBytes.Select(x => x * 1024)];
         }
     }
 }
