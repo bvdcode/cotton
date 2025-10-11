@@ -1,7 +1,9 @@
-﻿using System.Diagnostics;
+﻿using Cotton.Crypto.Tests.TestUtils;
+using System.Diagnostics;
 
 namespace Cotton.Crypto.Tests
 {
+    [Category("Performance")]
     [NonParallelizable]
     public class PerformanceTests
     {
@@ -9,9 +11,9 @@ namespace Cotton.Crypto.Tests
         private static byte[]? _sharedData;
         private static byte[]? _masterKey;
         private const int OneMb = 1024 * 1024;
-        private const int TestDataSizeMb = 1000; // 1 GB
+        private const int TestDataSizeMb = 1000;
         private const int Iterations = 2;
-        private static readonly int[] chunkSizes = [1, 8, 16, 24, 32];
+        private static readonly int[] chunkSizesInKBytes = [64, 128, 512, 1024, 4096, 8192, 16384];
 
         [SetUp]
         public void SetUp()
@@ -56,7 +58,7 @@ namespace Cotton.Crypto.Tests
             TestContext.Out.WriteLine("=== ENCRYPTION THREAD/CHUNK SWEEP ===");
             TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
             TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / OneMb}MB"))}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
             TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
@@ -66,9 +68,9 @@ namespace Cotton.Crypto.Tests
                     List<double> throughputs = [];
                     for (int i = 0; i < Iterations; i++)
                     {
-                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
+                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
                         using var inputStream = new MemoryStream(source, 0, totalBytes, writable: false, publiclyVisible: true);
-                        using var encryptedStream = new MemoryStream(capacity: totalBytes + 4096);
+                        using var encryptedStream = new DevNullStream();
                         long t0 = Stopwatch.GetTimestamp();
                         await cipher.EncryptAsync(inputStream, encryptedStream, chunkSize: chunkSize);
                         long t1 = Stopwatch.GetTimestamp();
@@ -77,7 +79,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / OneMb,7} | {avg,9:F1}");
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
                 }
             }
         }
@@ -111,7 +113,7 @@ namespace Cotton.Crypto.Tests
             TestContext.Out.WriteLine("=== DECRYPTION THREAD/CHUNK SWEEP ===");
             TestContext.Out.WriteLine($"Data size: {TestDataSizeMb} MB");
             TestContext.Out.WriteLine($"Threads: {string.Join(", ", threadCounts)}");
-            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / OneMb}MB"))}");
+            TestContext.Out.WriteLine($"Chunk sizes: {string.Join(", ", chunkSizes.Select(x => $"{x / (double)OneMb:F1}MB"))}");
             TestContext.Out.WriteLine("Threads | ChunkMB | Avg MB/s");
 
             foreach (int threads in threadCounts)
@@ -121,9 +123,9 @@ namespace Cotton.Crypto.Tests
                     List<double> throughputs = [];
                     for (int i = 0; i < Iterations; i++)
                     {
-                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1);
+                        var cipher = new AesGcmStreamCipher(masterKey, keyId: 1, threads: threads);
                         using var encryptedStream = new MemoryStream(encryptedPayload, writable: false);
-                        using var decryptedStream = new MemoryStream(capacity: totalBytes);
+                        var decryptedStream = new DevNullStream();
                         long t0 = Stopwatch.GetTimestamp();
                         await cipher.DecryptAsync(encryptedStream, decryptedStream);
                         long t1 = Stopwatch.GetTimestamp();
@@ -132,7 +134,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / OneMb,7} | {avg,9:F1}");
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
                 }
             }
         }
@@ -151,7 +153,7 @@ namespace Cotton.Crypto.Tests
 
         private static int[] GetChunkSweep()
         {
-            return [.. chunkSizes.Select(x => x * OneMb)];
+            return [.. chunkSizesInKBytes.Select(x => x * 1024)];
         }
     }
 }

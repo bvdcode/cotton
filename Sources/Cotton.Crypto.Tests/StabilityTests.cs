@@ -24,6 +24,149 @@ namespace Cotton.Crypto.Tests
 
         private static AesGcmStreamCipher Cipher(int keyId = 1, int? threads = null)
             => new(ValidMasterKey(), keyId, threads);
+        [Test]
+        public void Truncation_Fails_OnFileHeader()
+        {
+            var cipher = Cipher(keyId: 3);
+            byte[] data = RandomBytes(MinChunk + 123, 55);
+            using var input = new MemoryStream(data);
+            using var outEnc = new MemoryStream();
+            cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+            var full = outEnc.ToArray();
+            int fileHeaderLen = 4 + 4 + 8 + 4 + 4 + NonceSize + TagSize + 32; // with 32-byte encrypted key
+            int cut = fileHeaderLen / 2; // mid-file-header
+            using var truncated = new MemoryStream(full.AsSpan(0, cut).ToArray(), writable: false);
+            using var outDec = new MemoryStream();
+            Assert.ThrowsAsync<EndOfStreamException>(async () => await cipher.DecryptAsync(truncated, outDec));
+        }
+
+        [Test]
+        public void Tamper_FileHeader_NoncePrefix_ShouldFailEarly_NoPayload()
+        {
+            var cipher = Cipher(keyId: 17);
+            byte[] data = RandomBytes(MinChunk + 10_000, 106);
+            using var input = new MemoryStream(data);
+            using var outEnc = new MemoryStream();
+            cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+            var bytes = outEnc.ToArray();
+            int noncePrefixOffset = 4 + 4 + 8 + 4; // magic + headerLen + dataLen + keyId
+            bytes[noncePrefixOffset] ^= 0xFF; // flip a byte in noncePrefix
+
+            using var tampered = new MemoryStream(bytes, writable: false);
+            using var outDec = new MemoryStream();
+            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            Assert.That(outDec.Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Tamper_ChunkHeader_Length_ShouldFail_NoPayload()
+        {
+            var cipher = Cipher(keyId: 18);
+            byte[] data = RandomBytes((MinChunk * 2) + 999, 107);
+            using var input = new MemoryStream(data);
+            using var outEnc = new MemoryStream();
+            cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+            var bytes = outEnc.ToArray();
+            var (_, chunks) = ParseAllHeaders(bytes);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
+            int headerLen = 4 + 4 + 8 + 4 + TagSize;
+            int c0HeaderStart = chunks[0].cipherOffset - headerLen;
+            // Flip the MSB of length (little-endian last byte) to force invalid length
+            int lengthMsbOffset = c0HeaderStart + 4 + 4 + 7; // magic(4) + headerLen(4) + length(8)
+            bytes[lengthMsbOffset] ^= 0xFF;
+
+            using var tampered = new MemoryStream(bytes, writable: false);
+            using var outDec = new MemoryStream();
+            Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            Assert.That(outDec.Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Tamper_ChunkHeader_KeyId_ShouldFail_NoPayload()
+        {
+            var cipher = Cipher(keyId: 19);
+            byte[] data = RandomBytes((MinChunk * 2) + 777, 108);
+            using var input = new MemoryStream(data);
+            using var outEnc = new MemoryStream();
+            cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+            var bytes = outEnc.ToArray();
+            var (_, chunks) = ParseAllHeaders(bytes);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
+            int headerLen = 4 + 4 + 8 + 4 + TagSize;
+            int c0HeaderStart = chunks[0].cipherOffset - headerLen;
+            int keyIdOffset = c0HeaderStart + 4 + 4 + 8; // after magic(4), headerLen(4), length(8)
+            bytes[keyIdOffset] ^= 0xFF;
+
+            using var tampered = new MemoryStream(bytes, writable: false);
+            using var outDec = new MemoryStream();
+            Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            Assert.That(outDec.Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Duplicate_SecondChunk_ShouldFail_AfterFirstChunkOnly()
+        {
+            var cipher = Cipher(keyId: 20);
+            byte[] data = RandomBytes((MinChunk * 2) + 123, 109);
+            using var input = new MemoryStream(data);
+            using var outEnc = new MemoryStream();
+            cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+            var bytes = outEnc.ToArray();
+            var (_, chunks) = ParseAllHeaders(bytes);
+            Assert.That(chunks, Has.Count.GreaterThanOrEqualTo(2));
+
+            int headerLen = 4 + 4 + 8 + 4 + TagSize;
+            int c0Start = chunks[0].cipherOffset - headerLen;
+            int c0Total = headerLen + (int)chunks[0].hdr.DataLength;
+            int c1Start = chunks[1].cipherOffset - headerLen;
+            int c1Total = headerLen + (int)chunks[1].hdr.DataLength;
+
+            // Build a duplicate chunk1 = chunk0 stream (same size region)
+            var dup = (byte[])bytes.Clone();
+            // If lengths differ, limit copy to min to avoid overflow; remaining bytes unchanged but will still fail auth
+            int copyLen = Math.Min(c0Total, c1Total);
+            Array.Copy(dup, c0Start, dup, c1Start, copyLen);
+
+            using var tampered = new MemoryStream(dup, writable: false);
+            using var outDec = new MemoryStream();
+            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            // first chunk may have been written successfully, but no further payload
+            Assert.That(outDec.Length, Is.EqualTo((int)chunks[0].hdr.DataLength));
+        }
+
+        [Test]
+        public void Skip_SecondChunk_ShouldFail_AfterFirstChunkOnly()
+        {
+            var cipher = Cipher(keyId: 22);
+            byte[] data = RandomBytes((MinChunk * 3) + 321, 110);
+            using var input = new MemoryStream(data);
+            using var outEnc = new MemoryStream();
+            cipher.EncryptAsync(input, outEnc, chunkSize: MinChunk).GetAwaiter().GetResult();
+
+            var bytes = outEnc.ToArray();
+            var (_, chunks) = ParseAllHeaders(bytes);
+            Assert.That(chunks, Has.Count.GreaterThanOrEqualTo(3));
+
+            int headerLen = 4 + 4 + 8 + 4 + TagSize;
+            int c0Start = chunks[0].cipherOffset - headerLen;
+            int c0Total = headerLen + (int)chunks[0].hdr.DataLength;
+            int c1Start = chunks[1].cipherOffset - headerLen;
+            int c1Total = headerLen + (int)chunks[1].hdr.DataLength;
+
+            var skipped = new byte[bytes.Length - c1Total];
+            Array.Copy(bytes, 0, skipped, 0, c1Start);
+            Array.Copy(bytes, c1Start + c1Total, skipped, c1Start, bytes.Length - (c1Start + c1Total));
+
+            using var tampered = new MemoryStream(skipped, writable: false);
+            using var outDec = new MemoryStream();
+            Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            Assert.That(outDec.Length, Is.EqualTo((int)chunks[0].hdr.DataLength));
+        }
 
         private static AesGcmKeyHeader ReadHeader(Stream s) => AesGcmKeyHeader.FromStream(s, NonceSize, TagSize);
 
@@ -129,7 +272,7 @@ namespace Cotton.Crypto.Tests
             // In compact format nonce is not serialized per chunk; ensure it's omitted
             for (int i = 0; i < chunks.Count; i++)
             {
-                Assert.That(chunks[i].hdr.Nonce.Length, Is.EqualTo(0), $"Chunk {i} nonce should not be present in compact header");
+                Assert.That(chunks[i].hdr.Nonce, Is.Empty, $"Chunk {i} nonce should not be present in compact header");
             }
         }
 
@@ -146,7 +289,7 @@ namespace Cotton.Crypto.Tests
 
             // Truncate inside ciphertext of first chunk
             var (_, chunks) = ParseAllHeaders(full);
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
             int cut = chunks[0].cipherOffset + (int)(chunks[0].hdr.DataLength / 2);
             using var truncated1 = new MemoryStream(full.AsSpan(0, cut).ToArray(), writable: false);
             using var dec1 = new MemoryStream();
@@ -171,7 +314,7 @@ namespace Cotton.Crypto.Tests
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
 
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
 
             for (int i = 0; i < chunks.Count; i++)
             {
@@ -295,7 +438,7 @@ namespace Cotton.Crypto.Tests
 
             var bytes = outEnc.ToArray();
             var (_, chunks) = ParseAllHeaders(bytes);
-            Assert.That(chunks, Is.Not.Empty);
+            Assert.That(chunks, Has.Count.GreaterThan(0));
 
             int headerLen = 4 + 4 + 8 + 4 + TagSize; // compact chunk header (no nonce)
             int chunk0HeaderStart = chunks[0].cipherOffset - headerLen;
@@ -305,6 +448,7 @@ namespace Cotton.Crypto.Tests
             using var tampered = new MemoryStream(bytes, writable: false);
             using var outDec = new MemoryStream();
             Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
+            Assert.That(outDec.Length, Is.EqualTo(0));
         }
 
         [Test]

@@ -29,17 +29,17 @@ def _run_module_main(module_name: str) -> None:
 
 
 def generate_simple():
-    print("\n=== ✅ Генерация простых графиков ===")
+    print("\n=== ✅ Generating simple charts ===")
     _run_module_main("simple_charts")
 
 
 def generate_advanced():
-    print("\n=== ✅ Генерация расширенных графиков ===")
+    print("\n=== ✅ Generating advanced charts ===")
     _run_module_main("advanced_analysis")
 
 
 def generate_mega():
-    print("\n=== ✅ Генерация MEGA-графиков ===")
+    print("\n=== ✅ Generating MEGA charts ===")
     _run_module_main("mega_advanced_analysis")
 
 
@@ -49,7 +49,7 @@ def run_selected(sets: list[str]):
 
     # Basic presence check for input
     if not INPUT_DEFAULT.exists():
-        print(f"❌ Не найден файл с данными: {INPUT_DEFAULT}")
+        print(f"❌ Data file not found: {INPUT_DEFAULT}")
         sys.exit(1)
 
     for s in sets:
@@ -62,18 +62,18 @@ def run_selected(sets: list[str]):
         else:
             raise ValueError(f"Unknown set: {s}")
 
-    print("\n🎉 Готово. Созданы файлы (если данных было достаточно):")
+    print("\n🎉 Done. Files created (if enough data):")
     print("  • performance_charts.png")
     print("  • advanced_performance_analysis.png")
     print("  • mega_performance_analysis.png")
 
 
 def interactive_menu() -> list[str]:
-    print("\nЧто создать? Выберите опцию и нажмите Enter:")
-    print("  1) Только простые графики")
-    print("  2) Только расширенные графики")
-    print("  3) Только MEGA-графики")
-    print("  4) Всё сразу")
+    print("\nWhat to generate? Choose an option and press Enter:")
+    print("  1) Simple charts only")
+    print("  2) Advanced charts only")
+    print("  3) MEGA charts only")
+    print("  4) All at once")
 
     choice = input("> ").strip()
     mapping = {
@@ -82,17 +82,17 @@ def interactive_menu() -> list[str]:
         "3": ["mega"],
         "4": ["simple", "advanced", "mega"],
     }
-    return mapping.get(choice, ["simple", "advanced", "mega"])  # по умолчанию — всё
+    return mapping.get(choice, ["simple", "advanced", "mega"])  # default — all
 
 
 def parse_args(argv: list[str]):
-    p = argparse.ArgumentParser(description="Создание графиков производительности (simple/advanced/mega)")
+    p = argparse.ArgumentParser(description="Generate performance charts (simple/advanced/mega)")
     g = p.add_mutually_exclusive_group()
-    g.add_argument("--simple", action="store_true", help="Создать только простые графики")
-    g.add_argument("--advanced", action="store_true", help="Создать только расширенные графики")
-    g.add_argument("--mega", action="store_true", help="Создать только MEGA-графики")
-    g.add_argument("--all", action="store_true", help="Создать все графики (по умолчанию)")
-    p.add_argument("--menu", action="store_true", help="Показать интерактивное меню выбора")
+    g.add_argument("--simple", action="store_true", help="Generate simple charts only")
+    g.add_argument("--advanced", action="store_true", help="Generate advanced charts only")
+    g.add_argument("--mega", action="store_true", help="Generate MEGA charts only")
+    g.add_argument("--all", action="store_true", help="Generate all charts (default)")
+    p.add_argument("--menu", action="store_true", help="Show interactive selection menu")
     return p.parse_args(argv)
 
 

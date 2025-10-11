@@ -6,19 +6,19 @@ import seaborn as sns
 
 
 def parse_test_results(filename):
-    """Парсит результаты тестов производительности из файла"""
+    """Parse performance test results from a file"""
 
     with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Находим секции с результатами
+    # Find result sections
     encrypt_section = re.search(
         r'=== ENCRYPTION THREAD/CHUNK SWEEP ===(.*?)(?===|$)', content, re.DOTALL)
     decrypt_section = re.search(
         r'=== DECRYPTION THREAD/CHUNK SWEEP ===(.*?)(?===|$)', content, re.DOTALL)
 
     def extract_data(section_text):
-        """Извлекает данные из текстовой секции"""
+        """Extract data from a text section"""
         if not section_text:
             return pd.DataFrame()
 
@@ -45,7 +45,7 @@ def parse_test_results(filename):
 
 
 def create_advanced_plots(encrypt_data, decrypt_data):
-    """Создает расширенный набор графиков с дополнительным анализом"""
+    """Create an advanced set of plots with additional analysis"""
 
     # Устанавливаем стиль
     plt.style.use('seaborn-v0_8')
@@ -144,13 +144,13 @@ def create_advanced_plots(encrypt_data, decrypt_data):
     ax4.set_xticks(unique_threads)
     ax4.set_xticklabels([str(int(x)) for x in unique_threads])
 
-    # График 5: Сравнение лучших результатов
+    # Plot 5: Comparison of best results
     encrypt_best = encrypt_data.groupby(['Threads', 'ChunkMB'])[
         'Throughput'].max().reset_index()
     decrypt_best = decrypt_data.groupby(['Threads', 'ChunkMB'])[
         'Throughput'].max().reset_index()
 
-    # Находим оптимальные конфигурации
+    # Find optimal configurations
     encrypt_optimal = encrypt_data.loc[encrypt_data['Throughput'].idxmax()]
     decrypt_optimal = decrypt_data.loc[decrypt_data['Throughput'].idxmax()]
 
@@ -236,39 +236,39 @@ def create_advanced_plots(encrypt_data, decrypt_data):
 
 
 def print_analysis_summary(encrypt_data, decrypt_data, encrypt_optimal, decrypt_optimal):
-    """Выводит сводку анализа производительности"""
+    """Print performance analysis summary"""
 
     print("\n" + "="*60)
-    print("АНАЛИЗ ПРОИЗВОДИТЕЛЬНОСТИ")
+    print("PERFORMANCE ANALYSIS")
     print("="*60)
 
-    print(f"\n📊 ОПТИМАЛЬНЫЕ КОНФИГУРАЦИИ:")
+    print(f"\n📊 OPTIMAL CONFIGURATIONS:")
     print(f"   Encryption:")
-    print(f"      Лучший результат: {encrypt_optimal['Throughput']:.1f} MB/s")
+    print(f"      Best result: {encrypt_optimal['Throughput']:.1f} MB/s")
     print(
-        f"      Потоков: {encrypt_optimal['Threads']}, Размер чанка: {encrypt_optimal['ChunkMB']}MB")
+        f"      Threads: {encrypt_optimal['Threads']}, Chunk size: {encrypt_optimal['ChunkMB']}MB")
 
     print(f"   Decryption:")
-    print(f"      Лучший результат: {decrypt_optimal['Throughput']:.1f} MB/s")
+    print(f"      Best result: {decrypt_optimal['Throughput']:.1f} MB/s")
     print(
-        f"      Потоков: {decrypt_optimal['Threads']}, Размер чанка: {decrypt_optimal['ChunkMB']}MB")
+        f"      Threads: {decrypt_optimal['Threads']}, Chunk size: {decrypt_optimal['ChunkMB']}MB")
 
-    # Статистика по операциям
-    print(f"\n📈 ОБЩАЯ СТАТИСТИКА:")
+    # Statistics per operation
+    print(f"\n📈 OVERALL STATISTICS:")
     print(f"   Encryption:")
-    print(f"      Среднее: {encrypt_data['Throughput'].mean():.1f} MB/s")
-    print(f"      Медиана: {encrypt_data['Throughput'].median():.1f} MB/s")
+    print(f"      Mean: {encrypt_data['Throughput'].mean():.1f} MB/s")
+    print(f"      Median: {encrypt_data['Throughput'].median():.1f} MB/s")
     print(
-        f"      Мин/Макс: {encrypt_data['Throughput'].min():.1f} / {encrypt_data['Throughput'].max():.1f} MB/s")
+        f"      Min/Max: {encrypt_data['Throughput'].min():.1f} / {encrypt_data['Throughput'].max():.1f} MB/s")
 
     print(f"   Decryption:")
-    print(f"      Среднее: {decrypt_data['Throughput'].mean():.1f} MB/s")
-    print(f"      Медиана: {decrypt_data['Throughput'].median():.1f} MB/s")
+    print(f"      Mean: {decrypt_data['Throughput'].mean():.1f} MB/s")
+    print(f"      Median: {decrypt_data['Throughput'].median():.1f} MB/s")
     print(
-        f"      Мин/Макс: {decrypt_data['Throughput'].min():.1f} / {decrypt_data['Throughput'].max():.1f} MB/s")
+        f"      Min/Max: {decrypt_data['Throughput'].min():.1f} / {decrypt_data['Throughput'].max():.1f} MB/s")
 
-    # Анализ влияния размера чанка
-    print(f"\n🧩 ВЛИЯНИЕ РАЗМЕРА ЧАНКА:")
+    # Chunk size impact analysis
+    print(f"\n🧩 EFFECT OF CHUNK SIZE:")
     for operation, data in [("Encryption", encrypt_data), ("Decryption", decrypt_data)]:
         chunk_performance = data.groupby(
             'ChunkMB')['Throughput'].mean().sort_values(ascending=False)
@@ -276,9 +276,9 @@ def print_analysis_summary(encrypt_data, decrypt_data, encrypt_optimal, decrypt_
         worst_chunk = chunk_performance.index[-1]
         print(f"   {operation}:")
         print(
-            f"      Лучший размер чанка: {best_chunk}MB ({chunk_performance[best_chunk]:.1f} MB/s)")
+            f"      Best chunk size: {best_chunk}MB ({chunk_performance[best_chunk]:.1f} MB/s)")
         print(
-            f"      Худший размер чанка: {worst_chunk}MB ({chunk_performance[worst_chunk]:.1f} MB/s)")
+            f"      Worst chunk size: {worst_chunk}MB ({chunk_performance[worst_chunk]:.1f} MB/s)")
 
     print("\n" + "="*60)
 
@@ -313,9 +313,9 @@ def main():
         plt.show()
 
     except FileNotFoundError:
-        print("Ошибка: файл 'input.txt' не найден")
+        print("Error: file 'input.txt' not found")
     except Exception as e:
-        print(f"Ошибка: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()
 
