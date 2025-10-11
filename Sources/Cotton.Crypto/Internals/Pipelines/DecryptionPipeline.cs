@@ -9,6 +9,101 @@ namespace Cotton.Crypto.Internals.Pipelines
         byte[] fileKey, uint noncePrefix, int threads, int keyId, int nonceSize, 
         int tagSize, int maxChunkSize, int windowCap, long expectedTotal, bool strictLength, ArrayPool<byte> pool)
     {
+        private sealed class ReorderWriter
+        {
+            private readonly Stream _output;
+            private readonly BufferScope _scope;
+            private int _window;
+            private readonly int _windowCap;
+            private DecryptionResult[] _ring;
+            private bool[] _filled;
+            private long[] _slotIndex;
+            private long _nextToWrite;
+            public long TotalWritten { get; private set; }
+
+            public ReorderWriter(Stream output, BufferScope scope, int threads, int windowCap)
+            {
+                _output = output;
+                _scope = scope;
+                _windowCap = windowCap;
+                const int minWindow = 4;
+                _window = Math.Min(Math.Max(minWindow, threads * 4), _windowCap);
+                _ring = new DecryptionResult[_window];
+                _filled = new bool[_window];
+                _slotIndex = new long[_window];
+                _nextToWrite = 0;
+                TotalWritten = 0;
+            }
+
+            private void EnsureCapacity(long neededIndex)
+            {
+                if (neededIndex - _nextToWrite < _window) return;
+                int newWindow = Math.Min(_window * 2, _windowCap);
+                while (neededIndex - _nextToWrite >= newWindow && newWindow < _windowCap)
+                {
+                    newWindow = Math.Min(newWindow * 2, _windowCap);
+                }
+                var newRing = new DecryptionResult[newWindow];
+                var newFilled = new bool[newWindow];
+                var newSlotIndex = new long[newWindow];
+                for (int i = 0; i < _window; i++)
+                {
+                    if (!_filled[i]) continue;
+                    long idx = _slotIndex[i];
+                    int newSlot = (int)(idx % newWindow);
+                    newRing[newSlot] = _ring[i];
+                    newFilled[newSlot] = true;
+                    newSlotIndex[newSlot] = idx;
+                }
+                _ring = newRing; _filled = newFilled; _slotIndex = newSlotIndex; _window = newWindow;
+            }
+
+            private async Task FlushReadyAsync(CancellationToken ct)
+            {
+                while (true)
+                {
+                    int slot = (int)(_nextToWrite % _window);
+                    if (_filled[slot] && _slotIndex[slot] == _nextToWrite)
+                    {
+                        var res = _ring[slot];
+                        await _output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
+                        _scope.Recycle(res.Data);
+                        TotalWritten += res.DataLength;
+                        _filled[slot] = false; _nextToWrite++;
+                    }
+                    else break;
+                }
+            }
+
+            public async Task AcceptAsync(DecryptionResult result, CancellationToken ct)
+            {
+                if (result.Index == _nextToWrite)
+                {
+                    await _output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
+                    _scope.Recycle(result.Data);
+                    TotalWritten += result.DataLength;
+                    _nextToWrite++;
+                    await FlushReadyAsync(ct).ConfigureAwait(false);
+                }
+                else
+                {
+                    if (result.Index < _nextToWrite)
+                    {
+                        throw new InvalidDataException($"Duplicate chunk index detected. Received {result.Index}, next expected {_nextToWrite}.");
+                    }
+                    EnsureCapacity(result.Index);
+                    int slot = (int)(result.Index % _window);
+                    if (_filled[slot])
+                    {
+                        throw new InvalidDataException($"Reorder buffer slot collision. Slot {slot} already filled for index {_slotIndex[slot]}, tried to place {result.Index}.");
+                    }
+                    _ring[slot] = result; _slotIndex[slot] = result.Index; _filled[slot] = true;
+                }
+            }
+
+            public Task FlushAsync(CancellationToken ct) => FlushReadyAsync(ct);
+        }
+
         public async Task RunAsync(CancellationToken ct)
         {
             var jobCh = Channel.CreateBounded<DecryptionJob>(new BoundedChannelOptions(threads * 4)
@@ -47,6 +142,10 @@ namespace Cotton.Crypto.Internals.Pipelines
                 written = await consumerTask.ConfigureAwait(false);
             }
 
+            if (ct.IsCancellationRequested)
+            {
+                ct.ThrowIfCancellationRequested();
+            }
             if (strictLength && expectedTotal > 0 && written != expectedTotal)
             {
                 throw new InvalidDataException($"Decrypted length mismatch. Expected: {expectedTotal}, Actual: {written}");
@@ -151,7 +250,6 @@ namespace Cotton.Crypto.Internals.Pipelines
                         catch (CryptographicException ex)
                         {
                             scope.Recycle(plain);
-                            // bubble up; classification happens at top
                             throw new AuthenticationTagMismatchException("Chunk authentication failed.", ex);
                         }
                         finally
@@ -168,86 +266,13 @@ namespace Cotton.Crypto.Internals.Pipelines
         {
             return Task.Run(async () =>
             {
-                const int minWindow = 4;
-                int window = Math.Min(Math.Max(minWindow, threads * 4), windowCap);
-                var ring = new DecryptionResult[window];
-                var filled = new bool[window];
-                var slotIndex = new long[window];
-                long nextToWrite = 0;
-                long total = 0;
-
-                void EnsureCapacity(long neededIndex)
-                {
-                    if (neededIndex - nextToWrite < window) return;
-                    int newWindow = Math.Min(window * 2, windowCap);
-                    while (neededIndex - nextToWrite >= newWindow && newWindow < windowCap)
-                    {
-                        newWindow = Math.Min(newWindow * 2, windowCap);
-                    }
-                    var newRing = new DecryptionResult[newWindow];
-                    var newFilled = new bool[newWindow];
-                    var newSlotIndex = new long[newWindow];
-                    for (int i = 0; i < window; i++)
-                    {
-                        if (!filled[i]) continue;
-                        long idx = slotIndex[i];
-                        int newSlot = (int)(idx % newWindow);
-                        newRing[newSlot] = ring[i];
-                        newFilled[newSlot] = true;
-                        newSlotIndex[newSlot] = idx;
-                    }
-                    ring = newRing; filled = newFilled; slotIndex = newSlotIndex; window = newWindow;
-                }
-
-                async Task FlushReadyAsync()
-                {
-                    while (true)
-                    {
-                        int slot = (int)(nextToWrite % window);
-                        if (filled[slot] && slotIndex[slot] == nextToWrite)
-                        {
-                            var res = ring[slot];
-                            await output
-                                .WriteAsync(res.Data.AsMemory(0, res.DataLength), ct)
-                                .ConfigureAwait(false);
-                            scope.Recycle(res.Data);
-                            total += res.DataLength;
-                            filled[slot] = false; nextToWrite++;
-                        }
-                        else break;
-                    }
-                }
-
+                var writer = new ReorderWriter(output, scope, threads, windowCap);
                 await foreach (var result in reader.ReadAllAsync(ct))
                 {
-                    if (result.Index == nextToWrite)
-                    {
-                        await output
-                            .WriteAsync(result.Data.AsMemory(0, result.DataLength), ct)
-                            .ConfigureAwait(false);
-                        scope.Recycle(result.Data);
-                        total += result.DataLength;
-                        nextToWrite++;
-                        await FlushReadyAsync();
-                    }
-                    else
-                    {
-                        if (result.Index < nextToWrite)
-                        {
-                            throw new InvalidDataException($"Duplicate chunk index detected. Received {result.Index}, next expected {nextToWrite}.");
-                        }
-                        EnsureCapacity(result.Index);
-                        int slot = (int)(result.Index % window);
-                        if (filled[slot])
-                        {
-                            throw new InvalidDataException($"Reorder buffer slot collision. Slot {slot} already filled for index {slotIndex[slot]}, tried to place {result.Index}.");
-                        }
-                        ring[slot] = result; slotIndex[slot] = result.Index; filled[slot] = true;
-                    }
+                    await writer.AcceptAsync(result, ct).ConfigureAwait(false);
                 }
-
-                await FlushReadyAsync();
-                return total;
+                await writer.FlushAsync(ct).ConfigureAwait(false);
+                return writer.TotalWritten;
             }, ct);
         }
     }
