@@ -74,7 +74,9 @@ namespace Cotton.Crypto
             if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
             if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
+            {
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
+            }
 
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
