@@ -16,10 +16,21 @@ namespace Cotton.Crypto.Internals.Pipelines
             int jobCap = threads * 4;
             int resCap = threads * 4;
             int window = Math.Min(Math.Max(4, threads * 4), windowCap);
-            int approxLive = jobCap + threads + resCap + window;
-            int safetyUnits = Math.Max(64, threads * 8);
-            int maxCount = approxLive + safetyUnits;
-            long maxBytes = (long)chunkSize * (approxLive * 2L + safetyUnits);
+            int baseCount = jobCap + threads + resCap + window;
+            int maxCount = baseCount + 1024;
+            static int NextPow2(int x)
+            {
+                x--;
+                x |= x >> 1;
+                x |= x >> 2;
+                x |= x >> 4;
+                x |= x >> 8;
+                x |= x >> 16;
+                x++;
+                return x < 16 ? 16 : x;
+            }
+            long estSize = NextPow2(chunkSize);
+            long maxBytes = estSize * baseCount * 8L;
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
             var producer = ProduceAsync(jobCh.Writer, scope, ct);
