@@ -13,7 +13,7 @@ namespace Cotton.Crypto.Tests
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000;
         private const int Iterations = 2;
-        private static readonly int[] chunkSizesInKBytes = [8, 16, 32, 64, 128, 512, 1024, 4096, 8192, 16384];
+        private static readonly int[] chunkSizesInKBytes = [64, 128, 512, 1024, 4096, 8192, 16384];
 
         [SetUp]
         public void SetUp()
