@@ -115,7 +115,7 @@ def parse_openssl_results(filename: Path) -> pd.DataFrame:
 def plot_mylib_four_panels(enc: pd.DataFrame, dec: pd.DataFrame, out_path: Path) -> None:
     """Create 4-panel figure for my library: throughput vs chunk size (per threads) and vs threads (per chunk)."""
     if enc.empty or dec.empty:
-        print("[warn] MyLib data is empty; skipping library_performance.png")
+        print("[warn] CottonCrypto data is empty; skipping library_performance.png")
         return
 
     plt.rcParams["figure.facecolor"] = "white"
@@ -125,7 +125,7 @@ def plot_mylib_four_panels(enc: pd.DataFrame, dec: pd.DataFrame, out_path: Path)
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
     (ax1, ax2), (ax3, ax4) = axes
-    fig.suptitle("MyLib Performance: Encryption/Decryption Throughput", fontsize=16, fontweight="bold", y=0.98)
+    fig.suptitle("CottonCrypto Performance: Encryption/Decryption Throughput", fontsize=16, fontweight="bold", y=0.98)
 
     thread_colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
     chunk_colors = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#a65628", "#f781bf"]
@@ -190,7 +190,7 @@ def plot_mylib_four_panels(enc: pd.DataFrame, dec: pd.DataFrame, out_path: Path)
 def create_advanced_plots(encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame, out_path: Path) -> None:
     """Replicate the advanced analysis (6 plots) in a single figure and save it."""
     if encrypt_data.empty or decrypt_data.empty:
-        print("[warn] MyLib data empty; skipping advanced_performance_analysis.png")
+        print("[warn] CottonCrypto data empty; skipping advanced_performance_analysis.png")
         return
 
     plt.style.use('seaborn-v0_8')
@@ -312,7 +312,7 @@ def create_advanced_plots(encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame
 def create_mega_analysis(encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame, out_path: Path) -> None:
     """Replicate the MEGA analysis with multiple subplots (compact)."""
     if encrypt_data.empty or decrypt_data.empty:
-        print("[warn] MyLib data empty; skipping mega_performance_analysis.png")
+        print("[warn] CottonCrypto data empty; skipping mega_performance_analysis.png")
         return
 
     if sns:
@@ -524,16 +524,16 @@ def create_mega_analysis(encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame,
 
 
 def plot_openssl_comparison(enc: pd.DataFrame, dec: pd.DataFrame, ossl: pd.DataFrame, out_path: Path) -> None:
-    """Create a simple comparison: MyLib (best-per-chunk) vs OpenSSL across buffer sizes.
+    """Create a simple comparison: CottonCrypto (best-per-chunk) vs OpenSSL across buffer sizes.
 
     - X-axis: buffer/chunk size in bytes, log scale
-    - Lines: OpenSSL AES-128-GCM, MyLib Encrypt best-per-chunk, MyLib Decrypt best-per-chunk
+    - Lines: OpenSSL AES-128-GCM, CottonCrypto Encrypt best-per-chunk, CottonCrypto Decrypt best-per-chunk
     """
     if ossl is None or ossl.empty:
         print("[warn] OpenSSL data missing; skipping openssl_comparison.png")
         return
 
-    # MyLib best per chunk (across threads)
+    # CottonCrypto best per chunk (across threads)
     enc_best_per_chunk = enc.groupby("ChunkMB")["Throughput"].max().reset_index()
     dec_best_per_chunk = dec.groupby("ChunkMB")["Throughput"].max().reset_index()
 
@@ -542,17 +542,17 @@ def plot_openssl_comparison(enc: pd.DataFrame, dec: pd.DataFrame, ossl: pd.DataF
     dec_best_per_chunk["BlockBytes"] = (dec_best_per_chunk["ChunkMB"] * 1_000_000).astype(int)
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    fig.suptitle("MyLib vs OpenSSL: Throughput vs Buffer/Chunk Size", fontsize=16, fontweight="bold", y=0.96)
+    fig.suptitle("CottonCrypto vs OpenSSL: Throughput vs Buffer/Chunk Size", fontsize=16, fontweight="bold", y=0.96)
 
     # OpenSSL line
     ax.plot(ossl["BlockBytes"], ossl["ThroughputMBps"], marker="o", linewidth=2.5, markersize=7,
             label="OpenSSL AES-128-GCM")
 
-    # MyLib lines (best per chunk)
+    # CottonCrypto lines (best per chunk)
     ax.plot(enc_best_per_chunk["BlockBytes"], enc_best_per_chunk["Throughput"], marker="s", linewidth=2.0,
-            markersize=7, label="MyLib Encrypt (best per chunk)")
+            markersize=7, label="CottonCrypto Encrypt (best per chunk)")
     ax.plot(dec_best_per_chunk["BlockBytes"], dec_best_per_chunk["Throughput"], marker="^", linewidth=2.0,
-            markersize=7, label="MyLib Decrypt (best per chunk)")
+            markersize=7, label="CottonCrypto Decrypt (best per chunk)")
 
     ax.set_xscale("log")
     ax.set_xlabel("Buffer / Chunk Size (bytes) [log scale]")
@@ -562,7 +562,7 @@ def plot_openssl_comparison(enc: pd.DataFrame, dec: pd.DataFrame, ossl: pd.DataF
 
     # Lightweight note to clarify semantics difference
     note = (
-        "Note: OpenSSL varies small buffer sizes; MyLib varies file chunk sizes."
+        "Note: OpenSSL varies small buffer sizes; CottonCrypto varies file chunk sizes."
         " Scales differ; this is an approximate visual comparison."
     )
     ax.text(0.01, -0.18, note, transform=ax.transAxes, fontsize=9, va="top", ha="left", wrap=True)
@@ -579,15 +579,15 @@ def main(argv: Optional[list[str]] = None) -> int:
     openssl_path = Path(args[1]).resolve() if len(args) >= 2 else OPENSSL_INPUT_DEFAULT
 
     if not mylib_path.exists():
-        print(f"[error] MyLib input not found: {mylib_path}")
+        print(f"[error] CottonCrypto input not found: {mylib_path}")
         return 1
 
     enc, dec = parse_mylib_results(mylib_path)
     if enc.empty or dec.empty:
-        print(f"[error] Failed to parse MyLib data from {mylib_path}")
+        print(f"[error] Failed to parse CottonCrypto data from {mylib_path}")
         return 2
 
-    print(f"Loaded MyLib data: enc={len(enc)} rows, dec={len(dec)} rows")
+    print(f"Loaded CottonCrypto data: enc={len(enc)} rows, dec={len(dec)} rows")
     # 1) Core four panels
     plot_mylib_four_panels(enc, dec, ROOT / "library_performance.png")
     # 2) Advanced analysis (6 charts)
@@ -608,8 +608,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     enc_best = enc.loc[enc["Throughput"].idxmax()]
     dec_best = dec.loc[dec["Throughput"].idxmax()]
     print("\nSummary:")
-    print(f"  MyLib Encrypt best: {enc_best['Throughput']:.1f} MB/s at {enc_best['Threads']} threads, {enc_best['ChunkMB']}MB chunks")
-    print(f"  MyLib Decrypt best: {dec_best['Throughput']:.1f} MB/s at {dec_best['Threads']} threads, {dec_best['ChunkMB']}MB chunks")
+    print(f"  CottonCrypto Encrypt best: {enc_best['Throughput']:.1f} MB/s at {enc_best['Threads']} threads, {enc_best['ChunkMB']}MB chunks")
+    print(f"  CottonCrypto Decrypt best: {dec_best['Throughput']:.1f} MB/s at {dec_best['Threads']} threads, {dec_best['ChunkMB']}MB chunks")
     if not ossl_df.empty:
         print(f"  OpenSSL best: {ossl_df['ThroughputMBps'].max():.1f} MB/s at {int(ossl_df.loc[ossl_df['ThroughputMBps'].idxmax(), 'BlockBytes'])} bytes buffer")
 
