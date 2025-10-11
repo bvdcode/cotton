@@ -13,12 +13,13 @@ namespace Cotton.Crypto.Internals.Pipelines
             var jobCh = Channel.CreateBounded<EncryptionJob>(new BoundedChannelOptions(threads * 4) { SingleWriter = true, SingleReader = false, FullMode = BoundedChannelFullMode.Wait });
             var resCh = Channel.CreateBounded<EncryptionResult>(new BoundedChannelOptions(threads * 4) { SingleWriter = false, SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
 
-            // Compute conservative upper bounds based on channel capacities and write window
             int jobCap = threads * 4;
             int resCap = threads * 4;
             int window = Math.Min(Math.Max(4, threads * 4), windowCap);
-            int maxCount = jobCap + threads + resCap + window + 32; // extra headroom for ring and transient buffers
-            long maxBytes = (long)chunkSize * (window + threads * 2 + 32); // approximate live ciphertext+plaintext buffers
+            int approxLive = jobCap + threads + resCap + window;
+            int safetyUnits = Math.Max(64, threads * 8);
+            int maxCount = approxLive + safetyUnits;
+            long maxBytes = (long)chunkSize * (approxLive * 2L + safetyUnits);
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
             var producer = ProduceAsync(jobCh.Writer, scope, ct);
@@ -208,7 +209,6 @@ namespace Cotton.Crypto.Internals.Pipelines
                 }
 
                 await FlushReadyAsync().ConfigureAwait(false);
-                // No exception on leftovers: recycle any remaining buffers for robustness under extreme reordering
                 for (int i = 0; i < window; i++)
                 {
                     if (filled[i])
