@@ -30,9 +30,11 @@ namespace Cotton.Crypto.Internals
                     Interlocked.Decrement(ref _count);
                     Interlocked.Add(ref _bytes, -reused.Length);
                     _free.Add(reused);
-                    throw new InvalidOperationException("BufferScope limit exceeded.");
                 }
-                return reused;
+                else
+                {
+                    return reused;
+                }
             }
             var arr = _pool.Rent(minimumLength);
             _active[arr] = null;

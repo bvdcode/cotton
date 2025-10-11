@@ -19,7 +19,7 @@ namespace Cotton.Crypto
         public const int NonceSize = 12;
         public const int TagSize = 16;
         public const int KeySize = 32;
-        public const int MinChunkSize = 4 * 1024;
+        public const int MinChunkSize = 8 * 1024;
         public const int MaxChunkSize = 64 * 1024 * 1024;
         public const int DefaultChunkSize = 16 * 1024 * 1024;
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
