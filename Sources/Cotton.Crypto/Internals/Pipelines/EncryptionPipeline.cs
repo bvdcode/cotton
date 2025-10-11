@@ -128,105 +128,54 @@ namespace Cotton.Crypto.Internals.Pipelines
         {
             return Task.Run(async () =>
             {
-                const int minWindow = 4;
-                int window = Math.Min(Math.Max(minWindow, threads * 4), windowCap);
-                var ring = new EncryptionResult[window];
-                var filled = new bool[window];
-                var slotIndex = new long[window];
-                long nextToWrite = 0;
-
-                void EnsureCapacity(long neededIndex)
+                var pending = new SortedDictionary<long, EncryptionResult>();
+                long next = 0;
+                while (await reader.WaitToReadAsync(ct).ConfigureAwait(false))
                 {
-                    if (neededIndex - nextToWrite < window) return;
-                    int newWindow = Math.Min(window * 2, windowCap);
-                    while (neededIndex - nextToWrite >= newWindow && newWindow < windowCap) newWindow = Math.Min(newWindow * 2, windowCap);
-                    var newRing = new EncryptionResult[newWindow];
-                    var newFilled = new bool[newWindow];
-                    var newSlotIndex = new long[newWindow];
-                    for (int i = 0; i < window; i++)
+                    while (reader.TryRead(out var res))
                     {
-                        if (!filled[i]) continue;
-                        long idx = slotIndex[i];
-                        int newSlot = (int)(idx % newWindow);
-                        newRing[newSlot] = ring[i];
-                        newFilled[newSlot] = true;
-                        newSlotIndex[newSlot] = idx;
-                    }
-                    ring = newRing; filled = newFilled; slotIndex = newSlotIndex; window = newWindow;
-                }
-
-                async Task FlushReadyAsync()
-                {
-                    while (true)
-                    {
-                        int slot = (int)(nextToWrite % window);
-                        if (filled[slot] && slotIndex[slot] == nextToWrite)
+                        pending[res.Index] = res;
+                        while (pending.TryGetValue(next, out var ready))
                         {
-                            var res = ring[slot];
                             int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
                             byte[] headerBuf = pool.Rent(headerLen);
                             try
                             {
-                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, res.Tag, res.DataLength, tagSize);
+                                AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, ready.Tag, ready.DataLength, tagSize);
                                 await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                             }
                             finally
                             {
                                 pool.Return(headerBuf, clearArray: false);
                             }
-                            await output.WriteAsync(res.Data.AsMemory(0, res.DataLength), ct).ConfigureAwait(false);
-                            scope.Recycle(res.Data);
-                            filled[slot] = false;
-                            nextToWrite++;
+                            await output.WriteAsync(ready.Data.AsMemory(0, ready.DataLength), ct).ConfigureAwait(false);
+                            scope.Recycle(ready.Data);
+                            pending.Remove(next);
+                            next++;
                         }
-                        else break;
                     }
                 }
-
-                await foreach (var result in reader.ReadAllAsync(ct))
+                while (pending.TryGetValue(next, out var tail))
                 {
-                    if (result.Index == nextToWrite)
+                    int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
+                    byte[] headerBuf = pool.Rent(headerLen);
+                    try
                     {
-                        int headerLen = AesGcmStreamFormat.ComputeChunkHeaderLength(tagSize);
-                        byte[] headerBuf = pool.Rent(headerLen);
-                        try
-                        {
-                            AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, result.Tag, result.DataLength, tagSize);
-                            await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
-                        }
-                        finally
-                        {
-                            pool.Return(headerBuf, clearArray: false);
-                        }
-                        await output.WriteAsync(result.Data.AsMemory(0, result.DataLength), ct).ConfigureAwait(false);
-                        scope.Recycle(result.Data);
-                        nextToWrite++;
-                        await FlushReadyAsync().ConfigureAwait(false);
+                        AesGcmStreamFormat.BuildChunkHeader(headerBuf.AsSpan(0, headerLen), keyId, tail.Tag, tail.DataLength, tagSize);
+                        await output.WriteAsync(headerBuf.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                     }
-                    else
+                    finally
                     {
-                        if (result.Index < nextToWrite)
-                        {
-                            throw new InvalidDataException($"Duplicate chunk index detected. Received {result.Index}, next expected {nextToWrite}.");
-                        }
-                        EnsureCapacity(result.Index);
-                        int slot = (int)(result.Index % window);
-                        if (filled[slot])
-                        {
-                            throw new InvalidDataException($"Reorder buffer slot collision. Slot {slot} already filled for index {slotIndex[slot]}, tried to place {result.Index}.");
-                        }
-                        ring[slot] = result; slotIndex[slot] = result.Index; filled[slot] = true;
+                        pool.Return(headerBuf, clearArray: false);
                     }
+                    await output.WriteAsync(tail.Data.AsMemory(0, tail.DataLength), ct).ConfigureAwait(false);
+                    scope.Recycle(tail.Data);
+                    pending.Remove(next);
+                    next++;
                 }
-
-                await FlushReadyAsync().ConfigureAwait(false);
-                for (int i = 0; i < window; i++)
+                foreach (var kv in pending.Values)
                 {
-                    if (filled[i])
-                    {
-                        scope.Recycle(ring[i].Data);
-                        filled[i] = false;
-                    }
+                    scope.Recycle(kv.Data);
                 }
             }, ct);
         }
