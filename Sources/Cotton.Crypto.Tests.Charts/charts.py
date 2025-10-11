@@ -309,6 +309,185 @@ def create_advanced_plots(encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame
     print(f"[ok] Saved {out_path.name}")
 
 
+def _plot_encrypt_vs_chunk(ax, encrypt_data: pd.DataFrame, unique_threads: list[int]) -> None:
+    colors = plt.cm.Set1(np.linspace(0, 1, len(unique_threads)))
+    for i, threads in enumerate(unique_threads):
+        td = encrypt_data[encrypt_data['Threads'] == threads].sort_values('ChunkMB')
+        ax.plot(td['ChunkMB'], td['Throughput'], marker='o', label=f'{threads}T', linewidth=1.5, markersize=4, color=colors[i])
+    ax.set_title('Encrypt: Throughput vs Chunks', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Chunk Size (MB)')
+    ax.set_ylabel('MB/s')
+    ax.legend(ncol=2, fontsize=8)
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_decrypt_vs_chunk(ax, decrypt_data: pd.DataFrame, unique_threads: list[int]) -> None:
+    colors = plt.cm.Set1(np.linspace(0, 1, len(unique_threads)))
+    for i, threads in enumerate(unique_threads):
+        td = decrypt_data[decrypt_data['Threads'] == threads].sort_values('ChunkMB')
+        ax.plot(td['ChunkMB'], td['Throughput'], marker='s', label=f'{threads}T', linewidth=1.5, markersize=4, color=colors[i])
+    ax.set_title('Decrypt: Throughput vs Chunks', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Chunk Size (MB)')
+    ax.set_ylabel('MB/s')
+    ax.legend(ncol=2, fontsize=8)
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_encrypt_vs_threads(ax, encrypt_data: pd.DataFrame, unique_chunks: list[float]) -> None:
+    chunk_colors = plt.cm.tab10(np.linspace(0, 1, len(unique_chunks)))
+    for i, ch in enumerate(unique_chunks):
+        cd = encrypt_data[encrypt_data['ChunkMB'] == ch].sort_values('Threads')
+        ax.plot(cd['Threads'], cd['Throughput'], marker='o', label=f'{ch:g}MB', linewidth=1.5, markersize=4, color=chunk_colors[i])
+    ax.set_title('Encrypt: Throughput vs Threads', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Threads')
+    ax.set_ylabel('MB/s')
+    ax.legend(ncol=2, fontsize=8)
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_decrypt_vs_threads(ax, decrypt_data: pd.DataFrame, unique_chunks: list[float]) -> None:
+    chunk_colors = plt.cm.tab10(np.linspace(0, 1, len(unique_chunks)))
+    for i, ch in enumerate(unique_chunks):
+        cd = decrypt_data[decrypt_data['ChunkMB'] == ch].sort_values('Threads')
+        ax.plot(cd['Threads'], cd['Throughput'], marker='s', label=f'{ch:g}MB', linewidth=1.5, markersize=4, color=chunk_colors[i])
+    ax.set_title('Decrypt: Throughput vs Threads', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Threads')
+    ax.set_ylabel('MB/s')
+    ax.legend(ncol=2, fontsize=8)
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_heatmap(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame, unique_threads: list[int]) -> None:
+    encrypt_pivot = encrypt_data.pivot(index='Threads', columns='ChunkMB', values='Throughput')
+    decrypt_pivot = decrypt_data.pivot(index='Threads', columns='ChunkMB', values='Throughput')
+    common_cols = sorted(set(encrypt_pivot.columns).intersection(set(decrypt_pivot.columns)))
+    encrypt_pivot = encrypt_pivot[common_cols]
+    decrypt_pivot = decrypt_pivot[common_cols]
+    combined = (encrypt_pivot + decrypt_pivot) / 2.0
+    ax.imshow(combined.values, cmap='viridis', aspect='auto')
+    ax.set_title('Performance Heat Map (avg enc/dec)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Chunk Size (MB)')
+    ax.set_ylabel('Threads')
+    ax.set_xticks(range(len(common_cols)))
+    ax.set_xticklabels([f"{c:g}" for c in common_cols])
+    ax.set_yticks(range(len(unique_threads)))
+    ax.set_yticklabels([str(int(x)) for x in unique_threads])
+    for i in range(min(len(unique_threads), combined.shape[0])):
+        for j in range(min(len(common_cols), combined.shape[1])):
+            ax.text(j, i, f'{combined.iloc[i, j]:.0f}', ha='center', va='center', color='white', fontsize=8, fontweight='bold')
+
+
+def _plot_bar_avg(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame, unique_chunks: list[float]) -> None:
+    enc_by_chunk = encrypt_data.groupby('ChunkMB')['Throughput'].agg(['mean', 'std']).reindex(unique_chunks)
+    dec_by_chunk = decrypt_data.groupby('ChunkMB')['Throughput'].agg(['mean', 'std']).reindex(unique_chunks)
+    x = np.arange(len(unique_chunks))
+    width = 0.35
+    ax.bar(x - width/2, enc_by_chunk['mean'], width, yerr=enc_by_chunk['std'], label='Encrypt', alpha=0.8, capsize=5, color='skyblue')
+    ax.bar(x + width/2, dec_by_chunk['mean'], width, yerr=dec_by_chunk['std'], label='Decrypt', alpha=0.8, capsize=5, color='lightcoral')
+    ax.set_title('Average Performance by Chunk Size', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Chunk Size (MB)')
+    ax.set_ylabel('Avg Throughput (MB/s)')
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{c:g}" for c in unique_chunks])
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_violin(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame) -> None:
+    parts = ax.violinplot([encrypt_data['Throughput'], decrypt_data['Throughput']], positions=[1, 2], showmeans=True, showextrema=True)
+    for pc, color in zip(parts['bodies'], ['skyblue', 'lightcoral']):
+        pc.set_facecolor(color)
+        pc.set_alpha(0.7)
+    ax.set_title('Performance Distribution', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Throughput (MB/s)')
+    ax.set_xticks([1, 2])
+    ax.set_xticklabels(['Encrypt', 'Decrypt'])
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_scaling_eff(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame, unique_threads: list[int], unique_chunks: list[float]) -> None:
+    baseline_threads = 1
+    mid_chunk = unique_chunks[len(unique_chunks)//2]
+    enc_base = encrypt_data[(encrypt_data['Threads'] == baseline_threads) & (encrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
+    dec_base = decrypt_data[(decrypt_data['Threads'] == baseline_threads) & (decrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
+    enc_eff, dec_eff = [], []
+    if not enc_base.empty and not dec_base.empty:
+        enc_base_v = enc_base.iloc[0]
+        dec_base_v = dec_base.iloc[0]
+        for t in unique_threads:
+            enc_cur = encrypt_data[(encrypt_data['Threads'] == t) & (encrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
+            dec_cur = decrypt_data[(decrypt_data['Threads'] == t) & (decrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
+            enc_eff.append(((enc_cur.iloc[0] if not enc_cur.empty else np.nan) / enc_base_v) / t * 100)
+            dec_eff.append(((dec_cur.iloc[0] if not dec_cur.empty else np.nan) / dec_base_v) / t * 100)
+    ax.plot(unique_threads, enc_eff, marker='o', linewidth=3, markersize=8, label='Encrypt Efficiency', color='blue')
+    ax.plot(unique_threads, dec_eff, marker='s', linewidth=3, markersize=8, label='Decrypt Efficiency', color='red')
+    ax.axhline(y=100, color='gray', linestyle='--', alpha=0.7, label='Perfect Efficiency')
+    ax.set_title(f'Scaling Efficiency ({mid_chunk:g}MB chunks)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Number of Threads')
+    ax.set_ylabel('Efficiency (%)')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_ratio(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame) -> None:
+    ratios = []
+    for _, er in encrypt_data.iterrows():
+        dr = decrypt_data[(decrypt_data['Threads'] == er['Threads']) & (decrypt_data['ChunkMB'] == er['ChunkMB'])]
+        if not dr.empty and er['Throughput'] > 0:
+            ratios.append({'Threads': er['Threads'], 'ChunkMB': er['ChunkMB'], 'Ratio': dr['Throughput'].iloc[0] / er['Throughput']})
+    ratio_df = pd.DataFrame(ratios)
+    if not ratio_df.empty:
+        sc = ax.scatter(ratio_df['Threads'], ratio_df['ChunkMB'], c=ratio_df['Ratio'], s=ratio_df['Ratio']*30, cmap='RdYlGn', alpha=0.7, edgecolors='black')
+        cbar = plt.colorbar(sc, ax=ax, shrink=0.8)
+        cbar.set_label('Decrypt/Encrypt Ratio', rotation=270, labelpad=15)
+    ax.set_title('Decrypt/Encrypt Speed Ratios', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Threads')
+    ax.set_ylabel('Chunk Size (MB)')
+
+
+def _plot_zones(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame) -> None:
+    enc_max = encrypt_data['Throughput'].max()
+    dec_max = decrypt_data['Throughput'].max()
+    high_enc = encrypt_data[encrypt_data['Throughput'] > enc_max * 0.9]
+    med_enc = encrypt_data[(encrypt_data['Throughput'] > enc_max * 0.7) & (encrypt_data['Throughput'] <= enc_max * 0.9)]
+    high_dec = decrypt_data[decrypt_data['Throughput'] > dec_max * 0.9]
+    med_dec = decrypt_data[(decrypt_data['Throughput'] > dec_max * 0.7) & (decrypt_data['Throughput'] <= dec_max * 0.9)]
+    ax.scatter(high_enc['Threads'], high_enc['ChunkMB'], c='green', s=100, alpha=0.7, label='High Encrypt', marker='o')
+    ax.scatter(med_enc['Threads'], med_enc['ChunkMB'], c='orange', s=80, alpha=0.7, label='Medium Encrypt', marker='o')
+    ax.scatter(high_dec['Threads'], high_dec['ChunkMB'], c='darkgreen', s=100, alpha=0.7, label='High Decrypt', marker='s')
+    ax.scatter(med_dec['Threads'], med_dec['ChunkMB'], c='darkorange', s=80, alpha=0.7, label='Medium Decrypt', marker='s')
+    ax.set_title('Performance Zones', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Threads')
+    ax.set_ylabel('Chunk Size (MB)')
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True, alpha=0.3)
+
+
+def _plot_recommendations(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame) -> None:
+    ax.axis('off')
+    enc_best = encrypt_data.loc[encrypt_data['Throughput'].idxmax()]
+    dec_best = decrypt_data.loc[decrypt_data['Throughput'].idxmax()]
+    lines = [
+        f"Best Encrypt: {enc_best['Throughput']:.1f} MB/s @ {int(enc_best['Threads'])}T, {enc_best['ChunkMB']:g}MB",
+        f"Best Decrypt: {dec_best['Throughput']:.1f} MB/s @ {int(dec_best['Threads'])}T, {dec_best['ChunkMB']:g}MB",
+        f"Avg Encrypt: {encrypt_data['Throughput'].mean():.1f} MB/s",
+        f"Avg Decrypt: {decrypt_data['Throughput'].mean():.1f} MB/s",
+        "Tips:",
+        " - Larger chunks often help encryption",
+        " - 2-16 threads typically optimal",
+    ]
+    ax.text(0.01, 0.95, "\n".join(lines), va='top', ha='left', fontsize=10)
+
+
+def _plot_pie(ax, encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame) -> None:
+    ax.axis('off')
+    avg_speeds = [encrypt_data['Throughput'].mean(), decrypt_data['Throughput'].mean()]
+    labels = ['Encrypt', 'Decrypt']
+    colors_ = ['skyblue', 'lightcoral']
+    ax.pie(avg_speeds, labels=labels, colors=colors_, autopct='%1.0f%%', startangle=90)
+    ax.set_title('Performance Share', fontsize=10, fontweight='bold')
+
+
 def create_mega_analysis(encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame, out_path: Path) -> None:
     """Replicate the MEGA analysis with multiple subplots (compact)."""
     if encrypt_data.empty or decrypt_data.empty:
@@ -337,187 +516,19 @@ def create_mega_analysis(encrypt_data: pd.DataFrame, decrypt_data: pd.DataFrame,
 
     unique_threads = sorted(encrypt_data['Threads'].unique())
     unique_chunks = sorted(encrypt_data['ChunkMB'].unique())
-    colors = plt.cm.Set1(np.linspace(0, 1, len(unique_threads)))
-    chunk_colors = plt.cm.tab10(np.linspace(0, 1, len(unique_chunks)))
 
-    # 1) Encrypt: throughput vs chunk size
-    for i, threads in enumerate(unique_threads):
-        td = encrypt_data[encrypt_data['Threads'] == threads].sort_values('ChunkMB')
-        ax1.plot(td['ChunkMB'], td['Throughput'], marker='o', label=f'{threads}T', linewidth=1.5, markersize=4, color=colors[i])
-    ax1.set_title('Encrypt: Throughput vs Chunks', fontsize=12, fontweight='bold')
-    ax1.set_xlabel('Chunk Size (MB)')
-    ax1.set_ylabel('MB/s')
-    ax1.legend(ncol=2, fontsize=8)
-    ax1.grid(True, alpha=0.3)
-
-    # 2) Decrypt: throughput vs chunk size
-    for i, threads in enumerate(unique_threads):
-        td = decrypt_data[decrypt_data['Threads'] == threads].sort_values('ChunkMB')
-        ax2.plot(td['ChunkMB'], td['Throughput'], marker='s', label=f'{threads}T', linewidth=1.5, markersize=4, color=colors[i])
-    ax2.set_title('Decrypt: Throughput vs Chunks', fontsize=12, fontweight='bold')
-    ax2.set_xlabel('Chunk Size (MB)')
-    ax2.set_ylabel('MB/s')
-    ax2.legend(ncol=2, fontsize=8)
-    ax2.grid(True, alpha=0.3)
-
-    # 3) Encrypt: throughput vs threads
-    for i, ch in enumerate(unique_chunks):
-        cd = encrypt_data[encrypt_data['ChunkMB'] == ch].sort_values('Threads')
-        ax3.plot(cd['Threads'], cd['Throughput'], marker='o', label=f'{ch:g}MB', linewidth=1.5, markersize=4, color=chunk_colors[i])
-    ax3.set_title('Encrypt: Throughput vs Threads', fontsize=12, fontweight='bold')
-    ax3.set_xlabel('Threads')
-    ax3.set_ylabel('MB/s')
-    ax3.legend(ncol=2, fontsize=8)
-    ax3.grid(True, alpha=0.3)
-
-    # 4) Decrypt: throughput vs threads
-    for i, ch in enumerate(unique_chunks):
-        cd = decrypt_data[decrypt_data['ChunkMB'] == ch].sort_values('Threads')
-        ax4.plot(cd['Threads'], cd['Throughput'], marker='s', label=f'{ch:g}MB', linewidth=1.5, markersize=4, color=chunk_colors[i])
-    ax4.set_title('Decrypt: Throughput vs Threads', fontsize=12, fontweight='bold')
-    ax4.set_xlabel('Threads')
-    ax4.set_ylabel('MB/s')
-    ax4.legend(ncol=2, fontsize=8)
-    ax4.grid(True, alpha=0.3)
-
-    # 5) Heat map of average (encrypt+decrypt)/2
-    encrypt_pivot = encrypt_data.pivot(index='Threads', columns='ChunkMB', values='Throughput')
-    decrypt_pivot = decrypt_data.pivot(index='Threads', columns='ChunkMB', values='Throughput')
-    common_cols = sorted(set(encrypt_pivot.columns).intersection(set(decrypt_pivot.columns)))
-    encrypt_pivot = encrypt_pivot[common_cols]
-    decrypt_pivot = decrypt_pivot[common_cols]
-    combined = (encrypt_pivot + decrypt_pivot) / 2.0
-    im = ax5.imshow(combined.values, cmap='viridis', aspect='auto')
-    ax5.set_title('Performance Heat Map (avg enc/dec)', fontsize=12, fontweight='bold')
-    ax5.set_xlabel('Chunk Size (MB)')
-    ax5.set_ylabel('Threads')
-    ax5.set_xticks(range(len(common_cols)))
-    ax5.set_xticklabels([f"{c:g}" for c in common_cols])
-    ax5.set_yticks(range(len(unique_threads)))
-    ax5.set_yticklabels([str(int(x)) for x in unique_threads])
-    for i in range(len(unique_threads)):
-        if i >= combined.shape[0]:
-            break
-        for j in range(len(common_cols)):
-            if j >= combined.shape[1]:
-                break
-            ax5.text(j, i, f'{combined.iloc[i, j]:.0f}', ha='center', va='center', color='white', fontsize=8, fontweight='bold')
-
-    # 6) Bar averages with std by chunk size
-    enc_by_chunk = encrypt_data.groupby('ChunkMB')['Throughput'].agg(['mean', 'std']).reindex(unique_chunks)
-    dec_by_chunk = decrypt_data.groupby('ChunkMB')['Throughput'].agg(['mean', 'std']).reindex(unique_chunks)
-    x = np.arange(len(unique_chunks))
-    width = 0.35
-    ax6.bar(x - width/2, enc_by_chunk['mean'], width, yerr=enc_by_chunk['std'], label='Encrypt', alpha=0.8, capsize=5, color='skyblue')
-    ax6.bar(x + width/2, dec_by_chunk['mean'], width, yerr=dec_by_chunk['std'], label='Decrypt', alpha=0.8, capsize=5, color='lightcoral')
-    ax6.set_title('Average Performance by Chunk Size', fontsize=12, fontweight='bold')
-    ax6.set_xlabel('Chunk Size (MB)')
-    ax6.set_ylabel('Avg Throughput (MB/s)')
-    ax6.set_xticks(x)
-    ax6.set_xticklabels([f"{c:g}" for c in unique_chunks])
-    ax6.legend()
-    ax6.grid(True, alpha=0.3)
-
-    # 7) Violin distribution (matplotlib-based)
-    parts = ax7.violinplot([encrypt_data['Throughput'], decrypt_data['Throughput']], positions=[1, 2], showmeans=True, showextrema=True)
-    for pc, color in zip(parts['bodies'], ['skyblue', 'lightcoral']):
-        pc.set_facecolor(color)
-        pc.set_alpha(0.7)
-    ax7.set_title('Performance Distribution', fontsize=12, fontweight='bold')
-    ax7.set_ylabel('Throughput (MB/s)')
-    ax7.set_xticks([1, 2])
-    ax7.set_xticklabels(['Encrypt', 'Decrypt'])
-    ax7.grid(True, alpha=0.3)
-
-    # 8) Scaling efficiency curves at mid chunk
-    baseline_threads = 1
-    mid_chunk = unique_chunks[len(unique_chunks)//2]
-    enc_base = encrypt_data[(encrypt_data['Threads'] == baseline_threads) & (encrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
-    dec_base = decrypt_data[(decrypt_data['Threads'] == baseline_threads) & (decrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
-    enc_eff, dec_eff = [], []
-    if not enc_base.empty and not dec_base.empty:
-        enc_base_v = enc_base.iloc[0]
-        dec_base_v = dec_base.iloc[0]
-        for t in unique_threads:
-            enc_cur = encrypt_data[(encrypt_data['Threads'] == t) & (encrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
-            dec_cur = decrypt_data[(decrypt_data['Threads'] == t) & (decrypt_data['ChunkMB'] == mid_chunk)]['Throughput']
-            if not enc_cur.empty:
-                enc_eff.append((enc_cur.iloc[0] / enc_base_v) / t * 100)
-            else:
-                enc_eff.append(np.nan)
-            if not dec_cur.empty:
-                dec_eff.append((dec_cur.iloc[0] / dec_base_v) / t * 100)
-            else:
-                dec_eff.append(np.nan)
-    ax8.plot(unique_threads, enc_eff, marker='o', linewidth=3, markersize=8, label='Encrypt Efficiency', color='blue')
-    ax8.plot(unique_threads, dec_eff, marker='s', linewidth=3, markersize=8, label='Decrypt Efficiency', color='red')
-    ax8.axhline(y=100, color='gray', linestyle='--', alpha=0.7, label='Perfect Efficiency')
-    ax8.set_title(f'Scaling Efficiency ({mid_chunk:g}MB chunks)', fontsize=12, fontweight='bold')
-    ax8.set_xlabel('Number of Threads')
-    ax8.set_ylabel('Efficiency (%)')
-    ax8.legend()
-    ax8.grid(True, alpha=0.3)
-
-    # 9) Decrypt/Encrypt ratio scatter (color = ratio)
-    ratios = []
-    for _, er in encrypt_data.iterrows():
-        dr = decrypt_data[(decrypt_data['Threads'] == er['Threads']) & (decrypt_data['ChunkMB'] == er['ChunkMB'])]
-        if not dr.empty and er['Throughput'] > 0:
-            ratios.append({
-                'Threads': er['Threads'],
-                'ChunkMB': er['ChunkMB'],
-                'Ratio': dr['Throughput'].iloc[0] / er['Throughput']
-            })
-    ratio_df = pd.DataFrame(ratios)
-    if not ratio_df.empty:
-        sc = ax9.scatter(ratio_df['Threads'], ratio_df['ChunkMB'], c=ratio_df['Ratio'], s=ratio_df['Ratio']*30,
-                         cmap='RdYlGn', alpha=0.7, edgecolors='black')
-        cbar = plt.colorbar(sc, ax=ax9, shrink=0.8)
-        cbar.set_label('Decrypt/Encrypt Ratio', rotation=270, labelpad=15)
-    ax9.set_title('Decrypt/Encrypt Speed Ratios', fontsize=12, fontweight='bold')
-    ax9.set_xlabel('Threads')
-    ax9.set_ylabel('Chunk Size (MB)')
-
-    # 10) Performance zones (scatter by thresholds)
-    enc_max = encrypt_data['Throughput'].max()
-    dec_max = decrypt_data['Throughput'].max()
-    high_enc = encrypt_data[encrypt_data['Throughput'] > enc_max * 0.9]
-    med_enc = encrypt_data[(encrypt_data['Throughput'] > enc_max * 0.7) & (encrypt_data['Throughput'] <= enc_max * 0.9)]
-    high_dec = decrypt_data[decrypt_data['Throughput'] > dec_max * 0.9]
-    med_dec = decrypt_data[(decrypt_data['Throughput'] > dec_max * 0.7) & (decrypt_data['Throughput'] <= dec_max * 0.9)]
-    ax10.scatter(high_enc['Threads'], high_enc['ChunkMB'], c='green', s=100, alpha=0.7, label='High Encrypt', marker='o')
-    ax10.scatter(med_enc['Threads'], med_enc['ChunkMB'], c='orange', s=80, alpha=0.7, label='Medium Encrypt', marker='o')
-    ax10.scatter(high_dec['Threads'], high_dec['ChunkMB'], c='darkgreen', s=100, alpha=0.7, label='High Decrypt', marker='s')
-    ax10.scatter(med_dec['Threads'], med_dec['ChunkMB'], c='darkorange', s=80, alpha=0.7, label='Medium Decrypt', marker='s')
-    ax10.set_title('Performance Zones', fontsize=12, fontweight='bold')
-    ax10.set_xlabel('Threads')
-    ax10.set_ylabel('Chunk Size (MB)')
-    ax10.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    ax10.grid(True, alpha=0.3)
-
-    # 11) Simple recommendations table (text)
-    ax11.axis('off')
-    enc_best = encrypt_data.loc[encrypt_data['Throughput'].idxmax()]
-    dec_best = decrypt_data.loc[decrypt_data['Throughput'].idxmax()]
-    lines = [
-        f"Best Encrypt: {enc_best['Throughput']:.1f} MB/s @ {int(enc_best['Threads'])}T, {enc_best['ChunkMB']:g}MB",
-        f"Best Decrypt: {dec_best['Throughput']:.1f} MB/s @ {int(dec_best['Threads'])}T, {dec_best['ChunkMB']:g}MB",
-        f"Avg Encrypt: {encrypt_data['Throughput'].mean():.1f} MB/s",
-        f"Avg Decrypt: {decrypt_data['Throughput'].mean():.1f} MB/s",
-        "Tips:",
-        " - Larger chunks often help encryption",
-        " - 2-16 threads typically optimal",
-    ]
-    ax11.text(0.01, 0.95, "\n".join(lines), va='top', ha='left', fontsize=10)
-
-    # 12) Pie of avg performance share
-    ax12.axis('off')
-    ax12_sub = plt.subplot2grid((4, 3), (3, 2), fig=fig)
-    avg_speeds = [encrypt_data['Throughput'].mean(), decrypt_data['Throughput'].mean()]
-    labels = ['Encrypt', 'Decrypt']
-    colors_ = ['skyblue', 'lightcoral']
-    ax12_sub.pie(avg_speeds, labels=labels, colors=colors_, autopct='%1.0f%%', startangle=90)
-    ax12_sub.set_title('Performance Share', fontsize=10, fontweight='bold')
+    _plot_encrypt_vs_chunk(ax1, encrypt_data, unique_threads)
+    _plot_decrypt_vs_chunk(ax2, decrypt_data, unique_threads)
+    _plot_encrypt_vs_threads(ax3, encrypt_data, unique_chunks)
+    _plot_decrypt_vs_threads(ax4, decrypt_data, unique_chunks)
+    _plot_heatmap(ax5, encrypt_data, decrypt_data, unique_threads)
+    _plot_bar_avg(ax6, encrypt_data, decrypt_data, unique_chunks)
+    _plot_violin(ax7, encrypt_data, decrypt_data)
+    _plot_scaling_eff(ax8, encrypt_data, decrypt_data, unique_threads, unique_chunks)
+    _plot_ratio(ax9, encrypt_data, decrypt_data)
+    _plot_zones(ax10, encrypt_data, decrypt_data)
+    _plot_recommendations(ax11, encrypt_data, decrypt_data)
+    _plot_pie(ax12, encrypt_data, decrypt_data)
 
     fig.savefig(out_path, dpi=300, bbox_inches='tight')
     print(f"[ok] Saved {out_path.name}")
