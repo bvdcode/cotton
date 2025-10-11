@@ -13,7 +13,7 @@ namespace Cotton.Crypto.Tests
         private const int OneMb = 1024 * 1024;
         private const int TestDataSizeMb = 1000;
         private const int Iterations = 2;
-        private static readonly int[] chunkSizesInKBytes = [128, 512, 1024, 4096, 8192, 16384];
+        private static readonly int[] chunkSizesInKBytes = [4, 8, 16, 32, 64, 128, 512, 1024, 4096, 8192, 16384];
 
         [SetUp]
         public void SetUp()
@@ -79,7 +79,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F1} | {avg,9:F1}");
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
                 }
             }
         }
@@ -134,7 +134,7 @@ namespace Cotton.Crypto.Tests
                         throughputs.Add(throughputMBps);
                     }
                     double avg = throughputs.Average();
-                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F1} | {avg,9:F1}");
+                    TestContext.Out.WriteLine($"{threads,7} | {chunkSize / (double)OneMb,7:F3} | {avg,9:F1}");
                 }
             }
         }
