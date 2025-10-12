@@ -53,7 +53,9 @@ namespace Cotton.Server.Services
         public async Task WriteChunkAsync(string hash, Stream stream, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(hash))
+            {
                 throw new ArgumentException("Hash required", nameof(hash));
+            }
             ArgumentNullException.ThrowIfNull(stream);
 
             string dirPath = GetFolderByHash(hash);
