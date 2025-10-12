@@ -1,15 +1,1 @@
-{
-  "search": {
-    "placeholder": "Enter search text...",
-    "title": "Document search",
-    "noResults": "Nothing found",
-    "loading": "Loading...",
-    "error": "Error loading data",
-    "resultsCount": "Results found: {{count}}"
-  },
-  "pagination": {
-    "previous": "Previous",
-    "next": "Next",
-    "page": "Page {{current}}"
-  }
-}
+{}
