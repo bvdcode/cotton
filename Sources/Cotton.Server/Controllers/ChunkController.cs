@@ -17,9 +17,9 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest("No file uploaded.");
             }
-            if (file.Length > _settings.ChunkSizeBytes)
+            if (file.Length > _settings.MaxChunkSizeBytes)
             {
-                return CottonResult.BadRequest($"File size exceeds maximum chunk size of {_settings.ChunkSizeBytes} bytes.");
+                return CottonResult.BadRequest($"File size exceeds maximum chunk size of {_settings.MaxChunkSizeBytes} bytes.");
             }
             if (string.IsNullOrWhiteSpace(hash))
             {
