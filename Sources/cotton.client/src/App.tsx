@@ -1,14 +1,15 @@
 import {
-  Routes,
   Route,
+  Routes,
   Navigate,
   BrowserRouter as Router,
 } from "react-router-dom";
 import { Box } from "@mui/material";
 import "react-toastify/dist/ReactToastify.css";
 import { ConfirmProvider } from "material-ui-confirm";
-import { AppLayout, ProtectedRoute } from "./components";
-import AppThemeProvider from "./providers/ThemeProvider";
+import AppThemeProvider from "./providers/ThemeProvider.tsx";
+import { AppLayout, ProtectedRoute, FilesPage } from "./components/index.ts";
+// i18n is initialized in main.tsx
 
 function App() {
   return (
@@ -28,7 +29,7 @@ function App() {
               >
                 <Route index element={<>Home</>} />
                 <Route path="dashboard" element={<>Dashboard</>} />
-                <Route path="leadstream" element={<>Lead Stream</>} />
+                <Route path="files" element={<FilesPage />} />
                 <Route
                   path="options"
                   element={
