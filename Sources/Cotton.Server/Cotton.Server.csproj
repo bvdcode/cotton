@@ -27,8 +27,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="1.0.39" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="1.0.39" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="2.0.1" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="2.0.1" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
 	</ItemGroup>
 
