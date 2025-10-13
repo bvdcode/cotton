@@ -8,10 +8,12 @@ using Cotton.Server.Database.Models;
 
 namespace Cotton.Server.Controllers
 {
-    public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings, IStorage _storage) : ControllerBase
+    public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings, 
+        IStorage _storage, ILogger<ChunkController> _logger) : ControllerBase
     {
         [HttpPost(Routes.Chunks)]
-        public async Task<IActionResult> UploadChunk(IFormFile file, string hash)
+        [RequestSizeLimit(50 * 1024 * 1024)]
+        public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
             if (file == null || file.Length == 0)
             {
@@ -32,9 +34,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
-            await using var stream = file.OpenReadStream();
-            await using var tmp = new MemoryStream(capacity: (int)file.Length);
-            await stream.CopyToAsync(tmp);
+            using var tmp = WrapIfNonSeekable(file);
 
             byte[] computedHash = await SHA256.HashDataAsync(tmp);
             if (!computedHash.SequenceEqual(hashBytes))
@@ -61,6 +61,18 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.InternalError("Failed to store the uploaded chunk.", ex);
             }
+        }
+
+        private Stream WrapIfNonSeekable(IFormFile file)
+        {
+            var stream = file.OpenReadStream();
+            if (stream.CanSeek)
+            {
+                _logger.LogDebug("Uploaded file stream is seekable: {name}", file.FileName);
+                return stream;
+            }
+            _logger.LogDebug("Uploaded file stream is NOT seekable: {name}", file.FileName);
+            return new MemoryStream(capacity: (int)file.Length);
         }
     }
 }
