@@ -2,7 +2,7 @@
 {
     public interface IStorage
     {
-        Stream GetBlobStream(string[] hashes);
-        Task WriteChunkAsync(string hash, Stream stream, CancellationToken ct = default);
+        Stream GetBlobStream(string[] uids);
+        Task WriteFileAsync(string uid, Stream stream, CancellationToken ct = default);
     }
 }

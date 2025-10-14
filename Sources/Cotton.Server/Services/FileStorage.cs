@@ -3,21 +3,18 @@ using Cotton.Server.Streams;
 using Cotton.Server.Settings;
 using Cotton.Crypto.Abstractions;
 using Cotton.Server.Abstractions;
-using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Services
 {
     public partial class FileStorage : IStorage
     {
         private readonly string _basePath;
+        private const int MinFileUidLength = 6;
         private readonly IStreamCipher _cipher;
         private readonly CottonSettings _settings;
         private readonly ILogger<FileStorage> _logger;
         private const string ChunkFileExtension = ".ctn";
-        private const string BaseDirectoryName = "chunks";
-
-        [GeneratedRegex("^[0-9a-f]{64}$", RegexOptions.Compiled)]
-        private static partial Regex CreateHexSha256Regex();
+        private const string BaseDirectoryName = "files";
 
         public FileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<FileStorage> logger)
         {
@@ -28,14 +25,14 @@ namespace Cotton.Server.Services
             Directory.CreateDirectory(_basePath);
         }
 
-        public async Task<Stream> GetChunkReadStream(string hash, CancellationToken ct = default)
+        public async Task<Stream> GetFileReadStream(string uid, CancellationToken ct = default)
         {
-            hash = NormalizeHash(hash);
-            string dirPath = GetFolderByHash(hash);
-            string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
+            uid = NormalizeIdentity(uid);
+            string dirPath = GetFolderByUid(uid);
+            string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException("Chunk not found", filePath);
+                throw new FileNotFoundException("File not found", filePath);
             }
             var fso = new FileStreamOptions
             {
@@ -52,20 +49,20 @@ namespace Cotton.Server.Services
             return decryptedStream;
         }
 
-        public async Task WriteChunkAsync(string hash, Stream stream, CancellationToken ct = default)
+        public async Task WriteFileAsync(string uid, Stream stream, CancellationToken ct = default)
         {
-            hash = NormalizeHash(hash);
+            uid = NormalizeIdentity(uid);
             ArgumentNullException.ThrowIfNull(stream);
 
-            string dirPath = GetFolderByHash(hash);
-            string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
+            string dirPath = GetFolderByUid(uid);
+            string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
             if (File.Exists(filePath))
             {
-                _logger.LogCritical("File collision detected for chunk {Hash}", hash);
-                throw new IOException("File collision detected: two different chunks have the same name: " + hash);
+                _logger.LogCritical("File collision detected for file {Uid}", uid);
+                throw new IOException("File collision detected: two different files have the same name: " + uid);
             }
 
-            string tmpFilePath = Path.Combine(dirPath, $"{hash[4..]}.{Guid.NewGuid():N}.tmp");
+            string tmpFilePath = Path.Combine(dirPath, $"{uid[4..]}.{Guid.NewGuid():N}.tmp");
             var fso = new FileStreamOptions
             {
                 Share = FileShare.None,
@@ -76,7 +73,7 @@ namespace Cotton.Server.Services
 
             try
             {
-                _logger.LogInformation("Storing new chunk {Hash}", hash);
+                _logger.LogInformation("Storing new file {Uid}", uid);
                 await using var tmp = new FileStream(tmpFilePath, fso);
                 if (stream.CanSeek)
                 {
@@ -105,11 +102,11 @@ namespace Cotton.Server.Services
             }
         }
 
-        private string GetFolderByHash(string hash)
+        private string GetFolderByUid(string uid)
         {
-            hash = NormalizeHash(hash);
-            string p1 = hash[..2];
-            string p2 = hash[2..4];
+            uid = NormalizeIdentity(uid);
+            string p1 = uid[..2];
+            string p2 = uid[2..4];
             string dirPath = Path.Combine(_basePath, p1, p2);
             Directory.CreateDirectory(dirPath);
             return dirPath;
@@ -130,11 +127,11 @@ namespace Cotton.Server.Services
             }
         }
 
-        internal Stream CreateDecryptingReadStream(string hash)
+        internal Stream CreateDecryptingReadStream(string uid)
         {
-            hash = NormalizeHash(hash);
-            string dirPath = GetFolderByHash(hash);
-            string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
+            uid = NormalizeIdentity(uid);
+            string dirPath = GetFolderByUid(uid);
+            string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
             if (!File.Exists(filePath))
             {
                 throw new FileNotFoundException("Chunk not found", filePath);
@@ -189,23 +186,32 @@ namespace Cotton.Server.Services
             return readerStream;
         }
 
-        public Stream GetBlobStream(string[] hashes)
+        public Stream GetBlobStream(string[] uids)
         {
-            ArgumentNullException.ThrowIfNull(hashes);
-            foreach (var hash in hashes)
+            ArgumentNullException.ThrowIfNull(uids);
+            foreach (var uid in uids)
             {
-                ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+                ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             }
-            return new ConcatenatedReadStream(this, hashes);
+            return new ConcatenatedReadStream(this, uids);
         }
 
-        private static string NormalizeHash(string hash)
+        private static string NormalizeIdentity(string uid)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(hash);
-            string normalized = hash.Trim().ToLowerInvariant();
-            if (!CreateHexSha256Regex().IsMatch(normalized))
+            ArgumentException.ThrowIfNullOrWhiteSpace(uid);
+            string normalized = uid.Trim().ToLowerInvariant();
+            if (normalized.Length < MinFileUidLength)
             {
-                throw new ArgumentException("Invalid chunk hash.", nameof(hash));
+                throw new ArgumentException("File UID is too short, minimum length is " + MinFileUidLength);
+            }
+            for (int i = 0; i < normalized.Length; i++)
+            {
+                char c = normalized[i];
+                bool isHex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z');
+                if (!isHex)
+                {
+                    throw new ArgumentException("File UID contains invalid character: " + c);
+                }
             }
             return normalized;
         }
