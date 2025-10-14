@@ -20,10 +20,10 @@ namespace Cotton.Server.Controllers
             return CottonResult.Ok("Files retrieved successfully.", mapped);
         }
 
-        [HttpGet(Routes.Files + "/{fileId}/download")]
-        public async Task<CottonResult> DownloadFile([FromRoute] Guid fileId)
+        [HttpGet(Routes.Files + "/{fileManifestId:guid}/download")]
+        public async Task<CottonResult> DownloadFile([FromRoute] Guid fileManifestId)
         {
-            return CottonResult.Ok("");
+            return CottonResult.Ok("It will be just a file, you can open in new tab");
         }
 
         [HttpPost(Routes.Files)]
