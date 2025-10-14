@@ -4,21 +4,21 @@ using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
 {
-    [Table("blob_chunks")]
+    [Table("file_manifest_chunks")]
     [Index(nameof(ChunkSha256))]
-    [Index(nameof(BlobId), nameof(Order), IsUnique = true)]
-    public class BlobChunk : BaseEntity<Guid>
+    [Index(nameof(FileManifestId), nameof(ChunkOrder), IsUnique = true)]
+    public class FileManifestChunk : BaseEntity<Guid>
     {
         [Column("chunk_order")]
-        public int Order { get; set; } // 0..N-1
+        public int ChunkOrder { get; set; } // 0..N-1
 
         [Column("blob_id")]
-        public Guid BlobId { get; set; }
+        public Guid FileManifestId { get; set; }
 
         [Column("chunk_sha256")]
         public byte[] ChunkSha256 { get; set; } = null!;
 
         public virtual Chunk Chunk { get; set; } = null!;
-        public virtual Blob Blob { get; set; } = null!;
+        public virtual FileManifest FileManifest { get; set; } = null!;
     }
 }
