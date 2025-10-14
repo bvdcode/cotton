@@ -16,7 +16,7 @@ namespace Cotton.Server.Services
         private const string BaseDirectoryName = "chunks";
 
         [GeneratedRegex("^[0-9a-f]{64}$", RegexOptions.Compiled)]
-        private static partial Regex CreateHexHashRegex();
+        private static partial Regex CreateHexSha256Regex();
 
         public FileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<FileStorage> logger)
         {
@@ -287,7 +287,7 @@ namespace Cotton.Server.Services
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(hash);
             string normalized = hash.Trim().ToLowerInvariant();
-            if (!CreateHexHashRegex().IsMatch(normalized))
+            if (!CreateHexSha256Regex().IsMatch(normalized))
             {
                 throw new ArgumentException("Invalid chunk hash.", nameof(hash));
             }

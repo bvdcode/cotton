@@ -33,7 +33,7 @@ namespace Cotton.Server.Controllers
                 .Select(x => Convert.ToHexString(x.ChunkSha256))
                 .ToArrayAsync();
             Stream stream = _storage.GetBlobStream(hashes);
-            return File(stream, manifest.ContentType);
+            return File(stream, manifest.ContentType, manifest.Name);
         }
 
         [HttpPost(Routes.Files)]
