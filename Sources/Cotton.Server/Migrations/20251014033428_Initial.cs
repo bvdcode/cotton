@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -111,7 +112,7 @@ namespace Cotton.Server.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_blob_chunks_blob_id_chunk_order",
                 table: "blob_chunks",
-                columns: ["blob_id", "chunk_order"],
+                columns: new[] { "blob_id", "chunk_order" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -122,12 +123,12 @@ namespace Cotton.Server.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_blobs_owner_id_folder",
                 table: "blobs",
-                columns: ["owner_id", "folder"]);
+                columns: new[] { "owner_id", "folder" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_blobs_owner_id_folder_name",
                 table: "blobs",
-                columns: ["owner_id", "folder", "name"],
+                columns: new[] { "owner_id", "folder", "name" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
