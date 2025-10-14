@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Server.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251014044935_AddSizes")]
-    partial class AddSizes
+    [Migration("20251014051137_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -34,8 +34,8 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("bytea")
                         .HasColumnName("sha256");
 
-                    b.Property<int>("SizeBytes")
-                        .HasColumnType("integer")
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
 
                     b.HasKey("Sha256");
