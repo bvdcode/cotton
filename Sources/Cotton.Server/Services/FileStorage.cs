@@ -134,7 +134,7 @@ namespace Cotton.Server.Services
             string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException("Chunk not found", filePath);
+                throw new FileNotFoundException("File not found", filePath);
             }
 
             var fso = new FileStreamOptions

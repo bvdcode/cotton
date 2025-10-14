@@ -63,6 +63,7 @@ namespace Cotton.Server.Streams
         {
             _current?.Dispose();
             _hashes.Dispose();
+            GC.SuppressFinalize(this);
             return ValueTask.CompletedTask;
         }
 

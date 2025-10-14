@@ -3,6 +3,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Server.Validators;
 using Cotton.Server.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Server.Models.Requests;
@@ -52,11 +53,17 @@ namespace Cotton.Server.Controllers
                 }
                 chunks.Add(foundChunk);
             }
+            
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name, out string normalized, out string errorMessage);
+            if (!isValidName)
+            {
+                return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
+            }
 
             FileManifest newFile = new()
             {
+                Name = normalized,
                 ContentType = request.ContentType,
-                Name = request.Name,
                 Sha256 = Convert.FromHexString(request.Sha256),
                 SizeBytes = chunks.Sum(x => x.SizeBytes)
             };
