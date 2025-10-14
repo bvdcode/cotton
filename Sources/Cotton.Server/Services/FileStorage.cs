@@ -148,5 +148,10 @@ namespace Cotton.Server.Services
                 _logger.LogError(ex, "Failed to delete temporary file {Path}", path);
             }
         }
+
+        public Stream GetBlobStream(string[] hashes)
+        {
+
+        }
     }
 }
