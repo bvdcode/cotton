@@ -5,8 +5,6 @@ using EasyExtensions.EntityFrameworkCore.Abstractions;
 namespace Cotton.Server.Database.Models
 {
     [Table("file_manifests")]
-    [Index(nameof(OwnerId), nameof(Folder))]
-    [Index(nameof(OwnerId), nameof(Folder), nameof(Name), IsUnique = true)]
     public class FileManifest : BaseEntity<Guid>
     {
         [Obsolete("Temporary empty")]
@@ -15,9 +13,6 @@ namespace Cotton.Server.Database.Models
 
         [Column("name")]
         public string Name { get; set; } = null!;
-
-        [Column("folder")]
-        public string Folder { get; set; } = null!;
 
         [Column("content_type")]
         public string ContentType { get; set; } = null!;
