@@ -8,5 +8,6 @@
 
         public const string Files = Base + "/files";
         public const string Chunks = Base + "/chunks";
+        public const string Layouts = Base + "/layouts";
     }
 }
