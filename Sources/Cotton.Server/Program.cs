@@ -16,6 +16,7 @@ namespace Cotton.Server
             builder.Services.AddOptions<CottonSettings>()
                 .Bind(builder.Configuration).Services
                 .AddStreamCipher()
+                .AddCottonCors()
                 .AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value)
                 .AddScoped<IStorage, FileStorage>()
                 .AddOpenApi()
@@ -30,6 +31,7 @@ namespace Cotton.Server
                 app.MapOpenApi();
             }
             app.UseHttpsRedirection();
+            app.UseCottonCors();
             app.UseAuthorization();
             app.MapControllers();
             app.MapFallbackToFile("/index.html");

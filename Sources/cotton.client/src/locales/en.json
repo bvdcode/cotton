@@ -1,6 +1,14 @@
 {
 	"files": {
 		"title": "Files",
-		"subtitle": "Manage and browse your files here."
+			"subtitle": "Manage and browse your files here.",
+			"settings": "Chunk size: {{size}} bytes, Algorithm: {{algo}}",
+			"chooseFile": "Choose file",
+			"changeFile": "Change file",
+			"noFile": "No file selected",
+			"upload": "Upload",
+			"uploading": "Uploading...",
+			"hashList": "Chunk hashes (ordered)",
+			"noSettings": "Settings not loaded or unsupported algorithm."
 	}
 }

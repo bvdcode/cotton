@@ -9,9 +9,15 @@ import "react-toastify/dist/ReactToastify.css";
 import { ConfirmProvider } from "material-ui-confirm";
 import AppThemeProvider from "./providers/ThemeProvider.tsx";
 import { AppLayout, ProtectedRoute, FilesPage } from "./components/index.ts";
+import { useEffect } from "react";
+import { useSettings } from "./stores/settingsStore.ts";
 // i18n is initialized in main.tsx
 
 function App() {
+  const loadSettings = useSettings((s) => s.load);
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
   return (
     <Box sx={{ position: "fixed", inset: 0 }}>
       <AppThemeProvider>
