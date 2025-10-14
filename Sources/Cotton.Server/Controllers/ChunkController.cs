@@ -43,24 +43,28 @@ namespace Cotton.Server.Controllers
             }
 
             var chunk = await _dbContext.Chunks.FindAsync(hashBytes);
-            chunk ??= new Chunk
+            if (chunk != null)
             {
-                Sha256 = hashBytes,
-                SizeBytes = file.Length,
-            };
-
-
+                // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
+                // Must depend on owner/user authentication, no reason to delay for the same user
+                return CottonResult.Ok("Chunk was uploaded successfully.");
+            }
             tmp.Seek(default, SeekOrigin.Begin);
             try
             {
                 await _storage.WriteChunkAsync(hash, tmp);
+                chunk = new Chunk
+                {
+                    Sha256 = hashBytes,
+                    SizeBytes = file.Length,
+                };
                 await _dbContext.Chunks.AddAsync(chunk);
                 await _dbContext.SaveChangesAsync();
                 return CottonResult.Ok("Chunk was uploaded successfully.");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return CottonResult.InternalError("Failed to store the uploaded chunk.", ex);
+                return CottonResult.InternalError("Failed to store the uploaded chunk.");
             }
         }
 

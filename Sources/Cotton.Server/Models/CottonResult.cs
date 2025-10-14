@@ -50,12 +50,12 @@ namespace Cotton.Server.Models
             };
         }
 
-        public static CottonResult InternalError(string message, Exception ex)
+        public static CottonResult InternalError(string message)
         {
             return new()
             {
                 Success = false,
-                Message = $"{message} Exception: {ex.Message}",
+                Message = message,
                 StatusCode = HttpStatusCode.InternalServerError
             };
         }
