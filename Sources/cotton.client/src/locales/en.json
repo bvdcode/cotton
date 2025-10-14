@@ -9,6 +9,8 @@
 			"upload": "Upload",
 			"uploading": "Uploading...",
 			"hashList": "Chunk hashes (ordered)",
-			"noSettings": "Settings not loaded or unsupported algorithm."
+			"noSettings": "Settings not loaded or unsupported algorithm.",
+			"threads": "Threads: {{count}}",
+			"speed": "Speed: {{speed}}/s"
 	}
 }
