@@ -2,7 +2,7 @@
 {
     public class CreateFileRequest
     {
-        public Guid[] Chunks { get; set; } = [];
+        public string[] ChunkHashes { get; set; } = [];
 
         public string Name { get; set; } = null!;
 

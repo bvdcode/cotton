@@ -46,6 +46,7 @@ namespace Cotton.Server.Controllers
             chunk ??= new Chunk
             {
                 Sha256 = hashBytes,
+                SizeBytes = file.Length,
             };
 
 
