@@ -16,6 +16,17 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class FileController(CottonDbContext _dbContext, IStorage _storage) : ControllerBase
     {
+        [HttpDelete(Routes.Files + "/{fileManifestId:guid}")]
+        public async Task<CottonResult> DeleteFile([FromRoute] Guid fileManifestId)
+        {
+            var manifest = await _dbContext.FileManifests.FindAsync(fileManifestId)
+                ?? throw new EntityNotFoundException(nameof(FileManifest));
+            _dbContext.FileManifests.Remove(manifest);
+            await _dbContext.SaveChangesAsync();
+            // TODO: Consider deleting unreferenced chunks
+            return CottonResult.Ok("File deleted successfully.");
+        }
+
         [HttpGet(Routes.Files)]
         public async Task<CottonResult> GetFiles()
         {

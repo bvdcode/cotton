@@ -9,6 +9,8 @@ import Alert from "@mui/material/Alert";
 import { useSettings } from "../stores/settingsStore.ts";
 import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { chunkBlob } from "../utils/chunk.ts";
+import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
+import { formatBytes, formatBytesPerSecond } from "../utils/format";
 import {
   uploadChunk,
   createFileFromChunks,
@@ -31,6 +33,7 @@ const FilesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [files, setFiles] = useState<FileManifestDto[]>([]);
+  const [speedbps, setSpeedbps] = useState<number>(0);
 
   const algo: string | null = useMemo(() => {
     if (!settings) return null;
@@ -71,17 +74,58 @@ const FilesPage = () => {
     }
     setIsUploading(true);
     setError(null);
-    const total = Math.ceil(selectedFile.size / settings.maxChunkSizeBytes);
-    const hashesLocal: string[] = [];
-    let index = 0;
+    const totalChunks = Math.ceil(
+      selectedFile.size / settings.maxChunkSizeBytes,
+    );
+    const hashesLocal: string[] = new Array(totalChunks);
+    let uploadedBytes = 0;
+    const startTime = Date.now();
+    setSpeedbps(0);
     try {
-      for (const chunk of chunkBlob(selectedFile, settings.maxChunkSizeBytes)) {
-        const h = await hashBlob(chunk, algo);
-        await uploadChunk(chunk, h, selectedFile.name);
-        hashesLocal.push(h);
-        index++;
-        setProgress(Math.round((index / total) * 100));
-      }
+      // Prepare chunks with indexes for ordered hashes
+      const chunks = Array.from(
+        chunkBlob(selectedFile, settings.maxChunkSizeBytes),
+      ).map((blob, idx) => ({ idx, blob, size: blob.size }));
+
+      // Simple promise pool for concurrency
+      const concurrency = UPLOAD_CONCURRENCY_DEFAULT;
+      let next = 0;
+      let active = 0;
+      await new Promise<void>((resolve, reject) => {
+        const runNext = () => {
+          while (active < concurrency && next < chunks.length) {
+            const current = chunks[next++];
+            active++;
+            (async () => {
+              try {
+                const h = await hashBlob(current.blob, algo);
+                await uploadChunk(current.blob, h, selectedFile.name);
+                hashesLocal[current.idx] = h;
+                uploadedBytes += current.size;
+                const elapsed = (Date.now() - startTime) / 1000;
+                const bps = elapsed > 0 ? uploadedBytes / elapsed : 0;
+                setSpeedbps(bps);
+                const pct = Math.min(
+                  100,
+                  Math.round((uploadedBytes / selectedFile.size) * 100),
+                );
+                setProgress(pct);
+              } catch (e) {
+                reject(e);
+                return;
+              } finally {
+                active--;
+                if (next >= chunks.length && active === 0) {
+                  resolve();
+                } else {
+                  runNext();
+                }
+              }
+            })();
+          }
+        };
+        runNext();
+      });
       // Compute full file hash (over entire file blob) with same algorithm
       const fileHash = await hashBlob(selectedFile, algo);
       // Create file manifest on backend
@@ -155,7 +199,22 @@ const FilesPage = () => {
       {isUploading && (
         <Box sx={{ mt: 2 }}>
           <LinearProgress variant="determinate" value={progress} />
-          <Typography variant="caption">{progress}%</Typography>
+          <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
+            <Typography variant="caption">{progress}%</Typography>
+            <Typography variant="caption">
+              {t("files.threads", "Threads: {{count}}", {
+                count: UPLOAD_CONCURRENCY_DEFAULT,
+              })}
+            </Typography>
+            <Typography variant="caption">
+              {t("files.speed", "Speed: {{speed}}/s", {
+                speed: formatBytesPerSecond(speedbps),
+              })}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {`${formatBytes(selectedFile?.size ?? 0)} total`}
+            </Typography>
+          </Stack>
         </Box>
       )}
       {error && (

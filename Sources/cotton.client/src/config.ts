@@ -8,3 +8,6 @@ export const API_ENDPOINTS = {
 
 export const buildDownloadUrl = (fileManifestId: string) =>
   `${API_BASE_URL}${API_ENDPOINTS.files}/${fileManifestId}/download`;
+
+// Default number of parallel chunk uploads
+export const UPLOAD_CONCURRENCY_DEFAULT = 4;
