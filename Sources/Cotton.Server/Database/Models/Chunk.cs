@@ -9,5 +9,8 @@ namespace Cotton.Server.Database.Models
         [Key]
         [Column("sha256")]
         public byte[] Sha256 { get; set; } = null!;
+
+        [Column("size_bytes")]
+        public int SizeBytes { get; set; }
     }
 }
