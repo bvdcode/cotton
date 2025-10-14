@@ -3,13 +3,13 @@ using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Server.Validators;
 using Cotton.Server.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
-using Cotton.Server.Validators;
 
 namespace Cotton.Server.Controllers
 {
