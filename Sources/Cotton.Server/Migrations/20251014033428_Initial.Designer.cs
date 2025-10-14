@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Server.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251005080158_Initial")]
+    [Migration("20251014033428_Initial")]
     partial class Initial
     {
         /// <inheritdoc />

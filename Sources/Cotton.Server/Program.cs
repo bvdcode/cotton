@@ -5,6 +5,7 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Abstractions;
 using Microsoft.Extensions.Options;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
+using EasyExtensions.EntityFrameworkCore.Extensions;
 
 namespace Cotton.Server
 {
@@ -35,6 +36,7 @@ namespace Cotton.Server
             app.UseAuthorization();
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
+            app.ApplyMigrations<CottonDbContext>();
             app.Run();
         }
     }

@@ -75,9 +75,9 @@ namespace Cotton.Server.Services
                 Options = FileOptions.Asynchronous | FileOptions.WriteThrough
             };
 
-            await using var tmp = new FileStream(tmpFilePath, fso);
             try
             {
+                await using var tmp = new FileStream(tmpFilePath, fso);
                 if (stream.CanSeek)
                 {
                     stream.Seek(default, SeekOrigin.Begin);
@@ -143,7 +143,7 @@ namespace Cotton.Server.Services
                     File.Delete(path);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete temporary file {Path}", path);
             }
