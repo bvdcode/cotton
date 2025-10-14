@@ -4,6 +4,7 @@ using Cotton.Server.Database;
 using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 using Cotton.Server.Abstractions;
+using System.Security.Cryptography;
 using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
@@ -55,23 +56,32 @@ namespace Cotton.Server.Controllers
             FileManifest newFile = new()
             {
                 ContentType = request.ContentType,
-                Folder = request.Folder,
                 Name = request.Name,
                 Sha256 = Convert.FromHexString(request.Sha256),
                 SizeBytes = chunks.Sum(x => x.SizeBytes)
             };
             await _dbContext.FileManifests.AddAsync(newFile);
-            await _dbContext.SaveChangesAsync();
 
             for (int i = 0; i < chunks.Count; i++)
             {
                 var fileChunk = new FileManifestChunk
                 {
                     ChunkOrder = i,
-                    FileManifestId = newFile.Id,
+                    FileManifest = newFile,
                     ChunkSha256 = chunks[i].Sha256,
                 };
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk);
+            }
+
+            using var blob = _storage.GetBlobStream(request.ChunkHashes);
+            byte[] computedHash = await SHA256.HashDataAsync(blob);
+            if (!computedHash.SequenceEqual(newFile.Sha256))
+            {
+                // Rollback
+                _dbContext.FileManifestChunks.RemoveRange(
+                    _dbContext.FileManifestChunks.Where(x => x.FileManifestId == newFile.Id));
+                _dbContext.FileManifests.Remove(newFile);
+                return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the whole uploaded file.");
             }
 
             await _dbContext.SaveChangesAsync();
