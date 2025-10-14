@@ -1,14 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Database.Models
 {
     [Table("file_manifests")]
     public class FileManifest : BaseEntity<Guid>
     {
-        [Obsolete("Temporary empty")]
         [Column("owner_id")]
-        public Guid? OwnerId { get; set; }
+        public Guid OwnerId { get; set; }
 
         [Column("name")]
         public string Name { get; set; } = null!;
@@ -24,12 +24,12 @@ namespace Cotton.Server.Database.Models
 
         /// <summary>
         /// First ID is the first manifest created for a version, remains the same for all subsequent updates.
+        /// TODO: Set this id after entity was created.
         /// </summary>
         [Column("version_stable_id")]
         public Guid VersionStableId { get; set; }
 
-        public virtual User? Owner { get; set; } = null!;
-
+        public virtual User Owner { get; set; } = null!;
         public virtual ICollection<FileManifest> FileManifests { get; set; } = [];
     }
 }

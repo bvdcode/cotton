@@ -1,9 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
 {
     [Table("chunk_ownerships")]
+    [Index(nameof(OwnerId), nameof(ChunkSha256), IsUnique = true)]
     public class ChunkOwnership : BaseEntity<Guid>
     {
         [Column("owner_id")]

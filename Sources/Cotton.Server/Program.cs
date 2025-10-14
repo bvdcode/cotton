@@ -4,8 +4,8 @@ using Cotton.Server.Settings;
 using Cotton.Server.Extensions;
 using Cotton.Server.Abstractions;
 using Microsoft.Extensions.Options;
-using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
+using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 
 namespace Cotton.Server
 {
@@ -21,7 +21,7 @@ namespace Cotton.Server
                 .AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value)
                 .AddScoped<IStorage, FileStorage>()
                 .AddOpenApi()
-                .AddPostgresDbContext<CottonDbContext>()
+                .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddControllers();
 
             var app = builder.Build();
