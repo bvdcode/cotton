@@ -31,8 +31,8 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("bytea")
                         .HasColumnName("sha256");
 
-                    b.Property<int>("SizeBytes")
-                        .HasColumnType("integer")
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
 
                     b.HasKey("Sha256");
