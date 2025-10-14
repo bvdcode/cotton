@@ -2,6 +2,7 @@
 using Cotton.Server.Database;
 using Cotton.Server.Settings;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Server.Extensions;
 using Cotton.Server.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Server.Database.Models;
@@ -42,7 +43,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
             }
 
-            var chunk = await _dbContext.Chunks.FindAsync(hashBytes);
+            var chunk = await _dbContext.FindChunkAsync(hashBytes);
             if (chunk != null)
             {
                 // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks

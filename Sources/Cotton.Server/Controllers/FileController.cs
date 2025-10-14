@@ -1,6 +1,7 @@
 ﻿using Mapster;
 using Cotton.Server.Models;
 using Cotton.Server.Database;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 using Cotton.Server.Validators;
@@ -55,7 +56,7 @@ namespace Cotton.Server.Controllers
             List<Chunk> chunks = [];
             foreach (var item in request.ChunkHashes)
             {
-                var foundChunk = await _dbContext.Chunks.FindAsync(Convert.FromHexString(item));
+                var foundChunk = await _dbContext.FindChunkAsync(item);
                 if (foundChunk == null)
                 {
                     // TODO: Add safety check to ensure chunks belong to the user
