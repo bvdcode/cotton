@@ -1,8 +1,8 @@
-﻿using Cotton.Server.Settings;
+﻿using System.IO.Pipelines;
+using Cotton.Server.Settings;
 using Cotton.Crypto.Abstractions;
 using Cotton.Server.Abstractions;
 using System.Text.RegularExpressions;
-using System.IO.Pipelines;
 
 namespace Cotton.Server.Services
 {
@@ -12,12 +12,11 @@ namespace Cotton.Server.Services
         private readonly IStreamCipher _cipher;
         private readonly CottonSettings _settings;
         private readonly ILogger<FileStorage> _logger;
-
-        [GeneratedRegex("^[0-9a-f]{64}$", RegexOptions.Compiled)]
-        private static partial Regex CreateHexHashRegex();
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "chunks";
 
+        [GeneratedRegex("^[0-9a-f]{64}$", RegexOptions.Compiled)]
+        private static partial Regex CreateHexHashRegex();
 
         public FileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<FileStorage> logger)
         {
@@ -30,8 +29,9 @@ namespace Cotton.Server.Services
 
         public async Task<Stream> GetChunkReadStream(string hash, CancellationToken ct = default)
         {
+            hash = NormalizeHash(hash);
             string dirPath = GetFolderByHash(hash);
-            string filePath = Path.Combine(dirPath, hash[4..].ToLowerInvariant() + ChunkFileExtension);
+            string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
             if (!File.Exists(filePath))
             {
                 throw new FileNotFoundException("Chunk not found", filePath);
@@ -53,20 +53,17 @@ namespace Cotton.Server.Services
 
         public async Task WriteChunkAsync(string hash, Stream stream, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(hash))
-            {
-                throw new ArgumentException("Hash required", nameof(hash));
-            }
+            hash = NormalizeHash(hash);
             ArgumentNullException.ThrowIfNull(stream);
 
             string dirPath = GetFolderByHash(hash);
-            string filePath = Path.Combine(dirPath, hash[4..].ToLowerInvariant() + ChunkFileExtension);
+            string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
             if (File.Exists(filePath))
             {
                 return;
             }
 
-            string tmpFilePath = Path.Combine(dirPath, $"{hash[4..].ToLowerInvariant()}.{Guid.NewGuid():N}.tmp");
+            string tmpFilePath = Path.Combine(dirPath, $"{hash[4..]}.{Guid.NewGuid():N}.tmp");
 
             var fso = new FileStreamOptions
             {
@@ -124,17 +121,9 @@ namespace Cotton.Server.Services
 
         private string GetFolderByHash(string hash)
         {
-            if (string.IsNullOrWhiteSpace(hash))
-            {
-                throw new ArgumentException("Invalid chunk hash.", nameof(hash));
-            }
-            string normalized = hash.Trim().ToLowerInvariant();
-            if (!CreateHexHashRegex().IsMatch(normalized))
-            {
-                throw new ArgumentException("Invalid chunk hash.", nameof(hash));
-            }
-            string p1 = normalized[..2];
-            string p2 = normalized[2..4];
+            hash = NormalizeHash(hash);
+            string p1 = hash[..2];
+            string p2 = hash[2..4];
             string dirPath = Path.Combine(_basePath, p1, p2);
             Directory.CreateDirectory(dirPath);
             return dirPath;
@@ -157,8 +146,9 @@ namespace Cotton.Server.Services
 
         private Stream CreateDecryptingReadStream(string hash)
         {
+            hash = NormalizeHash(hash);
             string dirPath = GetFolderByHash(hash);
-            string filePath = Path.Combine(dirPath, hash[4..].ToLowerInvariant() + ChunkFileExtension);
+            string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
             if (!File.Exists(filePath))
             {
                 throw new FileNotFoundException("Chunk not found", filePath);
@@ -190,8 +180,22 @@ namespace Cotton.Server.Services
                 }
                 finally
                 {
-                    try { await writerStream.DisposeAsync().ConfigureAwait(false); } catch { }
-                    try { await fs.DisposeAsync().ConfigureAwait(false); } catch { }
+                    try
+                    {
+                        await writerStream.DisposeAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to dispose writer stream" );
+                    }
+                    try
+                    {
+                        await fs.DisposeAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to dispose file stream");
+                    }
                     pipe.Writer.Complete(error);
                 }
             });
@@ -199,17 +203,10 @@ namespace Cotton.Server.Services
             return readerStream;
         }
 
-        private sealed class ConcatenatedReadStream : Stream
+        private class ConcatenatedReadStream(FileStorage storage, IEnumerable<string> hashes) : Stream
         {
-            private readonly IEnumerator<string> _hashes;
-            private readonly FileStorage _storage;
+            private readonly IEnumerator<string> _hashes = hashes.GetEnumerator();
             private Stream? _current;
-
-            public ConcatenatedReadStream(FileStorage storage, IEnumerable<string> hashes)
-            {
-                _storage = storage;
-                _hashes = hashes.GetEnumerator();
-            }
 
             public override bool CanRead => true;
             public override bool CanSeek => false;
@@ -222,7 +219,7 @@ namespace Cotton.Server.Services
                 while (_current == null)
                 {
                     if (!_hashes.MoveNext()) return false;
-                    _current = _storage.CreateDecryptingReadStream(_hashes.Current);
+                    _current = storage.CreateDecryptingReadStream(_hashes.Current);
                 }
                 return true;
             }
@@ -279,7 +276,22 @@ namespace Cotton.Server.Services
         public Stream GetBlobStream(string[] hashes)
         {
             ArgumentNullException.ThrowIfNull(hashes);
+            foreach (var hash in hashes)
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+            }
             return new ConcatenatedReadStream(this, hashes);
+        }
+
+        private static string NormalizeHash(string hash)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+            string normalized = hash.Trim().ToLowerInvariant();
+            if (!CreateHexHashRegex().IsMatch(normalized))
+            {
+                throw new ArgumentException("Invalid chunk hash.", nameof(hash));
+            }
+            return normalized;
         }
     }
 }
