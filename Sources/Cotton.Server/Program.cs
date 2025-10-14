@@ -31,7 +31,6 @@ namespace Cotton.Server
             {
                 app.MapOpenApi();
             }
-            app.UseHttpsRedirection();
             app.UseCottonCors();
             app.UseAuthorization();
             app.MapControllers();
