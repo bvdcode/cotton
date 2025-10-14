@@ -52,7 +52,7 @@ namespace Cotton.Server.Controllers
             tmp.Seek(default, SeekOrigin.Begin);
             try
             {
-                await _storage.WriteChunkAsync(hash, tmp);
+                await _storage.WriteFileAsync(hash, tmp);
                 chunk = new Chunk
                 {
                     Sha256 = hashBytes,
