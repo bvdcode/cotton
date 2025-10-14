@@ -1,4 +1,5 @@
 ﻿using System.IO.Pipelines;
+using Cotton.Server.Streams;
 using Cotton.Server.Settings;
 using Cotton.Crypto.Abstractions;
 using Cotton.Server.Abstractions;
@@ -60,11 +61,11 @@ namespace Cotton.Server.Services
             string filePath = Path.Combine(dirPath, hash[4..] + ChunkFileExtension);
             if (File.Exists(filePath))
             {
-                return;
+                _logger.LogCritical("File collision detected for chunk {Hash}", hash);
+                throw new IOException("File collision detected: two different chunks have the same name: " + hash);
             }
 
             string tmpFilePath = Path.Combine(dirPath, $"{hash[4..]}.{Guid.NewGuid():N}.tmp");
-
             var fso = new FileStreamOptions
             {
                 Share = FileShare.None,
@@ -75,6 +76,7 @@ namespace Cotton.Server.Services
 
             try
             {
+                _logger.LogInformation("Storing new chunk {Hash}", hash);
                 await using var tmp = new FileStream(tmpFilePath, fso);
                 if (stream.CanSeek)
                 {
@@ -85,7 +87,7 @@ namespace Cotton.Server.Services
                 await tmp.FlushAsync(ct).ConfigureAwait(false);
                 tmp.Flush(true);
             }
-            catch
+            catch (Exception)
             {
                 TryDelete(tmpFilePath);
                 throw;
@@ -93,26 +95,10 @@ namespace Cotton.Server.Services
 
             try
             {
-                if (File.Exists(filePath))
-                {
-                    TryDelete(tmpFilePath);
-                    return;
-                }
-
                 File.Move(tmpFilePath, filePath);
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
             }
-            catch (IOException)
-            {
-                if (File.Exists(filePath))
-                {
-                    TryDelete(tmpFilePath);
-                    return;
-                }
-                TryDelete(tmpFilePath);
-                throw;
-            }
-            catch
+            catch (Exception)
             {
                 TryDelete(tmpFilePath);
                 throw;
@@ -140,11 +126,11 @@ namespace Cotton.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete temporary file {Path}", path);
+                _logger.LogError(ex, "Failed to delete file {Path}", path);
             }
         }
 
-        private Stream CreateDecryptingReadStream(string hash)
+        internal Stream CreateDecryptingReadStream(string hash)
         {
             hash = NormalizeHash(hash);
             string dirPath = GetFolderByHash(hash);
@@ -186,7 +172,7 @@ namespace Cotton.Server.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to dispose writer stream" );
+                        _logger.LogError(ex, "Failed to dispose writer stream");
                     }
                     try
                     {
@@ -201,76 +187,6 @@ namespace Cotton.Server.Services
             });
 
             return readerStream;
-        }
-
-        private class ConcatenatedReadStream(FileStorage storage, IEnumerable<string> hashes) : Stream
-        {
-            private readonly IEnumerator<string> _hashes = hashes.GetEnumerator();
-            private Stream? _current;
-
-            public override bool CanRead => true;
-            public override bool CanSeek => false;
-            public override bool CanWrite => false;
-            public override long Length => throw new NotSupportedException();
-            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-
-            private bool EnsureCurrent()
-            {
-                while (_current == null)
-                {
-                    if (!_hashes.MoveNext()) return false;
-                    _current = storage.CreateDecryptingReadStream(_hashes.Current);
-                }
-                return true;
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                if (!EnsureCurrent()) return 0;
-                int read = _current!.Read(buffer, offset, count);
-                if (read == 0)
-                {
-                    _current.Dispose();
-                    _current = null;
-                    return Read(buffer, offset, count);
-                }
-                return read;
-            }
-
-            public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (!EnsureCurrent()) return 0;
-                int read = await _current!.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                if (read == 0)
-                {
-                    await _current.DisposeAsync().ConfigureAwait(false);
-                    _current = null;
-                    return await ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                }
-                return read;
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                {
-                    _current?.Dispose();
-                    _hashes.Dispose();
-                }
-                base.Dispose(disposing);
-            }
-
-            public override ValueTask DisposeAsync()
-            {
-                _current?.Dispose();
-                _hashes.Dispose();
-                return ValueTask.CompletedTask;
-            }
-
-            public override void Flush() => throw new NotSupportedException();
-            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-            public override void SetLength(long value) => throw new NotSupportedException();
-            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         }
 
         public Stream GetBlobStream(string[] hashes)
