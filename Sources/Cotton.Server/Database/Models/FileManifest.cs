@@ -4,13 +4,13 @@ using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
 {
-    [Table("blobs")]
+    [Table("file_manifests")]
     [Index(nameof(OwnerId), nameof(Folder))]
     [Index(nameof(OwnerId), nameof(Folder), nameof(Name), IsUnique = true)]
-    public class Blob : BaseEntity<Guid>
+    public class FileManifest : BaseEntity<Guid>
     {
         [Column("owner_id")]
-        public Guid OwnerId { get; set; }
+        public Guid? OwnerId { get; set; }
 
         [Column("name")]
         public string Name { get; set; } = null!;
@@ -27,8 +27,8 @@ namespace Cotton.Server.Database.Models
         [Column("sha256")]
         public byte[] Sha256 { get; set; } = null!;
 
-        public virtual User Owner { get; set; } = null!;
+        public virtual User? Owner { get; set; } = null!;
 
-        public virtual ICollection<BlobChunk> BlobChunks { get; set; } = [];
+        public virtual ICollection<FileManifest> FileManifests { get; set; } = [];
     }
 }
