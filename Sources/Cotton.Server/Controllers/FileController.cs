@@ -9,6 +9,7 @@ using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using Cotton.Server.Validators;
 
 namespace Cotton.Server.Controllers
 {
@@ -52,11 +53,17 @@ namespace Cotton.Server.Controllers
                 }
                 chunks.Add(foundChunk);
             }
+            
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name, out string normalized, out string errorMessage);
+            if (!isValidName)
+            {
+                return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
+            }
 
             FileManifest newFile = new()
             {
+                Name = normalized,
                 ContentType = request.ContentType,
-                Name = request.Name,
                 Sha256 = Convert.FromHexString(request.Sha256),
                 SizeBytes = chunks.Sum(x => x.SizeBytes)
             };
