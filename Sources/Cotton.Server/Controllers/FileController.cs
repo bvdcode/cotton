@@ -3,14 +3,16 @@ using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
+using EasyExtensions.EntityFrameworkCore.Exceptions;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class FileController(CottonDbContext _dbContext) : ControllerBase
+    public class FileController(CottonDbContext _dbContext, IStorage _storage) : ControllerBase
     {
         [HttpGet(Routes.Files)]
         public async Task<CottonResult> GetFiles()
@@ -21,9 +23,17 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpGet(Routes.Files + "/{fileManifestId:guid}/download")]
-        public async Task<CottonResult> DownloadFile([FromRoute] Guid fileManifestId)
+        public async Task<IActionResult> DownloadFile([FromRoute] Guid fileManifestId)
         {
-            return CottonResult.Ok("It will be just a file, you can open in new tab");
+            var manifest = await _dbContext.FileManifests.FindAsync(fileManifestId)
+                ?? throw new EntityNotFoundException(nameof(FileManifest));
+            string[] hashes = await _dbContext.FileManifestChunks
+                .Where(x => x.FileManifestId == fileManifestId)
+                .OrderBy(x => x.ChunkOrder)
+                .Select(x => Convert.ToHexString(x.ChunkSha256))
+                .ToArrayAsync();
+            Stream stream = _storage.GetBlobStream(hashes);
+            return File(stream, manifest.ContentType);
         }
 
         [HttpPost(Routes.Files)]
