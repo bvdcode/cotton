@@ -46,6 +46,7 @@ namespace Cotton.Server.Controllers
                 if (foundChunk == null)
                 {
                     // TODO: Add safety check to ensure chunks belong to the user
+                    // Must depend on owner/user authentication, no reason to delay for the same user
                     return CottonResult.BadRequest($"Chunk with hash {item} not found.");
                 }
                 chunks.Add(foundChunk);
@@ -74,7 +75,6 @@ namespace Cotton.Server.Controllers
             }
 
             await _dbContext.SaveChangesAsync();
-
             return CottonResult.Ok("File created successfully.", newFile.Adapt<FileManifestDto>());
         }
     }
