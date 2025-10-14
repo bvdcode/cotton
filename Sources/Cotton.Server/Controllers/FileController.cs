@@ -29,21 +29,43 @@ namespace Cotton.Server.Controllers
         [HttpPost(Routes.Files)]
         public async Task<CottonResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
+            List<Chunk> chunks = [];
+            foreach (var item in request.ChunkHashes)
+            {
+                var foundChunk = await _dbContext.Chunks.FindAsync(Convert.FromHexString(item));
+                if (foundChunk == null)
+                {
+                    // TODO: Add safety check to ensure chunks belong to the user
+                    return CottonResult.BadRequest($"Chunk with hash {item} not found.");
+                }
+                chunks.Add(foundChunk);
+            }
+
             FileManifest newFile = new()
             {
                 ContentType = request.ContentType,
                 Folder = request.Folder,
                 Name = request.Name,
                 Sha256 = Convert.FromHexString(request.Sha256),
-                SizeBytes = 0
+                SizeBytes = chunks.Sum(x => x.SizeBytes)
             };
             await _dbContext.FileManifests.AddAsync(newFile);
             await _dbContext.SaveChangesAsync();
 
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                var fileChunk = new FileManifestChunk
+                {
+                    ChunkOrder = i,
+                    FileManifestId = newFile.Id,
+                    ChunkSha256 = chunks[i].Sha256,
+                };
+                await _dbContext.FileManifestChunks.AddAsync(fileChunk);
+            }
 
+            await _dbContext.SaveChangesAsync();
 
-
-            return CottonResult.Ok("");
+            return CottonResult.Ok("File created successfully.", newFile.Adapt<FileManifestDto>());
         }
     }
 }
