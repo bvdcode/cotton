@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
@@ -22,6 +21,12 @@ namespace Cotton.Server.Database.Models
 
         [Column("sha256")]
         public byte[] Sha256 { get; set; } = null!;
+
+        /// <summary>
+        /// First ID is the first manifest created for a version, remains the same for all subsequent updates.
+        /// </summary>
+        [Column("version_stable_id")]
+        public Guid VersionStableId { get; set; }
 
         public virtual User? Owner { get; set; } = null!;
 
