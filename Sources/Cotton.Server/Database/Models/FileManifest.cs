@@ -9,6 +9,7 @@ namespace Cotton.Server.Database.Models
     [Index(nameof(OwnerId), nameof(Folder), nameof(Name), IsUnique = true)]
     public class FileManifest : BaseEntity<Guid>
     {
+        [Obsolete("Temporary empty")]
         [Column("owner_id")]
         public Guid? OwnerId { get; set; }
 
