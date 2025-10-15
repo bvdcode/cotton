@@ -1,15 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using EasyExtensions.EntityFrameworkCore.Abstractions;
-using Microsoft.EntityFrameworkCore;
+﻿using Cotton.Server.Database.Abstractions;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Server.Database.Models
 {
     [Table("file_manifests")]
-    public class FileManifest : BaseEntity<Guid>
+    public class FileManifest : BaseOwnedEntity
     {
-        [Column("owner_id")]
-        public Guid OwnerId { get; set; }
-
         [Column("name")]
         public string Name { get; set; } = null!;
 
@@ -28,8 +24,6 @@ namespace Cotton.Server.Database.Models
         /// </summary>
         [Column("version_stable_id")]
         public Guid VersionStableId { get; set; }
-
-        public virtual User Owner { get; set; } = null!;
         public virtual ICollection<FileManifest> FileManifests { get; set; } = [];
     }
 }

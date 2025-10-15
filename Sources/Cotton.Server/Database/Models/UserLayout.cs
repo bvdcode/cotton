@@ -1,16 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using EasyExtensions.EntityFrameworkCore.Abstractions;
+﻿using Cotton.Server.Database.Abstractions;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Server.Database.Models
 {
     [Table("user_layouts")]
-    public class UserLayout : BaseEntity<Guid>
+    public class UserLayout : BaseOwnedEntity
     {
-        [Column("owner_id")]
-        public Guid OwnerId { get; set; }
-
-        public virtual User Owner { get; set; } = null!;
-
         public virtual ICollection<UserLayoutNode> UserLayoutNodes { get; set; } = [];
     }
 }
