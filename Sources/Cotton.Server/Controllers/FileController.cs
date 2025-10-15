@@ -11,6 +11,7 @@ using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using EasyExtensions;
 
 namespace Cotton.Server.Controllers
 {
@@ -53,6 +54,18 @@ namespace Cotton.Server.Controllers
         [HttpPost(Routes.Files)]
         public async Task<CottonResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
+            var node = await _dbContext.UserLayoutNodes
+                .Where(x => x.Id == request.UserLayoutNodeId)
+                .SingleOrDefaultAsync();
+            if (node == null)
+            {
+                return CottonResult.NotFound("User layout node not found.");
+            }
+            if (node.OwnerId != User.GetUserId())
+            {
+                return CottonResult.Forbidden("You do not have permission to add files to this node.");
+            }
+
             List<Chunk> chunks = [];
             foreach (var item in request.ChunkHashes)
             {
@@ -65,7 +78,7 @@ namespace Cotton.Server.Controllers
                 }
                 chunks.Add(foundChunk);
             }
-            
+
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name, out string normalized, out string errorMessage);
             if (!isValidName)
             {
@@ -102,6 +115,13 @@ namespace Cotton.Server.Controllers
                 _dbContext.FileManifests.Remove(newFile);
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the whole uploaded file.");
             }
+
+            UserLayoutNodeFile newNodeFile = new()
+            {
+                UserLayoutNode = node,
+                FileManifest = newFile,
+            };
+            await _dbContext.UserLayoutNodeFiles.AddAsync(newNodeFile);
 
             await _dbContext.SaveChangesAsync();
             return CottonResult.Ok("File created successfully.", newFile.Adapt<FileManifestDto>());
