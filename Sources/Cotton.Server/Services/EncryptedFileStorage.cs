@@ -6,17 +6,17 @@ using Cotton.Server.Abstractions;
 
 namespace Cotton.Server.Services
 {
-    public partial class FileStorage : IStorage
+    public partial class EncryptedFileStorage : IStorage
     {
         private readonly string _basePath;
         private const int MinFileUidLength = 6;
         private readonly IStreamCipher _cipher;
         private readonly CottonSettings _settings;
-        private readonly ILogger<FileStorage> _logger;
+        private readonly ILogger<EncryptedFileStorage> _logger;
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
 
-        public FileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<FileStorage> logger)
+        public EncryptedFileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<EncryptedFileStorage> logger)
         {
             _logger = logger;
             _cipher = cipher;
