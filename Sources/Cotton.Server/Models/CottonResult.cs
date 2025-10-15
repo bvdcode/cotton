@@ -69,5 +69,15 @@ namespace Cotton.Server.Models
                 StatusCode = HttpStatusCode.NotFound
             };
         }
+
+        public static CottonResult Forbidden(string message)
+        {
+            return new()
+            {
+                Success = false,
+                Message = message,
+                StatusCode = HttpStatusCode.Forbidden
+            };
+        }
     }
 }
