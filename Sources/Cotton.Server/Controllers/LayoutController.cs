@@ -4,16 +4,57 @@ using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Database.Models.Enums;
 using Cotton.Server.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
+using Cotton.Server.Database.Models.Enums;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class LayoutController(CottonDbContext _dbContext) : ControllerBase
     {
+        [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/children")]
+        public async Task<CottonResult> GetChildNodes([FromRoute] Guid nodeId,
+            [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
+        {
+            Guid userId = User.GetUserId();
+            var layout = await _dbContext.GetLatestUserLayoutAsync(userId);
+            var parentNode = await _dbContext.UserLayoutNodes
+                .AsNoTracking()
+                .Include(x => x.UserLayout)
+                .Where(x => x.Id == nodeId
+                    && x.UserLayout.OwnerId == userId
+                    && x.UserLayoutId == layout.Id
+                    && x.Type == type)
+                .SingleOrDefaultAsync();
+            if (parentNode == null)
+            {
+                return CottonResult.NotFound("Parent node not found.");
+            }
+
+            var nodes = await _dbContext.UserLayoutNodes
+                .AsNoTracking()
+                .Include(x => x.UserLayout)
+                .Where(x => x.ParentId == parentNode.Id && x.UserLayout.OwnerId == userId)
+                .ProjectToType<UserLayoutNodeDto>()
+                .ToListAsync();
+
+            var files = await _dbContext.UserLayoutNodeFiles
+                .AsNoTracking()
+                .Include(x => x.FileManifest)
+                .Where(x => x.UserLayoutNodeId == parentNode.Id)
+                .ProjectToType<FileManifestDto>()
+                .ToListAsync();
+
+            NodeContentDto result = new()
+            {
+                Nodes = nodes,
+                Files = files
+            };
+            return CottonResult.Ok("Child nodes retrieved successfully.", result);
+        }
+
         [HttpGet($"{Routes.Layouts}/resolver")]
         [HttpGet($"{Routes.Layouts}/resolver/{{*path}}")]
         public async Task<CottonResult> ResolveLayout([FromRoute] string? path,
