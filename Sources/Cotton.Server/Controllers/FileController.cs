@@ -17,7 +17,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class FileController(CottonDbContext _dbContext, IStorage _storage) : ControllerBase
     {
-        [HttpDelete(Routes.Files + "/{fileManifestId:guid}")]
+        [HttpDelete($"{Routes.Files}/{{fileManifestId:guid}}")]
         public async Task<CottonResult> DeleteFile([FromRoute] Guid fileManifestId)
         {
             var manifest = await _dbContext.FileManifests.FindAsync(fileManifestId)
@@ -36,7 +36,7 @@ namespace Cotton.Server.Controllers
             return CottonResult.Ok("Files retrieved successfully.", mapped);
         }
 
-        [HttpGet(Routes.Files + "/{fileManifestId:guid}/download")]
+        [HttpGet($"{Routes.Files}/{{fileManifestId:guid}}/download")]
         public async Task<IActionResult> DownloadFile([FromRoute] Guid fileManifestId)
         {
             var manifest = await _dbContext.FileManifests.FindAsync(fileManifestId)

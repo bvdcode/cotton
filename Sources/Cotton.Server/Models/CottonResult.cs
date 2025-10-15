@@ -59,5 +59,15 @@ namespace Cotton.Server.Models
                 StatusCode = HttpStatusCode.InternalServerError
             };
         }
+
+        public static CottonResult NotFound(string message)
+        {
+            return new()
+            {
+                Success = false,
+                Message = message,
+                StatusCode = HttpStatusCode.NotFound
+            };
+        }
     }
 }

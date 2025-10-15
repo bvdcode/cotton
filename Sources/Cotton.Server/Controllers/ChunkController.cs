@@ -13,7 +13,7 @@ namespace Cotton.Server.Controllers
         IStorage _storage, ILogger<ChunkController> _logger) : ControllerBase
     {
         [HttpPost(Routes.Chunks)]
-        [RequestSizeLimit(50 * 1024 * 1024)]
+        [RequestSizeLimit(100 * 1024 * 1024)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
             if (file == null || file.Length == 0)

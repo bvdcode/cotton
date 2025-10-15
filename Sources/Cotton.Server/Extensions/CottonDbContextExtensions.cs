@@ -1,11 +1,57 @@
 ﻿using Cotton.Server.Helpers;
 using Cotton.Server.Database;
 using Cotton.Server.Database.Models;
+using Microsoft.EntityFrameworkCore;
+using Cotton.Server.Database.Models.Enums;
 
 namespace Cotton.Server.Extensions
 {
     public static class CottonDbContextExtensions
     {
+        public static async Task<UserLayoutNode> GetRootNodeAsync(this CottonDbContext dbContext, Guid layoutId, Guid ownerId, UserLayoutNodeType type)
+        {
+            var currentNode = await dbContext.UserLayoutNodes
+                .AsNoTracking()
+                .Include(x => x.UserLayout)
+                .Where(x => x.UserLayout.OwnerId == ownerId
+                    && x.UserLayoutId == layoutId
+                    && x.ParentId == null
+                    && x.Type == type)
+                .FirstOrDefaultAsync();
+            if (currentNode == null)
+            {
+                UserLayoutNode newNode = new()
+                {
+                    Name = "/",
+                    Type = type,
+                    UserLayoutId = layoutId,
+                };
+                await dbContext.UserLayoutNodes.AddAsync(newNode);
+                await dbContext.SaveChangesAsync();
+                return newNode;
+            }
+            return currentNode;
+        }
+
+        public static async Task<UserLayout> GetLatestUserLayoutAsync(this CottonDbContext dbContext, Guid ownerId)
+        {
+            var found = await dbContext.UserLayouts
+                .Where(x => x.OwnerId == ownerId)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+            if (found == null)
+            {
+                UserLayout newLayout = new()
+                {
+                    OwnerId = ownerId
+                };
+                await dbContext.UserLayouts.AddAsync(newLayout);
+                await dbContext.SaveChangesAsync();
+                return newLayout;
+            }
+            return found;
+        }
+
         public static Task<Chunk?> FindChunkAsync(this CottonDbContext dbContext, string sha256hex)
         {
             if (!HashHelpers.IsValidHash(sha256hex))
