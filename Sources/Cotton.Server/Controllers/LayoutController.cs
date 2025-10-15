@@ -76,7 +76,10 @@ namespace Cotton.Server.Controllers
             {
                 var nextNode = await _dbContext.UserLayoutNodes
                     .AsNoTracking()
-                    .Where(x => x.UserLayout.OwnerId == userId && x.ParentId == currentNode.Id && x.Name == part && x.Type == type)
+                    .Where(x => x.UserLayout.OwnerId == userId
+                        && x.ParentId == currentNode.Id
+                        && x.Name == part
+                        && x.Type == type)
                     .SingleOrDefaultAsync();
                 if (nextNode == null)
                 {

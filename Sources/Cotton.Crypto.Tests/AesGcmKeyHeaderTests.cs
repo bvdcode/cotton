@@ -17,14 +17,14 @@ namespace Cotton.Crypto.Tests
             using MemoryStream ms = new(headerBytes.ToArray());
             AesGcmKeyHeader parsedHeader = AesGcmKeyHeader.FromStream(ms, 3, 16);
 
-            Assert.Multiple(() =>
+            using (Assert.EnterMultipleScope())
             {
                 Assert.That(parsedHeader.KeyId, Is.EqualTo(expectedHeader.KeyId));
                 Assert.That(parsedHeader.Nonce, Is.EqualTo(expectedHeader.Nonce));
                 Assert.That(parsedHeader.Tag, Is.EqualTo(expectedHeader.Tag));
                 Assert.That(parsedHeader.EncryptedKey, Is.EqualTo(expectedHeader.EncryptedKey));
                 Assert.That(parsedHeader.DataLength, Is.EqualTo(expectedHeader.DataLength));
-            });
+            }
         }
     }
 }
