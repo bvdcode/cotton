@@ -151,21 +151,21 @@ public class AesGcmStreamCipherTests
         var bytes = encrypted.ToArray();
         var (fileHeader, firstChunkHeader, _) = ParseHeaders(bytes);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(fileHeader.KeyId, Is.EqualTo(keyId));
             Assert.That(fileHeader.DataLength, Is.EqualTo(data.Length));
             Assert.That(fileHeader.Nonce, Has.Length.EqualTo(NonceSize));
             Assert.That(fileHeader.Tag, Has.Length.EqualTo(TagSize));
             Assert.That(firstChunkHeader, Is.Not.Null);
-        });
-        Assert.Multiple(() =>
+        }
+        using (Assert.EnterMultipleScope())
         {
             // Compact chunk header: nonce is not serialized
             Assert.That(firstChunkHeader!.Value.Nonce, Has.Length.EqualTo(0));
             Assert.That(firstChunkHeader!.Value.Tag, Has.Length.EqualTo(TagSize));
             Assert.That(firstChunkHeader!.Value.DataLength, Is.GreaterThan(0));
-        });
+        }
     }
 
     [Test]
@@ -183,7 +183,7 @@ public class AesGcmStreamCipherTests
         var bytes = encrypted.ToArray();
 
         var (fileHeader, _, _) = ParseHeaders(bytes);
-        Assert.That(fileHeader.DataLength, Is.EqualTo(0));
+        Assert.That(fileHeader.DataLength, Is.Zero);
     }
 
     [Test]
