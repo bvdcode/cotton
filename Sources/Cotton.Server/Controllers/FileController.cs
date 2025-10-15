@@ -24,7 +24,7 @@ namespace Cotton.Server.Controllers
                 ?? throw new EntityNotFoundException(nameof(FileManifest));
             _dbContext.FileManifests.Remove(manifest);
             await _dbContext.SaveChangesAsync();
-            // TODO: Consider deleting unreferenced chunks
+            // TODO: Consider deleting or just dereferencing chunks that are no longer used by any file manifests
             return CottonResult.Ok("File deleted successfully.");
         }
 

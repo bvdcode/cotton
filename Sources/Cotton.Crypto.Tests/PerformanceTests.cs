@@ -42,11 +42,11 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task Encrypt_ThreadSweep_ChunkSweep()
         {
-            Assert.Multiple(() =>
+            using (Assert.EnterMultipleScope())
             {
                 Assert.That(_sharedData, Is.Not.Null);
                 Assert.That(_masterKey, Is.Not.Null);
-            });
+            }
 
             byte[] source = _sharedData!;
             byte[] masterKey = _masterKey!;
@@ -87,11 +87,11 @@ namespace Cotton.Crypto.Tests
         [Test]
         public async Task Decrypt_ThreadSweep_ChunkSweep()
         {
-            Assert.Multiple(() =>
+            using (Assert.EnterMultipleScope())
             {
                 Assert.That(_sharedData, Is.Not.Null);
                 Assert.That(_masterKey, Is.Not.Null);
-            });
+            }
 
             byte[] source = _sharedData!;
             byte[] masterKey = _masterKey!;
