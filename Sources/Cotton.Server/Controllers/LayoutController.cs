@@ -23,6 +23,7 @@ namespace Cotton.Server.Controllers
             var parentNode = await _dbContext.UserLayoutNodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId
+                    && x.OwnerId == userId
                     && x.UserLayoutId == layout.Id
                     && x.Type == type)
                 .SingleOrDefaultAsync();
@@ -33,8 +34,7 @@ namespace Cotton.Server.Controllers
 
             var nodes = await _dbContext.UserLayoutNodes
                 .AsNoTracking()
-                .Include(x => x.UserLayout)
-                .Where(x => x.ParentId == parentNode.Id && x.UserLayout.OwnerId == userId)
+                .Where(x => x.ParentId == parentNode.Id && x.OwnerId == userId)
                 .ProjectToType<UserLayoutNodeDto>()
                 .ToListAsync();
 
@@ -43,6 +43,7 @@ namespace Cotton.Server.Controllers
                 .Include(x => x.FileManifest)
                 .Where(x => x.UserLayoutNodeId == parentNode.Id)
                 .Select(x => x.FileManifest)
+                .Where(x => x.OwnerId == userId)
                 .ProjectToType<FileManifestDto>()
                 .ToListAsync();
 
