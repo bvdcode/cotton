@@ -19,7 +19,7 @@ namespace Cotton.Server
                 .AddStreamCipher()
                 .AddCottonCors()
                 .AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value)
-                .AddScoped<IStorage, FileStorage>()
+                .AddScoped<IStorage, EncryptedFileStorage>()
                 .AddOpenApi()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddControllers();
