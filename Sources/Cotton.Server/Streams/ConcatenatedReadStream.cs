@@ -2,7 +2,7 @@
 
 namespace Cotton.Server.Streams
 {
-    public class ConcatenatedReadStream(FileStorage storage, IEnumerable<string> hashes) : Stream
+    public class ConcatenatedReadStream(EncryptedFileStorage storage, IEnumerable<string> hashes) : Stream
     {
         private readonly IEnumerator<string> _hashes = hashes.GetEnumerator();
         private Stream? _current;

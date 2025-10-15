@@ -38,6 +38,7 @@ namespace Cotton.Server.Controllers
             using var tmp = WrapIfNonSeekable(file);
 
             byte[] computedHash = await SHA256.HashDataAsync(tmp);
+            tmp.Seek(default, SeekOrigin.Begin);
             if (!computedHash.SequenceEqual(hashBytes))
             {
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
@@ -50,7 +51,6 @@ namespace Cotton.Server.Controllers
                 // Must depend on owner/user authentication, no reason to delay for the same user
                 return CottonResult.Ok("Chunk was uploaded successfully.");
             }
-            tmp.Seek(default, SeekOrigin.Begin);
             try
             {
                 await _storage.WriteFileAsync(hash, tmp);
@@ -77,8 +77,11 @@ namespace Cotton.Server.Controllers
                 _logger.LogDebug("Uploaded file stream is seekable: {name}", file.FileName);
                 return stream;
             }
-            _logger.LogDebug("Uploaded file stream is NOT seekable: {name}", file.FileName);
-            return new MemoryStream(capacity: (int)file.Length);
+            _logger.LogInformation("Uploaded file stream is NOT seekable: {name}", file.FileName);
+            var wrapper = new MemoryStream(capacity: (int)file.Length);
+            stream.CopyTo(wrapper);
+            wrapper.Seek(default, SeekOrigin.Begin);
+            return wrapper;
         }
     }
 }

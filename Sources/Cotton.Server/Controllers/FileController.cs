@@ -89,8 +89,8 @@ namespace Cotton.Server.Controllers
             {
                 Name = normalized,
                 ContentType = request.ContentType,
+                SizeBytes = chunks.Sum(x => x.SizeBytes),
                 Sha256 = Convert.FromHexString(request.Sha256),
-                SizeBytes = chunks.Sum(x => x.SizeBytes)
             };
             await _dbContext.FileManifests.AddAsync(newFile);
 
