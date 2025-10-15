@@ -1,13 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Cotton.Server.Database.Abstractions;
 using Cotton.Server.Database.Models.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
-using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
 {
     [Table("user_layout_nodes")]
     [Index(nameof(UserLayoutId), nameof(Name), nameof(ParentId), nameof(Type), IsUnique = true)]
-    public class UserLayoutNode : BaseEntity<Guid>
+    public class UserLayoutNode : BaseOwnedEntity
     {
         [Column("user_layout_id")]
         public Guid UserLayoutId { get; set; }
