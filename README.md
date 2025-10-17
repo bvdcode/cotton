@@ -8,8 +8,6 @@
 [![Image Size](https://img.shields.io/docker/image-size/bvdcode/cotton/latest)](https://hub.docker.com/r/bvdcode/cotton/tags)
 [![License](https://img.shields.io/github/license/bvdcode/cotton)](LICENSE)
 [![CodeFactor](https://www.codefactor.io/repository/github/bvdcode/cotton/badge)](https://www.codefactor.io/repository/github/bvdcode/cotton)
-[![Pure C#](https://img.shields.io/badge/pure%20C%23-100%25-brightgreen)](#-pure-c-sharp)
-[![Managed Only](https://img.shields.io/badge/managed-only-blue)](#-pure-c-sharp)
 
 **Files. Snapshots. Search. Stream. Restore.**  
 One container. Two faces: simple up top, full control under the hood.  
