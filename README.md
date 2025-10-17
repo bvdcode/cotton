@@ -1,3 +1,5 @@
+<div align="center">
+
 # Cotton Cloud — a real cloud that doesn’t suck
 
 [![CI](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml)
@@ -6,22 +8,48 @@
 [![Image Size](https://img.shields.io/docker/image-size/bvdcode/cotton/latest)](https://hub.docker.com/r/bvdcode/cotton/tags)
 [![License](https://img.shields.io/github/license/bvdcode/cotton)](LICENSE)
 [![CodeFactor](https://www.codefactor.io/repository/github/bvdcode/cotton/badge)](https://www.codefactor.io/repository/github/bvdcode/cotton)
+[![Pure C#](https://img.shields.io/badge/pure%20C%23-100%25-brightgreen)](#-pure-c-sharp)
+[![Managed Only](https://img.shields.io/badge/managed-only-blue)](#-pure-c-sharp)
 
-> **Files. Snapshots. Search. Stream. Restore.**
-> One container. Two faces: simple up top, full control under the hood.
-> Built with **.NET / C#** because performance and sanity matter.
+**Files. Snapshots. Search. Stream. Restore.**  
+One container. Two faces: simple up top, full control under the hood.  
+Built with **.NET / C#** because performance and sanity matter.
+
+**100% pure C# - zero native deps. Zero P/Invoke. All managed.**
+
+</div>
 
 ---
 
 ## TL;DR
 
-* **Instant snapshots & restore**: flip a pointer, not terabytes. “As it was yesterday at 19:03” in \~seconds.
-* **Zero-bullshit install**: one container; first launch benchmarks hardware → picks **Minimal / Standard / Full** profile.
-* **Real search**: one “Big Indexer” turns *docs, images, audio, video* into text + vectors. Search names, content, speech, EXIF… all of it.
-* **Media that works**: originals preserved; background transcode to HLS/DASH; chunked video streaming; optional speech-to-text.
-* **Encryption by default**: per-object keys, modern AEAD; restore and share without leaking guts.
-* **Plugins, not bloat**: hard isolation, quotas, kill policies, signed releases, quality rating. No messenger/CRM apps.
-* **For everyone**: “Family” template (photos first) **and** “Power” template (everything on). Lift the hood anytime.
+- ⚡ Instant snapshots and restore - flip a pointer, not terabytes. “As it was yesterday at 19:03” in ~seconds.
+- 🧠 Real search - single indexer for docs, images, audio, video. Names, content, speech, EXIF. All of it.
+- 🎬 Media that works - originals preserved, background transcode to HLS/DASH, chunked streaming, optional speech-to-text.
+- 🔐 Encryption by default - per-object keys, modern AEAD, share and restore without leaking guts.
+- 🧩 Plugins, not bloat - hard isolation, quotas, signed releases. No messenger or CRM junk.
+- 🧰 Zero-bullshit install - one container. First launch benchmarks hardware → picks **Minimal / Standard / Full** profile.
+
+---
+
+## Why Cotton
+
+- S3-first storage with hot local cache
+- Content-addressable chunks with GC and retention graph
+- One-click migration from Nextcloud and other clouds
+- White-label instances and SSO integrations ready for business
+- Clean APIs and SDKs for C# and TypeScript
+
+---
+
+## 🔧 Pure C#
+
+**All .NET. All managed. No native binaries. No excuses.**
+
+- No native deps - no P/Invoke - no platform SDK glue
+- Identical behavior on Linux, Windows, macOS
+- Container friendly - deterministic builds and CI
+
 
 ---
 
