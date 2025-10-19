@@ -1,4 +1,5 @@
 ﻿using Mapster;
+using EasyExtensions;
 using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Extensions;
@@ -11,7 +12,6 @@ using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
-using EasyExtensions;
 
 namespace Cotton.Server.Controllers
 {
@@ -30,6 +30,7 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpGet(Routes.Files)]
+        [Obsolete("Use Layout resolver endpoints instead.")]
         public async Task<CottonResult> GetFiles()
         {
             var all = await _dbContext.FileManifests.ToListAsync();
@@ -40,8 +41,12 @@ namespace Cotton.Server.Controllers
         [HttpGet($"{Routes.Files}/{{fileManifestId:guid}}/download")]
         public async Task<IActionResult> DownloadFile([FromRoute] Guid fileManifestId)
         {
-            var manifest = await _dbContext.FileManifests.FindAsync(fileManifestId)
-                ?? throw new EntityNotFoundException(nameof(FileManifest));
+            Guid userId = User.GetUserId();
+            var manifest = await _dbContext.FileManifests.SingleOrDefaultAsync(x => x.Id == fileManifestId && x.OwnerId == userId);
+            if (manifest == null)
+            {
+                return CottonResult.NotFound("File manifest not found");
+            }
             string[] hashes = await _dbContext.FileManifestChunks
                 .Where(x => x.FileManifestId == fileManifestId)
                 .OrderBy(x => x.ChunkOrder)
