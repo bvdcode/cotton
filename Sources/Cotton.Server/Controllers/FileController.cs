@@ -21,25 +21,15 @@ namespace Cotton.Server.Controllers
     {
         [Authorize]
         [HttpDelete($"{Routes.Files}/{{fileManifestId:guid}}")]
-        public async Task<CottonResult> DeleteFile([FromRoute] Guid fileManifestId)
+        public async Task<IActionResult> DeleteFile([FromRoute] Guid fileManifestId)
         {
             var manifest = await _dbContext.FileManifests.FindAsync(fileManifestId)
                 ?? throw new EntityNotFoundException(nameof(FileManifest));
             _dbContext.FileManifests.Remove(manifest);
             await _dbContext.SaveChangesAsync();
             // TODO: Consider deleting or just dereferencing chunks that are no longer used by any file manifests
-            return CottonResult.Ok("File deleted successfully.");
-        }
-        
-        [Authorize]
-        [HttpGet(Routes.Files)]
-        [Obsolete("Use Layout resolver endpoints instead.")]
-        public async Task<CottonResult> GetFiles()
-        {
-            var all = await _dbContext.FileManifests.ToListAsync();
-            var mapped = all.Adapt<FileManifestDto[]>();
-            return CottonResult.Ok("Files retrieved successfully.", mapped);
-        }
+            return NoContent();
+        }        
 
         // TODO: Authorization: Ensure the user has access to this file
         [HttpGet($"{Routes.Files}/{{fileManifestId:guid}}/download")]
@@ -62,8 +52,9 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpPost(Routes.Files)]
-        public async Task<CottonResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
+        public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
+            Guid userId = User.GetUserId();
             var node = await _dbContext.UserLayoutNodes
                 .Where(x => x.Id == request.NodeId)
                 .SingleOrDefaultAsync();
@@ -97,6 +88,7 @@ namespace Cotton.Server.Controllers
 
             FileManifest newFile = new()
             {
+                OwnerId = userId,
                 Name = normalized,
                 ContentType = request.ContentType,
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
@@ -134,7 +126,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.UserLayoutNodeFiles.AddAsync(newNodeFile);
 
             await _dbContext.SaveChangesAsync();
-            return CottonResult.Ok("File created successfully.", newFile.Adapt<FileManifestDto>());
+            return Ok(newFile.Adapt<FileManifestDto>());
         }
     }
 }
