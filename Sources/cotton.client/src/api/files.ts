@@ -58,12 +58,22 @@ export function getDownloadUrl(fileManifestId: string): string {
   return buildDownloadUrl(fileManifestId);
 }
 
+type CreateFileResponse = CottonResult<FileManifestDto> | FileManifestDto;
+
 export async function createFileFromChunks(req: CreateFileRequest): Promise<FileManifestDto> {
-  const res = await api.post<CottonResult<FileManifestDto>>(
-    `${API_ENDPOINTS.files}`,
-    req,
-  );
-  const envelope = res.data;
-  if (!envelope.success || !envelope.data) throw new Error(envelope.message || "Unknown error");
-  return envelope.data;
+  const res = await api.post<CreateFileResponse>(`${API_ENDPOINTS.files}`, req);
+  const data = res.data;
+  if (isEnvelope<FileManifestDto>(data)) {
+    if (!data.success || !data.data) {
+      throw new Error(data.message || "Server returned empty response");
+    }
+    return data.data;
+  }
+  return data as FileManifestDto;
+}
+
+function isEnvelope<T>(val: unknown): val is CottonResult<T> {
+  if (!val || typeof val !== "object") return false;
+  const rec = val as Record<string, unknown>;
+  return typeof rec["success"] === "boolean" && ("data" in rec || "message" in rec);
 }

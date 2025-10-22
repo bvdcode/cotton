@@ -13,7 +13,5 @@ namespace Cotton.Server.Models.Dto
         public string ContentType { get; set; } = null!;
 
         public long SizeBytes { get; set; }
-
-        public byte[] Sha256 { get; set; } = null!;
     }
 }
