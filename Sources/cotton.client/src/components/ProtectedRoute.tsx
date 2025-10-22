@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../stores/authStore";
+import Box from "@mui/material/Box";
+import LinearProgress from "@mui/material/LinearProgress";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,10 +13,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRole,
 }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { user, token, ensureLogin } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  useEffect(() => {
+    if (!token) {
+      // Trigger fake login to obtain token; do not redirect to /login
+      ensureLogin().catch(() => {
+        /* swallow error, fallback will navigate below */
+      });
+    }
+  }, [token, ensureLogin]);
+
+  // While obtaining token, show a lightweight loader to prevent flicker
+  if (!token) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <LinearProgress />
+      </Box>
+    );
   }
 
   if (requiredRole && (!user?.role || user.role !== requiredRole)) {

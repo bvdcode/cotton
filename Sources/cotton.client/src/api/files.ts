@@ -1,5 +1,5 @@
-import { API_BASE_URL, API_ENDPOINTS, buildDownloadUrl } from "../config.ts";
-import { apiFetch } from "./http.ts";
+import { API_ENDPOINTS, buildDownloadUrl } from "../config.ts";
+import api from "./http.ts";
 
 // CottonResult envelope
 interface CottonResult<T> {
@@ -21,7 +21,6 @@ export interface FileManifestDto {
 export interface CreateFileRequest {
   chunkHashes: string[];
   name: string;
-  folder: string;
   contentType: string;
   sha256: string; // full file hash
   nodeId: string; // layout node id to attach the file to
@@ -36,22 +35,21 @@ export async function uploadChunk(chunk: Blob, hash: string, filename?: string):
   formData.append("file", chunk, filename ?? "chunk.bin");
   formData.append("hash", hash);
 
-  const res = await apiFetch(`${API_BASE_URL}${API_ENDPOINTS.chunk}`, {
-    method: "POST",
-    body: formData,
+  const res = await api.post(`${API_ENDPOINTS.chunk}`, formData, {
+    // Let the browser set the multipart boundary automatically
+    headers: { },
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Chunk upload failed: ${res.status} ${text}`);
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Chunk upload failed: ${res.status}`);
   }
-  // If server returns something meaningful, parse it; for now just ok
   return { ok: true };
 }
 
 export async function listFiles(): Promise<FileManifestDto[]> {
-  const res = await apiFetch(`${API_BASE_URL}${API_ENDPOINTS.files}`);
-  if (!res.ok) throw new Error(`Files fetch failed: ${res.status}`);
-  const envelope = (await res.json()) as CottonResult<FileManifestDto[]>;
+  const res = await api.get<CottonResult<FileManifestDto[]>>(
+    `${API_ENDPOINTS.files}`,
+  );
+  const envelope = res.data;
   if (!envelope.success) throw new Error(envelope.message);
   return envelope.data ?? [];
 }
@@ -61,13 +59,11 @@ export function getDownloadUrl(fileManifestId: string): string {
 }
 
 export async function createFileFromChunks(req: CreateFileRequest): Promise<FileManifestDto> {
-  const res = await apiFetch(`${API_BASE_URL}${API_ENDPOINTS.files}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
-  });
-  if (!res.ok) throw new Error(`Create file failed: ${res.status}`);
-  const envelope = (await res.json()) as CottonResult<FileManifestDto>;
+  const res = await api.post<CottonResult<FileManifestDto>>(
+    `${API_ENDPOINTS.files}`,
+    req,
+  );
+  const envelope = res.data;
   if (!envelope.success || !envelope.data) throw new Error(envelope.message || "Unknown error");
   return envelope.data;
 }

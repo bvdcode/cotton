@@ -1,10 +1,20 @@
+import axios from "axios";
+import type { InternalAxiosRequestConfig, AxiosRequestHeaders } from "axios";
+import { API_BASE_URL } from "../config.ts";
 import { useAuth } from "../stores/authStore.ts";
 
-export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const { token } = useAuth.getState();
-  const headers = new Headers(init.headers || {});
   if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+    const headers: AxiosRequestHeaders = (config.headers ?? {}) as AxiosRequestHeaders;
+    headers["Authorization"] = `Bearer ${token}`;
+    config.headers = headers;
   }
-  return fetch(input, { ...init, headers });
-}
+  return config;
+});
+
+export default api;

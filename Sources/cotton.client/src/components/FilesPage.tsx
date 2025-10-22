@@ -133,7 +133,6 @@ const FilesPage = () => {
       await createFileFromChunks({
         chunkHashes: hashesLocal,
         name: selectedFile.name,
-        folder: "", // optional folder; adjust when folder selection UI appears
         contentType: selectedFile.type || "application/octet-stream",
         sha256: fileHash,
         nodeId: currentNode!.id,
