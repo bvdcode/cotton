@@ -17,7 +17,7 @@ namespace Cotton.Server.Controllers
     {
         [Authorize]
         [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/children")]
-        public async Task<CottonResult> GetChildNodes([FromRoute] Guid nodeId,
+        public async Task<IActionResult> GetChildNodes([FromRoute] Guid nodeId,
             [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
         {
             Guid userId = User.GetUserId();
@@ -55,13 +55,13 @@ namespace Cotton.Server.Controllers
                 Nodes = nodes,
                 Files = files
             };
-            return CottonResult.Ok("Child nodes retrieved successfully.", result);
+            return Ok(result);
         }
 
         [Authorize]
         [HttpGet($"{Routes.Layouts}/resolver")]
         [HttpGet($"{Routes.Layouts}/resolver/{{*path}}")]
-        public async Task<CottonResult> ResolveLayout([FromRoute] string? path,
+        public async Task<IActionResult> ResolveLayout([FromRoute] string? path,
             [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -91,7 +91,7 @@ namespace Cotton.Server.Controllers
                 currentNode = nextNode;
             }
             var mapped = currentNode.Adapt<UserLayoutNodeDto>();
-            return CottonResult.Ok("Layout node resolved successfully.", mapped);
+            return Ok(mapped);
         }
     }
 }

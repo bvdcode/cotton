@@ -29,17 +29,6 @@ namespace Cotton.Server.Models
             return objectResult.ExecuteResultAsync(context);
         }
 
-        public static CottonResult Ok(string message, object? data = null)
-        {
-            return new()
-            {
-                Data = data,
-                Success = true, 
-                Message = message,
-                StatusCode = HttpStatusCode.OK
-            };
-        }
-
         public static CottonResult BadRequest(string message)
         {
             return new()

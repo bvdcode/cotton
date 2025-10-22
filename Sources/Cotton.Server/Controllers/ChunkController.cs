@@ -51,7 +51,7 @@ namespace Cotton.Server.Controllers
             {
                 // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
                 // Must depend on owner/user authentication, no reason to delay for the same user
-                return CottonResult.Ok("Chunk was uploaded successfully.");
+                return Created();
             }
             try
             {
@@ -63,7 +63,7 @@ namespace Cotton.Server.Controllers
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
                 await _dbContext.SaveChangesAsync();
-                return CottonResult.Ok("Chunk was uploaded successfully.");
+                return Created();
             }
             catch (Exception)
             {
