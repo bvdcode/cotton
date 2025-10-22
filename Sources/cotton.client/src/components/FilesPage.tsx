@@ -11,16 +11,11 @@ import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { chunkBlob } from "../utils/chunk.ts";
 import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
-import {
-  uploadChunk,
-  createFileFromChunks,
-  listFiles,
-  getDownloadUrl,
-  type FileManifestDto,
-} from "../api/files.ts";
+import { uploadChunk, createFileFromChunks, getDownloadUrl } from "../api/files.ts";
 import Paper from "@mui/material/Paper";
 import Link from "@mui/material/Link";
 // Removed duplicate import of hashBlob
+import { useLayoutStore } from "../stores/layoutStore.ts";
 
 const FilesPage = () => {
   const { t } = useTranslation();
@@ -32,7 +27,7 @@ const FilesPage = () => {
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [files, setFiles] = useState<FileManifestDto[]>([]);
+  const { currentNode, children, loading: layoutLoading, error: layoutError, resolveRoot, loadChildren, navigateToNode } = useLayoutStore();
   const [speedbps, setSpeedbps] = useState<number>(0);
 
   const algo: string | null = useMemo(() => {
@@ -51,18 +46,10 @@ const FilesPage = () => {
     setError(null);
   };
 
-  const loadFiles = async () => {
-    try {
-      const list = await listFiles();
-      setFiles(list);
-    } catch {
-      // ignore list errors here, show with alert if needed
-    }
-  };
-
   useEffect(() => {
-    loadFiles();
-  }, []);
+    // Resolve root node and load its children
+    resolveRoot();
+  }, [resolveRoot]);
 
   const onUpload = async () => {
     if (!selectedFile) return;
@@ -136,7 +123,8 @@ const FilesPage = () => {
         contentType: selectedFile.type || "application/octet-stream",
         sha256: fileHash,
       });
-      await loadFiles();
+      // refresh current node children after upload
+      await loadChildren(currentNode?.id);
     } catch (_e) {
       const msg = _e instanceof Error ? _e.message : String(_e);
       setError(msg);
@@ -154,8 +142,10 @@ const FilesPage = () => {
         {t("files.subtitle", "Manage and browse your files here.")}
       </Typography>
       <Box sx={{ mt: 2 }}>
-        {loadingSettings && <LinearProgress />}
-        {errorSettings && <Alert severity="error">{errorSettings}</Alert>}
+        {(loadingSettings || layoutLoading) && <LinearProgress />}
+        {(errorSettings || layoutError) && (
+          <Alert severity="error">{errorSettings ?? layoutError}</Alert>
+        )}
         {settings && (
           <Alert severity="info">
             {t(
@@ -233,7 +223,39 @@ const FilesPage = () => {
             gap: 2,
           }}
         >
-          {files.map((f) => (
+          {/* Folders (nodes) */}
+          {children?.nodes.map((n) => (
+            <Paper
+              key={n.id}
+              elevation={2}
+              sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1, cursor: "pointer" }}
+              onClick={() => navigateToNode(n)}
+            >
+              <Box
+                sx={{
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  bgcolor: "action.hover",
+                  borderRadius: 1,
+                  backgroundImage: `url('https://cdn-icons-png.flaticon.com/512/716/716784.png')`,
+                  backgroundSize: "contain",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                }}
+              />
+              <Box>
+                <Typography variant="body2" noWrap title={n.name}>
+                  {n.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Folder
+                </Typography>
+              </Box>
+            </Paper>
+          ))}
+
+          {/* Files */}
+          {children?.files.map((f) => (
             <Paper
               key={f.id}
               elevation={2}
