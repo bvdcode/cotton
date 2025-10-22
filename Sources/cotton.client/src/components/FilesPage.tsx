@@ -59,6 +59,7 @@ const FilesPage = () => {
       );
       return;
     }
+    // currentNode is resolved on mount; no manual folder selection required
     setIsUploading(true);
     setError(null);
     const totalChunks = Math.ceil(
@@ -122,6 +123,7 @@ const FilesPage = () => {
         folder: "", // optional folder; adjust when folder selection UI appears
         contentType: selectedFile.type || "application/octet-stream",
         sha256: fileHash,
+        nodeId: currentNode!.id,
       });
       // refresh current node children after upload
       await loadChildren(currentNode?.id);
@@ -179,7 +181,7 @@ const FilesPage = () => {
         <Button
           variant="contained"
           onClick={onUpload}
-          disabled={!selectedFile || !settings || isUploading}
+          disabled={!selectedFile || !settings || isUploading || !currentNode}
         >
           {isUploading
             ? t("files.uploading", "Uploading...")
