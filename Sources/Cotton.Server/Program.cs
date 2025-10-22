@@ -34,8 +34,8 @@ namespace Cotton.Server
                 app.MapOpenApi();
             }
             app.UseCottonCors();
-            app.UseAuthorization()
-                .UseAuthentication();
+            app.UseAuthentication()
+                .UseAuthorization();
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();

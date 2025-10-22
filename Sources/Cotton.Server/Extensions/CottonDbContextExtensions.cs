@@ -24,6 +24,7 @@ namespace Cotton.Server.Extensions
                 {
                     Name = "/",
                     Type = type,
+                    OwnerId = ownerId,
                     UserLayoutId = layoutId,
                 };
                 await dbContext.UserLayoutNodes.AddAsync(newNode);

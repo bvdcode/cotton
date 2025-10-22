@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import api from "../api/http.ts";
+import { API_ENDPOINTS } from "../config.ts";
 
 type Role = "User" | "Admin";
 
@@ -34,13 +36,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     }),
   login: async () => {
     // Fake login endpoint; POST any body
-    const res = await fetch("http://localhost:5182/api/v1/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ any: "thing" }),
-    });
-    if (!res.ok) throw new Error(`Login failed: ${res.status}`);
-    const { token } = (await res.json()) as { token: string };
+    const res = await api.post<{ token: string }>(
+      `${API_ENDPOINTS.auth}/login`,
+      { any: "thing" },
+    );
+    const { token } = res.data;
     set({ token, isAuthenticated: true });
   },
   ensureLogin: async () => {
