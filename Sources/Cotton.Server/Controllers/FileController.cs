@@ -60,7 +60,7 @@ namespace Cotton.Server.Controllers
         public async Task<CottonResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
             var node = await _dbContext.UserLayoutNodes
-                .Where(x => x.Id == request.UserLayoutNodeId)
+                .Where(x => x.Id == request.NodeId)
                 .SingleOrDefaultAsync();
             if (node == null)
             {
