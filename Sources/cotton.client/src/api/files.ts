@@ -23,6 +23,7 @@ export interface CreateFileRequest {
   folder: string;
   contentType: string;
   sha256: string; // full file hash
+  nodeId: string; // layout node id to attach the file to
 }
 
 export interface UploadChunkResponse {
