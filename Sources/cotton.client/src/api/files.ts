@@ -1,4 +1,5 @@
 import { API_BASE_URL, API_ENDPOINTS, buildDownloadUrl } from "../config.ts";
+import { apiFetch } from "./http.ts";
 
 // CottonResult envelope
 interface CottonResult<T> {
@@ -35,7 +36,7 @@ export async function uploadChunk(chunk: Blob, hash: string, filename?: string):
   formData.append("file", chunk, filename ?? "chunk.bin");
   formData.append("hash", hash);
 
-  const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.chunk}`, {
+  const res = await apiFetch(`${API_BASE_URL}${API_ENDPOINTS.chunk}`, {
     method: "POST",
     body: formData,
   });
@@ -48,7 +49,7 @@ export async function uploadChunk(chunk: Blob, hash: string, filename?: string):
 }
 
 export async function listFiles(): Promise<FileManifestDto[]> {
-  const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.files}`);
+  const res = await apiFetch(`${API_BASE_URL}${API_ENDPOINTS.files}`);
   if (!res.ok) throw new Error(`Files fetch failed: ${res.status}`);
   const envelope = (await res.json()) as CottonResult<FileManifestDto[]>;
   if (!envelope.success) throw new Error(envelope.message);
@@ -60,7 +61,7 @@ export function getDownloadUrl(fileManifestId: string): string {
 }
 
 export async function createFileFromChunks(req: CreateFileRequest): Promise<FileManifestDto> {
-  const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.files}`, {
+  const res = await apiFetch(`${API_BASE_URL}${API_ENDPOINTS.files}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),

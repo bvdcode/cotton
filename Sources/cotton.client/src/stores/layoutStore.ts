@@ -9,6 +9,7 @@ interface LayoutState {
   resolveRoot: () => Promise<void>;
   loadChildren: (nodeId?: string) => Promise<void>;
   navigateToNode: (node: LayoutNodeDto) => Promise<void>;
+  openNodeById: (nodeId: string) => Promise<void>;
 }
 
 export const useLayoutStore = create<LayoutState>((set, get) => ({
@@ -42,6 +43,10 @@ export const useLayoutStore = create<LayoutState>((set, get) => ({
   navigateToNode: async (node: LayoutNodeDto) => {
     set({ currentNode: node });
     await get().loadChildren(node.id);
+  },
+  openNodeById: async (nodeId: string) => {
+    set({ currentNode: { id: nodeId, userLayoutId: "", parentId: null, name: "", createdAt: "", updatedAt: "" } as LayoutNodeDto });
+    await get().loadChildren(nodeId);
   },
 }));
 
