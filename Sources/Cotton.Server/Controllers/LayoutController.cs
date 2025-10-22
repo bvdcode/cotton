@@ -1,19 +1,21 @@
-﻿using Mapster;
-using EasyExtensions;
-using Cotton.Server.Models;
-using Cotton.Server.Database;
-using Cotton.Server.Models.Dto;
-using Microsoft.AspNetCore.Mvc;
-using Cotton.Server.Extensions;
-using Microsoft.EntityFrameworkCore;
+﻿using Cotton.Server.Database;
 using Cotton.Server.Database.Models;
 using Cotton.Server.Database.Models.Enums;
+using Cotton.Server.Extensions;
+using Cotton.Server.Models;
+using Cotton.Server.Models.Dto;
+using EasyExtensions;
+using Mapster;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class LayoutController(CottonDbContext _dbContext) : ControllerBase
     {
+        [Authorize]
         [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/children")]
         public async Task<CottonResult> GetChildNodes([FromRoute] Guid nodeId,
             [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
@@ -56,6 +58,7 @@ namespace Cotton.Server.Controllers
             return CottonResult.Ok("Child nodes retrieved successfully.", result);
         }
 
+        [Authorize]
         [HttpGet($"{Routes.Layouts}/resolver")]
         [HttpGet($"{Routes.Layouts}/resolver/{{*path}}")]
         public async Task<CottonResult> ResolveLayout([FromRoute] string? path,

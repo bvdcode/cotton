@@ -1,8 +1,7 @@
 ﻿using Cotton.Server.Database;
 using Microsoft.AspNetCore.Mvc;
-using EasyExtensions.AspNetCore.Authorization.Abstractions;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using EasyExtensions.AspNetCore.Authorization.Abstractions;
 
 namespace Cotton.Server.Controllers
 {

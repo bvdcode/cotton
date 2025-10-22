@@ -1,10 +1,11 @@
 export const API_BASE_URL = "http://localhost:5182";
 
 export const API_ENDPOINTS = {
-  settings: "/api/v1/settings",
-  chunk: "/api/v1/chunks",
+  auth: "/api/v1/auth",
   files: "/api/v1/files",
+  chunk: "/api/v1/chunks",
   layouts: "/api/v1/layouts",
+  settings: "/api/v1/settings",
 } as const;
 
 export const buildDownloadUrl = (fileManifestId: string) =>

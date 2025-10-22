@@ -6,12 +6,14 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Server.Database.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Cotton.Server.Controllers
 {
     public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings, 
         IStorage _storage, ILogger<ChunkController> _logger) : ControllerBase
     {
+        [Authorize]
         [HttpPost(Routes.Chunks)]
         [RequestSizeLimit(100 * 1024 * 1024)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)

@@ -16,6 +16,7 @@ import Paper from "@mui/material/Paper";
 import Link from "@mui/material/Link";
 // Removed duplicate import of hashBlob
 import { useLayoutStore } from "../stores/layoutStore.ts";
+import { useNavigate, useParams } from "react-router-dom";
 
 const FilesPage = () => {
   const { t } = useTranslation();
@@ -27,7 +28,9 @@ const FilesPage = () => {
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { currentNode, children, loading: layoutLoading, error: layoutError, resolveRoot, loadChildren, navigateToNode } = useLayoutStore();
+  const { currentNode, children, loading: layoutLoading, error: layoutError, resolveRoot, loadChildren, openNodeById } = useLayoutStore();
+  const navigate = useNavigate();
+  const { nodeId } = useParams();
   const [speedbps, setSpeedbps] = useState<number>(0);
 
   const algo: string | null = useMemo(() => {
@@ -47,9 +50,19 @@ const FilesPage = () => {
   };
 
   useEffect(() => {
-    // Resolve root node and load its children
-    resolveRoot();
-  }, [resolveRoot]);
+    // If route has nodeId param, open it; otherwise resolve root and navigate to it
+    (async () => {
+      if (nodeId) {
+        await openNodeById(nodeId);
+      } else {
+        await resolveRoot();
+        if (currentNode?.id) {
+          navigate(`/app/files/${currentNode.id}`, { replace: true });
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeId]);
 
   const onUpload = async () => {
     if (!selectedFile) return;
@@ -126,7 +139,7 @@ const FilesPage = () => {
         nodeId: currentNode!.id,
       });
       // refresh current node children after upload
-      await loadChildren(currentNode?.id);
+  await loadChildren(currentNode?.id);
     } catch (_e) {
       const msg = _e instanceof Error ? _e.message : String(_e);
       setError(msg);
@@ -231,7 +244,7 @@ const FilesPage = () => {
               key={n.id}
               elevation={2}
               sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1, cursor: "pointer" }}
-              onClick={() => navigateToNode(n)}
+              onClick={() => navigate(`/app/files/${n.id}`)}
             >
               <Box
                 sx={{
