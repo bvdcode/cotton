@@ -6,6 +6,7 @@ using Cotton.Server.Abstractions;
 using Microsoft.Extensions.Options;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
+using EasyExtensions.AspNetCore.Authorization.Extensions;
 
 namespace Cotton.Server
 {
@@ -22,7 +23,8 @@ namespace Cotton.Server
                 .AddScoped<IStorage, EncryptedFileStorage>()
                 .AddOpenApi()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
-                .AddControllers();
+                .AddControllers().Services
+                .AddJwt();
 
             var app = builder.Build();
             app.UseDefaultFiles();
@@ -32,7 +34,8 @@ namespace Cotton.Server
                 app.MapOpenApi();
             }
             app.UseCottonCors();
-            app.UseAuthorization();
+            app.UseAuthorization()
+                .UseAuthentication();
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();

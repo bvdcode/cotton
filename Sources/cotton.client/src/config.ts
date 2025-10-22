@@ -4,8 +4,7 @@ export const API_ENDPOINTS = {
   settings: "/api/v1/settings",
   chunk: "/api/v1/chunks",
   files: "/api/v1/files",
-  layoutsResolver: "/api/v1/layouts/resolver",
-  layoutsNodes: "/api/v1/layouts/nodes",
+  layouts: "/api/v1/layouts",
 } as const;
 
 export const buildDownloadUrl = (fileManifestId: string) =>
