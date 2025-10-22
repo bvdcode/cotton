@@ -2,7 +2,7 @@
 {
     public class CreateFileRequest
     {
-        public Guid UserLayoutNodeId { get; set; }
+        public Guid NodeId { get; set; }
         public string[] ChunkHashes { get; set; } = [];
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
