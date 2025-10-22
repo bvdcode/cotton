@@ -11,13 +11,18 @@ import AppThemeProvider from "./providers/ThemeProvider.tsx";
 import { AppLayout, ProtectedRoute, FilesPage } from "./components/index.ts";
 import { useEffect } from "react";
 import { useSettings } from "./stores/settingsStore.ts";
+import { useAuth } from "./stores/authStore.ts";
 // i18n is initialized in main.tsx
 
 function App() {
   const loadSettings = useSettings((s) => s.load);
+  const ensureLogin = useAuth((s) => s.ensureLogin);
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    (async () => {
+      await ensureLogin();
+      await loadSettings();
+    })();
+  }, [ensureLogin, loadSettings]);
   return (
     <Box sx={{ position: "fixed", inset: 0 }}>
       <AppThemeProvider>
@@ -35,7 +40,10 @@ function App() {
               >
                 <Route index element={<>Home</>} />
                 <Route path="dashboard" element={<>Dashboard</>} />
-                <Route path="files" element={<FilesPage />} />
+                <Route path="files">
+                  <Route index element={<FilesPage />} />
+                  <Route path=":nodeId" element={<FilesPage />} />
+                </Route>
                 <Route
                   path="options"
                   element={

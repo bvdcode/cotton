@@ -1,23 +1,25 @@
-﻿using Mapster;
-using EasyExtensions;
-using Cotton.Server.Models;
+﻿using Cotton.Server.Abstractions;
 using Cotton.Server.Database;
-using Cotton.Server.Extensions;
-using Cotton.Server.Models.Dto;
-using Microsoft.AspNetCore.Mvc;
-using Cotton.Server.Validators;
-using Cotton.Server.Abstractions;
-using System.Security.Cryptography;
-using Cotton.Server.Models.Requests;
-using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models;
+using Cotton.Server.Extensions;
+using Cotton.Server.Models;
+using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
+using Cotton.Server.Validators;
+using EasyExtensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using Mapster;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class FileController(CottonDbContext _dbContext, IStorage _storage) : ControllerBase
     {
+        [Authorize]
         [HttpDelete($"{Routes.Files}/{{fileManifestId:guid}}")]
         public async Task<CottonResult> DeleteFile([FromRoute] Guid fileManifestId)
         {
@@ -28,7 +30,8 @@ namespace Cotton.Server.Controllers
             // TODO: Consider deleting or just dereferencing chunks that are no longer used by any file manifests
             return CottonResult.Ok("File deleted successfully.");
         }
-
+        
+        [Authorize]
         [HttpGet(Routes.Files)]
         [Obsolete("Use Layout resolver endpoints instead.")]
         public async Task<CottonResult> GetFiles()
@@ -38,6 +41,7 @@ namespace Cotton.Server.Controllers
             return CottonResult.Ok("Files retrieved successfully.", mapped);
         }
 
+        // TODO: Authorization: Ensure the user has access to this file
         [HttpGet($"{Routes.Files}/{{fileManifestId:guid}}/download")]
         public async Task<IActionResult> DownloadFile([FromRoute] Guid fileManifestId)
         {
@@ -56,6 +60,7 @@ namespace Cotton.Server.Controllers
             return File(stream, manifest.ContentType, manifest.Name);
         }
 
+        [Authorize]
         [HttpPost(Routes.Files)]
         public async Task<CottonResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
