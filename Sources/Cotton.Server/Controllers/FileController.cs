@@ -35,8 +35,7 @@ namespace Cotton.Server.Controllers
         [HttpGet($"{Routes.Files}/{{fileManifestId:guid}}/download")]
         public async Task<IActionResult> DownloadFile([FromRoute] Guid fileManifestId)
         {
-            Guid userId = User.GetUserId();
-            var manifest = await _dbContext.FileManifests.SingleOrDefaultAsync(x => x.Id == fileManifestId && x.OwnerId == userId);
+            var manifest = await _dbContext.FileManifests.SingleOrDefaultAsync(x => x.Id == fileManifestId);
             if (manifest == null)
             {
                 return CottonResult.NotFound("File manifest not found");
