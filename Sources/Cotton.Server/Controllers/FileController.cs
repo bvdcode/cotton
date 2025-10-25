@@ -119,7 +119,7 @@ namespace Cotton.Server.Controllers
 
             UserLayoutNodeFile newNodeFile = new()
             {
-                UserLayoutNode = node,
+                Node = node,
                 FileManifest = newFile,
             };
             await _dbContext.UserLayoutNodeFiles.AddAsync(newNodeFile);

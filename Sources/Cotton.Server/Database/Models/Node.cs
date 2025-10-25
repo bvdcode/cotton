@@ -5,12 +5,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Server.Database.Models
 {
-    [Table("user_layout_nodes")]
-    [Index(nameof(UserLayoutId), nameof(Name), nameof(ParentId), nameof(Type), IsUnique = true)]
-    public class UserLayoutNode : BaseOwnedEntity
+    [Table("nodes")]
+    [Index(nameof(LayoutId), nameof(Name), nameof(ParentId), nameof(Type), IsUnique = true)]
+    public class Node : BaseOwnedEntity
     {
-        [Column("user_layout_id")]
-        public Guid UserLayoutId { get; set; }
+        [Column("layout_id")]
+        public Guid LayoutId { get; set; }
 
         [Column("parent_id")]
         public Guid? ParentId { get; set; }
@@ -22,7 +22,7 @@ namespace Cotton.Server.Database.Models
         // TODO: make sure the parent node type is the same as this node type
         public UserLayoutNodeType Type { get; set; }
 
-        public virtual UserLayout UserLayout { get; set; } = null!;
-        public virtual UserLayoutNode? Parent { get; set; } = null!;
+        public virtual Layout Layout { get; set; } = null!;
+        public virtual Node? Parent { get; set; } = null!;
     }
 }
