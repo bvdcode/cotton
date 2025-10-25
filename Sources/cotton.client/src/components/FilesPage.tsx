@@ -22,15 +22,6 @@ import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
 
 const FilesPage = () => {
-  const { t } = useTranslation();
-  const settings = useSettings((s) => s.settings);
-  const loadingSettings = useSettings((s) => s.loading);
-  const errorSettings = useSettings((s) => s.error);
-
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [progress, setProgress] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const {
     currentNode,
     children,
@@ -40,9 +31,17 @@ const FilesPage = () => {
     loadChildren,
     openNodeById,
   } = useLayoutStore();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { nodeId } = useParams();
+  const settings = useSettings((s) => s.settings);
+  const errorSettings = useSettings((s) => s.error);
+  const [progress, setProgress] = useState<number>(0);
   const [speedbps, setSpeedbps] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const loadingSettings = useSettings((s) => s.loading);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const algo: string | null = useMemo(() => {
     if (!settings) return null;
