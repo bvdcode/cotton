@@ -69,12 +69,15 @@ const FilesPage = () => {
       if (nodeId) {
         await openNodeById(nodeId);
       } else {
-        // Only resolve and SHOW root in-place; DO NOT navigate.
-        // This keeps browser Back working (back to /app/files stays on index without forced redirect).
+        // Resolve root, then navigate to it so the URL reflects the actual root node ID.
         await resolveRoot();
+        const rootNode = useLayoutStore.getState().currentNode;
+        if (rootNode?.id) {
+          navigate(`/app/files/${rootNode.id}`, { replace: true });
+        }
       }
     })();
-  }, [nodeId, openNodeById, resolveRoot]);
+  }, [nodeId, navigate, openNodeById, resolveRoot]);
 
   const onUpload = async () => {
     if (!selectedFile) return;
@@ -252,7 +255,6 @@ const FilesPage = () => {
       )}
 
       <Box sx={{ mt: 4 }}>
-        <Typography variant="h6">{t("files.filesGrid")}</Typography>
         <Box
           sx={{
             mt: 1,
