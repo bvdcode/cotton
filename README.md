@@ -1,7 +1,10 @@
+> ⚠️ **The Project Status: Pre-Alpha**
+
 <div align="center">
 
 # Cotton Cloud — a real cloud that doesn’t suck
 
+![status-prealpha](https://img.shields.io/badge/status-pre--alpha-red)
 [![CI](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml)
 [![Release](https://img.shields.io/github/v/release/bvdcode/cotton?sort=semver)](https://github.com/bvdcode/cotton/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/bvdcode/cotton)](https://hub.docker.com/r/bvdcode/cotton)
