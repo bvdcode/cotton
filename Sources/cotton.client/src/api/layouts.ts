@@ -33,9 +33,18 @@ export async function resolvePath(path?: string): Promise<LayoutNodeDto> {
   }
 }
 
-export async function getNodeChildren(nodeId: string): Promise<LayoutChildrenDto> {
+export async function getNodeChildren(
+  nodeId: string,
+): Promise<LayoutChildrenDto> {
   const res = await api.get<LayoutChildrenDto>(
     `${API_ENDPOINTS.layouts}/nodes/${encodeURIComponent(nodeId)}/children`,
+  );
+  return res.data;
+}
+
+export async function getNode(nodeId: string): Promise<LayoutNodeDto> {
+  const res = await api.get<LayoutNodeDto>(
+    `${API_ENDPOINTS.layouts}/nodes/${encodeURIComponent(nodeId)}`,
   );
   return res.data;
 }

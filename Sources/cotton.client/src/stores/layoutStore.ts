@@ -4,6 +4,7 @@ import { getNodeChildren, resolvePath, type LayoutChildrenDto, type LayoutNodeDt
 interface LayoutState {
   currentNode: LayoutNodeDto | null;
   children: LayoutChildrenDto | null;
+  parents: Record<string, string | null>; // nodeId -> parentId
   loading: boolean;
   error: string | null;
   resolveRoot: () => Promise<void>;
@@ -15,13 +16,14 @@ interface LayoutState {
 export const useLayoutStore = create<LayoutState>((set, get) => ({
   currentNode: null,
   children: null,
+  parents: {},
   loading: false,
   error: null,
   resolveRoot: async () => {
     set({ loading: true, error: null });
     try {
       const node = await resolvePath();
-      set({ currentNode: node, loading: false });
+      set((s) => ({ currentNode: node, loading: false, parents: { ...s.parents, [node.id]: node.parentId ?? null } }));
       await get().loadChildren(node.id);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -34,18 +36,28 @@ export const useLayoutStore = create<LayoutState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await getNodeChildren(id);
-      set({ children: data, loading: false });
+      // update parents map for all child nodes
+      set((s) => ({
+        children: data,
+        loading: false,
+        parents: {
+          ...s.parents,
+          ...Object.fromEntries((data.nodes ?? []).map((n) => [n.id, id])),
+        },
+      }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       set({ error: msg, loading: false });
     }
   },
   navigateToNode: async (node: LayoutNodeDto) => {
-    set({ currentNode: node });
+    set((s) => ({ currentNode: node, parents: { ...s.parents, [node.id]: node.parentId ?? s.parents[node.id] ?? null } }));
     await get().loadChildren(node.id);
   },
   openNodeById: async (nodeId: string) => {
-    set({ currentNode: { id: nodeId, userLayoutId: "", parentId: null, name: "", createdAt: "", updatedAt: "" } as LayoutNodeDto });
+    // Do not call missing endpoints; use known parent mapping if available
+    const pid = get().parents[nodeId] ?? null;
+    set({ currentNode: { id: nodeId, userLayoutId: "", parentId: pid, name: "", createdAt: "", updatedAt: "" } as LayoutNodeDto });
     await get().loadChildren(nodeId);
   },
 }));
