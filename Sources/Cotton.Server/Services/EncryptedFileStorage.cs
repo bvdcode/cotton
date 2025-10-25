@@ -16,6 +16,9 @@ namespace Cotton.Server.Services
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
 
+        // TODO: Add hot cache for frequently accessed files
+        // 2 layers: fast SSD cache, RAM cache for very hot files
+
         public EncryptedFileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<EncryptedFileStorage> logger)
         {
             _logger = logger;
