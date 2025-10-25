@@ -20,7 +20,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
 import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
-import { CreateNewFolder } from "@mui/icons-material";
+import { ArrowBack, CreateNewFolder } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { createFolder } from "../api/layout.ts";
 
@@ -190,6 +190,17 @@ const FilesPage = () => {
           >
             {isUploading ? t("files.uploading") : t("files.upload")}
           </Button>
+          <IconButton
+            disabled={!currentNode}
+            onClick={() => {
+              // get back to parent node
+              if (currentNode?.parentId) {
+                navigate(`/app/files/${currentNode.parentId}`);
+              }
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
           <IconButton
             title={t("files.newFolder", "New folder")}
             onClick={async () => {
