@@ -1,22 +1,25 @@
-import { useTranslation } from "react-i18next";
-import { useState, useMemo, useEffect } from "react";
+import {
+  uploadChunk,
+  createFileFromChunks,
+  getDownloadUrl,
+} from "../api/files.ts";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import LinearProgress from "@mui/material/LinearProgress";
+import Link from "@mui/material/Link";
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Alert from "@mui/material/Alert";
-import { useSettings } from "../stores/settingsStore.ts";
-import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
+import Button from "@mui/material/Button";
 import { chunkBlob } from "../utils/chunk.ts";
-import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
-import { formatBytes, formatBytesPerSecond } from "../utils/format";
-import { uploadChunk, createFileFromChunks, getDownloadUrl } from "../api/files.ts";
-import Paper from "@mui/material/Paper";
-import Link from "@mui/material/Link";
-// Removed duplicate import of hashBlob
+import { useTranslation } from "react-i18next";
+import Typography from "@mui/material/Typography";
+import { useState, useMemo, useEffect } from "react";
+import { useSettings } from "../stores/settingsStore.ts";
+import LinearProgress from "@mui/material/LinearProgress";
 import { useLayoutStore } from "../stores/layoutStore.ts";
 import { useNavigate, useParams } from "react-router-dom";
+import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
+import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
+import { formatBytes, formatBytesPerSecond } from "../utils/format";
 
 const FilesPage = () => {
   const { t } = useTranslation();
@@ -28,7 +31,15 @@ const FilesPage = () => {
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { currentNode, children, loading: layoutLoading, error: layoutError, resolveRoot, loadChildren, openNodeById } = useLayoutStore();
+  const {
+    currentNode,
+    children,
+    loading: layoutLoading,
+    error: layoutError,
+    resolveRoot,
+    loadChildren,
+    openNodeById,
+  } = useLayoutStore();
   const navigate = useNavigate();
   const { nodeId } = useParams();
   const [speedbps, setSpeedbps] = useState<number>(0);
@@ -138,7 +149,7 @@ const FilesPage = () => {
         nodeId: currentNode!.id,
       });
       // refresh current node children after upload
-  await loadChildren(currentNode?.id);
+      await loadChildren(currentNode?.id);
     } catch (_e) {
       const msg = _e instanceof Error ? _e.message : String(_e);
       setError(msg);
@@ -149,71 +160,46 @@ const FilesPage = () => {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        {t("files.title", "Files")}
-      </Typography>
-      <Typography color="text.secondary">
-        {t("files.subtitle", "Manage and browse your files here.")}
-      </Typography>
-      <Box sx={{ mt: 2 }}>
+      <Box sx={{ mt: 2, display: "flex", justifyContent: "space-between" }}>
+        <Typography variant="h4" gutterBottom>
+          {t("files.title", "Files")}
+        </Typography>
         {(loadingSettings || layoutLoading) && <LinearProgress />}
         {(errorSettings || layoutError) && (
           <Alert severity="error">{errorSettings ?? layoutError}</Alert>
         )}
-        {settings && (
-          <Alert severity="info">
-            {t(
-              "files.settings",
-              "Chunk size: {{size}} bytes, Algorithm: {{algo}}",
-              {
-                size: settings.maxChunkSizeBytes,
-                algo: settings.supportedHashAlgorithm,
-              },
-            )}
-          </Alert>
-        )}
-      </Box>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={2}
-        sx={{ mt: 2 }}
-        alignItems="center"
-      >
-        <Button variant="outlined" component="label" disabled={isUploading}>
-          {selectedFile
-            ? t("files.changeFile", "Change file")
-            : t("files.chooseFile", "Choose file")}
-          <input hidden type="file" onChange={onFileChange} />
-        </Button>
-        <Typography variant="body2" sx={{ minWidth: 200 }}>
-          {selectedFile
-            ? selectedFile.name
-            : t("files.noFile", "No file selected")}
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={onUpload}
-          disabled={!selectedFile || !settings || isUploading || !currentNode}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          sx={{ mt: 2 }}
+          alignItems="center"
         >
-          {isUploading
-            ? t("files.uploading", "Uploading...")
-            : t("files.upload", "Upload")}
-        </Button>
-      </Stack>
+          <Typography variant="body2" sx={{ minWidth: 200 }}>
+            {selectedFile ? selectedFile.name : t("files.noFile")}
+          </Typography>
+          <Button variant="outlined" component="label" disabled={isUploading}>
+            {selectedFile ? t("files.changeFile") : t("files.chooseFile")}
+            <input hidden type="file" onChange={onFileChange} />
+          </Button>
+          <Button
+            variant="contained"
+            onClick={onUpload}
+            disabled={!selectedFile || !settings || isUploading || !currentNode}
+          >
+            {isUploading ? t("files.uploading") : t("files.upload")}
+          </Button>
+        </Stack>
+      </Box>
       {isUploading && (
         <Box sx={{ mt: 2 }}>
           <LinearProgress variant="determinate" value={progress} />
           <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
             <Typography variant="caption">{progress}%</Typography>
             <Typography variant="caption">
-              {t("files.threads", "Threads: {{count}}", {
-                count: UPLOAD_CONCURRENCY_DEFAULT,
-              })}
+              {t("files.threads", { count: UPLOAD_CONCURRENCY_DEFAULT })}
             </Typography>
             <Typography variant="caption">
-              {t("files.speed", "Speed: {{speed}}/s", {
-                speed: formatBytesPerSecond(speedbps),
-              })}
+              {t("files.speed", { speed: formatBytesPerSecond(speedbps) })}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {`${formatBytes(selectedFile?.size ?? 0)} total`}
@@ -228,7 +214,7 @@ const FilesPage = () => {
       )}
 
       <Box sx={{ mt: 4 }}>
-        <Typography variant="h6">{t("files.filesGrid", "Files")}</Typography>
+        <Typography variant="h6">{t("files.filesGrid")}</Typography>
         <Box
           sx={{
             mt: 1,
@@ -242,7 +228,13 @@ const FilesPage = () => {
             <Paper
               key={n.id}
               elevation={2}
-              sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1, cursor: "pointer" }}
+              sx={{
+                p: 1.5,
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+                cursor: "pointer",
+              }}
               onClick={() => navigate(`/app/files/${n.id}`)}
             >
               <Box
@@ -303,7 +295,7 @@ const FilesPage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {t("files.download", "Download")}
+                  {t("files.download")}
                 </Link>
               </Box>
             </Paper>
