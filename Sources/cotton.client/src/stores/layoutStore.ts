@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getNodeChildren, resolvePath, type LayoutChildrenDto, type LayoutNodeDto } from "../api/layouts.ts";
+import { getNodeChildren, resolvePath, getNode, type LayoutChildrenDto, type LayoutNodeDto } from "../api/layouts.ts";
 
 interface LayoutState {
   currentNode: LayoutNodeDto | null;
@@ -12,6 +12,7 @@ interface LayoutState {
   loadChildren: (nodeId?: string) => Promise<void>;
   navigateToNode: (node: LayoutNodeDto) => Promise<void>;
   openNodeById: (nodeId: string) => Promise<void>;
+  hydrateAncestors: (nodeId: string) => Promise<void>;
 }
 
 export const useLayoutStore = create<LayoutState>((set, get) => ({
@@ -21,6 +22,40 @@ export const useLayoutStore = create<LayoutState>((set, get) => ({
   nodes: {},
   loading: false,
   error: null,
+  hydrateAncestors: async (nodeId: string) => {
+    // Walk up via getNode to build parents/nodes cache so breadcrumbs can render on deep links
+    const seen = new Set<string>();
+    let current: string | null = nodeId;
+    const parentsUpdate: Record<string, string | null> = {};
+    const nodesUpdate: Record<string, LayoutNodeDto> = {};
+    try {
+      // Safety cap to avoid infinite loops on unexpected cycles
+      let steps = 0;
+      while (current && !seen.has(current) && steps < 128) {
+        steps++;
+        seen.add(current);
+        let node: LayoutNodeDto | undefined = get().nodes[current];
+        // If we lack node or its parentId, fetch it
+        if (!node || typeof node.parentId === "undefined") {
+          try {
+            node = await getNode(current);
+          } catch {
+            // If backend doesn't support this endpoint, stop gracefully
+            break;
+          }
+        }
+        if (!node) break;
+        nodesUpdate[current] = node;
+        parentsUpdate[current] = node.parentId ?? null;
+        current = node.parentId ?? null;
+      }
+    } finally {
+      set((s) => ({
+        nodes: { ...s.nodes, ...nodesUpdate },
+        parents: { ...s.parents, ...parentsUpdate },
+      }));
+    }
+  },
   resolveRoot: async () => {
     set({ loading: true, error: null });
     try {
@@ -70,13 +105,13 @@ export const useLayoutStore = create<LayoutState>((set, get) => ({
     await get().loadChildren(node.id);
   },
   openNodeById: async (nodeId: string) => {
-    // Do not call missing endpoints; use known parent mapping if available
+    // Hydrate ancestors so breadcrumbs can be built even on cold deep links
+    await get().hydrateAncestors(nodeId);
     const s = get();
-    const pid = s.parents[nodeId] ?? null;
     const cached: LayoutNodeDto | undefined = s.nodes[nodeId];
     const node: LayoutNodeDto = cached
-      ? { ...cached, parentId: cached.parentId ?? pid }
-      : { id: nodeId, userLayoutId: "", parentId: pid, name: "", createdAt: "", updatedAt: "" } as LayoutNodeDto;
+      ? cached
+      : ({ id: nodeId, userLayoutId: "", parentId: s.parents[nodeId] ?? null, name: "", createdAt: "", updatedAt: "" } as LayoutNodeDto);
     set((prev) => ({ currentNode: node, nodes: { ...prev.nodes, [nodeId]: node } }));
     await get().loadChildren(nodeId);
   },
