@@ -1,4 +1,7 @@
-﻿using System.Security.Cryptography;
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace Cotton.Server.Helpers
