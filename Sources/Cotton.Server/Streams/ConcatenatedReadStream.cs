@@ -1,4 +1,7 @@
-﻿using Cotton.Server.Services;
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
+using Cotton.Server.Services;
 
 namespace Cotton.Server.Streams
 {

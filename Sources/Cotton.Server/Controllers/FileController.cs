@@ -1,4 +1,7 @@
-﻿using Mapster;
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
+using Mapster;
 using EasyExtensions;
 using Cotton.Server.Models;
 using Cotton.Server.Database;

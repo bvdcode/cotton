@@ -1,4 +1,7 @@
-﻿using System.IO.Pipelines;
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
+using System.IO.Pipelines;
 using Cotton.Server.Streams;
 using Cotton.Server.Settings;
 using Cotton.Crypto.Abstractions;

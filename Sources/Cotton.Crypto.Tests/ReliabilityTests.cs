@@ -1,4 +1,7 @@
-﻿using Cotton.Crypto.Models;
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
+using Cotton.Crypto.Models;
 using System.Buffers.Binary;
 using Cotton.Crypto.Tests.TestUtils;
 
