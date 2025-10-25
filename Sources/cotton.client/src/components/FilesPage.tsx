@@ -21,6 +21,7 @@ import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
 import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
 import { ArrowBack, CreateNewFolder } from "@mui/icons-material";
+import Breadcrumbs from "@mui/material/Breadcrumbs";
 import { IconButton } from "@mui/material";
 import { createFolder } from "../api/layout.ts";
 
@@ -37,6 +38,8 @@ const FilesPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { nodeId } = useParams();
+  const parentsMap = useLayoutStore((s) => s.parents);
+  const nodesDict = useLayoutStore((s) => s.nodes);
   const settings = useSettings((s) => s.settings);
   const errorSettings = useSettings((s) => s.error);
   const [progress, setProgress] = useState<number>(0);
@@ -167,6 +170,40 @@ const FilesPage = () => {
         <Typography variant="h4" gutterBottom>
           {t("files.title", "Files")}
         </Typography>
+        {/* Breadcrumbs */}
+        <Box sx={{ flex: 1, display: "flex", alignItems: "center", ml: 2 }}>
+          <Breadcrumbs maxItems={5} itemsAfterCollapse={2} aria-label="breadcrumb">
+            {(() => {
+              const pathIds: string[] = [];
+              let cur = currentNode?.id ?? nodeId ?? null;
+              const guard = new Set<string>();
+              while (cur && !guard.has(cur)) {
+                pathIds.unshift(cur);
+                guard.add(cur);
+                const pid = parentsMap[cur] ?? null;
+                cur = pid ?? null;
+              }
+              // Ensure root appears if known and not included yet
+              if (pathIds.length === 0 && currentNode?.id) pathIds.push(currentNode.id);
+              return pathIds.map((id, idx) => {
+                const isLast = idx === pathIds.length - 1;
+                const name = nodesDict[id]?.name || (idx === 0 ? "/" : id.substring(0, 8));
+                if (isLast) {
+                  return (
+                    <Typography key={id} color="text.primary" variant="body2">
+                      {name}
+                    </Typography>
+                  );
+                }
+                return (
+                  <Link key={id} component={RouterLink} to={`/app/files/${id}`} underline="hover" variant="body2">
+                    {name}
+                  </Link>
+                );
+              });
+            })()}
+          </Breadcrumbs>
+        </Box>
         {(loadingSettings || layoutLoading) && <LinearProgress />}
         {(errorSettings || layoutError) && (
           <Alert severity="error">{errorSettings ?? layoutError}</Alert>
@@ -270,6 +307,10 @@ const FilesPage = () => {
               key={n.id}
               component={RouterLink}
               to={`/app/files/${n.id}`}
+              onClick={() => {
+                // Pre-cache node info for immediate breadcrumbs update
+                useLayoutStore.getState().navigateToNode(n);
+              }}
               elevation={2}
               sx={{
                 p: 1.5,
