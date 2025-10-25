@@ -15,6 +15,7 @@
     "noNode": "Select a folder before uploading.",
     "download": "Download",
     "newFolder": "New folder",
-    "enterFolderName": "Enter folder name"
+    "enterFolderName": "Enter folder name",
+    "back": "Back"
   }
 }

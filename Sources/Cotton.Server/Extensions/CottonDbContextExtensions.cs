@@ -8,24 +8,24 @@ namespace Cotton.Server.Extensions
 {
     public static class CottonDbContextExtensions
     {
-        public static async Task<UserLayoutNode> GetRootNodeAsync(this CottonDbContext dbContext, Guid layoutId, Guid ownerId, UserLayoutNodeType type)
+        public static async Task<Node> GetRootNodeAsync(this CottonDbContext dbContext, Guid layoutId, Guid ownerId, UserLayoutNodeType type)
         {
             var currentNode = await dbContext.UserLayoutNodes
                 .AsNoTracking()
-                .Include(x => x.UserLayout)
-                .Where(x => x.UserLayout.OwnerId == ownerId
-                    && x.UserLayoutId == layoutId
+                .Include(x => x.Layout)
+                .Where(x => x.Layout.OwnerId == ownerId
+                    && x.LayoutId == layoutId
                     && x.ParentId == null
                     && x.Type == type)
                 .FirstOrDefaultAsync();
             if (currentNode == null)
             {
-                UserLayoutNode newNode = new()
+                Node newNode = new()
                 {
                     Name = "/",
                     Type = type,
                     OwnerId = ownerId,
-                    UserLayoutId = layoutId,
+                    LayoutId = layoutId,
                 };
                 await dbContext.UserLayoutNodes.AddAsync(newNode);
                 await dbContext.SaveChangesAsync();
@@ -34,7 +34,7 @@ namespace Cotton.Server.Extensions
             return currentNode;
         }
 
-        public static async Task<UserLayout> GetLatestUserLayoutAsync(this CottonDbContext dbContext, Guid ownerId)
+        public static async Task<Layout> GetLatestUserLayoutAsync(this CottonDbContext dbContext, Guid ownerId)
         {
             var found = await dbContext.UserLayouts
                 .Where(x => x.OwnerId == ownerId)
@@ -42,7 +42,7 @@ namespace Cotton.Server.Extensions
                 .FirstOrDefaultAsync();
             if (found == null)
             {
-                UserLayout newLayout = new()
+                Layout newLayout = new()
                 {
                     OwnerId = ownerId
                 };
