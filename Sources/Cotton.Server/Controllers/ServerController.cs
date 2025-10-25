@@ -1,4 +1,7 @@
-﻿using Cotton.Server.Helpers;
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
+using Cotton.Server.Helpers;
 using Cotton.Server.Settings;
 using Microsoft.AspNetCore.Mvc;
 

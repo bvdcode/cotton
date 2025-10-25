@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
 namespace Cotton.Crypto.Internals
 {
     // Work queue and results for encryption pipeline

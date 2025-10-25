@@ -1,4 +1,7 @@
-﻿using System;
+﻿// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Vadim Belov
+
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
