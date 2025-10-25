@@ -20,6 +20,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
 import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
+import { CreateNewFolder } from "@mui/icons-material";
+import { IconButton } from "@mui/material";
+import { createFolder } from "../api/layout.ts";
 
 const FilesPage = () => {
   const {
@@ -173,7 +176,7 @@ const FilesPage = () => {
           sx={{ mt: 2 }}
           alignItems="center"
         >
-          <Typography variant="body2" sx={{ minWidth: 200 }}>
+          <Typography variant="body2">
             {selectedFile ? selectedFile.name : t("files.noFile")}
           </Typography>
           <Button variant="outlined" component="label" disabled={isUploading}>
@@ -187,6 +190,29 @@ const FilesPage = () => {
           >
             {isUploading ? t("files.uploading") : t("files.upload")}
           </Button>
+          <IconButton
+            title={t("files.newFolder", "New folder")}
+            onClick={async () => {
+              if (!currentNode?.id) return;
+              const name = window.prompt(
+                t("files.enterFolderName", "Enter folder name"),
+                "",
+              );
+              if (!name) return;
+              const trimmed = name.trim();
+              if (!trimmed) return;
+              try {
+                await createFolder({ parentId: currentNode.id, name: trimmed });
+                await loadChildren(currentNode.id);
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setError(msg);
+              }
+            }}
+            disabled={!currentNode}
+          >
+            <CreateNewFolder />
+          </IconButton>
         </Stack>
       </Box>
       {isUploading && (

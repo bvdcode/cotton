@@ -13,6 +13,8 @@
     "threads": "Threads: {{count}}",
     "speed": "Speed: {{speed}}/s",
     "noNode": "Select a folder before uploading.",
-    "download": "Download"
+    "download": "Download",
+    "newFolder": "New folder",
+    "enterFolderName": "Enter folder name"
   }
 }
