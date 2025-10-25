@@ -63,19 +63,20 @@ const FilesPage = () => {
   };
 
   useEffect(() => {
-    // If route has nodeId param, open it; otherwise resolve root and navigate to it
+    // If route has nodeId param, open it; otherwise resolve root and navigate to it.
+    // Important: read fresh state AFTER awaiting actions to avoid stale closure.
     (async () => {
       if (nodeId) {
         await openNodeById(nodeId);
       } else {
         await resolveRoot();
-        if (currentNode?.id) {
-          navigate(`/app/files/${currentNode.id}`, { replace: true });
+        const id = useLayoutStore.getState().currentNode?.id;
+        if (id) {
+          navigate(`/app/files/${id}`, { replace: true });
         }
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeId]);
+  }, [nodeId, navigate, openNodeById, resolveRoot]);
 
   const onUpload = async () => {
     if (!selectedFile) return;
