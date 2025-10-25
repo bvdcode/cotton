@@ -64,7 +64,6 @@ const FilesPage = () => {
 
   useEffect(() => {
     // If route has nodeId param, open it; otherwise resolve root and navigate to it.
-    // Important: read fresh state AFTER awaiting actions to avoid stale closure.
     (async () => {
       if (nodeId) {
         await openNodeById(nodeId);
@@ -196,9 +195,11 @@ const FilesPage = () => {
             title={t("files.back", "Back")}
             disabled={!currentNode}
             onClick={() => {
-              // Navigate to parent node or files root
-              if (currentNode?.parentId) {
-                navigate(`/app/files/${currentNode.parentId}`);
+              // Prefer parent from store mapping if currentNode.parentId is missing
+              const parents = useLayoutStore.getState().parents;
+              const pid = currentNode?.parentId ?? (currentNode?.id ? parents[currentNode.id] ?? null : null);
+              if (pid) {
+                navigate(`/app/files/${pid}`);
               } else {
                 navigate(`/app/files`);
               }
