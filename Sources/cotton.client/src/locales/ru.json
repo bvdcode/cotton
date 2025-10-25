@@ -13,6 +13,8 @@
     "threads": "Потоки: {{count}}",
     "speed": "Скорость: {{speed}}/с",
     "noNode": "Выберите папку перед загрузкой.",
-    "download": "Скачать"
+    "download": "Скачать",
+    "newFolder": "Новая папка",
+    "enterFolderName": "Введите имя папки"
   }
 }
