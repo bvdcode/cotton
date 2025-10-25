@@ -1,20 +1,48 @@
-﻿using Cotton.Server.Database;
-using Cotton.Server.Database.Models;
-using Cotton.Server.Database.Models.Enums;
-using Cotton.Server.Extensions;
-using Cotton.Server.Models;
-using Cotton.Server.Models.Dto;
+﻿using Mapster;
 using EasyExtensions;
-using Mapster;
-using Microsoft.AspNetCore.Authorization;
+using Cotton.Server.Models;
+using Cotton.Server.Database;
+using Cotton.Server.Extensions;
+using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Server.Database.Models;
 using Microsoft.EntityFrameworkCore;
+using Cotton.Server.Models.Requests;
+using Microsoft.AspNetCore.Authorization;
+using Cotton.Server.Database.Models.Enums;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class LayoutController(CottonDbContext _dbContext) : ControllerBase
     {
+        [Authorize]
+        [HttpPut($"{Routes.Layouts}/nodes")]
+        public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequest request)
+        {
+            Guid userId = User.GetUserId();
+            var parentNode = await _dbContext.UserLayoutNodes
+                .AsNoTracking()
+                .Where(x => x.Id == request.ParentId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (parentNode == null)
+            {
+                return CottonResult.NotFound("Parent node not found.");
+            }
+            var newNode = new UserLayoutNode
+            {
+                OwnerId = userId,
+                Name = request.Name,
+                ParentId = parentNode.Id,
+                Type = UserLayoutNodeType.Default,
+                UserLayoutId = parentNode.UserLayoutId,
+            };
+            await _dbContext.UserLayoutNodes.AddAsync(newNode);
+            await _dbContext.SaveChangesAsync();
+            var mapped = newNode.Adapt<UserLayoutNodeDto>();
+            return Ok(mapped);
+        }
+
         [Authorize]
         [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/children")]
         public async Task<IActionResult> GetChildNodes([FromRoute] Guid nodeId,
