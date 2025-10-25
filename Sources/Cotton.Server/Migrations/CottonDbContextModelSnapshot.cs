@@ -187,6 +187,38 @@ namespace Cotton.Server.Migrations
                     b.ToTable("layouts");
                 });
 
+            modelBuilder.Entity("Cotton.Server.Database.Models.LayoutNodeFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("FileManifestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_manifest_id");
+
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("node_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileManifestId");
+
+                    b.HasIndex("NodeId");
+
+                    b.ToTable("layout_node_files");
+                });
+
             modelBuilder.Entity("Cotton.Server.Database.Models.Node", b =>
                 {
                     b.Property<Guid>("Id")
@@ -267,38 +299,6 @@ namespace Cotton.Server.Migrations
                     b.ToTable("users");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.UserLayoutNodeFile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("FileManifestId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_manifest_id");
-
-                    b.Property<Guid>("NodeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("node_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FileManifestId");
-
-                    b.HasIndex("NodeId");
-
-                    b.ToTable("layout_node_files");
-                });
-
             modelBuilder.Entity("Cotton.Server.Database.Models.ChunkOwnership", b =>
                 {
                     b.HasOne("Cotton.Server.Database.Models.User", "Owner")
@@ -355,6 +355,25 @@ namespace Cotton.Server.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Cotton.Server.Database.Models.LayoutNodeFile", b =>
+                {
+                    b.HasOne("Cotton.Server.Database.Models.FileManifest", "FileManifest")
+                        .WithMany()
+                        .HasForeignKey("FileManifestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Cotton.Server.Database.Models.Node", "Node")
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FileManifest");
+
+                    b.Navigation("Node");
+                });
+
             modelBuilder.Entity("Cotton.Server.Database.Models.Node", b =>
                 {
                     b.HasOne("Cotton.Server.Database.Models.Layout", "Layout")
@@ -378,25 +397,6 @@ namespace Cotton.Server.Migrations
                     b.Navigation("Owner");
 
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("Cotton.Server.Database.Models.UserLayoutNodeFile", b =>
-                {
-                    b.HasOne("Cotton.Server.Database.Models.FileManifest", "FileManifest")
-                        .WithMany()
-                        .HasForeignKey("FileManifestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Cotton.Server.Database.Models.Node", "Node")
-                        .WithMany()
-                        .HasForeignKey("NodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("FileManifest");
-
-                    b.Navigation("Node");
                 });
 
             modelBuilder.Entity("Cotton.Server.Database.Models.FileManifest", b =>

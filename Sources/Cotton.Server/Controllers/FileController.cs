@@ -117,7 +117,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the whole uploaded file.");
             }
 
-            UserLayoutNodeFile newNodeFile = new()
+            LayoutNodeFile newNodeFile = new()
             {
                 Node = node,
                 FileManifest = newFile,
