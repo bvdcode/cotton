@@ -29,13 +29,13 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Parent node not found.");
             }
-            var newNode = new UserLayoutNode
+            var newNode = new Node
             {
                 OwnerId = userId,
                 Name = request.Name,
                 ParentId = parentNode.Id,
                 Type = UserLayoutNodeType.Default,
-                UserLayoutId = parentNode.UserLayoutId,
+                LayoutId = parentNode.LayoutId,
             };
             await _dbContext.UserLayoutNodes.AddAsync(newNode);
             await _dbContext.SaveChangesAsync();
@@ -54,7 +54,7 @@ namespace Cotton.Server.Controllers
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId
                     && x.OwnerId == userId
-                    && x.UserLayoutId == layout.Id
+                    && x.LayoutId == layout.Id
                     && x.Type == type)
                 .SingleOrDefaultAsync();
             if (parentNode == null)
@@ -71,7 +71,7 @@ namespace Cotton.Server.Controllers
             var files = await _dbContext.UserLayoutNodeFiles
                 .AsNoTracking()
                 .Include(x => x.FileManifest)
-                .Where(x => x.UserLayoutNodeId == parentNode.Id)
+                .Where(x => x.NodeId == parentNode.Id)
                 .Select(x => x.FileManifest)
                 .Where(x => x.OwnerId == userId)
                 .ProjectToType<FileManifestDto>()
@@ -102,12 +102,12 @@ namespace Cotton.Server.Controllers
             var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             // search for the root node of this layout and user, using node type
 
-            UserLayoutNode currentNode = await _dbContext.GetRootNodeAsync(found.Id, userId, type);
+            Node currentNode = await _dbContext.GetRootNodeAsync(found.Id, userId, type);
             foreach (var part in parts)
             {
                 var nextNode = await _dbContext.UserLayoutNodes
                     .AsNoTracking()
-                    .Where(x => x.UserLayout.OwnerId == userId
+                    .Where(x => x.Layout.OwnerId == userId
                         && x.ParentId == currentNode.Id
                         && x.Name == part
                         && x.Type == type)

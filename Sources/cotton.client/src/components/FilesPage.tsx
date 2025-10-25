@@ -16,7 +16,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSettings } from "../stores/settingsStore.ts";
 import LinearProgress from "@mui/material/LinearProgress";
 import { useLayoutStore } from "../stores/layoutStore.ts";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link as RouterLink } from "react-router-dom";
 import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
 import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
@@ -69,14 +69,12 @@ const FilesPage = () => {
       if (nodeId) {
         await openNodeById(nodeId);
       } else {
+        // Only resolve and SHOW root in-place; DO NOT navigate.
+        // This keeps browser Back working (back to /app/files stays on index without forced redirect).
         await resolveRoot();
-        const id = useLayoutStore.getState().currentNode?.id;
-        if (id) {
-          navigate(`/app/files/${id}`, { replace: true });
-        }
       }
     })();
-  }, [nodeId, navigate, openNodeById, resolveRoot]);
+  }, [nodeId, openNodeById, resolveRoot]);
 
   const onUpload = async () => {
     if (!selectedFile) return;
@@ -192,11 +190,14 @@ const FilesPage = () => {
             {isUploading ? t("files.uploading") : t("files.upload")}
           </Button>
           <IconButton
+            title={t("files.back", "Back")}
             disabled={!currentNode}
             onClick={() => {
-              // get back to parent node
+              // Navigate to parent node or files root
               if (currentNode?.parentId) {
                 navigate(`/app/files/${currentNode.parentId}`);
+              } else {
+                navigate(`/app/files`);
               }
             }}
           >
@@ -264,6 +265,8 @@ const FilesPage = () => {
           {children?.nodes.map((n) => (
             <Paper
               key={n.id}
+              component={RouterLink}
+              to={`/app/files/${n.id}`}
               elevation={2}
               sx={{
                 p: 1.5,
@@ -271,8 +274,9 @@ const FilesPage = () => {
                 flexDirection: "column",
                 gap: 1,
                 cursor: "pointer",
+                textDecoration: "none",
+                color: "inherit",
               }}
-              onClick={() => navigate(`/app/files/${n.id}`)}
             >
               <Box
                 sx={{
