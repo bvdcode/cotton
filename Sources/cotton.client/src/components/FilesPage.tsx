@@ -20,7 +20,7 @@ import { useNavigate, useParams, Link as RouterLink } from "react-router-dom";
 import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
 import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
-import { ArrowBack, CreateNewFolder } from "@mui/icons-material";
+import { ArrowBack, CreateNewFolder, Home as HomeIcon } from "@mui/icons-material";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import { IconButton } from "@mui/material";
 import { createFolder } from "../api/layout.ts";
@@ -172,7 +172,15 @@ const FilesPage = () => {
         </Typography>
         {/* Breadcrumbs */}
         <Box sx={{ flex: 1, display: "flex", alignItems: "center", ml: 2 }}>
-          <Breadcrumbs maxItems={5} itemsAfterCollapse={2} aria-label="breadcrumb">
+          <Breadcrumbs
+            maxItems={5}
+            itemsAfterCollapse={2}
+            aria-label="breadcrumb"
+            separator="/"
+            sx={{
+              "& .MuiBreadcrumbs-separator": { color: "text.secondary" },
+            }}
+          >
             {(() => {
               const pathIds: string[] = [];
               let cur = currentNode?.id ?? nodeId ?? null;
@@ -187,16 +195,42 @@ const FilesPage = () => {
               if (pathIds.length === 0 && currentNode?.id) pathIds.push(currentNode.id);
               return pathIds.map((id, idx) => {
                 const isLast = idx === pathIds.length - 1;
-                const name = nodesDict[id]?.name || (idx === 0 ? "/" : id.substring(0, 8));
+                const isRoot = idx === 0;
+                const name = nodesDict[id]?.name || (isRoot ? "/" : id.substring(0, 8));
                 if (isLast) {
+                  // Last item: text only
                   return (
                     <Typography key={id} color="text.primary" variant="body2">
-                      {name}
+                      {isRoot ? name : name}
                     </Typography>
                   );
                 }
+                // Non-last items: links; for root render a Home icon instead of "/" label
+                if (isRoot) {
+                  return (
+                    <Link
+                      key={id}
+                      component={RouterLink}
+                      to={`/app/files/${id}`}
+                      underline="none"
+                      color="inherit"
+                      sx={{ display: "inline-flex", alignItems: "center" }}
+                      aria-label="root"
+                      title={nodesDict[id]?.name || "Root"}
+                    >
+                      <HomeIcon fontSize="small" />
+                    </Link>
+                  );
+                }
                 return (
-                  <Link key={id} component={RouterLink} to={`/app/files/${id}`} underline="hover" variant="body2">
+                  <Link
+                    key={id}
+                    component={RouterLink}
+                    to={`/app/files/${id}`}
+                    underline="hover"
+                    variant="body2"
+                    color="inherit"
+                  >
                     {name}
                   </Link>
                 );
