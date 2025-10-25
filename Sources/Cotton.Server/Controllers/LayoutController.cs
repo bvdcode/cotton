@@ -44,6 +44,44 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/ancestors")]
+        public async Task<IActionResult> GetAncestorNodes([FromRoute] Guid nodeId,
+            [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
+        {
+            // TODO: Optimize to a single query
+            // TODO: Guard against circular references
+            Guid userId = User.GetUserId();
+            var layout = await _dbContext.GetLatestUserLayoutAsync(userId);
+            var currentNode = await _dbContext.UserLayoutNodes
+                .AsNoTracking()
+                .Where(x => x.Id == nodeId
+                    && x.OwnerId == userId
+                    && x.LayoutId == layout.Id
+                    && x.Type == type)
+                .SingleOrDefaultAsync();
+            if (currentNode == null)
+            {
+                return CottonResult.NotFound("Node not found.");
+            }
+            List<UserLayoutNodeDto> ancestors = [];
+            while (currentNode.ParentId != null)
+            {
+                var parentNode = await _dbContext.UserLayoutNodes
+                    .AsNoTracking()
+                    .Where(x => x.Id == currentNode.ParentId && x.OwnerId == userId)
+                    .SingleOrDefaultAsync();
+                if (parentNode == null)
+                {
+                    break;
+                }
+                ancestors.Add(parentNode.Adapt<UserLayoutNodeDto>());
+                currentNode = parentNode;
+            }
+            ancestors.Reverse();
+            return Ok(ancestors);
+        }
+
+        [Authorize]
         [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/children")]
         public async Task<IActionResult> GetChildNodes([FromRoute] Guid nodeId,
             [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)

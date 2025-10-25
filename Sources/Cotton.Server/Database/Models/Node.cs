@@ -24,5 +24,7 @@ namespace Cotton.Server.Database.Models
 
         public virtual Layout Layout { get; set; } = null!;
         public virtual Node? Parent { get; set; } = null!;
+        public virtual ICollection<Node> Children { get; set; } = [];
+        public virtual ICollection<NodeFile> LayoutNodeFiles { get; set; } = [];
     }
 }

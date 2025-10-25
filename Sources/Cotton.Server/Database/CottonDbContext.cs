@@ -13,6 +13,6 @@ namespace Cotton.Server.Database
         public DbSet<FileManifest> FileManifests => Set<FileManifest>();
         public DbSet<ChunkOwnership> ChunkOwnerships => Set<ChunkOwnership>();
         public DbSet<FileManifestChunk> FileManifestChunks => Set<FileManifestChunk>();
-        public DbSet<LayoutNodeFile> UserLayoutNodeFiles => Set<LayoutNodeFile>();
+        public DbSet<NodeFile> UserLayoutNodeFiles => Set<NodeFile>();
     }
 }
