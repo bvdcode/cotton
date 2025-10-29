@@ -109,6 +109,7 @@ namespace Cotton.Server.Controllers
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk);
             }
 
+            // TODO: Get rid of this
             using var blob = _storage.GetBlobStream(request.ChunkHashes);
             byte[] computedHash = await SHA256.HashDataAsync(blob);
             if (!computedHash.SequenceEqual(newFile.Sha256))

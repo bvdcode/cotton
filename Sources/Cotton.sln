@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36518.9
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11121.172 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "cotton.client", "cotton.client\cotton.client.esproj", "{17DF5166-314D-84E5-D4E2-B2002BA08B61}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Crypto", "Cotton.Crypto\Cotton.Crypto.csproj", "{A017B772-1C61-46B0-8CA3-4B9A693D55ED}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Crypto.Tests", "Cotton.Crypto.Tests\Cotton.Crypto.Tests.csproj", "{65EC62DB-2082-440B-9F24-0194E3706844}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Server.IntegrationTests", "Cotton.Server.IntegrationTests\Cotton.Server.IntegrationTests.csproj", "{1FD12D27-BDD2-414A-8A37-48A105C8E759}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +37,10 @@ Global
 		{65EC62DB-2082-440B-9F24-0194E3706844}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65EC62DB-2082-440B-9F24-0194E3706844}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{65EC62DB-2082-440B-9F24-0194E3706844}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FD12D27-BDD2-414A-8A37-48A105C8E759}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1FD12D27-BDD2-414A-8A37-48A105C8E759}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FD12D27-BDD2-414A-8A37-48A105C8E759}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1FD12D27-BDD2-414A-8A37-48A105C8E759}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
