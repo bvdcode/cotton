@@ -157,5 +157,36 @@ public class LayoutAndFilesTests : IntegrationTestBase
         return login.token;
     }
 
+    [Test]
+    public async Task Cannot_Create_Duplicate_Node_Name_Within_Same_Parent()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var root = await _client.GetFromJsonAsync<UserLayoutNodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var name = "dup";
+        var req = new CreateNodeRequest { ParentId = root!.Id, Name = name };
+        // First create should succeed
+        var r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
+        r1.EnsureSuccessStatusCode();
+        // Second create with same name under same parent should throw due to unique index
+        var ex = Assert.ThrowsAsync<DbUpdateException>(async () =>
+            await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req));
+        Assert.That(ex, Is.Not.Null);
+        if (ex!.InnerException is PostgresException pg)
+        {
+            Assert.That(pg.SqlState, Is.EqualTo("23505")); // unique_violation
+        }
+        TestContext.Progress.WriteLine($"Duplicate create threw: {ex!.GetType().Name} -> {ex.InnerException?.GetType().Name}");
+
+        // Verify DB has only one such node
+        var duplicates = await DbContext.UserLayoutNodes
+            .AsNoTracking()
+            .Where(n => n.ParentId == root.Id && n.Name == name)
+            .CountAsync();
+        Assert.That(duplicates, Is.EqualTo(1));
+    }
+
     private sealed record LoginResponse(string token);
 }
