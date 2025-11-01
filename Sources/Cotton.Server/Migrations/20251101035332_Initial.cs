@@ -1,7 +1,4 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
-
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -27,6 +24,22 @@ namespace Cotton.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "file_manifests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    content_type = table.Column<string>(type: "text", nullable: false),
+                    size_bytes = table.Column<long>(type: "bigint", nullable: false),
+                    sha256 = table.Column<byte[]>(type: "bytea", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_file_manifests", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
                 {
@@ -39,6 +52,34 @@ namespace Cotton.Server.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_users", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "file_manifest_chunks",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    chunk_order = table.Column<int>(type: "integer", nullable: false),
+                    file_manifest_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    chunk_sha256 = table.Column<byte[]>(type: "bytea", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_file_manifest_chunks", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_file_manifest_chunks_chunks_chunk_sha256",
+                        column: x => x.chunk_sha256,
+                        principalTable: "chunks",
+                        principalColumn: "sha256",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_file_manifest_chunks_file_manifests_file_manifest_id",
+                        column: x => x.file_manifest_id,
+                        principalTable: "file_manifests",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -63,41 +104,11 @@ namespace Cotton.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "file_manifests",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "text", nullable: false),
-                    content_type = table.Column<string>(type: "text", nullable: false),
-                    size_bytes = table.Column<long>(type: "bigint", nullable: false),
-                    sha256 = table.Column<byte[]>(type: "bytea", nullable: false),
-                    version_stable_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    FileManifestId = table.Column<Guid>(type: "uuid", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    owner_id = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_file_manifests", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_file_manifests_file_manifests_FileManifestId",
-                        column: x => x.FileManifestId,
-                        principalTable: "file_manifests",
-                        principalColumn: "id");
-                    table.ForeignKey(
-                        name: "FK_file_manifests_users_owner_id",
-                        column: x => x.owner_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "layouts",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     owner_id = table.Column<Guid>(type: "uuid", nullable: false)
@@ -114,42 +125,15 @@ namespace Cotton.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "file_manifest_chunks",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    chunk_order = table.Column<int>(type: "integer", nullable: false),
-                    blob_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    chunk_sha256 = table.Column<byte[]>(type: "bytea", nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_file_manifest_chunks", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_file_manifest_chunks_chunks_chunk_sha256",
-                        column: x => x.chunk_sha256,
-                        principalTable: "chunks",
-                        principalColumn: "sha256",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_file_manifest_chunks_file_manifests_blob_id",
-                        column: x => x.blob_id,
-                        principalTable: "file_manifests",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "nodes",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     layout_id = table.Column<Guid>(type: "uuid", nullable: false),
                     parent_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    name = table.Column<string>(type: "text", nullable: false),
                     type = table.Column<int>(type: "integer", nullable: false),
+                    name = table.Column<string>(type: "text", nullable: false),
+                    name_key = table.Column<string>(type: "text", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     owner_id = table.Column<Guid>(type: "uuid", nullable: false)
@@ -177,28 +161,38 @@ namespace Cotton.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "layout_node_files",
+                name: "node_files",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     file_manifest_id = table.Column<Guid>(type: "uuid", nullable: false),
                     node_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    original_node_file_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "text", nullable: false),
+                    name_key = table.Column<string>(type: "text", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    owner_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_layout_node_files", x => x.id);
+                    table.PrimaryKey("PK_node_files", x => x.id);
                     table.ForeignKey(
-                        name: "FK_layout_node_files_file_manifests_file_manifest_id",
+                        name: "FK_node_files_file_manifests_file_manifest_id",
                         column: x => x.file_manifest_id,
                         principalTable: "file_manifests",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_layout_node_files_nodes_node_id",
+                        name: "FK_node_files_nodes_node_id",
                         column: x => x.node_id,
                         principalTable: "nodes",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_node_files_users_owner_id",
+                        column: x => x.owner_id,
+                        principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -210,35 +204,21 @@ namespace Cotton.Server.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_file_manifest_chunks_blob_id_chunk_order",
-                table: "file_manifest_chunks",
-                columns: new[] { "blob_id", "chunk_order" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_file_manifest_chunks_chunk_sha256",
                 table: "file_manifest_chunks",
                 column: "chunk_sha256");
 
             migrationBuilder.CreateIndex(
-                name: "IX_file_manifests_FileManifestId",
+                name: "IX_file_manifest_chunks_file_manifest_id_chunk_order",
+                table: "file_manifest_chunks",
+                columns: new[] { "file_manifest_id", "chunk_order" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_file_manifests_sha256",
                 table: "file_manifests",
-                column: "FileManifestId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_file_manifests_owner_id",
-                table: "file_manifests",
-                column: "owner_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_layout_node_files_file_manifest_id",
-                table: "layout_node_files",
-                column: "file_manifest_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_layout_node_files_node_id",
-                table: "layout_node_files",
-                column: "node_id");
+                column: "sha256",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_layouts_owner_id",
@@ -246,9 +226,26 @@ namespace Cotton.Server.Migrations
                 column: "owner_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_nodes_layout_id_name_parent_id_type",
+                name: "IX_node_files_file_manifest_id_node_id",
+                table: "node_files",
+                columns: new[] { "file_manifest_id", "node_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_node_files_node_id_name_key",
+                table: "node_files",
+                columns: new[] { "node_id", "name_key" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_node_files_owner_id",
+                table: "node_files",
+                column: "owner_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_nodes_layout_id_parent_id_type_name_key",
                 table: "nodes",
-                columns: new[] { "layout_id", "name", "parent_id", "type" },
+                columns: new[] { "layout_id", "parent_id", "type", "name_key" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -278,7 +275,7 @@ namespace Cotton.Server.Migrations
                 name: "file_manifest_chunks");
 
             migrationBuilder.DropTable(
-                name: "layout_node_files");
+                name: "node_files");
 
             migrationBuilder.DropTable(
                 name: "chunks");
