@@ -82,7 +82,7 @@ namespace Cotton.Server.Controllers
                 chunks.Add(foundChunk);
             }
 
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name, out string normalized, out string errorMessage);
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name, out string normalizedName, out string errorMessage);
             if (!isValidName)
             {
                 return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
@@ -91,7 +91,7 @@ namespace Cotton.Server.Controllers
             FileManifest newFile = new()
             {
                 OwnerId = userId,
-                Name = normalized,
+                Name = normalizedName,
                 ContentType = request.ContentType,
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
                 Sha256 = Convert.FromHexString(request.Sha256),
