@@ -186,5 +186,31 @@ namespace Cotton.Server.Validators
             var up = baseName.ToUpperInvariant();
             return ReservedBaseNamesCI.Contains(up);
         }
+
+        public static string GetNameKey(string normalized)
+        {
+            var sb = new StringBuilder();
+            var enumr = StringInfo.GetTextElementEnumerator(normalized);
+            while (enumr.MoveNext())
+            {
+                var element = enumr.GetTextElement();
+                var folded = element.Normalize(NormalizationForm.FormD);
+                var sbFolded = new StringBuilder();
+                foreach (var ch in folded.EnumerateRunes())
+                {
+                    var category = CharUnicodeInfo.GetUnicodeCategory(ch.Value);
+                    if (category == UnicodeCategory.NonSpacingMark ||
+                        category == UnicodeCategory.SpacingCombiningMark ||
+                        category == UnicodeCategory.EnclosingMark)
+                    {
+                        continue;
+                    }
+                    sbFolded.Append(ch.ToString().ToLowerInvariant());
+                }
+                var final = sbFolded.ToString().Normalize(NormalizationForm.FormC);
+                sb.Append(final);
+            }
+            return sb.ToString();
+        }
     }
 }

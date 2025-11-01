@@ -5,7 +5,7 @@ using EasyExtensions.Models.Dto;
 
 namespace Cotton.Server.Models.Dto
 {
-    public class UserLayoutNodeDto : BaseDto<Guid>
+    public class NodeDto : BaseDto<Guid>
     {
         public Guid LayoutId { get; set; }
         public Guid? ParentId { get; set; }

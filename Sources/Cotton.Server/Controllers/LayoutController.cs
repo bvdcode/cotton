@@ -7,13 +7,13 @@ using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Validators;
 using Microsoft.AspNetCore.Mvc;
 using Cotton.Server.Database.Models;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Models.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Cotton.Server.Database.Models.Enums;
-using Cotton.Server.Validators;
 
 namespace Cotton.Server.Controllers
 {
@@ -32,7 +32,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest(errorMessage);
             }
             Guid userId = User.GetUserId();
-            var parentNode = await _dbContext.UserLayoutNodes
+            var parentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == request.ParentId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
@@ -43,14 +43,14 @@ namespace Cotton.Server.Controllers
             var newNode = new Node
             {
                 OwnerId = userId,
-                Name = normalizedName,
                 ParentId = parentNode.Id,
                 Type = NodeType.Default,
                 LayoutId = parentNode.LayoutId,
             };
-            await _dbContext.UserLayoutNodes.AddAsync(newNode);
+            newNode.SetName(request.Name);
+            await _dbContext.Nodes.AddAsync(newNode);
             await _dbContext.SaveChangesAsync();
-            var mapped = newNode.Adapt<UserLayoutNodeDto>();
+            var mapped = newNode.Adapt<NodeDto>();
             return Ok(mapped);
         }
 
@@ -63,7 +63,7 @@ namespace Cotton.Server.Controllers
             // TODO: Guard against circular references
             Guid userId = User.GetUserId();
             var layout = await _dbContext.GetLatestUserLayoutAsync(userId);
-            var currentNode = await _dbContext.UserLayoutNodes
+            var currentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId
                     && x.OwnerId == userId
@@ -74,10 +74,10 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Node not found.");
             }
-            List<UserLayoutNodeDto> ancestors = [];
+            List<NodeDto> ancestors = [];
             while (currentNode.ParentId != null)
             {
-                var parentNode = await _dbContext.UserLayoutNodes
+                var parentNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.Id == currentNode.ParentId && x.OwnerId == userId)
                     .SingleOrDefaultAsync();
@@ -85,7 +85,7 @@ namespace Cotton.Server.Controllers
                 {
                     break;
                 }
-                ancestors.Add(parentNode.Adapt<UserLayoutNodeDto>());
+                ancestors.Add(parentNode.Adapt<NodeDto>());
                 currentNode = parentNode;
             }
             ancestors.Reverse();
@@ -99,7 +99,7 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             var layout = await _dbContext.GetLatestUserLayoutAsync(userId);
-            var parentNode = await _dbContext.UserLayoutNodes
+            var parentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId
                     && x.OwnerId == userId
@@ -111,10 +111,10 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("Parent node not found.");
             }
 
-            var nodes = await _dbContext.UserLayoutNodes
+            var nodes = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.ParentId == parentNode.Id && x.OwnerId == userId)
-                .ProjectToType<UserLayoutNodeDto>()
+                .ProjectToType<NodeDto>()
                 .ToListAsync();
 
             var files = await _dbContext.NodeFiles
@@ -122,7 +122,6 @@ namespace Cotton.Server.Controllers
                 .Include(x => x.FileManifest)
                 .Where(x => x.NodeId == parentNode.Id)
                 .Select(x => x.FileManifest)
-                .Where(x => x.OwnerId == userId)
                 .ProjectToType<FileManifestDto>()
                 .ToListAsync();
 
@@ -141,20 +140,20 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> ResolveLayout([FromRoute] string? path,
             [FromQuery] NodeType type = NodeType.Default)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                path = "/";
-            }
             Guid userId = User.GetUserId();
             var found = await _dbContext.GetLatestUserLayoutAsync(userId);
+            Node currentNode = await _dbContext.GetRootNodeAsync(found.Id, userId, type);
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                var dto = currentNode.Adapt<NodeDto>();
+                return Ok(dto);
+            }
 
             var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             // search for the root node of this layout and user, using node type
-
-            Node currentNode = await _dbContext.GetRootNodeAsync(found.Id, userId, type);
             foreach (var part in parts)
             {
-                var nextNode = await _dbContext.UserLayoutNodes
+                var nextNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.Layout.OwnerId == userId
                         && x.ParentId == currentNode.Id
@@ -167,7 +166,7 @@ namespace Cotton.Server.Controllers
                 }
                 currentNode = nextNode;
             }
-            var mapped = currentNode.Adapt<UserLayoutNodeDto>();
+            var mapped = currentNode.Adapt<NodeDto>();
             return Ok(mapped);
         }
     }
