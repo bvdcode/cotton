@@ -66,16 +66,12 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
             Guid userId = User.GetUserId();
-            var node = await _dbContext.UserLayoutNodes
-                .Where(x => x.Id == request.NodeId)
+            var node = await _dbContext.Nodes
+                .Where(x => x.Id == request.NodeId && x.Type == NodeType.Default && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
             if (node == null)
             {
-                return CottonResult.NotFound("User layout node not found.");
-            }
-            if (node.OwnerId != User.GetUserId())
-            {
-                return CottonResult.Forbidden("You do not have permission to add files to this node.");
+                return CottonResult.NotFound("Layout node not found.");
             }
 
             List<Chunk> chunks = [];
@@ -84,10 +80,10 @@ namespace Cotton.Server.Controllers
                 var foundChunk = await _dbContext.FindChunkAsync(item);
                 if (foundChunk == null)
                 {
-                    // TODO: Add safety check to ensure chunks belong to the user
-                    // Must depend on owner/user authentication, no reason to delay for the same user
                     return CottonResult.BadRequest($"Chunk with hash {item} not found.");
                 }
+                // TODO: Add safety check to ensure chunks belong to the user
+                // Must depend on owner/user authentication, no reason to delay for the same user
                 chunks.Add(foundChunk);
             }
 
@@ -99,8 +95,6 @@ namespace Cotton.Server.Controllers
 
             FileManifest newFile = new()
             {
-                OwnerId = userId,
-                Name = normalizedName,
                 ContentType = request.ContentType,
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
                 Sha256 = Convert.FromHexString(request.Sha256),
@@ -118,7 +112,7 @@ namespace Cotton.Server.Controllers
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk);
             }
 
-            // TODO: Get rid of this
+            // TODO: Get rid of this (or not?)
             using var blob = _storage.GetBlobStream(request.ChunkHashes);
             byte[] computedHash = await SHA256.HashDataAsync(blob);
             if (!computedHash.SequenceEqual(newFile.Sha256))
@@ -133,10 +127,13 @@ namespace Cotton.Server.Controllers
             NodeFile newNodeFile = new()
             {
                 Node = node,
+                OwnerId = userId,
                 FileManifest = newFile,
             };
+            newNodeFile.SetName(request.Name);
             await _dbContext.NodeFiles.AddAsync(newNodeFile);
-
+            await _dbContext.SaveChangesAsync();
+            newNodeFile.OriginalNodeFileId = newNodeFile.Id;
             await _dbContext.SaveChangesAsync();
             return Ok(newFile.Adapt<FileManifestDto>());
         }
