@@ -196,7 +196,7 @@ const FilesPage = () => {
               return pathIds.map((id, idx) => {
                 const isLast = idx === pathIds.length - 1;
                 const isRoot = idx === 0;
-                const name = nodesDict[id]?.name || (isRoot ? "/" : id.substring(0, 8));
+                const name = nodesDict[id]?.name || (isRoot ? "Default" : id.substring(0, 8));
                 if (isLast) {
                   // Last item: text only
                   return (
