@@ -20,6 +20,7 @@ namespace Cotton.Server
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddOptions<CottonSettings>()
                 .Bind(builder.Configuration).Services
+                .AddScoped<StorageLayoutService>()
                 .AddStreamCipher()
                 .AddCottonCors()
                 .AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value)

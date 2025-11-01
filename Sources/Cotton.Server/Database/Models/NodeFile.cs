@@ -13,8 +13,8 @@ namespace Cotton.Server.Database.Models
     [Index(nameof(FileManifestId), nameof(NodeId), IsUnique = true)]
     public class NodeFile : BaseOwnedEntity
     {
-        [Column("file_manifest_id")]
-        public Guid FileManifestId { get; set; }
+        [Column("file_manifest_sha256")]
+        public byte[] FileManifestId { get; set; } = null!;
 
         [Column("node_id")]
         public Guid NodeId { get; set; }

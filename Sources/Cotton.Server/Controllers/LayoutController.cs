@@ -5,7 +5,7 @@ using Mapster;
 using EasyExtensions;
 using Cotton.Server.Models;
 using Cotton.Server.Database;
-using Cotton.Server.Extensions;
+using Cotton.Server.Services;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Validators;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +18,7 @@ using Cotton.Server.Database.Models.Enums;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class LayoutController(CottonDbContext _dbContext) : ControllerBase
+    public class LayoutController(CottonDbContext _dbContext, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpPut($"{Routes.Layouts}/nodes")]
@@ -62,7 +62,7 @@ namespace Cotton.Server.Controllers
             // TODO: Optimize to a single query
             // TODO: Guard against circular references
             Guid userId = User.GetUserId();
-            var layout = await _dbContext.GetLatestUserLayoutAsync(userId);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
             var currentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId
@@ -98,7 +98,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType type = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            var layout = await _dbContext.GetLatestUserLayoutAsync(userId);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
             var parentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Where(x => x.Id == nodeId
@@ -145,8 +145,8 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType type = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            var found = await _dbContext.GetLatestUserLayoutAsync(userId);
-            Node currentNode = await _dbContext.GetRootNodeAsync(found.Id, userId, type);
+            var found = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+            Node currentNode = await _layouts.GetOrCreateRootNodeAsync(found.Id, userId, type);
             if (string.IsNullOrWhiteSpace(path))
             {
                 var dto = currentNode.Adapt<NodeDto>();
