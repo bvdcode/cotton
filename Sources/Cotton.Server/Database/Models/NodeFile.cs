@@ -8,9 +8,16 @@ using EasyExtensions.EntityFrameworkCore.Abstractions;
 namespace Cotton.Server.Database.Models
 {
     [Table("node_files")]
+    [Index(nameof(NodeId), nameof(NormalizedName), IsUnique = true)]
     [Index(nameof(FileManifestId), nameof(NodeId), IsUnique = true)]
     public class NodeFile : BaseEntity<Guid>
     {
+        [Column("name")]
+        public string Name { get; set; } = null!;
+
+        [Column("normalized_name")]
+        public string NormalizedName { get; set; } = null!;
+
         [Column("file_manifest_id")]
         public Guid FileManifestId { get; set; }
 

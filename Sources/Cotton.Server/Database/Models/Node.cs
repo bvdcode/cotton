@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Cotton.Server.Database.Models
 {
     [Table("nodes")]
-    [Index(nameof(LayoutId), nameof(Name), nameof(ParentId), nameof(Type), IsUnique = true)]
+    [Index(nameof(LayoutId), nameof(ParentId), nameof(Type), nameof(NormalizedName), IsUnique = true)]
     public class Node : BaseOwnedEntity
     {
         [Column("layout_id")]
@@ -20,6 +20,9 @@ namespace Cotton.Server.Database.Models
 
         [Column("name")]
         public string Name { get; set; } = null!;
+
+        [Column("normalized_name")]
+        public string NormalizedName { get; set; } = null!;
 
         [Column("type")]
         // TODO: make sure the parent node type is the same as this node type
