@@ -35,7 +35,7 @@ namespace Cotton.Server.Controllers
                 ?? throw new EntityNotFoundException(nameof(FileManifest));
             if (nodeFile.Node.Type == NodeType.Trash)
             {
-                return CottonResult.BadRequest("File is already deleted from the layout.");
+                return this.ApiBadRequest("File is already deleted from the layout.");
             }
             var trashNode = await _layouts.GetUserTrashNodeAsync(userId);
             nodeFile.NodeId = trashNode.Id;
@@ -63,7 +63,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPost(Routes.Files)]
+        [HttpPost(Routes.Files + "/from-chunks")]
         public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
             Guid userId = User.GetUserId();
@@ -113,17 +113,17 @@ namespace Cotton.Server.Controllers
                     Sha256 = clientComputedHash,
                 };
                 await _dbContext.FileManifests.AddAsync(newFile);
-            }
 
-            for (int i = 0; i < chunks.Count; i++)
-            {
-                var fileChunk = new FileManifestChunk
+                for (int i = 0; i < chunks.Count; i++)
                 {
-                    ChunkOrder = i,
-                    ChunkSha256 = chunks[i].Sha256,
-                    FileManifestSha256 = clientComputedHash,
-                };
-                await _dbContext.FileManifestChunks.AddAsync(fileChunk);
+                    var fileChunk = new FileManifestChunk
+                    {
+                        ChunkOrder = i,
+                        ChunkSha256 = chunks[i].Sha256,
+                        FileManifestSha256 = clientComputedHash,
+                    };
+                    await _dbContext.FileManifestChunks.AddAsync(fileChunk);
+                }
             }
 
             // TODO: Get rid of this (or not?)

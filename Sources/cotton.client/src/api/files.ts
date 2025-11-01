@@ -30,14 +30,18 @@ export interface UploadChunkResponse {
   ok: boolean;
 }
 
-export async function uploadChunk(chunk: Blob, hash: string, filename?: string): Promise<UploadChunkResponse> {
+export async function uploadChunk(
+  chunk: Blob,
+  hash: string,
+  filename?: string,
+): Promise<UploadChunkResponse> {
   const formData = new FormData();
   formData.append("file", chunk, filename ?? "chunk.bin");
   formData.append("hash", hash);
 
   const res = await api.post(`${API_ENDPOINTS.chunk}`, formData, {
     // Let the browser set the multipart boundary automatically
-    headers: { },
+    headers: {},
   });
   if (res.status < 200 || res.status >= 300) {
     throw new Error(`Chunk upload failed: ${res.status}`);
@@ -60,8 +64,13 @@ export function getDownloadUrl(fileManifestId: string): string {
 
 type CreateFileResponse = CottonResult<FileManifestDto> | FileManifestDto;
 
-export async function createFileFromChunks(req: CreateFileRequest): Promise<FileManifestDto> {
-  const res = await api.post<CreateFileResponse>(`${API_ENDPOINTS.files}`, req);
+export async function createFileFromChunks(
+  req: CreateFileRequest,
+): Promise<FileManifestDto> {
+  const res = await api.post<CreateFileResponse>(
+    `${API_ENDPOINTS.files}/from-chunks`,
+    req,
+  );
   const data = res.data;
   if (isEnvelope<FileManifestDto>(data)) {
     if (!data.success || !data.data) {
@@ -75,5 +84,7 @@ export async function createFileFromChunks(req: CreateFileRequest): Promise<File
 function isEnvelope<T>(val: unknown): val is CottonResult<T> {
   if (!val || typeof val !== "object") return false;
   const rec = val as Record<string, unknown>;
-  return typeof rec["success"] === "boolean" && ("data" in rec || "message" in rec);
+  return (
+    typeof rec["success"] === "boolean" && ("data" in rec || "message" in rec)
+  );
 }
