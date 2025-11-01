@@ -117,13 +117,17 @@ namespace Cotton.Server.Controllers
                 .ProjectToType<NodeDto>()
                 .ToListAsync();
 
-            var files = await _dbContext.NodeFiles
+            var files = _dbContext.NodeFiles
                 .AsNoTracking()
                 .Include(x => x.FileManifest)
                 .Where(x => x.NodeId == parentNode.Id)
-                .Select(x => x.FileManifest)
-                .ProjectToType<FileManifestDto>()
-                .ToListAsync();
+                .ToList()
+                .Select(x =>
+                {
+                    FileManifestDto dto = x.FileManifest.Adapt<FileManifestDto>();
+                    dto.Name = x.Name;
+                    return dto;
+                });
 
             NodeContentDto result = new()
             {

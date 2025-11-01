@@ -13,6 +13,7 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
+using Cotton.Server.Database.Models.Enums;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -79,7 +80,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var node = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(node, Is.Not.Null);
-        Assert.That(node!.Name, Is.EqualTo("/"));
+        Assert.That(node!.Name, Is.EqualTo(NodeType.Default.ToString()));
         Assert.That(node.ParentId, Is.Null);
         Assert.That(node.LayoutId, Is.Not.EqualTo(Guid.Empty));
         Assert.That(node.Id, Is.Not.EqualTo(Guid.Empty));
@@ -109,12 +110,18 @@ public class LayoutAndFilesTests : IntegrationTestBase
             var content = Encoding.UTF8.GetBytes($"hello {i}");
             var chunkHashLower = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
             // Upload chunk
-            using var form = new MultipartFormDataContent();
-            form.Add(new ByteArrayContent(content)
+            using var form = new MultipartFormDataContent
             {
-                Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
-            }, "file", $"chunk{i}.bin");
-            form.Add(new StringContent(chunkHashLower), "hash");
+                {
+                    new ByteArrayContent(content)
+                    {
+                        Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                    },
+                    "file",
+                    $"chunk{i}.bin"
+                },
+                { new StringContent(chunkHashLower), "hash" }
+            };
             var upRes = await _client.PostAsync("/api/v1/chunks", form);
             upRes.EnsureSuccessStatusCode();
             TestContext.Progress.WriteLine($"Uploaded chunk {i}: {chunkHashLower[..16]}...");

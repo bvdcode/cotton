@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Server.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251025054012_M1")]
-    partial class M1
+    [Migration("20251101035332_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -88,18 +88,6 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<Guid?>("FileManifestId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<Guid>("OwnerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("owner_id");
-
                     b.Property<byte[]>("Sha256")
                         .IsRequired()
                         .HasColumnType("bytea")
@@ -113,15 +101,10 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<Guid>("VersionStableId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("version_stable_id");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("FileManifestId");
-
-                    b.HasIndex("OwnerId");
+                    b.HasIndex("Sha256")
+                        .IsUnique();
 
                     b.ToTable("file_manifests");
                 });
@@ -148,7 +131,7 @@ namespace Cotton.Server.Migrations
 
                     b.Property<Guid>("FileManifestId")
                         .HasColumnType("uuid")
-                        .HasColumnName("blob_id");
+                        .HasColumnName("file_manifest_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -174,6 +157,10 @@ namespace Cotton.Server.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid")
@@ -210,6 +197,11 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<string>("NameKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_key");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid")
                         .HasColumnName("owner_id");
@@ -232,7 +224,7 @@ namespace Cotton.Server.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.HasIndex("LayoutId", "Name", "ParentId", "Type")
+                    b.HasIndex("LayoutId", "ParentId", "Type", "NameKey")
                         .IsUnique();
 
                     b.ToTable("nodes");
@@ -253,9 +245,27 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("file_manifest_id");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NameKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name_key");
+
                     b.Property<Guid>("NodeId")
                         .HasColumnType("uuid")
                         .HasColumnName("node_id");
+
+                    b.Property<Guid>("OriginalNodeFileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("original_node_file_id");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -263,9 +273,12 @@ namespace Cotton.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NodeId");
+                    b.HasIndex("OwnerId");
 
                     b.HasIndex("FileManifestId", "NodeId")
+                        .IsUnique();
+
+                    b.HasIndex("NodeId", "NameKey")
                         .IsUnique();
 
                     b.ToTable("node_files");
@@ -314,21 +327,6 @@ namespace Cotton.Server.Migrations
                     b.Navigation("Owner");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.FileManifest", b =>
-                {
-                    b.HasOne("Cotton.Server.Database.Models.FileManifest", null)
-                        .WithMany("FileManifests")
-                        .HasForeignKey("FileManifestId");
-
-                    b.HasOne("Cotton.Server.Database.Models.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Owner");
-                });
-
             modelBuilder.Entity("Cotton.Server.Database.Models.FileManifestChunk", b =>
                 {
                     b.HasOne("Cotton.Server.Database.Models.Chunk", "Chunk")
@@ -338,7 +336,7 @@ namespace Cotton.Server.Migrations
                         .IsRequired();
 
                     b.HasOne("Cotton.Server.Database.Models.FileManifest", "FileManifest")
-                        .WithMany()
+                        .WithMany("FileManifestChunks")
                         .HasForeignKey("FileManifestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -398,14 +396,22 @@ namespace Cotton.Server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Cotton.Server.Database.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("FileManifest");
 
                     b.Navigation("Node");
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Cotton.Server.Database.Models.FileManifest", b =>
                 {
-                    b.Navigation("FileManifests");
+                    b.Navigation("FileManifestChunks");
                 });
 
             modelBuilder.Entity("Cotton.Server.Database.Models.Layout", b =>
