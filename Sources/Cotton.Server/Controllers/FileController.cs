@@ -5,25 +5,24 @@ using Mapster;
 using EasyExtensions;
 using Cotton.Server.Models;
 using Cotton.Server.Database;
-using Cotton.Server.Extensions;
+using Cotton.Server.Services;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Validators;
 using Microsoft.AspNetCore.Mvc;
 using Cotton.Server.Abstractions;
 using System.Security.Cryptography;
-using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Models.Requests;
 using Cotton.Server.Database.Models;
+using Cotton.Server.Models.Requests;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Cotton.Server.Database.Models.Enums;
-using EasyExtensions.EntityFrameworkCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
-using System;
+using EasyExtensions.EntityFrameworkCore.Exceptions;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class FileController(CottonDbContext _dbContext, IStorage _storage) : ControllerBase
+    public class FileController(CottonDbContext _dbContext, IStorage _storage, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpDelete($"{Routes.Files}/{{nodeFileId:guid}}")]
@@ -38,7 +37,7 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest("File is already deleted from the layout.");
             }
-            var trashNode = await _dbContext.GetUserTrashNodeAsync(userId);
+            var trashNode = await _layouts.GetUserTrashNodeAsync(userId);
             nodeFile.NodeId = trashNode.Id;
             await _dbContext.SaveChangesAsync();
             return NoContent();
@@ -87,7 +86,7 @@ namespace Cotton.Server.Controllers
             List<Chunk> chunks = [];
             foreach (var item in request.ChunkHashes)
             {
-                var foundChunk = await _dbContext.FindChunkAsync(item);
+                var foundChunk = await _layouts.FindChunkAsync(item);
                 if (foundChunk == null)
                 {
                     return CottonResult.BadRequest($"Chunk with hash {item} not found.");
@@ -121,8 +120,8 @@ namespace Cotton.Server.Controllers
                 var fileChunk = new FileManifestChunk
                 {
                     ChunkOrder = i,
-                    FileManifest = newFile,
                     ChunkSha256 = chunks[i].Sha256,
+                    FileManifestSha256 = clientComputedHash,
                 };
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk);
             }
@@ -132,10 +131,6 @@ namespace Cotton.Server.Controllers
             byte[] computedHash = await SHA256.HashDataAsync(blob);
             if (!computedHash.SequenceEqual(newFile.Sha256))
             {
-                // Rollback
-                var created = _dbContext.FileManifestChunks.Where(x => x.FileManifestSha256.SequenceEqual(newFile.Sha256));
-                _dbContext.FileManifestChunks.RemoveRange(created);
-                _dbContext.FileManifests.Remove(newFile);
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the whole uploaded file.");
             }
 

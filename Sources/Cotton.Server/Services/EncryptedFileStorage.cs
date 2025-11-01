@@ -64,7 +64,7 @@ namespace Cotton.Server.Services
             string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
             if (File.Exists(filePath))
             {
-                _logger.LogCritical("File collision detected for file {Uid}", uid);
+                _logger.LogCritical("File collision detected for file {Uid}: two different files have the same name", uid);
                 throw new IOException("File collision detected: two different files have the same name: " + uid);
             }
 
