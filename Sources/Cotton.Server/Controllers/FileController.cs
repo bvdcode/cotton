@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Database.Models;
 using Microsoft.AspNetCore.Authorization;
+using Cotton.Server.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
 
 namespace Cotton.Server.Controllers
@@ -23,33 +24,41 @@ namespace Cotton.Server.Controllers
     public class FileController(CottonDbContext _dbContext, IStorage _storage) : ControllerBase
     {
         [Authorize]
-        [HttpDelete($"{Routes.Files}/{{fileManifestId:guid}}")]
-        public async Task<IActionResult> DeleteFile([FromRoute] Guid fileManifestId)
+        [HttpDelete($"{Routes.Files}/{{nodeFileId:guid}}")]
+        public async Task<IActionResult> DeleteFile([FromRoute] Guid nodeFileId)
         {
-            var manifest = await _dbContext.FileManifests.FindAsync(fileManifestId)
+            Guid userId = User.GetUserId();
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .FirstOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId)
                 ?? throw new EntityNotFoundException(nameof(FileManifest));
-            _dbContext.FileManifests.Remove(manifest);
+            if (nodeFile.Node.Type == NodeType.Trash)
+            {
+                return CottonResult.BadRequest("File is already deleted from the layout.");
+            }
+            var trashNode = await _dbContext.GetUserTrashNodeAsync(userId);
+            nodeFile.NodeId = trashNode.Id;
             await _dbContext.SaveChangesAsync();
-            // TODO: Consider deleting or just dereferencing chunks that are no longer used by any file manifests
             return NoContent();
         }        
 
         // TODO: Authorization: Ensure the user has access to this file
-        [HttpGet($"{Routes.Files}/{{fileManifestId:guid}}/download")]
-        public async Task<IActionResult> DownloadFile([FromRoute] Guid fileManifestId)
+        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
+        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId)
         {
-            var manifest = await _dbContext.FileManifests.SingleOrDefaultAsync(x => x.Id == fileManifestId);
-            if (manifest == null)
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
+            if (nodeFile == null)
             {
-                return CottonResult.NotFound("File manifest not found");
+                return CottonResult.NotFound("Node file not found");
             }
-            string[] hashes = await _dbContext.FileManifestChunks
-                .Where(x => x.FileManifestId == fileManifestId)
+            string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
                 .OrderBy(x => x.ChunkOrder)
-                .Select(x => Convert.ToHexString(x.ChunkSha256))
-                .ToArrayAsync();
+                .Select(x => Convert.ToHexString(x.ChunkSha256))];
             Stream stream = _storage.GetBlobStream(hashes);
-            return File(stream, manifest.ContentType, manifest.Name);
+            return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name);
         }
 
         [Authorize]
@@ -126,7 +135,7 @@ namespace Cotton.Server.Controllers
                 Node = node,
                 FileManifest = newFile,
             };
-            await _dbContext.UserLayoutNodeFiles.AddAsync(newNodeFile);
+            await _dbContext.NodeFiles.AddAsync(newNodeFile);
 
             await _dbContext.SaveChangesAsync();
             return Ok(newFile.Adapt<FileManifestDto>());

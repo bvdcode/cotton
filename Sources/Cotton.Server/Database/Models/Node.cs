@@ -26,10 +26,10 @@ namespace Cotton.Server.Database.Models
 
         [Column("type")]
         // TODO: make sure the parent node type is the same as this node type
-        public UserLayoutNodeType Type { get; set; }
+        public NodeType Type { get; set; }
 
         public virtual Layout Layout { get; set; } = null!;
-        public virtual Node? Parent { get; set; } = null!;
+        public virtual Node? Parent { get; set; }
         public virtual ICollection<Node> Children { get; set; } = [];
         public virtual ICollection<NodeFile> LayoutNodeFiles { get; set; } = [];
     }

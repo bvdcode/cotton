@@ -45,7 +45,7 @@ namespace Cotton.Server.Controllers
                 OwnerId = userId,
                 Name = normalizedName,
                 ParentId = parentNode.Id,
-                Type = UserLayoutNodeType.Default,
+                Type = NodeType.Default,
                 LayoutId = parentNode.LayoutId,
             };
             await _dbContext.UserLayoutNodes.AddAsync(newNode);
@@ -57,7 +57,7 @@ namespace Cotton.Server.Controllers
         [Authorize]
         [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/ancestors")]
         public async Task<IActionResult> GetAncestorNodes([FromRoute] Guid nodeId,
-            [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
+            [FromQuery] NodeType type = NodeType.Default)
         {
             // TODO: Optimize to a single query
             // TODO: Guard against circular references
@@ -95,7 +95,7 @@ namespace Cotton.Server.Controllers
         [Authorize]
         [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/children")]
         public async Task<IActionResult> GetChildNodes([FromRoute] Guid nodeId,
-            [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
+            [FromQuery] NodeType type = NodeType.Default)
         {
             Guid userId = User.GetUserId();
             var layout = await _dbContext.GetLatestUserLayoutAsync(userId);
@@ -117,7 +117,7 @@ namespace Cotton.Server.Controllers
                 .ProjectToType<UserLayoutNodeDto>()
                 .ToListAsync();
 
-            var files = await _dbContext.UserLayoutNodeFiles
+            var files = await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Include(x => x.FileManifest)
                 .Where(x => x.NodeId == parentNode.Id)
@@ -139,7 +139,7 @@ namespace Cotton.Server.Controllers
         [HttpGet($"{Routes.Layouts}/resolver")]
         [HttpGet($"{Routes.Layouts}/resolver/{{*path}}")]
         public async Task<IActionResult> ResolveLayout([FromRoute] string? path,
-            [FromQuery] UserLayoutNodeType type = UserLayoutNodeType.Default)
+            [FromQuery] NodeType type = NodeType.Default)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
