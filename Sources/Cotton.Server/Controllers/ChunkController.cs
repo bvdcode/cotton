@@ -3,9 +3,9 @@
 
 using Cotton.Server.Models;
 using Cotton.Server.Database;
+using Cotton.Server.Services;
 using Cotton.Server.Settings;
 using Microsoft.AspNetCore.Mvc;
-using Cotton.Server.Extensions;
 using Cotton.Server.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Server.Database.Models;
@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Cotton.Server.Controllers
 {
     public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings, 
-        IStorage _storage, ILogger<ChunkController> _logger) : ControllerBase
+        IStorage _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpPost(Routes.Chunks)]
@@ -40,16 +40,15 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
-            using var tmp = WrapIfNonSeekable(file);
-
-            byte[] computedHash = await SHA256.HashDataAsync(tmp);
-            tmp.Seek(default, SeekOrigin.Begin);
+            using var stream = file.OpenReadStream();
+            byte[] computedHash = await SHA256.HashDataAsync(stream);
+            stream.Seek(default, SeekOrigin.Begin);
             if (!computedHash.SequenceEqual(hashBytes))
             {
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
             }
 
-            var chunk = await _dbContext.FindChunkAsync(hashBytes);
+            var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk != null)
             {
                 // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
@@ -58,7 +57,7 @@ namespace Cotton.Server.Controllers
             }
             try
             {
-                await _storage.WriteFileAsync(hash, tmp);
+                await _storage.WriteFileAsync(hash, stream);
                 chunk = new Chunk
                 {
                     Sha256 = hashBytes,
@@ -66,27 +65,13 @@ namespace Cotton.Server.Controllers
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
                 await _dbContext.SaveChangesAsync();
+                _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes.", hash, chunk.SizeBytes);
                 return Created();
             }
             catch (Exception)
             {
                 return CottonResult.InternalError("Failed to store the uploaded chunk.");
             }
-        }
-
-        private Stream WrapIfNonSeekable(IFormFile file)
-        {
-            var stream = file.OpenReadStream();
-            if (stream.CanSeek)
-            {
-                _logger.LogDebug("Uploaded file stream is seekable: {name}", file.FileName);
-                return stream;
-            }
-            _logger.LogInformation("Uploaded file stream is NOT seekable: {name}", file.FileName);
-            var wrapper = new MemoryStream(capacity: (int)file.Length);
-            stream.CopyTo(wrapper);
-            wrapper.Seek(default, SeekOrigin.Begin);
-            return wrapper;
         }
     }
 }

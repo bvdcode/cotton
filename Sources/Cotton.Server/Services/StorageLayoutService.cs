@@ -1,26 +1,26 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
-
-using Cotton.Server.Helpers;
+﻿using Cotton.Server.Helpers;
 using Cotton.Server.Database;
-using Cotton.Server.Database.Models;
-using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Database.Models.Enums;
 using Cotton.Server.Validators;
+using Microsoft.EntityFrameworkCore;
+using Cotton.Server.Database.Models;
+using Cotton.Server.Database.Models.Enums;
 
-namespace Cotton.Server.Extensions
+namespace Cotton.Server.Services
 {
-    public static class CottonDbContextExtensions
+    public class StorageLayoutService(CottonDbContext _dbContext)
     {
-        public static async Task<Node> GetUserTrashNodeAsync(this CottonDbContext dbContext, Guid ownerId)
+        private static readonly SemaphoreSlim _layoutSemaphore = new(1, 1);
+
+        public async Task<Node> GetUserTrashNodeAsync(Guid ownerId)
         {
-            var layout = await dbContext.GetLatestUserLayoutAsync(ownerId);
-            return await GetRootNodeAsync(dbContext, layout.Id, ownerId, NodeType.Trash);
+            var layout = await GetOrCreateLatestUserLayoutAsync(ownerId);
+            return await GetOrCreateRootNodeAsync(layout.Id, ownerId, NodeType.Trash);
         }
 
-        public static async Task<Node> GetRootNodeAsync(this CottonDbContext dbContext, Guid layoutId, Guid ownerId, NodeType type)
+        public async Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType type)
         {
-            var currentNode = await dbContext.Nodes
+            _layoutSemaphore.Wait();
+            var currentNode = await _dbContext.Nodes
                 .AsNoTracking()
                 .Include(x => x.Layout)
                 .Where(x => x.Layout.OwnerId == ownerId
@@ -38,16 +38,19 @@ namespace Cotton.Server.Extensions
                     LayoutId = layoutId,
                 };
                 newNode.SetName(type.ToString());
-                await dbContext.Nodes.AddAsync(newNode);
-                await dbContext.SaveChangesAsync();
+                await _dbContext.Nodes.AddAsync(newNode);
+                await _dbContext.SaveChangesAsync();
+                _layoutSemaphore.Release();
                 return newNode;
             }
+            _layoutSemaphore.Release();
             return currentNode;
         }
 
-        public static async Task<Layout> GetLatestUserLayoutAsync(this CottonDbContext dbContext, Guid ownerId)
+        public async Task<Layout> GetOrCreateLatestUserLayoutAsync(Guid ownerId)
         {
-            var found = await dbContext.UserLayouts
+            _layoutSemaphore.Wait();
+            var found = await _dbContext.UserLayouts
                 .Where(x => x.OwnerId == ownerId && x.IsActive)
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync();
@@ -58,25 +61,27 @@ namespace Cotton.Server.Extensions
                     IsActive = true,
                     OwnerId = ownerId,
                 };
-                await dbContext.UserLayouts.AddAsync(newLayout);
-                await dbContext.SaveChangesAsync();
+                await _dbContext.UserLayouts.AddAsync(newLayout);
+                await _dbContext.SaveChangesAsync();
+                _layoutSemaphore.Release();
                 return newLayout;
             }
+            _layoutSemaphore.Release();
             return found;
         }
 
-        public static Task<Chunk?> FindChunkAsync(this CottonDbContext dbContext, string sha256hex)
+        public Task<Chunk?> FindChunkAsync(string sha256hex)
         {
             if (!HashHelpers.IsValidHash(sha256hex))
             {
                 throw new ArgumentException("Invalid hash format.", nameof(sha256hex));
             }
-            return FindChunkAsync(dbContext, Convert.FromHexString(sha256hex));
+            return FindChunkAsync(Convert.FromHexString(sha256hex));
         }
 
-        public static async Task<Chunk?> FindChunkAsync(this CottonDbContext dbContext, byte[] sha256)
+        public async Task<Chunk?> FindChunkAsync(byte[] sha256)
         {
-            return await dbContext.Chunks.FindAsync(sha256);
+            return await _dbContext.Chunks.FindAsync(sha256);
         }
     }
 }

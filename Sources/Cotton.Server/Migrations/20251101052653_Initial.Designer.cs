@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Server.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251101043310_Initial3")]
-    partial class Initial3
+    [Migration("20251101052653_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -225,12 +225,10 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<Guid>("FileManifestId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_manifest_id");
-
-                    b.Property<byte[]>("FileManifestSha256")
-                        .HasColumnType("bytea");
+                    b.Property<byte[]>("FileManifestId")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("file_manifest_sha256");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -259,8 +257,6 @@ namespace Cotton.Server.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FileManifestSha256");
 
                     b.HasIndex("OwnerId");
 
@@ -375,7 +371,9 @@ namespace Cotton.Server.Migrations
                 {
                     b.HasOne("Cotton.Server.Database.Models.FileManifest", "FileManifest")
                         .WithMany()
-                        .HasForeignKey("FileManifestSha256");
+                        .HasForeignKey("FileManifestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Cotton.Server.Database.Models.Node", "Node")
                         .WithMany("LayoutNodeFiles")
