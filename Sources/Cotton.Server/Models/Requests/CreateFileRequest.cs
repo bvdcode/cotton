@@ -10,5 +10,6 @@ namespace Cotton.Server.Models.Requests
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
         public string Sha256 { get; set; } = null!;
+        public Guid? OriginalNodeFileId { get; set; }
     }
 }
