@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
 using Cotton.Server.Database;
@@ -8,8 +8,8 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Abstractions;
 using Microsoft.Extensions.Options;
 using EasyExtensions.EntityFrameworkCore.Extensions;
-using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.AspNetCore.Authorization.Extensions;
+using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 
 namespace Cotton.Server
 {
