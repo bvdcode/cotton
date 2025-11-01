@@ -15,7 +15,7 @@ namespace Cotton.Server.Database.Models
         [Column("chunk_order")]
         public int ChunkOrder { get; set; } // 0..N-1
 
-        [Column("blob_id")]
+        [Column("file_manifest_id")]
         public Guid FileManifestId { get; set; }
 
         [Column("chunk_sha256")]

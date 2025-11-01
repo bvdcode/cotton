@@ -9,6 +9,8 @@ namespace Cotton.Server.Database.Models
     [Table("layouts")]
     public class Layout : BaseOwnedEntity
     {
+        [Column("is_active")]
+        public bool IsActive { get; set; }
         public virtual ICollection<Node> Nodes { get; set; } = [];
     }
 }

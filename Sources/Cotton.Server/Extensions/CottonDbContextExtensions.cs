@@ -11,7 +11,13 @@ namespace Cotton.Server.Extensions
 {
     public static class CottonDbContextExtensions
     {
-        public static async Task<Node> GetRootNodeAsync(this CottonDbContext dbContext, Guid layoutId, Guid ownerId, UserLayoutNodeType type)
+        public static async Task<Node> GetUserTrashNodeAsync(this CottonDbContext dbContext, Guid ownerId)
+        {
+            var layout = await dbContext.GetLatestUserLayoutAsync(ownerId);
+            return await GetRootNodeAsync(dbContext, layout.Id, ownerId, NodeType.Trash);
+        }
+
+        public static async Task<Node> GetRootNodeAsync(this CottonDbContext dbContext, Guid layoutId, Guid ownerId, NodeType type)
         {
             var currentNode = await dbContext.UserLayoutNodes
                 .AsNoTracking()
@@ -25,10 +31,11 @@ namespace Cotton.Server.Extensions
             {
                 Node newNode = new()
                 {
-                    Name = "/",
+                    Name = type.ToString(),
                     Type = type,
                     OwnerId = ownerId,
                     LayoutId = layoutId,
+                    NormalizedName = type.ToString().ToUpperInvariant(),
                 };
                 await dbContext.UserLayoutNodes.AddAsync(newNode);
                 await dbContext.SaveChangesAsync();
@@ -40,14 +47,15 @@ namespace Cotton.Server.Extensions
         public static async Task<Layout> GetLatestUserLayoutAsync(this CottonDbContext dbContext, Guid ownerId)
         {
             var found = await dbContext.UserLayouts
-                .Where(x => x.OwnerId == ownerId)
+                .Where(x => x.OwnerId == ownerId && x.IsActive)
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync();
             if (found == null)
             {
                 Layout newLayout = new()
                 {
-                    OwnerId = ownerId
+                    IsActive = true,
+                    OwnerId = ownerId,
                 };
                 await dbContext.UserLayouts.AddAsync(newLayout);
                 await dbContext.SaveChangesAsync();
