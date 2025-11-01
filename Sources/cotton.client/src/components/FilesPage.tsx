@@ -1,8 +1,4 @@
-import {
-  uploadChunk,
-  createFileFromChunks,
-  getDownloadUrl,
-} from "../api/files.ts";
+import { uploadChunk, createFileFromChunks, getDownloadUrl, chunkExists } from "../api/files.ts";
 import Box from "@mui/material/Box";
 import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
@@ -141,7 +137,11 @@ const FilesPage = () => {
                     throw err;
                   }
                 }
-                await uploadChunk(current.blob, h, selectedFile.name);
+                // Check if chunk already exists on server; if yes, skip uploading
+                const exists = await chunkExists(h);
+                if (!exists) {
+                  await uploadChunk(current.blob, h, selectedFile.name);
+                }
                 hashesLocal[current.idx] = h;
                 uploadedBytes += current.size;
                 const elapsed = (Date.now() - startTime) / 1000;
