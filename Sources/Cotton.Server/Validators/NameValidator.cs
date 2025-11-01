@@ -187,6 +187,16 @@ namespace Cotton.Server.Validators
             return ReservedBaseNamesCI.Contains(up);
         }
 
+        public static string NormalizeAndGetNameKey(string normalized)
+        {
+            bool isValid = TryNormalizeAndValidate(normalized, out string norm, out string error);
+            if (!isValid)
+            {
+                throw new ArgumentException($"Invalid name for key generation: {error}");
+            }
+            return GetNameKey(norm);
+        }
+
         public static string GetNameKey(string normalized)
         {
             var sb = new StringBuilder();

@@ -124,8 +124,8 @@ namespace Cotton.Server.Controllers
                 .ToList()
                 .Select(x =>
                 {
-                    FileManifestDto dto = x.FileManifest.Adapt<FileManifestDto>();
-                    dto.Name = x.Name;
+                    NodeFileManifestDto dto = x.Adapt<NodeFileManifestDto>();
+                    dto.ReadMetadataFromManifest(x.FileManifest);
                     return dto;
                 });
 

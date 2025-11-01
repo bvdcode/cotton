@@ -17,6 +17,8 @@ using Cotton.Server.Database.Models;
 using Microsoft.AspNetCore.Authorization;
 using Cotton.Server.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using EasyExtensions.AspNetCore.Extensions;
+using System;
 
 namespace Cotton.Server.Controllers
 {
@@ -40,7 +42,7 @@ namespace Cotton.Server.Controllers
             nodeFile.NodeId = trashNode.Id;
             await _dbContext.SaveChangesAsync();
             return NoContent();
-        }        
+        }
 
         // TODO: Authorization: Ensure the user has access to this file
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
@@ -71,7 +73,15 @@ namespace Cotton.Server.Controllers
                 .SingleOrDefaultAsync();
             if (node == null)
             {
-                return CottonResult.NotFound("Layout node not found.");
+                return this.ApiNotFound("Layout node not found.");
+            }
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+            bool nameExists = await _dbContext.NodeFiles
+                .AnyAsync(x => x.NodeId == node.Id && x.OwnerId == userId && x.NameKey == nameKey);
+            if (nameExists)
+            {
+                return this.ApiConflict("A file with the same name key already exists in the target node: " + nameKey);
             }
 
             List<Chunk> chunks = [];
@@ -93,13 +103,18 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
             }
 
-            FileManifest newFile = new()
+            byte[] clientComputedHash = Convert.FromHexString(request.Sha256);
+            var newFile = await _dbContext.FileManifests.FindAsync(clientComputedHash);
+            if (newFile == null)
             {
-                ContentType = request.ContentType,
-                SizeBytes = chunks.Sum(x => x.SizeBytes),
-                Sha256 = Convert.FromHexString(request.Sha256),
-            };
-            await _dbContext.FileManifests.AddAsync(newFile);
+                newFile = new()
+                {
+                    ContentType = request.ContentType,
+                    SizeBytes = chunks.Sum(x => x.SizeBytes),
+                    Sha256 = clientComputedHash,
+                };
+                await _dbContext.FileManifests.AddAsync(newFile);
+            }
 
             for (int i = 0; i < chunks.Count; i++)
             {
@@ -118,8 +133,8 @@ namespace Cotton.Server.Controllers
             if (!computedHash.SequenceEqual(newFile.Sha256))
             {
                 // Rollback
-                _dbContext.FileManifestChunks.RemoveRange(
-                    _dbContext.FileManifestChunks.Where(x => x.FileManifestId == newFile.Id));
+                var created = _dbContext.FileManifestChunks.Where(x => x.FileManifestSha256.SequenceEqual(newFile.Sha256));
+                _dbContext.FileManifestChunks.RemoveRange(created);
                 _dbContext.FileManifests.Remove(newFile);
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the whole uploaded file.");
             }
@@ -132,10 +147,19 @@ namespace Cotton.Server.Controllers
             };
             newNodeFile.SetName(request.Name);
             await _dbContext.NodeFiles.AddAsync(newNodeFile);
+            if (!request.OriginalNodeFileId.HasValue)
+            {
+                await _dbContext.SaveChangesAsync();
+                newNodeFile.OriginalNodeFileId = newNodeFile.Id;
+            }
+            else
+            {
+                newNodeFile.OriginalNodeFileId = request.OriginalNodeFileId.Value;
+            }
             await _dbContext.SaveChangesAsync();
-            newNodeFile.OriginalNodeFileId = newNodeFile.Id;
-            await _dbContext.SaveChangesAsync();
-            return Ok(newFile.Adapt<FileManifestDto>());
+            var dto = newNodeFile.Adapt<NodeFileManifestDto>();
+            dto.ReadMetadataFromManifest(newFile);
+            return Ok();
         }
     }
 }
