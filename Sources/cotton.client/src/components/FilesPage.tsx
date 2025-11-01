@@ -18,7 +18,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import { useLayoutStore } from "../stores/layoutStore.ts";
 import { useNavigate, useParams, Link as RouterLink } from "react-router-dom";
 import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
-import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
+import { normalizeAlgorithm, hashBlob, readBlobArrayBuffer, hashBlobIncremental } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
 import { ArrowBack, CreateNewFolder, Home as HomeIcon } from "@mui/icons-material";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
@@ -92,6 +92,20 @@ const FilesPage = () => {
     // currentNode is resolved on mount; no manual folder selection required
     setIsUploading(true);
     setError(null);
+    // Preflight: ensure we can read the file (helps surface NotReadableError early)
+    try {
+      const head = selectedFile.slice(0, Math.min(1, selectedFile.size));
+      await readBlobArrayBuffer(head);
+    } catch {
+      setError(
+        t(
+          "files.notReadableError",
+          "The selected file can't be read. It may be locked by another app, removed, or access was revoked. Close any app using the file, copy it to a writable folder, and choose it again.",
+        ),
+      );
+      setIsUploading(false);
+      return;
+    }
     const totalChunks = Math.ceil(
       selectedFile.size / settings.maxChunkSizeBytes,
     );
@@ -105,8 +119,8 @@ const FilesPage = () => {
         chunkBlob(selectedFile, settings.maxChunkSizeBytes),
       ).map((blob, idx) => ({ idx, blob, size: blob.size }));
 
-      // Simple promise pool for concurrency
-      const concurrency = UPLOAD_CONCURRENCY_DEFAULT;
+      // Simple promise pool for concurrency; reduce parallelism for very large files
+      const concurrency = selectedFile.size > 1_000_000_000 ? 1 : UPLOAD_CONCURRENCY_DEFAULT;
       let next = 0;
       let active = 0;
       await new Promise<void>((resolve, reject) => {
@@ -117,7 +131,17 @@ const FilesPage = () => {
             (async () => {
               try {
                 const h = await hashBlob(current.blob, algo);
-                await uploadChunk(current.blob, h, selectedFile.name);
+                // optional fast path: skip uploading if server already has this chunk
+                try {
+                  const { chunkExists } = await import("../api/files.ts");
+                  const exists = await chunkExists(h);
+                  if (!exists) {
+                    await uploadChunk(current.blob, h, selectedFile.name);
+                  }
+                } catch {
+                  // if check fails for any reason, proceed with normal upload
+                  await uploadChunk(current.blob, h, selectedFile.name);
+                }
                 hashesLocal[current.idx] = h;
                 uploadedBytes += current.size;
                 const elapsed = (Date.now() - startTime) / 1000;
@@ -144,8 +168,8 @@ const FilesPage = () => {
         };
         runNext();
       });
-      // Compute full file hash (over entire file blob) with same algorithm
-      const fileHash = await hashBlob(selectedFile, algo);
+  // Compute true full-file hash incrementally without loading entire file
+  const fileHash = await hashBlobIncremental(selectedFile, algo);
       // Create file manifest on backend
       await createFileFromChunks({
         chunkHashes: hashesLocal,
