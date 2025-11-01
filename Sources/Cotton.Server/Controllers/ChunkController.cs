@@ -10,10 +10,12 @@ using Cotton.Server.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Server.Database.Models;
 using Microsoft.AspNetCore.Authorization;
+using EasyExtensions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
-    public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings, 
+    public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings,
         IStorage _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
@@ -49,13 +51,7 @@ namespace Cotton.Server.Controllers
             }
 
             var chunk = await _layouts.FindChunkAsync(hashBytes);
-            if (chunk != null)
-            {
-                // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
-                // Must depend on owner/user authentication, no reason to delay for the same user
-                return Created();
-            }
-            try
+            if (chunk == null)
             {
                 await _storage.WriteFileAsync(hash, stream);
                 chunk = new Chunk
@@ -64,14 +60,24 @@ namespace Cotton.Server.Controllers
                     SizeBytes = file.Length,
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
-                await _dbContext.SaveChangesAsync();
-                _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes.", hash, chunk.SizeBytes);
-                return Created();
             }
-            catch (Exception)
+            // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
+            // Must depend on owner/user authentication, no reason to delay for the same user
+            var foundOwnership = await _dbContext.ChunkOwnerships
+                .FirstOrDefaultAsync(co => co.ChunkSha256.SequenceEqual(hashBytes)
+                    && co.OwnerId == User.GetUserId());
+            if (foundOwnership == null)
             {
-                return CottonResult.InternalError("Failed to store the uploaded chunk.");
+                ChunkOwnership chunkOwnership = new()
+                {
+                    ChunkSha256 = hashBytes,
+                    OwnerId = User.GetUserId(),
+                };
+                await _dbContext.ChunkOwnerships.AddAsync(chunkOwnership);
             }
+            await _dbContext.SaveChangesAsync();
+            _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes.", hash, chunk.SizeBytes);
+            return Created();
         }
     }
 }
