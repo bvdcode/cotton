@@ -30,6 +30,19 @@ export interface UploadChunkResponse {
   ok: boolean;
 }
 
+/**
+ * Check whether a chunk with the given hash already exists on the server.
+ * Returns true if server responds 200, false if 404. Any other status will also
+ * be treated as "not found" to allow best-effort uploads instead of failing early.
+ */
+export async function chunkExists(hash: string): Promise<boolean> {
+  const res = await api.get(`${API_ENDPOINTS.chunk}/${encodeURIComponent(hash)}`, {
+    // We want to inspect status codes directly
+    validateStatus: () => true,
+  });
+  return res.status === 200;
+}
+
 export async function uploadChunk(
   chunk: Blob,
   hash: string,
