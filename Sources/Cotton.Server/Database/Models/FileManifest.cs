@@ -9,9 +9,6 @@ namespace Cotton.Server.Database.Models
     [Table("file_manifests")]
     public class FileManifest : BaseOwnedEntity
     {
-        [Column("name")]
-        public string Name { get; set; } = null!;
-
         [Column("content_type")]
         public string ContentType { get; set; } = null!;
 
@@ -27,6 +24,5 @@ namespace Cotton.Server.Database.Models
         /// </summary>
         [Column("version_stable_id")]
         public Guid VersionStableId { get; set; }
-        public virtual ICollection<FileManifest> FileManifests { get; set; } = [];
     }
 }
