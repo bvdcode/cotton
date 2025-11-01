@@ -13,5 +13,7 @@ namespace Cotton.Server.Database.Models
     {
         [Column("chunk_sha256")]
         public byte[] ChunkSha256 { get; set; } = null!;
+
+        public virtual Chunk Chunk { get; set; } = null!;
     }
 }
