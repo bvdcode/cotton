@@ -6,14 +6,15 @@ using EasyExtensions;
 using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Services;
-using Cotton.Server.Models.Dto;
 using Cotton.Server.Validators;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Database.Models;
-using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Models.Requests;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Cotton.Server.Database.Models.Enums;
+using EasyExtensions.AspNetCore.Extensions;
 
 namespace Cotton.Server.Controllers
 {
@@ -31,6 +32,7 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest(errorMessage);
             }
+
             Guid userId = User.GetUserId();
             var parentNode = await _dbContext.Nodes
                 .AsNoTracking()
@@ -40,6 +42,22 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Parent node not found.");
             }
+
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+            bool nameExists = await _dbContext.Nodes
+                .AnyAsync(x => 
+                    x.ParentId == parentNode.Id && 
+                    x.OwnerId == userId && 
+                    x.NameKey == nameKey && 
+                    x.LayoutId == layout.Id && 
+                    x.Type == NodeType.Default);
+            if (nameExists)
+            {
+                return this.ApiConflict("A node with the same name key already exists in the target layout: " + nameKey);
+            }
+
             var newNode = new Node
             {
                 OwnerId = userId,
