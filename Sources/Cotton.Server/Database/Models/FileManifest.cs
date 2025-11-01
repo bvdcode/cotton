@@ -1,13 +1,15 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
-using Cotton.Server.Database.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
+using EasyExtensions.EntityFrameworkCore.Abstractions;
 
 namespace Cotton.Server.Database.Models
 {
     [Table("file_manifests")]
-    public class FileManifest : BaseOwnedEntity
+    [Index(nameof(Sha256), IsUnique = true)]
+    public class FileManifest : BaseEntity<Guid>
     {
         [Column("content_type")]
         public string ContentType { get; set; } = null!;
@@ -18,11 +20,6 @@ namespace Cotton.Server.Database.Models
         [Column("sha256")]
         public byte[] Sha256 { get; set; } = null!;
 
-        /// <summary>
-        /// First ID is the first manifest created for a version, remains the same for all subsequent updates.
-        /// TODO: Set this id after entity was created.
-        /// </summary>
-        [Column("version_stable_id")]
-        public Guid VersionStableId { get; set; }
+        public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
     }
 }

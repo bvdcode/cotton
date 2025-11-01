@@ -3,7 +3,7 @@
 
 namespace Cotton.Server.Database.Models.Enums
 {
-    public enum UserLayoutNodeType
+    public enum NodeType
     {
         Default = 0,
         Trash = 1,
