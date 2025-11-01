@@ -6,6 +6,7 @@ using Cotton.Server.Database;
 using Cotton.Server.Database.Models;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Database.Models.Enums;
+using Cotton.Server.Validators;
 
 namespace Cotton.Server.Extensions
 {
@@ -19,7 +20,7 @@ namespace Cotton.Server.Extensions
 
         public static async Task<Node> GetRootNodeAsync(this CottonDbContext dbContext, Guid layoutId, Guid ownerId, NodeType type)
         {
-            var currentNode = await dbContext.UserLayoutNodes
+            var currentNode = await dbContext.Nodes
                 .AsNoTracking()
                 .Include(x => x.Layout)
                 .Where(x => x.Layout.OwnerId == ownerId
@@ -29,15 +30,15 @@ namespace Cotton.Server.Extensions
                 .FirstOrDefaultAsync();
             if (currentNode == null)
             {
+                NameValidator.TryNormalizeAndValidate(type.ToString(), out string normalized, out _);
                 Node newNode = new()
                 {
-                    Name = type.ToString(),
                     Type = type,
                     OwnerId = ownerId,
                     LayoutId = layoutId,
-                    NormalizedName = type.ToString().ToUpperInvariant(),
                 };
-                await dbContext.UserLayoutNodes.AddAsync(newNode);
+                newNode.SetName(type.ToString());
+                await dbContext.Nodes.AddAsync(newNode);
                 await dbContext.SaveChangesAsync();
                 return newNode;
             }

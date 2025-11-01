@@ -77,7 +77,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var node = await _client.GetFromJsonAsync<UserLayoutNodeDto>("/api/v1/layouts/resolver");
+        var node = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(node, Is.Not.Null);
         Assert.That(node!.Name, Is.EqualTo("/"));
         Assert.That(node.ParentId, Is.Null);
@@ -91,7 +91,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var root = await _client.GetFromJsonAsync<UserLayoutNodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         // Create a new child node under root
@@ -99,7 +99,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         var createNodeReq = new CreateNodeRequest { ParentId = root!.Id, Name = nodeName };
         var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
         createNodeRes.EnsureSuccessStatusCode();
-        var child = await createNodeRes.Content.ReadFromJsonAsync<UserLayoutNodeDto>();
+        var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);
         TestContext.Progress.WriteLine($"Created node '{nodeName}' with Id={child!.Id}");
 
@@ -162,7 +162,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var root = await _client.GetFromJsonAsync<UserLayoutNodeDto>("/api/v1/layouts/resolver");
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         var name = "dup";
@@ -181,7 +181,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         TestContext.Progress.WriteLine($"Duplicate create threw: {ex!.GetType().Name} -> {ex.InnerException?.GetType().Name}");
 
         // Verify DB has only one such node
-        var duplicates = await DbContext.UserLayoutNodes
+        var duplicates = await DbContext.Nodes
             .AsNoTracking()
             .Where(n => n.ParentId == root.Id && n.Name == name)
             .CountAsync();
