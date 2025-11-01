@@ -18,7 +18,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import { useLayoutStore } from "../stores/layoutStore.ts";
 import { useNavigate, useParams, Link as RouterLink } from "react-router-dom";
 import { UPLOAD_CONCURRENCY_DEFAULT } from "../config.ts";
-import { normalizeAlgorithm, hashBlob } from "../utils/hash.ts";
+import { normalizeAlgorithm, hashBlob, readBlobArrayBuffer, isNotReadableError } from "../utils/hash.ts";
 import { formatBytes, formatBytesPerSecond } from "../utils/format";
 import { ArrowBack, CreateNewFolder, Home as HomeIcon } from "@mui/icons-material";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
@@ -92,6 +92,19 @@ const FilesPage = () => {
     // currentNode is resolved on mount; no manual folder selection required
     setIsUploading(true);
     setError(null);
+    // Preflight: try reading a byte to surface permission/lock issues early with a clearer message
+    try {
+      const head = selectedFile.slice(0, Math.min(1, selectedFile.size));
+      await readBlobArrayBuffer(head);
+    } catch {
+      const friendly = t(
+        "files.notReadableError",
+        "The selected file can't be read. It may be locked by another app, removed, or access was revoked. Close any app using the file, copy it to a writable folder, and choose it again.",
+      );
+      setError(friendly);
+      setIsUploading(false);
+      return;
+    }
     const totalChunks = Math.ceil(
       selectedFile.size / settings.maxChunkSizeBytes,
     );
@@ -116,7 +129,18 @@ const FilesPage = () => {
             active++;
             (async () => {
               try {
-                const h = await hashBlob(current.blob, algo);
+                let h: string;
+                try {
+                  h = await hashBlob(current.blob, algo);
+                } catch (err) {
+                  if (isNotReadableError(err)) {
+                    // brief backoff and single retry to handle transient locks
+                    await new Promise((r) => setTimeout(r, 100));
+                    h = await hashBlob(current.blob, algo);
+                  } else {
+                    throw err;
+                  }
+                }
                 await uploadChunk(current.blob, h, selectedFile.name);
                 hashesLocal[current.idx] = h;
                 uploadedBytes += current.size;
@@ -157,8 +181,16 @@ const FilesPage = () => {
       // refresh current node children after upload
       await loadChildren(currentNode?.id);
     } catch (_e) {
-      const msg = _e instanceof Error ? _e.message : String(_e);
-      setError(msg);
+      if (isNotReadableError(_e)) {
+        const friendly = t(
+          "files.notReadableError",
+          "The selected file can't be read. It may be locked by another app, removed, or access was revoked. Close any app using the file, copy it to a writable folder, and choose it again.",
+        );
+        setError(friendly);
+      } else {
+        const msg = _e instanceof Error ? _e.message : String(_e);
+        setError(msg);
+      }
     } finally {
       setIsUploading(false);
     }

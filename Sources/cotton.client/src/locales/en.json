@@ -16,6 +16,7 @@
     "download": "Download",
     "newFolder": "New folder",
     "enterFolderName": "Enter folder name",
-    "back": "Back"
+    "back": "Back",
+    "notReadableError": "The selected file can't be read. It may be locked by another app, removed, or access was revoked. Close any app using the file, copy it to a writable folder, and choose it again."
   }
 }

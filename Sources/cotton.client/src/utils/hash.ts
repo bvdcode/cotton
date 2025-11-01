@@ -24,7 +24,7 @@ export async function hashBlob(
   blob: Blob,
   algorithm: AlgorithmIdentifier,
 ): Promise<string> {
-  const ab = await blob.arrayBuffer();
+  const ab = await readBlobArrayBuffer(blob);
   const digest = await crypto.subtle.digest(algorithm, ab);
   return bufferToHex(digest);
 }
@@ -37,4 +37,34 @@ export function bufferToHex(buffer: ArrayBuffer): string {
     hex.push(h);
   }
   return hex.join("");
+}
+
+/**
+ * Read a Blob into an ArrayBuffer with a fallback to FileReader for browsers/environments
+ * that may intermittently throw NotReadableError on Blob.arrayBuffer().
+ */
+export async function readBlobArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  try {
+    return await blob.arrayBuffer();
+  } catch {
+    // Fallback via FileReader to work around sporadic NotReadableError scenarios
+    return await new Promise<ArrayBuffer>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => {
+        // Normalize the error type so callers can distinguish NotReadableError
+        const err = fr.error ?? new DOMException("Failed to read blob", "NotReadableError");
+        reject(err);
+      };
+      fr.onload = () => resolve(fr.result as ArrayBuffer);
+      try {
+        fr.readAsArrayBuffer(blob);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+}
+
+export function isNotReadableError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "NotReadableError";
 }
