@@ -4,7 +4,7 @@
 using System.Text;
 using System.Globalization;
 
-namespace Cotton.Server.Validators
+namespace Cotton.Validators
 {
     public static class NameValidator
     {

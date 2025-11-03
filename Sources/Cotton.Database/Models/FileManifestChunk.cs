@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 
-namespace Cotton.Server.Database.Models
+namespace Cotton.Database.Models
 {
     [Table("file_manifest_chunks")]
     [Index(nameof(ChunkSha256))]
