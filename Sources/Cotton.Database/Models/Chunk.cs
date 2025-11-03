@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Cotton.Server.Database.Models
+namespace Cotton.Database.Models
 {
     [Table("chunks")]
     public class Chunk

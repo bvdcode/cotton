@@ -3,13 +3,12 @@
 
 using Cotton.Shared;
 using EasyExtensions;
+using Cotton.Database;
 using Cotton.Server.Models;
-using Cotton.Server.Database;
-using Cotton.Server.Services;
+using Cotton.Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Cotton.Storage.Abstractions;
 using System.Security.Cryptography;
-using Cotton.Server.Database.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;

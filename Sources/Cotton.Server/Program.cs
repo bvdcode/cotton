@@ -3,7 +3,7 @@
 
 using Cotton.Shared;
 using Cotton.Storage;
-using Cotton.Server.Database;
+using Cotton.Database;
 using Cotton.Server.Services;
 using Cotton.Server.Extensions;
 using Cotton.Storage.Abstractions;

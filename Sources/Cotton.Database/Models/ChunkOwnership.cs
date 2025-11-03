@@ -2,10 +2,10 @@
 // Copyright (c) 2025 Vadim Belov
 
 using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Database.Abstractions;
+using Cotton.Database.Abstractions;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Cotton.Server.Database.Models
+namespace Cotton.Database.Models
 {
     [Table("chunk_ownerships")]
     [Index(nameof(OwnerId), nameof(ChunkSha256), IsUnique = true)]
