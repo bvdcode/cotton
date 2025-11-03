@@ -1,11 +1,9 @@
-﻿using Cotton.Server.Helpers;
-using Cotton.Server.Database;
-using Cotton.Server.Validators;
+﻿using Cotton.Database;
+using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Database.Models;
-using Cotton.Server.Database.Models.Enums;
 
-namespace Cotton.Server.Services
+namespace Cotton.Topology
 {
     public class StorageLayoutService(CottonDbContext _dbContext)
     {

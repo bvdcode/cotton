@@ -3,17 +3,16 @@
 
 using Mapster;
 using EasyExtensions;
+using Cotton.Database;
+using Cotton.Validators;
 using Cotton.Server.Models;
-using Cotton.Server.Database;
-using Cotton.Server.Services;
-using Cotton.Server.Validators;
+using Cotton.Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using Cotton.Server.Database.Models.Enums;
 using EasyExtensions.AspNetCore.Extensions;
 
 namespace Cotton.Server.Controllers

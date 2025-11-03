@@ -1,13 +1,13 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
-using Cotton.Server.Validators;
+using Cotton.Validators;
+using Cotton.Database.Abstractions;
+using Cotton.Database.Models.Enums;
 using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Database.Abstractions;
-using Cotton.Server.Database.Models.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Cotton.Server.Database.Models
+namespace Cotton.Database.Models
 {
     [Table("nodes")]
     [Index(nameof(LayoutId), nameof(ParentId), nameof(Type), nameof(NameKey), IsUnique = true)]
