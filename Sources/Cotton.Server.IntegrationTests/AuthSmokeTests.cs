@@ -1,19 +1,16 @@
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.Hosting; // WebHostDefaults
-using Microsoft.EntityFrameworkCore; // for EF Core
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using NUnit.Framework;
 using Npgsql;
-using Cotton.Server.Database;
-using Cotton.Server.IntegrationTests.Abstractions;
+using NUnit.Framework;
+using System.Net.Http.Json;
+using Cotton.Storage.Abstractions;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Helpers;
-using Cotton.Server.Abstractions;
-using System.Net.Http.Headers;
+using Microsoft.Extensions.DependencyInjection;
+using Cotton.Server.IntegrationTests.Abstractions;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -105,15 +102,15 @@ public class AuthSmokeTests : IntegrationTestBase
 
         var payload = await response.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.That(payload, Is.Not.Null);
-        Assert.That(string.IsNullOrWhiteSpace(payload!.token), Is.False, "Token must be present");
+        Assert.That(string.IsNullOrWhiteSpace(payload!.Token), Is.False, "Token must be present");
 
         // Basic JWT structure check: three dot-separated segments
-        var parts = payload.token.Split('.');
+        var parts = payload.Token.Split('.');
         Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
         // Log a short token preview
-        TestContext.Progress.WriteLine($"Login OK. Token: {payload.token[..Math.Min(16, payload.token.Length)]}...");
+        TestContext.Progress.WriteLine($"Login OK. Token: {payload.Token[..Math.Min(16, payload.Token.Length)]}...");
     }
 
-    private sealed record LoginResponse(string token);
+    private sealed record LoginResponse(string Token);
 }

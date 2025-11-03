@@ -1,11 +1,12 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
+using Cotton.Shared;
+using Cotton.Storage;
 using Cotton.Server.Database;
 using Cotton.Server.Services;
-using Cotton.Server.Settings;
 using Cotton.Server.Extensions;
-using Cotton.Server.Abstractions;
+using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Options;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.AspNetCore.Authorization.Extensions;
