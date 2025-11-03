@@ -3,13 +3,14 @@
 
 using Mapster;
 using EasyExtensions;
+using System.Diagnostics;
 using Cotton.Server.Models;
 using Cotton.Server.Database;
 using Cotton.Server.Services;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Validators;
 using Microsoft.AspNetCore.Mvc;
-using Cotton.Server.Abstractions;
+using Cotton.Storage.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Server.Database.Models;
 using Cotton.Server.Models.Requests;
@@ -22,7 +23,11 @@ using EasyExtensions.EntityFrameworkCore.Exceptions;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class FileController(CottonDbContext _dbContext, IStorage _storage, StorageLayoutService _layouts) : ControllerBase
+    public class FileController(
+        IStorage _storage,
+        CottonDbContext _dbContext,
+        ILogger<FileController> _logger,
+        StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpDelete($"{Routes.Files}/{{nodeFileId:guid}}")]
@@ -67,8 +72,9 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
             Guid userId = User.GetUserId();
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
             var node = await _dbContext.Nodes
-                .Where(x => x.Id == request.NodeId && x.Type == NodeType.Default && x.OwnerId == userId)
+                .Where(x => x.Id == request.NodeId && x.Type == NodeType.Default && x.OwnerId == userId && x.LayoutId == layout.Id)
                 .SingleOrDefaultAsync();
             if (node == null)
             {
@@ -102,36 +108,37 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
             }
 
-            byte[] clientComputedHash = Convert.FromHexString(request.Sha256);
-            var newFile = await _dbContext.FileManifests.FindAsync(clientComputedHash);
-            if (newFile == null)
-            {
-                newFile = new()
-                {
-                    ContentType = request.ContentType,
-                    SizeBytes = chunks.Sum(x => x.SizeBytes),
-                    Sha256 = clientComputedHash,
-                };
-                await _dbContext.FileManifests.AddAsync(newFile);
-
-                for (int i = 0; i < chunks.Count; i++)
-                {
-                    var fileChunk = new FileManifestChunk
-                    {
-                        ChunkOrder = i,
-                        ChunkSha256 = chunks[i].Sha256,
-                        FileManifestSha256 = clientComputedHash,
-                    };
-                    await _dbContext.FileManifestChunks.AddAsync(fileChunk);
-                }
-            }
-
+            Stopwatch sw = Stopwatch.StartNew();
             // TODO: Get rid of this (or not?)
             using var blob = _storage.GetBlobStream(request.ChunkHashes);
             byte[] computedHash = await SHA256.HashDataAsync(blob);
-            if (!computedHash.SequenceEqual(newFile.Sha256))
+            _logger.LogInformation("Computed hash for file {FileName} in {ElapsedMilliseconds} ms", request.Name, sw.ElapsedMilliseconds);
+            if (!string.IsNullOrWhiteSpace(request.Sha256))
             {
-                return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the whole uploaded file.");
+                byte[] providedHash = Convert.FromHexString(request.Sha256);
+                if (!computedHash.SequenceEqual(providedHash))
+                {
+                    return CottonResult.BadRequest("Provided SHA256 hash does not match the computed hash of the file.");
+                }
+            }
+
+            var newFile = new FileManifest()
+            {
+                ContentType = request.ContentType,
+                SizeBytes = chunks.Sum(x => x.SizeBytes),
+                Sha256 = computedHash,
+            };
+            await _dbContext.FileManifests.AddAsync(newFile);
+
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                var fileChunk = new FileManifestChunk
+                {
+                    ChunkOrder = i,
+                    ChunkSha256 = chunks[i].Sha256,
+                    FileManifestSha256 = computedHash,
+                };
+                await _dbContext.FileManifestChunks.AddAsync(fileChunk);
             }
 
             NodeFile newNodeFile = new()

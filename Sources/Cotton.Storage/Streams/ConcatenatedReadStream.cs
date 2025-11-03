@@ -1,11 +1,10 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
-using Cotton.Server.Services;
 
-namespace Cotton.Server.Streams
+namespace Cotton.Storage.Streams
 {
-    public class ConcatenatedReadStream(EncryptedFileStorage storage, IEnumerable<string> hashes) : Stream
+    internal class ConcatenatedReadStream(EncryptedFileStorage storage, IEnumerable<string> hashes) : Stream
     {
         private readonly IEnumerator<string> _hashes = hashes.GetEnumerator();
         private Stream? _current;

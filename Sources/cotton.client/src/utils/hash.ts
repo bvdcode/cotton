@@ -50,7 +50,9 @@ export async function readBlobArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
     return await new Promise<ArrayBuffer>((resolve, reject) => {
       const fr = new FileReader();
       fr.onerror = () => {
-        const err = fr.error ?? new DOMException("Failed to read blob", "NotReadableError");
+        const err =
+          fr.error ??
+          new DOMException("Failed to read blob", "NotReadableError");
         reject(err);
       };
       fr.onload = () => resolve(fr.result as ArrayBuffer);
@@ -153,11 +155,17 @@ class Sha256Hasher {
     for (let i = 0; i < 16; i++) {
       const j = i * 4;
       W[i] =
-        ((chunk[j] << 24) | (chunk[j + 1] << 16) | (chunk[j + 2] << 8) | chunk[j + 3]) | 0;
+        (chunk[j] << 24) |
+        (chunk[j + 1] << 16) |
+        (chunk[j + 2] << 8) |
+        chunk[j + 3] |
+        0;
     }
     for (let i = 16; i < 64; i++) {
-      const s0 = this.rotr(W[i - 15], 7) ^ this.rotr(W[i - 15], 18) ^ (W[i - 15] >>> 3);
-      const s1 = this.rotr(W[i - 2], 17) ^ this.rotr(W[i - 2], 19) ^ (W[i - 2] >>> 10);
+      const s0 =
+        this.rotr(W[i - 15], 7) ^ this.rotr(W[i - 15], 18) ^ (W[i - 15] >>> 3);
+      const s1 =
+        this.rotr(W[i - 2], 17) ^ this.rotr(W[i - 2], 19) ^ (W[i - 2] >>> 10);
       W[i] = (((W[i - 16] + s0) | 0) + ((W[i - 7] + s1) | 0)) | 0;
     }
 
@@ -304,7 +312,11 @@ class Sha1Hasher {
     for (let i = 0; i < 16; i++) {
       const j = i * 4;
       W[i] =
-        ((chunk[j] << 24) | (chunk[j + 1] << 16) | (chunk[j + 2] << 8) | chunk[j + 3]) | 0;
+        (chunk[j] << 24) |
+        (chunk[j + 1] << 16) |
+        (chunk[j + 2] << 8) |
+        chunk[j + 3] |
+        0;
     }
     for (let i = 16; i < 80; i++) {
       W[i] = this.rotl(W[i - 3] ^ W[i - 8] ^ W[i - 14] ^ W[i - 16], 1) | 0;
@@ -365,7 +377,13 @@ class Sha1Hasher {
     this.buffer[62] = (lo >>> 8) & 0xff;
     this.buffer[63] = lo & 0xff;
     this.processBlock(this.buffer);
-    const H = [this.h0 >>> 0, this.h1 >>> 0, this.h2 >>> 0, this.h3 >>> 0, this.h4 >>> 0];
+    const H = [
+      this.h0 >>> 0,
+      this.h1 >>> 0,
+      this.h2 >>> 0,
+      this.h3 >>> 0,
+      this.h4 >>> 0,
+    ];
     const out = new Uint8Array(20);
     for (let i = 0; i < 5; i++) {
       const v = H[i];
@@ -388,8 +406,14 @@ export async function hashBlobIncremental(
   algorithm: AlgorithmIdentifier,
   chunkSize = 4 * 1024 * 1024,
 ): Promise<string> {
-  const algo = typeof algorithm === "string" ? algorithm.toUpperCase() : String(algorithm).toUpperCase();
-  const hasher = algo === "SHA-256" || algo === "SHA256" ? new Sha256Hasher() : new Sha1Hasher();
+  const algo =
+    typeof algorithm === "string"
+      ? algorithm.toUpperCase()
+      : String(algorithm).toUpperCase();
+  const hasher =
+    algo === "SHA-256" || algo === "SHA256"
+      ? new Sha256Hasher()
+      : new Sha1Hasher();
   let offset = 0;
   while (offset < blob.size) {
     const end = Math.min(offset + chunkSize, blob.size);

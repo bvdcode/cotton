@@ -2,8 +2,8 @@
 // Copyright (c) 2025 Vadim Belov
 
 using System.Text;
+using Cotton.Shared;
 using Cotton.Crypto;
-using Cotton.Server.Settings;
 using Cotton.Crypto.Abstractions;
 using System.Security.Cryptography;
 
