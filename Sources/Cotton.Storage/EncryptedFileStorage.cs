@@ -1,26 +1,27 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
+using Cotton.Shared;
 using System.IO.Pipelines;
-using Cotton.Server.Streams;
-using Cotton.Server.Settings;
+using Cotton.Storage.Streams;
 using Cotton.Crypto.Abstractions;
-using Cotton.Server.Abstractions;
+using Cotton.Storage.Abstractions;
+using Microsoft.Extensions.Logging;
 
-namespace Cotton.Server.Services
+namespace Cotton.Storage
 {
-    public partial class EncryptedFileStorage : IStorage
+    public class EncryptedFileStorage : IStorage
     {
         private readonly string _basePath;
         private const int MinFileUidLength = 6;
         private readonly IStreamCipher _cipher;
         private readonly CottonSettings _settings;
-        private readonly ILogger<EncryptedFileStorage> _logger;
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
+        private readonly ILogger<EncryptedFileStorage> _logger;
 
         // TODO: Add hot cache for frequently accessed files
-        // 2 layers: fast SSD cache, RAM cache for very hot files
+        // 3 layers: RAM cache for very hot files, fast SSD cache, and main storage for other files
 
         public EncryptedFileStorage(CottonSettings settings, IStreamCipher cipher, ILogger<EncryptedFileStorage> logger)
         {

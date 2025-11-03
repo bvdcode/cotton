@@ -13,12 +13,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="2.0.17" />
+		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="2.0.24" />
+		<PackageReference Include="EasyExtensions.Mediator" Version="2.0.24" />
 		<PackageReference Include="Mapster" Version="7.4.0" />
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="2.0.2" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="2.0.2" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="2.0.24" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="2.0.24" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>9.*-*</Version>
@@ -26,6 +27,8 @@
 		<ProjectReference Include="..\cotton.client\cotton.client.esproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>
+		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
+		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
