@@ -1,5 +1,5 @@
 ﻿using Npgsql;
-using Cotton.Server.Database;
+using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.IntegrationTests.Abstractions
