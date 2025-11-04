@@ -10,8 +10,8 @@ namespace Cotton.Database.Models
     public class Chunk
     {
         [Key]
-        [Column("sha256")]
-        public byte[] Sha256 { get; set; } = null!;
+        [Column("hash")]
+        public byte[] Hash { get; set; } = null!;
 
         [Column("size_bytes")]
         public long SizeBytes { get; set; }

@@ -175,7 +175,7 @@ const FilesPage = () => {
         chunkHashes: hashesLocal,
         name: selectedFile.name,
         contentType: selectedFile.type || "application/octet-stream",
-        sha256: fileHash,
+        hash: fileHash,
         nodeId: currentNode!.id,
       });
       // refresh current node children after upload
