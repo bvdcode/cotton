@@ -1,19 +1,18 @@
-﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Security.Cryptography;
+﻿using Npgsql;
 using System.Text;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using NUnit.Framework;
-using Npgsql;
-using Cotton.Server.Database;
+using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using Cotton.Server.Models.Dto;
+using Cotton.Database.Models.Enums;
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
+using Cotton.Server.Models.Requests;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
-using Cotton.Server.Models.Dto;
-using Cotton.Server.Models.Requests;
-using Cotton.Server.Database.Models.Enums;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -130,7 +129,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
             var fileName = $"file{i}.txt";
             var fileReq = new CreateFileRequest
             {
-                ChunkHashes = new[] { chunkHashLower },
+                ChunkHashes = [chunkHashLower],
                 Name = fileName,
                 ContentType = "text/plain",
                 Sha256 = chunkHashLower,
@@ -160,8 +159,8 @@ public class LayoutAndFilesTests : IntegrationTestBase
         res.EnsureSuccessStatusCode();
         var login = await res.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.That(login, Is.Not.Null);
-        TestContext.Progress.WriteLine($"Login OK. Token: {login!.token[..Math.Min(16, login.token.Length)]}...");
-        return login.token;
+        TestContext.Progress.WriteLine($"Login OK. Token: {login!.Token[..Math.Min(16, login.Token.Length)]}...");
+        return login.Token;
     }
 
     [Test]
@@ -195,5 +194,5 @@ public class LayoutAndFilesTests : IntegrationTestBase
         Assert.That(duplicates, Is.EqualTo(1));
     }
 
-    private sealed record LoginResponse(string token);
+    private sealed record LoginResponse(string Token);
 }
