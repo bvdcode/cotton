@@ -11,16 +11,16 @@ namespace Cotton.Crypto.Helpers
             {
                 return false;
             }
-            return Sha256Regex().IsMatch(hash);
+            return Hash256BitRegex().IsMatch(hash);
         }
 
         public static string HashToHex(Stream input)
         {
-            byte[] result = SHA256.HashData(input);
+            byte[] result = Hasher.HashData(input);
             return Convert.ToHexString(result).ToLowerInvariant();
         }
 
         [GeneratedRegex("^[0-9a-f]{64}$", RegexOptions.Compiled)]
-        private static partial Regex Sha256Regex();
+        private static partial Regex Hash256BitRegex();
     }
 }

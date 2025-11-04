@@ -13,7 +13,7 @@ namespace Cotton.Database.Models
     [Index(nameof(FileManifestId), nameof(NodeId), IsUnique = true)]
     public class NodeFile : BaseOwnedEntity
     {
-        [Column("file_manifest_sha256")]
+        [Column("file_manifest_hash")]
         public byte[] FileManifestId { get; set; } = null!;
 
         [Column("node_id")]

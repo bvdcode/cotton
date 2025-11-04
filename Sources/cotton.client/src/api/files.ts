@@ -15,14 +15,14 @@ export interface FileManifestDto {
   folder: string;
   contentType: string;
   sizeBytes: number;
-  sha256: string; // server returns byte[]; we'll map to hex on server; assume string here for UI
+  hash: string; // server returns byte[]; we'll map to hex on server; assume string here for UI
 }
 
 export interface CreateFileRequest {
   chunkHashes: string[];
   name: string;
   contentType: string;
-  sha256: string; // full file hash
+  hash: string; // full file hash
   nodeId: string; // layout node id to attach the file to
 }
 
