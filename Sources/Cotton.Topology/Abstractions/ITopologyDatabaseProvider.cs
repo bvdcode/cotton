@@ -6,6 +6,5 @@ namespace Cotton.Topology.Abstractions
 {
     public interface ITopologyDatabaseProvider
     {
-        
     }
 }
