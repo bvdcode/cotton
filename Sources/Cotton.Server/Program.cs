@@ -4,7 +4,7 @@
 using Cotton.Shared;
 using Cotton.Storage;
 using Cotton.Database;
-using Cotton.Server.Services;
+using Cotton.Topology;
 using Cotton.Server.Extensions;
 using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Options;

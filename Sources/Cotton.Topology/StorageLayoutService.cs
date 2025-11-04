@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Validators;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -70,10 +71,6 @@ namespace Cotton.Topology
 
         public Task<Chunk?> FindChunkAsync(string sha256hex)
         {
-            if (!HashHelpers.IsValidHash(sha256hex))
-            {
-                throw new ArgumentException("Invalid hash format.", nameof(sha256hex));
-            }
             return FindChunkAsync(Convert.FromHexString(sha256hex));
         }
 

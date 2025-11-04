@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Vadim Belov
 
 using Cotton.Shared;
-using Cotton.Server.Helpers;
+using Cotton.Crypto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
@@ -16,7 +16,7 @@ namespace Cotton.Server.Controllers
             var settings = new
             {
                 _settings.MaxChunkSizeBytes,
-                HashHelpers.SupportedHashAlgorithm,
+                Hasher.SupportedHashAlgorithm,
             };
             return Ok(settings);
         }
