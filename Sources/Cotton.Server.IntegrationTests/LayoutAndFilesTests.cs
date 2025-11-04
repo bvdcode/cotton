@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Cotton.Crypto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -107,7 +108,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         for (int i = 1; i <= 10; i++)
         {
             var content = Encoding.UTF8.GetBytes($"hello {i}");
-            var chunkHashLower = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
+            var chunkHashLower = Convert.ToHexString(Hasher.HashData(content)).ToLowerInvariant();
             // Upload chunk
             using var form = new MultipartFormDataContent
             {
@@ -132,7 +133,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
                 ChunkHashes = [chunkHashLower],
                 Name = fileName,
                 ContentType = "text/plain",
-                Sha256 = chunkHashLower,
+                Hash = chunkHashLower,
                 NodeId = child.Id
             };
             var createFileRes = await _client.PostAsJsonAsync("/api/v1/files", fileReq);

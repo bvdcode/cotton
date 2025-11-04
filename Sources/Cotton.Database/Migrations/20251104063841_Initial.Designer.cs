@@ -9,10 +9,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cotton.Server.Migrations
+namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251101052653_Initial")]
+    [Migration("20251104063841_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -25,32 +25,32 @@ namespace Cotton.Server.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.Chunk", b =>
+            modelBuilder.Entity("Cotton.Database.Models.Chunk", b =>
                 {
-                    b.Property<byte[]>("Sha256")
+                    b.Property<byte[]>("Hash")
                         .HasColumnType("bytea")
-                        .HasColumnName("sha256");
+                        .HasColumnName("hash");
 
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
 
-                    b.HasKey("Sha256");
+                    b.HasKey("Hash");
 
                     b.ToTable("chunks");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.ChunkOwnership", b =>
+            modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<byte[]>("ChunkSha256")
+                    b.Property<byte[]>("ChunkHash")
                         .IsRequired()
                         .HasColumnType("bytea")
-                        .HasColumnName("chunk_sha256");
+                        .HasColumnName("chunk_hash");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -66,17 +66,19 @@ namespace Cotton.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId", "ChunkSha256")
+                    b.HasIndex("ChunkHash");
+
+                    b.HasIndex("OwnerId", "ChunkHash")
                         .IsUnique();
 
                     b.ToTable("chunk_ownerships");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.FileManifest", b =>
+            modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
                 {
-                    b.Property<byte[]>("Sha256")
+                    b.Property<byte[]>("Hash")
                         .HasColumnType("bytea")
-                        .HasColumnName("sha256");
+                        .HasColumnName("hash");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
@@ -87,35 +89,35 @@ namespace Cotton.Server.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
 
-                    b.HasKey("Sha256");
+                    b.HasKey("Hash");
 
                     b.ToTable("file_manifests");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.FileManifestChunk", b =>
+            modelBuilder.Entity("Cotton.Database.Models.FileManifestChunk", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<byte[]>("ChunkHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("chunk_hash");
+
                     b.Property<int>("ChunkOrder")
                         .HasColumnType("integer")
                         .HasColumnName("chunk_order");
-
-                    b.Property<byte[]>("ChunkSha256")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("chunk_sha256");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("FileManifestSha256")
+                    b.Property<byte[]>("FileManifestHash")
                         .IsRequired()
                         .HasColumnType("bytea")
-                        .HasColumnName("file_manifest_sha256");
+                        .HasColumnName("file_manifest_hash");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -123,15 +125,15 @@ namespace Cotton.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ChunkSha256");
+                    b.HasIndex("ChunkHash");
 
-                    b.HasIndex("FileManifestSha256", "ChunkOrder")
+                    b.HasIndex("FileManifestHash", "ChunkOrder")
                         .IsUnique();
 
                     b.ToTable("file_manifest_chunks");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.Layout", b =>
+            modelBuilder.Entity("Cotton.Database.Models.Layout", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -161,7 +163,7 @@ namespace Cotton.Server.Migrations
                     b.ToTable("layouts");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.Node", b =>
+            modelBuilder.Entity("Cotton.Database.Models.Node", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -214,7 +216,7 @@ namespace Cotton.Server.Migrations
                     b.ToTable("nodes");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.NodeFile", b =>
+            modelBuilder.Entity("Cotton.Database.Models.NodeFile", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -228,7 +230,7 @@ namespace Cotton.Server.Migrations
                     b.Property<byte[]>("FileManifestId")
                         .IsRequired()
                         .HasColumnType("bytea")
-                        .HasColumnName("file_manifest_sha256");
+                        .HasColumnName("file_manifest_hash");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -269,7 +271,7 @@ namespace Cotton.Server.Migrations
                     b.ToTable("node_files");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.User", b =>
+            modelBuilder.Entity("Cotton.Database.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -301,28 +303,36 @@ namespace Cotton.Server.Migrations
                     b.ToTable("users");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.ChunkOwnership", b =>
+            modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
                 {
-                    b.HasOne("Cotton.Server.Database.Models.User", "Owner")
+                    b.HasOne("Cotton.Database.Models.Chunk", "Chunk")
+                        .WithMany()
+                        .HasForeignKey("ChunkHash")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Chunk");
+
                     b.Navigation("Owner");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.FileManifestChunk", b =>
+            modelBuilder.Entity("Cotton.Database.Models.FileManifestChunk", b =>
                 {
-                    b.HasOne("Cotton.Server.Database.Models.Chunk", "Chunk")
+                    b.HasOne("Cotton.Database.Models.Chunk", "Chunk")
                         .WithMany()
-                        .HasForeignKey("ChunkSha256")
+                        .HasForeignKey("ChunkHash")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cotton.Server.Database.Models.FileManifest", "FileManifest")
+                    b.HasOne("Cotton.Database.Models.FileManifest", "FileManifest")
                         .WithMany("FileManifestChunks")
-                        .HasForeignKey("FileManifestSha256")
+                        .HasForeignKey("FileManifestHash")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -331,9 +341,9 @@ namespace Cotton.Server.Migrations
                     b.Navigation("FileManifest");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.Layout", b =>
+            modelBuilder.Entity("Cotton.Database.Models.Layout", b =>
                 {
-                    b.HasOne("Cotton.Server.Database.Models.User", "Owner")
+                    b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -342,21 +352,21 @@ namespace Cotton.Server.Migrations
                     b.Navigation("Owner");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.Node", b =>
+            modelBuilder.Entity("Cotton.Database.Models.Node", b =>
                 {
-                    b.HasOne("Cotton.Server.Database.Models.Layout", "Layout")
+                    b.HasOne("Cotton.Database.Models.Layout", "Layout")
                         .WithMany("Nodes")
                         .HasForeignKey("LayoutId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cotton.Server.Database.Models.User", "Owner")
+                    b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cotton.Server.Database.Models.Node", "Parent")
+                    b.HasOne("Cotton.Database.Models.Node", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId");
 
@@ -367,21 +377,21 @@ namespace Cotton.Server.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.NodeFile", b =>
+            modelBuilder.Entity("Cotton.Database.Models.NodeFile", b =>
                 {
-                    b.HasOne("Cotton.Server.Database.Models.FileManifest", "FileManifest")
+                    b.HasOne("Cotton.Database.Models.FileManifest", "FileManifest")
                         .WithMany()
                         .HasForeignKey("FileManifestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cotton.Server.Database.Models.Node", "Node")
+                    b.HasOne("Cotton.Database.Models.Node", "Node")
                         .WithMany("LayoutNodeFiles")
                         .HasForeignKey("NodeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cotton.Server.Database.Models.User", "Owner")
+                    b.HasOne("Cotton.Database.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -394,17 +404,17 @@ namespace Cotton.Server.Migrations
                     b.Navigation("Owner");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.FileManifest", b =>
+            modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
                 {
                     b.Navigation("FileManifestChunks");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.Layout", b =>
+            modelBuilder.Entity("Cotton.Database.Models.Layout", b =>
                 {
                     b.Navigation("Nodes");
                 });
 
-            modelBuilder.Entity("Cotton.Server.Database.Models.Node", b =>
+            modelBuilder.Entity("Cotton.Database.Models.Node", b =>
                 {
                     b.Navigation("Children");
 

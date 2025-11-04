@@ -69,14 +69,14 @@ namespace Cotton.Topology
             return found;
         }
 
-        public Task<Chunk?> FindChunkAsync(string sha256hex)
+        public Task<Chunk?> FindChunkAsync(string hash)
         {
-            return FindChunkAsync(Convert.FromHexString(sha256hex));
+            return FindChunkAsync(Convert.FromHexString(hash));
         }
 
-        public async Task<Chunk?> FindChunkAsync(byte[] sha256)
+        public async Task<Chunk?> FindChunkAsync(byte[] hash)
         {
-            return await _dbContext.Chunks.FindAsync(sha256);
+            return await _dbContext.Chunks.FindAsync(hash);
         }
     }
 }

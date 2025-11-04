@@ -15,7 +15,7 @@ public class GoldenVectorsTests
         // Fixed master key
         byte[] masterKey = new byte[32];
         for (int i = 0; i < masterKey.Length; i++) masterKey[i] = (byte)(i + 1);
-        // Deterministic RNG seeded via RNGCryptoServiceProvider replacement: use fixed bytes from SHA256 counter
+        // Deterministic RNG seeded via RNGCryptoServiceProvider replacement: use fixed bytes from Hash counter
         var rng = new DeterministicRng(0xA5A5A5A5);
 
         var cipher = new AesGcmStreamCipher(masterKey, keyId: 77, threads: 1, rng: rng);
@@ -42,20 +42,20 @@ public class GoldenVectorsTests
             0x4D,0x00,0x00,0x00, 0x7A,0x7A,0x7A,0x7A, // prefix deterministic
             // nonce 12, tag 16, encryptedKey 32 (fake but consistent with DeterministicRng)
         ];
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(header.AsSpan(0, 20).ToArray(), Is.EqualTo(expectedHeader.AsSpan(0, 20).ToArray()));
 
             // For brevity, pin only the first 20 header bytes and first 8 bytes of chunk header
             Assert.That(chunk, Has.Length.GreaterThanOrEqualTo(chunkHdrLen));
-        });
-        Assert.Multiple(() =>
+        }
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(chunk[0], Is.EqualTo((byte)'C'));
             Assert.That(chunk[1], Is.EqualTo((byte)'T'));
             Assert.That(chunk[2], Is.EqualTo((byte)'N'));
             Assert.That(chunk[3], Is.EqualTo((byte)'1'));
-        });
+        }
     }
 
     private sealed class DeterministicRng(ulong seed) : RandomNumberGenerator

@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;
+using Cotton.Crypto;
 
 namespace Cotton.Server.Controllers
 {
@@ -28,13 +29,13 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
             byte[] hashBytes = Convert.FromHexString(hash);
-            if (hashBytes.Length != SHA256.HashSizeInBytes)
+            if (hashBytes.Length != Hasher.HashSizeInBytes)
             {
                 return CottonResult.BadRequest("Invalid hash format.");
             }
             Guid userId = User.GetUserId();
             var chunkOwnership = await _dbContext.ChunkOwnerships
-                .FirstOrDefaultAsync(co => co.ChunkSha256.SequenceEqual(hashBytes)
+                .FirstOrDefaultAsync(co => co.ChunkHash.SequenceEqual(hashBytes)
                     && co.OwnerId == userId);
             if (chunkOwnership == null)
             {
@@ -63,13 +64,13 @@ namespace Cotton.Server.Controllers
             }
 
             byte[] hashBytes = Convert.FromHexString(hash);
-            if (hashBytes.Length != SHA256.HashSizeInBytes)
+            if (hashBytes.Length != Hasher.HashSizeInBytes)
             {
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
             using var stream = file.OpenReadStream();
-            byte[] computedHash = await SHA256.HashDataAsync(stream);
+            byte[] computedHash = await Hasher.HashDataAsync(stream);
             stream.Seek(default, SeekOrigin.Begin);
             if (!computedHash.SequenceEqual(hashBytes))
             {
@@ -82,7 +83,7 @@ namespace Cotton.Server.Controllers
                 await _storage.WriteFileAsync(hash, stream);
                 chunk = new Chunk
                 {
-                    Sha256 = hashBytes,
+                    Hash = hashBytes,
                     SizeBytes = file.Length,
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
@@ -90,13 +91,13 @@ namespace Cotton.Server.Controllers
             // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
             // Must depend on owner/user authentication, no reason to delay for the same user
             var foundOwnership = await _dbContext.ChunkOwnerships
-                .FirstOrDefaultAsync(co => co.ChunkSha256.SequenceEqual(hashBytes)
+                .FirstOrDefaultAsync(co => co.ChunkHash.SequenceEqual(hashBytes)
                     && co.OwnerId == User.GetUserId());
             if (foundOwnership == null)
             {
                 ChunkOwnership chunkOwnership = new()
                 {
-                    ChunkSha256 = hashBytes,
+                    ChunkHash = hashBytes,
                     OwnerId = User.GetUserId(),
                 };
                 await _dbContext.ChunkOwnerships.AddAsync(chunkOwnership);

@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using Cotton.Crypto;
 
 namespace Cotton.Server.Controllers
 {
@@ -62,7 +63,7 @@ namespace Cotton.Server.Controllers
             }
             string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
                 .OrderBy(x => x.ChunkOrder)
-                .Select(x => Convert.ToHexString(x.ChunkSha256))];
+                .Select(x => Convert.ToHexString(x.ChunkHash))];
             Stream stream = _storage.GetBlobStream(hashes);
             return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name);
         }
@@ -111,14 +112,14 @@ namespace Cotton.Server.Controllers
             Stopwatch sw = Stopwatch.StartNew();
             // TODO: Get rid of this (or not?)
             using var blob = _storage.GetBlobStream(request.ChunkHashes);
-            byte[] computedHash = await SHA256.HashDataAsync(blob);
+            byte[] computedHash = await Hasher.HashDataAsync(blob);
             _logger.LogInformation("Computed hash for file {FileName} in {ElapsedMilliseconds} ms", request.Name, sw.ElapsedMilliseconds);
-            if (!string.IsNullOrWhiteSpace(request.Sha256))
+            if (!string.IsNullOrWhiteSpace(request.Hash))
             {
-                byte[] providedHash = Convert.FromHexString(request.Sha256);
+                byte[] providedHash = Convert.FromHexString(request.Hash);
                 if (!computedHash.SequenceEqual(providedHash))
                 {
-                    return CottonResult.BadRequest("Provided SHA256 hash does not match the computed hash of the file.");
+                    return CottonResult.BadRequest("Provided Hash does not match the computed hash of the file.");
                 }
             }
 
@@ -126,7 +127,7 @@ namespace Cotton.Server.Controllers
             {
                 ContentType = request.ContentType,
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
-                Sha256 = computedHash,
+                Hash = computedHash,
             };
             await _dbContext.FileManifests.AddAsync(newFile);
 
@@ -135,8 +136,8 @@ namespace Cotton.Server.Controllers
                 var fileChunk = new FileManifestChunk
                 {
                     ChunkOrder = i,
-                    ChunkSha256 = chunks[i].Sha256,
-                    FileManifestSha256 = computedHash,
+                    ChunkHash = chunks[i].Hash,
+                    FileManifestHash = computedHash,
                 };
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk);
             }

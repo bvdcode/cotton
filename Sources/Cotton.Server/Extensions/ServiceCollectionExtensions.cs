@@ -5,7 +5,6 @@ using System.Text;
 using Cotton.Shared;
 using Cotton.Crypto;
 using Cotton.Crypto.Abstractions;
-using System.Security.Cryptography;
 
 namespace Cotton.Server.Extensions
 {
@@ -21,7 +20,7 @@ namespace Cotton.Server.Extensions
                     throw new InvalidOperationException("MasterEncryptionKey is not configured.");
                 }
                 // Derive 32-byte key (SHA-256 of provided string)
-                byte[] keyMaterial = SHA256.HashData(Encoding.UTF8.GetBytes(settings.MasterEncryptionKey));
+                byte[] keyMaterial = Hasher.HashData(Encoding.UTF8.GetBytes(settings.MasterEncryptionKey));
                 int keyId = settings.MasterEncryptionKeyId;
                 int? threads = settings.EncryptionThreads.HasValue && settings.EncryptionThreads > 0 ? settings.EncryptionThreads : null;
                 return new AesGcmStreamCipher(keyMaterial, keyId, threads);

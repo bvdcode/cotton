@@ -10,8 +10,8 @@ namespace Cotton.Database.Models
     public class FileManifest
     {
         [Key]
-        [Column("sha256")]
-        public byte[] Sha256 { get; set; } = null!;
+        [Column("hash")]
+        public byte[] Hash { get; set; } = null!;
 
         [Column("content_type")]
         public string ContentType { get; set; } = null!;
