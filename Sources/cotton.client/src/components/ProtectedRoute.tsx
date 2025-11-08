@@ -4,21 +4,13 @@ import { useAuth } from "../stores/authStore";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  requiredRole,
-}) => {
-  const { isAuthenticated, user } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
-  }
-
-  if (requiredRole && (!user?.role || user.role !== requiredRole)) {
-    return <Navigate to="/app" replace />;
   }
 
   return <>{children}</>;

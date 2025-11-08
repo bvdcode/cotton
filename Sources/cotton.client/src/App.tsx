@@ -44,14 +44,7 @@ function App() {
                   <Route index element={<FilesPage />} />
                   <Route path=":nodeId" element={<FilesPage />} />
                 </Route>
-                <Route
-                  path="options"
-                  element={
-                    <ProtectedRoute requiredRole="Admin">
-                      <>Options</>
-                    </ProtectedRoute>
-                  }
-                />
+                <Route path="options" element={<>Options</>} />
               </Route>
 
               <Route path="/" element={<Navigate to="/app" replace />} />
