@@ -1,4 +1,12 @@
 {
+  "login": {
+    "title": "Sign In",
+    "subtitle": "Enter your credentials to access the application",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign In",
+    "unknownError": "An unknown error occurred. Please try again."
+  },
   "files": {
     "title": "Files",
     "subtitle": "Manage and browse your files here.",

@@ -1,5 +1,5 @@
 // no props for now
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
@@ -7,8 +7,17 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Container from "@mui/material/Container";
+import { useAuth } from "../stores/authStore";
 
 const AppLayout = () => {
+  const navigate = useNavigate();
+  const logout = useAuth((s) => s.logout);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <AppBar position="static" color="default" elevation={1}>
@@ -28,6 +37,9 @@ const AppLayout = () => {
             </Button>
             <Button component={Link} to="/app/options" color="inherit">
               Options
+            </Button>
+            <Button onClick={handleLogout} color="inherit">
+              Logout
             </Button>
           </Stack>
         </Toolbar>
