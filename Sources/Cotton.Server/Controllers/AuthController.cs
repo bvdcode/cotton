@@ -6,8 +6,8 @@ using Cotton.Database.Models;
 using EasyExtensions.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using EasyExtensions.Abstractions;
-using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using EasyExtensions.AspNetCore.Authorization.Abstractions;
 
 namespace Cotton.Server.Controllers
 {
@@ -26,8 +26,7 @@ namespace Cotton.Server.Controllers
         [HttpPost("/api/v1/auth/login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
-            string normalizedUsername = request.Username.Trim().ToLowerInvariant();
-            var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == normalizedUsername);
+            var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
             {
                 user = new()
