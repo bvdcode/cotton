@@ -11,7 +11,7 @@ namespace Cotton.Database.Models
     [Index(nameof(Username), IsUnique = true)]
     public class User : BaseEntity<Guid>
     {
-        [Column("username")]
+        [Column("username", TypeName = "citext")]
         public string Username { get; set; } = null!;
 
         [Column("password_phc")]
