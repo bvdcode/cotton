@@ -5,7 +5,8 @@
     "username": "Username",
     "password": "Password",
     "signIn": "Sign In",
-    "unknownError": "An unknown error occurred. Please try again."
+    "unknownError": "An unknown error occurred. Please try again.",
+    "sessionExpired": "Your session has expired. Please sign in again."
   },
   "files": {
     "title": "Files",
