@@ -123,13 +123,17 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            var newFile = new FileManifest()
+            var newFile = await _dbContext.FileManifests.FindAsync(computedHash);
+            if (newFile == null)
             {
-                ContentType = request.ContentType,
-                SizeBytes = chunks.Sum(x => x.SizeBytes),
-                Hash = computedHash,
-            };
-            await _dbContext.FileManifests.AddAsync(newFile);
+                newFile = new FileManifest()
+                {
+                    ContentType = request.ContentType,
+                    SizeBytes = chunks.Sum(x => x.SizeBytes),
+                    Hash = computedHash,
+                };
+                await _dbContext.FileManifests.AddAsync(newFile);
+            }
 
             for (int i = 0; i < chunks.Count; i++)
             {
