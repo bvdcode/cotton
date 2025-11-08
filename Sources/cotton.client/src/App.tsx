@@ -8,28 +8,28 @@ import { Box } from "@mui/material";
 import "react-toastify/dist/ReactToastify.css";
 import { ConfirmProvider } from "material-ui-confirm";
 import AppThemeProvider from "./providers/ThemeProvider.tsx";
-import { AppLayout, ProtectedRoute, FilesPage } from "./components/index.ts";
+import {
+  AppLayout,
+  ProtectedRoute,
+  FilesPage,
+  LoginPage,
+} from "./components/index.ts";
 import { useEffect } from "react";
 import { useSettings } from "./stores/settingsStore.ts";
-import { useAuth } from "./stores/authStore.ts";
 // i18n is initialized in main.tsx
 
 function App() {
   const loadSettings = useSettings((s) => s.load);
-  const ensureLogin = useAuth((s) => s.ensureLogin);
   useEffect(() => {
-    (async () => {
-      await ensureLogin();
-      await loadSettings();
-    })();
-  }, [ensureLogin, loadSettings]);
+    loadSettings();
+  }, [loadSettings]);
   return (
     <Box sx={{ position: "fixed", inset: 0 }}>
       <AppThemeProvider>
         <ConfirmProvider>
           <Router>
             <Routes>
-              <Route path="/login" element={<>Login</>} />
+              <Route path="/login" element={<LoginPage />} />
               <Route
                 path="/app"
                 element={
