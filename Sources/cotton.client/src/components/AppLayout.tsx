@@ -12,6 +12,7 @@ import { useAuth } from "../stores/authStore";
 const AppLayout = () => {
   const navigate = useNavigate();
   const logout = useAuth((s) => s.logout);
+  const user = useAuth((s) => s.user);
 
   const handleLogout = () => {
     logout();
@@ -25,6 +26,11 @@ const AppLayout = () => {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Cotton
           </Typography>
+          {user && (
+            <Typography variant="body2" sx={{ mr: 2, color: "text.secondary" }}>
+              {user.username}
+            </Typography>
+          )}
           <Stack direction="row" spacing={1}>
             <Button component={Link} to="/app" color="inherit">
               Home

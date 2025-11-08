@@ -2,6 +2,7 @@ export const API_BASE_URL = "http://localhost:5182";
 
 export const API_ENDPOINTS = {
   auth: "/api/v1/auth",
+  users: "/api/v1/users",
   files: "/api/v1/files",
   chunk: "/api/v1/chunks",
   layouts: "/api/v1/layouts",

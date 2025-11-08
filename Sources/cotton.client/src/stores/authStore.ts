@@ -1,14 +1,14 @@
 import { create } from "zustand";
 import api from "../api/http.ts";
+import { getMe } from "../api/users.ts";
 import { API_ENDPOINTS } from "../config.ts";
 import { persist } from "zustand/middleware";
 
-type Role = "User" | "Admin";
-
 export interface AuthUser {
   id: string;
-  name: string;
-  role: Role;
+  username: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthState {
@@ -16,7 +16,6 @@ interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
-  loginLocal: (user?: Partial<AuthUser>) => void;
   login: (username: string, password: string) => Promise<void>;
   refresh: () => Promise<void>;
   logout: () => void;
@@ -30,23 +29,17 @@ export const useAuth = create<AuthState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
-      loginLocal: (user) =>
-        set({
-          isAuthenticated: true,
-          user: {
-            id: user?.id ?? "1",
-            name: user?.name ?? "Mock User",
-            role: (user?.role as Role) ?? "Admin",
-          },
-        }),
       login: async (username: string, password: string) => {
         // Login endpoint with username and password
         const res = await api.post<{
           accessToken: string;
           refreshToken: string;
-          user: AuthUser;
         }>(`${API_ENDPOINTS.auth}/login`, { username, password });
-        const { accessToken, refreshToken, user } = res.data;
+        const { accessToken, refreshToken } = res.data;
+
+        // Get user info from /api/v1/users/me
+        const user = await getMe();
+
         set({
           accessToken,
           refreshToken,
@@ -65,9 +58,14 @@ export const useAuth = create<AuthState>()(
         }>(`${API_ENDPOINTS.auth}/refresh`, { refreshToken });
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
           res.data;
+
+        // Get updated user info
+        const user = await getMe();
+
         set({
           accessToken: newAccessToken,
           refreshToken: newRefreshToken,
+          user,
         });
       },
       logout: () =>
