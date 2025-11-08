@@ -26,9 +26,17 @@ namespace Cotton.Database.Models
         [Column("original_node_file_id")]
         public Guid OriginalNodeFileId { get; set; }
 
+        /// <summary>
+        /// Gets the name associated with the entity.
+        /// Use SetName method to set the name with validation.
+        /// </summary>
         [Column("name")]
         public string Name { get; private set; } = null!;
 
+        /// <summary>
+        /// Gets the unique key associated with the name for this entity.
+        /// Automatically set when using SetName method.
+        /// </summary>
         [Column("name_key")]
         public string NameKey { get; private set; } = null!;
 
