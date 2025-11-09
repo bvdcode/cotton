@@ -2,6 +2,8 @@
 
 <div align="center">
 
+> Live: [cotton.splidex.com](https://cotton.splidex.com/)
+
 # Cotton Cloud — a real cloud that doesn’t suck
 
 ![status-prealpha](https://img.shields.io/badge/status-pre--alpha-red)
