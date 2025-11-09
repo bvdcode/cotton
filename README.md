@@ -1,8 +1,6 @@
-> ⚠️ **The Project Status: Pre-Alpha**
+> ⚠️ **The Project Status: Pre-Alpha** | Live: [cotton.splidex.com](https://cotton.splidex.com/)
 
 <div align="center">
-
-> Live: [cotton.splidex.com](https://cotton.splidex.com/)
 
 # Cotton Cloud — a real cloud that doesn’t suck
 
