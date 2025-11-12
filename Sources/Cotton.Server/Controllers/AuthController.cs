@@ -56,7 +56,7 @@ namespace Cotton.Server.Controllers
         [HttpPost("/api/v1/auth/refresh")]
         public async Task<IActionResult> GetRefreshToken(RefreshTokenRequest request)
         {
-            var dbToken = await _dbContext.RefreshTokens.FindAsync(request.RefreshToken);
+            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == request.RefreshToken);
             if (dbToken == null || dbToken.RevokedAt != null)
             {
                 return Unauthorized();
