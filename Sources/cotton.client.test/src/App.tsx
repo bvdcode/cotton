@@ -1,0 +1,59 @@
+import {
+  Route,
+  Routes,
+  Navigate,
+  BrowserRouter as Router,
+} from "react-router-dom";
+import { Box } from "@mui/material";
+import "react-toastify/dist/ReactToastify.css";
+import { ConfirmProvider } from "material-ui-confirm";
+import AppThemeProvider from "./providers/ThemeProvider.tsx";
+import {
+  AppLayout,
+  ProtectedRoute,
+  FilesPage,
+  LoginPage,
+} from "./components/index.ts";
+import { useEffect } from "react";
+import { useSettings } from "./stores/settingsStore.ts";
+// i18n is initialized in main.tsx
+
+function App() {
+  const loadSettings = useSettings((s) => s.load);
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+  return (
+    <Box sx={{ position: "fixed", inset: 0 }}>
+      <AppThemeProvider>
+        <ConfirmProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/app"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<>Home</>} />
+                <Route path="dashboard" element={<>Dashboard</>} />
+                <Route path="files">
+                  <Route index element={<FilesPage />} />
+                  <Route path=":nodeId" element={<FilesPage />} />
+                </Route>
+                <Route path="options" element={<>Options</>} />
+              </Route>
+
+              <Route path="/" element={<Navigate to="/app" replace />} />
+            </Routes>
+          </Router>
+        </ConfirmProvider>
+      </AppThemeProvider>
+    </Box>
+  );
+}
+
+export default App;
