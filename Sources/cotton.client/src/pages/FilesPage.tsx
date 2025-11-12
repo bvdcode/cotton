@@ -133,6 +133,10 @@ const FilesPage: FunctionComponent = () => {
       setError(msg);
     } finally {
       setIsUploading(false);
+      setProgressPct(0);
+      setSpeedBps(0);
+      setUploadBytes(0);
+      setSelectedFile(null);
     }
   }, [selectedFile, currentNode]);
 
