@@ -14,6 +14,7 @@ import {
   ArrowBack,
   CreateNewFolder,
   Home as HomeIcon,
+  Folder as FolderIcon,
 } from "@mui/icons-material";
 import {
   hashBlob,
@@ -24,6 +25,7 @@ import {
   DEFAULT_CONCURRENCY,
   formatBytesPerSecond,
 } from "../utils/fileUpload";
+import { fileIcon } from "../utils/fileIcons";
 import { filesApi, layoutApi } from "../api";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
@@ -414,12 +416,13 @@ const FilesPage: FunctionComponent = () => {
                   aspectRatio: "1 / 1",
                   bgcolor: "action.hover",
                   borderRadius: 1,
-                  backgroundImage: `url('https://cdn-icons-png.flaticon.com/512/716/716784.png')`,
-                  backgroundSize: "contain",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                <FolderIcon fontSize="large" color="warning" />
+              </Box>
               <Box>
                 <Typography variant="body2" noWrap title={n.name}>
                   {n.name}
@@ -444,12 +447,13 @@ const FilesPage: FunctionComponent = () => {
                   aspectRatio: "1 / 1",
                   bgcolor: "action.hover",
                   borderRadius: 1,
-                  backgroundImage: `url('https://images.freeimages.com/fic/images/icons/2813/flat_jewels/512/file.png')`,
-                  backgroundSize: "contain",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                {fileIcon(f.name, f.contentType)}
+              </Box>
               <Box>
                 <Typography variant="body2" noWrap title={f.name}>
                   {f.name}
