@@ -1,21 +1,33 @@
 import {
-  Alert,
   Box,
-  Breadcrumbs,
-  Button,
-  IconButton,
   Link,
-  LinearProgress,
+  Alert,
   Paper,
   Stack,
+  Button,
+  IconButton,
   Typography,
+  Breadcrumbs,
+  LinearProgress,
 } from "@mui/material";
-import { ArrowBack, CreateNewFolder, Home as HomeIcon } from "@mui/icons-material";
+import {
+  ArrowBack,
+  CreateNewFolder,
+  Home as HomeIcon,
+} from "@mui/icons-material";
+import {
+  hashBlob,
+  hashFile,
+  chunkBlob,
+  formatBytes,
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_CONCURRENCY,
+  formatBytesPerSecond,
+} from "../utils/fileUpload";
+import { filesApi, layoutApi } from "../api";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { filesApi, layoutApi } from "../api";
-import { chunkBlob, DEFAULT_CHUNK_SIZE, DEFAULT_CONCURRENCY, hashBlob, hashFile, formatBytesPerSecond, formatBytes } from "../utils/fileUpload";
 import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
 
 const FilesPage: FunctionComponent = () => {
@@ -34,6 +46,21 @@ const FilesPage: FunctionComponent = () => {
   const [progressPct, setProgressPct] = useState(0);
   const [speedBps, setSpeedBps] = useState(0);
   const [uploadBytes, setUploadBytes] = useState(0);
+
+  const prettyFileType = (name: string, contentType?: string): string => {
+    const ext = name.includes(".") ? name.split(".").pop()!.toUpperCase() : "";
+    const ct = contentType || "";
+    if (ct.startsWith("image/")) return "Image";
+    if (ct.startsWith("video/")) return "Video";
+    if (ct.startsWith("audio/")) return "Audio";
+    if (ct === "application/pdf") return "PDF";
+    if (ct === "application/zip") return "ZIP";
+    if (ct === "application/vnd.android.package-archive") return "APK";
+    if (ct === "text/plain") return "Text";
+    if (ct === "application/json") return "JSON";
+    if (ext && ext.length <= 5) return ext;
+    return ct || "File";
+  };
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
     setSelectedFile(f);
@@ -128,22 +155,25 @@ const FilesPage: FunctionComponent = () => {
     }
   }, [nodeCache]);
 
-  const openNode = useCallback(async (node: LayoutNodeDto) => {
-    try {
-      setLoading(true);
-      setError(null);
-      setNavStack((s) => (currentNode ? [...s, currentNode] : s));
-      setCurrentNode(node);
-      nodeCache.set(node.id, node);
-      const ch = await layoutApi.getNodeChildren(node.id);
-      setChildren(ch);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentNode, nodeCache]);
+  const openNode = useCallback(
+    async (node: LayoutNodeDto) => {
+      try {
+        setLoading(true);
+        setError(null);
+        setNavStack((s) => (currentNode ? [...s, currentNode] : s));
+        setCurrentNode(node);
+        nodeCache.set(node.id, node);
+        const ch = await layoutApi.getNodeChildren(node.id);
+        setChildren(ch);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentNode, nodeCache],
+  );
 
   const goBack = useCallback(async () => {
     if (navStack.length === 0) {
@@ -158,7 +188,10 @@ const FilesPage: FunctionComponent = () => {
 
   const onCreateFolder = useCallback(async () => {
     if (!currentNode?.id) return;
-    const name = window.prompt(t("filesPage.enterFolderName", "Enter folder name"), "");
+    const name = window.prompt(
+      t("filesPage.enterFolderName", "Enter folder name"),
+      "",
+    );
     if (!name) return;
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -182,7 +215,10 @@ const FilesPage: FunctionComponent = () => {
   // Rebuild breadcrumbs when currentNode changes
   useEffect(() => {
     const buildPath = async () => {
-      if (!currentNode) { setPathNodes([]); return; }
+      if (!currentNode) {
+        setPathNodes([]);
+        return;
+      }
       const acc: LayoutNodeDto[] = [];
       let cur: LayoutNodeDto | undefined = currentNode;
       const guard = new Set<string>();
@@ -229,20 +265,52 @@ const FilesPage: FunctionComponent = () => {
               const isLast = idx === pathNodes.length - 1;
               if (idx === 0) {
                 return isLast ? (
-                  <Typography key={n.id} color="text.primary" variant="body2" title={n.name}>
-                    <HomeIcon fontSize="small" style={{ verticalAlign: "middle" }} />
+                  <Typography
+                    key={n.id}
+                    color="text.primary"
+                    variant="body2"
+                    title={n.name}
+                  >
+                    <HomeIcon
+                      fontSize="small"
+                      style={{ verticalAlign: "middle" }}
+                    />
                   </Typography>
                 ) : (
-                  <Link key={n.id} underline="none" color="inherit" sx={{ display: "inline-flex", alignItems: "center" }}
-                        onClick={() => openNode(n)} title={n.name}>
+                  <Link
+                    key={n.id}
+                    underline="none"
+                    color="inherit"
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => openNode(n)}
+                    title={n.name}
+                  >
                     <HomeIcon fontSize="small" />
                   </Link>
                 );
               }
               return isLast ? (
-                <Typography key={n.id} color="text.primary" variant="body2" title={n.name}>{n.name}</Typography>
+                <Typography
+                  key={n.id}
+                  color="text.primary"
+                  variant="body2"
+                  title={n.name}
+                >
+                  {n.name}
+                </Typography>
               ) : (
-                <Link key={n.id} underline="hover" color="inherit" onClick={() => openNode(n)} title={n.name}>
+                <Link
+                  key={n.id}
+                  underline="hover"
+                  color="inherit"
+                  onClick={() => openNode(n)}
+                  title={n.name}
+                  sx={{ cursor: "pointer" }}
+                >
                   {n.name}
                 </Link>
               );
@@ -250,8 +318,8 @@ const FilesPage: FunctionComponent = () => {
           </Breadcrumbs>
         </Box>
 
-  {loading && <LinearProgress />}
-  {error && <Alert severity="error">{error}</Alert>}
+        {loading && <LinearProgress />}
+        {error && <Alert severity="error">{error}</Alert>}
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -259,18 +327,38 @@ const FilesPage: FunctionComponent = () => {
           sx={{ mt: 2 }}
           alignItems="center"
         >
-          <Typography variant="body2">{currentNode?.name ?? t("filesPage.noFile")}</Typography>
-          <Button variant="outlined" component="label" disabled={isUploading || loading}>
-            {selectedFile ? t("filesPage.changeFile") : t("filesPage.chooseFile")}
+          <Typography variant="body2">
+            {currentNode?.name ?? t("filesPage.noFile")}
+          </Typography>
+          <Button
+            variant="outlined"
+            component="label"
+            disabled={isUploading || loading}
+          >
+            {selectedFile
+              ? t("filesPage.changeFile")
+              : t("filesPage.chooseFile")}
             <input hidden type="file" onChange={onFileChange} />
           </Button>
-          <Button variant="contained" disabled={!selectedFile || isUploading || loading || !currentNode} onClick={performUpload}>
+          <Button
+            variant="contained"
+            disabled={!selectedFile || isUploading || loading || !currentNode}
+            onClick={performUpload}
+          >
             {isUploading ? t("filesPage.uploading") : t("filesPage.upload")}
           </Button>
-          <IconButton title={t("filesPage.back")} onClick={goBack} disabled={loading}>
+          <IconButton
+            title={t("filesPage.back")}
+            onClick={goBack}
+            disabled={loading}
+          >
             <ArrowBack />
           </IconButton>
-          <IconButton title={t("filesPage.newFolder")} onClick={onCreateFolder} disabled={loading || !currentNode}>
+          <IconButton
+            title={t("filesPage.newFolder")}
+            onClick={onCreateFolder}
+            disabled={loading || !currentNode}
+          >
             <CreateNewFolder />
           </IconButton>
         </Stack>
@@ -282,9 +370,20 @@ const FilesPage: FunctionComponent = () => {
             <LinearProgress variant="determinate" value={progressPct} />
             <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
               <Typography variant="caption">{progressPct}%</Typography>
-              <Typography variant="caption">{t("filesPage.threads", { count: DEFAULT_CONCURRENCY })}</Typography>
-              <Typography variant="caption">{t("filesPage.speed", { speed: formatBytesPerSecond(speedBps) })}</Typography>
-              <Typography variant="caption" color="text.secondary">{`${formatBytes(uploadBytes)} / ${formatBytes(selectedFile?.size ?? 0)}`}</Typography>
+              <Typography variant="caption">
+                {t("filesPage.threads", { count: DEFAULT_CONCURRENCY })}
+              </Typography>
+              <Typography variant="caption">
+                {t("filesPage.speed", {
+                  speed: formatBytesPerSecond(speedBps),
+                })}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >{`${formatBytes(uploadBytes)} / ${formatBytes(
+                selectedFile?.size ?? 0,
+              )}`}</Typography>
             </Stack>
           </Box>
         )}
@@ -298,8 +397,18 @@ const FilesPage: FunctionComponent = () => {
         >
           {/* Folders */}
           {children?.nodes.map((n) => (
-            <Paper key={n.id} elevation={2} sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1, cursor: "pointer" }}
-              onClick={() => openNode(n)}>
+            <Paper
+              key={n.id}
+              elevation={2}
+              sx={{
+                p: 1.5,
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+                cursor: "pointer",
+              }}
+              onClick={() => openNode(n)}
+            >
               <Box
                 sx={{
                   width: "100%",
@@ -313,7 +422,9 @@ const FilesPage: FunctionComponent = () => {
                 }}
               />
               <Box>
-                <Typography variant="body2" noWrap title={n.name}>{n.name}</Typography>
+                <Typography variant="body2" noWrap title={n.name}>
+                  {n.name}
+                </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {t("filesPage.folder")}
                 </Typography>
@@ -323,7 +434,11 @@ const FilesPage: FunctionComponent = () => {
 
           {/* Files */}
           {children?.files.map((f) => (
-            <Paper key={f.id} elevation={2} sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+            <Paper
+              key={f.id}
+              elevation={2}
+              sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}
+            >
               <Box
                 sx={{
                   width: "100%",
@@ -337,11 +452,24 @@ const FilesPage: FunctionComponent = () => {
                 }}
               />
               <Box>
-                <Typography variant="body2" noWrap title={f.name}>{f.name}</Typography>
-                <Typography variant="caption" color="text.secondary">{f.contentType}</Typography>
+                <Typography variant="body2" noWrap title={f.name}>
+                  {f.name}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  noWrap
+                  title={f.contentType}
+                >
+                  {prettyFileType(f.name, f.contentType)}
+                </Typography>
               </Box>
               <Box>
-                <Link href={filesApi.getDownloadUrl(f.id)} target="_blank" rel="noopener noreferrer">
+                <Link
+                  href={filesApi.getDownloadUrl(f.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {t("filesPage.download")}
                 </Link>
               </Box>
