@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
 
@@ -8,7 +8,9 @@ const FilesPage: FunctionComponent = () => {
   return (
     <Box>
       <Box display="flex" width="100%" height="100%">
-        {t("filesPage.title")}
+        <Typography variant="h4" component="h1">
+          {t("filesPage.title")}
+        </Typography>
       </Box>
     </Box>
   );
