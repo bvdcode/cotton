@@ -1,15 +1,15 @@
-import type { ReactNode } from "react";
 import {
-  PictureAsPdf,
-  InsertDriveFile,
+  Code,
   Image,
   Movie,
-  Audiotrack,
   Archive,
-  Description,
-  Code,
   Android,
+  Audiotrack,
+  Description,
+  PictureAsPdf,
+  InsertDriveFile,
 } from "@mui/icons-material";
+import type { ReactNode } from "react";
 
 export function fileIcon(name: string, contentType?: string): ReactNode {
   const ct = contentType || "";
@@ -20,10 +20,12 @@ export function fileIcon(name: string, contentType?: string): ReactNode {
   if (ct.startsWith("image/")) return <Image color="info" />;
   if (ct.startsWith("video/")) return <Movie color="action" />;
   if (ct.startsWith("audio/")) return <Audiotrack color="secondary" />;
-  if (ct === "application/zip" || ct === "application/x-zip-compressed") return <Archive />;
+  if (ct === "application/zip" || ct === "application/x-zip-compressed")
+    return <Archive />;
   if (ct === "application/json") return <Code />;
   if (ct === "text/plain") return <Description />;
-  if (ct === "application/vnd.android.package-archive") return <Android color="success" />;
+  if (ct === "application/vnd.android.package-archive")
+    return <Android color="success" />;
 
   // Extension-based fallbacks
   switch (ext) {
