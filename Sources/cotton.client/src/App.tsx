@@ -2,6 +2,7 @@ import { ru, en } from "./locales";
 import { Box } from "@mui/material";
 import FilesPage from "./pages/FilesPage";
 import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
+import type { AuthUser } from "./api";
 
 function App() {
   return (
@@ -22,10 +23,13 @@ function App() {
             return response.data;
           },
           getUserInfo: async (axiosInstance) => {
-            const response = await axiosInstance.get<UserInfo>(
+            const response = await axiosInstance.get<AuthUser>(
               "/api/v1/users/me",
             );
-            return response.data;
+            return {
+              ...response.data,
+              displayName: response.data.username,
+            } as UserInfo;
           },
           refreshToken: async (refreshToken, axiosInstance) => {
             const response = await axiosInstance.post<TokenPair>(
