@@ -1,6 +1,10 @@
-import type { AxiosInstance } from "axios";
+import type {
+  CottonResult,
+  FileManifestDto,
+  CreateFileRequest,
+} from "../types/api";
 import { getHttpOrThrow } from "./http";
-import type { CottonResult, FileManifestDto, CreateFileRequest } from "../types/api";
+import type { AxiosInstance } from "axios";
 
 /**
  * OOP-style API client responsible for file and layout related endpoints.
@@ -20,13 +24,20 @@ export class FilesApiClient {
   }
 
   async chunkExists(hash: string): Promise<boolean> {
-    const res = await this.axios().get(this.url(`/chunks/${encodeURIComponent(hash)}`), {
-      validateStatus: () => true,
-    });
+    const res = await this.axios().get(
+      this.url(`/chunks/${encodeURIComponent(hash)}`),
+      {
+        validateStatus: () => true,
+      },
+    );
     return res.status === 200;
   }
 
-  async uploadChunk(blob: Blob, hash: string, fileName?: string): Promise<void> {
+  async uploadChunk(
+    blob: Blob,
+    hash: string,
+    fileName?: string,
+  ): Promise<void> {
     const form = new FormData();
     form.append("file", blob, fileName ?? "chunk.bin");
     form.append("hash", hash);
@@ -57,7 +68,9 @@ export class FilesApiClient {
   private isEnvelope<T>(val: unknown): val is CottonResult<T> {
     if (!val || typeof val !== "object") return false;
     const rec = val as Record<string, unknown>;
-    return typeof rec["success"] === "boolean" && ("data" in rec || "message" in rec);
+    return (
+      typeof rec["success"] === "boolean" && ("data" in rec || "message" in rec)
+    );
   }
 }
 
