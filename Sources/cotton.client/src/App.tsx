@@ -1,6 +1,7 @@
+import { ru, en } from "./locales";
 import { Box } from "@mui/material";
-import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
 import FilesPage from "./pages/FilesPage";
+import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
 
 function App() {
   return (
@@ -8,6 +9,10 @@ function App() {
       <AppShell
         appName="Cotton"
         logoUrl="/icon.png"
+        translations={{
+          en: { translation: en },
+          ru: { translation: ru },
+        }}
         authConfig={{
           login: async (credentials, axiosInstance) => {
             const response = await axiosInstance.post<TokenPair>(
