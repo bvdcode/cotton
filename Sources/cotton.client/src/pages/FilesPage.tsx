@@ -294,12 +294,7 @@ const FilesPage: FunctionComponent = () => {
                 );
               }
               return isLast ? (
-                <Typography
-                  key={n.id}
-                  color="text.primary"
-                  variant="body2"
-                  title={n.name}
-                >
+                <Typography key={n.id} color="text.primary" title={n.name}>
                   {n.name}
                 </Typography>
               ) : (
