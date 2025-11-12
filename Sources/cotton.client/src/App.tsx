@@ -1,5 +1,6 @@
 import { Box } from "@mui/material";
 import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
+import FilesPage from "./pages/FilesPage";
 
 function App() {
   return (
@@ -41,21 +42,13 @@ function App() {
           {
             route: "/",
             name: "Home",
-            component: (
-              <div>
-                Home Page Content <a href="/dawdaw">no</a>
-              </div>
-            ),
+            component: <div>Welcome to Cotton!</div>,
             icon: <div>🏠</div>,
           },
           {
             route: "/files",
             name: "Files",
-            component: (
-              <Box display="flex" width="100%" height="100%" bgcolor="red">
-                Test
-              </Box>
-            ),
+            component: <FilesPage />,
             icon: <div>📁</div>,
           },
         ]}
