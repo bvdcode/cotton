@@ -13,22 +13,86 @@ import {
 import { ArrowBack, CreateNewFolder, Home as HomeIcon } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { filesApi, layoutApi } from "../api";
+import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
 
 const FilesPage: FunctionComponent = () => {
   const { t } = useTranslation();
 
-  // UI-only state (visual parity with the old page)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading] = useState(false);
-  const [progress] = useState(0);
-  const [speedbps] = useState(0);
-  const [error] = useState<string | null>(null);
+  // State
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentNode, setCurrentNode] = useState<LayoutNodeDto | null>(null);
+  const [children, setChildren] = useState<LayoutChildrenDto | null>(null);
+  const [navStack, setNavStack] = useState<LayoutNodeDto[]>([]);
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] ?? null;
-    setSelectedFile(f);
-  };
+  const loadRoot = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const root = await layoutApi.resolvePath();
+      setCurrentNode(root);
+      const ch = await layoutApi.getNodeChildren(root.id);
+      setChildren(ch);
+      setNavStack([]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const openNode = useCallback(async (node: LayoutNodeDto) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setNavStack((s) => (currentNode ? [...s, currentNode] : s));
+      setCurrentNode(node);
+      const ch = await layoutApi.getNodeChildren(node.id);
+      setChildren(ch);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentNode]);
+
+  const goBack = useCallback(async () => {
+    if (navStack.length === 0) {
+      await loadRoot();
+      return;
+    }
+    const next = [...navStack];
+    const prev = next.pop()!;
+    setNavStack(next);
+    await openNode(prev);
+  }, [navStack, loadRoot, openNode]);
+
+  const onCreateFolder = useCallback(async () => {
+    if (!currentNode?.id) return;
+    const name = window.prompt(t("filesPage.enterFolderName", "Enter folder name"), "");
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      setLoading(true);
+      await layoutApi.createFolder({ parentId: currentNode.id, name: trimmed });
+      const ch = await layoutApi.getNodeChildren(currentNode.id);
+      setChildren(ch);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentNode, t]);
+
+  useEffect(() => {
+    loadRoot();
+  }, [loadRoot]);
 
   return (
     <Box>
@@ -61,10 +125,8 @@ const FilesPage: FunctionComponent = () => {
           </Breadcrumbs>
         </Box>
 
-        {/* Simulated loading/error placeholders for visual parity */}
-        {/* Hide by default; shown here to keep layout consistent */}
-        {/* <LinearProgress /> */}
-        {/* <Alert severity="error">{t("filesPage.errorPlaceholder")}</Alert> */}
+  {loading && <LinearProgress />}
+  {error && <Alert severity="error">{error}</Alert>}
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -72,49 +134,22 @@ const FilesPage: FunctionComponent = () => {
           sx={{ mt: 2 }}
           alignItems="center"
         >
-          <Typography variant="body2">
-            {selectedFile ? selectedFile.name : t("filesPage.noFile")}
-          </Typography>
-          <Button variant="outlined" component="label">
-            {selectedFile ? t("filesPage.changeFile") : t("filesPage.chooseFile")}
-            <input hidden type="file" onChange={onFileChange} />
+          <Typography variant="body2">{currentNode?.name ?? t("filesPage.noFile")}</Typography>
+          <Button variant="outlined" component="label" disabled>
+            {t("filesPage.chooseFile")}
+            <input hidden type="file" />
           </Button>
           <Button variant="contained" disabled>
-            {isUploading ? t("filesPage.uploading") : t("filesPage.upload")}
+            {t("filesPage.upload")}
           </Button>
-          <IconButton title={t("filesPage.back")}
-            disabled
-          >
+          <IconButton title={t("filesPage.back")} onClick={goBack} disabled={loading}>
             <ArrowBack />
           </IconButton>
-          <IconButton title={t("filesPage.newFolder")}
-            disabled
-          >
+          <IconButton title={t("filesPage.newFolder")} onClick={onCreateFolder} disabled={loading || !currentNode}>
             <CreateNewFolder />
           </IconButton>
         </Stack>
       </Box>
-
-      {isUploading && (
-        <Box sx={{ mt: 2 }}>
-          <LinearProgress variant="determinate" value={progress} />
-          <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-            <Typography variant="caption">{progress}%</Typography>
-            <Typography variant="caption">
-              {t("filesPage.threads", { count: 4 })}
-            </Typography>
-            <Typography variant="caption">
-              {t("filesPage.speed", { speed: `${Math.round(speedbps)} B/s` })}
-            </Typography>
-          </Stack>
-        </Box>
-      )}
-
-      {error && (
-        <Box sx={{ mt: 2 }}>
-          <Alert severity="error">{error}</Alert>
-        </Box>
-      )}
 
       <Box sx={{ mt: 4 }}>
         <Box
@@ -125,9 +160,10 @@ const FilesPage: FunctionComponent = () => {
             gap: 2,
           }}
         >
-          {/* Folders (visual placeholders) */}
-          {[1, 2, 3].map((i) => (
-            <Paper key={`folder-${i}`} elevation={2} sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+          {/* Folders */}
+          {children?.nodes.map((n) => (
+            <Paper key={n.id} elevation={2} sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1, cursor: "pointer" }}
+              onClick={() => openNode(n)}>
               <Box
                 sx={{
                   width: "100%",
@@ -141,7 +177,7 @@ const FilesPage: FunctionComponent = () => {
                 }}
               />
               <Box>
-                <Typography variant="body2" noWrap title={t("filesPage.folder")}>{t("filesPage.folder")}</Typography>
+                <Typography variant="body2" noWrap title={n.name}>{n.name}</Typography>
                 <Typography variant="caption" color="text.secondary">
                   {t("filesPage.folder")}
                 </Typography>
@@ -149,9 +185,9 @@ const FilesPage: FunctionComponent = () => {
             </Paper>
           ))}
 
-          {/* Files (visual placeholders) */}
-          {[1, 2].map((i) => (
-            <Paper key={`file-${i}`} elevation={2} sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+          {/* Files */}
+          {children?.files.map((f) => (
+            <Paper key={f.id} elevation={2} sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
               <Box
                 sx={{
                   width: "100%",
@@ -165,13 +201,13 @@ const FilesPage: FunctionComponent = () => {
                 }}
               />
               <Box>
-                <Typography variant="body2" noWrap title="file.txt">file.txt</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  text/plain
-                </Typography>
+                <Typography variant="body2" noWrap title={f.name}>{f.name}</Typography>
+                <Typography variant="caption" color="text.secondary">{f.contentType}</Typography>
               </Box>
               <Box>
-                <Link href="#" onClick={(e) => e.preventDefault()}>{t("filesPage.download")}</Link>
+                <Link href={filesApi.getDownloadUrl(f.id)} target="_blank" rel="noopener noreferrer">
+                  {t("filesPage.download")}
+                </Link>
               </Box>
             </Paper>
           ))}

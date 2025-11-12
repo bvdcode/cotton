@@ -10,6 +10,7 @@
     "upload": "Upload",
     "back": "Back",
     "newFolder": "New folder",
+    "enterFolderName": "Enter folder name",
     "folder": "Folder",
     "download": "Download",
     "threads": "Threads: {{count}}",
