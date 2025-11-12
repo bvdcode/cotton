@@ -1,5 +1,18 @@
 {
   "filesPage": {
-    "title": "Files"
+    "title": "Files",
+    "root": "Root",
+    "current": "Current",
+    "noFile": "No file selected",
+    "changeFile": "Change file",
+    "chooseFile": "Choose file",
+    "uploading": "Uploading...",
+    "upload": "Upload",
+    "back": "Back",
+    "newFolder": "New folder",
+    "folder": "Folder",
+    "download": "Download",
+    "threads": "Threads: {{count}}",
+    "speed": "Speed: {{speed}}"
   }
 }

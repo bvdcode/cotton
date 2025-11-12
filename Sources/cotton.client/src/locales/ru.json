@@ -1,5 +1,18 @@
 {
   "filesPage": {
-    "title": "Файлы"
+    "title": "Файлы",
+    "root": "Корень",
+    "current": "Текущая",
+    "noFile": "Файл не выбран",
+    "changeFile": "Сменить файл",
+    "chooseFile": "Выбрать файл",
+    "uploading": "Загрузка...",
+    "upload": "Загрузить",
+    "back": "Назад",
+    "newFolder": "Новая папка",
+    "folder": "Папка",
+    "download": "Скачать",
+    "threads": "Потоков: {{count}}",
+    "speed": "Скорость: {{speed}}"
   }
 }
