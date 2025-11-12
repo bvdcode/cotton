@@ -8,7 +8,7 @@ const FilesPage: FunctionComponent = () => {
   return (
     <Box>
       <Box display="flex" width="100%" height="100%">
-        {t("filesPage.test")}
+        {t("filesPage.title")}
       </Box>
     </Box>
   );
