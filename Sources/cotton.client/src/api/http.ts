@@ -3,17 +3,11 @@ import { getAxiosInstance } from "@bvdcode/react-kit";
 
 export class AxiosNotInitializedError extends Error {
   constructor() {
-    super(
-      "Axios instance is not initialized yet. Ensure AppShell is mounted before calling the API or guard your calls to wait for initialization.",
-    );
+    super("Axios instance is not initialized yet.");
     this.name = "AxiosNotInitializedError";
   }
 }
 
-/**
- * Returns the configured Axios instance from AppShell or throws if not initialized yet.
- * Prefer calling this lazily inside API methods to always use the latest tokens/interceptors.
- */
 export function getHttpOrThrow(): AxiosInstance {
   const axios = getAxiosInstance();
   if (!axios) {
@@ -22,7 +16,6 @@ export function getHttpOrThrow(): AxiosInstance {
   return axios;
 }
 
-/** Optional helper for future: wait until axios is available (polling). */
 export async function waitForHttp(
   timeoutMs = 5000,
   intervalMs = 50,

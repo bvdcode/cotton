@@ -1,13 +1,6 @@
 import type { AxiosInstance } from "axios";
 import { getHttpOrThrow } from "./http";
-import type {
-  ChildrenResponse,
-  CreateFileFromChunksRequest,
-  CreateFolderRequest,
-  ChunkExistsResponse,
-  FileItem,
-  NodeItem,
-} from "../types/files";
+import type { CottonResult, FileManifestDto, CreateFileRequest } from "../types/api";
 
 /**
  * OOP-style API client responsible for file and layout related endpoints.
@@ -27,46 +20,44 @@ export class FilesApiClient {
   }
 
   async chunkExists(hash: string): Promise<boolean> {
-    const { data } = await this.axios().get<ChunkExistsResponse>(
-      this.url(`/files/chunks/${encodeURIComponent(hash)}`),
-    );
-    return data.exists;
-  }
-
-  async uploadChunk(blob: Blob, hash: string, fileName: string): Promise<void> {
-    const form = new FormData();
-    form.append("hash", hash);
-    form.append("file", blob, fileName);
-    await this.axios().post(this.url("/files/chunks"), form, {
-      headers: { "Content-Type": "multipart/form-data" },
+    const res = await this.axios().get(this.url(`/chunks/${encodeURIComponent(hash)}`), {
+      validateStatus: () => true,
     });
+    return res.status === 200;
   }
 
-  async createFileFromChunks(req: CreateFileFromChunksRequest): Promise<FileItem> {
-    const { data } = await this.axios().post<FileItem>(
-      this.url("/files"),
+  async uploadChunk(blob: Blob, hash: string, fileName?: string): Promise<void> {
+    const form = new FormData();
+    form.append("file", blob, fileName ?? "chunk.bin");
+    form.append("hash", hash);
+    const res = await this.axios().post(this.url("/chunks"), form);
+    if (res.status < 200 || res.status >= 300) {
+      throw new Error(`Chunk upload failed: ${res.status}`);
+    }
+  }
+
+  async createFileFromChunks(req: CreateFileRequest): Promise<FileManifestDto> {
+    type Resp = CottonResult<FileManifestDto> | FileManifestDto;
+    const { data } = await this.axios().post<Resp>(
+      this.url("/files/from-chunks"),
       req,
     );
-    return data;
+    if (this.isEnvelope<FileManifestDto>(data)) {
+      if (!data.success || !data.data) {
+        throw new Error(data.message || "Server returned empty response");
+      }
+      return data.data;
+    }
+    return data as FileManifestDto;
   }
 
   getDownloadUrl(fileId: string): string {
     return this.url(`/files/${encodeURIComponent(fileId)}/download`);
   }
-
-  async listChildren(nodeId: string): Promise<ChildrenResponse> {
-    const { data } = await this.axios().get<ChildrenResponse>(
-      this.url(`/layout/${encodeURIComponent(nodeId)}/children`),
-    );
-    return data;
-  }
-
-  async createFolder(req: CreateFolderRequest): Promise<NodeItem> {
-    const { data } = await this.axios().post<NodeItem>(
-      this.url("/layout/folders"),
-      req,
-    );
-    return data;
+  private isEnvelope<T>(val: unknown): val is CottonResult<T> {
+    if (!val || typeof val !== "object") return false;
+    const rec = val as Record<string, unknown>;
+    return typeof rec["success"] === "boolean" && ("data" in rec || "message" in rec);
   }
 }
 
