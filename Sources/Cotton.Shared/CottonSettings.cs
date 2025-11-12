@@ -1,6 +1,6 @@
 ﻿namespace Cotton.Shared
 {
-    public class CottonSettings
+    public record CottonSettings
     {
         public int MaxChunkSizeBytes { get; set; }
         public string MasterEncryptionKey { get; set; } = string.Empty;

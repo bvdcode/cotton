@@ -2,11 +2,11 @@
 
 namespace Cotton.Autoconfig
 {
-    public class ConfigurationProvider
+    internal static class ConfigurationProvider
     {
-        public CottonSettings Settings => GetSettings();
+        internal static CottonSettings Settings => GetSettings();
 
-        private CottonSettings GetSettings()
+        private static CottonSettings GetSettings()
         {
             /*
              * 

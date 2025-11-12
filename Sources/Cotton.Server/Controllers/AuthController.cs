@@ -29,6 +29,7 @@ namespace Cotton.Server.Controllers
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
             {
+                // TODO: Return unauthorized
                 user = new()
                 {
                     Username = request.Username.Trim(),
