@@ -29,7 +29,7 @@ namespace Cotton.Server.Controllers
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
             {
-                // TODO: Return unauthorized
+                // TODO: Return NotFound
                 user = new()
                 {
                     Username = request.Username.Trim(),
@@ -40,7 +40,7 @@ namespace Cotton.Server.Controllers
             }
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
-                return Unauthorized();
+                return NotFound();
             }
             var accessToken = _tokens.CreateToken(x => x.Add("sub", user.Id.ToString()));
             string refreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
@@ -60,12 +60,12 @@ namespace Cotton.Server.Controllers
             var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == request.RefreshToken);
             if (dbToken == null || dbToken.RevokedAt != null)
             {
-                return Unauthorized();
+                return NotFound();
             }
             var user = await _dbContext.Users.FindAsync(dbToken.UserId);
             if (user == null)
             {
-                return Unauthorized();
+                return NotFound();
             }
             var accessToken = _tokens.CreateToken(x => x.Add("sub", user.Id.ToString()));
             string newRefreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
