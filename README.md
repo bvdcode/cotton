@@ -1,4 +1,4 @@
-> ⚠️ **The Project Status: Pre-Alpha**
+> ⚠️ **The Project Status: Pre-Alpha** | Live: [cotton.splidex.com](https://cotton.splidex.com/)
 
 <div align="center">
 
