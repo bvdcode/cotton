@@ -323,7 +323,7 @@ const FilesPage: FunctionComponent = () => {
           alignItems="center"
         >
           <Typography variant="body2">
-            {currentNode?.name ?? t("filesPage.noFile")}
+            {selectedFile?.name ?? t("filesPage.noFile")}
           </Typography>
           <Button
             variant="outlined"
