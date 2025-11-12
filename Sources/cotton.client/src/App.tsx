@@ -6,6 +6,7 @@ function App() {
     <Box>
       <AppShell
         appName="Cotton"
+        logoUrl="/icon.png"
         authConfig={{
           login: async (credentials, axiosInstance) => {
             const response = await axiosInstance.post<TokenPair>(
