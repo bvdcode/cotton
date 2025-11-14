@@ -2,12 +2,12 @@
 // Copyright (c) 2025 Vadim Belov
 
 using System.Buffers;
+using System.IO.Pipelines;
 using System.Buffers.Binary;
 using Cotton.Crypto.Internals;
 using Cotton.Crypto.Abstractions;
 using System.Security.Cryptography;
 using Cotton.Crypto.Internals.Pipelines;
-using System.IO.Pipelines;
 
 namespace Cotton.Crypto
 {
@@ -75,8 +75,14 @@ namespace Cotton.Crypto
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            if (!output.CanWrite)
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
             {
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
@@ -129,12 +135,20 @@ namespace Cotton.Crypto
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
-            if (!output.CanWrite) throw new ArgumentException("Output stream must be writable.", nameof(output));
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
+            if (!output.CanWrite)
+            {
+                throw new ArgumentException("Output stream must be writable.", nameof(output));
+            }
 
             FileHeader header = await AesGcmStreamFormat.ReadFileHeaderAsync(input, NonceSize, TagSize, KeySize, ct).ConfigureAwait(false);
             if (header.KeyId != _keyId)
+            {
                 throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
+            }
 
             byte[] fileKey = BufferPool.Rent(KeySize);
             try
@@ -158,7 +172,10 @@ namespace Cotton.Crypto
         public Task<Stream> EncryptAsync(Stream input, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(input);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
             if (chunkSize < MinChunkSize || chunkSize > MaxChunkSize)
             {
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
@@ -198,7 +215,10 @@ namespace Cotton.Crypto
         public Task<Stream> DecryptAsync(Stream input, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(input);
-            if (!input.CanRead) throw new ArgumentException("Input stream must be readable.", nameof(input));
+            if (!input.CanRead)
+            {
+                throw new ArgumentException("Input stream must be readable.", nameof(input));
+            }
 
             // Use a bounded pipe; decryption chunk size is determined by the file, but pipe capacity can still be limited by window cap
             long perChunkGuess = DefaultChunkSize; // heuristic; actual pipeline uses its own windows

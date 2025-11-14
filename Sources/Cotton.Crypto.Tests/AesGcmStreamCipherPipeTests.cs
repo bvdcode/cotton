@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
-using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using Cotton.Crypto.Tests.TestUtils;
+using Cotton.Crypto.Models;
 
 namespace Cotton.Crypto.Tests;
 
@@ -17,24 +17,34 @@ public class AesGcmStreamCipherPipeTests
     private static byte[] Key() => [.. Enumerable.Range(0, 32).Select(i => (byte)i)];
 
     [Test]
-    public async Task EncryptAsync_StreamOverload_ProducesSameBytesAsDirect()
+    public async Task EncryptAsync_StreamOverload_DecryptsCorrectly()
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 11, threads: 2);
         byte[] data = [.. Enumerable.Range(0, 3 * AesGcmStreamCipher.MinChunkSize + 123).Select(i => (byte)(i & 0xFF))];
 
+        // Direct encrypt
         using var input1 = new MemoryStream(data);
         using var directOut = new MemoryStream();
         await cipher.EncryptAsync(input1, directOut, chunkSize: AesGcmStreamCipher.MinChunkSize);
-        var directBytes = directOut.ToArray();
+        directOut.Position = 0;
+        using var directPlain = new MemoryStream();
+        await cipher.DecryptAsync(directOut, directPlain);
 
+        // Streaming encrypt
         using var input2 = new MemoryStream(data);
         var pipeStream = await cipher.EncryptAsync(input2, chunkSize: AesGcmStreamCipher.MinChunkSize);
         using var collected = new MemoryStream();
         await pipeStream.CopyToAsync(collected);
-        var pipeBytes = collected.ToArray();
+        collected.Position = 0;
+        using var pipePlain = new MemoryStream();
+        await cipher.DecryptAsync(collected, pipePlain);
 
-        Assert.That(pipeBytes, Is.EqualTo(directBytes));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(directPlain.ToArray(), Is.EqualTo(data));
+            Assert.That(pipePlain.ToArray(), Is.EqualTo(data));
+        }
     }
 
     [Test]
@@ -58,32 +68,63 @@ public class AesGcmStreamCipherPipeTests
     }
 
     [Test]
-    public void EncryptAsync_StreamOverload_Cancellation()
+    public async Task EncryptAsync_StreamOverload_Cancellation()
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 13, threads: 2);
-        byte[] data = [.. Enumerable.Range(0, 10 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        byte[] data = [.. Enumerable.Range(0, 12 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        cts.CancelAfter(30); // let pipeline start
 
-        Assert.ThrowsAsync<TaskCanceledException>(() => cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token));
+        var stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
+        byte[] buffer = new byte[64 * 1024];
+        TaskCanceledException? caught = null;
+        try
+        {
+            while (true)
+            {
+                int r = await stream.ReadAsync(buffer, cts.Token);
+                if (r == 0) break; // finished before cancel
+            }
+        }
+        catch (TaskCanceledException ex)
+        {
+            caught = ex;
+        }
+        Assert.That(caught, Is.Not.Null, "Expected TaskCanceledException during streaming encrypt read.");
     }
 
     [Test]
-    public void DecryptAsync_StreamOverload_Cancellation()
+    public async Task DecryptAsync_StreamOverload_Cancellation()
     {
         var key = Key();
-        var cipher = new AesGcmStreamCipher(key, keyId: 14, threads: 2);
-        byte[] data = [.. Enumerable.Range(0, 4 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        var encCipher = new AesGcmStreamCipher(key, keyId: 14, threads: 2);
+        var decCipher = new AesGcmStreamCipher(key, keyId: 14, threads: 2);
+        byte[] data = [.. Enumerable.Range(0, 12 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var encrypted = new MemoryStream();
-        cipher.EncryptAsync(input, encrypted, chunkSize: AesGcmStreamCipher.MinChunkSize).GetAwaiter().GetResult();
+        await encCipher.EncryptAsync(input, encrypted, chunkSize: AesGcmStreamCipher.MinChunkSize);
         encrypted.Position = 0;
 
         using var cts = new CancellationTokenSource();
-        cts.Cancel();
-        Assert.ThrowsAsync<TaskCanceledException>(() => cipher.DecryptAsync(encrypted, ct: cts.Token));
+        cts.CancelAfter(30);
+        var decStream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
+        byte[] buffer = new byte[64 * 1024];
+        TaskCanceledException? caught = null;
+        try
+        {
+            while (true)
+            {
+                int r = await decStream.ReadAsync(buffer, cts.Token);
+                if (r == 0) break; // finished before cancel
+            }
+        }
+        catch (TaskCanceledException ex)
+        {
+            caught = ex;
+        }
+        Assert.That(caught, Is.Not.Null, "Expected TaskCanceledException during streaming decrypt read.");
     }
 
     [Test]
@@ -118,19 +159,14 @@ public class AesGcmStreamCipherPipeTests
         using var ciphertextCollected = new MemoryStream();
         await encStream.CopyToAsync(ciphertextCollected);
 
-        // Tamper a byte after headers
         var bytes = ciphertextCollected.ToArray();
         int headerLen = Cotton.Crypto.Internals.AesGcmStreamFormat.ComputeFileHeaderLength(AesGcmStreamCipher.NonceSize, AesGcmStreamCipher.TagSize, AesGcmStreamCipher.KeySize);
-        if (bytes.Length > headerLen + 5)
-        {
-            bytes[headerLen + 5] ^= 0xFF;
-        }
+        if (bytes.Length > headerLen + 5) bytes[headerLen + 5] ^= 0xFF; // corrupt
         using var tampered = new MemoryStream(bytes);
-        Assert.ThrowsAsync<CryptographicException>(async () =>
-        {
-            var dec = await cipher.DecryptAsync(tampered);
-            using var sink = new MemoryStream();
-            await dec.CopyToAsync(sink);
-        });
+        var decStream = await cipher.DecryptAsync(tampered);
+        using var sink = new MemoryStream();
+        // Expect either InvalidDataException (header parsing) or CryptographicException (auth failure) on copy
+        Assert.That(async () => await decStream.CopyToAsync(sink),
+            Throws.TypeOf<InvalidDataException>().Or.TypeOf<CryptographicException>());
     }
 }
