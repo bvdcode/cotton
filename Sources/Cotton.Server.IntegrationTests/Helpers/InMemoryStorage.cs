@@ -7,27 +7,27 @@ namespace Cotton.Server.IntegrationTests.Helpers;
 /// In-memory implementation of IStorage for integration tests.
 /// Avoids filesystem side-effects and speeds up IO.
 /// </summary>
-public sealed class InMemoryStorage : IStorage
+public sealed class InMemoryStorage : IStoragePipeline
 {
     private readonly ConcurrentDictionary<string, byte[]> _blobs = new(StringComparer.OrdinalIgnoreCase);
 
-    public Stream GetBlobStream(string[] uids)
+    public Task<Stream> ReadAsync(string uid)
     {
-        ArgumentNullException.ThrowIfNull(uids);
+        ArgumentNullException.ThrowIfNull(uid);
         MemoryStream ms = new();
-        foreach (var uid in uids)
+        if (_blobs.TryGetValue(uid, out var data))
         {
-            if (!_blobs.TryGetValue(uid, out var data))
-            {
-                throw new FileNotFoundException($"Blob {uid} not found in memory storage");
-            }
             ms.Write(data, 0, data.Length);
+            ms.Seek(0, SeekOrigin.Begin);
         }
-        ms.Seek(0, SeekOrigin.Begin);
-        return ms;
+        else
+        {
+            throw new FileNotFoundException("Blob not found in in-memory storage", uid);
+        }
+        return Task.FromResult(result: (Stream)ms);
     }
 
-    public async Task WriteFileAsync(string uid, Stream stream, CancellationToken ct = default)
+    public async Task WriteAsync(string uid, Stream stream)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(uid);
         ArgumentNullException.ThrowIfNull(stream);
@@ -36,7 +36,7 @@ public sealed class InMemoryStorage : IStorage
         {
             stream.Seek(0, SeekOrigin.Begin);
         }
-        await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
+        await stream.CopyToAsync(ms).ConfigureAwait(false);
         _blobs[uid] = ms.ToArray();
     }
 }

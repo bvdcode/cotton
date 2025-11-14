@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov
 
 using Cotton.Shared;
+using Cotton.Crypto;
 using EasyExtensions;
 using Cotton.Topology;
 using Cotton.Database;
@@ -9,16 +10,14 @@ using Cotton.Server.Models;
 using Cotton.Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Cotton.Storage.Abstractions;
-using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;
-using Cotton.Crypto;
 
 namespace Cotton.Server.Controllers
 {
     public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings,
-        IStorage _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
+        IStoragePipeline _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpGet(Routes.Chunks + "/{hash}")]
@@ -80,7 +79,7 @@ namespace Cotton.Server.Controllers
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)
             {
-                await _storage.WriteFileAsync(hash, stream);
+                await _storage.WriteAsync(hash, stream);
                 chunk = new Chunk
                 {
                     Hash = hashBytes,
