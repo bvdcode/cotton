@@ -1,14 +1,12 @@
 ﻿using Cotton.Shared;
-using Cotton.Storage.Streams;
 using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Processors
 {
-    public class FileSystemStorageProcessor(
-        CottonSettings _settings,
-        ILogger<FileSystemStorageProcessor> _logger) : IStorageProcessor
+    public class FileSystemStorageProcessor(ILogger<FileSystemStorageProcessor> _logger) : IStorageProcessor
     {
+        public int Priority => 1;
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
         private const int MinFileUidLength = 6;
@@ -59,8 +57,12 @@ namespace Cotton.Storage.Processors
             return normalized;
         }
 
-        public async Task<Stream> GetFileReadStream(string uid, CancellationToken ct = default)
+        public async Task<Stream> ReadAsync(string uid, Stream stream)
         {
+            if (stream != Stream.Null)
+            {
+                throw new NotSupportedException("This processor does not support chained reading.");
+            }
             uid = NormalizeIdentity(uid);
             string dirPath = GetFolderByUid(uid);
             string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
@@ -78,7 +80,7 @@ namespace Cotton.Storage.Processors
             return new FileStream(filePath, fso);
         }
 
-        public async Task WriteFileAsync(string uid, Stream stream, CancellationToken ct = default)
+        public async Task<Stream> WriteAsync(string uid, Stream stream)
         {
             uid = NormalizeIdentity(uid);
             ArgumentNullException.ThrowIfNull(stream);
@@ -108,8 +110,8 @@ namespace Cotton.Storage.Processors
                 {
                     stream.Seek(default, SeekOrigin.Begin);
                 }
-                await stream.CopyToAsync(tmp, ct).ConfigureAwait(false);
-                await tmp.FlushAsync(ct).ConfigureAwait(false);
+                await stream.CopyToAsync(tmp).ConfigureAwait(false);
+                await tmp.FlushAsync().ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -127,6 +129,7 @@ namespace Cotton.Storage.Processors
                 TryDelete(tmpFilePath);
                 throw;
             }
+            return Stream.Null;
         }
     }
 }
