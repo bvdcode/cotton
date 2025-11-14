@@ -2,9 +2,11 @@
 // Copyright (c) 2025 Vadim Belov
 
 
+using Cotton.Storage.Abstractions;
+
 namespace Cotton.Storage.Streams
 {
-    internal class ConcatenatedReadStream(EncryptedFileStorage storage, IEnumerable<string> hashes) : Stream
+    internal class ConcatenatedReadStream(IStoragePipeline storage, IEnumerable<string> hashes) : Stream
     {
         private readonly IEnumerator<string> _hashes = hashes.GetEnumerator();
         private Stream? _current;
@@ -30,7 +32,7 @@ namespace Cotton.Storage.Streams
             while (_current == null)
             {
                 if (!_hashes.MoveNext()) return false;
-                _current = storage.CreateDecryptingReadStream(_hashes.Current);
+                _current = storage.ReadAsync(_hashes.Current).GetAwaiter().GetResult();
             }
             return true;
         }
