@@ -1,5 +1,6 @@
 ﻿using Cotton.Crypto.Abstractions;
 using Cotton.Storage.Abstractions;
+using System.IO;
 using System.IO.Pipelines;
 
 namespace Cotton.Storage.Processors
@@ -8,7 +9,10 @@ namespace Cotton.Storage.Processors
     {
         public Task<Stream> ReadAsync(string uid, Stream stream)
         {
-            
+
+            var decryptedStream = new MemoryStream(capacity: (int)fileStream.Length);
+            await _cipher.DecryptAsync(fileStream, decryptedStream, ct).ConfigureAwait(false);
+            decryptedStream.Seek(default, SeekOrigin.Begin);
         }
 
         public Task<Stream> WriteAsync(string uid, Stream stream)

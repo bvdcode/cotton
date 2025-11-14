@@ -1,26 +1,18 @@
-﻿using Cotton.Storage.Abstractions;
+﻿using Cotton.Shared;
 using Cotton.Storage.Streams;
-using System;
-using System.Collections.Generic;
-using System.Runtime;
-using System.Text;
+using Cotton.Storage.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Processors
 {
-    internal class FileSystemStorageProcessor : IStorageProcessor
+    public class FileSystemStorageProcessor(
+        CottonSettings _settings,
+        ILogger<FileSystemStorageProcessor> _logger) : IStorageProcessor
     {
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
         private const int MinFileUidLength = 6;
-
-        private readonly string _basePath;
-
-        public FileSystemStorageProcessor()
-        {
-
-            _basePath = Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
-            Directory.CreateDirectory(_basePath);
-        }
+        private readonly string _basePath = Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
 
         private string GetFolderByUid(string uid)
         {
@@ -83,12 +75,7 @@ namespace Cotton.Storage.Processors
                 Access = FileAccess.Read,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan
             };
-            var fileStream = new FileStream(filePath, fso);
-            var decryptedStream = new MemoryStream(capacity: (int)fileStream.Length);
-            await _cipher.DecryptAsync(fileStream, decryptedStream, ct).ConfigureAwait(false);
-            decryptedStream.Seek(default, SeekOrigin.Begin);
-            await fileStream.DisposeAsync().ConfigureAwait(false);
-            return decryptedStream;
+            return new FileStream(filePath, fso);
         }
 
         public async Task WriteFileAsync(string uid, Stream stream, CancellationToken ct = default)
@@ -121,10 +108,8 @@ namespace Cotton.Storage.Processors
                 {
                     stream.Seek(default, SeekOrigin.Begin);
                 }
-
-                await _cipher.EncryptAsync(stream, tmp, _settings.CipherChunkSizeBytes, ct).ConfigureAwait(false);
+                await stream.CopyToAsync(tmp, ct).ConfigureAwait(false);
                 await tmp.FlushAsync(ct).ConfigureAwait(false);
-                tmp.Flush(true);
             }
             catch (Exception)
             {
@@ -142,17 +127,6 @@ namespace Cotton.Storage.Processors
                 TryDelete(tmpFilePath);
                 throw;
             }
-        }
-
-
-        public Stream GetBlobStream(string[] uids)
-        {
-            ArgumentNullException.ThrowIfNull(uids);
-            foreach (var uid in uids)
-            {
-                ArgumentException.ThrowIfNullOrWhiteSpace(uid);
-            }
-            return new ConcatenatedReadStream(this, uids);
         }
     }
 }
