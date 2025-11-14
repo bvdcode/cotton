@@ -1,7 +1,6 @@
-﻿using Cotton.Crypto.Abstractions;
+﻿using System.IO.Pipelines;
+using Cotton.Crypto.Abstractions;
 using Cotton.Storage.Abstractions;
-using System.IO;
-using System.IO.Pipelines;
 
 namespace Cotton.Storage.Processors
 {
