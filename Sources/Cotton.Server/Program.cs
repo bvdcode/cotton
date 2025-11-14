@@ -6,6 +6,7 @@ using Cotton.Storage;
 using Cotton.Database;
 using Cotton.Topology;
 using Cotton.Server.Extensions;
+using Cotton.Storage.Pipelines;
 using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Options;
 using EasyExtensions.AspNetCore.Extensions;
@@ -22,7 +23,7 @@ namespace Cotton.Server
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddOptions<CottonSettings>()
                 .Bind(builder.Configuration).Services
-                .AddScoped<IStorage, EncryptedFileStorage>()
+                .AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value)
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<StorageLayoutService>()

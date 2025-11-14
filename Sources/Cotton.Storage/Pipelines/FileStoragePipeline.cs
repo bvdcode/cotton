@@ -27,6 +27,14 @@ namespace Cotton.Storage.Pipelines
             {
                 currentStream = await processor.ReadAsync(uid, currentStream);
                 _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
+                if (currentStream == Stream.Null)
+                {
+                    throw new InvalidOperationException($"Processor {processor} returned Stream.Null for UID {uid} but it should return a valid stream.");
+                }
+            }
+            if (currentStream == Stream.Null)
+            {
+                throw new InvalidOperationException($"No registered processor could retrieve the file with UID {uid}");
             }
             return currentStream;
         }
@@ -37,8 +45,16 @@ namespace Cotton.Storage.Pipelines
             Stream currentStream = stream;
             foreach (var processor in orderedProcessors)
             {
+                if (currentStream == Stream.Null)
+                {
+                    throw new InvalidOperationException($"Processor BEFORE {processor} returned Stream.Null for UID {uid} but it should pass a valid stream to the next processor.");
+                }
                 currentStream = await processor.WriteAsync(uid, currentStream);
                 _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
+            }
+            if (currentStream != Stream.Null)
+            {
+                throw new InvalidOperationException($"The final stream after writing should be Stream.Null for UID {uid}");
             }
         }
     }
