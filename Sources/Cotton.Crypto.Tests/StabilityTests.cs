@@ -202,7 +202,7 @@ namespace Cotton.Crypto.Tests
         }
 
         [Test]
-        [Repeat(20)]
+        [Repeat(50)]
         public async Task Fuzz_RoundTrip_RandomizedChunks_AndThreads()
         {
             int seed = (TestContext.CurrentContext.CurrentRepeatCount * 12345) + 7;

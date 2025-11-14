@@ -181,7 +181,6 @@ namespace Cotton.Crypto
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
             }
 
-            // Bounded pipe based on window and chunk size to keep memory footprint similar to pipeline window
             long pauseThreshold = (long)Math.Clamp(chunkSize, MinChunkSize, MaxChunkSize) * Math.Clamp(_windowCap, 4, int.MaxValue);
             long resumeThreshold = pauseThreshold / 2;
             var pipe = new Pipe(new PipeOptions(
@@ -194,6 +193,11 @@ namespace Cotton.Crypto
                 useSynchronizationContext: false));
 
             var readerStream = pipe.Reader.AsStream(leaveOpen: false);
+            // Propagate cancellation to reader (causes reads to throw)
+            if (ct.CanBeCanceled)
+            {
+                ct.Register(() => pipe.Reader.CancelPendingRead());
+            }
 
             _ = Task.Run(async () =>
             {
@@ -203,11 +207,15 @@ namespace Cotton.Crypto
                     await EncryptAsync(input, writerStream, chunkSize, ct).ConfigureAwait(false);
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
+                catch (OperationCanceledException oce)
+                {
+                    await pipe.Writer.CompleteAsync(oce).ConfigureAwait(false);
+                }
                 catch (Exception ex)
                 {
                     await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
                 }
-            }, CancellationToken.None);
+            }, ct);
 
             return Task.FromResult<Stream>(readerStream);
         }
@@ -220,8 +228,7 @@ namespace Cotton.Crypto
                 throw new ArgumentException("Input stream must be readable.", nameof(input));
             }
 
-            // Use a bounded pipe; decryption chunk size is determined by the file, but pipe capacity can still be limited by window cap
-            long perChunkGuess = DefaultChunkSize; // heuristic; actual pipeline uses its own windows
+            long perChunkGuess = DefaultChunkSize;
             long pauseThreshold = (long)Math.Clamp(perChunkGuess, MinChunkSize, MaxChunkSize) * Math.Clamp(_windowCap, 4, int.MaxValue);
             long resumeThreshold = pauseThreshold / 2;
             var pipe = new Pipe(new PipeOptions(
@@ -234,6 +241,10 @@ namespace Cotton.Crypto
                 useSynchronizationContext: false));
 
             var readerStream = pipe.Reader.AsStream(leaveOpen: false);
+            if (ct.CanBeCanceled)
+            {
+                ct.Register(() => pipe.Reader.CancelPendingRead());
+            }
 
             _ = Task.Run(async () =>
             {
@@ -243,11 +254,15 @@ namespace Cotton.Crypto
                     await DecryptAsync(input, writerStream, ct).ConfigureAwait(false);
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
+                catch (OperationCanceledException oce)
+                {
+                    await pipe.Writer.CompleteAsync(oce).ConfigureAwait(false);
+                }
                 catch (Exception ex)
                 {
                     await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
                 }
-            }, CancellationToken.None);
+            }, ct);
 
             return Task.FromResult<Stream>(readerStream);
         }
