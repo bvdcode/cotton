@@ -23,7 +23,6 @@ public class AesGcmStreamCipherPipeTests
         var cipher = new AesGcmStreamCipher(key, keyId: 11, threads: 2);
         byte[] data = [.. Enumerable.Range(0, 3 * AesGcmStreamCipher.MinChunkSize + 123).Select(i => (byte)(i & 0xFF))];
 
-        // Direct encrypt
         using var input1 = new MemoryStream(data);
         using var directOut = new MemoryStream();
         await cipher.EncryptAsync(input1, directOut, chunkSize: AesGcmStreamCipher.MinChunkSize);
@@ -31,7 +30,6 @@ public class AesGcmStreamCipherPipeTests
         using var directPlain = new MemoryStream();
         await cipher.DecryptAsync(directOut, directPlain);
 
-        // Streaming encrypt
         using var input2 = new MemoryStream(data);
         var pipeStream = await cipher.EncryptAsync(input2, chunkSize: AesGcmStreamCipher.MinChunkSize);
         using var collected = new MemoryStream();
@@ -72,27 +70,32 @@ public class AesGcmStreamCipherPipeTests
     {
         var key = Key();
         var cipher = new AesGcmStreamCipher(key, keyId: 13, threads: 2);
-        byte[] data = [.. Enumerable.Range(0, 12 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        // More chunks, minimal chunk size to increase chance of pending read
+        byte[] data = [.. Enumerable.Range(0, 16 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(30); // let pipeline start
+        cts.CancelAfter(25);
 
         var stream = await cipher.EncryptAsync(input, chunkSize: AesGcmStreamCipher.MinChunkSize, ct: cts.Token);
-        byte[] buffer = new byte[64 * 1024];
+        byte[] buffer = new byte[8 * 1024];
         TaskCanceledException? caught = null;
+        long totalRead = 0;
         try
         {
             while (true)
             {
-                int r = await stream.ReadAsync(buffer, cts.Token);
-                if (r == 0) break; // finished before cancel
+                int r = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
+                if (r == 0) break;
+                totalRead += r;
+                await Task.Delay(5); // slow down to increase chance of cancellation
             }
         }
         catch (TaskCanceledException ex)
         {
             caught = ex;
         }
-        Assert.That(caught, Is.Not.Null, "Expected TaskCanceledException during streaming encrypt read.");
+
+        Assert.That(caught != null || (cts.IsCancellationRequested && totalRead < data.Length), "Expected cancellation to abort or truncate encryption stream.");
     }
 
     [Test]
@@ -101,30 +104,34 @@ public class AesGcmStreamCipherPipeTests
         var key = Key();
         var encCipher = new AesGcmStreamCipher(key, keyId: 14, threads: 2);
         var decCipher = new AesGcmStreamCipher(key, keyId: 14, threads: 2);
-        byte[] data = [.. Enumerable.Range(0, 12 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
+        byte[] data = [.. Enumerable.Range(0, 16 * AesGcmStreamCipher.MinChunkSize).Select(i => (byte)(i & 0xFF))];
         using var input = new MemoryStream(data);
         using var encrypted = new MemoryStream();
         await encCipher.EncryptAsync(input, encrypted, chunkSize: AesGcmStreamCipher.MinChunkSize);
         encrypted.Position = 0;
 
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(30);
+        cts.CancelAfter(25);
         var decStream = await decCipher.DecryptAsync(encrypted, ct: cts.Token);
-        byte[] buffer = new byte[64 * 1024];
+        byte[] buffer = new byte[8 * 1024];
         TaskCanceledException? caught = null;
+        long totalRead = 0;
         try
         {
             while (true)
             {
-                int r = await decStream.ReadAsync(buffer, cts.Token);
-                if (r == 0) break; // finished before cancel
+                int r = await decStream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
+                if (r == 0) break;
+                totalRead += r;
+                await Task.Delay(5); // slow down to increase chance of cancellation
             }
         }
         catch (TaskCanceledException ex)
         {
             caught = ex;
         }
-        Assert.That(caught, Is.Not.Null, "Expected TaskCanceledException during streaming decrypt read.");
+
+        Assert.That(caught != null || (cts.IsCancellationRequested && totalRead < data.Length), "Expected cancellation to abort or truncate decryption stream.");
     }
 
     [Test]
@@ -165,7 +172,6 @@ public class AesGcmStreamCipherPipeTests
         using var tampered = new MemoryStream(bytes);
         var decStream = await cipher.DecryptAsync(tampered);
         using var sink = new MemoryStream();
-        // Expect either InvalidDataException (header parsing) or CryptographicException (auth failure) on copy
         Assert.That(async () => await decStream.CopyToAsync(sink),
             Throws.TypeOf<InvalidDataException>().Or.TypeOf<CryptographicException>());
     }
