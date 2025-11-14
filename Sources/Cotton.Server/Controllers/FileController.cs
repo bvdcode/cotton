@@ -20,12 +20,13 @@ using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
 using Cotton.Crypto;
+using Cotton.Storage.Extensions;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class FileController(
-        IStorage _storage,
+        IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ILogger<FileController> _logger,
         StorageLayoutService _layouts) : ControllerBase
