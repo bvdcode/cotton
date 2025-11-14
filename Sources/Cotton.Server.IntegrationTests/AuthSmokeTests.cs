@@ -67,9 +67,9 @@ public class AuthSmokeTests : IntegrationTestBase
         builder.ConfigureServices(services =>
         {
             // Replace file storage with in-memory implementation for tests
-            var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStorage));
+            var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
             if (existing != null) services.Remove(existing);
-            services.AddSingleton<IStorage, InMemoryStorage>();
+            services.AddSingleton<IStoragePipeline, InMemoryStorage>();
         });
         builder.ConfigureLogging((ctx, logging) =>
         {
