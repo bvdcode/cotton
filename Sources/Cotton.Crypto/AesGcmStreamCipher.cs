@@ -153,5 +153,15 @@ namespace Cotton.Crypto
                 BufferPool.Return(fileKey, clearArray: false);
             }
         }
+
+        public Task<Stream> EncryptAsync(Stream input, int chunkSize = 16777216, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Stream> DecryptAsync(Stream input, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
