@@ -15,6 +15,16 @@ namespace Cotton.Storage.Streams
         public override long Length => throw new NotSupportedException();
         public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
+        //public Stream GetBlobStream(string[] uids)
+        //{
+        //    ArgumentNullException.ThrowIfNull(uids);
+        //    foreach (var uid in uids)
+        //    {
+        //        ArgumentException.ThrowIfNullOrWhiteSpace(uid);
+        //    }
+        //    return new ConcatenatedReadStream(this, uids);
+        //}
+
         private bool EnsureCurrent()
         {
             while (_current == null)
