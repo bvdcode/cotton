@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Security;
 using System.Security.Cryptography;
 
 namespace Cotton.Crypto
