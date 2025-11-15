@@ -14,6 +14,7 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Cotton.Crypto;
+using Cotton.Server.Models;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -156,12 +157,12 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
     private async Task<string> LoginAsync()
     {
-        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new { any = "thing" });
+        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("testuser", "testpassword"));
         res.EnsureSuccessStatusCode();
         var login = await res.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.That(login, Is.Not.Null);
-        TestContext.Progress.WriteLine($"Login OK. Token: {login!.Token[..Math.Min(16, login.Token.Length)]}...");
-        return login.Token;
+        TestContext.Progress.WriteLine($"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
+        return login.AccessToken;
     }
 
     [Test]
@@ -194,6 +195,4 @@ public class LayoutAndFilesTests : IntegrationTestBase
             .CountAsync();
         Assert.That(duplicates, Is.EqualTo(1));
     }
-
-    private sealed record LoginResponse(string Token);
 }
