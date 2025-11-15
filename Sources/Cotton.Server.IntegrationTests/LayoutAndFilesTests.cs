@@ -1,11 +1,12 @@
 ﻿using Npgsql;
 using System.Text;
+using Cotton.Crypto;
 using NUnit.Framework;
 using System.Net.Http.Json;
+using Cotton.Server.Models;
 using System.Net.Http.Headers;
 using Cotton.Server.Models.Dto;
 using Cotton.Database.Models.Enums;
-using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Cotton.Server.Models.Requests;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -13,8 +14,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Cotton.Crypto;
-using Cotton.Server.Models;
 
 namespace Cotton.Server.IntegrationTests;
 
