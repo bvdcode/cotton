@@ -16,6 +16,7 @@
 		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="2.0.24" />
 		<PackageReference Include="EasyExtensions.Mediator" Version="2.0.24" />
 		<PackageReference Include="Mapster" Version="7.4.0" />
+		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="2.0.24" />
 		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="2.0.24" />
