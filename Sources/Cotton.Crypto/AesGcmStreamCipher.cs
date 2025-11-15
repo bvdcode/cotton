@@ -19,20 +19,20 @@ namespace Cotton.Crypto
     public class AesGcmStreamCipher : IStreamCipher
     {
         private readonly int _keyId;
-        private readonly byte[] _masterKeyBytes;
-        public const int NonceSize = 12;
         public const int TagSize = 16;
         public const int KeySize = 32;
+        public const int NonceSize = 12;
+        private readonly int _windowCap;
+        private readonly int _maxThreads;
+        private readonly int _threadsMultiplier;
+        private readonly byte[] _masterKeyBytes;
+        private readonly bool _strictLengthCheck;
         public const int MinChunkSize = 8 * 1024;
+        private readonly RandomNumberGenerator _rng;
         public const int MaxChunkSize = 64 * 1024 * 1024;
         public const int DefaultChunkSize = 16 * 1024 * 1024;
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         private readonly int ConcurrencyLevel = Math.Min(4, Environment.ProcessorCount);
-        private readonly int _threadsMultiplier;
-        private readonly int _maxThreads;
-        private readonly int _windowCap;
-        private readonly bool _strictLengthCheck;
-        private readonly RandomNumberGenerator _rng;
 
         public AesGcmStreamCipher(ReadOnlyMemory<byte> masterKey, int keyId = 1, int? threads = null, int threadsLimitMultiplier = 2, int windowCap = 1024, bool strictLengthCheck = true, RandomNumberGenerator? rng = null)
         {
@@ -71,7 +71,7 @@ namespace Cotton.Crypto
             ConcurrencyLevel = Math.Clamp(ConcurrencyLevel, 1, _maxThreads);
         }
 
-        public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
+        public async Task EncryptAsync(Stream input, Stream output, int chunkSize = DefaultChunkSize, CancellationToken ct = default, bool leaveInputOpen = true, bool leaveOutputOpen = true)
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
@@ -128,10 +128,18 @@ namespace Cotton.Crypto
             {
                 CryptographicOperations.ZeroMemory(fileKey);
                 BufferPool.Return(fileKey, clearArray: false);
+                if (!leaveInputOpen)
+                {
+                    input.Dispose();
+                }
+                if (!leaveOutputOpen)
+                {
+                    output.Dispose();
+                }
             }
         }
 
-        public async Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default)
+        public async Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default, bool leaveInputOpen = true, bool leaveOutputOpen = true)
         {
             ArgumentNullException.ThrowIfNull(input);
             ArgumentNullException.ThrowIfNull(output);
@@ -147,6 +155,14 @@ namespace Cotton.Crypto
             FileHeader header = await AesGcmStreamFormat.ReadFileHeaderAsync(input, NonceSize, TagSize, KeySize, ct).ConfigureAwait(false);
             if (header.KeyId != _keyId)
             {
+                if (!leaveInputOpen)
+                {
+                    input.Dispose();
+                }
+                if (!leaveOutputOpen)
+                {
+                    output.Dispose();
+                }
                 throw new InvalidDataException($"Key ID mismatch. Expected {_keyId}, but file has {header.KeyId}.");
             }
 
@@ -166,6 +182,14 @@ namespace Cotton.Crypto
             {
                 CryptographicOperations.ZeroMemory(fileKey);
                 BufferPool.Return(fileKey, clearArray: false);
+                if (!leaveInputOpen)
+                {
+                    input.Dispose();
+                }
+                if (!leaveOutputOpen)
+                {
+                    output.Dispose();
+                }
             }
         }
 
@@ -192,7 +216,7 @@ namespace Cotton.Crypto
                 minimumSegmentSize: 4096,
                 useSynchronizationContext: false));
 
-            var readerStream = pipe.Reader.AsStream(leaveOpen: false);
+            var readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
             // Propagate cancellation to reader (causes reads to throw)
             if (ct.CanBeCanceled)
             {
@@ -204,7 +228,7 @@ namespace Cotton.Crypto
                 try
                 {
                     var writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await EncryptAsync(input, writerStream, chunkSize, ct).ConfigureAwait(false);
+                    await EncryptAsync(input, writerStream, chunkSize, ct, leaveInputOpen: leaveOpen, leaveOutputOpen: true).ConfigureAwait(false);
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException oce)
@@ -214,6 +238,13 @@ namespace Cotton.Crypto
                 catch (Exception ex)
                 {
                     await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (!leaveOpen)
+                    {
+                        input.Dispose();
+                    }
                 }
             }, ct);
 
@@ -240,7 +271,7 @@ namespace Cotton.Crypto
                 minimumSegmentSize: 4096,
                 useSynchronizationContext: false));
 
-            var readerStream = pipe.Reader.AsStream(leaveOpen: false);
+            var readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
             if (ct.CanBeCanceled)
             {
                 ct.Register(() => pipe.Reader.CancelPendingRead());
@@ -251,7 +282,7 @@ namespace Cotton.Crypto
                 try
                 {
                     var writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await DecryptAsync(input, writerStream, ct).ConfigureAwait(false);
+                    await DecryptAsync(input, writerStream, ct, leaveInputOpen: leaveOpen, leaveOutputOpen: true).ConfigureAwait(false);
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException oce)
@@ -261,6 +292,13 @@ namespace Cotton.Crypto
                 catch (Exception ex)
                 {
                     await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (!leaveOpen)
+                    {
+                        input.Dispose();
+                    }
                 }
             }, ct);
 

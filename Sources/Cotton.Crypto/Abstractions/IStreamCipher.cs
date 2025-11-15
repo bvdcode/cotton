@@ -5,8 +5,8 @@ namespace Cotton.Crypto.Abstractions
 {
     public interface IStreamCipher
     {
-        Task EncryptAsync(Stream input, Stream output, int chunkSize = AesGcmStreamCipher.DefaultChunkSize, CancellationToken ct = default);
-        Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default);
+        Task EncryptAsync(Stream input, Stream output, int chunkSize = AesGcmStreamCipher.DefaultChunkSize, CancellationToken ct = default, bool leaveInputOpen = true, bool leaveOutputOpen = true);
+        Task DecryptAsync(Stream input, Stream output, CancellationToken ct = default, bool leaveInputOpen = true, bool leaveOutputOpen = true);
         Task<Stream> EncryptAsync(Stream input, int chunkSize = AesGcmStreamCipher.DefaultChunkSize, bool leaveOpen = false, CancellationToken ct = default);
         Task<Stream> DecryptAsync(Stream input, bool leaveOpen = false, CancellationToken ct = default);
     }
