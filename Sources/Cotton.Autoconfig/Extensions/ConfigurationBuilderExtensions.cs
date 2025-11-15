@@ -1,4 +1,6 @@
-﻿using EasyExtensions.Helpers;
+﻿using Cotton.Crypto;
+using Cotton.Shared;
+using EasyExtensions.Helpers;
 using Microsoft.Extensions.Configuration;
 
 namespace Cotton.Autoconfig.Extensions
@@ -14,36 +16,32 @@ namespace Cotton.Autoconfig.Extensions
             string postgresPass = Environment.GetEnvironmentVariable("COTTON_PG_PASSWORD") ?? "postgres";
             ushort postgresPort = ushort.Parse(postgresPortStr);
 
-            string jwtKey = StringHelpers.CreateRandomString(128);
+            string jwtKey = StringHelpers.CreateRandomString(64);
 
             const int masterKeyId = 1;
-            string masterEncryptionKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY") ?? "devedovolovopeperepolevopopovedo";
-            string pepper = new([.. masterEncryptionKey.Reverse()]);
+            string rootMasterEncryptionKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY") ?? "devedovolovopeperepolevopopovedo";
+            string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", 16);
+            string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", 32);
 
             const int defaultEncryptionThreads = 4;
             const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
             const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
 
-
             var dict = new Dictionary<string, string?>
             {
-                // DB
+                ["JwtSettings:Key"] = jwtKey,
                 ["DatabaseSettings:Host"] = postgresHost,
                 ["DatabaseSettings:Port"] = postgresPort.ToString(),
                 ["DatabaseSettings:Database"] = postgresDb,
                 ["DatabaseSettings:Username"] = postgresUser,
                 ["DatabaseSettings:Password"] = postgresPass,
 
-                // Crypto / Pepper
-                ["MasterKeyId"] = masterKeyId.ToString(),
-                ["MasterKey"] = masterEncryptionKey,
-                ["Pepper"] = pepper,
-                ["EncryptionThreads"] = defaultEncryptionThreads.ToString(),
-                ["MaxChunkSizeBytes"] = defaultMaxChunkSizeBytes.ToString(),
-                ["CipherChunkSizeBytes"] = defaultCipherChunkSizeBytes.ToString(),
-
-                // JWT
-                ["JwtSettings:Key"] = jwtKey,
+                [nameof(CottonSettings.MasterEncryptionKeyId)] = masterKeyId.ToString(),
+                [nameof(CottonSettings.MasterEncryptionKey)] = masterEncryptionKey,
+                [nameof(CottonSettings.Pepper)] = pepper,
+                [nameof(CottonSettings.EncryptionThreads)] = defaultEncryptionThreads.ToString(),
+                [nameof(CottonSettings.MaxChunkSizeBytes)] = defaultMaxChunkSizeBytes.ToString(),
+                [nameof(CottonSettings.CipherChunkSizeBytes)] = defaultCipherChunkSizeBytes.ToString(),
             };
 
             return configurationBuilder.AddInMemoryCollection(dict);
