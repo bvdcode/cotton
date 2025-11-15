@@ -18,7 +18,7 @@ namespace Cotton.Autoconfig.Extensions
 
             const int masterKeyId = 1;
             string masterEncryptionKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY") ?? "devedovolovopeperepolevopopovedo";
-            string pepper = masterEncryptionKey;
+            string pepper = new([.. masterEncryptionKey.Reverse()]);
 
             const int defaultEncryptionThreads = 4;
             const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
