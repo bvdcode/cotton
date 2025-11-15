@@ -19,7 +19,7 @@ namespace Cotton.Server
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            builder.Configuration.AddCottonDefaults();
+            builder.Configuration.AddCottonOptions();
             builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<StorageLayoutService>()
