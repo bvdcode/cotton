@@ -25,7 +25,7 @@ namespace Cotton.Autoconfig.Tests
         [Test]
         public void MasterKeyLength_Is_32()
         {
-            Assert.That(ConfigurationBuilderExtensions.MasterKeyLength, Is.EqualTo(32));
+            Assert.That(ConfigurationBuilderExtensions.DefaultKeyLength, Is.EqualTo(32));
         }
 
         [Test]
@@ -34,7 +34,7 @@ namespace Cotton.Autoconfig.Tests
             Environment.SetEnvironmentVariable(EnvVar, "too-short");
             var builder = new ConfigurationBuilder();
             var ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
-            Assert.That(ex!.Message, Does.Contain(ConfigurationBuilderExtensions.MasterKeyLength.ToString()));
+            Assert.That(ex!.Message, Does.Contain(ConfigurationBuilderExtensions.DefaultKeyLength.ToString()));
         }
 
         [Test]
@@ -44,8 +44,8 @@ namespace Cotton.Autoconfig.Tests
             const string root = "0123456789abcdef0123456789abcdef"; // 32 chars
             Environment.SetEnvironmentVariable(EnvVar, root);
 
-            string expectedPepper = KeyDerivation.DeriveSubkeyBase64(root, "CottonPepper", ConfigurationBuilderExtensions.MasterKeyLength);
-            string expectedMaster = KeyDerivation.DeriveSubkeyBase64(root, "CottonMasterEncryptionKey", ConfigurationBuilderExtensions.MasterKeyLength);
+            string expectedPepper = KeyDerivation.DeriveSubkeyBase64(root, "CottonPepper", ConfigurationBuilderExtensions.DefaultKeyLength);
+            string expectedMaster = KeyDerivation.DeriveSubkeyBase64(root, "CottonMasterEncryptionKey", ConfigurationBuilderExtensions.DefaultKeyLength);
 
             // Act
             var cfg = new ConfigurationBuilder().AddCottonOptions().Build();
@@ -63,8 +63,8 @@ namespace Cotton.Autoconfig.Tests
             var masterBytes = Convert.FromBase64String(cfg[nameof(CottonSettings.MasterEncryptionKey)]!);
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(pepperBytes, Has.Length.EqualTo(ConfigurationBuilderExtensions.MasterKeyLength));
-                Assert.That(masterBytes, Has.Length.EqualTo(ConfigurationBuilderExtensions.MasterKeyLength));
+                Assert.That(pepperBytes, Has.Length.EqualTo(ConfigurationBuilderExtensions.DefaultKeyLength));
+                Assert.That(masterBytes, Has.Length.EqualTo(ConfigurationBuilderExtensions.DefaultKeyLength));
             }
         }
 
