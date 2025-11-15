@@ -1,5 +1,4 @@
-﻿using Cotton.Shared;
-using Cotton.Storage.Abstractions;
+﻿using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Processors
