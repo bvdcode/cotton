@@ -7,6 +7,8 @@ namespace Cotton.Autoconfig.Extensions
 {
     public static class ConfigurationBuilderExtensions
     {
+        public const int MasterKeyLength = 32;
+
         public static IConfigurationBuilder AddCottonOptions(this IConfigurationBuilder configurationBuilder)
         {
             string postgresHost = Environment.GetEnvironmentVariable("COTTON_PG_HOST") ?? "localhost";
@@ -14,17 +16,20 @@ namespace Cotton.Autoconfig.Extensions
             string postgresDb = Environment.GetEnvironmentVariable("COTTON_PG_DATABASE") ?? "cotton_dev";
             string postgresUser = Environment.GetEnvironmentVariable("COTTON_PG_USERNAME") ?? "postgres";
             string postgresPass = Environment.GetEnvironmentVariable("COTTON_PG_PASSWORD") ?? "postgres";
-            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", null);
+            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", StringHelpers.CreatePseudoRandomString(32));
             ushort postgresPort = ushort.Parse(postgresPortStr);
 
             string jwtKey = StringHelpers.CreateRandomString(64);
-
             const int masterKeyId = 1;
             string rootMasterEncryptionKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY") ?? "devedovolovopeperepolevopopovedo";
-            Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", null);
+            if (rootMasterEncryptionKey.Length != MasterKeyLength)
+            {
+                throw new InvalidOperationException($"COTTON_MASTER_KEY must be set and be exactly {MasterKeyLength} characters long.");
+            }
+            Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", StringHelpers.CreatePseudoRandomString(MasterKeyLength));
 
-            string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", 16);
-            string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", 32);
+            string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", MasterKeyLength);
+            string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", MasterKeyLength);
 
             const int defaultEncryptionThreads = 4;
             const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
