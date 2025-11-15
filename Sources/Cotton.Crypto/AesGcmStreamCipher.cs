@@ -169,7 +169,7 @@ namespace Cotton.Crypto
             }
         }
 
-        public Task<Stream> EncryptAsync(Stream input, int chunkSize = DefaultChunkSize, CancellationToken ct = default)
+        public Task<Stream> EncryptAsync(Stream input, int chunkSize = DefaultChunkSize, bool leaveOpen = false, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(input);
             if (!input.CanRead)
@@ -220,7 +220,7 @@ namespace Cotton.Crypto
             return Task.FromResult<Stream>(readerStream);
         }
 
-        public Task<Stream> DecryptAsync(Stream input, CancellationToken ct = default)
+        public Task<Stream> DecryptAsync(Stream input, bool leaveOpen = false, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(input);
             if (!input.CanRead)
