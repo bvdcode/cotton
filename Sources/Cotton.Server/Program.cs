@@ -11,6 +11,8 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.AspNetCore.Authorization.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
+using Cotton.Shared;
+using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
 {
@@ -20,6 +22,13 @@ namespace Cotton.Server
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions();
+
+            // Bind CottonSettings from configuration and expose as concrete instance
+            builder.Services
+                .AddOptions<CottonSettings>()
+                .Bind(builder.Configuration);
+            builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value);
+
             builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<StorageLayoutService>()

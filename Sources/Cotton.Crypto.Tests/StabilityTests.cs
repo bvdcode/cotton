@@ -60,7 +60,7 @@ namespace Cotton.Crypto.Tests
             using var tampered = new MemoryStream(bytes, writable: false);
             using var outDec = new MemoryStream();
             Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
-            Assert.That(outDec.Length, Is.EqualTo(0));
+            Assert.That(outDec.Length, Is.Zero);
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace Cotton.Crypto.Tests
             using var tampered = new MemoryStream(bytes, writable: false);
             using var outDec = new MemoryStream();
             Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
-            Assert.That(outDec.Length, Is.EqualTo(0));
+            Assert.That(outDec.Length, Is.Zero);
         }
 
         [Test]
@@ -107,7 +107,7 @@ namespace Cotton.Crypto.Tests
             using var tampered = new MemoryStream(bytes, writable: false);
             using var outDec = new MemoryStream();
             Assert.ThrowsAsync<InvalidDataException>(async () => await cipher.DecryptAsync(tampered, outDec));
-            Assert.That(outDec.Length, Is.EqualTo(0));
+            Assert.That(outDec.Length, Is.Zero);
         }
 
         [Test]
@@ -451,7 +451,7 @@ namespace Cotton.Crypto.Tests
             using var tampered = new MemoryStream(bytes, writable: false);
             using var outDec = new MemoryStream();
             Assert.ThrowsAsync<AuthenticationTagMismatchException>(async () => await cipher.DecryptAsync(tampered, outDec));
-            Assert.That(outDec.Length, Is.EqualTo(0));
+            Assert.That(outDec.Length, Is.Zero);
         }
 
         [Test]
