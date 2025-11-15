@@ -16,7 +16,7 @@ namespace Cotton.Storage.Processors
 
         public Task<Stream> WriteAsync(string uid, Stream stream)
         {
-            var encoded = LZ4Stream.Encode(stream, level: LZ4Level.L00_FAST, leaveOpen: false);
+            var encoded = LZ4Stream.Encode(stream, level: LZ4Level.L11_OPT, leaveOpen: false);
             return Task.FromResult<Stream>(encoded);
         }
     }
