@@ -8,13 +8,11 @@ using Microsoft.AspNetCore.Mvc;
 using EasyExtensions.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
+using Cotton.Server.Models.Requests;
+using Cotton.Server.Models;
 
 namespace Cotton.Server.Controllers
 {
-    public record LoginRequest(string Username, string Password);
-    public record LoginResponse(string AccessToken, string RefreshToken);
-    public record RefreshTokenRequest(string RefreshToken);
-
     [ApiController]
     public class AuthController(
         ITokenProvider _tokens,

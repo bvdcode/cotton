@@ -1,9 +1,11 @@
 using Npgsql;
 using NUnit.Framework;
 using System.Net.Http.Json;
+using Cotton.Server.Models;
 using Cotton.Storage.Abstractions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+using Cotton.Server.Models.Requests;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -97,20 +99,18 @@ public class AuthSmokeTests : IntegrationTestBase
     {
         Assert.That(_client, Is.Not.Null);
 
-        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", new { any = "thing" });
+        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("testuser", "testpassword"));
         response.EnsureSuccessStatusCode();
 
         var payload = await response.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.That(payload, Is.Not.Null);
-        Assert.That(string.IsNullOrWhiteSpace(payload!.Token), Is.False, "Token must be present");
+        Assert.That(string.IsNullOrWhiteSpace(payload!.AccessToken), Is.False, "Token must be present");
 
         // Basic JWT structure check: three dot-separated segments
-        var parts = payload.Token.Split('.');
+        var parts = payload.AccessToken.Split('.');
         Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
         // Log a short token preview
-        TestContext.Progress.WriteLine($"Login OK. Token: {payload.Token[..Math.Min(16, payload.Token.Length)]}...");
+        TestContext.Progress.WriteLine($"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
     }
-
-    private sealed record LoginResponse(string Token);
 }
