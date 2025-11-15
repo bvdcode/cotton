@@ -5,7 +5,7 @@ namespace Cotton.Autoconfig.Extensions
 {
     public static class ConfigurationBuilderExtensions
     {
-        public static IConfigurationBuilder AddCottonDefaults(this IConfigurationBuilder configurationBuilder)
+        public static IConfigurationBuilder AddCottonOptions(this IConfigurationBuilder configurationBuilder)
         {
             string postgresHost = Environment.GetEnvironmentVariable("COTTON_PG_HOST") ?? "localhost";
             string postgresPortStr = Environment.GetEnvironmentVariable("COTTON_PG_PORT") ?? "5432";
@@ -28,22 +28,22 @@ namespace Cotton.Autoconfig.Extensions
             var dict = new Dictionary<string, string?>
             {
                 // DB
-                ["Cotton:Postgres:Host"] = postgresHost,
-                ["Cotton:Postgres:Port"] = postgresPort.ToString(),
-                ["Cotton:Postgres:Database"] = postgresDb,
-                ["Cotton:Postgres:Username"] = postgresUser,
-                ["Cotton:Postgres:Password"] = postgresPass,
+                ["DatabaseSettings:Host"] = postgresHost,
+                ["DatabaseSettings:Port"] = postgresPort.ToString(),
+                ["DatabaseSettings:Database"] = postgresDb,
+                ["DatabaseSettings:Username"] = postgresUser,
+                ["DatabaseSettings:Password"] = postgresPass,
 
                 // Crypto / Pepper
-                ["Cotton:Crypto:MasterKeyId"] = masterKeyId.ToString(),
-                ["Cotton:Crypto:MasterKey"] = masterEncryptionKey,
-                ["Cotton:Crypto:Pepper"] = pepper,
-                ["Cotton:Crypto:EncryptionThreads"] = defaultEncryptionThreads.ToString(),
-                ["Cotton:Crypto:MaxChunkSizeBytes"] = defaultMaxChunkSizeBytes.ToString(),
-                ["Cotton:Crypto:CipherChunkSizeBytes"] = defaultCipherChunkSizeBytes.ToString(),
+                ["MasterKeyId"] = masterKeyId.ToString(),
+                ["MasterKey"] = masterEncryptionKey,
+                ["Pepper"] = pepper,
+                ["EncryptionThreads"] = defaultEncryptionThreads.ToString(),
+                ["MaxChunkSizeBytes"] = defaultMaxChunkSizeBytes.ToString(),
+                ["CipherChunkSizeBytes"] = defaultCipherChunkSizeBytes.ToString(),
 
                 // JWT
-                ["Cotton:Auth:JwtKey"] = jwtKey,
+                ["JwtSettings:Key"] = jwtKey,
             };
 
             return configurationBuilder.AddInMemoryCollection(dict);
