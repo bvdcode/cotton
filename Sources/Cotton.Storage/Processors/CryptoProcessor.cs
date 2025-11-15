@@ -1,5 +1,4 @@
-﻿using System.IO.Pipelines;
-using Cotton.Crypto.Abstractions;
+﻿using Cotton.Crypto.Abstractions;
 using Cotton.Storage.Abstractions;
 
 namespace Cotton.Storage.Processors
@@ -8,14 +7,14 @@ namespace Cotton.Storage.Processors
     {
         public int Priority => 100;
 
-        public async Task<Stream> ReadAsync(string uid, Stream stream)
+        public Task<Stream> ReadAsync(string uid, Stream stream)
         {
-            return stream;
+            return cipher.DecryptAsync(stream);
         }
 
-        public async Task<Stream> WriteAsync(string uid, Stream stream)
+        public Task<Stream> WriteAsync(string uid, Stream stream)
         {
-            return stream;
+            return cipher.EncryptAsync(stream);
         }
     }
 }
