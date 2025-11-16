@@ -127,13 +127,22 @@ const FilesPage: FunctionComponent = () => {
                   throw new Error("Upload aborted");
                 }
                 const h = await hashBlob(blob);
+                if (abortUpload.current) {
+                  throw new Error("Upload aborted");
+                }
                 chunkHashes[index] = h;
                 const exists = await api.chunkExists(h);
+                if (abortUpload.current) {
+                  throw new Error("Upload aborted");
+                }
                 if (!exists) {
                   if (abortUpload.current) {
                     throw new Error("Upload aborted");
                   }
                   await api.uploadChunk(blob, h, selectedFile.name);
+                  if (abortUpload.current) {
+                    throw new Error("Upload aborted");
+                  }
                 }
                 uploaded += blob.size;
                 setUploadBytes(uploaded);
