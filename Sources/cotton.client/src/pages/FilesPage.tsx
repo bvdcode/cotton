@@ -285,36 +285,26 @@ const FilesPage: FunctionComponent = () => {
   }, [nodeId]);
 
   useEffect(() => {
-    const buildPath = async () => {
-      if (!currentNode) {
-        setPathNodes([]);
-        return;
-      }
-      const acc: LayoutNodeDto[] = [];
-      let cur: LayoutNodeDto | undefined = currentNode;
-      const guard = new Set<string>();
-      while (cur && !guard.has(cur.id)) {
-        acc.unshift(cur);
-        guard.add(cur.id);
-        const pid = cur.parentId ?? null;
-        if (!pid) break;
-        const cached = nodeCache.get(pid);
-        if (cached) {
-          cur = cached;
-        } else {
-          try {
-            const parent = await api.getNode(pid);
-            nodeCache.set(parent.id, parent);
-            cur = parent;
-          } catch {
-            break;
-          }
-        }
-      }
-      setPathNodes(acc);
+    if (!currentNode) {
+      setPathNodes([]);
+      return;
+    }
+    let mounted = true;
+    api
+      .getAncestors(currentNode.id)
+      .then((path) => {
+        if (!mounted) return;
+        setPathNodes(path);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        // fallback: at least show current node
+        setPathNodes([currentNode]);
+      });
+    return () => {
+      mounted = false;
     };
-    buildPath();
-  }, [currentNode, nodeCache, api]);
+  }, [currentNode, api]);
 
   return (
     <Box>

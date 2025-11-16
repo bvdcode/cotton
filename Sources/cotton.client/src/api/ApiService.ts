@@ -75,6 +75,14 @@ export class ApiService {
     return data;
   }
 
+  async getAncestors(nodeId: string): Promise<LayoutNodeDto[]> {
+    const axios = this.getAxios();
+    const { data } = await axios.get<LayoutNodeDto[]>(
+      `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/ancestors`,
+    );
+    return data;
+  }
+
   async getNodeChildren(nodeId: string): Promise<LayoutChildrenDto> {
     const axios = this.getAxios();
     const { data } = await axios.get<LayoutChildrenDto>(`${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/children`);
