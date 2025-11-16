@@ -125,7 +125,9 @@ namespace Cotton.Crypto.Internals.Pipelines
             int jobCap = threads * 4;
             int resCap = threads * 4;
             int window = Math.Min(Math.Max(4, threads * 4), windowCap);
-            int maxCount = jobCap + threads + resCap + window + 8;
+            // Add extra headroom for out-of-order accumulation under contention
+            int allowedBacklog = Math.Min(windowCap * 2, 8192);
+            int maxCount = jobCap + threads + resCap + allowedBacklog;
             long maxBytes = (long)maxChunkSize * maxCount * 4;
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
