@@ -13,6 +13,7 @@ using Cotton.Storage.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;
+using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
@@ -49,6 +50,8 @@ namespace Cotton.Server.Controllers
         [RequestSizeLimit(100 * 1024 * 1024)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+            Stopwatch total = Stopwatch.StartNew();
             if (file == null || file.Length == 0)
             {
                 return CottonResult.BadRequest("No file uploaded.");
@@ -69,12 +72,20 @@ namespace Cotton.Server.Controllers
             }
 
             using var stream = file.OpenReadStream();
+
+            _logger.LogInformation("1: Chunk upload started after {ElapsedMilliseconds} ms", sw.ElapsedMilliseconds);
+            sw.Restart();
+
+            // Verify hash
             byte[] computedHash = await Hasher.HashDataAsync(stream);
             stream.Seek(default, SeekOrigin.Begin);
             if (!computedHash.SequenceEqual(hashBytes))
             {
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
             }
+
+            _logger.LogInformation("2: Chunk hash verified after {ElapsedMilliseconds} ms", sw.ElapsedMilliseconds);
+            sw.Restart();
 
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)
@@ -87,6 +98,10 @@ namespace Cotton.Server.Controllers
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
             }
+            
+            _logger.LogInformation("3: Chunk stored in storage after {ElapsedMilliseconds} ms", sw.ElapsedMilliseconds);
+            sw.Restart();
+
             // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
             // Must depend on owner/user authentication, no reason to delay for the same user
             var foundOwnership = await _dbContext.ChunkOwnerships
@@ -102,7 +117,11 @@ namespace Cotton.Server.Controllers
                 await _dbContext.ChunkOwnerships.AddAsync(chunkOwnership);
             }
             await _dbContext.SaveChangesAsync();
-            _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes.", hash, chunk.SizeBytes);
+
+            _logger.LogInformation("4: Chunk ownership recorded after {ElapsedMilliseconds} ms", sw.ElapsedMilliseconds);
+
+            _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes in {ElapsedMilliseconds} ms",
+                hash, file.Length, total.ElapsedMilliseconds);
             return Created();
         }
     }
