@@ -31,7 +31,7 @@ namespace Cotton.Server
             builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageProcessor, FileSystemStorageProcessor>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
-                .AddScoped<IStorageProcessor, CompressionProcessor>()
+                //.AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<StorageLayoutService>()
                 .AddPbkdf2PasswordHashService()
