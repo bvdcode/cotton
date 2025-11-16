@@ -205,9 +205,7 @@ namespace Cotton.Crypto
                 throw new ArgumentOutOfRangeException(nameof(chunkSize), $"Chunk size must be between {MinChunkSize} and {MaxChunkSize} bytes.");
             }
 
-            // Limit buffered chunks to avoid unbounded memory growth when downstream is slower
-            const int MaxBufferedChunks = 16; // at most ~chunkSize * 16 bytes in pipe buffer
-            long pauseThreshold = (long)Math.Clamp(chunkSize, MinChunkSize, MaxChunkSize) * Math.Clamp(_windowCap, 4, MaxBufferedChunks);
+            long pauseThreshold = (long)Math.Clamp(chunkSize, MinChunkSize, MaxChunkSize) * Math.Clamp(_windowCap, 4, int.MaxValue);
             long resumeThreshold = pauseThreshold / 2;
             var pipe = new Pipe(new PipeOptions(
                 pool: MemoryPool<byte>.Shared,
@@ -257,9 +255,7 @@ namespace Cotton.Crypto
             }
 
             long perChunkGuess = DefaultChunkSize;
-            // Limit buffered chunks to avoid unbounded memory growth when downstream is slower
-            const int MaxBufferedChunks = 16; // at most ~perChunkGuess * 16 bytes in pipe buffer
-            long pauseThreshold = (long)Math.Clamp(perChunkGuess, MinChunkSize, MaxChunkSize) * Math.Clamp(_windowCap, 4, MaxBufferedChunks);
+            long pauseThreshold = (long)Math.Clamp(perChunkGuess, MinChunkSize, MaxChunkSize) * Math.Clamp(_windowCap, 4, int.MaxValue);
             long resumeThreshold = pauseThreshold / 2;
             var pipe = new Pipe(new PipeOptions(
                 pool: MemoryPool<byte>.Shared,
