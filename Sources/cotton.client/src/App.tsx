@@ -1,8 +1,9 @@
 import { ru, en } from "./locales";
-import { Box } from "@mui/material";
-import FilesPage from "./pages/FilesPage";
-import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
 import type { AuthUser } from "./api";
+import FilesPage from "./pages/FilesPage";
+import { Box, Typography } from "@mui/material";
+import { Folder, Home } from "@mui/icons-material";
+import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
 
 function App() {
   return (
@@ -47,9 +48,22 @@ function App() {
         pages={[
           {
             route: "/",
+            name: "Home",
+            component: (
+              <Box>
+                <Typography variant="h4">Welcome to Cotton</Typography>
+                <Typography variant="body1">
+                  Select a page from the menu.
+                </Typography>
+              </Box>
+            ),
+            icon: <Home />,
+          },
+          {
+            route: "/files/:nodeId?",
             name: "Files",
             component: <FilesPage />,
-            icon: <div>📁</div>,
+            icon: <Folder />,
           },
         ]}
       />
