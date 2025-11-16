@@ -13,29 +13,29 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="2.0.32" />
-		<PackageReference Include="EasyExtensions.Mediator" Version="2.0.32" />
-		<PackageReference Include="Mapster" Version="7.4.0" />
-		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
-		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="2.0.32" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="2.0.32" />
-		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>10.0.0</Version>
 		</PackageReference>
 		<ProjectReference Include="..\cotton.client\cotton.client.esproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>
-		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
-		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
-		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
-		<ProjectReference Include="..\Cotton.Topology\Cotton.Topology.csproj" />
-		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="Mapster" Version="7.4.0" />
+		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
+		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
+		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
+		<PackageReference Include="EasyExtensions.Mediator" Version="2.0.32" />
+		<ProjectReference Include="..\Cotton.Topology\Cotton.Topology.csproj" />
+		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
+		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
+		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="2.0.32" />
+		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="2.0.32" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="2.0.32" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
 		<Folder Include="wwwroot\" />
 	</ItemGroup>
 
