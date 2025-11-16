@@ -13,7 +13,6 @@ using Cotton.Storage.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;
-using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
@@ -69,12 +68,8 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
-            Stopwatch sw = Stopwatch.StartNew();
-            _logger.LogInformation("Uploading chunk {Hash} of size {Size} bytes.", hash, file.Length);
             using var stream = file.OpenReadStream();
             byte[] computedHash = await Hasher.HashDataAsync(stream);
-            _logger.LogInformation("Computed hash for uploaded chunk {Hash} in {ElapsedMilliseconds} ms.", hash, sw.ElapsedMilliseconds);
-            sw.Restart();
             stream.Seek(default, SeekOrigin.Begin);
             if (!computedHash.SequenceEqual(hashBytes))
             {
@@ -91,8 +86,6 @@ namespace Cotton.Server.Controllers
                     SizeBytes = file.Length,
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
-                _logger.LogInformation("Stored chunk {Hash} in storage backend in {ElapsedMilliseconds} ms.", hash, sw.ElapsedMilliseconds);
-                sw.Restart();
             }
             // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
             // Must depend on owner/user authentication, no reason to delay for the same user
@@ -109,7 +102,7 @@ namespace Cotton.Server.Controllers
                 await _dbContext.ChunkOwnerships.AddAsync(chunkOwnership);
             }
             await _dbContext.SaveChangesAsync();
-            _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes for user {UserId} in {ElapsedMilliseconds} ms.", hash, file.Length, User.GetUserId(), sw.ElapsedMilliseconds);
+            _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes.", hash, chunk.SizeBytes);
             return Created();
         }
     }
