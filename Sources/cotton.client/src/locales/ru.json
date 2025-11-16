@@ -14,6 +14,8 @@
     "folder": "Папка",
     "download": "Скачать",
     "threads": "Потоков: {{count}}",
-    "speed": "Скорость: {{speed}}"
+    "speed": "Скорость: {{speed}}",
+    "deleteFile": "Удалить файл",
+    "deleteFolder": "Удалить папку"
   }
 }

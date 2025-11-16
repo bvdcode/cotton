@@ -14,6 +14,8 @@
     "folder": "Folder",
     "download": "Download",
     "threads": "Threads: {{count}}",
-    "speed": "Speed: {{speed}}"
+    "speed": "Speed: {{speed}}",
+    "deleteFile": "Delete file",
+    "deleteFolder": "Delete folder"
   }
 }
