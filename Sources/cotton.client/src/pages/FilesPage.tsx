@@ -1,23 +1,23 @@
 import {
   Box,
+  Menu,
   Link,
   Alert,
   Paper,
   Stack,
   Button,
+  MenuItem,
   IconButton,
   Typography,
   Breadcrumbs,
   LinearProgress,
-  Menu,
-  MenuItem,
 } from "@mui/material";
 import {
+  MoreVert,
   ArrowBack,
   CreateNewFolder,
   Home as HomeIcon,
   Folder as FolderIcon,
-  MoreVert,
 } from "@mui/icons-material";
 import {
   hashBlob,
@@ -28,16 +28,19 @@ import {
   DEFAULT_CONCURRENCY,
   formatBytesPerSecond,
 } from "../utils/fileUpload";
-import { fileIcon } from "../utils/fileIcons";
 import { useApi } from "../api/ApiContext";
+import { fileIcon } from "../utils/fileIcons";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
 
 const FilesPage: FunctionComponent = () => {
   const { t } = useTranslation();
   const api = useApi();
+  const navigate = useNavigate();
+  const { nodeId } = useParams<{ nodeId?: string }>();
 
   // State
   const [loading, setLoading] = useState(false);
@@ -167,32 +170,22 @@ const FilesPage: FunctionComponent = () => {
       setNavStack([]);
       nodeCache.set(root.id, root);
       setPathNodes([root]);
+      // Ensure URL shows the root node id
+      navigate(`/files/${root.id}`, { replace: true });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [nodeCache, api]);
+  }, [nodeCache, api, navigate]);
 
   const openNode = useCallback(
     async (node: LayoutNodeDto) => {
-      try {
-        setLoading(true);
-        setError(null);
-        setNavStack((s) => (currentNode ? [...s, currentNode] : s));
-        setCurrentNode(node);
-        nodeCache.set(node.id, node);
-        const ch = await api.getNodeChildren(node.id);
-        setChildren(ch);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        setError(msg);
-      } finally {
-        setLoading(false);
-      }
+      // Navigate to URL for the node; effect will load contents
+      navigate(`/files/${node.id}`);
     },
-    [currentNode, nodeCache, api],
+    [navigate],
   );
 
   const goBack = useCallback(async () => {
@@ -266,9 +259,30 @@ const FilesPage: FunctionComponent = () => {
     [api, currentNode],
   );
 
+  // Sync with route param: load specific node or redirect to root
   useEffect(() => {
-    loadRoot();
-  }, [loadRoot]);
+    (async () => {
+      if (nodeId) {
+        try {
+          setLoading(true);
+          setError(null);
+          const node = await api.getNode(nodeId);
+          setCurrentNode(node);
+          nodeCache.set(node.id, node);
+          const ch = await api.getNodeChildren(node.id);
+          setChildren(ch);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          setError(msg);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        await loadRoot();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeId]);
 
   useEffect(() => {
     const buildPath = async () => {
