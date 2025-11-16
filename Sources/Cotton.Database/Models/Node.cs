@@ -43,6 +43,6 @@ namespace Cotton.Database.Models
         public virtual Layout Layout { get; set; } = null!;
         public virtual Node? Parent { get; set; }
         public virtual ICollection<Node> Children { get; set; } = [];
-        public virtual ICollection<NodeFile> LayoutNodeFiles { get; set; } = [];
+        public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
     }
 }

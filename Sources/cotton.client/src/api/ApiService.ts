@@ -52,6 +52,11 @@ export class ApiService {
     return `${this.base}/files/${encodeURIComponent(fileId)}/download`;
   }
 
+  async deleteFile(nodeFileId: string): Promise<void> {
+    const axios = this.getAxios();
+    await axios.delete(`${this.base}/files/${encodeURIComponent(nodeFileId)}`);
+  }
+
   // Layout
   async resolvePath(path?: string): Promise<LayoutNodeDto> {
     const axios = this.getAxios();
@@ -79,6 +84,11 @@ export class ApiService {
   async createFolder(req: { parentId: string; name: string }): Promise<void> {
     const axios = this.getAxios();
     await axios.put(`${this.base}/layouts/nodes`, req);
+  }
+
+  async deleteNode(nodeId: string): Promise<void> {
+    const axios = this.getAxios();
+    await axios.delete(`${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}`);
   }
 
   // Users
