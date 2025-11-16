@@ -4,6 +4,7 @@ import type {
   FileManifestDto,
   CreateFileRequest,
   LayoutChildrenDto,
+  NodeType,
 } from "../types/api";
 import type { AxiosInstance } from "axios";
 
@@ -73,17 +74,19 @@ export class ApiService {
   }
 
   // Layout
-  async resolvePath(path?: string): Promise<LayoutNodeDto> {
+  async resolvePath(path?: string, nodeType?: NodeType): Promise<LayoutNodeDto> {
     const axios = this.getAxios();
     if (path && path.length > 0) {
       const seg = encodeURI(path);
       const { data } = await axios.get<LayoutNodeDto>(
         `${this.base}/layouts/resolver/${seg}`,
+        { params: nodeType !== undefined ? { nodeType } : undefined },
       );
       return data;
     }
     const { data } = await axios.get<LayoutNodeDto>(
       `${this.base}/layouts/resolver`,
+      { params: nodeType !== undefined ? { nodeType } : undefined },
     );
     return data;
   }
@@ -96,18 +99,20 @@ export class ApiService {
     return data;
   }
 
-  async getAncestors(nodeId: string): Promise<LayoutNodeDto[]> {
+  async getAncestors(nodeId: string, nodeType?: NodeType): Promise<LayoutNodeDto[]> {
     const axios = this.getAxios();
     const { data } = await axios.get<LayoutNodeDto[]>(
       `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/ancestors`,
+      { params: nodeType !== undefined ? { nodeType } : undefined },
     );
     return data;
   }
 
-  async getNodeChildren(nodeId: string): Promise<LayoutChildrenDto> {
+  async getNodeChildren(nodeId: string, nodeType?: NodeType): Promise<LayoutChildrenDto> {
     const axios = this.getAxios();
     const { data } = await axios.get<LayoutChildrenDto>(
       `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/children`,
+      { params: nodeType !== undefined ? { nodeType } : undefined },
     );
     return data;
   }

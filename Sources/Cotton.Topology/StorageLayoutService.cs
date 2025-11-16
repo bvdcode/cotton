@@ -16,7 +16,7 @@ namespace Cotton.Topology
             return await GetOrCreateRootNodeAsync(layout.Id, ownerId, NodeType.Trash);
         }
 
-        public async Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType type)
+        public async Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType nodeType)
         {
             _layoutSemaphore.Wait();
             var currentNode = await _dbContext.Nodes
@@ -25,18 +25,18 @@ namespace Cotton.Topology
                 .Where(x => x.Layout.OwnerId == ownerId
                     && x.LayoutId == layoutId
                     && x.ParentId == null
-                    && x.Type == type)
+                    && x.Type == nodeType)
                 .FirstOrDefaultAsync();
             if (currentNode == null)
             {
-                NameValidator.TryNormalizeAndValidate(type.ToString(), out string normalized, out _);
+                NameValidator.TryNormalizeAndValidate(nodeType.ToString(), out string normalized, out _);
                 Node newNode = new()
                 {
-                    Type = type,
+                    Type = nodeType,
                     OwnerId = ownerId,
                     LayoutId = layoutId,
                 };
-                newNode.SetName(type.ToString());
+                newNode.SetName(nodeType.ToString());
                 await _dbContext.Nodes.AddAsync(newNode);
                 await _dbContext.SaveChangesAsync();
                 _layoutSemaphore.Release();

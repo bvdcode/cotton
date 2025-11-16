@@ -33,14 +33,23 @@ import { fileIcon } from "../utils/fileIcons";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
+import { NodeType } from "../types/api";
+import { DeleteOutline } from "@mui/icons-material";
 
 const FilesPage: FunctionComponent = () => {
   const { t } = useTranslation();
   const api = useApi();
   const navigate = useNavigate();
   const { nodeId } = useParams<{ nodeId?: string }>();
+  const [searchParams] = useSearchParams();
+
+  const typeParam = searchParams.get("type");
+  const viewType: NodeType =
+    typeParam === "trash" ? NodeType.Trash : NodeType.Default;
+
+  const typeSuffix = viewType === NodeType.Trash ? "?type=trash" : "";
 
   // State
   const [loading, setLoading] = useState(false);
@@ -145,7 +154,7 @@ const FilesPage: FunctionComponent = () => {
         hash: fileHash,
         nodeId: currentNode.id,
       });
-      const ch = await api.getNodeChildren(currentNode.id);
+      const ch = await api.getNodeChildren(currentNode.id, viewType);
       setChildren(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -157,38 +166,42 @@ const FilesPage: FunctionComponent = () => {
       setUploadBytes(0);
       setSelectedFile(null);
     }
-  }, [selectedFile, currentNode, api]);
+  }, [selectedFile, currentNode, api, viewType]);
 
   const loadRoot = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const root = await api.resolvePath();
+      const root = await api.resolvePath(undefined, viewType);
       setCurrentNode(root);
-      const ch = await api.getNodeChildren(root.id);
+      const ch = await api.getNodeChildren(root.id, viewType);
       setChildren(ch);
       setNavStack([]);
       nodeCache.set(root.id, root);
       setPathNodes([root]);
       // Ensure URL shows the root node id
-      navigate(`/files/${root.id}`, { replace: true });
+      navigate(`/files/${root.id}${typeSuffix}`, { replace: true });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [nodeCache, api, navigate]);
+  }, [nodeCache, api, navigate, viewType, typeSuffix]);
 
   const openNode = useCallback(
     async (node: LayoutNodeDto) => {
       // Navigate to URL for the node; effect will load contents
-      navigate(`/files/${node.id}`);
+      navigate(`/files/${node.id}${typeSuffix}`);
     },
-    [navigate],
+    [navigate, typeSuffix],
   );
 
   const goBack = useCallback(async () => {
+    if (viewType === NodeType.Trash) {
+      navigate(`/files`);
+      return;
+    }
     if (navStack.length === 0) {
       await loadRoot();
       return;
@@ -197,7 +210,7 @@ const FilesPage: FunctionComponent = () => {
     const prev = next.pop()!;
     setNavStack(next);
     await openNode(prev);
-  }, [navStack, loadRoot, openNode]);
+  }, [navStack, loadRoot, openNode, navigate, viewType]);
 
   const onCreateFolder = useCallback(async () => {
     if (!currentNode?.id) return;
@@ -211,7 +224,7 @@ const FilesPage: FunctionComponent = () => {
     try {
       setLoading(true);
       await api.createFolder({ parentId: currentNode.id, name: trimmed });
-      const ch = await api.getNodeChildren(currentNode.id);
+      const ch = await api.getNodeChildren(currentNode.id, viewType);
       setChildren(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -219,7 +232,7 @@ const FilesPage: FunctionComponent = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentNode, t, api]);
+  }, [currentNode, t, api, viewType]);
 
   const onDeleteFile = useCallback(
     async (fileId: string) => {
@@ -227,7 +240,7 @@ const FilesPage: FunctionComponent = () => {
       try {
         setDeletingFileId(fileId);
         await api.deleteFile(fileId);
-        const ch = await api.getNodeChildren(currentNode.id);
+        const ch = await api.getNodeChildren(currentNode.id, viewType);
         setChildren(ch);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -237,7 +250,7 @@ const FilesPage: FunctionComponent = () => {
         setFileMenuAnchor(null);
       }
     },
-    [api, currentNode],
+    [api, currentNode, viewType],
   );
 
   const onDeleteNode = useCallback(
@@ -246,7 +259,7 @@ const FilesPage: FunctionComponent = () => {
       try {
         setDeletingNodeId(nodeId);
         await api.deleteNode(nodeId);
-        const ch = await api.getNodeChildren(currentNode.id);
+        const ch = await api.getNodeChildren(currentNode.id, viewType);
         setChildren(ch);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -256,7 +269,7 @@ const FilesPage: FunctionComponent = () => {
         setNodeMenuAnchor(null);
       }
     },
-    [api, currentNode],
+    [api, currentNode, viewType],
   );
 
   // Sync with route param: load specific node or redirect to root
@@ -269,7 +282,7 @@ const FilesPage: FunctionComponent = () => {
           const node = await api.getNode(nodeId);
           setCurrentNode(node);
           nodeCache.set(node.id, node);
-          const ch = await api.getNodeChildren(node.id);
+          const ch = await api.getNodeChildren(node.id, viewType);
           setChildren(ch);
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
@@ -282,7 +295,7 @@ const FilesPage: FunctionComponent = () => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeId]);
+  }, [nodeId, viewType]);
 
   useEffect(() => {
     let mounted = true;
@@ -291,9 +304,9 @@ const FilesPage: FunctionComponent = () => {
         if (mounted) setPathNodes([]);
         return;
       }
-      let path = await api.getAncestors(currentNode.id);
+      let path = await api.getAncestors(currentNode.id, viewType);
       if (!path.length || path[0].parentId) {
-        const root = await api.resolvePath();
+        const root = await api.resolvePath(undefined, viewType);
         path = [root, ...path.filter((p) => p.id !== root.id)];
       }
       if (!path.length || path[path.length - 1].id !== currentNode.id) {
@@ -304,7 +317,7 @@ const FilesPage: FunctionComponent = () => {
     return () => {
       mounted = false;
     };
-  }, [currentNode, api]);
+  }, [currentNode, api, viewType]);
 
   return (
     <Box>
@@ -412,9 +425,22 @@ const FilesPage: FunctionComponent = () => {
             <ArrowBack />
           </IconButton>
           <IconButton
+            title={t("filesPage.trash")}
+            onClick={() => {
+              if (viewType === NodeType.Trash) {
+                navigate(`/files`);
+              } else {
+                navigate(`/files${`?type=trash`}`);
+              }
+            }}
+            color={viewType === NodeType.Trash ? "error" : "default"}
+          >
+            <DeleteOutline />
+          </IconButton>
+          <IconButton
             title={t("filesPage.newFolder")}
             onClick={onCreateFolder}
-            disabled={loading || !currentNode}
+            disabled={loading || !currentNode || viewType === NodeType.Trash}
           >
             <CreateNewFolder />
           </IconButton>
