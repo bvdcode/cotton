@@ -19,13 +19,25 @@ export class ApiService {
   // Files
   async chunkExists(hash: string): Promise<boolean> {
     const axios = this.getAxios();
-    const res = await axios.get(
-      `${this.base}/chunks/${encodeURIComponent(hash)}`,
-      {
-        validateStatus: () => true,
-      },
-    );
-    return res.status === 200;
+    try {
+      await axios.get(`${this.base}/chunks/${encodeURIComponent(hash)}`);
+      return true;
+    } catch (err: unknown) {
+      // 404 means chunk doesn't exist - expected behavior
+      if (
+        err &&
+        typeof err === "object" &&
+        "response" in err &&
+        err.response &&
+        typeof err.response === "object" &&
+        "status" in err.response &&
+        err.response.status === 404
+      ) {
+        return false;
+      }
+      // Other errors (including 401) should be thrown to trigger interceptors
+      throw err;
+    }
   }
 
   async uploadChunk(
@@ -74,7 +86,10 @@ export class ApiService {
   }
 
   // Layout
-  async resolvePath(path?: string, nodeType?: NodeType): Promise<LayoutNodeDto> {
+  async resolvePath(
+    path?: string,
+    nodeType?: NodeType,
+  ): Promise<LayoutNodeDto> {
     const axios = this.getAxios();
     if (path && path.length > 0) {
       const seg = encodeURI(path);
@@ -99,7 +114,10 @@ export class ApiService {
     return data;
   }
 
-  async getAncestors(nodeId: string, nodeType?: NodeType): Promise<LayoutNodeDto[]> {
+  async getAncestors(
+    nodeId: string,
+    nodeType?: NodeType,
+  ): Promise<LayoutNodeDto[]> {
     const axios = this.getAxios();
     const { data } = await axios.get<LayoutNodeDto[]>(
       `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/ancestors`,
@@ -108,7 +126,10 @@ export class ApiService {
     return data;
   }
 
-  async getNodeChildren(nodeId: string, nodeType?: NodeType): Promise<LayoutChildrenDto> {
+  async getNodeChildren(
+    nodeId: string,
+    nodeType?: NodeType,
+  ): Promise<LayoutChildrenDto> {
     const axios = this.getAxios();
     const { data } = await axios.get<LayoutChildrenDto>(
       `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/children`,
