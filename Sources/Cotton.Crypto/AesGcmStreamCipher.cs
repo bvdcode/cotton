@@ -217,11 +217,6 @@ namespace Cotton.Crypto
                 useSynchronizationContext: false));
 
             var readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
-            // Propagate cancellation to reader (causes reads to throw)
-            if (ct.CanBeCanceled)
-            {
-                ct.Register(() => pipe.Reader.CancelPendingRead());
-            }
 
             _ = Task.Run(async () =>
             {
@@ -272,10 +267,6 @@ namespace Cotton.Crypto
                 useSynchronizationContext: false));
 
             var readerStream = pipe.Reader.AsStream(leaveOpen: leaveOpen);
-            if (ct.CanBeCanceled)
-            {
-                ct.Register(() => pipe.Reader.CancelPendingRead());
-            }
 
             _ = Task.Run(async () =>
             {
