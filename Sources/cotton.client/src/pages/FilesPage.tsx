@@ -62,6 +62,7 @@ const FilesPage: FunctionComponent = () => {
   const [progressPct, setProgressPct] = useState(0);
   const [speedBps, setSpeedBps] = useState(0);
   const [uploadBytes, setUploadBytes] = useState(0);
+  const [currentChunkSize, setCurrentChunkSize] = useState(0);
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null);
   const [fileMenuAnchor, setFileMenuAnchor] = useState<{
@@ -93,6 +94,7 @@ const FilesPage: FunctionComponent = () => {
     setProgressPct(0);
     setSpeedBps(0);
     setUploadBytes(0);
+    setCurrentChunkSize(0);
   };
 
   const abortUpload = useRef(false);
@@ -123,6 +125,7 @@ const FilesPage: FunctionComponent = () => {
         }
 
         const chunkSize = adaptiveUploader.currentChunkSize;
+        setCurrentChunkSize(chunkSize);
         const end = Math.min(offset + chunkSize, selectedFile.size);
         const blob = selectedFile.slice(offset, end);
         const chunkStart = Date.now();
@@ -183,6 +186,7 @@ const FilesPage: FunctionComponent = () => {
       setProgressPct(0);
       setSpeedBps(0);
       setUploadBytes(0);
+      setCurrentChunkSize(0);
       // Only clear file on successful upload
       if (!uploadFailed) {
         setSelectedFile(null);
@@ -491,6 +495,9 @@ const FilesPage: FunctionComponent = () => {
                 {t("filesPage.speed", {
                   speed: formatBytesPerSecond(speedBps),
                 })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {`Chunk: ${formatBytes(currentChunkSize)}`}
               </Typography>
               <Typography
                 variant="caption"
