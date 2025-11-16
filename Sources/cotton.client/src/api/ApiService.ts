@@ -1,11 +1,11 @@
-import type { AxiosInstance } from "axios";
 import type {
   AuthUser,
-  CreateFileRequest,
-  FileManifestDto,
-  LayoutChildrenDto,
   LayoutNodeDto,
+  FileManifestDto,
+  CreateFileRequest,
+  LayoutChildrenDto,
 } from "../types/api";
+import type { AxiosInstance } from "axios";
 
 export class ApiService {
   private readonly getAxios: () => AxiosInstance;
@@ -18,13 +18,20 @@ export class ApiService {
   // Files
   async chunkExists(hash: string): Promise<boolean> {
     const axios = this.getAxios();
-    const res = await axios.get(`${this.base}/chunks/${encodeURIComponent(hash)}`, {
-      validateStatus: () => true,
-    });
+    const res = await axios.get(
+      `${this.base}/chunks/${encodeURIComponent(hash)}`,
+      {
+        validateStatus: () => true,
+      },
+    );
     return res.status === 200;
   }
 
-  async uploadChunk(blob: Blob, hash: string, fileName?: string): Promise<void> {
+  async uploadChunk(
+    blob: Blob,
+    hash: string,
+    fileName?: string,
+  ): Promise<void> {
     const axios = this.getAxios();
     const form = new FormData();
     form.append("file", blob, fileName ?? "chunk.bin");
@@ -36,13 +43,21 @@ export class ApiService {
   }
 
   async createFileFromChunks(req: CreateFileRequest): Promise<FileManifestDto> {
-    type Envelope = { success: boolean; message: string; data: FileManifestDto | null };
+    type Envelope = {
+      success: boolean;
+      message: string;
+      data: FileManifestDto | null;
+    };
     type Resp = Envelope | FileManifestDto;
     const axios = this.getAxios();
-    const { data } = await axios.post<Resp>(`${this.base}/files/from-chunks`, req);
+    const { data } = await axios.post<Resp>(
+      `${this.base}/files/from-chunks`,
+      req,
+    );
     if (typeof (data as { success?: unknown }).success === "boolean") {
       const env = data as Envelope;
-      if (!env.success || !env.data) throw new Error(env.message || "Empty response");
+      if (!env.success || !env.data)
+        throw new Error(env.message || "Empty response");
       return env.data;
     }
     return data as FileManifestDto;
@@ -62,16 +77,22 @@ export class ApiService {
     const axios = this.getAxios();
     if (path && path.length > 0) {
       const seg = encodeURI(path);
-      const { data } = await axios.get<LayoutNodeDto>(`${this.base}/layouts/resolver/${seg}`);
+      const { data } = await axios.get<LayoutNodeDto>(
+        `${this.base}/layouts/resolver/${seg}`,
+      );
       return data;
     }
-    const { data } = await axios.get<LayoutNodeDto>(`${this.base}/layouts/resolver`);
+    const { data } = await axios.get<LayoutNodeDto>(
+      `${this.base}/layouts/resolver`,
+    );
     return data;
   }
 
   async getNode(nodeId: string): Promise<LayoutNodeDto> {
     const axios = this.getAxios();
-    const { data } = await axios.get<LayoutNodeDto>(`${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}`);
+    const { data } = await axios.get<LayoutNodeDto>(
+      `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}`,
+    );
     return data;
   }
 
@@ -85,7 +106,9 @@ export class ApiService {
 
   async getNodeChildren(nodeId: string): Promise<LayoutChildrenDto> {
     const axios = this.getAxios();
-    const { data } = await axios.get<LayoutChildrenDto>(`${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/children`);
+    const { data } = await axios.get<LayoutChildrenDto>(
+      `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}/children`,
+    );
     return data;
   }
 
@@ -96,7 +119,9 @@ export class ApiService {
 
   async deleteNode(nodeId: string): Promise<void> {
     const axios = this.getAxios();
-    await axios.delete(`${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}`);
+    await axios.delete(
+      `${this.base}/layouts/nodes/${encodeURIComponent(nodeId)}`,
+    );
   }
 
   // Users
