@@ -48,3 +48,9 @@ export interface CottonResult<T> {
   message: string;
   data: T | null;
 }
+
+export const NodeType = {
+  Default: 0,
+  Trash: 1,
+} as const;
+export type NodeType = (typeof NodeType)[keyof typeof NodeType];
