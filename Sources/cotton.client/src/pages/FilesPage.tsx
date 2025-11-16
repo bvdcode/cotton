@@ -102,6 +102,7 @@ const FilesPage: FunctionComponent = () => {
     if (!selectedFile || !currentNode) return;
     abortUpload.current = false;
     setIsUploading(true);
+    let uploadFailed = false;
     try {
       const start = Date.now();
       const chunks = Array.from(chunkBlob(selectedFile, DEFAULT_CHUNK_SIZE));
@@ -169,6 +170,7 @@ const FilesPage: FunctionComponent = () => {
       const ch = await api.getNodeChildren(currentNode.id, viewType);
       setChildren(ch);
     } catch (e) {
+      uploadFailed = true;
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(msg);
     } finally {
@@ -177,7 +179,10 @@ const FilesPage: FunctionComponent = () => {
       setProgressPct(0);
       setSpeedBps(0);
       setUploadBytes(0);
-      setSelectedFile(null);
+      // Only clear file on successful upload
+      if (!uploadFailed) {
+        setSelectedFile(null);
+      }
     }
   }, [selectedFile, currentNode, api, viewType]);
 
