@@ -22,7 +22,7 @@ namespace Cotton.Server.Controllers
     public class LayoutController(CottonDbContext _dbContext, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
-        [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}")]
+        [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
             Guid userId = User.GetUserId();
@@ -39,7 +39,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpDelete($"{Routes.Layouts}/nodes/{{nodeId:guid}}")]
+        [HttpDelete($"{Routes.Nodes}/{{nodeId:guid}}")]
         public async Task<IActionResult> DeleteLayoutNode([FromRoute] Guid nodeId)
         {
             Guid userId = User.GetUserId();
