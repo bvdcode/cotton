@@ -39,7 +39,7 @@ namespace Cotton.Autoconfig.Extensions
             string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", DefaultKeyLength);
             string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", DefaultKeyLength);
 
-            const int defaultEncryptionThreads = 4;
+            const int defaultEncryptionThreads = 2;
             const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
             const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
 
