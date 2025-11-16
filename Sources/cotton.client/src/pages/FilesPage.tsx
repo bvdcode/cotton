@@ -2,7 +2,6 @@ import {
   Box,
   Menu,
   Link,
-  Alert,
   Paper,
   Stack,
   Button,
@@ -32,11 +31,12 @@ import { useApi } from "../api/ApiContext";
 import { fileIcon } from "../utils/fileIcons";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
 import { NodeType } from "../types/api";
 import { DeleteOutline } from "@mui/icons-material";
+import { toast } from "react-toastify";
 
 const FilesPage: FunctionComponent = () => {
   const { t } = useTranslation();
@@ -53,7 +53,6 @@ const FilesPage: FunctionComponent = () => {
 
   // State
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [currentNode, setCurrentNode] = useState<LayoutNodeDto | null>(null);
   const [children, setChildren] = useState<LayoutChildrenDto | null>(null);
   const [navStack, setNavStack] = useState<LayoutNodeDto[]>([]);
@@ -97,10 +96,12 @@ const FilesPage: FunctionComponent = () => {
     setUploadBytes(0);
   };
 
+  const abortUpload = useRef(false);
+
   const performUpload = useCallback(async () => {
     if (!selectedFile || !currentNode) return;
+    abortUpload.current = false;
     setIsUploading(true);
-    setError(null);
     try {
       const start = Date.now();
       const chunks = Array.from(chunkBlob(selectedFile, DEFAULT_CHUNK_SIZE));
@@ -111,16 +112,26 @@ const FilesPage: FunctionComponent = () => {
 
       await new Promise<void>((resolve, reject) => {
         const runNext = () => {
+          if (abortUpload.current) {
+            reject(new Error("Upload aborted"));
+            return;
+          }
           while (active < DEFAULT_CONCURRENCY && next < chunks.length) {
             const index = next++;
             const blob = chunks[index];
             active++;
             (async () => {
               try {
+                if (abortUpload.current) {
+                  throw new Error("Upload aborted");
+                }
                 const h = await hashBlob(blob);
                 chunkHashes[index] = h;
                 const exists = await api.chunkExists(h);
                 if (!exists) {
+                  if (abortUpload.current) {
+                    throw new Error("Upload aborted");
+                  }
                   await api.uploadChunk(blob, h, selectedFile.name);
                 }
                 uploaded += blob.size;
@@ -130,6 +141,7 @@ const FilesPage: FunctionComponent = () => {
                 const elapsed = (Date.now() - start) / 1000;
                 if (elapsed > 0) setSpeedBps(uploaded / elapsed);
               } catch (err) {
+                abortUpload.current = true;
                 reject(err);
                 return;
               } finally {
@@ -158,8 +170,9 @@ const FilesPage: FunctionComponent = () => {
       setChildren(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
+      toast.error(msg);
     } finally {
+      abortUpload.current = false;
       setIsUploading(false);
       setProgressPct(0);
       setSpeedBps(0);
@@ -171,7 +184,6 @@ const FilesPage: FunctionComponent = () => {
   const loadRoot = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
       const root = await api.resolvePath(undefined, viewType);
       setCurrentNode(root);
       const ch = await api.getNodeChildren(root.id, viewType);
@@ -183,7 +195,7 @@ const FilesPage: FunctionComponent = () => {
       navigate(`/files/${root.id}${typeSuffix}`, { replace: true });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -228,7 +240,7 @@ const FilesPage: FunctionComponent = () => {
       setChildren(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -244,7 +256,7 @@ const FilesPage: FunctionComponent = () => {
         setChildren(ch);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        setError(msg);
+        toast.error(msg);
       } finally {
         setDeletingFileId(null);
         setFileMenuAnchor(null);
@@ -263,7 +275,7 @@ const FilesPage: FunctionComponent = () => {
         setChildren(ch);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        setError(msg);
+        toast.error(msg);
       } finally {
         setDeletingNodeId(null);
         setNodeMenuAnchor(null);
@@ -278,7 +290,6 @@ const FilesPage: FunctionComponent = () => {
       if (nodeId) {
         try {
           setLoading(true);
-          setError(null);
           const node = await api.getNode(nodeId);
           setCurrentNode(node);
           nodeCache.set(node.id, node);
@@ -286,7 +297,7 @@ const FilesPage: FunctionComponent = () => {
           setChildren(ch);
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          setError(msg);
+          toast.error(msg);
         } finally {
           setLoading(false);
         }
@@ -389,7 +400,6 @@ const FilesPage: FunctionComponent = () => {
         </Box>
 
         {loading && <LinearProgress />}
-        {error && <Alert severity="error">{error}</Alert>}
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
