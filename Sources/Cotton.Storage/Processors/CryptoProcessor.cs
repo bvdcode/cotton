@@ -5,7 +5,7 @@ namespace Cotton.Storage.Processors
 {
     public class CryptoProcessor(IStreamCipher cipher) : IStorageProcessor
     {
-        public int Priority => 100;
+        public int Priority => 10;
 
         public Task<Stream> ReadAsync(string uid, Stream stream)
         {
