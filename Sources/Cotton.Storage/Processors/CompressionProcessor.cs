@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using K4os.Compression.LZ4;
 using Cotton.Storage.Abstractions;
 using K4os.Compression.LZ4.Streams;
@@ -27,17 +26,7 @@ namespace Cotton.Storage.Processors
                 throw new ArgumentException("Input stream must be readable.", nameof(stream));
             }
 
-            // Limit buffering inside the pipe to prevent multi-GB memory growth
-            const long MaxBufferedBytes = 64L * 1024 * 1024; // 64 MB
-            var pipe = new Pipe(new PipeOptions(
-                pool: MemoryPool<byte>.Shared,
-                readerScheduler: null,
-                writerScheduler: null,
-                pauseWriterThreshold: MaxBufferedBytes,
-                resumeWriterThreshold: MaxBufferedBytes / 2,
-                minimumSegmentSize: 4096,
-                useSynchronizationContext: false));
-
+            var pipe = new Pipe(new PipeOptions(useSynchronizationContext: false));
             var readerStream = pipe.Reader.AsStream(leaveOpen: false);
 
             _ = Task.Run(async () =>
