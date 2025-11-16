@@ -58,6 +58,7 @@ const FilesPage: FunctionComponent = () => {
   const [navStack, setNavStack] = useState<LayoutNodeDto[]>([]);
   const [pathNodes, setPathNodes] = useState<LayoutNodeDto[]>([]);
   const nodeCache = useState(() => new Map<string, LayoutNodeDto>())[0];
+  const ancestorsCache = useRef(new Map<string, LayoutNodeDto[]>());
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progressPct, setProgressPct] = useState(0);
@@ -333,7 +334,22 @@ const FilesPage: FunctionComponent = () => {
         if (mounted) setPathNodes([currentNode]);
         return;
       }
+      
+      // Check cache first
+      const cacheKey = `${currentNode.id}-${viewType}`;
+      const cached = ancestorsCache.current.get(cacheKey);
+      if (cached) {
+        let path = cached;
+        if (!path.length || path[path.length - 1].id !== currentNode.id) {
+          path = [...path, currentNode];
+        }
+        if (mounted) setPathNodes(path);
+        return;
+      }
+
+      // Fetch and cache
       let path = await api.getAncestors(currentNode.id, viewType);
+      ancestorsCache.current.set(cacheKey, path);
       if (!path.length || path[path.length - 1].id !== currentNode.id) {
         path = [...path, currentNode];
       }
