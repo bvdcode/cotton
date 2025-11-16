@@ -34,7 +34,7 @@ namespace Cotton.Storage.Processors
                 try
                 {
                     await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await using (var lz4 = LZ4Stream.Encode(writerStream, level: LZ4Level.L03_HC, leaveOpen: true))
+                    await using (var lz4 = LZ4Stream.Encode(writerStream, level: LZ4Level.L00_FAST, leaveOpen: true))
                     {
                         await stream.CopyToAsync(lz4).ConfigureAwait(false);
                         await lz4.FlushAsync().ConfigureAwait(false);
