@@ -54,8 +54,14 @@ const FilesPage: FunctionComponent = () => {
   const [uploadBytes, setUploadBytes] = useState(0);
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null);
-  const [fileMenuAnchor, setFileMenuAnchor] = useState<{ id: string; el: HTMLElement } | null>(null);
-  const [nodeMenuAnchor, setNodeMenuAnchor] = useState<{ id: string; el: HTMLElement } | null>(null);
+  const [fileMenuAnchor, setFileMenuAnchor] = useState<{
+    id: string;
+    el: HTMLElement;
+  } | null>(null);
+  const [nodeMenuAnchor, setNodeMenuAnchor] = useState<{
+    id: string;
+    el: HTMLElement;
+  } | null>(null);
 
   const prettyFileType = (name: string, contentType?: string): string => {
     const ext = name.includes(".") ? name.split(".").pop()!.toUpperCase() : "";
@@ -222,43 +228,48 @@ const FilesPage: FunctionComponent = () => {
     }
   }, [currentNode, t, api]);
 
-  const onDeleteFile = useCallback(async (fileId: string) => {
-    if (!currentNode) return;
-    try {
-      setDeletingFileId(fileId);
-      await api.deleteFile(fileId);
-      const ch = await api.getNodeChildren(currentNode.id);
-      setChildren(ch);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
-    } finally {
-      setDeletingFileId(null);
-      setFileMenuAnchor(null);
-    }
-  }, [api, currentNode]);
+  const onDeleteFile = useCallback(
+    async (fileId: string) => {
+      if (!currentNode) return;
+      try {
+        setDeletingFileId(fileId);
+        await api.deleteFile(fileId);
+        const ch = await api.getNodeChildren(currentNode.id);
+        setChildren(ch);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+      } finally {
+        setDeletingFileId(null);
+        setFileMenuAnchor(null);
+      }
+    },
+    [api, currentNode],
+  );
 
-  const onDeleteNode = useCallback(async (nodeId: string) => {
-    if (!currentNode) return;
-    try {
-      setDeletingNodeId(nodeId);
-      await api.deleteNode(nodeId);
-      const ch = await api.getNodeChildren(currentNode.id);
-      setChildren(ch);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
-    } finally {
-      setDeletingNodeId(null);
-      setNodeMenuAnchor(null);
-    }
-  }, [api, currentNode]);
+  const onDeleteNode = useCallback(
+    async (nodeId: string) => {
+      if (!currentNode) return;
+      try {
+        setDeletingNodeId(nodeId);
+        await api.deleteNode(nodeId);
+        const ch = await api.getNodeChildren(currentNode.id);
+        setChildren(ch);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+      } finally {
+        setDeletingNodeId(null);
+        setNodeMenuAnchor(null);
+      }
+    },
+    [api, currentNode],
+  );
 
   useEffect(() => {
     loadRoot();
   }, [loadRoot]);
 
-  // Rebuild breadcrumbs when currentNode changes
   useEffect(() => {
     const buildPath = async () => {
       if (!currentNode) {
@@ -428,142 +439,169 @@ const FilesPage: FunctionComponent = () => {
             </Stack>
           </Box>
         )}
-        <Box
-          sx={{
-            mt: 1,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: 2,
-          }}
-        >
-          {/* Folders */}
-          {children?.nodes.map((n) => (
-            <Paper
-              key={n.id}
-              elevation={2}
-              sx={{
-                p: 1.5,
-                display: "flex",
-                flexDirection: "column",
-                gap: 1,
-                cursor: "pointer",
-                position: "relative",
-                opacity: deletingNodeId === n.id ? 0.6 : 1,
-                pointerEvents: deletingNodeId === n.id ? "none" : "auto",
-              }}
-              onClick={() => openNode(n)}
-            >
-              <IconButton
-                size="small"
-                sx={{ position: "absolute", top: 4, right: 4 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setNodeMenuAnchor({ id: n.id, el: e.currentTarget });
-                }}
-              >
-                <MoreVert fontSize="small" />
-              </IconButton>
-              <Box
+        {children &&
+        children.nodes.length === 0 &&
+        children.files.length === 0 ? (
+          <Box sx={{ mt: 3, textAlign: "center", color: "text.secondary" }}>
+            <Typography variant="body2">
+              {t("filesPage.emptyFolder", "No files")}
+            </Typography>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              mt: 1,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+              gap: 2,
+            }}
+          >
+            {/* Folders */}
+            {children?.nodes.map((n) => (
+              <Paper
+                key={n.id}
+                elevation={2}
                 sx={{
-                  width: "100%",
-                  aspectRatio: "1 / 1",
-                  bgcolor: "action.hover",
-                  borderRadius: 1,
+                  p: 1.5,
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  flexDirection: "column",
+                  gap: 1,
+                  cursor: "pointer",
+                  position: "relative",
+                  opacity: deletingNodeId === n.id ? 0.6 : 1,
+                  pointerEvents: deletingNodeId === n.id ? "none" : "auto",
+                }}
+                onClick={() => {
+                  if (nodeMenuAnchor || fileMenuAnchor) return;
+                  openNode(n);
                 }}
               >
-                <FolderIcon fontSize="large" color="warning" />
-              </Box>
-              <Box>
-                <Typography variant="body2" noWrap title={n.name}>
-                  {n.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t("filesPage.folder")}
-                </Typography>
-              </Box>
-              <Menu
-                open={nodeMenuAnchor?.id === n.id}
-                anchorEl={nodeMenuAnchor?.el}
-                onClose={() => setNodeMenuAnchor(null)}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-              >
-                <MenuItem onClick={() => onDeleteNode(n.id)} disabled={deletingNodeId === n.id}>
-                  {t("filesPage.deleteFolder", "Delete folder")}
-                </MenuItem>
-              </Menu>
-            </Paper>
-          ))}
+                <IconButton
+                  size="small"
+                  sx={{ position: "absolute", top: 12, right: 12 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNodeMenuAnchor({ id: n.id, el: e.currentTarget });
+                  }}
+                >
+                  <MoreVert fontSize="small" />
+                </IconButton>
+                <Box
+                  sx={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    bgcolor: "action.hover",
+                    borderRadius: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <FolderIcon fontSize="large" color="warning" />
+                </Box>
+                <Box>
+                  <Typography variant="body2" noWrap title={n.name}>
+                    {n.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t("filesPage.folder")}
+                  </Typography>
+                </Box>
+                <Menu
+                  open={nodeMenuAnchor?.id === n.id}
+                  anchorEl={nodeMenuAnchor?.el}
+                  onClose={() => setNodeMenuAnchor(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
+                >
+                  <MenuItem
+                    onClick={() => onDeleteNode(n.id)}
+                    disabled={deletingNodeId === n.id}
+                  >
+                    {t("filesPage.deleteFolder", "Delete folder")}
+                  </MenuItem>
+                </Menu>
+              </Paper>
+            ))}
 
-          {/* Files */}
-          {children?.files.map((f) => (
-            <Paper
-              key={f.id}
-              elevation={2}
-              sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1, position: "relative", opacity: deletingFileId === f.id ? 0.6 : 1, pointerEvents: deletingFileId === f.id ? "none" : "auto" }}
-            >
-              <IconButton
-                size="small"
-                sx={{ position: "absolute", top: 4, right: 4 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFileMenuAnchor({ id: f.id, el: e.currentTarget });
-                }}
-              >
-                <MoreVert fontSize="small" />
-              </IconButton>
-              <Box
+            {/* Files */}
+            {children?.files.map((f) => (
+              <Paper
+                key={f.id}
+                elevation={2}
                 sx={{
-                  width: "100%",
-                  aspectRatio: "1 / 1",
-                  bgcolor: "action.hover",
-                  borderRadius: 1,
+                  p: 1.5,
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  flexDirection: "column",
+                  gap: 1,
+                  position: "relative",
+                  opacity: deletingFileId === f.id ? 0.6 : 1,
+                  pointerEvents: deletingFileId === f.id ? "none" : "auto",
                 }}
               >
-                {fileIcon(f.name, f.contentType)}
-              </Box>
-              <Box>
-                <Typography variant="body2" noWrap title={f.name}>
-                  {f.name}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  noWrap
-                  title={f.contentType}
+                <IconButton
+                  size="small"
+                  sx={{ position: "absolute", top: 12, right: 12 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFileMenuAnchor({ id: f.id, el: e.currentTarget });
+                  }}
                 >
-                  {prettyFileType(f.name, f.contentType)}
-                </Typography>
-              </Box>
-              <Box>
-                <Link
-                  href={api.getDownloadUrl(f.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  <MoreVert fontSize="small" />
+                </IconButton>
+                <Box
+                  sx={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    bgcolor: "action.hover",
+                    borderRadius: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
-                  {t("filesPage.download")}
-                </Link>
-              </Box>
-              <Menu
-                open={fileMenuAnchor?.id === f.id}
-                anchorEl={fileMenuAnchor?.el}
-                onClose={() => setFileMenuAnchor(null)}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-              >
-                <MenuItem onClick={() => onDeleteFile(f.id)} disabled={deletingFileId === f.id}>
-                  {t("filesPage.deleteFile", "Delete file")}
-                </MenuItem>
-              </Menu>
-            </Paper>
-          ))}
-        </Box>
+                  {fileIcon(f.name, f.contentType)}
+                </Box>
+                <Box>
+                  <Typography variant="body2" noWrap title={f.name}>
+                    {f.name}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    title={f.contentType}
+                  >
+                    {prettyFileType(f.name, f.contentType)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Link
+                    href={api.getDownloadUrl(f.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("filesPage.download")}
+                  </Link>
+                </Box>
+                <Menu
+                  open={fileMenuAnchor?.id === f.id}
+                  anchorEl={fileMenuAnchor?.el}
+                  onClose={() => setFileMenuAnchor(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
+                >
+                  <MenuItem
+                    onClick={() => onDeleteFile(f.id)}
+                    disabled={deletingFileId === f.id}
+                  >
+                    {t("filesPage.deleteFile", "Delete file")}
+                  </MenuItem>
+                </Menu>
+              </Paper>
+            ))}
+          </Box>
+        )}
       </Box>
     </Box>
   );
