@@ -23,8 +23,8 @@ namespace Cotton.Autoconfig.Extensions
             string postgresUser = Environment.GetEnvironmentVariable("COTTON_PG_USERNAME") ?? "postgres";
             string postgresPass = Environment.GetEnvironmentVariable("COTTON_PG_PASSWORD") ?? "postgres";
             ushort postgresPort = ushort.Parse(postgresPortStr);
-            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.Process);
-            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.User);
+            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", null, EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", null, EnvironmentVariableTarget.User);
 
             string jwtKey = StringHelpers.CreateRandomString(DefaultKeyLength);
             const int masterKeyId = 1;
@@ -33,8 +33,8 @@ namespace Cotton.Autoconfig.Extensions
             {
                 throw new InvalidOperationException($"COTTON_MASTER_KEY must be set and be exactly {DefaultKeyLength} characters long.");
             }
-            Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.Process);
-            Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.User);
+            Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", null, EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", null, EnvironmentVariableTarget.User);
 
             string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", DefaultKeyLength);
             string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", DefaultKeyLength);
@@ -52,9 +52,9 @@ namespace Cotton.Autoconfig.Extensions
                 ["DatabaseSettings:Username"] = postgresUser,
                 ["DatabaseSettings:Password"] = postgresPass,
 
-                [nameof(CottonSettings.MasterEncryptionKeyId)] = masterKeyId.ToString(),
-                [nameof(CottonSettings.MasterEncryptionKey)] = masterEncryptionKey,
                 [nameof(CottonSettings.Pepper)] = pepper,
+                [nameof(CottonSettings.MasterEncryptionKey)] = masterEncryptionKey,
+                [nameof(CottonSettings.MasterEncryptionKeyId)] = masterKeyId.ToString(),
                 [nameof(CottonSettings.EncryptionThreads)] = defaultEncryptionThreads.ToString(),
                 [nameof(CottonSettings.MaxChunkSizeBytes)] = defaultMaxChunkSizeBytes.ToString(),
                 [nameof(CottonSettings.CipherChunkSizeBytes)] = defaultCipherChunkSizeBytes.ToString(),

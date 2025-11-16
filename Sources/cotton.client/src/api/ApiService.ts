@@ -5,6 +5,7 @@ import type {
   CreateFileRequest,
   LayoutChildrenDto,
   NodeType,
+  ServerSettings,
 } from "../types/api";
 import type { AxiosInstance } from "axios";
 
@@ -154,6 +155,13 @@ export class ApiService {
   async getMe(): Promise<AuthUser> {
     const axios = this.getAxios();
     const { data } = await axios.get<AuthUser>(`${this.base}/users/me`);
+    return data;
+  }
+
+  // Settings
+  async getSettings(): Promise<ServerSettings> {
+    const axios = this.getAxios();
+    const { data } = await axios.get<ServerSettings>(`${this.base}/settings`);
     return data;
   }
 }
