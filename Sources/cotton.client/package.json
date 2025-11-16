@@ -15,7 +15,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@bvdcode/react-kit": "^0.0.16",
+    "@bvdcode/react-kit": "^0.0.18",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
