@@ -26,7 +26,7 @@ import {
   formatBytesPerSecond,
 } from "../utils/fileUpload";
 import { fileIcon } from "../utils/fileIcons";
-import { filesApi, layoutApi } from "../api";
+import { useApi } from "../api/ApiContext";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -34,6 +34,7 @@ import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
 
 const FilesPage: FunctionComponent = () => {
   const { t } = useTranslation();
+  const api = useApi();
 
   // State
   const [loading, setLoading] = useState(false);
@@ -93,9 +94,9 @@ const FilesPage: FunctionComponent = () => {
               try {
                 const h = await hashBlob(blob);
                 chunkHashes[index] = h;
-                const exists = await filesApi.chunkExists(h);
+                const exists = await api.chunkExists(h);
                 if (!exists) {
-                  await filesApi.uploadChunk(blob, h, selectedFile.name);
+                  await api.uploadChunk(blob, h, selectedFile.name);
                 }
                 uploaded += blob.size;
                 setUploadBytes(uploaded);
@@ -121,14 +122,14 @@ const FilesPage: FunctionComponent = () => {
       });
 
       const fileHash = await hashFile(selectedFile);
-      await filesApi.createFileFromChunks({
+      await api.createFileFromChunks({
         chunkHashes,
         name: selectedFile.name,
         contentType: selectedFile.type || "application/octet-stream",
         hash: fileHash,
         nodeId: currentNode.id,
       });
-      const ch = await layoutApi.getNodeChildren(currentNode.id);
+      const ch = await api.getNodeChildren(currentNode.id);
       setChildren(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -140,15 +141,15 @@ const FilesPage: FunctionComponent = () => {
       setUploadBytes(0);
       setSelectedFile(null);
     }
-  }, [selectedFile, currentNode]);
+  }, [selectedFile, currentNode, api]);
 
   const loadRoot = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const root = await layoutApi.resolvePath();
+      const root = await api.resolvePath();
       setCurrentNode(root);
-      const ch = await layoutApi.getNodeChildren(root.id);
+      const ch = await api.getNodeChildren(root.id);
       setChildren(ch);
       setNavStack([]);
       nodeCache.set(root.id, root);
@@ -159,7 +160,7 @@ const FilesPage: FunctionComponent = () => {
     } finally {
       setLoading(false);
     }
-  }, [nodeCache]);
+  }, [nodeCache, api]);
 
   const openNode = useCallback(
     async (node: LayoutNodeDto) => {
@@ -169,7 +170,7 @@ const FilesPage: FunctionComponent = () => {
         setNavStack((s) => (currentNode ? [...s, currentNode] : s));
         setCurrentNode(node);
         nodeCache.set(node.id, node);
-        const ch = await layoutApi.getNodeChildren(node.id);
+        const ch = await api.getNodeChildren(node.id);
         setChildren(ch);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -178,7 +179,7 @@ const FilesPage: FunctionComponent = () => {
         setLoading(false);
       }
     },
-    [currentNode, nodeCache],
+    [currentNode, nodeCache, api],
   );
 
   const goBack = useCallback(async () => {
@@ -203,8 +204,8 @@ const FilesPage: FunctionComponent = () => {
     if (!trimmed) return;
     try {
       setLoading(true);
-      await layoutApi.createFolder({ parentId: currentNode.id, name: trimmed });
-      const ch = await layoutApi.getNodeChildren(currentNode.id);
+      await api.createFolder({ parentId: currentNode.id, name: trimmed });
+      const ch = await api.getNodeChildren(currentNode.id);
       setChildren(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -212,7 +213,7 @@ const FilesPage: FunctionComponent = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentNode, t]);
+  }, [currentNode, t, api]);
 
   useEffect(() => {
     loadRoot();
@@ -238,7 +239,7 @@ const FilesPage: FunctionComponent = () => {
           cur = cached;
         } else {
           try {
-            const parent = await layoutApi.getNode(pid);
+            const parent = await api.getNode(pid);
             nodeCache.set(parent.id, parent);
             cur = parent;
           } catch {
@@ -249,7 +250,7 @@ const FilesPage: FunctionComponent = () => {
       setPathNodes(acc);
     };
     buildPath();
-  }, [currentNode, nodeCache]);
+  }, [currentNode, nodeCache, api]);
 
   return (
     <Box>
@@ -469,7 +470,7 @@ const FilesPage: FunctionComponent = () => {
               </Box>
               <Box>
                 <Link
-                  href={filesApi.getDownloadUrl(f.id)}
+                  href={api.getDownloadUrl(f.id)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

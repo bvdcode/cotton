@@ -1,6 +1,7 @@
 import { ru, en } from "./locales";
 import { Box } from "@mui/material";
 import FilesPage from "./pages/FilesPage";
+import { ApiProvider } from "./api/ApiContext";
 import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
 import type { AuthUser } from "./api";
 
@@ -48,7 +49,11 @@ function App() {
           {
             route: "/",
             name: "Files",
-            component: <FilesPage />,
+            component: (
+              <ApiProvider>
+                <FilesPage />
+              </ApiProvider>
+            ),
             icon: <div>📁</div>,
           },
         ]}
