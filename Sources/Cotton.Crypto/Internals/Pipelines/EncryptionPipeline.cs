@@ -19,8 +19,11 @@ namespace Cotton.Crypto.Internals.Pipelines
             int jobCap = threads * 4;
             int resCap = threads * 4;
             int window = Math.Min(Math.Max(4, threads * 4), windowCap);
-            int baseCount = jobCap + threads + resCap + window;
-            int maxCount = baseCount + 1024;
+            // Conservative upper-bound for concurrently active buffers (input + output + worker in-flight + reordering backlog).
+            // We explicitly include a multiple of windowCap to tolerate out-of-order accumulation under contention.
+            int allowedBacklog = Math.Min(windowCap * 2, 32768);
+            int maxCount = checked(jobCap + threads + resCap + allowedBacklog);
+
             static int NextPow2(int x)
             {
                 x--;
@@ -33,7 +36,7 @@ namespace Cotton.Crypto.Internals.Pipelines
                 return x < 16 ? 16 : x;
             }
             long estSize = NextPow2(chunkSize);
-            long maxBytes = estSize * baseCount * 8L;
+            long maxBytes = estSize * maxCount;
             using var scope = new BufferScope(pool, maxCount: maxCount, maxBytes: maxBytes);
 
             var producer = ProduceAsync(jobCh.Writer, scope, ct);
