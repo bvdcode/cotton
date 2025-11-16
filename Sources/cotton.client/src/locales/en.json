@@ -16,6 +16,7 @@
     "threads": "Threads: {{count}}",
     "speed": "Speed: {{speed}}",
     "deleteFile": "Delete file",
-    "deleteFolder": "Delete folder"
+    "deleteFolder": "Delete folder",
+    "emptyFolder": "No files"
   }
 }

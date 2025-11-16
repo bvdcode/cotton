@@ -16,6 +16,7 @@
     "threads": "Потоков: {{count}}",
     "speed": "Скорость: {{speed}}",
     "deleteFile": "Удалить файл",
-    "deleteFolder": "Удалить папку"
+    "deleteFolder": "Удалить папку",
+    "emptyFolder": "Файлов нет"
   }
 }
