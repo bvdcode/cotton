@@ -120,10 +120,6 @@ namespace Cotton.Storage.Processors
                 TryDelete(tmpFilePath);
                 throw;
             }
-            finally
-            {
-                try { await stream.DisposeAsync().ConfigureAwait(false); } catch { /* ignore */ }
-            }
 
             try
             {
