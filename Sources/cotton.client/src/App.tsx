@@ -60,6 +60,7 @@ function App() {
             icon: <Home />,
           },
           {
+            url: "/files",
             route: "/files/:nodeId?",
             name: "Files",
             component: <FilesPage />,
