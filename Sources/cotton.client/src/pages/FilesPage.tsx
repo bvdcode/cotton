@@ -20,10 +20,9 @@ import {
 } from "@mui/icons-material";
 import {
   hashBlob,
-  chunkBlob,
   formatBytes,
+  createAdaptiveUploader,
   DEFAULT_CHUNK_SIZE,
-  DEFAULT_CONCURRENCY,
   formatBytesPerSecond,
 } from "../utils/fileUpload";
 import { toast } from "react-toastify";
@@ -104,69 +103,66 @@ const FilesPage: FunctionComponent = () => {
     setIsUploading(true);
     let uploadFailed = false;
     try {
-      const start = Date.now();
-      const chunks = Array.from(chunkBlob(selectedFile, DEFAULT_CHUNK_SIZE));
-      const chunkHashes: string[] = new Array(chunks.length);
-      let uploaded = 0;
-      let next = 0;
-      let active = 0;
+      // Fetch server settings for max chunk size
+      const settings = await api.getSettings();
+      const maxChunkSize = settings.maxChunkSizeBytes || 100 * 1024 * 1024; // default 100MB
+      const adaptiveUploader = createAdaptiveUploader(
+        DEFAULT_CHUNK_SIZE,
+        maxChunkSize,
+      );
 
-      await new Promise<void>((resolve, reject) => {
-        const runNext = () => {
+      const start = Date.now();
+      let uploaded = 0;
+      const chunkHashes: string[] = [];
+      let offset = 0;
+
+      // Dynamic chunking loop
+      while (offset < selectedFile.size) {
+        if (abortUpload.current) {
+          throw new Error("Upload aborted");
+        }
+
+        const chunkSize = adaptiveUploader.currentChunkSize;
+        const end = Math.min(offset + chunkSize, selectedFile.size);
+        const blob = selectedFile.slice(offset, end);
+        const chunkStart = Date.now();
+
+        if (abortUpload.current) {
+          throw new Error("Upload aborted");
+        }
+
+        const h = await hashBlob(blob);
+        if (abortUpload.current) {
+          throw new Error("Upload aborted");
+        }
+
+        chunkHashes.push(h);
+        const exists = await api.chunkExists(h);
+        if (abortUpload.current) {
+          throw new Error("Upload aborted");
+        }
+
+        if (!exists) {
           if (abortUpload.current) {
-            reject(new Error("Upload aborted"));
-            return;
+            throw new Error("Upload aborted");
           }
-          while (active < DEFAULT_CONCURRENCY && next < chunks.length) {
-            const index = next++;
-            const blob = chunks[index];
-            active++;
-            (async () => {
-              try {
-                if (abortUpload.current) {
-                  throw new Error("Upload aborted");
-                }
-                const h = await hashBlob(blob);
-                if (abortUpload.current) {
-                  throw new Error("Upload aborted");
-                }
-                chunkHashes[index] = h;
-                const exists = await api.chunkExists(h);
-                if (abortUpload.current) {
-                  throw new Error("Upload aborted");
-                }
-                if (!exists) {
-                  if (abortUpload.current) {
-                    throw new Error("Upload aborted");
-                  }
-                  await api.uploadChunk(blob, h, selectedFile.name);
-                  if (abortUpload.current) {
-                    throw new Error("Upload aborted");
-                  }
-                }
-                uploaded += blob.size;
-                setUploadBytes(uploaded);
-                const pct = Math.round((uploaded / selectedFile.size) * 100);
-                setProgressPct(pct);
-                const elapsed = (Date.now() - start) / 1000;
-                if (elapsed > 0) setSpeedBps(uploaded / elapsed);
-              } catch (err) {
-                abortUpload.current = true;
-                reject(err);
-                return;
-              } finally {
-                active--;
-                if (next >= chunks.length && active === 0) {
-                  resolve();
-                } else {
-                  runNext();
-                }
-              }
-            })();
+          await api.uploadChunk(blob, h, selectedFile.name);
+          if (abortUpload.current) {
+            throw new Error("Upload aborted");
           }
-        };
-        runNext();
-      });
+        }
+
+        const chunkTime = Date.now() - chunkStart;
+        adaptiveUploader.adjustChunkSize(chunkTime);
+
+        offset = end;
+        uploaded += blob.size;
+        setUploadBytes(uploaded);
+        const pct = Math.round((uploaded / selectedFile.size) * 100);
+        setProgressPct(pct);
+        const elapsed = (Date.now() - start) / 1000;
+        if (elapsed > 0) setSpeedBps(uploaded / elapsed);
+      }
 
       await api.createFileFromChunks({
         hash: "",
@@ -491,9 +487,6 @@ const FilesPage: FunctionComponent = () => {
             <LinearProgress variant="determinate" value={progressPct} />
             <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
               <Typography variant="caption">{progressPct}%</Typography>
-              <Typography variant="caption">
-                {t("filesPage.threads", { count: DEFAULT_CONCURRENCY })}
-              </Typography>
               <Typography variant="caption">
                 {t("filesPage.speed", {
                   speed: formatBytesPerSecond(speedBps),

@@ -54,3 +54,8 @@ export const NodeType = {
   Trash: 1,
 } as const;
 export type NodeType = (typeof NodeType)[keyof typeof NodeType];
+
+export interface ServerSettings {
+  maxChunkSizeBytes: number;
+  supportedHashAlgorithm: string;
+}
