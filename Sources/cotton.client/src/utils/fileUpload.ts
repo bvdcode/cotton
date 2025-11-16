@@ -1,5 +1,5 @@
-export const DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
-export const DEFAULT_CONCURRENCY = 4;
+export const DEFAULT_CHUNK_SIZE = 4 * 1024 * 1024; // 4MB
+export const DEFAULT_CONCURRENCY = 2;
 
 export function* chunkBlob(blob: Blob, chunkSize: number): Generator<Blob> {
   let offset = 0;
