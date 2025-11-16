@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using System.Net;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -104,7 +105,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         Assert.That(child, Is.Not.Null);
         TestContext.Progress.WriteLine($"Created node '{nodeName}' with Id={child!.Id}");
 
-        // Upload10 unique chunks and create files from them
+        // Upload 10 unique chunks and create files from them
         for (int i = 1; i <= 10; i++)
         {
             var content = Encoding.UTF8.GetBytes($"hello {i}");
@@ -136,11 +137,11 @@ public class LayoutAndFilesTests : IntegrationTestBase
                 Hash = chunkHashLower,
                 NodeId = child.Id
             };
-            var createFileRes = await _client.PostAsJsonAsync("/api/v1/files", fileReq);
+            var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
             createFileRes.EnsureSuccessStatusCode();
         }
 
-        // Verify children listing shows10 files
+        // Verify children listing shows 10 files
         var list = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{child!.Id}/children");
         Assert.That(list, Is.Not.Null);
         Assert.That(list!.Files.Count, Is.EqualTo(10));
@@ -177,15 +178,10 @@ public class LayoutAndFilesTests : IntegrationTestBase
         // First create should succeed
         var r1 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
         r1.EnsureSuccessStatusCode();
-        // Second create with same name under same parent should throw due to unique index
-        var ex = Assert.ThrowsAsync<DbUpdateException>(async () =>
-            await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req));
-        Assert.That(ex, Is.Not.Null);
-        if (ex!.InnerException is PostgresException pg)
-        {
-            Assert.That(pg.SqlState, Is.EqualTo("23505")); // unique_violation
-        }
-        TestContext.Progress.WriteLine($"Duplicate create threw: {ex!.GetType().Name} -> {ex.InnerException?.GetType().Name}");
+        // Second create with same name under same parent should return conflict (409)
+        var r2 = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", req);
+        Assert.That(r2.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        TestContext.Progress.WriteLine($"Duplicate create returned status: {(int)r2.StatusCode} {r2.StatusCode}");
 
         // Verify DB has only one such node
         var duplicates = await DbContext.Nodes
