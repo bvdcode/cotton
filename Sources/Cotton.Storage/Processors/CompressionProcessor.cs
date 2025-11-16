@@ -24,7 +24,7 @@ namespace Cotton.Storage.Processors
             if (!stream.CanRead)
             {
                 throw new ArgumentException("Input stream must be readable.", nameof(stream));
-            }    
+            }
 
             var pipe = new Pipe(new PipeOptions(useSynchronizationContext: false));
             var readerStream = pipe.Reader.AsStream(leaveOpen: false);
@@ -33,10 +33,13 @@ namespace Cotton.Storage.Processors
             {
                 try
                 {
-                    var writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await using var lz4 = LZ4Stream.Encode(writerStream, level: LZ4Level.L03_HC, leaveOpen: true);
-                    await stream.CopyToAsync(lz4).ConfigureAwait(false);
-                    await lz4.FlushAsync().ConfigureAwait(false);
+                    await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
+                    await using (var lz4 = LZ4Stream.Encode(writerStream, level: LZ4Level.L03_HC, leaveOpen: true))
+                    {
+                        await stream.CopyToAsync(lz4).ConfigureAwait(false);
+                        await lz4.FlushAsync().ConfigureAwait(false);
+                    } // ensure LZ4 writes footer before completing pipe
+
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
