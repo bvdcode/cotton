@@ -81,6 +81,8 @@ namespace Cotton.Storage.Processors
 
         public async Task<Stream> WriteAsync(string uid, Stream stream)
         {
+            const int WriteBufferSize = 1024 * 1024;
+
             uid = NormalizeIdentity(uid);
             ArgumentNullException.ThrowIfNull(stream);
 
@@ -98,6 +100,7 @@ namespace Cotton.Storage.Processors
                 Share = FileShare.None,
                 Mode = FileMode.CreateNew,
                 Access = FileAccess.Write,
+                BufferSize = WriteBufferSize,
                 Options = FileOptions.Asynchronous,
             };
 
@@ -109,7 +112,7 @@ namespace Cotton.Storage.Processors
                 {
                     stream.Seek(default, SeekOrigin.Begin);
                 }
-                await stream.CopyToAsync(tmp).ConfigureAwait(false);
+                await stream.CopyToAsync(tmp, WriteBufferSize).ConfigureAwait(false);
                 await tmp.FlushAsync().ConfigureAwait(false);
             }
             catch (Exception)
