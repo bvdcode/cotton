@@ -22,6 +22,23 @@ namespace Cotton.Server.Controllers
     public class LayoutController(CottonDbContext _dbContext, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
+        [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}")]
+        public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
+        {
+            Guid userId = User.GetUserId();
+            var node = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.Id == nodeId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (node == null)
+            {
+                return CottonResult.NotFound("Node not found.");
+            }
+            var mapped = node.Adapt<NodeDto>();
+            return Ok(mapped);
+        }
+
+        [Authorize]
         [HttpDelete($"{Routes.Layouts}/nodes/{{nodeId:guid}}")]
         public async Task<IActionResult> DeleteLayoutNode([FromRoute] Guid nodeId)
         {
