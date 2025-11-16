@@ -559,14 +559,13 @@ const FilesPage: FunctionComponent = () => {
                   sx={{
                     width: "100%",
                     aspectRatio: "1 / 1",
-                    bgcolor: "action.hover",
                     borderRadius: 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <FolderIcon fontSize="large" color="warning" />
+                  <FolderIcon sx={{ fontSize: 120 }} color="warning" />
                 </Box>
                 <Box>
                   <Typography variant="body2" noWrap title={n.name}>
@@ -622,11 +621,11 @@ const FilesPage: FunctionComponent = () => {
                   sx={{
                     width: "100%",
                     aspectRatio: "1 / 1",
-                    bgcolor: "action.hover",
                     borderRadius: 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    "& > svg": { fontSize: 120 },
                   }}
                 >
                   {fileIcon(f.name, f.contentType)}
@@ -643,15 +642,6 @@ const FilesPage: FunctionComponent = () => {
                   >
                     {prettyFileType(f.name, f.contentType)}
                   </Typography>
-                </Box>
-                <Box>
-                  <Link
-                    href={api.getDownloadUrl(f.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {t("filesPage.download")}
-                  </Link>
                 </Box>
                 <Menu
                   open={fileMenuAnchor?.id === f.id}

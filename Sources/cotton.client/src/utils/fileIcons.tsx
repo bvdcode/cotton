@@ -9,9 +9,9 @@ import {
   PictureAsPdf,
   InsertDriveFile,
 } from "@mui/icons-material";
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
 
-export function fileIcon(name: string, contentType?: string): ReactNode {
+export function fileIcon(name: string, contentType?: string): ReactElement {
   const ct = contentType || "";
   const ext = name.split(".").pop()?.toLowerCase();
 
