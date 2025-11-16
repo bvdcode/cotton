@@ -304,11 +304,11 @@ const FilesPage: FunctionComponent = () => {
         if (mounted) setPathNodes([]);
         return;
       }
-      let path = await api.getAncestors(currentNode.id, viewType);
-      if (!path.length || path[0].parentId) {
-        const root = await api.resolvePath(undefined, viewType);
-        path = [root, ...path.filter((p) => p.id !== root.id)];
+      if (!currentNode.parentId) {
+        if (mounted) setPathNodes([currentNode]);
+        return;
       }
+      let path = await api.getAncestors(currentNode.id, viewType);
       if (!path.length || path[path.length - 1].id !== currentNode.id) {
         path = [...path, currentNode];
       }
