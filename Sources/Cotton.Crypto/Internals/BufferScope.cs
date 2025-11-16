@@ -22,23 +22,34 @@ namespace Cotton.Crypto.Internals
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minimumLength);
             ThrowIfDisposed();
+
+            // Try reuse first, but only if buffer is large enough
             if (_free.TryTake(out var reused))
             {
-                _active[reused] = null;
-                var newCountReuse = Interlocked.Increment(ref _count);
-                var newBytesReuse = Interlocked.Add(ref _bytes, reused.Length);
-                if (newCountReuse > _maxCount || newBytesReuse > _maxBytes)
+                if (reused.Length >= minimumLength)
                 {
-                    _active.TryRemove(reused, out _);
-                    Interlocked.Decrement(ref _count);
-                    Interlocked.Add(ref _bytes, -reused.Length);
-                    _free.Add(reused);
+                    _active[reused] = null;
+                    var newCountReuse = Interlocked.Increment(ref _count);
+                    var newBytesReuse = Interlocked.Add(ref _bytes, reused.Length);
+                    if (newCountReuse > _maxCount || newBytesReuse > _maxBytes)
+                    {
+                        _active.TryRemove(reused, out _);
+                        Interlocked.Decrement(ref _count);
+                        Interlocked.Add(ref _bytes, -reused.Length);
+                        _free.Add(reused);
+                    }
+                    else
+                    {
+                        return reused;
+                    }
                 }
                 else
                 {
-                    return reused;
+                    // Too small for this request; put back and rent fresh
+                    _free.Add(reused);
                 }
             }
+
             var arr = _pool.Rent(minimumLength);
             _active[arr] = null;
             var newCount = Interlocked.Increment(ref _count);
