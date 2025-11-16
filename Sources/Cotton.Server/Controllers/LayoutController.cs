@@ -57,7 +57,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPut($"{Routes.Layouts}/nodes")]
+        [HttpPut(Routes.Nodes)]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequest request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
@@ -108,9 +108,9 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/ancestors")]
+        [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}/ancestors")]
         public async Task<IActionResult> GetAncestorNodes([FromRoute] Guid nodeId,
-            [FromQuery] NodeType type = NodeType.Default)
+            [FromQuery] NodeType nodeType = NodeType.Default)
         {
             // TODO: Optimize to a single query
             // TODO: Guard against circular references
@@ -121,7 +121,7 @@ namespace Cotton.Server.Controllers
                 .Where(x => x.Id == nodeId
                     && x.OwnerId == userId
                     && x.LayoutId == layout.Id
-                    && x.Type == type)
+                    && x.Type == nodeType)
                 .SingleOrDefaultAsync();
             if (currentNode == null)
             {
@@ -132,7 +132,10 @@ namespace Cotton.Server.Controllers
             {
                 var parentNode = await _dbContext.Nodes
                     .AsNoTracking()
-                    .Where(x => x.Id == currentNode.ParentId && x.OwnerId == userId)
+                    .Where(x => x.Id == currentNode.ParentId
+                        && x.OwnerId == userId
+                        && x.LayoutId == layout.Id
+                        && x.Type == nodeType)
                     .SingleOrDefaultAsync();
                 if (parentNode == null)
                 {
@@ -146,9 +149,9 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Layouts}/nodes/{{nodeId:guid}}/children")]
+        [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}/children")]
         public async Task<IActionResult> GetChildNodes([FromRoute] Guid nodeId,
-            [FromQuery] NodeType type = NodeType.Default)
+            [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
@@ -157,7 +160,7 @@ namespace Cotton.Server.Controllers
                 .Where(x => x.Id == nodeId
                     && x.OwnerId == userId
                     && x.LayoutId == layout.Id
-                    && x.Type == type)
+                    && x.Type == nodeType)
                 .SingleOrDefaultAsync();
             if (parentNode == null)
             {
@@ -166,7 +169,7 @@ namespace Cotton.Server.Controllers
 
             var nodes = await _dbContext.Nodes
                 .AsNoTracking()
-                .Where(x => x.ParentId == parentNode.Id && x.OwnerId == userId)
+                .Where(x => x.ParentId == parentNode.Id && x.OwnerId == userId && x.LayoutId == layout.Id && x.Type == nodeType)
                 .ProjectToType<NodeDto>()
                 .ToListAsync();
 
@@ -195,11 +198,11 @@ namespace Cotton.Server.Controllers
         [HttpGet($"{Routes.Layouts}/resolver")]
         [HttpGet($"{Routes.Layouts}/resolver/{{*path}}")]
         public async Task<IActionResult> ResolveLayout([FromRoute] string? path,
-            [FromQuery] NodeType type = NodeType.Default)
+            [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
             var found = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-            Node currentNode = await _layouts.GetOrCreateRootNodeAsync(found.Id, userId, type);
+            Node currentNode = await _layouts.GetOrCreateRootNodeAsync(found.Id, userId, nodeType);
             if (string.IsNullOrWhiteSpace(path))
             {
                 var dto = currentNode.Adapt<NodeDto>();
@@ -215,7 +218,7 @@ namespace Cotton.Server.Controllers
                     .Where(x => x.Layout.OwnerId == userId
                         && x.ParentId == currentNode.Id
                         && x.Name == part
-                        && x.Type == type)
+                        && x.Type == nodeType)
                     .SingleOrDefaultAsync();
                 if (nextNode == null)
                 {
