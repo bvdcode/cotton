@@ -285,22 +285,22 @@ const FilesPage: FunctionComponent = () => {
   }, [nodeId]);
 
   useEffect(() => {
-    if (!currentNode) {
-      setPathNodes([]);
-      return;
-    }
     let mounted = true;
-    api
-      .getAncestors(currentNode.id)
-      .then((path) => {
-        if (!mounted) return;
-        setPathNodes(path);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        // fallback: at least show current node
-        setPathNodes([currentNode]);
-      });
+    (async () => {
+      if (!currentNode) {
+        if (mounted) setPathNodes([]);
+        return;
+      }
+      let path = await api.getAncestors(currentNode.id);
+      if (!path.length || path[0].parentId) {
+        const root = await api.resolvePath();
+        path = [root, ...path.filter((p) => p.id !== root.id)];
+      }
+      if (!path.length || path[path.length - 1].id !== currentNode.id) {
+        path = [...path, currentNode];
+      }
+      if (mounted) setPathNodes(path);
+    })();
     return () => {
       mounted = false;
     };
@@ -324,7 +324,8 @@ const FilesPage: FunctionComponent = () => {
           >
             {pathNodes.map((n, idx) => {
               const isLast = idx === pathNodes.length - 1;
-              if (idx === 0) {
+              const isRoot = !n.parentId;
+              if (isRoot) {
                 return isLast ? (
                   <Typography
                     key={n.id}
