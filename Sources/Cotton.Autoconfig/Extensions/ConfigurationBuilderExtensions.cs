@@ -25,7 +25,6 @@ namespace Cotton.Autoconfig.Extensions
             ushort postgresPort = ushort.Parse(postgresPortStr);
             Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.User);
-            Environment.SetEnvironmentVariable("COTTON_PG_PASSWORD", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.Machine);
 
             string jwtKey = StringHelpers.CreateRandomString(DefaultKeyLength);
             const int masterKeyId = 1;
@@ -36,7 +35,6 @@ namespace Cotton.Autoconfig.Extensions
             }
             Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.User);
-            Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", StringHelpers.CreatePseudoRandomString(DefaultKeyLength), EnvironmentVariableTarget.Machine);
 
             string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", DefaultKeyLength);
             string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", DefaultKeyLength);
