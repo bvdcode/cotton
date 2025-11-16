@@ -20,23 +20,22 @@ import {
 } from "@mui/icons-material";
 import {
   hashBlob,
-  hashFile,
   chunkBlob,
   formatBytes,
   DEFAULT_CHUNK_SIZE,
   DEFAULT_CONCURRENCY,
   formatBytesPerSecond,
 } from "../utils/fileUpload";
+import { toast } from "react-toastify";
+import { NodeType } from "../types/api";
 import { useApi } from "../api/ApiContext";
 import { fileIcon } from "../utils/fileIcons";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "react";
-import { useCallback, useEffect, useState, useRef } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
-import { NodeType } from "../types/api";
 import { DeleteOutline } from "@mui/icons-material";
-import { toast } from "react-toastify";
+import { useCallback, useEffect, useState, useRef } from "react";
+import type { LayoutChildrenDto, LayoutNodeDto } from "../types/api";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 const FilesPage: FunctionComponent = () => {
   const { t } = useTranslation();
@@ -169,13 +168,12 @@ const FilesPage: FunctionComponent = () => {
         runNext();
       });
 
-      const fileHash = await hashFile(selectedFile);
       await api.createFileFromChunks({
+        hash: "",
         chunkHashes,
-        name: selectedFile.name,
-        contentType: selectedFile.type || "application/octet-stream",
-        hash: fileHash,
         nodeId: currentNode.id,
+        name: selectedFile.name,
+        contentType: selectedFile.type,
       });
       const ch = await api.getNodeChildren(currentNode.id, viewType);
       setChildren(ch);
@@ -334,7 +332,7 @@ const FilesPage: FunctionComponent = () => {
         if (mounted) setPathNodes([currentNode]);
         return;
       }
-      
+
       // Check cache first
       const cacheKey = `${currentNode.id}-${viewType}`;
       const cached = ancestorsCache.current.get(cacheKey);
