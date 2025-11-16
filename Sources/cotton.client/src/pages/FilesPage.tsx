@@ -9,12 +9,15 @@ import {
   Typography,
   Breadcrumbs,
   LinearProgress,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   ArrowBack,
   CreateNewFolder,
   Home as HomeIcon,
   Folder as FolderIcon,
+  MoreVert,
 } from "@mui/icons-material";
 import {
   hashBlob,
@@ -49,6 +52,10 @@ const FilesPage: FunctionComponent = () => {
   const [progressPct, setProgressPct] = useState(0);
   const [speedBps, setSpeedBps] = useState(0);
   const [uploadBytes, setUploadBytes] = useState(0);
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
+  const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null);
+  const [fileMenuAnchor, setFileMenuAnchor] = useState<{ id: string; el: HTMLElement } | null>(null);
+  const [nodeMenuAnchor, setNodeMenuAnchor] = useState<{ id: string; el: HTMLElement } | null>(null);
 
   const prettyFileType = (name: string, contentType?: string): string => {
     const ext = name.includes(".") ? name.split(".").pop()!.toUpperCase() : "";
@@ -214,6 +221,38 @@ const FilesPage: FunctionComponent = () => {
       setLoading(false);
     }
   }, [currentNode, t, api]);
+
+  const onDeleteFile = useCallback(async (fileId: string) => {
+    if (!currentNode) return;
+    try {
+      setDeletingFileId(fileId);
+      await api.deleteFile(fileId);
+      const ch = await api.getNodeChildren(currentNode.id);
+      setChildren(ch);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setDeletingFileId(null);
+      setFileMenuAnchor(null);
+    }
+  }, [api, currentNode]);
+
+  const onDeleteNode = useCallback(async (nodeId: string) => {
+    if (!currentNode) return;
+    try {
+      setDeletingNodeId(nodeId);
+      await api.deleteNode(nodeId);
+      const ch = await api.getNodeChildren(currentNode.id);
+      setChildren(ch);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setDeletingNodeId(null);
+      setNodeMenuAnchor(null);
+    }
+  }, [api, currentNode]);
 
   useEffect(() => {
     loadRoot();
@@ -408,9 +447,22 @@ const FilesPage: FunctionComponent = () => {
                 flexDirection: "column",
                 gap: 1,
                 cursor: "pointer",
+                position: "relative",
+                opacity: deletingNodeId === n.id ? 0.6 : 1,
+                pointerEvents: deletingNodeId === n.id ? "none" : "auto",
               }}
               onClick={() => openNode(n)}
             >
+              <IconButton
+                size="small"
+                sx={{ position: "absolute", top: 4, right: 4 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNodeMenuAnchor({ id: n.id, el: e.currentTarget });
+                }}
+              >
+                <MoreVert fontSize="small" />
+              </IconButton>
               <Box
                 sx={{
                   width: "100%",
@@ -432,6 +484,17 @@ const FilesPage: FunctionComponent = () => {
                   {t("filesPage.folder")}
                 </Typography>
               </Box>
+              <Menu
+                open={nodeMenuAnchor?.id === n.id}
+                anchorEl={nodeMenuAnchor?.el}
+                onClose={() => setNodeMenuAnchor(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+              >
+                <MenuItem onClick={() => onDeleteNode(n.id)} disabled={deletingNodeId === n.id}>
+                  {t("filesPage.deleteFolder", "Delete folder")}
+                </MenuItem>
+              </Menu>
             </Paper>
           ))}
 
@@ -440,8 +503,18 @@ const FilesPage: FunctionComponent = () => {
             <Paper
               key={f.id}
               elevation={2}
-              sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}
+              sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1, position: "relative", opacity: deletingFileId === f.id ? 0.6 : 1, pointerEvents: deletingFileId === f.id ? "none" : "auto" }}
             >
+              <IconButton
+                size="small"
+                sx={{ position: "absolute", top: 4, right: 4 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFileMenuAnchor({ id: f.id, el: e.currentTarget });
+                }}
+              >
+                <MoreVert fontSize="small" />
+              </IconButton>
               <Box
                 sx={{
                   width: "100%",
@@ -477,6 +550,17 @@ const FilesPage: FunctionComponent = () => {
                   {t("filesPage.download")}
                 </Link>
               </Box>
+              <Menu
+                open={fileMenuAnchor?.id === f.id}
+                anchorEl={fileMenuAnchor?.el}
+                onClose={() => setFileMenuAnchor(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+              >
+                <MenuItem onClick={() => onDeleteFile(f.id)} disabled={deletingFileId === f.id}>
+                  {t("filesPage.deleteFile", "Delete file")}
+                </MenuItem>
+              </Menu>
             </Paper>
           ))}
         </Box>
