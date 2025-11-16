@@ -98,7 +98,7 @@ namespace Cotton.Storage.Processors
                 Share = FileShare.None,
                 Mode = FileMode.CreateNew,
                 Access = FileAccess.Write,
-                Options = FileOptions.Asynchronous | FileOptions.WriteThrough
+                Options = FileOptions.Asynchronous,
             };
 
             try
