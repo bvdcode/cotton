@@ -603,8 +603,14 @@ const FilesPage: FunctionComponent = () => {
                   flexDirection: "column",
                   gap: 1,
                   position: "relative",
+                  cursor: "pointer",
                   opacity: deletingFileId === f.id ? 0.6 : 1,
                   pointerEvents: deletingFileId === f.id ? "none" : "auto",
+                }}
+                onClick={() => {
+                  if (fileMenuAnchor) return;
+                  const url = api.getDownloadUrl(f.id);
+                  window.open(url, "_blank", "noopener,noreferrer");
                 }}
               >
                 <IconButton

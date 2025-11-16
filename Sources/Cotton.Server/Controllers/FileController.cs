@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov
 
 using Mapster;
+using Cotton.Crypto;
 using EasyExtensions;
 using Cotton.Topology;
 using Cotton.Database;
@@ -11,16 +12,14 @@ using Cotton.Server.Models;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Cotton.Storage.Extensions;
 using Cotton.Storage.Abstractions;
 using Cotton.Database.Models.Enums;
-using System.Security.Cryptography;
 using Cotton.Server.Models.Requests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
-using Cotton.Crypto;
-using Cotton.Storage.Extensions;
 
 namespace Cotton.Server.Controllers
 {
