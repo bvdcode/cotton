@@ -108,7 +108,7 @@ Hashing for addressing uses SHA‑256 (see `Sources/Cotton.Crypto/Hasher.cs`).
 
 ## Quick Start (dev)
 
-Requires Docker (for Postgres) and .NET 8 SDK.
+Requires Docker
 
 1. Start Postgres:
 
