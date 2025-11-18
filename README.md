@@ -119,14 +119,7 @@ docker run -d --name cotton-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgr
 2. Set env and run server:
 
 ```bash
-export COTTON_PG_HOST="localhost"
-export COTTON_PG_PORT="5432"
-export COTTON_PG_DATABASE="cotton_dev"
-export COTTON_PG_USERNAME="postgres"
-export COTTON_PG_PASSWORD="postgres"
-
-# Exactly 32 characters; used to derive pepper and master encryption key
-export COTTON_MASTER_KEY="devedovolovopeperepolevopopovedo"
+# COTTON_MASTER_KEY is exactly 32 characters; used to derive pepper and master encryption key
 
 docker run -d --name cotton -p 8080:8080 \
   -v /data/cotton:/app/files
