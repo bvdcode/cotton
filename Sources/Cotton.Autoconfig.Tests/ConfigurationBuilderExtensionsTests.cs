@@ -84,8 +84,11 @@ namespace Cotton.Autoconfig.Tests
             string pepperB = cfgB[nameof(CottonSettings.Pepper)]!;
             string masterB = cfgB[nameof(CottonSettings.MasterEncryptionKey)]!;
 
-            Assert.That(pepperA, Is.Not.EqualTo(pepperB));
-            Assert.That(masterA, Is.Not.EqualTo(masterB));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(pepperA, Is.Not.EqualTo(pepperB));
+                Assert.That(masterA, Is.Not.EqualTo(masterB));
+            }
         }
     }
 }
