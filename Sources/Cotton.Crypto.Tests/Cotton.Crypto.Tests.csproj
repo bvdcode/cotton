@@ -6,7 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
-		<PackageLicenseExpression>AGPL-3.0</PackageLicenseExpression>
+		<PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -21,7 +21,6 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
-		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<Using Include="NUnit.Framework" />
 	</ItemGroup>
 
