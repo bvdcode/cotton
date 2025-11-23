@@ -9,7 +9,7 @@
 		<SpaRoot>..\cotton.client</SpaRoot>
 		<SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
 		<SpaProxyServerUrl>https://localhost:51856</SpaProxyServerUrl>
-		<PackageLicenseExpression>AGPL-3.0</PackageLicenseExpression>
+		<PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -25,7 +25,6 @@
 		</PackageReference>
 		<PackageReference Include="Mapster" Version="7.4.0" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
-		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
 		<PackageReference Include="EasyExtensions.Mediator" Version="2.0.32" />
 		<ProjectReference Include="..\Cotton.Topology\Cotton.Topology.csproj" />
