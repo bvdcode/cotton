@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Vadim Belov
 
 using Cotton.Shared;
-using Cotton.Crypto;
+using Cotton.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers

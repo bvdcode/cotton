@@ -7,8 +7,6 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "cotton.client", "cotton.cli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Server", "Cotton.Server\Cotton.Server.csproj", "{C580B62C-6C38-4373-B39A-42C2330E9511}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Crypto.Tests", "Cotton.Crypto.Tests\Cotton.Crypto.Tests.csproj", "{65EC62DB-2082-440B-9F24-0194E3706844}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Server.IntegrationTests", "Cotton.Server.IntegrationTests\Cotton.Server.IntegrationTests.csproj", "{1FD12D27-BDD2-414A-8A37-48A105C8E759}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Storage", "Cotton.Storage\Cotton.Storage.csproj", "{5B1149B9-2215-4820-AAA3-90EE127D1B56}"
@@ -46,10 +44,6 @@ Global
 		{C580B62C-6C38-4373-B39A-42C2330E9511}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C580B62C-6C38-4373-B39A-42C2330E9511}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C580B62C-6C38-4373-B39A-42C2330E9511}.Release|Any CPU.Build.0 = Release|Any CPU
-		{65EC62DB-2082-440B-9F24-0194E3706844}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{65EC62DB-2082-440B-9F24-0194E3706844}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{65EC62DB-2082-440B-9F24-0194E3706844}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{65EC62DB-2082-440B-9F24-0194E3706844}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1FD12D27-BDD2-414A-8A37-48A105C8E759}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1FD12D27-BDD2-414A-8A37-48A105C8E759}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1FD12D27-BDD2-414A-8A37-48A105C8E759}.Release|Any CPU.ActiveCfg = Release|Any CPU
