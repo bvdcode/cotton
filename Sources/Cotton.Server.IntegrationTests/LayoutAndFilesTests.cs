@@ -1,9 +1,10 @@
 ﻿using Npgsql;
+using System.Net;
 using System.Text;
-using Cotton.Crypto;
 using NUnit.Framework;
 using System.Net.Http.Json;
 using Cotton.Server.Models;
+using Cotton.Server.Services;
 using System.Net.Http.Headers;
 using Cotton.Server.Models.Dto;
 using Cotton.Database.Models.Enums;
@@ -14,7 +15,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using System.Net;
 
 namespace Cotton.Server.IntegrationTests;
 

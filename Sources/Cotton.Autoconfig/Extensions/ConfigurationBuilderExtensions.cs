@@ -1,5 +1,5 @@
-﻿using Cotton.Crypto;
-using Cotton.Shared;
+﻿using Cotton.Shared;
+using EasyExtensions.Crypto;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Configuration;
 

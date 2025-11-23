@@ -3,8 +3,9 @@
 
 using System.Text;
 using Cotton.Shared;
-using Cotton.Crypto;
-using Cotton.Crypto.Abstractions;
+using EasyExtensions.Crypto;
+using Cotton.Server.Services;
+using EasyExtensions.Crypto.Abstractions;
 
 namespace Cotton.Server.Extensions
 {
