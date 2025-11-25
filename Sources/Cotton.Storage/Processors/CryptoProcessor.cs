@@ -1,5 +1,5 @@
 ﻿using Cotton.Storage.Abstractions;
-using EasyExtensions.Crypto.Abstractions;
+using EasyExtensions.Abstractions;
 
 namespace Cotton.Storage.Processors
 {
