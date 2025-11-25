@@ -5,7 +5,7 @@ using System.Text;
 using Cotton.Shared;
 using EasyExtensions.Crypto;
 using Cotton.Server.Services;
-using EasyExtensions.Crypto.Abstractions;
+using EasyExtensions.Abstractions;
 
 namespace Cotton.Server.Extensions
 {
