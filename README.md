@@ -5,7 +5,7 @@
 [![Image Size](https://img.shields.io/docker/image-size/bvdcode/cotton/latest)](https://hub.docker.com/r/bvdcode/cotton/tags)
 [![License](https://img.shields.io/github/license/bvdcode/cotton)](LICENSE)
 
-> ⚠️ The Project Status: Pre-Alpha | Live: [cotton.splidex.com](https://cotton.splidex.com/)
+> ⚠️ The Project Status: Beta | Live: [cotton.splidex.com](https://cotton.splidex.com/)
 
 <div align="center">
 

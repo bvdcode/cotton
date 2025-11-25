@@ -26,7 +26,7 @@ jobs:
       - name: install and calculate version
         uses: gittools/actions/gitversion/setup@v0.10.2
         with:
-          versionSpec: '5.x'
+          versionSpec: "5.x"
 
       - name: determine version
         id: gitversion
@@ -66,3 +66,21 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/cotton:latest
             ghcr.io/${{ github.repository_owner }}/cotton:${{ steps.gitversion.outputs.semVer }}
           file: Sources/Cotton.Server/Dockerfile
+
+      #Create release
+      - name: Create Release
+        if: 1 == 0 #needs.build.outputs.CommitsSinceVersionSource > 0 #Only release if there has been a commit/version change
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.build.outputs.Version }}
+          release_name: Release ${{ needs.build.outputs.Version }}
+      - name: Create Release
+        if: needs.build.outputs.CommitsSinceVersionSource > 0 #Only release if there has been a commit/version change
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.build.outputs.Version }}
+          name: Release ${{ needs.build.outputs.Version }}
+          artifacts: "nupkg/*"
+          token: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
