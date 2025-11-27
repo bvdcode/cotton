@@ -1,4 +1,4 @@
-name: Docker Image
+name: CI
 
 env:
   IMAGE_NAME: cotton
