@@ -78,6 +78,7 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
 
   release:
+    name: Create Release
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' # only run job if on the master branch
