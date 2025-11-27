@@ -109,11 +109,9 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
             }
 
-            Stopwatch sw = Stopwatch.StartNew();
             // TODO: Get rid of this (or not?)
             using var blob = _storage.GetBlobStream(request.ChunkHashes);
             byte[] computedHash = await Hasher.HashDataAsync(blob);
-            _logger.LogInformation("Computed hash for file {FileName} in {ElapsedMilliseconds} ms", request.Name, sw.ElapsedMilliseconds);
             if (!string.IsNullOrWhiteSpace(request.Hash))
             {
                 byte[] providedHash = Convert.FromHexString(request.Hash);
