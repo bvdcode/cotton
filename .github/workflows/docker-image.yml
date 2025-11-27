@@ -9,7 +9,7 @@ on:
   push:
     paths:
       - "Sources/**"
-      - ".github/workflows/docker-image.yaml"
+      - ".github/workflows/**"
     branches:
       - main
   workflow_dispatch:
@@ -18,6 +18,9 @@ jobs:
   build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      Version: ${{ steps.gitversion.outputs.SemVer }}
+      CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}
     permissions:
       contents: read
       packages: write
@@ -28,22 +31,26 @@ jobs:
           lfs: "true"
           fetch-depth: 0
 
-      - name: install and calculate version
-        uses: gittools/actions/gitversion/setup@v0.10.2
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.1.11
         with:
-          versionSpec: "5.x"
+          versionSpec: 5.x
 
-      - name: determine version
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.10.2
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v3.1.11
+        id: gitversion # step id used as reference for output values
+      - name: Display GitVersion outputs
+        run: |
+          echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
+          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
 
-      - name: login to docker registry
+      - name: login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{secrets.DOCKERHUB_USERNAME}}
           password: ${{secrets.DOCKERHUB_TOKEN}}
 
-      - name: build and push docker image to Docker Hub
+      - name: Build and push docker image to Docker Hub
         uses: docker/build-push-action@v5
         with:
           context: ${{ env.CONTEXT_PATH }}
@@ -53,14 +60,14 @@ jobs:
             bvdcode/${{ env.IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
 
-      - name: login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: build and push docker image to GitHub Container Registry
+      - name: Build and push docker image to GitHub Container Registry
         uses: docker/build-push-action@v5
         with:
           context: ${{ env.CONTEXT_PATH }}
@@ -70,11 +77,16 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
 
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' # only run job if on the master branch
+    steps:
       - name: Create Release
         if: needs.build.outputs.CommitsSinceVersionSource > 0
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.gitversion.outputs.semVer }}
-          name: Release ${{ steps.gitversion.outputs.semVer }}
+          tag: ${{ needs.build.outputs.Version }}
+          name: Release ${{ needs.build.outputs.Version }}
           artifacts: "nupkg/*"
           token: ${{ secrets.GITHUB_TOKEN }}
