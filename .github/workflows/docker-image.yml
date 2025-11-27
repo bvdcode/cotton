@@ -36,8 +36,6 @@ jobs:
       - name: determine version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.10.2
-        with:
-          useConfigFile: true
 
       - name: login to docker registry
         uses: docker/login-action@v3
