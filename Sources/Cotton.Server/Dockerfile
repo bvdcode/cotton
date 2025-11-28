@@ -42,4 +42,5 @@ RUN dotnet publish "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
 ENTRYPOINT ["dotnet", "Cotton.Server.dll"]

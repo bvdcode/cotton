@@ -46,6 +46,7 @@ namespace Cotton.Server.Controllers
             var trashNode = await _layouts.GetUserTrashNodeAsync(userId);
             nodeFile.NodeId = trashNode.Id;
             await _dbContext.SaveChangesAsync();
+            _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.", userId, nodeFileId);
             return NoContent();
         }
 
@@ -65,6 +66,7 @@ namespace Cotton.Server.Controllers
                 .OrderBy(x => x.ChunkOrder)
                 .Select(x => Convert.ToHexString(x.ChunkHash))];
             Stream stream = _storage.GetBlobStream(hashes);
+            _logger.LogInformation("File {NodeFileId} downloaded.", nodeFileId);
             return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name);
         }
 
