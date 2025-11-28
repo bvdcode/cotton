@@ -1,25 +1,26 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
-using Mapster;
-using EasyExtensions;
-using Cotton.Topology;
 using Cotton.Database;
-using Cotton.Validators;
-using System.Diagnostics;
-using Cotton.Server.Models;
 using Cotton.Database.Models;
-using Cotton.Server.Services;
-using Cotton.Server.Models.Dto;
-using Microsoft.AspNetCore.Mvc;
-using Cotton.Storage.Extensions;
-using Cotton.Storage.Abstractions;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Models;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
+using Cotton.Server.Services;
+using Cotton.Storage.Abstractions;
+using Cotton.Storage.Extensions;
+using Cotton.Topology;
+using Cotton.Validators;
+using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using EasyExtensions.Mediator.Contracts;
+using Mapster;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
@@ -92,18 +93,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiConflict("A file with the same name key already exists in the target node: " + nameKey);
             }
 
-            List<Chunk> chunks = [];
-            foreach (var item in request.ChunkHashes)
-            {
-                var foundChunk = await _layouts.FindChunkAsync(item);
-                if (foundChunk == null)
-                {
-                    return CottonResult.BadRequest($"Chunk with hash {item} not found.");
-                }
-                // TODO: Add safety check to ensure chunks belong to the user
-                // Must depend on owner/user authentication, no reason to delay for the same user
-                chunks.Add(foundChunk);
-            }
+            List<Chunk> chunks = await GetChunksAsync(request.ChunkHashes);
 
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name, out string normalizedName, out string errorMessage);
             if (!isValidName)
@@ -123,28 +113,8 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            var newFile = await _dbContext.FileManifests.FindAsync(computedHash);
-            if (newFile == null)
-            {
-                newFile = new FileManifest()
-                {
-                    ContentType = request.ContentType,
-                    SizeBytes = chunks.Sum(x => x.SizeBytes),
-                    Hash = computedHash,
-                };
-                await _dbContext.FileManifests.AddAsync(newFile);
-
-                for (int i = 0; i < chunks.Count; i++)
-                {
-                    var fileChunk = new FileManifestChunk
-                    {
-                        ChunkOrder = i,
-                        ChunkHash = chunks[i].Hash,
-                        FileManifestHash = computedHash,
-                    };
-                    await _dbContext.FileManifestChunks.AddAsync(fileChunk);
-                }
-            }
+            var newFile = await _dbContext.FileManifests.FindAsync(computedHash)
+                ?? await CreateNewFileManifestAsync(chunks, request, computedHash);
 
             NodeFile newNodeFile = new()
             {
@@ -167,6 +137,43 @@ namespace Cotton.Server.Controllers
             var dto = newNodeFile.Adapt<NodeFileManifestDto>();
             dto.ReadMetadataFromManifest(newFile);
             return Ok();
+        }
+
+        private async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes)
+        {
+            List<Chunk> chunks = [];
+            foreach (var item in chunkHashes)
+            {
+                var foundChunk = await _layouts.FindChunkAsync(item) ?? throw new EntityNotFoundException(nameof(Chunk));
+                // TODO: Add safety check to ensure chunks belong to the user
+                // Must depend on owner/user authentication, no reason to delay for the same user
+                chunks.Add(foundChunk);
+            }
+            return chunks;
+        }
+
+        private async Task<FileManifest> CreateNewFileManifestAsync(List<Chunk> chunks, CreateFileRequest request, byte[] computedHash)
+        {
+            var newFile = new FileManifest()
+            {
+                ContentType = request.ContentType,
+                SizeBytes = chunks.Sum(x => x.SizeBytes),
+                Hash = computedHash,
+            };
+            await _dbContext.FileManifests.AddAsync(newFile);
+
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                var fileChunk = new FileManifestChunk
+                {
+                    ChunkOrder = i,
+                    ChunkHash = chunks[i].Hash,
+                    FileManifestHash = computedHash,
+                };
+                await _dbContext.FileManifestChunks.AddAsync(fileChunk);
+            }
+            await _dbContext.SaveChangesAsync();
+            return newFile;
         }
     }
 }
