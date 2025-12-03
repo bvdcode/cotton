@@ -1,9 +1,9 @@
 import {
+  Login,
   NotFound,
   AppLayout,
   Dashboard,
   ProtectedRoute,
-  RealtimeProvider,
 } from "./components";
 import {
   Route,
@@ -13,12 +13,10 @@ import {
 } from "react-router-dom";
 import React from "react";
 import { Box } from "@mui/material";
-import Login from "./components/Login";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import { ConfirmProvider } from "material-ui-confirm";
 import AppThemeProvider from "./providers/ThemeProvider";
-import AuthInitializer from "./components/AuthInitializer";
 import { useThemeModeContext } from "./providers/ThemeContext";
 
 const ProtectedAppLayout: React.FC = () => (
@@ -40,8 +38,6 @@ const InnerApp: React.FC = () => {
         <ToastContainer
           theme={(resolvedMode as "light" | "dark" | "colored") ?? "light"}
         />
-        <AuthInitializer />
-        <RealtimeProvider />
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
