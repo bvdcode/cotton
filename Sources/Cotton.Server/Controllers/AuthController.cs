@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
+using Cotton.Shared;
 using Cotton.Database;
 using Cotton.Server.Models;
 using Cotton.Database.Models;
@@ -17,6 +18,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class AuthController(
         ITokenProvider _tokens,
+        CottonSettings _settings,
         CottonDbContext _dbContext,
         IPasswordHashService _hasher) : ControllerBase
     {
@@ -50,12 +52,27 @@ namespace Cotton.Server.Controllers
             };
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
+            Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
+            {
+                Secure = true,
+                HttpOnly = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
+            });
             return Ok(new LoginResponse(accessToken, refreshToken));
         }
 
         [HttpPost("/api/v1/auth/refresh")]
         public async Task<IActionResult> GetRefreshToken(RefreshTokenRequest request)
         {
+            // read from cookie if not provided in body
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                if (Request.Cookies.TryGetValue("refresh_token", out var cookieToken))
+                {
+                    request = request with { RefreshToken = cookieToken };
+                }
+            }
             var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == request.RefreshToken);
             if (dbToken == null || dbToken.RevokedAt != null)
             {
