@@ -1,4 +1,50 @@
 {
+  "login": {
+    "title": "Sign In",
+    "subtitle": "Enter your credentials to access the application",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign In",
+    "usernameInvalid": "Username format is invalid.",
+    "unknownError": "An unknown error occurred. Please try again.",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "configError": "Authentication is not configured. Please provide authConfig with onLogin handler in AppShell props."
+  },
+  "navigation": {
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "language": "Change language",
+    "logout": "Logout"
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "description": "Oops! The page you're looking for doesn't exist. It might have been moved or deleted.",
+    "goHome": "Go Back Home"
+  },
+  "errors": {
+    "noPagesTitle": "No Pages Configured",
+    "noPagesDescription": "You haven't added any pages to your application. Please add at least one page to the <strong>pages</strong> prop of the <strong>AppShell</strong> component."
+  },
+  "files": {
+    "title": "Files",
+    "subtitle": "Manage and browse your files here.",
+    "settings": "Chunk size: {{size}} bytes, Algorithm: {{algo}}",
+    "chooseFile": "Choose file",
+    "changeFile": "Change file",
+    "noFile": "No file selected",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "hashList": "Chunk hashes (ordered)",
+    "noSettings": "Settings not loaded or unsupported algorithm.",
+    "threads": "Threads: {{count}}",
+    "speed": "Speed: {{speed}}/s",
+    "noNode": "Select a folder before uploading.",
+    "download": "Download",
+    "newFolder": "New folder",
+    "enterFolderName": "Enter folder name",
+    "back": "Back",
+    "notReadableError": "The selected file can't be read. It may be locked by another app, removed, or access was revoked. Close any app using the file, copy it to a writable folder, and choose it again."
+  },
   "filesPage": {
     "title": "Files",
     "root": "Root",
