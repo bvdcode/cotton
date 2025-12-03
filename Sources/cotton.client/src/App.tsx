@@ -1,6 +1,8 @@
+import "./i18n";
 import { ru, en } from "./locales";
 import type { AuthUser } from "./api";
 import FilesPage from "./pages/FilesPage";
+import LoginPage from "./pages/LoginPage";
 import { Box, Typography } from "@mui/material";
 import { Folder, Home } from "@mui/icons-material";
 import { AppShell, type TokenPair, type UserInfo } from "@bvdcode/react-kit";
@@ -11,6 +13,7 @@ function App() {
       <AppShell
         appName="Cotton"
         logoUrl="/icon.png"
+        renderLoginPage={(props) => <LoginPage appProps={props} />}
         translations={{
           en: { translation: en },
           ru: { translation: ru },

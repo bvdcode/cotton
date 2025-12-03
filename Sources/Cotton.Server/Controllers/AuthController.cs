@@ -2,14 +2,15 @@
 // Copyright (c) 2025 Vadim Belov
 
 using Cotton.Database;
+using Cotton.Server.Models;
 using Cotton.Database.Models;
 using EasyExtensions.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using EasyExtensions.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using Cotton.Server.Models.Requests;
-using Cotton.Server.Models;
+using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.AspNetCore.Authorization.Abstractions;
 
 namespace Cotton.Server.Controllers
 {
@@ -38,7 +39,7 @@ namespace Cotton.Server.Controllers
             }
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
-                return NotFound();
+                return this.ApiUnauthorized("Invalid username or password");
             }
             var accessToken = _tokens.CreateToken(x => x.Add("sub", user.Id.ToString()));
             string refreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
