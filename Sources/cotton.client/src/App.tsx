@@ -24,7 +24,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route element={<Box />}>
+            <Route>
               {protectedRoutes.map(({ path, element }) => (
                 <Route key={path} path={path} element={element} />
               ))}
