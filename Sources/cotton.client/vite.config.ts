@@ -7,9 +7,10 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:5182",
+        target: "https://cotton.splidex.com",
         changeOrigin: true,
-        secure: false,
+        secure: true,
+        ws: true,
       },
     },
   },
