@@ -1,11 +1,9 @@
 using Npgsql;
 using NUnit.Framework;
 using System.Net.Http.Json;
-using Cotton.Server.Models;
 using Cotton.Storage.Abstractions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
-using Cotton.Server.Models.Requests;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -13,6 +11,7 @@ using Cotton.Server.IntegrationTests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using EasyExtensions.Models;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -99,7 +98,11 @@ public class AuthSmokeTests : IntegrationTestBase
     {
         Assert.That(_client, Is.Not.Null);
 
-        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("testuser", "testpassword"));
+        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", new UsernameLoginRequest()
+        {
+            Username = "testuser",
+            Password = "testpassword"
+        });
         response.EnsureSuccessStatusCode();
 
         var payload = await response.Content.ReadFromJsonAsync<LoginResponse>();
