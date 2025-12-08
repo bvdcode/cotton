@@ -8,6 +8,7 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using EasyExtensions.Models;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -85,7 +86,10 @@ public class ServerEndpointsTests : IntegrationTestBase
 
     private async Task<string> LoginAsync()
     {
-        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new Models.Requests.LoginRequest("testuser", "testpassword"));
+        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new UsernameLoginRequest()
+        {
+            Username = "testuser", Password = "testpassword"
+        });
         res.EnsureSuccessStatusCode();
         var login = await res.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.That(login, Is.Not.Null);
