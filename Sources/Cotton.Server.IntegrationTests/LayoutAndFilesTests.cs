@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using EasyExtensions.Models;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -157,7 +158,11 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
     private async Task<string> LoginAsync()
     {
-        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("testuser", "testpassword"));
+        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new UsernameLoginRequest()
+        {
+            Username = "testuser",
+            Password = "testpassword"
+        });
         res.EnsureSuccessStatusCode();
         var login = await res.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.That(login, Is.Not.Null);
