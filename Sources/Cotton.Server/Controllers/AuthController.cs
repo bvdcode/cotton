@@ -3,15 +3,14 @@
 
 using Cotton.Shared;
 using Cotton.Database;
-using Cotton.Server.Models;
-using Cotton.Database.Models;
+using EasyExtensions.Models;
 using EasyExtensions.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using EasyExtensions.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Models.Requests;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
+using EasyExtensions.EntityFrameworkCore.Database;
 
 namespace Cotton.Server.Controllers
 {
@@ -25,7 +24,7 @@ namespace Cotton.Server.Controllers
         private const int RefreshTokenLength = 64;
 
         [HttpPost("/api/v1/auth/login")]
-        public async Task<IActionResult> Login(LoginRequest request)
+        public async Task<IActionResult> Login(UsernameLoginRequest request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
@@ -59,7 +58,11 @@ namespace Cotton.Server.Controllers
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
             });
-            return Ok(new LoginResponse(accessToken, refreshToken));
+            return Ok(new LoginResponse()
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            });
         }
 
         [HttpPost("/api/v1/auth/refresh")]
@@ -100,7 +103,11 @@ namespace Cotton.Server.Controllers
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
             });
-            return Ok(new LoginResponse(accessToken, newRefreshToken));
+            return Ok(new LoginResponse()
+            {
+                AccessToken = accessToken,
+                RefreshToken = newRefreshToken
+            });
         }
 
         [HttpPost("/api/v1/auth/logout")]
