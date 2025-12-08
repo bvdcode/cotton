@@ -3,5 +3,8 @@
 
 namespace Cotton.Server.Models.Requests
 {
-    public record RefreshTokenRequest(string? RefreshToken);
+    public class RefreshTokenRequest
+    {
+        public string? RefreshToken { get; set; }
+    }
 }

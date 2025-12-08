@@ -70,7 +70,7 @@ namespace Cotton.Server.Controllers
             {
                 if (Request.Cookies.TryGetValue("refresh_token", out var cookieToken))
                 {
-                    request = request with { RefreshToken = cookieToken };
+                    request.RefreshToken = cookieToken;
                 }
             }
             var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == request.RefreshToken);
@@ -93,7 +93,41 @@ namespace Cotton.Server.Controllers
             };
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
+            Response.Cookies.Append("refresh_token", newRefreshToken, new CookieOptions
+            {
+                Secure = true,
+                HttpOnly = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
+            });
             return Ok(new LoginResponse(accessToken, newRefreshToken));
+        }
+
+        [HttpPost("/api/v1/auth/logout")]
+        public async Task<IActionResult> Logout(RefreshTokenRequest request)
+        {
+            // read from cookie if not provided in body
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                if (Request.Cookies.TryGetValue("refresh_token", out var cookieToken))
+                {
+                    request.RefreshToken = cookieToken;
+                }
+            }
+            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == request.RefreshToken);
+            if (dbToken != null && dbToken.RevokedAt == null)
+            {
+                dbToken.RevokedAt = DateTime.UtcNow;
+                await _dbContext.SaveChangesAsync();
+            }
+            Response.Cookies.Append("refresh_token", "", new CookieOptions
+            {
+                Secure = true,
+                HttpOnly = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(-1)
+            });
+            return Ok();
         }
     }
 }
