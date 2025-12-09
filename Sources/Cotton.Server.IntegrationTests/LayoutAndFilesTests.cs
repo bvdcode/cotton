@@ -16,6 +16,7 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using EasyExtensions.Models;
+using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -158,13 +159,13 @@ public class LayoutAndFilesTests : IntegrationTestBase
 
     private async Task<string> LoginAsync()
     {
-        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new UsernameLoginRequest()
+        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequestDto()
         {
             Username = "testuser",
             Password = "testpassword"
         });
         res.EnsureSuccessStatusCode();
-        var login = await res.Content.ReadFromJsonAsync<LoginResponse>();
+        var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         TestContext.Progress.WriteLine($"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
         return login.AccessToken;

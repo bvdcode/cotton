@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
 using EasyExtensions.Models;
+using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -97,12 +98,12 @@ public class LayoutEndpointsTests : IntegrationTestBase
 
     private async Task<string> LoginAsync()
     {
-        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new UsernameLoginRequest()
+        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequestDto()
         {
             Username = "testuser", Password = "testpassword"
         });
         res.EnsureSuccessStatusCode();
-        var login = await res.Content.ReadFromJsonAsync<LoginResponse>();
+        var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);
         return login!.AccessToken;
     }
