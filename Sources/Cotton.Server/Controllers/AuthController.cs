@@ -9,8 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 using EasyExtensions.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.EntityFrameworkCore.Database;
+using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using EasyExtensions.AspNetCore.Authorization.Abstractions;
 
 namespace Cotton.Server.Controllers
 {
@@ -24,7 +25,7 @@ namespace Cotton.Server.Controllers
         private const int RefreshTokenLength = 64;
 
         [HttpPost("/api/v1/auth/login")]
-        public async Task<IActionResult> Login(UsernameLoginRequest request)
+        public async Task<IActionResult> Login(LoginRequestDto request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
@@ -58,7 +59,7 @@ namespace Cotton.Server.Controllers
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
             });
-            return Ok(new LoginResponse()
+            return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
@@ -66,7 +67,7 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpPost("/api/v1/auth/refresh")]
-        public async Task<IActionResult> GetRefreshToken(RefreshTokenRequest request)
+        public async Task<IActionResult> GetRefreshToken(RefreshTokenRequestDto request)
         {
             // read from cookie if not provided in body
             if (string.IsNullOrEmpty(request.RefreshToken))
@@ -103,7 +104,7 @@ namespace Cotton.Server.Controllers
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
             });
-            return Ok(new LoginResponse()
+            return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
                 RefreshToken = newRefreshToken
@@ -111,7 +112,7 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpPost("/api/v1/auth/logout")]
-        public async Task<IActionResult> Logout(RefreshTokenRequest request)
+        public async Task<IActionResult> Logout(RefreshTokenRequestDto request)
         {
             // read from cookie if not provided in body
             if (string.IsNullOrEmpty(request.RefreshToken))
@@ -127,13 +128,7 @@ namespace Cotton.Server.Controllers
                 dbToken.RevokedAt = DateTime.UtcNow;
                 await _dbContext.SaveChangesAsync();
             }
-            Response.Cookies.Append("refresh_token", "", new CookieOptions
-            {
-                Secure = true,
-                HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(-1)
-            });
+            Response.Cookies.Delete("refresh_token");
             return Ok();
         }
     }
