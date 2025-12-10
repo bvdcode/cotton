@@ -31,19 +31,17 @@ namespace Cotton.Server
             builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageProcessor, FileSystemStorageProcessor>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
-                //.AddScoped<IStorageProcessor, CompressionProcessor>()
+                .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<StorageLayoutService>()
                 .AddPbkdf2PasswordHashService()
                 .AddControllers().Services
                 .AddStreamCipher()
-                .AddCottonCors()
                 .AddJwt();
 
             var app = builder.Build();
             app.UseDefaultFiles();
             app.MapStaticAssets();
-            app.UseCottonCors();
             app.UseAuthentication()
                 .UseAuthorization();
             app.MapControllers();
