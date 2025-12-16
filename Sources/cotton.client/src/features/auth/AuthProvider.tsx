@@ -19,10 +19,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isInitializing = useAuthStore((s) => s.isInitializing);
   const refreshEnabled = useAuthStore((s) => s.refreshEnabled);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const hasChecked = useAuthStore((s) => s.hasChecked);
   const setInitializing = useAuthStore((s) => s.setInitializing);
   const setAuthenticatedInStore = useAuthStore((s) => s.setAuthenticated);
   const setUnauthenticated = useAuthStore((s) => s.setUnauthenticated);
   const logoutLocal = useAuthStore((s) => s.logoutLocal);
+  const setHasChecked = useAuthStore((s) => s.setHasChecked);
 
   useEffect(() => {
     // Listen for logout event from httpClient interceptor
@@ -38,6 +41,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const ensureAuth = useCallback(async () => {
     if (isAuthenticated || isInitializing) return;
+    if (!hydrated) return;
     if (!refreshEnabled) return;
 
     setInitializing(true);
@@ -53,9 +57,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error("Failed to fetch user data:", error);
       setUnauthenticated();
     } finally {
+      setHasChecked(true);
       setInitializing(false);
     }
-  }, [isAuthenticated, isInitializing, refreshEnabled, setInitializing, setAuthenticatedInStore, setUnauthenticated]);
+  }, [isAuthenticated, isInitializing, hydrated, refreshEnabled, setInitializing, setAuthenticatedInStore, setUnauthenticated, setHasChecked]);
 
   const setAuthenticated = useCallback((value: boolean, u?: User | null) => {
     if (value && u) {
@@ -81,6 +86,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isAuthenticated,
     isInitializing,
+    refreshEnabled,
+    hydrated,
+    hasChecked,
     ensureAuth,
     setAuthenticated,
     logout,
