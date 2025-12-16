@@ -21,6 +21,7 @@ export interface AuthState {
  * Auth context value with state and actions
  */
 export interface AuthContextValue extends AuthState {
+  ensureAuth: () => Promise<void>;
   setAuthenticated: (value: boolean, user?: User | null) => void;
   logout: () => Promise<void>;
 }
