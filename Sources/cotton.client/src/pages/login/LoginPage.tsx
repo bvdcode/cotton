@@ -8,25 +8,45 @@ import {
 } from "@mui/material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { authApi } from "../../shared/api/authApi";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
+import Loader from "../../shared/ui/Loader";
 
 export const LoginPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation("login");
   const [error, setError] = useState("");
-  const { isAuthenticated, isInitializing, setAuthenticated } = useAuth();
+  const {
+    isAuthenticated,
+    isInitializing,
+    hydrated,
+    refreshEnabled,
+    hasChecked,
+    ensureAuth,
+    setAuthenticated,
+  } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // If we can silently restore a session, do it and keep loader overlay while it runs.
+    if (!hydrated) return;
+    if (!refreshEnabled) return;
+    if (isAuthenticated) return;
+    if (hasChecked) return;
+    ensureAuth();
+  }, [hydrated, refreshEnabled, isAuthenticated, hasChecked, ensureAuth]);
 
   // Redirect to home if already authenticated
   if (!isInitializing && isAuthenticated) {
     const from = (location.state as { from?: string })?.from || "/";
     return <Navigate to={from} replace />;
   }
+
+  const showRestoreOverlay = hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -47,7 +67,15 @@ export const LoginPage = () => {
   };
 
   return (
-    <Container maxWidth="sm">
+    <>
+      {(isInitializing || showRestoreOverlay) && (
+        <Loader
+          overlay={true}
+          title="Restoring session..."
+          caption="Please, wait"
+        />
+      )}
+      <Container maxWidth="sm">
       <Paper
         sx={{
           mt: 8,
@@ -100,6 +128,7 @@ export const LoginPage = () => {
           </Button>
         </Box>
       </Paper>
-    </Container>
+      </Container>
+    </>
   );
 };

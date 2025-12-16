@@ -15,6 +15,9 @@ export interface AuthState {
   user: User | null; // optional snapshot for UI
   isAuthenticated: boolean; // gate-only flag
   isInitializing: boolean; // boot spinner
+  refreshEnabled: boolean; // blocks refresh after explicit logout
+  hydrated: boolean; // store hydration complete
+  hasChecked: boolean; // at least one auth-check attempted this session
 }
 
 /**
