@@ -17,7 +17,7 @@ const appRoutes: RouteConfig[] = [
     protected: true,
     displayName: "Home",
     element: (
-      <Box bgcolor="green" width="100%" height="100%">
+      <Box bgcolor="#3a9b6f2a" width="100%" height="100%">
         Home
       </Box>
     ),
@@ -28,12 +28,17 @@ const appRoutes: RouteConfig[] = [
     icon: <Dashboard />,
     displayName: "Dashboard",
     element: (
-      <Box width="100%" bgcolor="red" display="flex" flexDirection="column">
+      <Box
+        width="100%"
+        bgcolor="#fc6a6a3b"
+        display="flex"
+        flexDirection="column"
+      >
         Dashboard
         {/* Generate 100 random rows */}
         <Box>
           {Array.from({ length: 100 }).map((_, index) => (
-            <Box key={index} p={1} borderBottom="1px solid #ccc">
+            <Box key={index} p={1} borderBottom="1px solid #cccccc56">
               Row {index + 1}
             </Box>
           ))}

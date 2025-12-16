@@ -42,9 +42,9 @@ export const authApi = {
   me: async (): Promise<User> => {
     const response = await httpClient.get<UserInfoResponse>("auth/me");
     return {
-      id: response.data.id,
-      username: response.data.username,
-      displayName: response.data.displayName,
+      id: response.data.id ?? "",
+      username: response.data.username ?? "Unknown",
+      displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
     };
   },
