@@ -1,17 +1,18 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2025 Vadim Belov
 
-using Cotton.Shared;
 using Cotton.Database;
-using EasyExtensions.Models;
-using EasyExtensions.Helpers;
-using Microsoft.AspNetCore.Mvc;
+using Cotton.Shared;
+using EasyExtensions;
 using EasyExtensions.Abstractions;
-using Microsoft.EntityFrameworkCore;
+using EasyExtensions.AspNetCore.Authorization.Abstractions;
+using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
-using EasyExtensions.AspNetCore.Authorization.Models.Dto;
-using EasyExtensions.AspNetCore.Authorization.Abstractions;
+using EasyExtensions.Helpers;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
@@ -23,6 +24,25 @@ namespace Cotton.Server.Controllers
         IPasswordHashService _hasher) : ControllerBase
     {
         private const int RefreshTokenLength = 64;
+        private const string CookieRefreshTokenKey = "refresh_token";
+
+        [Authorize]
+        [HttpGet("/api/v1/auth/me")]
+        public async Task<IActionResult> Me()
+        {
+            var userId = User.GetUserId();
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return this.ApiUnauthorized("User not found");
+            }
+            return Ok(new
+            {
+                user.Id,
+                user.Username,
+                DisplayName = user.Username,
+            });
+        }
 
         [HttpPost("/api/v1/auth/login")]
         public async Task<IActionResult> Login(LoginRequestDto request)
@@ -52,13 +72,7 @@ namespace Cotton.Server.Controllers
             };
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
-            Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
-            {
-                Secure = true,
-                HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
-            });
+            AddRefreshTokenToCookies(refreshToken);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
@@ -67,17 +81,16 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpPost("/api/v1/auth/refresh")]
-        public async Task<IActionResult> GetRefreshToken(RefreshTokenRequestDto request)
+        public async Task<IActionResult> GetRefreshToken([FromQuery] string? refreshToken = null)
         {
-            // read from cookie if not provided in body
-            if (string.IsNullOrEmpty(request.RefreshToken))
+            if (string.IsNullOrEmpty(refreshToken))
             {
-                if (Request.Cookies.TryGetValue("refresh_token", out var cookieToken))
+                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out var cookieToken))
                 {
-                    request.RefreshToken = cookieToken;
+                    refreshToken = cookieToken;
                 }
             }
-            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == request.RefreshToken);
+            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshToken);
             if (dbToken == null || dbToken.RevokedAt != null)
             {
                 return NotFound();
@@ -97,13 +110,7 @@ namespace Cotton.Server.Controllers
             };
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
-            Response.Cookies.Append("refresh_token", newRefreshToken, new CookieOptions
-            {
-                Secure = true,
-                HttpOnly = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
-            });
+            AddRefreshTokenToCookies(newRefreshToken);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
@@ -112,24 +119,34 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpPost("/api/v1/auth/logout")]
-        public async Task<IActionResult> Logout(RefreshTokenRequestDto request)
+        public async Task<IActionResult> Logout([FromQuery] string? refreshToken = null)
         {
-            // read from cookie if not provided in body
-            if (string.IsNullOrEmpty(request.RefreshToken))
+            if (string.IsNullOrEmpty(refreshToken))
             {
-                if (Request.Cookies.TryGetValue("refresh_token", out var cookieToken))
+                if (Request.Cookies.TryGetValue(CookieRefreshTokenKey, out var cookieToken))
                 {
-                    request.RefreshToken = cookieToken;
+                    refreshToken = cookieToken;
                 }
             }
-            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == request.RefreshToken);
+            var dbToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshToken);
             if (dbToken != null && dbToken.RevokedAt == null)
             {
                 dbToken.RevokedAt = DateTime.UtcNow;
                 await _dbContext.SaveChangesAsync();
             }
-            Response.Cookies.Delete("refresh_token");
+            Response.Cookies.Delete(CookieRefreshTokenKey);
             return Ok();
+        }
+
+        private void AddRefreshTokenToCookies(string refreshToken)
+        {
+            Response.Cookies.Append(CookieRefreshTokenKey, refreshToken, new CookieOptions
+            {
+                Secure = true,
+                HttpOnly = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
+            });
         }
     }
 }
