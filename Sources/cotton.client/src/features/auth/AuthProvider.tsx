@@ -22,21 +22,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      console.log("[AuthProvider] Starting initialization...");
       // Attempt silent refresh before finishing initialization
       const token = await authApi.refresh();
+      console.log("[AuthProvider] Refresh result:", token ? "token received" : "no token");
       if (!mounted) return;
 
       // If token received, validate it by fetching user data
       if (token) {
         try {
           const userData = await authApi.me();
+          console.log("[AuthProvider] User data fetched:", userData);
           if (mounted) {
             setUser(userData);
             setIsAuthenticated(true);
           }
         } catch (error) {
           // Token invalid or /me failed
-          console.error("Failed to fetch user data:", error);
+          console.error("[AuthProvider] Failed to fetch user data:", error);
           if (mounted) {
             setIsAuthenticated(false);
             setUser(null);
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (mounted) {
+        console.log("[AuthProvider] Initialization complete. isAuthenticated:", !!token);
         setIsInitializing(false);
       }
     })();

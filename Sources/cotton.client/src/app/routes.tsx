@@ -52,19 +52,15 @@ export function AppRoutes() {
         ))}
       </Route>
 
-      <Route element={<AppLayout routes={appRoutes} />}>
+      <Route
+        element={
+          <RequireAuth>
+            <AppLayout routes={appRoutes} />
+          </RequireAuth>
+        }
+      >
         {appRoutes.map((route) => (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={
-              route.protected ? (
-                <RequireAuth>{route.element}</RequireAuth>
-              ) : (
-                route.element
-              )
-            }
-          />
+          <Route key={route.path} path={route.path} element={route.element} />
         ))}
       </Route>
 

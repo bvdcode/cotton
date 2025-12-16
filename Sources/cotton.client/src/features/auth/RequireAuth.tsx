@@ -11,7 +11,10 @@ export function RequireAuth({ children }: Props) {
   const { isAuthenticated, isInitializing } = useAuth();
   const location = useLocation();
 
+  console.log("[RequireAuth] Checking auth:", { isInitializing, isAuthenticated, path: location.pathname });
+
   if (isInitializing) {
+    console.log("[RequireAuth] Still initializing, showing loader");
     return (
       <Loader
         overlay={true}
@@ -22,8 +25,10 @@ export function RequireAuth({ children }: Props) {
   }
 
   if (!isAuthenticated) {
+    console.log("[RequireAuth] Not authenticated, redirecting to /login");
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
+  console.log("[RequireAuth] Authenticated, rendering children");
   return <>{children}</>;
 }
