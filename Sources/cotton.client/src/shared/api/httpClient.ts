@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { getRefreshEnabled } from "../store";
 
 let accessToken: string | null = null;
 export const getAccessToken = () => accessToken;
@@ -15,6 +16,10 @@ export const clearAccessToken = () => {
  */
 export const refreshAccessToken = async (): Promise<string | null> => {
   try {
+    if (!getRefreshEnabled()) {
+      clearAccessToken();
+      return null;
+    }
     const response = await httpClient.post(
       "auth/refresh",
       {},
@@ -76,6 +81,15 @@ httpClient.interceptors.response.use(
       // Don't retry on auth endpoints themselves
       const url = originalRequest.url || "";
       if (url.includes("auth/login") || url.includes("auth/refresh")) {
+        return Promise.reject(error);
+      }
+
+      // If refresh is disabled (explicit logout), never attempt refresh.
+      if (!getRefreshEnabled()) {
+        clearAccessToken();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("auth:logout"));
+        }
         return Promise.reject(error);
       }
 
