@@ -1,4 +1,3 @@
-import { useState, type MouseEvent, useMemo } from "react";
 import {
   Avatar,
   IconButton,
@@ -19,6 +18,7 @@ import {
 import { useAuth } from "../../../features/auth";
 import { useTheme } from "../../providers";
 import { useTranslation } from "react-i18next";
+import { useState, type MouseEvent, useMemo } from "react";
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
@@ -54,7 +54,10 @@ export const UserMenu = () => {
   const displayName = user?.displayName || user?.username || "User";
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const themeLabel = useMemo(
-    () => (resolvedMode === "dark" ? t("userMenu.darkMode") : t("userMenu.lightMode")),
+    () =>
+      resolvedMode === "dark"
+        ? t("userMenu.darkMode")
+        : t("userMenu.lightMode"),
     [resolvedMode, t],
   );
   const ThemeIcon = resolvedMode === "dark" ? Brightness7 : Brightness4;
@@ -67,6 +70,9 @@ export const UserMenu = () => {
         aria-controls={isOpen ? "user-menu" : undefined}
         aria-haspopup="true"
         aria-expanded={isOpen ? "true" : undefined}
+        sx={{
+          padding: 0,
+        }}
       >
         <Avatar
           alt={displayName}

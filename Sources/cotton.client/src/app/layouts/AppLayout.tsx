@@ -21,7 +21,12 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
       }}
     >
       <AppBar position="static" elevation={1}>
-        <Toolbar>
+        <Toolbar
+          disableGutters
+          sx={{
+            px: { xs: 2, sm: 2 },
+          }}
+        >
           <Box sx={{ display: "flex", gap: 1, flexGrow: 1 }}>
             {routes.map((route) => {
               const isActive = location.pathname === route.path;
