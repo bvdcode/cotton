@@ -24,8 +24,6 @@ export const useAuthStore = create<AuthStoreState>()(
       user: null,
       isAuthenticated: false,
       isInitializing: false,
-      // Allow trying to restore session by default.
-      // Explicit logout will persist `refreshEnabled=false` to block refresh attempts.
       refreshEnabled: true,
       hydrated: false,
       hasChecked: false,
@@ -49,7 +47,6 @@ export const useAuthStore = create<AuthStoreState>()(
           hasChecked: true,
         }),
 
-      // Explicit user logout: also disables refresh until next login.
       logoutLocal: () =>
         set({
           user: null,
