@@ -1,0 +1,8 @@
+{
+  "title": "Sign in to your account",
+  "usernameLabel": "Username",
+  "passwordLabel": "Password",
+  "loginButton": "Login",
+  "loggingIn": "Logging in...",
+  "errorMessage": "Login failed. Check your credentials."
+}
