@@ -13,10 +13,12 @@ namespace Cotton.Server.Controllers
         [HttpGet("/api/v1/settings")]
         public async Task<IActionResult> GetSettings()
         {
+            bool serverHasUsers = await _settings.ServerHasUsersAsync();
             bool isServerInitialized = await _settings.IsServerInitializedAsync();
             int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
             var settings = new
             {
+                serverHasUsers,
                 maxChunkSizeBytes,
                 isServerInitialized,
                 Hasher.SupportedHashAlgorithm,
