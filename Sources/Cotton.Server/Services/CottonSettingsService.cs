@@ -1,0 +1,23 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using Cotton.Database;
+using Cotton.Database.Models;
+
+namespace Cotton.Server.Services
+{
+    public class CottonSettingsService(CottonDbContext _dbContext)
+    {
+        const int defaultEncryptionThreads = 2;
+        const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
+        const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
+
+        //[nameof(CottonServerSettings.EncryptionThreads)] = defaultEncryptionThreads.ToString(),
+        //[nameof(CottonServerSettings.MaxChunkSizeBytes)] = defaultMaxChunkSizeBytes.ToString(),
+        //[nameof(CottonServerSettings.CipherChunkSizeBytes)] = defaultCipherChunkSizeBytes.ToString(),
+        internal CottonServerSettings GetServerSettings()
+        {
+            throw new NotImplementedException();
+        }
+    }
+}

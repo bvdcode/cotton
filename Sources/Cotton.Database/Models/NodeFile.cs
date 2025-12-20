@@ -1,8 +1,8 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
 
-using Cotton.Validators;
 using Cotton.Database.Abstractions;
+using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 

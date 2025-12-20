@@ -1,6 +1,9 @@
-﻿using Cotton.Shared;
-using EasyExtensions.Crypto;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
 using Cotton.Autoconfig.Extensions;
+using Cotton.Shared;
+using EasyExtensions.Crypto;
 using Microsoft.Extensions.Configuration;
 
 namespace Cotton.Autoconfig.Tests
@@ -53,14 +56,14 @@ namespace Cotton.Autoconfig.Tests
             using (Assert.EnterMultipleScope())
             {
                 // Assert exact values
-                Assert.That(cfg[nameof(CottonSettings.Pepper)], Is.EqualTo(expectedPepper));
-                Assert.That(cfg[nameof(CottonSettings.MasterEncryptionKey)], Is.EqualTo(expectedMaster));
-                Assert.That(cfg[nameof(CottonSettings.MasterEncryptionKeyId)], Is.EqualTo("1"));
+                Assert.That(cfg[nameof(CottonEncryptionSettings.Pepper)], Is.EqualTo(expectedPepper));
+                Assert.That(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKey)], Is.EqualTo(expectedMaster));
+                Assert.That(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKeyId)], Is.EqualTo("1"));
             }
 
             // And base64 decodes to required length
-            var pepperBytes = Convert.FromBase64String(cfg[nameof(CottonSettings.Pepper)]!);
-            var masterBytes = Convert.FromBase64String(cfg[nameof(CottonSettings.MasterEncryptionKey)]!);
+            var pepperBytes = Convert.FromBase64String(cfg[nameof(CottonEncryptionSettings.Pepper)]!);
+            var masterBytes = Convert.FromBase64String(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKey)]!);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(pepperBytes, Has.Length.EqualTo(ConfigurationBuilderExtensions.DefaultKeyLength));
@@ -76,13 +79,13 @@ namespace Cotton.Autoconfig.Tests
 
             Environment.SetEnvironmentVariable(EnvVar, rootA);
             var cfgA = new ConfigurationBuilder().AddCottonOptions().Build();
-            string pepperA = cfgA[nameof(CottonSettings.Pepper)]!;
-            string masterA = cfgA[nameof(CottonSettings.MasterEncryptionKey)]!;
+            string pepperA = cfgA[nameof(CottonEncryptionSettings.Pepper)]!;
+            string masterA = cfgA[nameof(CottonEncryptionSettings.MasterEncryptionKey)]!;
 
             Environment.SetEnvironmentVariable(EnvVar, rootB);
             var cfgB = new ConfigurationBuilder().AddCottonOptions().Build();
-            string pepperB = cfgB[nameof(CottonSettings.Pepper)]!;
-            string masterB = cfgB[nameof(CottonSettings.MasterEncryptionKey)]!;
+            string pepperB = cfgB[nameof(CottonEncryptionSettings.Pepper)]!;
+            string masterB = cfgB[nameof(CottonEncryptionSettings.MasterEncryptionKey)]!;
 
             using (Assert.EnterMultipleScope())
             {

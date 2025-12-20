@@ -1,10 +1,13 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Storage.Abstractions;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
-using Cotton.Server.IntegrationTests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Server.IntegrationTests.Common;
 

@@ -1,6 +1,9 @@
-﻿using System.Text;
-using NUnit.Framework;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
 using Cotton.Server.IntegrationTests.Helpers;
+using NUnit.Framework;
+using System.Text;
 
 namespace Cotton.Server.IntegrationTests
 {

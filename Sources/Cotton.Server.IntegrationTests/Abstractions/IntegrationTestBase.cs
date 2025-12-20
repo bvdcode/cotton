@@ -1,6 +1,9 @@
-﻿using Npgsql;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Cotton.Server.IntegrationTests.Abstractions
 {

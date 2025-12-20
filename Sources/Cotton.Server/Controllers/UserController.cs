@@ -1,9 +1,12 @@
-﻿using Mapster;
-using EasyExtensions;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
-using Microsoft.AspNetCore.Mvc;
+using EasyExtensions;
+using Mapster;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
 {
