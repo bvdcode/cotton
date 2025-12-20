@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class ServerController(CottonSettingsService _settings) : ControllerBase
+    public class ServerController(SettingsProvider _settings) : ControllerBase
     {
         [HttpGet("/api/v1/settings")]
         public async Task<IActionResult> GetSettings()

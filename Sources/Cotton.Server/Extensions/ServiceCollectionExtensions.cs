@@ -24,7 +24,7 @@ namespace Cotton.Server.Extensions
                 // Derive 32-byte key (SHA-256 of provided string)
                 byte[] keyMaterial = Hasher.HashData(Encoding.UTF8.GetBytes(settings.MasterEncryptionKey));
                 int keyId = settings.MasterEncryptionKeyId;
-                CottonSettingsService settingsService = sp.GetRequiredService<CottonSettingsService>();
+                SettingsProvider settingsService = sp.GetRequiredService<SettingsProvider>();
                 CottonServerSettings serverSettings = settingsService.GetServerSettings();
                 int? threads = serverSettings.EncryptionThreads > 0 ? serverSettings.EncryptionThreads : null;
                 return new AesGcmStreamCipher(keyMaterial, keyId, threads);

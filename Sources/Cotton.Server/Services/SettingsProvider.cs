@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    public class CottonSettingsService(CottonDbContext _dbContext)
+    public class SettingsProvider(CottonDbContext _dbContext)
     {
         const int defaultEncryptionThreads = 2;
         const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;

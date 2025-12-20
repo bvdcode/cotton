@@ -19,7 +19,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class AuthController(
         ITokenProvider _tokens,
-        CottonSettingsService _settings,
+        SettingsProvider _settings,
         CottonDbContext _dbContext,
         IPasswordHashService _hasher) : ControllerBase
     {
