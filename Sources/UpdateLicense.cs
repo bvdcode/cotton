@@ -1,5 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+// Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using System;
 using System.IO;
@@ -9,7 +9,7 @@ using System.Text;
 class Program
 {
     private const int StartYear = 2025;
-    private const string Author = "Vadim Belov | bvdcode | belov.us";
+    private const string Author = "Vadim Belov <https://belov.us>";
     private const string Spdx = "MIT";
 
     static void Main(string[] args)

@@ -1,9 +1,8 @@
 ﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+// Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace Cotton.Server.Controllers
 {
