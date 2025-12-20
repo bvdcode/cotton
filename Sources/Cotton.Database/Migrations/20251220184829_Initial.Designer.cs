@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251104063841_Initial")]
+    [Migration("20251220184829_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -20,9 +20,10 @@ namespace Cotton.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.10")
+                .HasAnnotation("ProductVersion", "10.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Cotton.Database.Models.Chunk", b =>
@@ -30,6 +31,10 @@ namespace Cotton.Database.Migrations
                     b.Property<byte[]>("Hash")
                         .HasColumnType("bytea")
                         .HasColumnName("hash");
+
+                    b.Property<int>("CompressionAlgorithm")
+                        .HasColumnType("integer")
+                        .HasColumnName("compression_algorithm");
 
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
@@ -72,6 +77,59 @@ namespace Cotton.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("chunk_ownerships");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.CottonServerSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowCrossUserDeduplication")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_cross_user_deduplication");
+
+                    b.Property<bool>("AllowGlobalIndexing")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_global_indexing");
+
+                    b.Property<int>("CipherChunkSizeBytes")
+                        .HasColumnType("integer")
+                        .HasColumnName("cipher_chunk_size_bytes");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("EncryptionThreads")
+                        .HasColumnType("integer")
+                        .HasColumnName("encryption_threads");
+
+                    b.Property<int>("MaxChunkSizeBytes")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_chunk_size_bytes");
+
+                    b.Property<int>("SessionTimeoutHours")
+                        .HasColumnType("integer")
+                        .HasColumnName("session_timeout_hours");
+
+                    b.Property<bool>("TelemetryEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("telemetry_enabled");
+
+                    b.Property<string>("Timezone")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("timezone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("server_settings");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
@@ -292,7 +350,7 @@ namespace Cotton.Database.Migrations
 
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("citext")
                         .HasColumnName("username");
 
                     b.HasKey("Id");
@@ -301,6 +359,42 @@ namespace Cotton.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("EasyExtensions.EntityFrameworkCore.Database.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("token");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("refresh_tokens");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.ChunkOwnership", b =>
@@ -386,7 +480,7 @@ namespace Cotton.Database.Migrations
                         .IsRequired();
 
                     b.HasOne("Cotton.Database.Models.Node", "Node")
-                        .WithMany("LayoutNodeFiles")
+                        .WithMany("NodeFiles")
                         .HasForeignKey("NodeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -418,7 +512,7 @@ namespace Cotton.Database.Migrations
                 {
                     b.Navigation("Children");
 
-                    b.Navigation("LayoutNodeFiles");
+                    b.Navigation("NodeFiles");
                 });
 #pragma warning restore 612, 618
         }
