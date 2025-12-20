@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Vadim Belov
 
 using Cotton.Database;
-using Cotton.Shared;
+using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
@@ -19,7 +19,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class AuthController(
         ITokenProvider _tokens,
-        CottonSettings _settings,
+        CottonSettingsService _settings,
         CottonDbContext _dbContext,
         IPasswordHashService _hasher) : ControllerBase
     {
@@ -140,12 +140,13 @@ namespace Cotton.Server.Controllers
 
         private void AddRefreshTokenToCookies(string refreshToken)
         {
+            int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
             Response.Cookies.Append(CookieRefreshTokenKey, refreshToken, new CookieOptions
             {
                 Secure = true,
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
+                Expires = DateTimeOffset.UtcNow.AddDays(sessionTimeoutHours)
             });
         }
     }

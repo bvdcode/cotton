@@ -17,7 +17,17 @@ namespace Cotton.Server.Services
         //[nameof(CottonServerSettings.CipherChunkSizeBytes)] = defaultCipherChunkSizeBytes.ToString(),
         internal CottonServerSettings GetServerSettings()
         {
-            throw new NotImplementedException();
+            return new()
+            {
+                AllowCrossUserDeduplication = false,
+                AllowGlobalIndexing = false,
+                CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                EncryptionThreads = defaultEncryptionThreads,
+                MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
+                SessionTimeoutHours = 24 * 30,
+                TelemetryEnabled = true,
+                Timezone = "America/Los_Angeles"
+            };
         }
     }
 }
