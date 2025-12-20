@@ -16,7 +16,7 @@ namespace Cotton.Server.Services
         //[nameof(CottonServerSettings.EncryptionThreads)] = defaultEncryptionThreads.ToString(),
         //[nameof(CottonServerSettings.MaxChunkSizeBytes)] = defaultMaxChunkSizeBytes.ToString(),
         //[nameof(CottonServerSettings.CipherChunkSizeBytes)] = defaultCipherChunkSizeBytes.ToString(),
-        public static CottonServerSettings GetServerSettings()
+        public CottonServerSettings GetServerSettings()
         {
             return new()
             {
