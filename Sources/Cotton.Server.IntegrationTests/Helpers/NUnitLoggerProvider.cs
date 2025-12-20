@@ -1,5 +1,8 @@
-using NUnit.Framework;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
 using Microsoft.Extensions.Logging;
+using NUnit.Framework;
 
 namespace Cotton.Server.IntegrationTests.Helpers;
 

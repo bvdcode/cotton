@@ -1,7 +1,10 @@
-﻿using Cotton.Database;
-using Cotton.Validators;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Topology

@@ -1,4 +1,6 @@
-﻿using System.IO.Compression;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
 using Cotton.Storage.Abstractions;
 
 namespace Cotton.Storage.Processors

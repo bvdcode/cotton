@@ -1,4 +1,7 @@
-﻿using Cotton.Shared;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using Cotton.Shared;
 using EasyExtensions.Crypto;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Configuration;
@@ -39,9 +42,6 @@ namespace Cotton.Autoconfig.Extensions
             string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", DefaultKeyLength);
             string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", DefaultKeyLength);
 
-            const int defaultEncryptionThreads = 2;
-            const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
-            const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
 
             var dict = new Dictionary<string, string?>
             {
@@ -52,12 +52,9 @@ namespace Cotton.Autoconfig.Extensions
                 ["DatabaseSettings:Username"] = postgresUser,
                 ["DatabaseSettings:Password"] = postgresPass,
 
-                [nameof(CottonSettings.Pepper)] = pepper,
-                [nameof(CottonSettings.MasterEncryptionKey)] = masterEncryptionKey,
-                [nameof(CottonSettings.MasterEncryptionKeyId)] = masterKeyId.ToString(),
-                [nameof(CottonSettings.EncryptionThreads)] = defaultEncryptionThreads.ToString(),
-                [nameof(CottonSettings.MaxChunkSizeBytes)] = defaultMaxChunkSizeBytes.ToString(),
-                [nameof(CottonSettings.CipherChunkSizeBytes)] = defaultCipherChunkSizeBytes.ToString(),
+                [nameof(CottonEncryptionSettings.Pepper)] = pepper,
+                [nameof(CottonEncryptionSettings.MasterEncryptionKey)] = masterEncryptionKey,
+                [nameof(CottonEncryptionSettings.MasterEncryptionKeyId)] = masterKeyId.ToString(),
             };
 
             return configurationBuilder.AddInMemoryCollection(dict);

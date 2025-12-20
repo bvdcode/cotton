@@ -1,23 +1,22 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
 
-using Cotton.Shared;
-using EasyExtensions;
-using Cotton.Topology;
 using Cotton.Database;
-using System.Diagnostics;
-using Cotton.Server.Models;
 using Cotton.Database.Models;
+using Cotton.Server.Models;
 using Cotton.Server.Services;
-using Microsoft.AspNetCore.Mvc;
 using Cotton.Storage.Abstractions;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
+using Cotton.Topology;
+using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
-    public class ChunkController(CottonDbContext _dbContext, CottonSettings _settings,
+    public class ChunkController(CottonDbContext _dbContext, CottonServerSettings _settings,
         IStoragePipeline _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
@@ -98,7 +97,7 @@ namespace Cotton.Server.Controllers
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
             }
-            
+
             _logger.LogInformation("3: Chunk stored in storage after {ElapsedMilliseconds} ms", sw.ElapsedMilliseconds);
             sw.Restart();
 

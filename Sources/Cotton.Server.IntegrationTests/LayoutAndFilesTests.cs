@@ -1,22 +1,23 @@
-﻿using Npgsql;
-using System.Net;
-using System.Text;
-using NUnit.Framework;
-using System.Net.Http.Json;
-using Cotton.Server.Models;
-using Cotton.Server.Services;
-using System.Net.Http.Headers;
-using Cotton.Server.Models.Dto;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
 using Cotton.Database.Models.Enums;
-using Microsoft.EntityFrameworkCore;
-using Cotton.Server.Models.Requests;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore.Storage;
-using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.IntegrationTests.Abstractions;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using EasyExtensions.Models;
+using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
+using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
+using NUnit.Framework;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
 

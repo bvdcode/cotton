@@ -1,4 +1,7 @@
-﻿using EasyExtensions.Models.Dto;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using EasyExtensions.Models.Dto;
 
 namespace Cotton.Server.Models.Dto
 {

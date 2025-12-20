@@ -1,16 +1,17 @@
-using Npgsql;
-using NUnit.Framework;
-using System.Net.Http.Json;
-using Cotton.Server.Models;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using Cotton.Server.IntegrationTests.Abstractions;
+using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
-using System.Net.Http.Headers;
+using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
-using Cotton.Server.IntegrationTests.Common;
-using Cotton.Server.IntegrationTests.Abstractions;
-using EasyExtensions.Models;
-using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using Npgsql;
+using NUnit.Framework;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -100,7 +101,8 @@ public class LayoutEndpointsTests : IntegrationTestBase
     {
         var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequestDto()
         {
-            Username = "testuser", Password = "testpassword"
+            Username = "testuser",
+            Password = "testpassword"
         });
         res.EnsureSuccessStatusCode();
         var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();

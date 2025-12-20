@@ -1,20 +1,20 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
 
-using Mapster;
-using EasyExtensions;
-using Cotton.Topology;
 using Cotton.Database;
-using Cotton.Validators;
-using Cotton.Server.Models;
 using Cotton.Database.Models;
-using Microsoft.AspNetCore.Mvc;
-using Cotton.Server.Models.Dto;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Models;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
+using Cotton.Topology;
+using Cotton.Validators;
+using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
+using Mapster;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
@@ -83,11 +83,11 @@ namespace Cotton.Server.Controllers
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
             bool nameExists = await _dbContext.Nodes
-                .AnyAsync(x => 
-                    x.ParentId == parentNode.Id && 
-                    x.OwnerId == userId && 
-                    x.NameKey == nameKey && 
-                    x.LayoutId == layout.Id && 
+                .AnyAsync(x =>
+                    x.ParentId == parentNode.Id &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey &&
+                    x.LayoutId == layout.Id &&
                     x.Type == NodeType.Default);
             if (nameExists)
             {
