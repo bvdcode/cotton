@@ -1,17 +1,1 @@
-mode: ContinuousDeployment
-next-version: 0.0.1
-branches:
-  main:
-    tag: ''
-    increment: Patch
-    prevent-increment-of-merged-branch-version: true
-  develop:
-    tag: dev
-    increment: Minor
-    prevent-increment-of-merged-branch-version: false
-  feature:
-    tag: feat-{BranchName}
-    increment: Minor
-  hotfix:
-    tag: hotfix
-    increment: Patch
+next-version: 1.0.0

@@ -1,0 +1,8 @@
+{
+  "title": "Войдите в аккаунт",
+  "usernameLabel": "Имя пользователя",
+  "passwordLabel": "Пароль",
+  "loginButton": "Войти",
+  "loggingIn": "Вход...",
+  "errorMessage": "Ошибка входа. Проверьте данные."
+}
