@@ -1,6 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
-// Copyright (c) 2025 Vadim Belov <https://belov.us>
-
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -13,12 +11,16 @@ namespace Cotton.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:citext", ",,");
+
             migrationBuilder.CreateTable(
                 name: "chunks",
                 columns: table => new
                 {
                     hash = table.Column<byte[]>(type: "bytea", nullable: false),
-                    size_bytes = table.Column<long>(type: "bigint", nullable: false)
+                    size_bytes = table.Column<long>(type: "bigint", nullable: false),
+                    compression_algorithm = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -39,11 +41,48 @@ namespace Cotton.Database.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "refresh_tokens",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    token = table.Column<string>(type: "text", nullable: false),
+                    revoked_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_refresh_tokens", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "server_settings",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    encryption_threads = table.Column<int>(type: "integer", nullable: false),
+                    cipher_chunk_size_bytes = table.Column<int>(type: "integer", nullable: false),
+                    max_chunk_size_bytes = table.Column<int>(type: "integer", nullable: false),
+                    session_timeout_hours = table.Column<int>(type: "integer", nullable: false),
+                    allow_cross_user_deduplication = table.Column<bool>(type: "boolean", nullable: false),
+                    allow_global_indexing = table.Column<bool>(type: "boolean", nullable: false),
+                    telemetry_enabled = table.Column<bool>(type: "boolean", nullable: false),
+                    timezone = table.Column<string>(type: "text", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_server_settings", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    username = table.Column<string>(type: "text", nullable: false),
+                    username = table.Column<string>(type: "citext", nullable: false),
                     password_phc = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -263,6 +302,12 @@ namespace Cotton.Database.Migrations
                 column: "parent_id");
 
             migrationBuilder.CreateIndex(
+                name: "IX_refresh_tokens_token",
+                table: "refresh_tokens",
+                column: "token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_users_username",
                 table: "users",
                 column: "username",
@@ -280,6 +325,12 @@ namespace Cotton.Database.Migrations
 
             migrationBuilder.DropTable(
                 name: "node_files");
+
+            migrationBuilder.DropTable(
+                name: "refresh_tokens");
+
+            migrationBuilder.DropTable(
+                name: "server_settings");
 
             migrationBuilder.DropTable(
                 name: "chunks");
