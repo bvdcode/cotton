@@ -1,4 +1,7 @@
-﻿using System.Security.Cryptography;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {

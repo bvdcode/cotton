@@ -1,9 +1,9 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
 
+using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Net.Mime;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Models
 {

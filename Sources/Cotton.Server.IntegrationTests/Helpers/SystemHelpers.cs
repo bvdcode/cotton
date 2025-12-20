@@ -1,4 +1,7 @@
-﻿using System.Management;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using System.Management;
 
 namespace Cotton.Server.IntegrationTests.Helpers
 {

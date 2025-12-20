@@ -1,4 +1,7 @@
-﻿using Cotton.Storage.Abstractions;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
+
+using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Processors

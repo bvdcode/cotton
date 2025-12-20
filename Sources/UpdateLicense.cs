@@ -1,5 +1,5 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
 
 using System;
 using System.IO;
@@ -9,12 +9,11 @@ using System.Text;
 class Program
 {
     private const int StartYear = 2025;
-    private const string Author = "Vadim Belov";
-    private const string Spdx = "AGPL-3.0-only";
+    private const string Author = "Vadim Belov | bvdcode | belov.us";
+    private const string Spdx = "MIT";
 
     static void Main(string[] args)
     {
-        // можешь передать путь как аргумент, иначе текущая папка
         var root = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
 
         Console.WriteLine($"[cotton-license] scanning: {root}");

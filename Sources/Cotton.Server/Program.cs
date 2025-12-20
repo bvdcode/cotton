@@ -1,19 +1,19 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
 
-using Cotton.Shared;
-using Cotton.Database;
-using Cotton.Topology;
-using Cotton.Storage.Pipelines;
-using Cotton.Server.Extensions;
-using Cotton.Storage.Processors;
-using Cotton.Storage.Abstractions;
 using Cotton.Autoconfig.Extensions;
-using Microsoft.Extensions.Options;
+using Cotton.Database;
+using Cotton.Server.Extensions;
+using Cotton.Shared;
+using Cotton.Storage.Abstractions;
+using Cotton.Storage.Pipelines;
+using Cotton.Storage.Processors;
+using Cotton.Topology;
+using EasyExtensions.AspNetCore.Authorization.Extensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
-using EasyExtensions.AspNetCore.Authorization.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
 {
@@ -24,10 +24,10 @@ namespace Cotton.Server
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions();
             builder.Services
-                .AddOptions<CottonSettings>()
+                .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
 
-            builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonSettings>>().Value);
+            builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageProcessor, FileSystemStorageProcessor>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()

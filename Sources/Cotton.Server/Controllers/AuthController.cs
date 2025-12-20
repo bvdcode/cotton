@@ -1,25 +1,24 @@
-﻿// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Vadim Belov
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov | bvdcode | belov.us
 
-using Cotton.Shared;
 using Cotton.Database;
-using EasyExtensions.Models;
-using EasyExtensions.Helpers;
-using Microsoft.AspNetCore.Mvc;
+using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
-using Microsoft.EntityFrameworkCore;
+using EasyExtensions.AspNetCore.Authorization.Abstractions;
+using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
-using EasyExtensions.AspNetCore.Authorization.Models.Dto;
-using EasyExtensions.AspNetCore.Authorization.Abstractions;
+using EasyExtensions.Helpers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class AuthController(
         ITokenProvider _tokens,
-        CottonSettings _settings,
         CottonDbContext _dbContext,
+        CottonSettingsService _settings,
         IPasswordHashService _hasher) : ControllerBase
     {
         private const int RefreshTokenLength = 64;
@@ -52,12 +51,13 @@ namespace Cotton.Server.Controllers
             };
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
+            int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
             Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
             {
                 Secure = true,
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
+                Expires = DateTimeOffset.UtcNow.AddDays(sessionTimeoutHours)
             });
             return Ok(new TokenPairResponseDto()
             {
@@ -97,12 +97,13 @@ namespace Cotton.Server.Controllers
             };
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
+            int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
             Response.Cookies.Append("refresh_token", newRefreshToken, new CookieOptions
             {
                 Secure = true,
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(_settings.SessionTimeoutHours)
+                Expires = DateTimeOffset.UtcNow.AddDays(sessionTimeoutHours)
             });
             return Ok(new TokenPairResponseDto()
             {
