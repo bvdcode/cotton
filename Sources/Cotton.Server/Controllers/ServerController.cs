@@ -3,6 +3,7 @@
 
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace Cotton.Server.Controllers
 {
@@ -10,12 +11,14 @@ namespace Cotton.Server.Controllers
     public class ServerController(CottonSettingsService _settings) : ControllerBase
     {
         [HttpGet("/api/v1/settings")]
-        public IActionResult GetSettings()
+        public async Task<IActionResult> GetSettings()
         {
+            bool isServerInitialized = await _settings.IsServerInitializedAsync();
             int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
             var settings = new
             {
                 maxChunkSizeBytes,
+                isServerInitialized,
                 Hasher.SupportedHashAlgorithm,
             };
             return Ok(settings);

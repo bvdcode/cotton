@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
@@ -28,6 +29,13 @@ namespace Cotton.Server.Services
                 TelemetryEnabled = true,
                 Timezone = "America/Los_Angeles"
             };
+        }
+
+        public async Task<bool> IsServerInitializedAsync()
+        {
+            bool hasSettings = await _dbContext.ServerSettings.AnyAsync();
+            bool hasUsers = await _dbContext.Users.AnyAsync();
+            return hasSettings && hasUsers;
         }
     }
 }

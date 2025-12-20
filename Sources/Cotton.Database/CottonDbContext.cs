@@ -18,6 +18,6 @@ namespace Cotton.Database
         public DbSet<FileManifest> FileManifests => Set<FileManifest>();
         public DbSet<ChunkOwnership> ChunkOwnerships => Set<ChunkOwnership>();
         public DbSet<FileManifestChunk> FileManifestChunks => Set<FileManifestChunk>();
-        public DbSet<CottonServerSettings> CottonServerSettings => Set<CottonServerSettings>();
+        public DbSet<CottonServerSettings> ServerSettings => Set<CottonServerSettings>();
     }
 }
