@@ -31,11 +31,14 @@ namespace Cotton.Server.Services
             };
         }
 
-        public async Task<bool> IsServerInitializedAsync()
+        public Task<bool> IsServerInitializedAsync()
         {
-            bool hasSettings = await _dbContext.ServerSettings.AnyAsync();
-            bool hasUsers = await _dbContext.Users.AnyAsync();
-            return hasSettings && hasUsers;
+            return _dbContext.ServerSettings.AnyAsync();
+        }
+
+        public Task<bool> ServerHasUsersAsync()
+        {
+            return _dbContext.Users.AnyAsync();
         }
     }
 }
