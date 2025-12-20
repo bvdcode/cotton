@@ -4,6 +4,7 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
@@ -29,6 +30,7 @@ namespace Cotton.Server
 
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
+                .AddScoped<SettingsProvider>()
                 .AddScoped<IStorageProcessor, FileSystemStorageProcessor>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
