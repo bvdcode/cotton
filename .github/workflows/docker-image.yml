@@ -2,13 +2,13 @@ name: CI
 
 env:
   IMAGE_NAME: cotton
-  CONTEXT_PATH: Sources
+  CONTEXT_PATH: src
   SOURCES_PATH: Cotton.Server
 
 on:
   push:
     paths:
-      - "Sources/**"
+      - "src/**"
       - ".github/workflows/**"
     branches:
       - main
