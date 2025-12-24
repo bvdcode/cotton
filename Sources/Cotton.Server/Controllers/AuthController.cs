@@ -50,7 +50,11 @@ namespace Cotton.Server.Controllers
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
             {
-                // TODO: Return NotFound
+                bool hasUsers = await _dbContext.Users.AnyAsync();
+                if (hasUsers)
+                {
+                    return this.ApiUnauthorized("Invalid username or password");
+                }
                 user = new()
                 {
                     Username = request.Username.Trim(),
