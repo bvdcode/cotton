@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cotton.Server.Controllers
@@ -9,6 +10,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class ServerController(SettingsProvider _settings) : ControllerBase
     {
+        [Authorize]
         [HttpGet("/api/v1/settings")]
         public async Task<IActionResult> GetSettings()
         {
