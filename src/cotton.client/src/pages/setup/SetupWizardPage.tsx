@@ -171,10 +171,10 @@ export function SetupWizardPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "#f7f9fb",
+        color: "#ffffff",
         p: { xs: 2, sm: 4 },
         overflow: "hidden",
-        background: "linear-gradient(135deg, #0c111b, #101826)",
+        background: "linear-gradient(135deg, #1a1520, #151A21)",
         "@keyframes floatA": {
           "0%": { transform: "translate3d(0,0,0)" },
           "50%": { transform: "translate3d(20px, -30px, 0)" },
@@ -203,13 +203,13 @@ export function SetupWizardPage() {
           borderRadius: 3,
           backdropFilter: "blur(10px)",
           background:
-            "linear-gradient(155deg, rgba(18,28,45,0.85), rgba(14,23,37,0.92))",
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "0 30px 90px rgba(0,0,0,0.55)",
+            "linear-gradient(155deg, rgba(21,26,33,0.95), rgba(31,32,34,0.9))",
+          border: "1px solid rgba(93,50,173,0.15)",
+          boxShadow: "0 30px 90px rgba(93,50,173,0.25)",
           zIndex: 1,
         }}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, color: "#e8eef7" }}>
+        <CardContent sx={{ p: { xs: 3, sm: 4 }, color: "#ffffff" }}>
           <Stack spacing={3.5}>
             <Header t={t} />
 
@@ -259,7 +259,7 @@ export function SetupWizardPage() {
               </Stack>
             ) : (
               <Stack spacing={2.5}>
-                <Typography variant="body1" color="rgba(232,238,247,0.78)">
+                <Typography variant="body1" color="#cecece">
                   {t("intro")}
                 </Typography>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
@@ -292,10 +292,10 @@ function Header({ t }: { t: (key: string) => string }) {
   return (
     <Stack spacing={1.5}>
       <Stack spacing={0.5}>
-        <Typography variant="h4" fontWeight={800} color="#fefefe">
+        <Typography variant="h4" fontWeight={800} color="#ffffff">
           {t("title")}
         </Typography>
-        <Typography variant="body1" color="rgba(232,238,247,0.82)">
+        <Typography variant="body1" color="#cecece">
           {t("subtitle")}
         </Typography>
       </Stack>
@@ -432,10 +432,10 @@ function QuestionHeader({
       justifyContent="space-between"
     >
       <Stack spacing={0.4}>
-        <Typography variant="h6" fontWeight={700} color="#fdfefe">
+        <Typography variant="h6" fontWeight={700} color="#ffffff">
           {title}
         </Typography>
-        <Typography variant="body2" color="rgba(232,238,247,0.74)">
+        <Typography variant="body2" color="#cecece">
           {subtitle}
         </Typography>
       </Stack>
@@ -491,13 +491,13 @@ function OptionCard({
         p: 2,
         minHeight: 120,
         border: active
-          ? "1.5px solid rgba(92, 202, 255, 0.9)"
+          ? "1.5px solid #5d32adff"
           : "1px solid rgba(255,255,255,0.08)",
         background: active
-          ? "linear-gradient(145deg, rgba(76,110,245,0.16), rgba(76,245,181,0.12))"
+          ? "linear-gradient(145deg, rgba(93,50,173,0.2), rgba(27,206,167,0.15))"
           : "rgba(255,255,255,0.02)",
         boxShadow: active
-          ? "0 15px 35px rgba(76,110,245,0.25)"
+          ? "0 15px 35px rgba(93,50,173,0.35)"
           : "0 6px 18px rgba(0,0,0,0.25)",
         cursor: "pointer",
         display: "flex",
@@ -507,18 +507,18 @@ function OptionCard({
         gap: 2,
         transition: "all 0.2s ease",
         ":hover": {
-          borderColor: "rgba(92,202,255,0.8)",
+          borderColor: "#5d32adff",
           transform: "translateY(-2px)",
         },
         outline: "none",
       }}
     >
       <Stack spacing={0.6} sx={{ flex: 1 }}>
-        <Typography variant="subtitle1" fontWeight={700} color="#fefefe">
+        <Typography variant="subtitle1" fontWeight={700} color="#ffffff">
           {label}
         </Typography>
         {description ? (
-          <Typography variant="body2" color="rgba(232,238,247,0.7)">
+          <Typography variant="body2" color="#cecece">
             {description}
           </Typography>
         ) : null}
@@ -526,11 +526,18 @@ function OptionCard({
       {icon && (
         <Box
           sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             color: active
-              ? "rgba(92, 202, 255, 0.95)"
-              : "rgba(255, 255, 255, 0.6)",
+              ? "#1bcea7ff"
+              : "rgba(255, 255, 255, 0.4)",
             transition: "color 0.2s ease",
             flexShrink: 0,
+            "& > svg": {
+              width: 72,
+              height: 72,
+            },
           }}
         >
           {icon}
@@ -544,7 +551,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
   const progress = Math.round((step / total) * 100);
   return (
     <Stack spacing={0.5}>
-      <Typography variant="body2" color="rgba(232,238,247,0.7)">
+      <Typography variant="body2" color="#cecece">
         {progress}% · {step}/{total}
       </Typography>
       <Box
@@ -560,7 +567,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
           sx={{
             height: "100%",
             width: `${progress}%`,
-            background: "linear-gradient(90deg, #4c6ef5, #4cf5b5)",
+            background: "linear-gradient(90deg, #5d32adff, #1bcea7ff)",
             transition: "width 0.25s ease",
           }}
         />
@@ -587,7 +594,7 @@ function FloatingBlobs() {
           top: "12%",
           left: "14%",
           background:
-            "radial-gradient(circle, rgba(76,110,245,0.45), transparent 60%)",
+            "radial-gradient(circle, rgba(93,50,173,0.4), transparent 60%)",
           animation: "floatA 14s ease-in-out infinite",
         }}
       />
@@ -597,7 +604,7 @@ function FloatingBlobs() {
           bottom: "-4%",
           right: "-6%",
           background:
-            "radial-gradient(circle, rgba(76,245,181,0.35), transparent 60%)",
+            "radial-gradient(circle, rgba(27,206,167,0.3), transparent 60%)",
           animation: "floatB 18s ease-in-out infinite",
         }}
       />
@@ -607,7 +614,7 @@ function FloatingBlobs() {
           top: "40%",
           right: "20%",
           background:
-            "radial-gradient(circle, rgba(245,186,76,0.25), transparent 65%)",
+            "radial-gradient(circle, rgba(93,50,173,0.25), transparent 65%)",
           animation: "floatC 16s ease-in-out infinite",
         }}
       />
