@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Services;
 using EasyExtensions;
@@ -14,6 +15,8 @@ using EasyExtensions.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Cotton.Server.Controllers
 {
@@ -77,7 +80,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiUnauthorized("Invalid username or password");
             }
-            var accessToken = _tokens.CreateToken(x => x.Add("sub", user.Id.ToString()));
+            string accessToken = CreateAccessToken(user);
             string refreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
             RefreshToken dbToken = new()
             {
@@ -114,7 +117,7 @@ namespace Cotton.Server.Controllers
             {
                 return NotFound();
             }
-            var accessToken = _tokens.CreateToken(x => x.Add("sub", user.Id.ToString()));
+            var accessToken = CreateAccessToken(user);
             string newRefreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
             dbToken.RevokedAt = DateTime.UtcNow;
             RefreshToken newDbToken = new()
@@ -150,6 +153,18 @@ namespace Cotton.Server.Controllers
             }
             Response.Cookies.Delete(CookieRefreshTokenKey);
             return Ok();
+        }
+
+        private string CreateAccessToken(User user)
+        {
+            return _tokens.CreateToken(x =>
+            {
+                return x.Add(JwtRegisteredClaimNames.Sub, user.Id.ToString())
+                    .Add(JwtRegisteredClaimNames.UniqueName, user.Username)
+                    .Add(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                    .Add(ClaimsIdentity.DefaultNameClaimType, user.Username)
+                    .Add(ClaimsIdentity.DefaultRoleClaimType, user.Role.ToString());
+            });
         }
 
         private void AddRefreshTokenToCookies(string refreshToken)
