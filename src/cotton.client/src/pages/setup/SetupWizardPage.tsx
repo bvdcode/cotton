@@ -223,69 +223,78 @@ export function SetupWizardPage() {
           zIndex: 1,
         }}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-          <Stack spacing={3.5}>
-            <WizardHeader t={t} />
+        <CardContent
+          sx={{
+            p: { xs: 3, sm: 4 },
+            display: "flex",
+            flexDirection: "column",
+            minHeight: "calc(600px - 48px)",
+          }}
+        >
+          <WizardHeader t={t} />
 
+          <Box sx={{ flex: 1, mt: 3.5, mb: 3.5, overflow: "auto" }}>
             {started ? (
               <Stack spacing={2.5}>
                 <WizardProgressBar step={stepIndex + 1} total={steps.length} />
                 {currentStep?.render()}
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <Button
-                    variant="outlined"
-                    color="inherit"
-                    size="large"
-                    fullWidth
-                    onClick={handleBack}
-                    disabled={stepIndex === 0}
-                    sx={{
-                      py: 1.3,
-                      fontWeight: 700,
-                      textTransform: "none",
-                    }}
-                  >
-                    {t("actions.back")}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    fullWidth
-                    onClick={handleNext}
-                    disabled={!canProceed}
-                    sx={{
-                      py: 1.3,
-                      fontWeight: 700,
-                      textTransform: "none",
-                    }}
-                  >
-                    {isLastStep ? t("actions.finish") : t("actions.next")}
-                  </Button>
-                </Stack>
               </Stack>
             ) : (
-              <Stack spacing={2.5}>
-                <Typography variant="body1" color="text.secondary">
-                  {t("intro")}
-                </Typography>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    fullWidth
-                    onClick={handleStart}
-                    sx={{
-                      py: 1.3,
-                      fontWeight: 700,
-                      textTransform: "none",
-                    }}
-                  >
-                    {t("actions.start")}
-                  </Button>
-                </Stack>
-              </Stack>
+              <Typography variant="body1" color="text.secondary">
+                {t("intro")}
+              </Typography>
+            )}
+          </Box>
+
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            {started ? (
+              <>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="large"
+                  fullWidth
+                  onClick={handleBack}
+                  disabled={stepIndex === 0}
+                  sx={{
+                    py: 1.3,
+                    fontWeight: 700,
+                    textTransform: "none",
+                  }}
+                >
+                  {t("actions.back")}
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  fullWidth
+                  onClick={handleNext}
+                  disabled={!canProceed}
+                  sx={{
+                    py: 1.3,
+                    fontWeight: 700,
+                    textTransform: "none",
+                  }}
+                >
+                  {isLastStep ? t("actions.finish") : t("actions.next")}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                fullWidth
+                onClick={handleStart}
+                sx={{
+                  py: 1.3,
+                  fontWeight: 700,
+                  textTransform: "none",
+                }}
+              >
+                {t("actions.start")}
+              </Button>
             )}
           </Stack>
         </CardContent>
