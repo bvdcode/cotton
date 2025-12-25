@@ -9,7 +9,7 @@
 		<SpaRoot>..\cotton.client</SpaRoot>
 		<SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
 		<SpaProxyServerUrl>https://localhost:51856</SpaProxyServerUrl>
-		<PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<ItemGroup>
