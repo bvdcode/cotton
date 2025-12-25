@@ -57,6 +57,12 @@ namespace Cotton.Server.Controllers
                 {
                     return this.ApiUnauthorized("Invalid username or password");
                 }
+                var uptime = DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
+                if (uptime.TotalMinutes > 5)
+                {
+                    _logger.LogWarning("Attempt to create initial admin user after uptime of {Uptime}. Please restart the application to enable initial admin user creation.", uptime);
+                    return this.ApiUnauthorized("Invalid username or password");
+                }
                 user = new()
                 {
                     Role = UserRole.Admin,
