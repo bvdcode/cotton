@@ -5,6 +5,7 @@ import {
   TextField,
   Container,
   Typography,
+  Avatar,
 } from "@mui/material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
@@ -59,9 +60,8 @@ export const LoginPage = () => {
       const user = await authApi.me();
       setAuthenticated(true, user);
       navigate("/");
-    } catch (err) {
+    } catch {
       setError(t("errorMessage"));
-      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -85,9 +85,16 @@ export const LoginPage = () => {
             borderRadius: 2,
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
-            {t("title")}
-          </Typography>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="h4" component="h1" gutterBottom>
+              {t("title")}
+            </Typography>
+            <Avatar src="/icon.svg" alt="App Logo" />
+          </Box>
           <Box
             component="form"
             onSubmit={handleSubmit}
