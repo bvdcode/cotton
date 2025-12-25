@@ -43,7 +43,7 @@
     "questions": {
       "multiuser": {
         "title": "Are you planning to use:",
-        "subtitle": "This affects some security settings.",
+        "subtitle": "This affects space saving and some security settings.",
         "linkAria": "Open documentation in a new tab",
         "options": {
           "family": "Only at home for family",
