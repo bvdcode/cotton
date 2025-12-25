@@ -10,11 +10,7 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import {
-  setupStepDefinitions,
-  type SetupMultiOption,
-  type SetupSingleOption,
-} from "./setupQuestions";
+import { setupStepDefinitions } from "./setupQuestions.tsx";
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
@@ -45,22 +41,22 @@ export function SetupWizardPage() {
   const buildSteps = useCallback((): BuiltStep[] => {
     return setupStepDefinitions.map((def) => {
       if (def.type === "single" && def.key === "multiuser") {
-        const options: Array<
-          SetupSingleOption<boolean> & { label: string; description?: string }
-        > = def.options.map((opt) => ({
-          ...opt,
-          label: t(opt.labelKey),
-          description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
+        const options = def.options.map((opt) => ({
+          key: opt.key,
+          label: opt.label(),
+          description: opt.description?.(),
+          value: opt.value,
+          icon: opt.icon,
         }));
 
         return {
           key: def.key,
           render: () => (
             <QuestionBlock
-              title={t(def.titleKey)}
-              subtitle={t(def.subtitleKey)}
+              title={def.title()}
+              subtitle={def.subtitle()}
               linkUrl={def.linkUrl}
-              linkAriaLabel={def.linkAriaKey ? t(def.linkAriaKey) : undefined}
+              linkAriaLabel={def.linkAria?.()}
               options={options}
               selectedKey={multiuserChoiceKey}
               onSelect={(optKey, value) => {
@@ -75,16 +71,17 @@ export function SetupWizardPage() {
 
       if (def.type === "multi") {
         const options = def.options.map((opt) => ({
-          ...opt,
-          label: t(opt.labelKey),
+          key: opt.key,
+          label: opt.label(),
+          icon: opt.icon,
         }));
 
         return {
           key: def.key,
           render: () => (
             <QuestionBlockMulti
-              title={t(def.titleKey)}
-              subtitle={t(def.subtitleKey)}
+              title={def.title()}
+              subtitle={def.subtitle()}
               options={options}
               selectedKeys={intendedUse}
               onToggle={toggleIntendedUse}
@@ -95,20 +92,20 @@ export function SetupWizardPage() {
       }
 
       if (def.type === "single" && def.key === "telemetry") {
-        const options: Array<
-          SetupSingleOption<boolean> & { label: string; description?: string }
-        > = def.options.map((opt) => ({
-          ...opt,
-          label: t(opt.labelKey),
-          description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
+        const options = def.options.map((opt) => ({
+          key: opt.key,
+          label: opt.label(),
+          description: opt.description?.(),
+          value: opt.value,
+          icon: opt.icon,
         }));
 
         return {
           key: def.key,
           render: () => (
             <QuestionBlock
-              title={t(def.titleKey)}
-              subtitle={t(def.subtitleKey)}
+              title={def.title()}
+              subtitle={def.subtitle()}
               options={options}
               selectedValue={allowTelemetry}
               onSelect={(_, value) => setAllowTelemetry(value)}
@@ -124,7 +121,7 @@ export function SetupWizardPage() {
         isValid: (): boolean => true,
       };
     });
-  }, [t, multiuserChoiceKey, intendedUse, allowTelemetry, toggleIntendedUse]);
+  }, [multiuserChoiceKey, intendedUse, allowTelemetry, toggleIntendedUse]);
 
   const steps = useMemo(() => buildSteps(), [buildSteps]);
 
@@ -318,9 +315,13 @@ function QuestionBlock<T>({
 }: {
   title: string;
   subtitle: string;
-  options: Array<
-    SetupSingleOption<T> & { label: string; description?: string }
-  >;
+  options: Array<{
+    key: string;
+    label: string;
+    description?: string;
+    value: T;
+    icon?: ReactNode;
+  }>;
   selectedValue?: T | null;
   selectedKey?: string | null;
   onSelect: (key: string, value: T) => void;
@@ -338,7 +339,10 @@ function QuestionBlock<T>({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)",
+          },
           gap: 1.5,
         }}
       >
@@ -351,6 +355,7 @@ function QuestionBlock<T>({
               key={opt.key}
               label={opt.label}
               description={opt.description}
+              icon={opt.icon}
               active={active}
               onClick={() => onSelect(opt.key, opt.value)}
             />
@@ -370,7 +375,11 @@ function QuestionBlockMulti({
 }: {
   title: string;
   subtitle: string;
-  options: Array<SetupMultiOption & { label: string }>;
+  options: Array<{
+    key: string;
+    label: string;
+    icon?: ReactNode;
+  }>;
   selectedKeys: string[];
   onToggle: (key: string) => void;
 }) {
@@ -380,7 +389,10 @@ function QuestionBlockMulti({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)",
+          },
           gap: 1.5,
         }}
       >
@@ -390,6 +402,7 @@ function QuestionBlockMulti({
             <OptionCard
               key={opt.key}
               label={opt.label}
+              icon={opt.icon}
               active={active}
               onClick={() => onToggle(opt.key)}
             />
@@ -452,11 +465,13 @@ function QuestionHeader({
 function OptionCard({
   label,
   description,
+  icon,
   active,
   onClick,
 }: {
   label: string;
   description?: string;
+  icon?: ReactNode;
   active: boolean;
   onClick: () => void;
 }) {
@@ -486,8 +501,10 @@ function OptionCard({
           : "0 6px 18px rgba(0,0,0,0.25)",
         cursor: "pointer",
         display: "flex",
-        flexDirection: "column",
-        gap: 0.6,
+        flexDirection: "row",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 2,
         transition: "all 0.2s ease",
         ":hover": {
           borderColor: "rgba(92,202,255,0.8)",
@@ -496,14 +513,30 @@ function OptionCard({
         outline: "none",
       }}
     >
-      <Typography variant="subtitle1" fontWeight={700} color="#fefefe">
-        {label}
-      </Typography>
-      {description ? (
-        <Typography variant="body2" color="rgba(232,238,247,0.7)">
-          {description}
+      <Stack spacing={0.6} sx={{ flex: 1 }}>
+        <Typography variant="subtitle1" fontWeight={700} color="#fefefe">
+          {label}
         </Typography>
-      ) : null}
+        {description ? (
+          <Typography variant="body2" color="rgba(232,238,247,0.7)">
+            {description}
+          </Typography>
+        ) : null}
+      </Stack>
+      {icon && (
+        <Box
+          sx={{
+            fontSize: 36,
+            color: active
+              ? "rgba(92, 202, 255, 0.95)"
+              : "rgba(255, 255, 255, 0.6)",
+            transition: "color 0.2s ease",
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </Box>
+      )}
     </Box>
   );
 }
