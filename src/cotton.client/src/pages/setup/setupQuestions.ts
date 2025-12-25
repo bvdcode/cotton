@@ -8,6 +8,7 @@ export type SetupSingleOption<T> = {
 export type SetupMultiOption = {
   key: string;
   labelKey: string;
+  icon?: React.ReactNode;
 };
 
 export type SetupStepDefinition =
@@ -65,7 +66,10 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     titleKey: "questions.usage.title",
     subtitleKey: "questions.usage.subtitle",
     options: [
-      { key: "photos", labelKey: "questions.usage.options.photos" },
+      {
+        key: "photos",
+        labelKey: "questions.usage.options.photos",
+      },
       { key: "documents", labelKey: "questions.usage.options.documents" },
       { key: "media", labelKey: "questions.usage.options.media" },
       { key: "other", labelKey: "questions.usage.options.other" },
