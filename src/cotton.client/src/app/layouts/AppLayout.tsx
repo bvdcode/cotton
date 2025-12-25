@@ -2,6 +2,9 @@ import type { RouteConfig } from "../types";
 import { UserMenu } from "./components/UserMenu";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { AppBar, Toolbar, Box, Button, Container } from "@mui/material";
+import { useEffect } from "react";
+import { useAuth } from "../../features/auth";
+import { useSettingsStore } from "../../shared/store/settingsStore";
 
 interface AppLayoutProps {
   routes: RouteConfig[];
@@ -9,6 +12,30 @@ interface AppLayoutProps {
 
 export const AppLayout = ({ routes }: AppLayoutProps) => {
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const settingsLoaded = useSettingsStore((s) => s.loaded);
+  const settingsLoading = useSettingsStore((s) => s.loading);
+  const fetchSettings = useSettingsStore((s) => s.fetchSettings);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (settingsLoaded || settingsLoading) return;
+    fetchSettings();
+  }, [isAuthenticated, settingsLoaded, settingsLoading, fetchSettings]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleFocus = () => {
+      fetchSettings({ force: true });
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [isAuthenticated, fetchSettings]);
 
   return (
     <Box
