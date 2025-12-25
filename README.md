@@ -148,7 +148,7 @@ The app applies EF migrations automatically and serves the UI at http://localhos
 
 ## License & Branding
 
-- License: AGPL‑3.0‑only (see `LICENSE`).
+- License: MIT (see `LICENSE`).
 - The “Cotton” name and marks are reserved; forks should use distinct names/marks.
 
 ---
