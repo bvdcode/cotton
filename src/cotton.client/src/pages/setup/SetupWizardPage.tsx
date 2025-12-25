@@ -1,4 +1,11 @@
-import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useServerSettings } from "../../shared/store/useServerSettings";
 
 export function SetupWizardPage() {
@@ -42,47 +49,12 @@ export function SetupWizardPage() {
                 Server setup wizard
               </Typography>
               <Typography variant="body1" color="rgba(232,238,247,0.78)">
-                Complete initial server configuration to start using the app.
-                We detected that the server is not initialized yet.
+                Complete initial server configuration to start using the app. We
+                detected that the server is not initialized yet.
               </Typography>
             </Stack>
 
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
-                gap: 2,
-              }}
-            >
-              <StatusTile
-                label="Has users"
-                value={data?.serverHasUsers ? "Yes" : "No"}
-              />
-              <StatusTile
-                label="Max chunk size"
-                value={data ? `${data.maxChunkSizeBytes} bytes` : "—"}
-              />
-              <StatusTile
-                label="Hash algorithm"
-                value={data?.supportedHashAlgorithm ?? "—"}
-              />
-            </Box>
-
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-                sx={{
-                  py: 1.3,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  boxShadow: "0 8px 24px rgba(76,110,245,0.35)",
-                }}
-              >
-                Start initialization
-              </Button>
               <Button
                 variant="outlined"
                 color="inherit"
@@ -103,6 +75,20 @@ export function SetupWizardPage() {
                 }}
               >
                 Refresh status
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                fullWidth
+                sx={{
+                  py: 1.3,
+                  fontWeight: 700,
+                  textTransform: "none",
+                  boxShadow: "0 8px 24px rgba(76,110,245,0.35)",
+                }}
+              >
+                Start initialization
               </Button>
             </Stack>
 
