@@ -33,8 +33,13 @@
     },
     "actions": {
       "start": "Start initialization",
-      "later": "Do it later"
+      "later": "Do it later",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish",
+      "cancel": "Cancel"
     },
+    "intro": "Answer a few questions to tailor security and defaults. You can change these later in settings.",
     "questions": {
       "multiuser": {
         "title": "Are you planning to use:",
