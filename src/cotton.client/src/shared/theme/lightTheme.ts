@@ -15,7 +15,7 @@ export const lightTheme = createTheme({
     },
     divider: "rgba(0,0,0,.08)",
     text: {
-      primary: "#1a1a1a",
+      primary: "#3f3f3fff",
       secondary: "rgba(0,0,0,.6)",
     },
   },
