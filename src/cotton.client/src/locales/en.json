@@ -19,5 +19,54 @@
     "title": "Page Not Found",
     "message": "The page you are looking for does not exist.",
     "backButton": "Go Back to Home"
+  },
+  "setup": {
+    "title": "Server setup wizard",
+    "subtitle": "Complete initial server configuration to start using the app. We detected that the server is not initialized yet.",
+    "repoLink": "Project on GitHub",
+    "status": {
+      "hasUsers": "Has users",
+      "maxChunk": "Max chunk size",
+      "hash": "Hash algorithm",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "actions": {
+      "start": "Start initialization",
+      "later": "Do it later"
+    },
+    "questions": {
+      "multiuser": {
+        "title": "Are you planning to use:",
+        "subtitle": "This affects some security settings.",
+        "options": {
+          "family": "Only at home for family",
+          "many": "For many people",
+          "unknown": "Not sure yet"
+        },
+        "descriptions": {
+          "family": "We will optimize for home/family usage.",
+          "many": "We will tighten certain checks for broader sharing.",
+          "unknown": "You can change this later in settings."
+        }
+      },
+      "usage": {
+        "title": "You plan to use the cloud for:",
+        "subtitle": "Select one or more options",
+        "options": {
+          "photos": "Photos",
+          "documents": "Documents",
+          "media": "Movies and series"
+        }
+      },
+      "telemetry": {
+        "title": "Allow sending statistics?",
+        "subtitle": "This information helps us improve products and does not reveal your identity.",
+        "options": {
+          "allow": "Yes, allow telemetry",
+          "deny": "No, do not send"
+        }
+      }
+    }
   }
 }
