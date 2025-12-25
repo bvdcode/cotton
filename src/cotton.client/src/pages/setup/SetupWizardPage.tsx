@@ -5,6 +5,7 @@ import {
   CardContent,
   Stack,
   Typography,
+  useTheme,
 } from "@mui/material";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -171,10 +172,9 @@ export function SetupWizardPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "#ffffff",
         p: { xs: 2, sm: 4 },
         overflow: "hidden",
-        background: "linear-gradient(135deg, #1a1520, #151A21)",
+        bgcolor: "background.default",
         "@keyframes floatA": {
           "0%": { transform: "translate3d(0,0,0)" },
           "50%": { transform: "translate3d(20px, -30px, 0)" },
@@ -202,14 +202,15 @@ export function SetupWizardPage() {
           maxWidth: 920,
           borderRadius: 3,
           backdropFilter: "blur(10px)",
-          background:
-            "linear-gradient(155deg, rgba(21,26,33,0.95), rgba(31,32,34,0.9))",
-          border: "1px solid rgba(93,50,173,0.15)",
-          boxShadow: "0 30px 90px rgba(93,50,173,0.25)",
+          bgcolor: "background.paper",
+          borderColor: "divider",
+          borderWidth: 1,
+          borderStyle: "solid",
+          boxShadow: (theme) => `0 30px 90px ${theme.palette.mode === "dark" ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.15)"}`,
           zIndex: 1,
         }}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, color: "#ffffff" }}>
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
           <Stack spacing={3.5}>
             <Header t={t} />
 
@@ -259,7 +260,7 @@ export function SetupWizardPage() {
               </Stack>
             ) : (
               <Stack spacing={2.5}>
-                <Typography variant="body1" color="#cecece">
+                <Typography variant="body1" color="text.secondary">
                   {t("intro")}
                 </Typography>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
@@ -292,10 +293,10 @@ function Header({ t }: { t: (key: string) => string }) {
   return (
     <Stack spacing={1.5}>
       <Stack spacing={0.5}>
-        <Typography variant="h4" fontWeight={800} color="#ffffff">
+        <Typography variant="h4" fontWeight={800}>
           {t("title")}
         </Typography>
-        <Typography variant="body1" color="#cecece">
+        <Typography variant="body1" color="text.secondary">
           {t("subtitle")}
         </Typography>
       </Stack>
@@ -432,10 +433,10 @@ function QuestionHeader({
       justifyContent="space-between"
     >
       <Stack spacing={0.4}>
-        <Typography variant="h6" fontWeight={700} color="#ffffff">
+        <Typography variant="h6" fontWeight={700}>
           {title}
         </Typography>
-        <Typography variant="body2" color="#cecece">
+        <Typography variant="body2" color="text.secondary">
           {subtitle}
         </Typography>
       </Stack>
@@ -490,15 +491,21 @@ function OptionCard({
         borderRadius: 2,
         p: 2,
         minHeight: 120,
-        border: active
-          ? "1.5px solid #5d32adff"
-          : "1px solid rgba(255,255,255,0.08)",
-        background: active
-          ? "linear-gradient(145deg, rgba(93,50,173,0.2), rgba(27,206,167,0.15))"
-          : "rgba(255,255,255,0.02)",
-        boxShadow: active
-          ? "0 15px 35px rgba(93,50,173,0.35)"
-          : "0 6px 18px rgba(0,0,0,0.25)",
+        border: (theme) => active
+          ? `1.5px solid ${theme.palette.primary.main}`
+          : `1px solid ${theme.palette.divider}`,
+        background: (theme) => active
+          ? theme.palette.mode === "dark"
+            ? `linear-gradient(145deg, ${theme.palette.primary.main}33, ${theme.palette.secondary.main}26)`
+            : `linear-gradient(145deg, ${theme.palette.primary.main}1a, ${theme.palette.secondary.main}1a)`
+          : theme.palette.mode === "dark"
+            ? "rgba(255,255,255,0.02)"
+            : "rgba(0,0,0,0.02)",
+        boxShadow: (theme) => active
+          ? `0 15px 35px ${theme.palette.primary.main}40`
+          : theme.palette.mode === "dark"
+            ? "0 6px 18px rgba(0,0,0,0.25)"
+            : "0 6px 18px rgba(0,0,0,0.08)",
         cursor: "pointer",
         display: "flex",
         flexDirection: "row",
@@ -507,7 +514,7 @@ function OptionCard({
         gap: 2,
         transition: "all 0.2s ease",
         ":hover": {
-          borderColor: "#5d32adff",
+          borderColor: "primary.main",
           transform: "translateY(-2px)",
         },
         outline: "none",
@@ -549,9 +556,10 @@ function OptionCard({
 
 function ProgressBar({ step, total }: { step: number; total: number }) {
   const progress = Math.round((step / total) * 100);
+  const theme = useTheme();
   return (
     <Stack spacing={0.5}>
-      <Typography variant="body2" color="#cecece">
+      <Typography variant="body2" color="text.secondary">
         {progress}% · {step}/{total}
       </Typography>
       <Box
@@ -559,7 +567,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
           width: "100%",
           height: 8,
           borderRadius: 999,
-          background: "rgba(255,255,255,0.08)",
+          bgcolor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
           overflow: "hidden",
         }}
       >
@@ -567,7 +575,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
           sx={{
             height: "100%",
             width: `${progress}%`,
-            background: "linear-gradient(90deg, #5d32adff, #1bcea7ff)",
+            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
             transition: "width 0.25s ease",
           }}
         />
@@ -577,6 +585,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
 }
 
 function FloatingBlobs() {
+  const theme = useTheme();
   return (
     <Box
       aria-hidden
@@ -594,7 +603,7 @@ function FloatingBlobs() {
           top: "12%",
           left: "14%",
           background:
-            "radial-gradient(circle, rgba(93,50,173,0.4), transparent 60%)",
+            `radial-gradient(circle, ${theme.palette.primary.main}66, transparent 60%)`,
           animation: "floatA 14s ease-in-out infinite",
         }}
       />
@@ -604,7 +613,7 @@ function FloatingBlobs() {
           bottom: "-4%",
           right: "-6%",
           background:
-            "radial-gradient(circle, rgba(27,206,167,0.3), transparent 60%)",
+            `radial-gradient(circle, ${theme.palette.secondary.main}4d, transparent 60%)`,
           animation: "floatB 18s ease-in-out infinite",
         }}
       />
@@ -614,7 +623,7 @@ function FloatingBlobs() {
           top: "40%",
           right: "20%",
           background:
-            "radial-gradient(circle, rgba(93,50,173,0.25), transparent 65%)",
+            `radial-gradient(circle, ${theme.palette.primary.main}40, transparent 65%)`,
           animation: "floatC 16s ease-in-out infinite",
         }}
       />
