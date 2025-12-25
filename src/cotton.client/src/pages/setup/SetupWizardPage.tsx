@@ -9,22 +9,19 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-
-type SingleOption<T> = {
-  key: string;
-  label: string;
-  description?: string;
-  value: T;
-};
-
-type MultiOption = {
-  key: string;
-  label: string;
-};
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import {
+  setupStepDefinitions,
+  type SetupMultiOption,
+  type SetupSingleOption,
+} from "./setupQuestions";
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
   const navigate = useNavigate();
+  const [multiuserChoiceKey, setMultiuserChoiceKey] = useState<string | null>(
+    null,
+  );
   const [unsafeMultiuserInteraction, setUnsafeMultiuserInteraction] = useState<
     boolean | null
   >(null);
@@ -33,114 +30,103 @@ export function SetupWizardPage() {
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
 
-  const multiuserOptions: SingleOption<boolean>[] = useMemo(
-    () => [
-      {
-        key: "family",
-        label: t("questions.multiuser.options.family"),
-        value: true,
-        description: t("questions.multiuser.descriptions.family"),
-      },
-      {
-        key: "many",
-        label: t("questions.multiuser.options.many"),
-        value: false,
-        description: t("questions.multiuser.descriptions.many"),
-      },
-      {
-        key: "unknown",
-        label: t("questions.multiuser.options.unknown"),
-        value: false,
-        description: t("questions.multiuser.descriptions.unknown"),
-      },
-    ],
-    [t],
-  );
-
-  const usageOptions: MultiOption[] = useMemo(
-    () => [
-      { key: "photos", label: t("questions.usage.options.photos") },
-      { key: "documents", label: t("questions.usage.options.documents") },
-      { key: "media", label: t("questions.usage.options.media") },
-    ],
-    [t],
-  );
-
-  const telemetryOptions: SingleOption<boolean>[] = useMemo(
-    () => [
-      {
-        key: "allow",
-        label: t("questions.telemetry.options.allow"),
-        value: true,
-      },
-      {
-        key: "deny",
-        label: t("questions.telemetry.options.deny"),
-        value: false,
-      },
-    ],
-    [t],
-  );
-
   const toggleIntendedUse = (key: string) => {
     setIntendedUse((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     );
   };
 
-  const steps = useMemo(
-    () => [
-      {
-        key: "multiuser",
-        render: () => (
-          <QuestionBlock
-            title={t("questions.multiuser.title")}
-            subtitle={t("questions.multiuser.subtitle")}
-            options={multiuserOptions}
-            selectedValue={unsafeMultiuserInteraction}
-            onSelect={(v) => setUnsafeMultiuserInteraction(v)}
-          />
-        ),
-        isValid: () => unsafeMultiuserInteraction !== null,
-      },
-      {
-        key: "usage",
-        render: () => (
-          <QuestionBlockMulti
-            title={t("questions.usage.title")}
-            subtitle={t("questions.usage.subtitle")}
-            options={usageOptions}
-            selectedKeys={intendedUse}
-            onToggle={toggleIntendedUse}
-          />
-        ),
-        isValid: () => intendedUse.length > 0,
-      },
-      {
-        key: "telemetry",
-        render: () => (
-          <QuestionBlock
-            title={t("questions.telemetry.title")}
-            subtitle={t("questions.telemetry.subtitle")}
-            options={telemetryOptions}
-            selectedValue={allowTelemetry}
-            onSelect={(v) => setAllowTelemetry(v)}
-          />
-        ),
-        isValid: () => allowTelemetry !== null,
-      },
-    ],
-    [
-      t,
-      multiuserOptions,
-      usageOptions,
-      telemetryOptions,
-      unsafeMultiuserInteraction,
-      intendedUse,
-      allowTelemetry,
-      toggleIntendedUse,
-    ],
-  );
+  const buildSteps = () => {
+    return setupStepDefinitions.map((def) => {
+      if (def.type === "single" && def.key === "multiuser") {
+        const options: Array<SetupSingleOption<boolean> & { label: string; description?: string }> = def.options.map(
+          (opt) => ({
+            ...opt,
+            label: t(opt.labelKey),
+            description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
+          }),
+        );
+
+        return {
+          key: def.key,
+          render: () => (
+            <QuestionBlock
+              title={t(def.titleKey)}
+              subtitle={t(def.subtitleKey)}
+              linkUrl={def.linkUrl}
+              linkAriaLabel={def.linkAriaKey ? t(def.linkAriaKey) : undefined}
+              options={options}
+              selectedKey={multiuserChoiceKey}
+              onSelect={(optKey, value) => {
+                setMultiuserChoiceKey(optKey);
+                setUnsafeMultiuserInteraction(value);
+              }}
+            />
+          ),
+          isValid: () => multiuserChoiceKey !== null,
+        };
+      }
+
+      if (def.type === "multi") {
+        const options = def.options.map((opt) => ({
+          ...opt,
+          label: t(opt.labelKey),
+        }));
+
+        return {
+          key: def.key,
+          render: () => (
+            <QuestionBlockMulti
+              title={t(def.titleKey)}
+              subtitle={t(def.subtitleKey)}
+              options={options}
+              selectedKeys={intendedUse}
+              onToggle={toggleIntendedUse}
+            />
+          ),
+          isValid: () => intendedUse.length > 0,
+        };
+      }
+
+      if (def.type === "single" && def.key === "telemetry") {
+        const options: Array<SetupSingleOption<boolean> & { label: string; description?: string }> = def.options.map(
+          (opt) => ({
+            ...opt,
+            label: t(opt.labelKey),
+            description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
+          }),
+        );
+
+        return {
+          key: def.key,
+          render: () => (
+            <QuestionBlock
+              title={t(def.titleKey)}
+              subtitle={t(def.subtitleKey)}
+              options={options}
+              selectedValue={allowTelemetry}
+              onSelect={(_, value) => setAllowTelemetry(value)}
+            />
+          ),
+          isValid: () => allowTelemetry !== null,
+        };
+      }
+
+      return {
+        key: def.key,
+        render: () => null,
+        isValid: () => true,
+      };
+    });
+  };
+
+  const steps = useMemo(buildSteps, [
+    t,
+    multiuserChoiceKey,
+    intendedUse,
+    allowTelemetry,
+    toggleIntendedUse,
+  ]);
 
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
@@ -318,17 +304,28 @@ function QuestionBlock<T>({
   subtitle,
   options,
   selectedValue,
+  selectedKey,
   onSelect,
+  linkUrl,
+  linkAriaLabel,
 }: {
   title: string;
   subtitle: string;
-  options: SingleOption<T>[];
-  selectedValue: T | null;
-  onSelect: (value: T) => void;
+  options: Array<SetupSingleOption<T> & { label: string; description?: string }>;
+  selectedValue?: T | null;
+  selectedKey?: string | null;
+  onSelect: (key: string, value: T) => void;
+  linkUrl?: string;
+  linkAriaLabel?: string;
 }) {
   return (
     <Stack spacing={1.5}>
-      <QuestionHeader title={title} subtitle={subtitle} />
+      <QuestionHeader
+        title={title}
+        subtitle={subtitle}
+        linkUrl={linkUrl}
+        linkAriaLabel={linkAriaLabel}
+      />
       <Box
         sx={{
           display: "grid",
@@ -337,14 +334,14 @@ function QuestionBlock<T>({
         }}
       >
         {options.map((opt) => {
-          const active = selectedValue === opt.value;
+          const active = selectedKey ? selectedKey === opt.key : selectedValue === opt.value;
           return (
             <OptionCard
               key={opt.key}
               label={opt.label}
               description={opt.description}
               active={active}
-              onClick={() => onSelect(opt.value)}
+              onClick={() => onSelect(opt.key, opt.value)}
             />
           );
         })}
@@ -362,7 +359,7 @@ function QuestionBlockMulti({
 }: {
   title: string;
   subtitle: string;
-  options: MultiOption[];
+  options: Array<SetupMultiOption & { label: string }>;
   selectedKeys: string[];
   onToggle: (key: string) => void;
 }) {
@@ -395,18 +392,43 @@ function QuestionBlockMulti({
 function QuestionHeader({
   title,
   subtitle,
+  linkUrl,
+  linkAriaLabel,
 }: {
   title: string;
   subtitle: string;
+  linkUrl?: string;
+  linkAriaLabel?: string;
 }) {
   return (
-    <Stack spacing={0.4}>
-      <Typography variant="h6" fontWeight={700} color="#fdfefe">
-        {title}
-      </Typography>
-      <Typography variant="body2" color="rgba(232,238,247,0.74)">
-        {subtitle}
-      </Typography>
+    <Stack spacing={0.4} direction="row" alignItems="center" justifyContent="space-between">
+      <Stack spacing={0.4}>
+        <Typography variant="h6" fontWeight={700} color="#fdfefe">
+          {title}
+        </Typography>
+        <Typography variant="body2" color="rgba(232,238,247,0.74)">
+          {subtitle}
+        </Typography>
+      </Stack>
+      {linkUrl ? (
+        <Button
+          href={linkUrl}
+          target="_blank"
+          rel="noreferrer"
+          variant="text"
+          size="small"
+          aria-label={linkAriaLabel}
+          sx={{
+            minWidth: 0,
+            color: "rgba(255,255,255,0.75)",
+            ":hover": { color: "rgba(255,255,255,0.95)" },
+            p: 0.75,
+            borderRadius: 1.5,
+          }}
+        >
+          <OpenInNewIcon fontSize="small" />
+        </Button>
+      ) : null}
     </Stack>
   );
 }

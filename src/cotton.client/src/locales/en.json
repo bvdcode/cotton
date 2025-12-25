@@ -44,6 +44,7 @@
       "multiuser": {
         "title": "Are you planning to use:",
         "subtitle": "This affects some security settings.",
+        "linkAria": "Open documentation in a new tab",
         "options": {
           "family": "Only at home for family",
           "many": "For many people",
