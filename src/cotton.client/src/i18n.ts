@@ -1,24 +1,25 @@
 import i18n from "i18next";
-import { resources } from ".";
+import * as locales from "./locales";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-import { STORAGE_KEY_PREFIX } from "../shared/config/storageKeys";
 
+const resources = Object.fromEntries(
+  Object.entries(locales).map(([lng, data]) => [lng, { translation: data }]),
+);
 const supportedLangs = Object.keys(resources);
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    resources,
     fallbackLng: "en",
-    resources: resources,
     supportedLngs: supportedLangs,
     nonExplicitSupportedLngs: true,
-    defaultNS: "common",
     detection: {
       order: ["localStorage", "navigator", "htmlTag"],
       caches: ["localStorage"],
-      lookupLocalStorage: STORAGE_KEY_PREFIX + "i18next-lang",
+      lookupLocalStorage: "ctn-i18next-lang",
     },
     interpolation: {
       escapeValue: false,
