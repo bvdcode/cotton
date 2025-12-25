@@ -203,10 +203,14 @@ export function SetupWizardPage() {
           borderRadius: 3,
           backdropFilter: "blur(10px)",
           bgcolor: "background.paper",
-          borderColor: "divider",
+          borderColor: (theme) => theme.palette.mode === "dark" 
+            ? `${theme.palette.primary.main}26`
+            : "divider",
           borderWidth: 1,
           borderStyle: "solid",
-          boxShadow: (theme) => `0 30px 90px ${theme.palette.mode === "dark" ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.15)"}`,
+          boxShadow: (theme) => theme.palette.mode === "dark"
+            ? `0 30px 90px ${theme.palette.primary.main}40, 0 10px 40px rgba(0,0,0,0.5)`
+            : `0 30px 60px rgba(0,0,0,0.12), 0 10px 30px rgba(0,0,0,0.08)`,
           zIndex: 1,
         }}
       >

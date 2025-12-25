@@ -11,9 +11,8 @@ import LanguageDetector from "i18next-browser-languagedetector";
 
 const languageDetectorOptions = {
   order: ["localStorage", "navigator", "querystring", "cookie", "htmlTag"],
-  lookupFromNavigatorLanguage: true,
+  lookupLocalStorage: "ctn-i18nextLng",
   caches: ["localStorage"],
-  cacheName: "ctn-i18nextLng",
 };
 
 i18n
