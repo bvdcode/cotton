@@ -6,6 +6,7 @@ import {
   Stack,
   Typography,
   useTheme,
+  alpha,
 } from "@mui/material";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -203,14 +204,16 @@ export function SetupWizardPage() {
           borderRadius: 3,
           backdropFilter: "blur(10px)",
           bgcolor: "background.paper",
-          borderColor: (theme) => theme.palette.mode === "dark" 
-            ? `${theme.palette.primary.main}26`
-            : "divider",
+          borderColor: (theme) =>
+            theme.palette.mode === "dark"
+              ? alpha(theme.palette.primary.main, 0.15)
+              : "divider",
           borderWidth: 1,
           borderStyle: "solid",
-          boxShadow: (theme) => theme.palette.mode === "dark"
-            ? `0 30px 90px ${theme.palette.primary.main}40, 0 10px 40px rgba(0,0,0,0.5)`
-            : `0 30px 60px rgba(0,0,0,0.12), 0 10px 30px rgba(0,0,0,0.08)`,
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? `0 30px 90px ${alpha(theme.palette.primary.main, 0.25)}, 0 10px 40px ${alpha(theme.palette.common.black, 0.5)}`
+              : `0 30px 60px ${alpha(theme.palette.common.black, 0.12)}, 0 10px 30px ${alpha(theme.palette.common.black, 0.08)}`,
           zIndex: 1,
         }}
       >
@@ -234,12 +237,6 @@ export function SetupWizardPage() {
                       py: 1.3,
                       fontWeight: 700,
                       textTransform: "none",
-                      borderColor: "rgba(255,255,255,0.4)",
-                      color: "rgba(255,255,255,0.9)",
-                      ":hover": {
-                        borderColor: "rgba(255,255,255,0.7)",
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                      },
                     }}
                   >
                     {t("actions.back")}
@@ -255,7 +252,6 @@ export function SetupWizardPage() {
                       py: 1.3,
                       fontWeight: 700,
                       textTransform: "none",
-                      boxShadow: "0 10px 26px rgba(76,110,245,0.35)",
                     }}
                   >
                     {isLastStep ? t("actions.finish") : t("actions.next")}
@@ -278,7 +274,6 @@ export function SetupWizardPage() {
                       py: 1.3,
                       fontWeight: 700,
                       textTransform: "none",
-                      boxShadow: "0 10px 26px rgba(76,110,245,0.35)",
                     }}
                   >
                     {t("actions.start")}
@@ -454,8 +449,6 @@ function QuestionHeader({
           aria-label={linkAriaLabel}
           sx={{
             minWidth: 0,
-            color: "rgba(255,255,255,0.75)",
-            ":hover": { color: "rgba(255,255,255,0.95)" },
             p: 0.75,
             borderRadius: 1.5,
           }}
@@ -495,21 +488,20 @@ function OptionCard({
         borderRadius: 2,
         p: 2,
         minHeight: 120,
-        border: (theme) => active
-          ? `1.5px solid ${theme.palette.primary.main}`
-          : `1px solid ${theme.palette.divider}`,
-        background: (theme) => active
-          ? theme.palette.mode === "dark"
-            ? `linear-gradient(145deg, ${theme.palette.primary.main}33, ${theme.palette.secondary.main}26)`
-            : `linear-gradient(145deg, ${theme.palette.primary.main}1a, ${theme.palette.secondary.main}1a)`
-          : theme.palette.mode === "dark"
-            ? "rgba(255,255,255,0.02)"
-            : "rgba(0,0,0,0.02)",
-        boxShadow: (theme) => active
-          ? `0 15px 35px ${theme.palette.primary.main}40`
-          : theme.palette.mode === "dark"
-            ? "0 6px 18px rgba(0,0,0,0.25)"
-            : "0 6px 18px rgba(0,0,0,0.08)",
+        border: (theme) =>
+          active
+            ? `1.5px solid ${theme.palette.primary.main}`
+            : `1px solid ${theme.palette.divider}`,
+        background: (theme) =>
+          active
+            ? theme.palette.mode === "dark"
+              ? `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.secondary.main, 0.15)})`
+              : `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`
+            : alpha(theme.palette.text.primary, 0.02),
+        boxShadow: (theme) =>
+          active
+            ? `0 15px 35px ${alpha(theme.palette.primary.main, 0.35)}, 0 8px 20px ${alpha(theme.palette.primary.main, 0.25)}`
+            : `0 6px 18px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.25 : 0.08)}`,
         cursor: "pointer",
         display: "flex",
         flexDirection: "row",
@@ -520,16 +512,20 @@ function OptionCard({
         ":hover": {
           borderColor: "primary.main",
           transform: "translateY(-2px)",
+          boxShadow: (theme) =>
+            active
+              ? `0 20px 45px ${alpha(theme.palette.primary.main, 0.4)}, 0 10px 25px ${alpha(theme.palette.primary.main, 0.3)}`
+              : `0 10px 25px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.3 : 0.12)}`,
         },
         outline: "none",
       }}
     >
       <Stack spacing={0.6} sx={{ flex: 1 }}>
-        <Typography variant="subtitle1" fontWeight={700} color="#ffffff">
+        <Typography variant="subtitle1" fontWeight={700}>
           {label}
         </Typography>
         {description ? (
-          <Typography variant="body2" color="#cecece">
+          <Typography variant="body2" color="text.secondary">
             {description}
           </Typography>
         ) : null}
@@ -540,14 +536,15 @@ function OptionCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: active
-              ? "#1bcea7ff"
-              : "rgba(255, 255, 255, 0.4)",
+            color: (theme) =>
+              active
+                ? theme.palette.secondary.main
+                : theme.palette.text.disabled,
             transition: "color 0.2s ease",
             flexShrink: 0,
             "& > svg": {
-              width: 72,
-              height: 72,
+              width: 128,
+              height: 128,
             },
           }}
         >
@@ -571,7 +568,11 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
           width: "100%",
           height: 8,
           borderRadius: 999,
-          bgcolor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+          bgcolor: (theme) =>
+            alpha(
+              theme.palette.text.primary,
+              theme.palette.mode === "dark" ? 0.08 : 0.08
+            ),
           overflow: "hidden",
         }}
       >
@@ -589,7 +590,6 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
 }
 
 function FloatingBlobs() {
-  const theme = useTheme();
   return (
     <Box
       aria-hidden
@@ -606,8 +606,8 @@ function FloatingBlobs() {
         sx={{
           top: "12%",
           left: "14%",
-          background:
-            `radial-gradient(circle, ${theme.palette.primary.main}66, transparent 60%)`,
+          background: (theme: { palette: { primary: { main: string } } }) =>
+            `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.4)}, transparent 60%)`,
           animation: "floatA 14s ease-in-out infinite",
         }}
       />
@@ -616,8 +616,8 @@ function FloatingBlobs() {
         sx={{
           bottom: "-4%",
           right: "-6%",
-          background:
-            `radial-gradient(circle, ${theme.palette.secondary.main}4d, transparent 60%)`,
+          background: (theme: { palette: { secondary: { main: string } } }) =>
+            `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.3)}, transparent 60%)`,
           animation: "floatB 18s ease-in-out infinite",
         }}
       />
@@ -626,8 +626,8 @@ function FloatingBlobs() {
         sx={{
           top: "40%",
           right: "20%",
-          background:
-            `radial-gradient(circle, ${theme.palette.primary.main}40, transparent 65%)`,
+          background: (theme: { palette: { primary: { main: string } } }) =>
+            `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.25)}, transparent 65%)`,
           animation: "floatC 16s ease-in-out infinite",
         }}
       />
