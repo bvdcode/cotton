@@ -62,7 +62,8 @@
         "options": {
           "photos": "Photos",
           "documents": "Documents",
-          "media": "Movies and series"
+          "media": "Movies and series",
+          "other": "Other"
         }
       },
       "telemetry": {
