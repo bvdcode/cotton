@@ -81,8 +81,6 @@ export const LoginPage = () => {
           sx={{
             mt: 8,
             p: 4,
-            boxShadow: 3,
-            borderRadius: 2,
           }}
         >
           <Box
