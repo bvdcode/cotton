@@ -68,7 +68,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       { key: "photos", labelKey: "questions.usage.options.photos" },
       { key: "documents", labelKey: "questions.usage.options.documents" },
       { key: "media", labelKey: "questions.usage.options.media" },
-      { key: "development", labelKey: "questions.usage.options.development" },
+      { key: "other", labelKey: "questions.usage.options.other" },
     ],
   },
   {
@@ -78,14 +78,14 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     subtitleKey: "questions.telemetry.subtitle",
     options: [
       {
-        key: "allow",
-        labelKey: "questions.telemetry.options.allow",
-        value: true,
-      },
-      {
         key: "deny",
         labelKey: "questions.telemetry.options.deny",
         value: false,
+      },
+      {
+        key: "allow",
+        labelKey: "questions.telemetry.options.allow",
+        value: true,
       },
     ],
   },
