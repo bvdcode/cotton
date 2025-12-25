@@ -4,6 +4,7 @@ import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import DescriptionIcon from "@mui/icons-material/Description";
 import MovieIcon from "@mui/icons-material/Movie";
 import CodeIcon from "@mui/icons-material/Code";
+import { Cloud } from "@mui/icons-material";
 
 export type SetupSingleOption<T> = {
   key: string;
@@ -111,6 +112,27 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         key: "allow",
         label: () => t("setup:questions.telemetry.options.allow"),
         value: true,
+      },
+    ],
+  },
+  {
+    key: "storage",
+    type: "single",
+    title: () => t("setup:questions.storage.title"),
+    subtitle: () => t("setup:questions.storage.subtitle"),
+    options: [
+      {
+        key: "local",
+        label: () => t("setup:questions.storage.options.local"),
+        description: () => t("setup:questions.storage.descriptions.local"),
+        value: true,
+      },
+      {
+        key: "s3",
+        label: () => t("setup:questions.storage.options.s3"),
+        description: () => t("setup:questions.storage.descriptions.s3"),
+        value: false,
+        icon: <Cloud />,
       },
     ],
   },
