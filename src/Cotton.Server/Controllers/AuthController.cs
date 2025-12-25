@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
@@ -21,6 +22,7 @@ namespace Cotton.Server.Controllers
         ITokenProvider _tokens,
         SettingsProvider _settings,
         CottonDbContext _dbContext,
+        ILogger<AuthController> _logger,
         IPasswordHashService _hasher) : ControllerBase
     {
         private const int RefreshTokenLength = 64;
@@ -57,11 +59,13 @@ namespace Cotton.Server.Controllers
                 }
                 user = new()
                 {
+                    Role = UserRole.Admin,
                     Username = request.Username.Trim(),
                     PasswordPhc = _hasher.Hash(request.Password)
                 };
                 await _dbContext.Users.AddAsync(user);
                 await _dbContext.SaveChangesAsync();
+                _logger.LogInformation("Created initial admin user: {Username}", user.Username);
             }
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
