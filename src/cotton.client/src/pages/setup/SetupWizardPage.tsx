@@ -338,7 +338,7 @@ function QuestionBlock<T>({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
+          gridTemplateColumns: { xs: "1fr", sm: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)" },
           gap: 1.5,
         }}
       >
@@ -380,7 +380,7 @@ function QuestionBlockMulti({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
+          gridTemplateColumns: { xs: "1fr", sm: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)" },
           gap: 1.5,
         }}
       >
