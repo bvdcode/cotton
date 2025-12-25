@@ -5,6 +5,8 @@ import { LoginPage, NotFoundPage } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Dashboard, Folder, Home } from "@mui/icons-material";
 import { Box } from "@mui/material";
+import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
+import { SetupGate } from "../features/settings/SetupGate";
 
 const publicRoutes: RouteConfig[] = [
   { path: "/login", displayName: "Login", element: <LoginPage /> },
@@ -71,7 +73,9 @@ export function AppRoutes() {
       <Route
         element={
           <RequireAuth>
-            <AppLayout routes={appRoutes} />
+            <SetupGate>
+              <AppLayout routes={appRoutes} />
+            </SetupGate>
           </RequireAuth>
         }
       >
@@ -79,6 +83,17 @@ export function AppRoutes() {
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
       </Route>
+
+      <Route
+        path="/setup"
+        element={
+          <RequireAuth>
+            <SetupGate>
+              <SetupWizardPage />
+            </SetupGate>
+          </RequireAuth>
+        }
+      />
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
