@@ -6,7 +6,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -30,13 +30,19 @@ export function SetupWizardPage() {
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
 
-  const toggleIntendedUse = (key: string) => {
+  const toggleIntendedUse = useCallback((key: string) => {
     setIntendedUse((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     );
+  }, []);
+
+  type BuiltStep = {
+    key: string;
+    render: () => ReactNode;
+    isValid: () => boolean;
   };
 
-  const buildSteps = () => {
+  const buildSteps = useCallback((): BuiltStep[] => {
     return setupStepDefinitions.map((def) => {
       if (def.type === "single" && def.key === "multiuser") {
         const options: Array<SetupSingleOption<boolean> & { label: string; description?: string }> = def.options.map(
@@ -63,7 +69,7 @@ export function SetupWizardPage() {
               }}
             />
           ),
-          isValid: () => multiuserChoiceKey !== null,
+          isValid: (): boolean => multiuserChoiceKey !== null,
         };
       }
 
@@ -84,7 +90,7 @@ export function SetupWizardPage() {
               onToggle={toggleIntendedUse}
             />
           ),
-          isValid: () => intendedUse.length > 0,
+          isValid: (): boolean => intendedUse.length > 0,
         };
       }
 
@@ -108,25 +114,25 @@ export function SetupWizardPage() {
               onSelect={(_, value) => setAllowTelemetry(value)}
             />
           ),
-          isValid: () => allowTelemetry !== null,
+          isValid: (): boolean => allowTelemetry !== null,
         };
       }
 
       return {
         key: def.key,
         render: () => null,
-        isValid: () => true,
+        isValid: (): boolean => true,
       };
     });
-  };
-
-  const steps = useMemo(buildSteps, [
+  }, [
     t,
     multiuserChoiceKey,
     intendedUse,
     allowTelemetry,
     toggleIntendedUse,
   ]);
+
+  const steps = useMemo(() => buildSteps(), [buildSteps]);
 
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
@@ -143,7 +149,13 @@ export function SetupWizardPage() {
       return;
     }
     if (isLastStep) {
+      const submission = {
+        unsafeMultiuserInteraction,
+        intendedUse,
+        allowTelemetry,
+      };
       // Placeholder submit; replace with API call/save later.
+      void submission;
       navigate("/");
       return;
     }
