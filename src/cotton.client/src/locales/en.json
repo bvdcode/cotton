@@ -66,6 +66,34 @@
           "other": "Other"
         }
       },
+      "storage": {
+        "title": "Where do you want to store your data?",
+        "subtitle": "Choose storage location for your files.",
+        "options": {
+          "local": "Local disk",
+          "s3": "S3-compatible storage"
+        },
+        "descriptions": {
+          "local": "Store files on the server's local filesystem",
+          "s3": "Store files in remote S3-compatible object storage"
+        }
+      },
+      "s3Config": {
+        "title": "Configure S3 storage",
+        "subtitle": "Enter your S3-compatible storage credentials.",
+        "fields": {
+          "endpoint": "Endpoint URL",
+          "bucket": "Bucket name",
+          "accessKey": "Access key",
+          "secretKey": "Secret key"
+        },
+        "placeholders": {
+          "endpoint": "https://s3.example.com",
+          "bucket": "my-bucket",
+          "accessKey": "Your access key",
+          "secretKey": "Your secret key"
+        }
+      },
       "telemetry": {
         "title": "Allow sending statistics?",
         "subtitle": "This information helps us improve products and does not reveal your identity.",

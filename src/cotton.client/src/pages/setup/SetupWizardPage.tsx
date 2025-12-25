@@ -16,27 +16,31 @@ import {
   WizardProgressBar,
   QuestionBlock,
   QuestionBlockMulti,
+  QuestionForm,
   FloatingBlobs,
 } from "./components";
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
   const navigate = useNavigate();
-  const [multiuserChoiceKey, setMultiuserChoiceKey] = useState<string | null>(
-    null,
-  );
-  const [unsafeMultiuserInteraction, setUnsafeMultiuserInteraction] = useState<
-    boolean | null
-  >(null);
-  const [intendedUse, setIntendedUse] = useState<string[]>([]);
-  const [allowTelemetry, setAllowTelemetry] = useState<boolean | null>(null);
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  
+  // Generic answers storage
+  const [answers, setAnswers] = useState<Record<string, unknown>>({});
 
-  const toggleIntendedUse = useCallback((key: string) => {
-    setIntendedUse((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    );
+  const updateAnswer = useCallback((key: string, value: unknown) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const updateFormField = useCallback((stepKey: string, fieldKey: string, value: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [stepKey]: {
+        ...(prev[stepKey] || {}),
+        [fieldKey]: value,
+      },
+    }));
   }, []);
 
   type BuiltStep = {
@@ -46,8 +50,15 @@ export function SetupWizardPage() {
   };
 
   const buildSteps = useCallback((): BuiltStep[] => {
-    return setupStepDefinitions.map((def) => {
-      if (def.type === "single" && def.key === "multiuser") {
+    const steps: BuiltStep[] = [];
+
+    for (const def of setupStepDefinitions) {
+      // Check if step should be shown
+      if (def.showIf && !def.showIf(answers)) {
+        continue;
+      }
+
+      if (def.type === "single") {
         const options = def.options.map((opt) => ({
           key: opt.key,
           label: opt.label(),
@@ -56,7 +67,7 @@ export function SetupWizardPage() {
           icon: opt.icon,
         }));
 
-        return {
+        steps.push({
           key: def.key,
           render: () => (
             <QuestionBlock
@@ -65,70 +76,86 @@ export function SetupWizardPage() {
               linkUrl={def.linkUrl}
               linkAriaLabel={def.linkAria?.()}
               options={options}
-              selectedKey={multiuserChoiceKey}
-              onSelect={(optKey, value) => {
-                setMultiuserChoiceKey(optKey);
-                setUnsafeMultiuserInteraction(value);
-              }}
+              selectedValue={answers[def.key]}
+              onSelect={(_, value) => updateAnswer(def.key, value)}
             />
           ),
-          isValid: (): boolean => multiuserChoiceKey !== null,
-        };
-      }
-
-      if (def.type === "multi") {
+          isValid: (): boolean => answers[def.key] !== undefined && answers[def.key] !== null,
+        });
+      } else if (def.type === "multi") {
         const options = def.options.map((opt) => ({
           key: opt.key,
           label: opt.label(),
           icon: opt.icon,
         }));
 
-        return {
+        steps.push({
           key: def.key,
-          render: () => (
-            <QuestionBlockMulti
-              title={def.title()}
-              subtitle={def.subtitle()}
-              options={options}
-              selectedKeys={intendedUse}
-              onToggle={toggleIntendedUse}
-            />
-          ),
-          isValid: (): boolean => intendedUse.length > 0,
-        };
-      }
-
-      if (def.type === "single" && def.key === "telemetry") {
-        const options = def.options.map((opt) => ({
-          key: opt.key,
-          label: opt.label(),
-          description: opt.description?.(),
-          value: opt.value,
-          icon: opt.icon,
+          render: () => {
+            const selectedKeys = Array.isArray(answers[def.key]) 
+              ? (answers[def.key] as string[])
+              : [];
+            
+            return (
+              <QuestionBlockMulti
+                title={def.title()}
+                subtitle={def.subtitle()}
+                options={options}
+                selectedKeys={selectedKeys}
+                onToggle={(key) => {
+                  const updated = selectedKeys.includes(key)
+                    ? selectedKeys.filter((k) => k !== key)
+                    : [...selectedKeys, key];
+                  updateAnswer(def.key, updated);
+                }}
+              />
+            );
+          },
+          isValid: (): boolean => {
+            const value = answers[def.key];
+            return Array.isArray(value) && value.length > 0;
+          },
+        });
+      } else if (def.type === "form") {
+        const fields = def.fields.map((field) => ({
+          key: field.key,
+          label: field.label(),
+          placeholder: field.placeholder?.(),
+          type: field.type,
         }));
 
-        return {
+        steps.push({
           key: def.key,
-          render: () => (
-            <QuestionBlock
-              title={def.title()}
-              subtitle={def.subtitle()}
-              options={options}
-              selectedValue={allowTelemetry}
-              onSelect={(_, value) => setAllowTelemetry(value)}
-            />
-          ),
-          isValid: (): boolean => allowTelemetry !== null,
-        };
+          render: () => {
+            const formValues = answers[def.key] && typeof answers[def.key] === "object"
+              ? (answers[def.key] as Record<string, string>)
+              : {};
+            
+            return (
+              <QuestionForm
+                title={def.title()}
+                subtitle={def.subtitle()}
+                fields={fields}
+                values={formValues}
+                onChange={(fieldKey, value) => updateFormField(def.key, fieldKey, value)}
+              />
+            );
+          },
+          isValid: (): boolean => {
+            const formData = answers[def.key];
+            if (!formData || typeof formData !== "object") return false;
+            // All fields must be filled
+            return def.fields.every((field) => {
+              const value = (formData as Record<string, string>)[field.key];
+              return value && value.trim().length > 0;
+            });
+          },
+        });
       }
+    }
 
-      return {
-        key: def.key,
-        render: () => null,
-        isValid: (): boolean => true,
-      };
-    });
-  }, [multiuserChoiceKey, intendedUse, allowTelemetry, toggleIntendedUse]);
+    return steps;
+  }, [answers, updateAnswer, updateFormField]);
 
   const steps = useMemo(() => buildSteps(), [buildSteps]);
 
@@ -147,13 +174,8 @@ export function SetupWizardPage() {
       return;
     }
     if (isLastStep) {
-      const submission = {
-        unsafeMultiuserInteraction,
-        intendedUse,
-        allowTelemetry,
-      };
       // Placeholder submit; replace with API call/save later.
-      void submission;
+      console.log("Setup completed with answers:", answers);
       navigate("/");
       return;
     }
