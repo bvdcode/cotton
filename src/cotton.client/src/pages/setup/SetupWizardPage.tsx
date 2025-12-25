@@ -45,13 +45,13 @@ export function SetupWizardPage() {
   const buildSteps = useCallback((): BuiltStep[] => {
     return setupStepDefinitions.map((def) => {
       if (def.type === "single" && def.key === "multiuser") {
-        const options: Array<SetupSingleOption<boolean> & { label: string; description?: string }> = def.options.map(
-          (opt) => ({
-            ...opt,
-            label: t(opt.labelKey),
-            description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
-          }),
-        );
+        const options: Array<
+          SetupSingleOption<boolean> & { label: string; description?: string }
+        > = def.options.map((opt) => ({
+          ...opt,
+          label: t(opt.labelKey),
+          description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
+        }));
 
         return {
           key: def.key,
@@ -95,13 +95,13 @@ export function SetupWizardPage() {
       }
 
       if (def.type === "single" && def.key === "telemetry") {
-        const options: Array<SetupSingleOption<boolean> & { label: string; description?: string }> = def.options.map(
-          (opt) => ({
-            ...opt,
-            label: t(opt.labelKey),
-            description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
-          }),
-        );
+        const options: Array<
+          SetupSingleOption<boolean> & { label: string; description?: string }
+        > = def.options.map((opt) => ({
+          ...opt,
+          label: t(opt.labelKey),
+          description: opt.descriptionKey ? t(opt.descriptionKey) : undefined,
+        }));
 
         return {
           key: def.key,
@@ -124,13 +124,7 @@ export function SetupWizardPage() {
         isValid: (): boolean => true,
       };
     });
-  }, [
-    t,
-    multiuserChoiceKey,
-    intendedUse,
-    allowTelemetry,
-    toggleIntendedUse,
-  ]);
+  }, [t, multiuserChoiceKey, intendedUse, allowTelemetry, toggleIntendedUse]);
 
   const steps = useMemo(() => buildSteps(), [buildSteps]);
 
@@ -233,6 +227,7 @@ export function SetupWizardPage() {
                     size="large"
                     fullWidth
                     onClick={handleBack}
+                    disabled={stepIndex === 0}
                     sx={{
                       py: 1.3,
                       fontWeight: 700,
@@ -245,7 +240,7 @@ export function SetupWizardPage() {
                       },
                     }}
                   >
-                    {stepIndex === 0 ? t("actions.cancel") : t("actions.back")}
+                    {t("actions.back")}
                   </Button>
                   <Button
                     variant="contained"
@@ -323,7 +318,9 @@ function QuestionBlock<T>({
 }: {
   title: string;
   subtitle: string;
-  options: Array<SetupSingleOption<T> & { label: string; description?: string }>;
+  options: Array<
+    SetupSingleOption<T> & { label: string; description?: string }
+  >;
   selectedValue?: T | null;
   selectedKey?: string | null;
   onSelect: (key: string, value: T) => void;
@@ -346,7 +343,9 @@ function QuestionBlock<T>({
         }}
       >
         {options.map((opt) => {
-          const active = selectedKey ? selectedKey === opt.key : selectedValue === opt.value;
+          const active = selectedKey
+            ? selectedKey === opt.key
+            : selectedValue === opt.value;
           return (
             <OptionCard
               key={opt.key}
@@ -413,7 +412,12 @@ function QuestionHeader({
   linkAriaLabel?: string;
 }) {
   return (
-    <Stack spacing={0.4} direction="row" alignItems="center" justifyContent="space-between">
+    <Stack
+      spacing={0.4}
+      direction="row"
+      alignItems="center"
+      justifyContent="space-between"
+    >
       <Stack spacing={0.4}>
         <Typography variant="h6" fontWeight={700} color="#fdfefe">
           {title}

@@ -68,6 +68,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       { key: "photos", labelKey: "questions.usage.options.photos" },
       { key: "documents", labelKey: "questions.usage.options.documents" },
       { key: "media", labelKey: "questions.usage.options.media" },
+      { key: "development", labelKey: "questions.usage.options.development" },
     ],
   },
   {
