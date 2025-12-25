@@ -18,7 +18,7 @@ export type SetupStepDefinition =
       subtitleKey: string;
       linkUrl?: string;
       linkAriaKey?: string;
-      options: SetupSingleOption<any>[];
+      options: SetupSingleOption<boolean>[];
     }
   | {
       key: "usage";
