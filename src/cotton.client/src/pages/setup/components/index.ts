@@ -4,4 +4,5 @@ export { QuestionHeader } from "./QuestionHeader";
 export { OptionCard } from "./OptionCard";
 export { QuestionBlock } from "./QuestionBlock";
 export { QuestionBlockMulti } from "./QuestionBlockMulti";
+export { QuestionForm } from "./QuestionForm";
 export { FloatingBlobs } from "./FloatingBlobs";
