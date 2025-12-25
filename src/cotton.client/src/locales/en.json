@@ -1,0 +1,23 @@
+{
+  "common": {
+    "userMenu": {
+      "lightMode": "Light Mode",
+      "darkMode": "Dark Mode",
+      "changeLanguage": "Change language",
+      "logout": "Logout"
+    }
+  },
+  "login": {
+    "title": "Sign in to your account",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "loginButton": "Login",
+    "loggingIn": "Logging in...",
+    "errorMessage": "Login failed. Check your credentials."
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "message": "The page you are looking for does not exist.",
+    "backButton": "Go Back to Home"
+  }
+}

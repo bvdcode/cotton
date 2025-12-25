@@ -46,7 +46,8 @@ export const LoginPage = () => {
     return <Navigate to={from} replace />;
   }
 
-  const showRestoreOverlay = hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
+  const showRestoreOverlay =
+    hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,58 +77,58 @@ export const LoginPage = () => {
         />
       )}
       <Container maxWidth="sm">
-      <Paper
-        sx={{
-          mt: 8,
-          p: 4,
-          boxShadow: 3,
-          borderRadius: 2,
-        }}
-      >
-        <Typography variant="h4" component="h1" gutterBottom>
-          {t("title")}
-        </Typography>
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          noValidate
-          autoComplete="off"
+        <Paper
+          sx={{
+            mt: 8,
+            p: 4,
+            boxShadow: 3,
+            borderRadius: 2,
+          }}
         >
-          <TextField
-            fullWidth
-            label={t("usernameLabel")}
-            margin="normal"
-            variant="outlined"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            disabled={loading}
-          />
-          <TextField
-            fullWidth
-            label={t("passwordLabel")}
-            type="password"
-            margin="normal"
-            variant="outlined"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-          />
-          {error && (
-            <Typography color="error" sx={{ mt: 2 }}>
-              {error}
-            </Typography>
-          )}
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={loading}
-            sx={{ mt: 2 }}
+          <Typography variant="h4" component="h1" gutterBottom>
+            {t("title")}
+          </Typography>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            noValidate
+            autoComplete="off"
           >
-            {loading ? t("loggingIn") : t("loginButton")}
-          </Button>
-        </Box>
-      </Paper>
+            <TextField
+              fullWidth
+              label={t("usernameLabel")}
+              margin="normal"
+              variant="outlined"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={loading}
+            />
+            <TextField
+              fullWidth
+              label={t("passwordLabel")}
+              type="password"
+              margin="normal"
+              variant="outlined"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+            {error && (
+              <Typography color="error" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
+            )}
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={loading}
+              sx={{ mt: 2 }}
+            >
+              {loading ? t("loggingIn") : t("loginButton")}
+            </Button>
+          </Box>
+        </Paper>
       </Container>
     </>
   );
