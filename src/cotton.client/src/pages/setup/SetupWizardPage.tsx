@@ -543,8 +543,8 @@ function OptionCard({
             transition: "color 0.2s ease",
             flexShrink: 0,
             "& > svg": {
-              width: 128,
-              height: 128,
+              width: 72,
+              height: 72,
             },
           }}
         >
