@@ -526,7 +526,6 @@ function OptionCard({
       {icon && (
         <Box
           sx={{
-            fontSize: 36,
             color: active
               ? "rgba(92, 202, 255, 0.95)"
               : "rgba(255, 255, 255, 0.6)",
