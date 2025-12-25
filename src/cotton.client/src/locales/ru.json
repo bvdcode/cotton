@@ -1,0 +1,23 @@
+{
+  "common": {
+    "userMenu": {
+      "lightMode": "Светлая тема",
+      "darkMode": "Тёмная тема",
+      "changeLanguage": "Сменить язык",
+      "logout": "Выйти"
+    }
+  },
+  "login": {
+    "title": "Войдите в аккаунт",
+    "usernameLabel": "Имя пользователя",
+    "passwordLabel": "Пароль",
+    "loginButton": "Войти",
+    "loggingIn": "Вход...",
+    "errorMessage": "Ошибка входа. Проверьте данные."
+  },
+  "notFound": {
+    "title": "Страница не найдена",
+    "message": "Страница, которую вы ищете, не существует.",
+    "backButton": "Вернуться на главную"
+  }
+}

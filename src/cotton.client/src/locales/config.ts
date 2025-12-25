@@ -1,8 +1,8 @@
 import i18n from "i18next";
 import { resources } from ".";
 import { initReactI18next } from "react-i18next";
-import { STORAGE_KEY_PREFIX } from "../../config/storageKeys";
 import LanguageDetector from "i18next-browser-languagedetector";
+import { STORAGE_KEY_PREFIX } from "../shared/config/storageKeys";
 
 const supportedLangs = Object.keys(resources);
 
