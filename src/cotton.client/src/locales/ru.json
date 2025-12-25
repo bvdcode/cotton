@@ -62,7 +62,8 @@
         "options": {
           "photos": "Фоточки",
           "documents": "Документы",
-          "media": "Фильмы и сериалы"
+          "media": "Фильмы и сериалы",
+          "other": "Разное"
         }
       },
       "telemetry": {
