@@ -2,7 +2,6 @@ import { useAuth } from "./useAuth";
 import { useEffect, type ReactNode } from "react";
 import Loader from "../../shared/ui/Loader";
 import { Navigate, useLocation } from "react-router-dom";
-import { useSettingsStore } from "../../shared/store/settingsStore";
 
 type Props = {
   children: ReactNode;
@@ -18,33 +17,10 @@ export function RequireAuth({ children }: Props) {
     ensureAuth,
   } = useAuth();
   const location = useLocation();
-  const settingsLoaded = useSettingsStore((s) => s.loaded);
-  const settingsLoading = useSettingsStore((s) => s.loading);
-  const fetchSettings = useSettingsStore((s) => s.fetchSettings);
 
   useEffect(() => {
     ensureAuth();
   }, [ensureAuth]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (settingsLoaded || settingsLoading) return;
-    fetchSettings();
-  }, [isAuthenticated, settingsLoaded, settingsLoading, fetchSettings]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const handleFocus = () => {
-      fetchSettings({ force: true });
-    };
-
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [isAuthenticated, fetchSettings]);
 
   // Wait for store rehydration before deciding to redirect.
   if (!hydrated) {
