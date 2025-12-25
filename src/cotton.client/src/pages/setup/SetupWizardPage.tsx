@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 type SingleOption<T> = {
   key: string;
@@ -23,10 +24,14 @@ type MultiOption = {
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
-  const [unsafeMultiuserInteraction, setUnsafeMultiuserInteraction] =
-    useState<boolean | null>(null);
+  const navigate = useNavigate();
+  const [unsafeMultiuserInteraction, setUnsafeMultiuserInteraction] = useState<
+    boolean | null
+  >(null);
   const [intendedUse, setIntendedUse] = useState<string[]>([]);
   const [allowTelemetry, setAllowTelemetry] = useState<boolean | null>(null);
+  const [started, setStarted] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
 
   const multiuserOptions: SingleOption<boolean>[] = useMemo(
     () => [
@@ -63,8 +68,16 @@ export function SetupWizardPage() {
 
   const telemetryOptions: SingleOption<boolean>[] = useMemo(
     () => [
-      { key: "allow", label: t("questions.telemetry.options.allow"), value: true },
-      { key: "deny", label: t("questions.telemetry.options.deny"), value: false },
+      {
+        key: "allow",
+        label: t("questions.telemetry.options.allow"),
+        value: true,
+      },
+      {
+        key: "deny",
+        label: t("questions.telemetry.options.deny"),
+        value: false,
+      },
     ],
     [t],
   );
@@ -73,6 +86,91 @@ export function SetupWizardPage() {
     setIntendedUse((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     );
+  };
+
+  const steps = useMemo(
+    () => [
+      {
+        key: "multiuser",
+        render: () => (
+          <QuestionBlock
+            title={t("questions.multiuser.title")}
+            subtitle={t("questions.multiuser.subtitle")}
+            options={multiuserOptions}
+            selectedValue={unsafeMultiuserInteraction}
+            onSelect={(v) => setUnsafeMultiuserInteraction(v)}
+          />
+        ),
+        isValid: () => unsafeMultiuserInteraction !== null,
+      },
+      {
+        key: "usage",
+        render: () => (
+          <QuestionBlockMulti
+            title={t("questions.usage.title")}
+            subtitle={t("questions.usage.subtitle")}
+            options={usageOptions}
+            selectedKeys={intendedUse}
+            onToggle={toggleIntendedUse}
+          />
+        ),
+        isValid: () => intendedUse.length > 0,
+      },
+      {
+        key: "telemetry",
+        render: () => (
+          <QuestionBlock
+            title={t("questions.telemetry.title")}
+            subtitle={t("questions.telemetry.subtitle")}
+            options={telemetryOptions}
+            selectedValue={allowTelemetry}
+            onSelect={(v) => setAllowTelemetry(v)}
+          />
+        ),
+        isValid: () => allowTelemetry !== null,
+      },
+    ],
+    [
+      t,
+      multiuserOptions,
+      usageOptions,
+      telemetryOptions,
+      unsafeMultiuserInteraction,
+      intendedUse,
+      allowTelemetry,
+      toggleIntendedUse,
+    ],
+  );
+
+  const currentStep = steps[stepIndex];
+  const isLastStep = stepIndex === steps.length - 1;
+  const canProceed = currentStep?.isValid?.() ?? false;
+
+  const handleStart = () => {
+    setStarted(true);
+    setStepIndex(0);
+  };
+
+  const handleNext = () => {
+    if (!started) {
+      handleStart();
+      return;
+    }
+    if (isLastStep) {
+      // Placeholder submit; replace with API call/save later.
+      navigate("/");
+      return;
+    }
+    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+  };
+
+  const handleBack = () => {
+    if (!started || stepIndex === 0) {
+      setStarted(false);
+      setStepIndex(0);
+      return;
+    }
+    setStepIndex((i) => Math.max(i - 1, 0));
   };
 
   return (
@@ -126,65 +224,73 @@ export function SetupWizardPage() {
           <Stack spacing={3.5}>
             <Header t={t} />
 
-            <QuestionBlock
-              title={t("questions.multiuser.title")}
-              subtitle={t("questions.multiuser.subtitle")}
-              options={multiuserOptions}
-              selectedValue={unsafeMultiuserInteraction}
-              onSelect={(v) => setUnsafeMultiuserInteraction(v)}
-            />
-
-            <QuestionBlockMulti
-              title={t("questions.usage.title")}
-              subtitle={t("questions.usage.subtitle")}
-              options={usageOptions}
-              selectedKeys={intendedUse}
-              onToggle={toggleIntendedUse}
-            />
-
-            <QuestionBlock
-              title={t("questions.telemetry.title")}
-              subtitle={t("questions.telemetry.subtitle")}
-              options={telemetryOptions}
-              selectedValue={allowTelemetry}
-              onSelect={(v) => setAllowTelemetry(v)}
-            />
-
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-                sx={{
-                  py: 1.3,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  boxShadow: "0 10px 26px rgba(76,110,245,0.35)",
-                }}
-              >
-                {t("actions.start")}
-              </Button>
-              <Button
-                variant="outlined"
-                color="inherit"
-                size="large"
-                fullWidth
-                sx={{
-                  py: 1.3,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  borderColor: "rgba(255,255,255,0.4)",
-                  color: "rgba(255,255,255,0.9)",
-                  ":hover": {
-                    borderColor: "rgba(255,255,255,0.7)",
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                  },
-                }}
-              >
-                {t("actions.later")}
-              </Button>
-            </Stack>
+            {started ? (
+              <Stack spacing={2.5}>
+                <ProgressBar step={stepIndex + 1} total={steps.length} />
+                {currentStep?.render()}
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <Button
+                    variant="outlined"
+                    color="inherit"
+                    size="large"
+                    fullWidth
+                    onClick={handleBack}
+                    sx={{
+                      py: 1.3,
+                      fontWeight: 700,
+                      textTransform: "none",
+                      borderColor: "rgba(255,255,255,0.4)",
+                      color: "rgba(255,255,255,0.9)",
+                      ":hover": {
+                        borderColor: "rgba(255,255,255,0.7)",
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                      },
+                    }}
+                  >
+                    {stepIndex === 0 ? t("actions.cancel") : t("actions.back")}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    fullWidth
+                    onClick={handleNext}
+                    disabled={!canProceed}
+                    sx={{
+                      py: 1.3,
+                      fontWeight: 700,
+                      textTransform: "none",
+                      boxShadow: "0 10px 26px rgba(76,110,245,0.35)",
+                    }}
+                  >
+                    {isLastStep ? t("actions.finish") : t("actions.next")}
+                  </Button>
+                </Stack>
+              </Stack>
+            ) : (
+              <Stack spacing={2.5}>
+                <Typography variant="body1" color="rgba(232,238,247,0.78)">
+                  {t("intro")}
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    fullWidth
+                    onClick={handleStart}
+                    sx={{
+                      py: 1.3,
+                      fontWeight: 700,
+                      textTransform: "none",
+                      boxShadow: "0 10px 26px rgba(76,110,245,0.35)",
+                    }}
+                  >
+                    {t("actions.start")}
+                  </Button>
+                </Stack>
+              </Stack>
+            )}
           </Stack>
         </CardContent>
       </Card>
@@ -203,24 +309,6 @@ function Header({ t }: { t: (key: string) => string }) {
           {t("subtitle")}
         </Typography>
       </Stack>
-      <Button
-        href="https://github.com/bvdcode/cotton"
-        target="_blank"
-        rel="noreferrer"
-        variant="text"
-        size="small"
-        sx={{
-          alignSelf: "flex-start",
-          px: 0,
-          color: "rgba(255,255,255,0.72)",
-          textTransform: "none",
-          fontWeight: 600,
-          gap: 0.75,
-          ":hover": { color: "rgba(255,255,255,0.95)" },
-        }}
-      >
-        {t("repoLink")}
-      </Button>
     </Stack>
   );
 }
@@ -304,7 +392,13 @@ function QuestionBlockMulti({
   );
 }
 
-function QuestionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function QuestionHeader({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
   return (
     <Stack spacing={0.4}>
       <Typography variant="h6" fontWeight={700} color="#fdfefe">
@@ -376,6 +470,35 @@ function OptionCard({
   );
 }
 
+function ProgressBar({ step, total }: { step: number; total: number }) {
+  const progress = Math.round((step / total) * 100);
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="body2" color="rgba(232,238,247,0.7)">
+        {progress}% · {step}/{total}
+      </Typography>
+      <Box
+        sx={{
+          width: "100%",
+          height: 8,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            height: "100%",
+            width: `${progress}%`,
+            background: "linear-gradient(90deg, #4c6ef5, #4cf5b5)",
+            transition: "width 0.25s ease",
+          }}
+        />
+      </Box>
+    </Stack>
+  );
+}
+
 function FloatingBlobs() {
   return (
     <Box
@@ -393,7 +516,8 @@ function FloatingBlobs() {
         sx={{
           top: "12%",
           left: "14%",
-          background: "radial-gradient(circle, rgba(76,110,245,0.45), transparent 60%)",
+          background:
+            "radial-gradient(circle, rgba(76,110,245,0.45), transparent 60%)",
           animation: "floatA 14s ease-in-out infinite",
         }}
       />
@@ -402,7 +526,8 @@ function FloatingBlobs() {
         sx={{
           bottom: "-4%",
           right: "-6%",
-          background: "radial-gradient(circle, rgba(76,245,181,0.35), transparent 60%)",
+          background:
+            "radial-gradient(circle, rgba(76,245,181,0.35), transparent 60%)",
           animation: "floatB 18s ease-in-out infinite",
         }}
       />
@@ -411,7 +536,8 @@ function FloatingBlobs() {
         sx={{
           top: "40%",
           right: "20%",
-          background: "radial-gradient(circle, rgba(245,186,76,0.25), transparent 65%)",
+          background:
+            "radial-gradient(circle, rgba(245,186,76,0.25), transparent 65%)",
           animation: "floatC 16s ease-in-out infinite",
         }}
       />
