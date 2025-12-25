@@ -7,6 +7,7 @@ import {
 import { authApi } from "../../shared/api/authApi";
 import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
+import { useSettingsStore } from "../../shared/store/settingsStore";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for logout event from httpClient interceptor
     const handleLogout = () => {
       setUnauthenticated();
+      useSettingsStore.getState().reset();
     };
     window.addEventListener("auth:logout", handleLogout);
 
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error("Logout error:", error);
     }
     logoutLocal();
+    useSettingsStore.getState().reset();
   }, [logoutLocal]);
 
   const value: AuthContextValue = {
