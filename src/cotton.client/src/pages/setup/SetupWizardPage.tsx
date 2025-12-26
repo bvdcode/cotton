@@ -13,10 +13,13 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { WizardHeader, WizardProgressBar, FloatingBlobs } from "./components";
 import { useSetupSteps } from "./useSetupSteps.tsx";
+import { useAuth } from "../../features/auth/useAuth";
+import { UserRole } from "../../features/auth/types";
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -73,6 +76,41 @@ export function SetupWizardPage() {
     }
     setStepIndex((i) => Math.max(i - 1, 0));
   };
+
+  const isAdmin = user?.role === UserRole.Admin;
+
+  if (!isAdmin) {
+    return (
+      <Box
+        sx={{
+          position: "relative",
+          width: "100%",
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: { xs: 2, sm: 4 },
+          overflow: "hidden",
+          bgcolor: "background.default",
+        }}
+      >
+        <Card
+          elevation={6}
+          sx={{
+            width: "100%",
+            maxWidth: 560,
+            borderRadius: 3,
+          }}
+        >
+          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+            <Alert severity="warning">
+              {t("onlyAdminCanSetup")}
+            </Alert>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
     <Box
