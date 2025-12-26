@@ -17,6 +17,8 @@ export function QuestionBlockMulti({
     label: string;
     description?: string;
     icon?: ReactNode;
+    disabled?: boolean;
+    disabledTooltip?: string;
   }>;
   selectedKeys: string[];
   onToggle: (key: string) => void;
@@ -44,6 +46,8 @@ export function QuestionBlockMulti({
               icon={opt.icon}
               active={active}
               onClick={() => onToggle(opt.key)}
+              disabled={opt.disabled}
+              disabledTooltip={opt.disabledTooltip}
             />
           );
         })}
