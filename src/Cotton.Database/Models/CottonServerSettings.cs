@@ -32,5 +32,20 @@ namespace Cotton.Database.Models
 
         [Column("timezone")]
         public string Timezone { get; init; } = null!;
+
+        [Column("instance_id")]
+        public Guid InstanceId { get; init; }
+
+        [Column("smtp_server_address")]
+        public string? SmtpServerAddress { get; init; }
+
+        [Column("smtp_server_port")]
+        public int? SmtpServerPort { get; init; }
+
+        [Column("smtp_username")]
+        public string? SmtpUsername { get; init; }
+
+        [Column("smtp_password_encrypted")]
+        public string? SmtpPasswordEncrypted { get; init; }
     }
 }

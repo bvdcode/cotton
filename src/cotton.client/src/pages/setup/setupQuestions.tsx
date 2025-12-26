@@ -35,7 +35,7 @@ export type SetupTextFieldOption = {
   key: string;
   label: () => string;
   placeholder?: () => string;
-  type?: "text" | "password" | "url";
+  type?: "text" | "password" | "url" | "boolean";
 };
 
 export type SetupStepDefinition =
@@ -234,6 +234,55 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.email.descriptions.custom"),
         value: "custom",
         icon: <AttachEmail />,
+      },
+    ],
+  },
+  {
+    key: "emailConfig",
+    type: "form",
+    requires: "email:custom",
+    title: () => t("setup:questions.emailConfig.title"),
+    subtitle: () => t("setup:questions.emailConfig.subtitle"),
+    fields: [
+      {
+        key: "smtpServer",
+        label: () => t("setup:questions.emailConfig.fields.smtpServer"),
+        placeholder: () =>
+          t("setup:questions.emailConfig.placeholders.smtpServer"),
+        type: "text",
+      },
+      {
+        key: "port",
+        label: () => t("setup:questions.emailConfig.fields.port"),
+        placeholder: () => t("setup:questions.emailConfig.placeholders.port"),
+        type: "text",
+      },
+      {
+        key: "username",
+        label: () => t("setup:questions.emailConfig.fields.username"),
+        placeholder: () =>
+          t("setup:questions.emailConfig.placeholders.username"),
+        type: "text",
+      },
+      {
+        key: "password",
+        label: () => t("setup:questions.emailConfig.fields.password"),
+        placeholder: () =>
+          t("setup:questions.emailConfig.placeholders.password"),
+        type: "password",
+      },
+      {
+        key: "fromAddress",
+        label: () => t("setup:questions.emailConfig.fields.fromAddress"),
+        placeholder: () =>
+          t("setup:questions.emailConfig.placeholders.fromAddress"),
+        type: "text",
+      },
+      {
+        key: "useSSL",
+        label: () => t("setup:questions.emailConfig.fields.useSSL"),
+        placeholder: () => t("setup:questions.emailConfig.placeholders.useSSL"),
+        type: "boolean",
       },
     ],
   },
