@@ -105,6 +105,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         key: "photos",
         label: () => t("setup:questions.usage.options.photos"),
         icon: <PhotoLibraryIcon />,
+        description: () => t("setup:questions.usage.descriptions.photos"),
       },
       {
         key: "documents",
