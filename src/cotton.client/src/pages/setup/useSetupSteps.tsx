@@ -4,6 +4,7 @@ import {
   QuestionBlock,
   QuestionBlockMulti,
   QuestionForm,
+  QuestionDropdown,
 } from "./components";
 
 type BuiltStep = {
@@ -50,10 +51,35 @@ export function useSetupSteps(
         steps.push({
           key: def.key,
           render: () => {
-            const selectedKey =
-              typeof answers[def.key] === "string"
-                ? (answers[def.key] as string)
-                : null;
+            // Get selected key, or use default value if not set
+            let selectedKey: string | null = null;
+            
+            if (answers[def.key] !== undefined && typeof answers[def.key] === "string") {
+              selectedKey = answers[def.key] as string;
+            } else if (def.getDefaultValue && answers[def.key] === undefined) {
+              // Set default value on first render
+              const defaultValue = def.getDefaultValue();
+              const defaultOption = options.find(opt => opt.value === defaultValue);
+              if (defaultOption) {
+                selectedKey = defaultOption.key;
+                updateAnswer(def.key, selectedKey);
+              }
+            }
+
+            // Render as dropdown or cards based on renderAs field
+            if (def.renderAs === "dropdown") {
+              return (
+                <QuestionDropdown
+                  title={def.title()}
+                  subtitle={def.subtitle()}
+                  linkUrl={def.linkUrl}
+                  linkAriaLabel={def.linkAria?.()}
+                  options={options}
+                  selectedKey={selectedKey}
+                  onSelect={(key) => updateAnswer(def.key, key)}
+                />
+              );
+            }
 
             return (
               <QuestionBlock
@@ -118,7 +144,7 @@ export function useSetupSteps(
           render: () => {
             const formValues =
               answers[def.key] && typeof answers[def.key] === "object"
-                ? (answers[def.key] as Record<string, string>)
+                ? (answers[def.key] as Record<string, string | boolean>)
                 : {};
 
             return (
@@ -136,10 +162,13 @@ export function useSetupSteps(
           isValid: (): boolean => {
             const formData = answers[def.key];
             if (!formData || typeof formData !== "object") return false;
-            // All fields must be filled
+            // All fields must be filled (except boolean which are optional)
             return def.fields.every((field) => {
-              const value = (formData as Record<string, string>)[field.key];
-              return value && value.trim().length > 0;
+              const value = (formData as Record<string, string | boolean>)[field.key];
+              // Boolean fields are always valid
+              if (field.type === "boolean") return true;
+              // For text fields, check if value exists and is not empty
+              return value && typeof value === "string" && value.trim().length > 0;
             });
           },
         });
