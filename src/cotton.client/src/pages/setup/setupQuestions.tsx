@@ -33,6 +33,7 @@ export type SetupSingleOption<T> = {
   value: T;
   icon?: ReactNode;
   disabledIfAny?: string[];
+  requires?: string;
 };
 
 export type SetupMultiOption = {
@@ -41,6 +42,7 @@ export type SetupMultiOption = {
   description?: () => string;
   icon?: ReactNode;
   disabledIfAny?: string[];
+  requires?: string;
 };
 
 export type SetupTextFieldOption = {
@@ -148,6 +150,29 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     ],
   },
   {
+    key: "telemetry",
+    type: "single",
+    title: () => t("setup:questions.telemetry.title"),
+    subtitle: () => t("setup:questions.telemetry.subtitle"),
+    options: [
+      {
+        key: "deny",
+        label: () => t("setup:questions.telemetry.options.deny"),
+        description: () => t("setup:questions.telemetry.descriptions.deny"),
+        value: false,
+        icon: <AssistWalker />,
+        disabledIfAny: ["email:cloud", "ai:cloud", "masterKeyStorage:cloud"],
+      },
+      {
+        key: "allow",
+        label: () => t("setup:questions.telemetry.options.allow"),
+        description: () => t("setup:questions.telemetry.descriptions.allow"),
+        value: true,
+        icon: <AutoFixHigh />,
+      },
+    ],
+  },
+  {
     key: "storage",
     type: "single",
     title: () => t("setup:questions.storage.title"),
@@ -209,29 +234,6 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     ],
   },
   {
-    key: "telemetry",
-    type: "single",
-    title: () => t("setup:questions.telemetry.title"),
-    subtitle: () => t("setup:questions.telemetry.subtitle"),
-    options: [
-      {
-        key: "deny",
-        label: () => t("setup:questions.telemetry.options.deny"),
-        description: () => t("setup:questions.telemetry.descriptions.deny"),
-        value: false,
-        icon: <AssistWalker />,
-        disabledIfAny: ["email:cloud", "ai:cloud", "masterKeyStorage:cloud"],
-      },
-      {
-        key: "allow",
-        label: () => t("setup:questions.telemetry.options.allow"),
-        description: () => t("setup:questions.telemetry.descriptions.allow"),
-        value: true,
-        icon: <AutoFixHigh />,
-      },
-    ],
-  },
-  {
     key: "email",
     type: "single",
     title: () => t("setup:questions.email.title"),
@@ -243,6 +245,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.email.descriptions.cloud"),
         value: "cloud",
         icon: <CloudDone />,
+        requires: "telemetry:allow",
       },
       {
         key: "custom",
