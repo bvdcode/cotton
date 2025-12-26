@@ -23,6 +23,7 @@ export type SetupSingleOption<T> = {
 export type SetupMultiOption = {
   key: string;
   label: () => string;
+  description?: () => string;
   icon?: ReactNode;
 };
 
@@ -111,16 +112,19 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         key: "documents",
         label: () => t("setup:questions.usage.options.documents"),
         icon: <DescriptionIcon />,
+        description: () => t("setup:questions.usage.descriptions.documents"),
       },
       {
         key: "media",
         label: () => t("setup:questions.usage.options.media"),
         icon: <MovieIcon />,
+        description: () => t("setup:questions.usage.descriptions.media"),
       },
       {
         key: "other",
         label: () => t("setup:questions.usage.options.other"),
         icon: <CodeIcon />,
+        description: () => t("setup:questions.usage.descriptions.other"),
       },
     ],
   },
