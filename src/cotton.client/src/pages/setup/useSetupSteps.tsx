@@ -16,7 +16,7 @@ type BuiltStep = {
 export function useSetupSteps(
   answers: Record<string, unknown>,
   updateAnswer: (key: string, value: unknown) => void,
-  updateFormField: (stepKey: string, fieldKey: string, value: string) => void,
+  updateFormField: (stepKey: string, fieldKey: string, value: string | boolean) => void,
 ) {
   const buildSteps = useCallback((): BuiltStep[] => {
     const steps: BuiltStep[] = [];
