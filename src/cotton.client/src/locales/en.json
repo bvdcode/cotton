@@ -83,12 +83,14 @@
         "subtitle": "Enter your S3-compatible storage credentials.",
         "fields": {
           "endpoint": "Endpoint URL",
+          "region": "Region",
           "bucket": "Bucket name",
           "accessKey": "Access key",
           "secretKey": "Secret key"
         },
         "placeholders": {
           "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
           "bucket": "my-bucket",
           "accessKey": "Your access key",
           "secretKey": "Your secret key"

@@ -1,4 +1,4 @@
-import { Stack, TextField, useTheme } from "@mui/material";
+import { Stack, TextField } from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionFormProps = {
@@ -25,8 +25,6 @@ export function QuestionForm({
   values,
   onChange,
 }: QuestionFormProps) {
-  const theme = useTheme();
-
   return (
     <Stack spacing={3}>
       <QuestionHeader
@@ -46,17 +44,6 @@ export function QuestionForm({
             onChange={(e) => onChange(field.key, e.target.value)}
             fullWidth
             variant="outlined"
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                bgcolor: theme.palette.background.paper,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                },
-                "&.Mui-focused": {
-                  bgcolor: theme.palette.background.paper,
-                },
-              },
-            }}
           />
         ))}
       </Stack>
