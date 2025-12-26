@@ -21,18 +21,36 @@ export function useSetupSteps(
 ) {
   const { t } = useTranslation();
   
-  // Helper function to check if requirement is met
-  const checkRequires = useCallback((requires?: string): boolean => {
-    if (!requires) return true;
+  // Helper function to check if requirement is met and get required option label
+  const checkRequires = useCallback((requires?: string): { met: boolean; requiredLabel?: string } => {
+    if (!requires) return { met: true };
     
     const [reqKey, reqValue] = requires.split(":");
     const currentValue = answers[reqKey];
     
+    let met = false;
     // Check if it's an array (multi-select)
     if (Array.isArray(currentValue)) {
-      return currentValue.includes(reqValue);
+      met = currentValue.includes(reqValue);
+    } else {
+      met = currentValue === reqValue;
     }
-    return currentValue === reqValue;
+    
+    // If not met, get the label of the required option
+    if (!met) {
+      const step = setupStepDefinitions.find((s) => s.key === reqKey);
+      if (step && step.type === "single") {
+        const optionsList = "getOptions" in step && step.getOptions 
+          ? step.getOptions() 
+          : step.options;
+        const option = optionsList.find((o) => o.key === reqValue);
+        if (option) {
+          return { met: false, requiredLabel: option.label() };
+        }
+      }
+    }
+    
+    return { met };
   }, [answers]);
   
   // Helper function to check if option should be disabled based on answers
@@ -89,13 +107,18 @@ export function useSetupSteps(
       if (def.type === "single") {
         // Use dynamic options if available, otherwise use static
         const optionsList = def.getOptions ? def.getOptions() : def.options;
-        const options = optionsList
-          .filter((opt) => checkRequires(opt.requires))
-          .map((opt) => {
+        const options = optionsList.map((opt) => {
+          const requiresCheck = checkRequires(opt.requires);
           const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
-          const disabledTooltip = disabled && reasons.length > 0
-            ? `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`
-            : undefined;
+          
+          const isDisabled = !requiresCheck.met || disabled;
+          let disabledTooltip: string | undefined;
+          
+          if (!requiresCheck.met && requiresCheck.requiredLabel) {
+            disabledTooltip = `${t("setup:questions.requiresTooltip")} ${requiresCheck.requiredLabel}`;
+          } else if (disabled && reasons.length > 0) {
+            disabledTooltip = `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`;
+          }
           
           return {
             key: opt.key,
@@ -103,7 +126,7 @@ export function useSetupSteps(
             description: opt.description?.(),
             value: opt.value,
             icon: opt.icon,
-            disabled,
+            disabled: isDisabled,
             disabledTooltip,
           };
         });
@@ -157,20 +180,25 @@ export function useSetupSteps(
             typeof answers[def.key] === "string" && answers[def.key] !== "",
         });
       } else if (def.type === "multi") {
-        const options = def.options
-          .filter((opt) => checkRequires(opt.requires))
-          .map((opt) => {
+        const options = def.options.map((opt) => {
+          const requiresCheck = checkRequires(opt.requires);
           const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
-          const disabledTooltip = disabled && reasons.length > 0
-            ? `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`
-            : undefined;
+          
+          const isDisabled = !requiresCheck.met || disabled;
+          let disabledTooltip: string | undefined;
+          
+          if (!requiresCheck.met && requiresCheck.requiredLabel) {
+            disabledTooltip = `${t("setup:questions.requiresTooltip")} ${requiresCheck.requiredLabel}`;
+          } else if (disabled && reasons.length > 0) {
+            disabledTooltip = `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`;
+          }
           
           return {
             key: opt.key,
             label: opt.label(),
             description: opt.description?.(),
             icon: opt.icon,
-            disabled,
+            disabled: isDisabled,
             disabledTooltip,
           };
         });
