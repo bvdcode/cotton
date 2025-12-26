@@ -153,23 +153,21 @@ export function SetupWizardPage() {
               mx: -2,
             }}
           >
-            <Box sx={{ px: 2, py: 1 }}>
-              <Fade in={true} timeout={600} key={started ? stepIndex : "intro"}>
-                <Box>
-                  {started ? (
-                    <Stack spacing={2.5}>
-                      <WizardProgressBar
-                        step={stepIndex + 1}
-                        total={steps.length}
-                      />
-                      {currentStep?.render()}
-                    </Stack>
-                  ) : (
-                    <Alert severity="info">{t("intro")}</Alert>
-                  )}
-                </Box>
-              </Fade>
-            </Box>
+            <Fade in={true} timeout={600} key={started ? stepIndex : "intro"}>
+              <Box>
+                {started ? (
+                  <Stack spacing={2.5}>
+                    <WizardProgressBar
+                      step={stepIndex + 1}
+                      total={steps.length}
+                    />
+                    {currentStep?.render()}
+                  </Stack>
+                ) : (
+                  <Alert severity="info">{t("intro")}</Alert>
+                )}
+              </Box>
+            </Fade>
           </Box>
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
