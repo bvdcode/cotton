@@ -1,11 +1,12 @@
 import {
-  Alert,
   Box,
   Button,
   Card,
   CardContent,
   Stack,
+  Fade,
   alpha,
+  Alert,
 } from "@mui/material";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -113,7 +114,6 @@ export function SetupWizardPage() {
           minHeight: 600,
           borderRadius: 3,
           backdropFilter: "blur(10px)",
-          bgcolor: "background.paper",
           borderColor: (theme) =>
             theme.palette.mode === "dark"
               ? alpha(theme.palette.primary.main, 0.15)
@@ -154,17 +154,21 @@ export function SetupWizardPage() {
             }}
           >
             <Box sx={{ px: 2, py: 1 }}>
-              {started ? (
-                <Stack spacing={2.5}>
-                  <WizardProgressBar
-                    step={stepIndex + 1}
-                    total={steps.length}
-                  />
-                  {currentStep?.render()}
-                </Stack>
-              ) : (
-                <Alert severity="info">{t("intro")}</Alert>
-              )}
+              <Fade in={true} timeout={600} key={started ? stepIndex : "intro"}>
+                <Box>
+                  {started ? (
+                    <Stack spacing={2.5}>
+                      <WizardProgressBar
+                        step={stepIndex + 1}
+                        total={steps.length}
+                      />
+                      {currentStep?.render()}
+                    </Stack>
+                  ) : (
+                    <Alert severity="info">{t("intro")}</Alert>
+                  )}
+                </Box>
+              </Fade>
             </Box>
           </Box>
 
@@ -173,7 +177,6 @@ export function SetupWizardPage() {
               <>
                 <Button
                   variant="outlined"
-                  color="inherit"
                   size="large"
                   fullWidth
                   onClick={handleBack}
@@ -188,7 +191,6 @@ export function SetupWizardPage() {
                 </Button>
                 <Button
                   variant="contained"
-                  color="primary"
                   size="large"
                   fullWidth
                   onClick={handleNext}
@@ -205,7 +207,6 @@ export function SetupWizardPage() {
             ) : (
               <Button
                 variant="contained"
-                color="primary"
                 size="large"
                 fullWidth
                 onClick={handleStart}
