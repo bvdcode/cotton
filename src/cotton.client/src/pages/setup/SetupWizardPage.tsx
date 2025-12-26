@@ -28,7 +28,7 @@ export function SetupWizardPage() {
   }, []);
 
   const updateFormField = useCallback(
-    (stepKey: string, fieldKey: string, value: string) => {
+    (stepKey: string, fieldKey: string, value: string | boolean) => {
       setAnswers((prev) => ({
         ...prev,
         [stepKey]: {
