@@ -166,7 +166,7 @@
       },
       "timezone": {
         "title": "Time Zone",
-        "subtitle": "Select your time zone for correct time display."
+        "subtitle": "Select your time zone to avoid being disturbed by notifications and disk noise at night."
       },
       "storage_space": {
         "title": "How much space are you giving to the app?",
