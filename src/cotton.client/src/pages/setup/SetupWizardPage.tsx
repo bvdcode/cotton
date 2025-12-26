@@ -1,24 +1,17 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardContent,
   Stack,
-  Typography,
   alpha,
 } from "@mui/material";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { setupStepDefinitions } from "./setupQuestions.tsx";
-import {
-  WizardHeader,
-  WizardProgressBar,
-  QuestionBlock,
-  QuestionBlockMulti,
-  QuestionForm,
-  FloatingBlobs,
-} from "./components";
+import { WizardHeader, WizardProgressBar, FloatingBlobs } from "./components";
+import { useSetupSteps } from "./useSetupSteps.tsx";
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
@@ -46,129 +39,7 @@ export function SetupWizardPage() {
     [],
   );
 
-  type BuiltStep = {
-    key: string;
-    render: () => ReactNode;
-    isValid: () => boolean;
-  };
-
-  const buildSteps = useCallback((): BuiltStep[] => {
-    const steps: BuiltStep[] = [];
-
-    for (const def of setupStepDefinitions) {
-      // Check if step should be shown
-      if (def.showIf && !def.showIf(answers)) {
-        continue;
-      }
-
-      if (def.type === "single") {
-        const options = def.options.map((opt) => ({
-          key: opt.key,
-          label: opt.label(),
-          description: opt.description?.(),
-          value: opt.value,
-          icon: opt.icon,
-        }));
-
-        steps.push({
-          key: def.key,
-          render: () => {
-            const selectedKey = typeof answers[def.key] === 'string' ? answers[def.key] as string : null;
-
-            return (
-              <QuestionBlock
-                title={def.title()}
-                subtitle={def.subtitle()}
-                linkUrl={def.linkUrl}
-                linkAriaLabel={def.linkAria?.()}
-                options={options}
-                selectedKey={selectedKey}
-                onSelect={(key) => updateAnswer(def.key, key)}
-              />
-            );
-          },
-          isValid: (): boolean =>
-            typeof answers[def.key] === 'string' && answers[def.key] !== '',
-        });
-      } else if (def.type === "multi") {
-        const options = def.options.map((opt) => ({
-          key: opt.key,
-          label: opt.label(),
-          icon: opt.icon,
-        }));
-
-        steps.push({
-          key: def.key,
-          render: () => {
-            const selectedKeys = Array.isArray(answers[def.key])
-              ? (answers[def.key] as string[])
-              : [];
-
-            return (
-              <QuestionBlockMulti
-                title={def.title()}
-                subtitle={def.subtitle()}
-                options={options}
-                selectedKeys={selectedKeys}
-                onToggle={(key) => {
-                  const updated = selectedKeys.includes(key)
-                    ? selectedKeys.filter((k) => k !== key)
-                    : [...selectedKeys, key];
-                  updateAnswer(def.key, updated);
-                }}
-              />
-            );
-          },
-          isValid: (): boolean => {
-            const value = answers[def.key];
-            return Array.isArray(value) && value.length > 0;
-          },
-        });
-      } else if (def.type === "form") {
-        const fields = def.fields.map((field) => ({
-          key: field.key,
-          label: field.label(),
-          placeholder: field.placeholder?.(),
-          type: field.type,
-        }));
-
-        steps.push({
-          key: def.key,
-          render: () => {
-            const formValues =
-              answers[def.key] && typeof answers[def.key] === "object"
-                ? (answers[def.key] as Record<string, string>)
-                : {};
-
-            return (
-              <QuestionForm
-                title={def.title()}
-                subtitle={def.subtitle()}
-                fields={fields}
-                values={formValues}
-                onChange={(fieldKey, value) =>
-                  updateFormField(def.key, fieldKey, value)
-                }
-              />
-            );
-          },
-          isValid: (): boolean => {
-            const formData = answers[def.key];
-            if (!formData || typeof formData !== "object") return false;
-            // All fields must be filled
-            return def.fields.every((field) => {
-              const value = (formData as Record<string, string>)[field.key];
-              return value && value.trim().length > 0;
-            });
-          },
-        });
-      }
-    }
-
-    return steps;
-  }, [answers, updateAnswer, updateFormField]);
-
-  const steps = useMemo(() => buildSteps(), [buildSteps]);
+  const steps = useSetupSteps(answers, updateAnswer, updateFormField);
 
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
@@ -292,9 +163,7 @@ export function SetupWizardPage() {
                   {currentStep?.render()}
                 </Stack>
               ) : (
-                <Typography variant="body1" color="text.secondary">
-                  {t("intro")}
-                </Typography>
+                <Alert severity="info">{t("intro")}</Alert>
               )}
             </Box>
           </Box>

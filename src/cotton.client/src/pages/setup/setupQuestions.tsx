@@ -150,6 +150,12 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         type: "url",
       },
       {
+        key: "region",
+        label: () => t("setup:questions.s3Config.fields.region"),
+        placeholder: () => t("setup:questions.s3Config.placeholders.region"),
+        type: "text",
+      },
+      {
         key: "bucket",
         label: () => t("setup:questions.s3Config.fields.bucket"),
         placeholder: () => t("setup:questions.s3Config.placeholders.bucket"),
