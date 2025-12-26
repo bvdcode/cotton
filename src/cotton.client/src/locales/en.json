@@ -112,11 +112,13 @@
         "subtitle": "Choose where email notifications will be sent from.",
         "options": {
           "cloud": "Use cloud Cotton Mail",
-          "custom": "Use custom SMTP server"
+          "custom": "Use custom SMTP server",
+          "none": "No Email notifications"
         },
         "descriptions": {
           "cloud": "Public Cotton Cloud SMTP server will be used. It's secure and free. Choose this if you're not sure.",
-          "custom": "Configure your own SMTP server for sending email notifications."
+          "custom": "Configure your own SMTP server for sending email notifications.",
+          "none": "The simplest option, but you won't even be able to recover your password."
         }
       },
       "emailConfig": {
@@ -149,7 +151,8 @@
         "descriptions": {
           "allow": "Send anonymous metrics that we use for software feedback and bug fixes.",
           "deny": "This is your choice, and we respect your decision."
-        }
+        },
+        "disabledTooltip": "To disable telemetry, you need to turn off the following services:"
       },
       "ai": {
         "title": "AI and Computations",
@@ -163,6 +166,18 @@
           "local": "Slow, most heavy features disabled and model quality is simplified.",
           "runner": "Connect a separate GPU runner for computations. Fast, high quality - best models and support for all features.",
           "cloud": "Optimal balance, but may have limitations. Incredible generosity for free."
+        }
+      },
+      "masterKeyStorage": {
+        "title": "Where do you want to store the master key?",
+        "subtitle": "Choose the storage location for your encryption master key.",
+        "options": {
+          "local": "Locally",
+          "cloud": "Transfer key to Cotton"
+        },
+        "descriptions": {
+          "local": "I trust myself, storing the key locally",
+          "cloud": "You can restore encryption by obtaining a backup copy of the key. It's safe - the key doesn't provide any external access and is used by the app in process memory."
         }
       },
       "timezone": {

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
 import {
   QuestionBlock,
@@ -18,6 +19,40 @@ export function useSetupSteps(
   updateAnswer: (key: string, value: unknown) => void,
   updateFormField: (stepKey: string, fieldKey: string, value: string | boolean) => void,
 ) {
+  const { t } = useTranslation();
+  
+  // Helper function to check if option should be disabled based on answers
+  const checkDisabled = useCallback((disabledIfAny?: string[]) => {
+    if (!disabledIfAny || disabledIfAny.length === 0) {
+      return { disabled: false, reasons: [] };
+    }
+
+    const reasons: string[] = [];
+    for (const condition of disabledIfAny) {
+      const [key, value] = condition.split(":");
+      const currentValue = answers[key];
+      
+      if (currentValue === value) {
+        // Find the label for this option
+        const step = setupStepDefinitions.find((s) => s.key === key);
+        if (step && step.type === "single") {
+          const optionsList = "getOptions" in step && step.getOptions 
+            ? step.getOptions() 
+            : step.options;
+          const option = optionsList.find((o) => o.key === value);
+          if (option) {
+            reasons.push(option.label());
+          }
+        }
+      }
+    }
+
+    return {
+      disabled: reasons.length > 0,
+      reasons,
+    };
+  }, [answers]);
+
   const buildSteps = useCallback((): BuiltStep[] => {
     const steps: BuiltStep[] = [];
 
@@ -40,13 +75,22 @@ export function useSetupSteps(
       if (def.type === "single") {
         // Use dynamic options if available, otherwise use static
         const optionsList = def.getOptions ? def.getOptions() : def.options;
-        const options = optionsList.map((opt) => ({
-          key: opt.key,
-          label: opt.label(),
-          description: opt.description?.(),
-          value: opt.value,
-          icon: opt.icon,
-        }));
+        const options = optionsList.map((opt) => {
+          const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
+          const disabledTooltip = disabled && reasons.length > 0
+            ? `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`
+            : undefined;
+          
+          return {
+            key: opt.key,
+            label: opt.label(),
+            description: opt.description?.(),
+            value: opt.value,
+            icon: opt.icon,
+            disabled,
+            disabledTooltip,
+          };
+        });
 
         steps.push({
           key: def.key,
@@ -97,12 +141,21 @@ export function useSetupSteps(
             typeof answers[def.key] === "string" && answers[def.key] !== "",
         });
       } else if (def.type === "multi") {
-        const options = def.options.map((opt) => ({
-          key: opt.key,
-          label: opt.label(),
-          description: opt.description?.(),
-          icon: opt.icon,
-        }));
+        const options = def.options.map((opt) => {
+          const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
+          const disabledTooltip = disabled && reasons.length > 0
+            ? `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`
+            : undefined;
+          
+          return {
+            key: opt.key,
+            label: opt.label(),
+            description: opt.description?.(),
+            icon: opt.icon,
+            disabled,
+            disabledTooltip,
+          };
+        });
 
         steps.push({
           key: def.key,
@@ -176,7 +229,7 @@ export function useSetupSteps(
     }
 
     return steps;
-  }, [answers, updateAnswer, updateFormField]);
+  }, [answers, updateAnswer, updateFormField, checkDisabled, t]);
 
   return useMemo(() => buildSteps(), [buildSteps]);
 }
