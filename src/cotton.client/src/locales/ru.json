@@ -1,5 +1,7 @@
 {
   "common": {
+    "languageName": "Русский",
+    "switchToThisLanguage": "Переключить на русский",
     "userMenu": {
       "lightMode": "Светлая тема",
       "darkMode": "Тёмная тема",
