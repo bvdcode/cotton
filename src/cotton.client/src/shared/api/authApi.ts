@@ -18,6 +18,7 @@ interface LoginResponse {
 interface UserInfoResponse {
   id: string;
   username: string;
+  role: UserRole;
   displayName?: string;
   pictureUrl?: string;
 }
@@ -42,9 +43,9 @@ export const authApi = {
   me: async (): Promise<User> => {
     const response = await httpClient.get<UserInfoResponse>("auth/me");
     return {
-      id: response.data.id ?? "",
-      role: UserRole.User,
-      username: response.data.username ?? "Unknown",
+      id: response.data.id,
+      role: response.data.role,
+      username: response.data.username,
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
     };
