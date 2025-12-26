@@ -24,7 +24,7 @@
   },
   "setup": {
     "title": "Server setup wizard",
-    "subtitle": "Complete initial server configuration to start using the app. We detected that the server is not initialized yet.",
+    "subtitle": "Complete the initial server configuration to get started. This won't take long and will personalize the app for you.",
     "repoLink": "Project on GitHub",
     "status": {
       "hasUsers": "Has users",
@@ -34,30 +34,30 @@
       "no": "No"
     },
     "actions": {
-      "start": "Start initialization",
+      "start": "Let's go",
       "later": "Do it later",
       "back": "Back",
       "next": "Next",
-      "finish": "Finish",
+      "finish": "Done",
       "cancel": "Cancel",
       "toggleLanguage": "Change language",
       "toggleTheme": "Toggle theme"
     },
-    "intro": "Answer a few questions to tailor security and defaults. You can change these later in settings.",
+    "intro": "You'll be asked simple questions about your Cotton Cloud usage preferences. If you're not sure, don't worry - many settings can be changed later.",
     "questions": {
       "multiuser": {
-        "title": "Are you planning to use:",
-        "subtitle": "This affects space saving and some security settings.",
-        "linkAria": "Open documentation in a new tab",
+        "title": "You plan to use it:",
+        "subtitle": "This affects storage optimization and some security settings.",
+        "linkAria": "Open help in a new tab",
         "options": {
-          "family": "Only at home for family",
-          "many": "For many people",
+          "family": "For family",
+          "many": "With strangers",
           "unknown": "Not sure yet"
         },
         "descriptions": {
-          "family": "We will optimize for home/family usage.",
-          "many": "We will tighten certain checks for broader sharing.",
-          "unknown": "You can change this later in settings."
+          "family": "File deduplication, shared search index, and pre-installed modules.",
+          "many": "Stricter mode for security between unknown users.",
+          "unknown": "Will set the best optimal defaults."
         }
       },
       "usage": {
@@ -68,18 +68,24 @@
           "documents": "Documents",
           "media": "Movies and series",
           "other": "Other"
+        },
+        "descriptions": {
+          "photos": "Will install AI search and text recognition add-ons.",
+          "documents": "Optimization for office files and PDFs for home archive",
+          "media": "Optimization for video files and streaming, integration with movie database.",
+          "other": "General settings for mixed file types."
         }
       },
       "storage": {
         "title": "Where do you want to store your data?",
-        "subtitle": "Choose storage location for your files.",
+        "subtitle": "Choose storage location for your files. Cotton Cloud will use server disk for hot cache regardless of your choice.",
         "options": {
-          "local": "Local disk",
+          "local": "Server local disk",
           "s3": "S3-compatible storage"
         },
         "descriptions": {
-          "local": "Store files on the server's local filesystem",
-          "s3": "Store files in remote S3-compatible object storage"
+          "local": "Store files on the server's local filesystem.",
+          "s3": "Store files in remote S3-compatible object storage."
         }
       },
       "s3Config": {
@@ -100,12 +106,48 @@
           "secretKey": "Your secret key"
         }
       },
+      "email": {
+        "title": "Email configuration",
+        "subtitle": "Choose where email notifications will be sent from.",
+        "options": {
+          "cloud": "Use cloud Cotton Mail",
+          "custom": "Use custom SMTP server"
+        },
+        "descriptions": {
+          "cloud": "Public Cotton Cloud SMTP server will be used. It's secure and free. Choose this if you're not sure.",
+          "custom": "Configure your own SMTP server for sending email notifications."
+        }
+      },
+      "emailConfig": {
+        "title": "SMTP server configuration",
+        "subtitle": "Enter your SMTP server details.",
+        "fields": {
+          "smtpServer": "SMTP server",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "fromAddress": "From address",
+          "useSSL": "Use SSL/TLS"
+        },
+        "placeholders": {
+          "smtpServer": "smtp.example.com",
+          "port": "587",
+          "username": "your@email.com",
+          "password": "Your password",
+          "fromAddress": "noreply@example.com",
+          "useSSL": "Enable SSL/TLS encryption"
+        }
+      },
       "telemetry": {
         "title": "Allow sending statistics?",
-        "subtitle": "This information helps us improve products and does not reveal your identity.",
+        "subtitle": "This information helps us improve products and does not reveal your identity in any way.",
         "options": {
-          "allow": "Yes, allow telemetry",
-          "deny": "No, do not send"
+          "allow": "Yes, send",
+          "deny": "No, don't send"
+        },
+        "descriptions": {
+          "allow": "Send anonymous metrics that we use for software feedback and bug fixes.",
+          "deny": "This is your choice, and we respect your decision."
         }
       }
     }
