@@ -9,9 +9,9 @@ namespace Cotton.Server.Services
 {
     public class SettingsProvider(CottonDbContext _dbContext)
     {
-        const int defaultEncryptionThreads = 2;
-        const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
-        const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
+        private const int defaultEncryptionThreads = 2;
+        private const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
+        private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
 
         //[nameof(CottonServerSettings.EncryptionThreads)] = defaultEncryptionThreads.ToString(),
         //[nameof(CottonServerSettings.MaxChunkSizeBytes)] = defaultMaxChunkSizeBytes.ToString(),
