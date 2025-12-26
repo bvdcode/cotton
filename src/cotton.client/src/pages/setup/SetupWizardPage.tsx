@@ -255,17 +255,28 @@ export function SetupWizardPage() {
         >
           <WizardHeader t={t} />
 
-          <Box sx={{ flex: 1, mt: 3.5, mb: 3.5, overflow: "auto" }}>
-            {started ? (
-              <Stack spacing={2.5}>
-                <WizardProgressBar step={stepIndex + 1} total={steps.length} />
-                {currentStep?.render()}
-              </Stack>
-            ) : (
-              <Typography variant="body1" color="text.secondary">
-                {t("intro")}
-              </Typography>
-            )}
+          <Box 
+            sx={{ 
+              flex: 1, 
+              mt: 3.5, 
+              mb: 3.5, 
+              overflow: "auto",
+              px: 0.5,
+              mx: -0.5,
+            }}
+          >
+            <Box sx={{ px: 0.5 }}>
+              {started ? (
+                <Stack spacing={2.5}>
+                  <WizardProgressBar step={stepIndex + 1} total={steps.length} />
+                  {currentStep?.render()}
+                </Stack>
+              ) : (
+                <Typography variant="body1" color="text.secondary">
+                  {t("intro")}
+                </Typography>
+              )}
+            </Box>
           </Box>
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
