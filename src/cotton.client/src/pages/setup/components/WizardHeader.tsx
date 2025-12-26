@@ -23,6 +23,13 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
     setTheme(mode === "light" ? "dark" : "light");
   };
 
+  // Get next language for tooltip
+  const currentLang = i18n.language;
+  const currentIndex = supportedLanguages.indexOf(currentLang);
+  const nextIndex = (currentIndex + 1) % supportedLanguages.length;
+  const nextLanguage = supportedLanguages[nextIndex];
+  const nextLanguageLabel = i18n.getFixedT(nextLanguage, "common")("switchToThisLanguage");
+
   return (
     <Stack spacing={1.5}>
       <Box
@@ -42,7 +49,7 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
         </Stack>
 
         <Stack direction="row" spacing={0.5}>
-          <Tooltip title={tCommon("userMenu.changeLanguage")}>
+          <Tooltip title={nextLanguageLabel}>
             <IconButton onClick={toggleLanguage} size="medium">
               <TranslateIcon />
             </IconButton>

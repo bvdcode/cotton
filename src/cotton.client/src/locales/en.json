@@ -1,5 +1,7 @@
 {
   "common": {
+    "languageName": "English",
+    "switchToThisLanguage": "Switch to English",
     "userMenu": {
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
