@@ -62,6 +62,7 @@ export function useSetupSteps(
         const options = def.options.map((opt) => ({
           key: opt.key,
           label: opt.label(),
+          description: opt.description?.(),
           icon: opt.icon,
         }));
 
