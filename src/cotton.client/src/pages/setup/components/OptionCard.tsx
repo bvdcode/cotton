@@ -36,13 +36,25 @@ export function OptionCard({
         background: (theme) =>
           active
             ? theme.palette.mode === "dark"
-              ? `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.secondary.main, 0.15)})`
-              : `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`
+              ? `linear-gradient(145deg, ${alpha(
+                  theme.palette.primary.main,
+                  0.2,
+                )}, ${alpha(theme.palette.secondary.main, 0.15)})`
+              : `linear-gradient(145deg, ${alpha(
+                  theme.palette.primary.main,
+                  0.1,
+                )}, ${alpha(theme.palette.secondary.main, 0.1)})`
             : alpha(theme.palette.text.primary, 0.02),
         boxShadow: (theme) =>
           active
-            ? `0 15px 35px ${alpha(theme.palette.primary.main, 0.35)}, 0 8px 20px ${alpha(theme.palette.primary.main, 0.25)}`
-            : `0 6px 18px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.25 : 0.08)}`,
+            ? `0 15px 55px ${alpha(
+                theme.palette.primary.main,
+                0.05,
+              )}, 0 8px 20px ${alpha(theme.palette.primary.main, 0.15)}`
+            : `0 6px 18px ${alpha(
+                theme.palette.common.black,
+                theme.palette.mode === "dark" ? 0.25 : 0.08,
+              )}`,
         cursor: "pointer",
         display: "flex",
         flexDirection: "row",
@@ -50,20 +62,15 @@ export function OptionCard({
         justifyContent: "space-between",
         gap: 2,
         transition: (theme) =>
-          theme.transitions.create(
-            ['border-color', 'background', 'box-shadow', 'transform'],
-            {
-              duration: theme.transitions.duration.standard,
-              easing: theme.transitions.easing.easeInOut,
-            },
-          ),
+          theme.transitions.create([
+            "border-color",
+            "background",
+            "box-shadow",
+            "transform",
+          ]),
         ":hover": {
           borderColor: "primary.main",
           transform: "translateY(-2px)",
-          boxShadow: (theme) =>
-            active
-              ? `0 20px 45px ${alpha(theme.palette.primary.main, 0.4)}, 0 10px 25px ${alpha(theme.palette.primary.main, 0.3)}`
-              : `0 10px 25px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.3 : 0.12)}`,
         },
         outline: "none",
       }}
@@ -85,11 +92,9 @@ export function OptionCard({
             alignItems: "center",
             justifyContent: "center",
             color: (theme) =>
-              active
-                ? theme.palette.secondary.main
-                : theme.palette.text.disabled,
+              active ? theme.palette.primary.main : theme.palette.text.disabled,
             transition: (theme) =>
-              theme.transitions.create(['color'], {
+              theme.transitions.create(["color"], {
                 duration: theme.transitions.duration.standard,
                 easing: theme.transitions.easing.easeInOut,
               }),
