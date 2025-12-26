@@ -14,6 +14,7 @@ using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -49,32 +50,18 @@ namespace Cotton.Server.Controllers
             });
         }
 
+        [EnableRateLimiting("auth")]
         [HttpPost("/api/v1/auth/login")]
         public async Task<IActionResult> Login(LoginRequestDto request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
             {
-                bool hasUsers = await _dbContext.Users.AnyAsync();
-                if (hasUsers)
+                user = await TryGetNewUserAsync(request);
+                if (user == null)
                 {
                     return this.ApiUnauthorized("Invalid username or password");
                 }
-                var uptime = DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
-                if (uptime.TotalMinutes > 5)
-                {
-                    _logger.LogWarning("Attempt to create initial admin user after uptime of {Uptime}. Please restart the application to enable initial admin user creation.", uptime);
-                    return this.ApiUnauthorized("Invalid username or password");
-                }
-                user = new()
-                {
-                    Role = UserRole.Admin,
-                    Username = request.Username.Trim(),
-                    PasswordPhc = _hasher.Hash(request.Password)
-                };
-                await _dbContext.Users.AddAsync(user);
-                await _dbContext.SaveChangesAsync();
-                _logger.LogInformation("Created initial admin user: {Username}", user.Username);
             }
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
@@ -177,6 +164,47 @@ namespace Cotton.Server.Controllers
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(sessionTimeoutHours)
             });
+        }
+
+        private async Task<User?> TryGetNewUserAsync(LoginRequestDto request)
+        {
+            bool hasUsers = await _dbContext.Users.AnyAsync();
+            if (hasUsers)
+            {
+                return null;
+            }
+
+            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "1";
+            if (isPublicInstance)
+            {
+                User guest = new()
+                {
+                    Role = UserRole.User,
+                    Username = request.Username.Trim(),
+                    PasswordPhc = _hasher.Hash(request.Password)
+                };
+                await _dbContext.Users.AddAsync(guest);
+                await _dbContext.SaveChangesAsync();
+                _logger.LogInformation("Created guest user {Username} on public instance", guest.Username);
+                return guest;
+            }
+
+            var uptime = DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
+            if (uptime.TotalMinutes > 5)
+            {
+                _logger.LogWarning("Attempt to create initial admin user after uptime of {Uptime}. Please restart the application to enable initial admin user creation.", uptime);
+                return null;
+            }
+            User user = new()
+            {
+                Role = UserRole.Admin,
+                Username = request.Username.Trim(),
+                PasswordPhc = _hasher.Hash(request.Password)
+            };
+            await _dbContext.Users.AddAsync(user);
+            await _dbContext.SaveChangesAsync();
+            _logger.LogInformation("Created initial admin user: {Username}", user.Username);
+            return user;
         }
     }
 }
