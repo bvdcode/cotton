@@ -185,6 +185,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         key: "deny",
         label: () => t("setup:questions.telemetry.options.deny"),
         value: false,
+        
       },
       {
         key: "allow",
