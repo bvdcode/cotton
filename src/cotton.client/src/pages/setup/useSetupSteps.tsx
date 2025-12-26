@@ -24,13 +24,22 @@ export function useSetupSteps(
       // Check if step should be shown based on requires
       if (def.requires) {
         const [reqKey, reqValue] = def.requires.split(":");
-        if (answers[reqKey] !== reqValue) {
+        const currentValue = answers[reqKey];
+        
+        // Check if it's an array (multi-select)
+        if (Array.isArray(currentValue)) {
+          if (!currentValue.includes(reqValue)) {
+            continue;
+          }
+        } else if (currentValue !== reqValue) {
           continue;
         }
       }
 
       if (def.type === "single") {
-        const options = def.options.map((opt) => ({
+        // Use dynamic options if available, otherwise use static
+        const optionsList = def.getOptions ? def.getOptions() : def.options;
+        const options = optionsList.map((opt) => ({
           key: opt.key,
           label: opt.label(),
           description: opt.description?.(),

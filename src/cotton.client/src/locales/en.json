@@ -163,6 +163,61 @@
           "runner": "Connect a separate GPU runner for computations. Fast, high quality - best models and support for all features.",
           "cloud": "Optimal balance, but may have limitations. Incredible generosity for free."
         }
+      },
+      "timezone": {
+        "title": "Time Zone",
+        "subtitle": "Select your time zone for correct time display."
+      },
+      "storage_space": {
+        "title": "How much space are you giving to the app?",
+        "subtitle": "This will help us optimize disk usage.",
+        "options": {
+          "all": "All you have",
+          "economical": "Space saving",
+          "unknown": "Don't know, let's move on"
+        },
+        "descriptions": {
+          "all": "Use all available space for maximum performance.",
+          "economical": "Aggressive space saving, compression and deduplication.",
+          "unknown": "We'll choose optimal settings for you."
+        }
+      },
+      "import_sources": {
+        "title": "Anything to import from legacy systems?",
+        "subtitle": "Select sources from which you want to migrate data.",
+        "options": {
+          "nextcloud": "Nextcloud",
+          "webdav": "WebDAV",
+          "none": "Nothing"
+        }
+      },
+      "nextcloudConfig": {
+        "title": "Nextcloud Import Setup",
+        "subtitle": "Enter credentials to connect to Nextcloud.",
+        "fields": {
+          "serverUrl": "Server URL",
+          "username": "Username",
+          "password": "Password"
+        },
+        "placeholders": {
+          "serverUrl": "https://nextcloud.example.com",
+          "username": "Your username",
+          "password": "Your password"
+        }
+      },
+      "webdavConfig": {
+        "title": "WebDAV Import Setup",
+        "subtitle": "Enter credentials to connect to WebDAV server.",
+        "fields": {
+          "serverUrl": "Server URL",
+          "username": "Username",
+          "password": "Password"
+        },
+        "placeholders": {
+          "serverUrl": "https://webdav.example.com",
+          "username": "Your username",
+          "password": "Your password"
+        }
       }
     }
   }
