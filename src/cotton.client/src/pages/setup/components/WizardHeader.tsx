@@ -1,11 +1,18 @@
-import { Box, Stack, Typography, IconButton, Tooltip } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  IconButton,
+  Tooltip,
+  Avatar,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../app/providers";
 import { supportedLanguages } from "../../../locales";
 import {
   Brightness4 as DarkIcon,
   Brightness7 as LightIcon,
-  Translate as TranslateIcon
+  Translate as TranslateIcon,
 } from "@mui/icons-material";
 
 export function WizardHeader({ t }: { t: (key: string) => string }) {
@@ -28,7 +35,10 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
   const currentIndex = supportedLanguages.indexOf(currentLang);
   const nextIndex = (currentIndex + 1) % supportedLanguages.length;
   const nextLanguage = supportedLanguages[nextIndex];
-  const nextLanguageLabel = i18n.getFixedT(nextLanguage, "common")("switchToThisLanguage");
+  const nextLanguageLabel = i18n.getFixedT(
+    nextLanguage,
+    "common",
+  )("switchToThisLanguage");
 
   return (
     <Stack spacing={1.5}>
@@ -40,9 +50,12 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
         }}
       >
         <Stack spacing={0.5} sx={{ flex: 1 }}>
-          <Typography variant="h4" fontWeight={800}>
-            {t("title")}
-          </Typography>
+          <Box display="flex" gap={2} alignItems="center">
+            <Avatar src="/icon.svg" alt="Cotton Logo" />
+            <Typography variant="h4" fontWeight={800}>
+              {t("title")}
+            </Typography>
+          </Box>
           <Typography variant="body1" color="text.secondary">
             {t("subtitle")}
           </Typography>

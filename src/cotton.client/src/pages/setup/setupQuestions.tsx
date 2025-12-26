@@ -4,7 +4,13 @@ import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import DescriptionIcon from "@mui/icons-material/Description";
 import MovieIcon from "@mui/icons-material/Movie";
 import CodeIcon from "@mui/icons-material/Code";
-import { Cloud, Folder } from "@mui/icons-material";
+import {
+  Cloud,
+  Diversity1,
+  Diversity3,
+  Folder,
+  PsychologyAlt,
+} from "@mui/icons-material";
 
 export type SetupSingleOption<T> = {
   key: string;
@@ -71,18 +77,21 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         label: () => t("setup:questions.multiuser.options.family"),
         description: () => t("setup:questions.multiuser.descriptions.family"),
         value: true,
+        icon: <Diversity1 />,
       },
       {
         key: "many",
         label: () => t("setup:questions.multiuser.options.many"),
         description: () => t("setup:questions.multiuser.descriptions.many"),
         value: false,
+        icon: <Diversity3 />,
       },
       {
         key: "unknown",
         label: () => t("setup:questions.multiuser.options.unknown"),
         description: () => t("setup:questions.multiuser.descriptions.unknown"),
         value: false,
+        icon: <PsychologyAlt />,
       },
     ],
   },
@@ -185,7 +194,6 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         key: "deny",
         label: () => t("setup:questions.telemetry.options.deny"),
         value: false,
-        
       },
       {
         key: "allow",
