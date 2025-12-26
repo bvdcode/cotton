@@ -147,10 +147,9 @@ namespace Cotton.Server.Controllers
             return _tokens.CreateToken(x =>
             {
                 return x.Add(JwtRegisteredClaimNames.Sub, user.Id.ToString())
-                    .Add(JwtRegisteredClaimNames.UniqueName, user.Username)
-                    .Add(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                    .Add(ClaimsIdentity.DefaultNameClaimType, user.Username)
-                    .Add(ClaimsIdentity.DefaultRoleClaimType, user.Role.ToString());
+                    .Add(JwtRegisteredClaimNames.Name, user.Username)
+                    .Add(ClaimTypes.Name, user.Username)
+                    .Add(ClaimTypes.Role, user.Role.ToString());
             });
         }
 
