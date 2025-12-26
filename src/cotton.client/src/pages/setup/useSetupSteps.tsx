@@ -21,6 +21,20 @@ export function useSetupSteps(
 ) {
   const { t } = useTranslation();
   
+  // Helper function to check if requirement is met
+  const checkRequires = useCallback((requires?: string): boolean => {
+    if (!requires) return true;
+    
+    const [reqKey, reqValue] = requires.split(":");
+    const currentValue = answers[reqKey];
+    
+    // Check if it's an array (multi-select)
+    if (Array.isArray(currentValue)) {
+      return currentValue.includes(reqValue);
+    }
+    return currentValue === reqValue;
+  }, [answers]);
+  
   // Helper function to check if option should be disabled based on answers
   const checkDisabled = useCallback((disabledIfAny?: string[]) => {
     if (!disabledIfAny || disabledIfAny.length === 0) {
@@ -75,7 +89,9 @@ export function useSetupSteps(
       if (def.type === "single") {
         // Use dynamic options if available, otherwise use static
         const optionsList = def.getOptions ? def.getOptions() : def.options;
-        const options = optionsList.map((opt) => {
+        const options = optionsList
+          .filter((opt) => checkRequires(opt.requires))
+          .map((opt) => {
           const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
           const disabledTooltip = disabled && reasons.length > 0
             ? `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`
@@ -141,7 +157,9 @@ export function useSetupSteps(
             typeof answers[def.key] === "string" && answers[def.key] !== "",
         });
       } else if (def.type === "multi") {
-        const options = def.options.map((opt) => {
+        const options = def.options
+          .filter((opt) => checkRequires(opt.requires))
+          .map((opt) => {
           const { disabled, reasons } = checkDisabled(opt.disabledIfAny);
           const disabledTooltip = disabled && reasons.length > 0
             ? `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`
@@ -229,7 +247,7 @@ export function useSetupSteps(
     }
 
     return steps;
-  }, [answers, updateAnswer, updateFormField, checkDisabled, t]);
+  }, [answers, updateAnswer, updateFormField, checkDisabled, checkRequires, t]);
 
   return useMemo(() => buildSteps(), [buildSteps]);
 }
