@@ -174,7 +174,7 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "1";
+            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
             if (isPublicInstance)
             {
                 User guest = new()
