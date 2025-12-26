@@ -5,7 +5,11 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import MovieIcon from "@mui/icons-material/Movie";
 import CodeIcon from "@mui/icons-material/Code";
 import {
+  AssistWalker,
+  AttachEmail,
+  AutoFixHigh,
   Cloud,
+  CloudDone,
   Diversity1,
   Diversity3,
   Folder,
@@ -43,7 +47,7 @@ export type SetupStepDefinition =
       linkUrl?: string;
       linkAria?: () => string;
       options: SetupSingleOption<unknown>[];
-      showIf?: (answers: Record<string, unknown>) => boolean;
+      requires?: string;
     }
   | {
       key: string;
@@ -53,7 +57,7 @@ export type SetupStepDefinition =
       linkUrl?: string;
       linkAria?: () => string;
       options: SetupMultiOption[];
-      showIf?: (answers: Record<string, unknown>) => boolean;
+      requires?: string;
     }
   | {
       key: string;
@@ -61,7 +65,7 @@ export type SetupStepDefinition =
       title: () => string;
       subtitle: () => string;
       fields: SetupTextFieldOption[];
-      showIf?: (answers: Record<string, unknown>) => boolean;
+      requires?: string;
     };
 
 export const setupStepDefinitions: SetupStepDefinition[] = [
@@ -153,9 +157,9 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
   {
     key: "s3Config",
     type: "form",
+    requires: "storage:s3",
     title: () => t("setup:questions.s3Config.title"),
     subtitle: () => t("setup:questions.s3Config.subtitle"),
-    showIf: (answers) => answers.storage === "s3",
     fields: [
       {
         key: "endpoint",
@@ -198,12 +202,38 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "deny",
         label: () => t("setup:questions.telemetry.options.deny"),
+        description: () => t("setup:questions.telemetry.descriptions.deny"),
         value: false,
+        icon: <AssistWalker />,
       },
       {
         key: "allow",
         label: () => t("setup:questions.telemetry.options.allow"),
+        description: () => t("setup:questions.telemetry.descriptions.allow"),
         value: true,
+        icon: <AutoFixHigh />,
+      },
+    ],
+  },
+  {
+    key: "email",
+    type: "single",
+    title: () => t("setup:questions.email.title"),
+    subtitle: () => t("setup:questions.email.subtitle"),
+    options: [
+      {
+        key: "cloud",
+        label: () => t("setup:questions.email.options.cloud"),
+        description: () => t("setup:questions.email.descriptions.cloud"),
+        value: "cloud",
+        icon: <CloudDone />,
+      },
+      {
+        key: "custom",
+        label: () => t("setup:questions.email.options.custom"),
+        description: () => t("setup:questions.email.descriptions.custom"),
+        value: "custom",
+        icon: <AttachEmail />,
       },
     ],
   },
