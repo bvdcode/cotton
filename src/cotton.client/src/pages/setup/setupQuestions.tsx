@@ -4,7 +4,7 @@ import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import DescriptionIcon from "@mui/icons-material/Description";
 import MovieIcon from "@mui/icons-material/Movie";
 import CodeIcon from "@mui/icons-material/Code";
-import { Cloud } from "@mui/icons-material";
+import { Cloud, Folder } from "@mui/icons-material";
 
 export type SetupSingleOption<T> = {
   key: string;
@@ -125,6 +125,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         label: () => t("setup:questions.storage.options.local"),
         description: () => t("setup:questions.storage.descriptions.local"),
         value: "local",
+        icon: <Folder />,
       },
       {
         key: "s3",

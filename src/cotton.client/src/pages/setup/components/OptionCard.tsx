@@ -49,7 +49,14 @@ export function OptionCard({
         alignItems: "flex-start",
         justifyContent: "space-between",
         gap: 2,
-        transition: "all 0.2s ease",
+        transition: (theme) =>
+          theme.transitions.create(
+            ['border-color', 'background', 'box-shadow', 'transform'],
+            {
+              duration: theme.transitions.duration.standard,
+              easing: theme.transitions.easing.easeInOut,
+            },
+          ),
         ":hover": {
           borderColor: "primary.main",
           transform: "translateY(-2px)",
@@ -81,7 +88,11 @@ export function OptionCard({
               active
                 ? theme.palette.secondary.main
                 : theme.palette.text.disabled,
-            transition: "color 0.2s ease",
+            transition: (theme) =>
+              theme.transitions.create(['color'], {
+                duration: theme.transitions.duration.standard,
+                easing: theme.transitions.easing.easeInOut,
+              }),
             flexShrink: 0,
             "& > svg": {
               width: 72,
