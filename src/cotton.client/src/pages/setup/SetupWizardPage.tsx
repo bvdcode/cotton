@@ -73,11 +73,7 @@ export function SetupWizardPage() {
         steps.push({
           key: def.key,
           render: () => {
-            // Find the selected key by matching the value
-            const selectedOption = options.find(
-              (opt) => opt.value === answers[def.key],
-            );
-            const selectedKey = selectedOption?.key ?? null;
+            const selectedKey = typeof answers[def.key] === 'string' ? answers[def.key] as string : null;
 
             return (
               <QuestionBlock
@@ -87,12 +83,12 @@ export function SetupWizardPage() {
                 linkAriaLabel={def.linkAria?.()}
                 options={options}
                 selectedKey={selectedKey}
-                onSelect={(_, value) => updateAnswer(def.key, value)}
+                onSelect={(key) => updateAnswer(def.key, key)}
               />
             );
           },
           isValid: (): boolean =>
-            answers[def.key] !== undefined && answers[def.key] !== null,
+            typeof answers[def.key] === 'string' && answers[def.key] !== '',
         });
       } else if (def.type === "multi") {
         const options = def.options.map((opt) => ({
