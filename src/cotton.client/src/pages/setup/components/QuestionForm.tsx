@@ -1,4 +1,4 @@
-import { Stack, TextField } from "@mui/material";
+import { Stack, TextField, FormControlLabel, Checkbox } from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionFormProps = {
@@ -10,10 +10,10 @@ type QuestionFormProps = {
     key: string;
     label: string;
     placeholder?: string;
-    type?: "text" | "password" | "url";
+    type?: "text" | "password" | "url" | "boolean";
   }>;
-  values: Record<string, string>;
-  onChange: (key: string, value: string) => void;
+  values: Record<string, string | boolean>;
+  onChange: (key: string, value: string | boolean) => void;
 };
 
 export function QuestionForm({
@@ -34,18 +34,35 @@ export function QuestionForm({
         linkAriaLabel={linkAriaLabel}
       />
       <Stack spacing={2.5}>
-        {fields.map((field) => (
-          <TextField
-            key={field.key}
-            label={field.label}
-            placeholder={field.placeholder}
-            type={field.type || "text"}
-            value={values[field.key] || ""}
-            onChange={(e) => onChange(field.key, e.target.value)}
-            fullWidth
-            variant="outlined"
-          />
-        ))}
+        {fields.map((field) => {
+          if (field.type === "boolean") {
+            return (
+              <FormControlLabel
+                key={field.key}
+                control={
+                  <Checkbox
+                    checked={Boolean(values[field.key])}
+                    onChange={(e) => onChange(field.key, e.target.checked)}
+                  />
+                }
+                label={field.label}
+              />
+            );
+          }
+          
+          return (
+            <TextField
+              key={field.key}
+              label={field.label}
+              placeholder={field.placeholder}
+              type={field.type || "text"}
+              value={values[field.key] || ""}
+              onChange={(e) => onChange(field.key, e.target.value)}
+              fullWidth
+              variant="outlined"
+            />
+          );
+        })}
       </Stack>
     </Stack>
   );
