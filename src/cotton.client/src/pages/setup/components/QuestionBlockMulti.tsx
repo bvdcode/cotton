@@ -15,6 +15,7 @@ export function QuestionBlockMulti({
   options: Array<{
     key: string;
     label: string;
+    description?: string;
     icon?: ReactNode;
   }>;
   selectedKeys: string[];
@@ -39,6 +40,7 @@ export function QuestionBlockMulti({
             <OptionCard
               key={opt.key}
               label={opt.label}
+              description={opt.description}
               icon={opt.icon}
               active={active}
               onClick={() => onToggle(opt.key)}
