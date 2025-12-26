@@ -83,12 +83,14 @@
         "subtitle": "Введите данные вашего S3-совместимого хранилища.",
         "fields": {
           "endpoint": "URL эндпоинта",
+          "region": "Регион",
           "bucket": "Имя bucket",
           "accessKey": "Ключ доступа",
           "secretKey": "Секретный ключ"
         },
         "placeholders": {
           "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
           "bucket": "my-bucket",
           "accessKey": "Ваш ключ доступа",
           "secretKey": "Ваш секретный ключ"
