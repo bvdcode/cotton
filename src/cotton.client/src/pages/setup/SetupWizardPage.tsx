@@ -149,8 +149,8 @@ export function SetupWizardPage() {
               mt: 3.5,
               mb: 3.5,
               overflow: "auto",
-              px: 2,
-              mx: -2,
+              px: 3,
+              mx: -3,
             }}
           >
             <Fade in={true} timeout={600} key={started ? stepIndex : "intro"}>
