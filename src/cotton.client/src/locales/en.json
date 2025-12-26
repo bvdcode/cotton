@@ -44,6 +44,7 @@
       "toggleTheme": "Toggle theme"
     },
     "intro": "You'll be asked simple questions about your Cotton Cloud usage preferences. If you're not sure, don't worry - many settings can be changed later.",
+    "onlyAdminCanSetup": "Only administrators can configure the application. Please ask an administrator to perform the initial setup.",
     "questions": {
       "multiuser": {
         "title": "You plan to use it:",
