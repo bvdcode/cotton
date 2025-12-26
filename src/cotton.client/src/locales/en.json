@@ -149,6 +149,20 @@
           "allow": "Send anonymous metrics that we use for software feedback and bug fixes.",
           "deny": "This is your choice, and we respect your decision."
         }
+      },
+      "ai": {
+        "title": "AI and Computations",
+        "subtitle": "Choose where AI computations will be performed for search, recognition, and other features.",
+        "options": {
+          "local": "Local computations",
+          "runner": "Custom GPU runner",
+          "cloud": "Cotton Cloud computations"
+        },
+        "descriptions": {
+          "local": "Slow, most heavy features disabled and model quality is simplified.",
+          "runner": "Connect a separate GPU runner for computations. Fast, high quality - best models and support for all features.",
+          "cloud": "Optimal balance, but may have limitations. Incredible generosity for free."
+        }
       }
     }
   }
