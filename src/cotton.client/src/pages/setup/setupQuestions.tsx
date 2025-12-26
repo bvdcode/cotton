@@ -10,9 +10,11 @@ import {
   AutoFixHigh,
   Cloud,
   CloudDone,
+  Computer,
   Diversity1,
   Diversity3,
   Folder,
+  Memory,
   PsychologyAlt,
 } from "@mui/icons-material";
 
@@ -212,6 +214,35 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.telemetry.descriptions.allow"),
         value: true,
         icon: <AutoFixHigh />,
+      },
+    ],
+  },
+  {
+    key: "ai",
+    type: "single",
+    title: () => t("setup:questions.ai.title"),
+    subtitle: () => t("setup:questions.ai.subtitle"),
+    options: [
+      {
+        key: "local",
+        label: () => t("setup:questions.ai.options.local"),
+        description: () => t("setup:questions.ai.descriptions.local"),
+        value: "local",
+        icon: <Computer />,
+      },
+      {
+        key: "runner",
+        label: () => t("setup:questions.ai.options.runner"),
+        description: () => t("setup:questions.ai.descriptions.runner"),
+        value: "runner",
+        icon: <Memory />,
+      },
+      {
+        key: "cloud",
+        label: () => t("setup:questions.ai.options.cloud"),
+        description: () => t("setup:questions.ai.descriptions.cloud"),
+        value: "cloud",
+        icon: <PsychologyAlt />,
       },
     ],
   },
