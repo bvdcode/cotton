@@ -122,9 +122,9 @@ export function SetupWizardPage() {
           borderStyle: "solid",
           boxShadow: (theme) =>
             theme.palette.mode === "dark"
-              ? `0 30px 90px ${alpha(
+              ? `0 30px 190px ${alpha(
                   theme.palette.primary.main,
-                  0.25,
+                  0.15,
                 )}, 0 10px 40px ${alpha(theme.palette.common.black, 0.5)}`
               : `0 30px 60px ${alpha(
                   theme.palette.common.black,
@@ -148,9 +148,7 @@ export function SetupWizardPage() {
               flex: 1,
               mt: 3.5,
               mb: 3.5,
-              overflow: "auto",
-              px: 3,
-              mx: -3,
+              overflow: "visible",
             }}
           >
             <Fade in={true} timeout={600} key={started ? stepIndex : "intro"}>
