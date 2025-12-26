@@ -37,7 +37,9 @@
       "back": "Back",
       "next": "Next",
       "finish": "Finish",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "toggleLanguage": "Change language",
+      "toggleTheme": "Toggle theme"
     },
     "intro": "Answer a few questions to tailor security and defaults. You can change these later in settings.",
     "questions": {
