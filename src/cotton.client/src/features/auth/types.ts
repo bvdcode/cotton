@@ -3,6 +3,7 @@
  */
 export interface User {
   id: string;
+  role: UserRole;
   username: string;
   pictureUrl?: string;
   displayName?: string;
@@ -28,3 +29,10 @@ export interface AuthContextValue extends AuthState {
   setAuthenticated: (value: boolean, user?: User | null) => void;
   logout: () => Promise<void>;
 }
+
+export const UserRole = {
+  User: 0,
+  Admin: 1,
+} as const;
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
