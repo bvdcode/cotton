@@ -8,6 +8,7 @@ import {
   AssistWalker,
   AttachEmail,
   AutoFixHigh,
+  Block,
   Cloud,
   CloudDone,
   CloudSync,
@@ -21,6 +22,8 @@ import {
   Save,
   SdStorage,
   Sync,
+  VpnKey,
+  VpnKeyOff,
 } from "@mui/icons-material";
 
 export type SetupSingleOption<T> = {
@@ -29,6 +32,7 @@ export type SetupSingleOption<T> = {
   description?: () => string;
   value: T;
   icon?: ReactNode;
+  disabledIfAny?: string[];
 };
 
 export type SetupMultiOption = {
@@ -36,6 +40,7 @@ export type SetupMultiOption = {
   label: () => string;
   description?: () => string;
   icon?: ReactNode;
+  disabledIfAny?: string[];
 };
 
 export type SetupTextFieldOption = {
@@ -215,6 +220,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.telemetry.descriptions.deny"),
         value: false,
         icon: <AssistWalker />,
+        disabledIfAny: ["email:cloud", "ai:cloud", "masterKeyStorage:cloud"],
       },
       {
         key: "allow",
@@ -244,6 +250,13 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.email.descriptions.custom"),
         value: "custom",
         icon: <AttachEmail />,
+      },
+      {
+        key: "none",
+        label: () => t("setup:questions.email.options.none"),
+        description: () => t("setup:questions.email.descriptions.none"),
+        value: "none",
+        icon: <Block />,
       },
     ],
   },
@@ -322,6 +335,28 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.ai.descriptions.cloud"),
         value: "cloud",
         icon: <CloudSync />,
+      },
+    ],
+  },
+  {
+    key: "masterKeyStorage",
+    type: "single",
+    title: () => t("setup:questions.masterKeyStorage.title"),
+    subtitle: () => t("setup:questions.masterKeyStorage.subtitle"),
+    options: [
+      {
+        key: "local",
+        label: () => t("setup:questions.masterKeyStorage.options.local"),
+        description: () => t("setup:questions.masterKeyStorage.descriptions.local"),
+        value: "local",
+        icon: <VpnKeyOff />,
+      },
+      {
+        key: "cloud",
+        label: () => t("setup:questions.masterKeyStorage.options.cloud"),
+        description: () => t("setup:questions.masterKeyStorage.descriptions.cloud"),
+        value: "cloud",
+        icon: <VpnKey />,
       },
     ],
   },

@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
@@ -12,6 +13,7 @@ using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Helpers;
+using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -42,12 +44,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiUnauthorized("User not found");
             }
-            return Ok(new
-            {
-                user.Id,
-                user.Username,
-                DisplayName = user.Username,
-            });
+            return Ok(user.Adapt<UserDto>());
         }
 
         [EnableRateLimiting("auth")]

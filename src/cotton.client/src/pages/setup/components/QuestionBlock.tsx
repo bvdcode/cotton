@@ -21,6 +21,8 @@ export function QuestionBlock<T>({
     description?: string;
     value: T;
     icon?: ReactNode;
+    disabled?: boolean;
+    disabledTooltip?: string;
   }>;
   selectedValue?: T | null;
   selectedKey?: string | null;
@@ -58,6 +60,8 @@ export function QuestionBlock<T>({
               icon={opt.icon}
               active={active}
               onClick={() => onSelect(opt.key, opt.value)}
+              disabled={opt.disabled}
+              disabledTooltip={opt.disabledTooltip}
             />
           );
         })}
