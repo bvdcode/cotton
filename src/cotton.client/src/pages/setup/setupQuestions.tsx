@@ -56,6 +56,7 @@ export type SetupStepDefinition =
       options: SetupSingleOption<unknown>[];
       getOptions?: () => SetupSingleOption<unknown>[];
       getDefaultValue?: () => unknown;
+      renderAs?: "cards" | "dropdown";
       requires?: string;
     }
   | {
@@ -329,9 +330,10 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     type: "single",
     title: () => t("setup:questions.timezone.title"),
     subtitle: () => t("setup:questions.timezone.subtitle"),
+    renderAs: "dropdown",
     getOptions: () => {
       const timezones = Intl.supportedValuesOf("timeZone");
-      return timezones.slice(0, 20).map((tz) => ({
+      return timezones.map((tz) => ({
         key: tz,
         label: () => tz,
         value: tz,
