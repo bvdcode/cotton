@@ -4,7 +4,7 @@ import {
   clearAccessToken,
   refreshAccessToken,
 } from "./httpClient";
-import type { User } from "../../features/auth/types";
+import { UserRole, type User } from "../../features/auth/types";
 
 interface LoginRequest {
   username: string;
@@ -43,6 +43,7 @@ export const authApi = {
     const response = await httpClient.get<UserInfoResponse>("auth/me");
     return {
       id: response.data.id ?? "",
+      role: UserRole.User,
       username: response.data.username ?? "Unknown",
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
