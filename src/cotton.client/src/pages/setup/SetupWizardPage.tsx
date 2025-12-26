@@ -25,7 +25,7 @@ export function SetupWizardPage() {
   const navigate = useNavigate();
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  
+
   // Generic answers storage
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
 
@@ -33,15 +33,18 @@ export function SetupWizardPage() {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const updateFormField = useCallback((stepKey: string, fieldKey: string, value: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [stepKey]: {
-        ...(prev[stepKey] || {}),
-        [fieldKey]: value,
-      },
-    }));
-  }, []);
+  const updateFormField = useCallback(
+    (stepKey: string, fieldKey: string, value: string) => {
+      setAnswers((prev) => ({
+        ...prev,
+        [stepKey]: {
+          ...(prev[stepKey] || {}),
+          [fieldKey]: value,
+        },
+      }));
+    },
+    [],
+  );
 
   type BuiltStep = {
     key: string;
@@ -69,18 +72,27 @@ export function SetupWizardPage() {
 
         steps.push({
           key: def.key,
-          render: () => (
-            <QuestionBlock
-              title={def.title()}
-              subtitle={def.subtitle()}
-              linkUrl={def.linkUrl}
-              linkAriaLabel={def.linkAria?.()}
-              options={options}
-              selectedValue={answers[def.key]}
-              onSelect={(_, value) => updateAnswer(def.key, value)}
-            />
-          ),
-          isValid: (): boolean => answers[def.key] !== undefined && answers[def.key] !== null,
+          render: () => {
+            // Find the selected key by matching the value
+            const selectedOption = options.find(
+              (opt) => opt.value === answers[def.key],
+            );
+            const selectedKey = selectedOption?.key ?? null;
+
+            return (
+              <QuestionBlock
+                title={def.title()}
+                subtitle={def.subtitle()}
+                linkUrl={def.linkUrl}
+                linkAriaLabel={def.linkAria?.()}
+                options={options}
+                selectedKey={selectedKey}
+                onSelect={(_, value) => updateAnswer(def.key, value)}
+              />
+            );
+          },
+          isValid: (): boolean =>
+            answers[def.key] !== undefined && answers[def.key] !== null,
         });
       } else if (def.type === "multi") {
         const options = def.options.map((opt) => ({
@@ -92,10 +104,10 @@ export function SetupWizardPage() {
         steps.push({
           key: def.key,
           render: () => {
-            const selectedKeys = Array.isArray(answers[def.key]) 
+            const selectedKeys = Array.isArray(answers[def.key])
               ? (answers[def.key] as string[])
               : [];
-            
+
             return (
               <QuestionBlockMulti
                 title={def.title()}
@@ -127,17 +139,20 @@ export function SetupWizardPage() {
         steps.push({
           key: def.key,
           render: () => {
-            const formValues = answers[def.key] && typeof answers[def.key] === "object"
-              ? (answers[def.key] as Record<string, string>)
-              : {};
-            
+            const formValues =
+              answers[def.key] && typeof answers[def.key] === "object"
+                ? (answers[def.key] as Record<string, string>)
+                : {};
+
             return (
               <QuestionForm
                 title={def.title()}
                 subtitle={def.subtitle()}
                 fields={fields}
                 values={formValues}
-                onChange={(fieldKey, value) => updateFormField(def.key, fieldKey, value)}
+                onChange={(fieldKey, value) =>
+                  updateFormField(def.key, fieldKey, value)
+                }
               />
             );
           },
@@ -240,8 +255,14 @@ export function SetupWizardPage() {
           borderStyle: "solid",
           boxShadow: (theme) =>
             theme.palette.mode === "dark"
-              ? `0 30px 90px ${alpha(theme.palette.primary.main, 0.25)}, 0 10px 40px ${alpha(theme.palette.common.black, 0.5)}`
-              : `0 30px 60px ${alpha(theme.palette.common.black, 0.12)}, 0 10px 30px ${alpha(theme.palette.common.black, 0.08)}`,
+              ? `0 30px 90px ${alpha(
+                  theme.palette.primary.main,
+                  0.25,
+                )}, 0 10px 40px ${alpha(theme.palette.common.black, 0.5)}`
+              : `0 30px 60px ${alpha(
+                  theme.palette.common.black,
+                  0.12,
+                )}, 0 10px 30px ${alpha(theme.palette.common.black, 0.08)}`,
           zIndex: 1,
         }}
       >
@@ -255,20 +276,23 @@ export function SetupWizardPage() {
         >
           <WizardHeader t={t} />
 
-          <Box 
-            sx={{ 
-              flex: 1, 
-              mt: 3.5, 
-              mb: 3.5, 
+          <Box
+            sx={{
+              flex: 1,
+              mt: 3.5,
+              mb: 3.5,
               overflow: "auto",
-              px: 0.5,
-              mx: -0.5,
+              px: 2,
+              mx: -2,
             }}
           >
-            <Box sx={{ px: 0.5 }}>
+            <Box sx={{ px: 2, py: 1 }}>
               {started ? (
                 <Stack spacing={2.5}>
-                  <WizardProgressBar step={stepIndex + 1} total={steps.length} />
+                  <WizardProgressBar
+                    step={stepIndex + 1}
+                    total={steps.length}
+                  />
                   {currentStep?.render()}
                 </Stack>
               ) : (
