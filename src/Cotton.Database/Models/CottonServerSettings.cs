@@ -47,5 +47,26 @@ namespace Cotton.Database.Models
 
         [Column("smtp_password_encrypted")]
         public string? SmtpPasswordEncrypted { get; init; }
+
+        [Column("smtp_sender_email")]
+        public string? SmtpSenderEmail { get; init; }
+
+        [Column("smtp_use_ssl")]
+        public bool SmtpUseSsl { get; init; }
+
+        [Column("s3_access_key_id")]
+        public string? S3AccessKeyId { get; init; }
+
+        [Column("s3_secret_access_key_encrypted")]
+        public string? S3SecretAccessKeyEncrypted { get; init; }
+
+        [Column("s3_bucket_name")]
+        public string? S3BucketName { get; init; }
+
+        [Column("s3_region")]
+        public string? S3Region { get; init; }
+
+        [Column("s3_endpoint_url")]
+        public string? S3EndpointUrl { get; init; }
     }
 }
