@@ -21,9 +21,12 @@ export function useSetupSteps(
     const steps: BuiltStep[] = [];
 
     for (const def of setupStepDefinitions) {
-      // Check if step should be shown
-      if (def.showIf && !def.showIf(answers)) {
-        continue;
+      // Check if step should be shown based on requires
+      if (def.requires) {
+        const [reqKey, reqValue] = def.requires.split(":");
+        if (answers[reqKey] !== reqValue) {
+          continue;
+        }
       }
 
       if (def.type === "single") {
