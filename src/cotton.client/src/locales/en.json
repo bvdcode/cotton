@@ -47,6 +47,7 @@
     "onlyAdminCanSetup": "Only administrators can configure the application. Please ask an administrator to perform the initial setup.",
     "questions": {
       "requiresTooltip": "To enable this option, you need to select:",
+      "inQuestion": "in question",
       "multiuser": {
         "title": "You plan to use it:",
         "subtitle": "This affects storage optimization and some security settings.",
