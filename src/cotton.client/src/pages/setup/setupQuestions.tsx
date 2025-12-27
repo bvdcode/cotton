@@ -338,6 +338,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.ai.descriptions.cloud"),
         value: "cloud",
         icon: <CloudSync />,
+        requires: "telemetry:allow",
       },
     ],
   },

@@ -21,8 +21,8 @@ export function useSetupSteps(
 ) {
   const { t } = useTranslation();
   
-  // Helper function to check if requirement is met and get required option label
-  const checkRequires = useCallback((requires?: string): { met: boolean; requiredLabel?: string } => {
+  // Helper function to check if requirement is met and get required option label and question
+  const checkRequires = useCallback((requires?: string): { met: boolean; requiredLabel?: string; questionTitle?: string } => {
     if (!requires) return { met: true };
     
     const [reqKey, reqValue] = requires.split(":");
@@ -36,7 +36,7 @@ export function useSetupSteps(
       met = currentValue === reqValue;
     }
     
-    // If not met, get the label of the required option
+    // If not met, get the label of the required option and question title
     if (!met) {
       const step = setupStepDefinitions.find((s) => s.key === reqKey);
       if (step && step.type === "single") {
@@ -45,7 +45,11 @@ export function useSetupSteps(
           : step.options;
         const option = optionsList.find((o) => o.key === reqValue);
         if (option) {
-          return { met: false, requiredLabel: option.label() };
+          return { 
+            met: false, 
+            requiredLabel: option.label(),
+            questionTitle: step.title()
+          };
         }
       }
     }
@@ -114,8 +118,8 @@ export function useSetupSteps(
           const isDisabled = !requiresCheck.met || disabled;
           let disabledTooltip: string | undefined;
           
-          if (!requiresCheck.met && requiresCheck.requiredLabel) {
-            disabledTooltip = `${t("setup:questions.requiresTooltip")} ${requiresCheck.requiredLabel}`;
+          if (!requiresCheck.met && requiresCheck.requiredLabel && requiresCheck.questionTitle) {
+            disabledTooltip = `${t("setup:questions.requiresTooltip")} "${requiresCheck.requiredLabel}" ${t("setup:questions.inQuestion")} "${requiresCheck.questionTitle}"`;
           } else if (disabled && reasons.length > 0) {
             disabledTooltip = `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`;
           }
@@ -187,8 +191,8 @@ export function useSetupSteps(
           const isDisabled = !requiresCheck.met || disabled;
           let disabledTooltip: string | undefined;
           
-          if (!requiresCheck.met && requiresCheck.requiredLabel) {
-            disabledTooltip = `${t("setup:questions.requiresTooltip")} ${requiresCheck.requiredLabel}`;
+          if (!requiresCheck.met && requiresCheck.requiredLabel && requiresCheck.questionTitle) {
+            disabledTooltip = `${t("setup:questions.requiresTooltip")} "${requiresCheck.requiredLabel}" ${t("setup:questions.inQuestion")} "${requiresCheck.questionTitle}"`;
           } else if (disabled && reasons.length > 0) {
             disabledTooltip = `${t("setup:questions.telemetry.disabledTooltip")} ${reasons.join(", ")}`;
           }
