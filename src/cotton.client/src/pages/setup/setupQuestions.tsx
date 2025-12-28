@@ -5,7 +5,6 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import MovieIcon from "@mui/icons-material/Movie";
 import CodeIcon from "@mui/icons-material/Code";
 import {
-  AssistWalker,
   AttachEmail,
   AutoFixHigh,
   Block,
@@ -18,6 +17,7 @@ import {
   Folder,
   Language,
   Memory,
+  PrivacyTip,
   PsychologyAlt,
   Save,
   SdStorage,
@@ -160,7 +160,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         label: () => t("setup:questions.telemetry.options.deny"),
         description: () => t("setup:questions.telemetry.descriptions.deny"),
         value: false,
-        icon: <AssistWalker />,
+        icon: <PrivacyTip />,
         disabledIfAny: ["email:cloud", "ai:cloud", "masterKeyStorage:cloud"],
       },
       {
@@ -351,14 +351,16 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "local",
         label: () => t("setup:questions.masterKeyStorage.options.local"),
-        description: () => t("setup:questions.masterKeyStorage.descriptions.local"),
+        description: () =>
+          t("setup:questions.masterKeyStorage.descriptions.local"),
         value: "local",
         icon: <VpnKeyOff />,
       },
       {
         key: "cloud",
         label: () => t("setup:questions.masterKeyStorage.options.cloud"),
-        description: () => t("setup:questions.masterKeyStorage.descriptions.cloud"),
+        description: () =>
+          t("setup:questions.masterKeyStorage.descriptions.cloud"),
         value: "cloud",
         icon: <VpnKey />,
       },
@@ -397,14 +399,16 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "economical",
         label: () => t("setup:questions.storage_space.options.economical"),
-        description: () => t("setup:questions.storage_space.descriptions.economical"),
+        description: () =>
+          t("setup:questions.storage_space.descriptions.economical"),
         value: "economical",
         icon: <Save />,
       },
       {
         key: "unknown",
         label: () => t("setup:questions.storage_space.options.unknown"),
-        description: () => t("setup:questions.storage_space.descriptions.unknown"),
+        description: () =>
+          t("setup:questions.storage_space.descriptions.unknown"),
         value: "all",
         icon: <PsychologyAlt />,
       },
@@ -443,19 +447,22 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "serverUrl",
         label: () => t("setup:questions.nextcloudConfig.fields.serverUrl"),
-        placeholder: () => t("setup:questions.nextcloudConfig.placeholders.serverUrl"),
+        placeholder: () =>
+          t("setup:questions.nextcloudConfig.placeholders.serverUrl"),
         type: "url",
       },
       {
         key: "username",
         label: () => t("setup:questions.nextcloudConfig.fields.username"),
-        placeholder: () => t("setup:questions.nextcloudConfig.placeholders.username"),
+        placeholder: () =>
+          t("setup:questions.nextcloudConfig.placeholders.username"),
         type: "text",
       },
       {
         key: "password",
         label: () => t("setup:questions.nextcloudConfig.fields.password"),
-        placeholder: () => t("setup:questions.nextcloudConfig.placeholders.password"),
+        placeholder: () =>
+          t("setup:questions.nextcloudConfig.placeholders.password"),
         type: "password",
       },
     ],
@@ -470,19 +477,22 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "serverUrl",
         label: () => t("setup:questions.webdavConfig.fields.serverUrl"),
-        placeholder: () => t("setup:questions.webdavConfig.placeholders.serverUrl"),
+        placeholder: () =>
+          t("setup:questions.webdavConfig.placeholders.serverUrl"),
         type: "url",
       },
       {
         key: "username",
         label: () => t("setup:questions.webdavConfig.fields.username"),
-        placeholder: () => t("setup:questions.webdavConfig.placeholders.username"),
+        placeholder: () =>
+          t("setup:questions.webdavConfig.placeholders.username"),
         type: "text",
       },
       {
         key: "password",
         label: () => t("setup:questions.webdavConfig.fields.password"),
-        placeholder: () => t("setup:questions.webdavConfig.placeholders.password"),
+        placeholder: () =>
+          t("setup:questions.webdavConfig.placeholders.password"),
         type: "password",
       },
     ],

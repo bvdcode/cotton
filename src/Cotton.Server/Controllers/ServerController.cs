@@ -10,6 +10,12 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class ServerController(SettingsProvider _settings) : ControllerBase
     {
+        [HttpPost("/api/v1/settings")]
+        public async Task<IActionResult> CreateSettings()
+        {
+
+        }
+
         [Authorize]
         [HttpGet("/api/v1/settings")]
         public async Task<IActionResult> GetSettings()
