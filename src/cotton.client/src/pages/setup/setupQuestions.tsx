@@ -22,8 +22,6 @@ import {
   Save,
   SdStorage,
   Sync,
-  VpnKey,
-  VpnKeyOff,
 } from "@mui/icons-material";
 
 export type SetupSingleOption<T> = {
@@ -339,30 +337,6 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         value: "cloud",
         icon: <CloudSync />,
         requires: "telemetry:allow",
-      },
-    ],
-  },
-  {
-    key: "masterKeyStorage",
-    type: "single",
-    title: () => t("setup:questions.masterKeyStorage.title"),
-    subtitle: () => t("setup:questions.masterKeyStorage.subtitle"),
-    options: [
-      {
-        key: "local",
-        label: () => t("setup:questions.masterKeyStorage.options.local"),
-        description: () =>
-          t("setup:questions.masterKeyStorage.descriptions.local"),
-        value: "local",
-        icon: <VpnKeyOff />,
-      },
-      {
-        key: "cloud",
-        label: () => t("setup:questions.masterKeyStorage.options.cloud"),
-        description: () =>
-          t("setup:questions.masterKeyStorage.descriptions.cloud"),
-        value: "cloud",
-        icon: <VpnKey />,
       },
     ],
   },
