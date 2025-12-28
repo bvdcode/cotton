@@ -32,8 +32,8 @@ export function OptionCard({
       }}
       sx={{
         borderRadius: 2,
-        p: 2,
-        minHeight: 120,
+        p: { xs: 1.5, sm: 1.75, md: 2 },
+        minHeight: { xs: 100, sm: 110, md: 120 },
         border: (theme) =>
           active
             ? `1.5px solid ${theme.palette.primary.main}`
@@ -69,7 +69,7 @@ export function OptionCard({
         flexDirection: "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
-        gap: 2,
+        gap: { xs: 1, sm: 1.5, md: 2 },
         opacity: disabled ? 0.4 : 1,
         transition: (theme) =>
           theme.transitions.create([
@@ -88,12 +88,26 @@ export function OptionCard({
         outline: "none",
       }}
     >
-      <Stack spacing={0.6} sx={{ flex: 1 }}>
-        <Typography variant="subtitle1" fontWeight={700}>
+      <Stack spacing={{ xs: 0.4, sm: 0.5, md: 0.6 }} sx={{ flex: 1, minWidth: 0 }}>
+        <Typography 
+          variant="subtitle1" 
+          fontWeight={700}
+          sx={{
+            fontSize: { xs: "0.875rem", sm: "0.9rem", md: "1rem" },
+            lineHeight: 1.3,
+          }}
+        >
           {label}
         </Typography>
         {description ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{
+              fontSize: { xs: "0.75rem", sm: "0.8rem", md: "0.875rem" },
+              lineHeight: 1.4,
+            }}
+          >
             {description}
           </Typography>
         ) : null}
@@ -117,8 +131,8 @@ export function OptionCard({
               }),
             flexShrink: 0,
             "& > svg": {
-              width: 72,
-              height: 72,
+              width: { xs: 48, sm: 56, md: 72 },
+              height: { xs: 48, sm: 56, md: 72 },
             },
           }}
         >

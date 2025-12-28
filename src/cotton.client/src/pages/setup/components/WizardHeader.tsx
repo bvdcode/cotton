@@ -41,30 +41,54 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
   )("switchToThisLanguage");
 
   return (
-    <Stack spacing={1.5}>
+    <Stack spacing={{ xs: 1, sm: 1.5 }}>
       <Box
         sx={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: { xs: "center", sm: "flex-start" },
           justifyContent: "space-between",
+          gap: { xs: 1, sm: 2 },
         }}
       >
-        <Stack spacing={0.5} sx={{ flex: 1 }}>
-          <Box display="flex" gap={2} alignItems="center">
-            <Avatar src="/icon.svg" alt="Cotton Logo" />
-            <Typography variant="h4" fontWeight={800}>
+        <Stack spacing={{ xs: 0.5, sm: 0.5 }} sx={{ flex: 1, minWidth: 0 }}>
+          <Box 
+            display="flex" 
+            gap={{ xs: 1.5, sm: 2 }} 
+            alignItems="center"
+            sx={{ flexWrap: "nowrap" }}
+          >
+            <Avatar 
+              src="/icon.svg" 
+              alt="Cotton Logo" 
+              sx={{ width: { xs: 32, sm: 40 }, height: { xs: 32, sm: 40 } }}
+            />
+            <Typography 
+              variant="h4" 
+              fontWeight={800}
+              sx={{
+                fontSize: { xs: "1.25rem", sm: "1.5rem", md: "2rem" },
+                lineHeight: 1.2,
+              }}
+            >
               {t("title")}
             </Typography>
           </Box>
-          <Typography variant="body1" color="text.secondary">
+          <Typography 
+            variant="body1" 
+            color="text.secondary"
+            sx={{
+              fontSize: { xs: "0.875rem", sm: "1rem" },
+              display: { xs: "none", sm: "block" },
+            }}
+          >
             {t("subtitle")}
           </Typography>
         </Stack>
 
-        <Stack direction="row" spacing={0.5}>
+        <Stack direction="row" spacing={{ xs: 0, sm: 0.5 }} sx={{ flexShrink: 0 }}>
           <Tooltip title={nextLanguageLabel}>
-            <IconButton onClick={toggleLanguage} size="medium">
-              <TranslateIcon />
+            <IconButton onClick={toggleLanguage} size="small">
+              <TranslateIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
             </IconButton>
           </Tooltip>
           <Tooltip
@@ -74,8 +98,11 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
                 : tCommon("userMenu.lightMode")
             }
           >
-            <IconButton onClick={toggleTheme} size="medium">
-              {mode === "light" ? <DarkIcon /> : <LightIcon />}
+            <IconButton onClick={toggleTheme} size="small">
+              {mode === "light" ? 
+                <DarkIcon sx={{ fontSize: { xs: 20, sm: 24 } }} /> : 
+                <LightIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              }
             </IconButton>
           </Tooltip>
         </Stack>
