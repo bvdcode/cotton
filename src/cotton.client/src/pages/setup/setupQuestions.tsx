@@ -154,19 +154,19 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     subtitle: () => t("setup:questions.telemetry.subtitle"),
     options: [
       {
+        key: "allow",
+        label: () => t("setup:questions.telemetry.options.allow"),
+        description: () => t("setup:questions.telemetry.descriptions.allow"),
+        value: true,
+        icon: <AutoFixHigh />,
+      },
+      {
         key: "deny",
         label: () => t("setup:questions.telemetry.options.deny"),
         description: () => t("setup:questions.telemetry.descriptions.deny"),
         value: false,
         icon: <PrivacyTip />,
         disabledIfAny: ["email:cloud", "ai:cloud", "masterKeyStorage:cloud"],
-      },
-      {
-        key: "allow",
-        label: () => t("setup:questions.telemetry.options.allow"),
-        description: () => t("setup:questions.telemetry.descriptions.allow"),
-        value: true,
-        icon: <AutoFixHigh />,
       },
     ],
   },
@@ -317,6 +317,14 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     subtitle: () => t("setup:questions.ai.subtitle"),
     options: [
       {
+        key: "cloud",
+        label: () => t("setup:questions.ai.options.cloud"),
+        description: () => t("setup:questions.ai.descriptions.cloud"),
+        value: "cloud",
+        icon: <CloudSync />,
+        requires: "telemetry:allow",
+      },
+      {
         key: "local",
         label: () => t("setup:questions.ai.options.local"),
         description: () => t("setup:questions.ai.descriptions.local"),
@@ -329,14 +337,6 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.ai.descriptions.runner"),
         value: "runner",
         icon: <Memory />,
-      },
-      {
-        key: "cloud",
-        label: () => t("setup:questions.ai.options.cloud"),
-        description: () => t("setup:questions.ai.descriptions.cloud"),
-        value: "cloud",
-        icon: <CloudSync />,
-        requires: "telemetry:allow",
       },
     ],
   },
