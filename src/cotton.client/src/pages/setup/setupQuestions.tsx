@@ -358,55 +358,55 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     options: [],
   },
   {
-    key: "storage_space",
+    key: "storageSpace",
     type: "single",
-    title: () => t("setup:questions.storage_space.title"),
-    subtitle: () => t("setup:questions.storage_space.subtitle"),
+    title: () => t("setup:questions.storageSpace.title"),
+    subtitle: () => t("setup:questions.storageSpace.subtitle"),
     options: [
       {
         key: "all",
-        label: () => t("setup:questions.storage_space.options.all"),
-        description: () => t("setup:questions.storage_space.descriptions.all"),
+        label: () => t("setup:questions.storageSpace.options.all"),
+        description: () => t("setup:questions.storageSpace.descriptions.all"),
         value: "all",
         icon: <SdStorage />,
       },
       {
         key: "economical",
-        label: () => t("setup:questions.storage_space.options.economical"),
+        label: () => t("setup:questions.storageSpace.options.economical"),
         description: () =>
-          t("setup:questions.storage_space.descriptions.economical"),
+          t("setup:questions.storageSpace.descriptions.economical"),
         value: "economical",
         icon: <Save />,
       },
       {
         key: "unknown",
-        label: () => t("setup:questions.storage_space.options.unknown"),
+        label: () => t("setup:questions.storageSpace.options.unknown"),
         description: () =>
-          t("setup:questions.storage_space.descriptions.unknown"),
+          t("setup:questions.storageSpace.descriptions.unknown"),
         value: "all",
         icon: <PsychologyAlt />,
       },
     ],
   },
   {
-    key: "import_sources",
+    key: "importSources",
     type: "multi",
-    title: () => t("setup:questions.import_sources.title"),
-    subtitle: () => t("setup:questions.import_sources.subtitle"),
+    title: () => t("setup:questions.importSources.title"),
+    subtitle: () => t("setup:questions.importSources.subtitle"),
     options: [
       {
         key: "nextcloud",
-        label: () => t("setup:questions.import_sources.options.nextcloud"),
+        label: () => t("setup:questions.importSources.options.nextcloud"),
         icon: <Cloud />,
       },
       {
         key: "webdav",
-        label: () => t("setup:questions.import_sources.options.webdav"),
+        label: () => t("setup:questions.importSources.options.webdav"),
         icon: <Sync />,
       },
       {
         key: "none",
-        label: () => t("setup:questions.import_sources.options.none"),
+        label: () => t("setup:questions.importSources.options.none"),
         icon: <Language />,
       },
     ],
@@ -414,7 +414,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
   {
     key: "nextcloudConfig",
     type: "form",
-    requires: "import_sources:nextcloud",
+    requires: "importSources:nextcloud",
     title: () => t("setup:questions.nextcloudConfig.title"),
     subtitle: () => t("setup:questions.nextcloudConfig.subtitle"),
     fields: [
@@ -444,7 +444,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
   {
     key: "webdavConfig",
     type: "form",
-    requires: "import_sources:webdav",
+    requires: "importSources:webdav",
     title: () => t("setup:questions.webdavConfig.title"),
     subtitle: () => t("setup:questions.webdavConfig.subtitle"),
     fields: [

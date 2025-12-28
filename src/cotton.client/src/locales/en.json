@@ -174,7 +174,7 @@
         "title": "Time Zone",
         "subtitle": "Select your time zone to avoid being disturbed by notifications and disk noise at night."
       },
-      "storage_space": {
+      "storageSpace": {
         "title": "How much space are you giving to the app?",
         "subtitle": "This will help us optimize disk usage.",
         "options": {
@@ -188,7 +188,7 @@
           "unknown": "We'll choose optimal settings for you."
         }
       },
-      "import_sources": {
+      "importSources": {
         "title": "Anything to import from legacy systems?",
         "subtitle": "Select sources from which you want to migrate data.",
         "options": {
