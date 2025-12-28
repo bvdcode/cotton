@@ -43,9 +43,10 @@ export function QuestionBlock<T>({
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            sm: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)",
+            sm: "1fr",
+            md: options.length === 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)",
           },
-          gap: 1.5,
+          gap: { xs: 1.25, sm: 1.5 },
         }}
       >
         {options.map((opt) => {

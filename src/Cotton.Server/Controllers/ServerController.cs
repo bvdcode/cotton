@@ -10,6 +10,7 @@ namespace Cotton.Server.Controllers
     [ApiController]
     public class ServerController(SettingsProvider _settings) : ControllerBase
     {
+        [Authorize(Roles = "Admin")]
         [HttpPost("/api/v1/settings")]
         public async Task<IActionResult> CreateSettings()
         {
