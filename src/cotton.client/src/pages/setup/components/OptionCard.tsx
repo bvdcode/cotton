@@ -86,6 +86,19 @@ export function OptionCard({
               transform: "translateY(-2px)",
             },
         outline: "none",
+        ":focus": {
+          outline: "none",
+        },
+        ":focus-visible": {
+          outline: `2px solid`,
+          outlineColor: "primary.main",
+          outlineOffset: 2,
+        },
+        ":active": {
+          transform: disabled ? "none" : "scale(0.98)",
+        },
+        WebkitTapHighlightColor: "transparent",
+        userSelect: "none",
       }}
     >
       <Stack spacing={{ xs: 0.4, sm: 0.5, md: 0.6 }} sx={{ flex: 1, minWidth: 0 }}>
