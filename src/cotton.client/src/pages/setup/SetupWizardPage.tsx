@@ -174,8 +174,8 @@ export function SetupWizardPage() {
           position: "relative",
           width: "100%",
           maxWidth: 920,
-          minHeight: { xs: "calc(100vh - 56px)", sm: 600 },
-          height: { xs: "calc(100vh - 56px)", sm: "auto" },
+          minHeight: { xs: "calc(100vh - 60px)", sm: 600 },
+          height: { xs: "calc(100vh - 60px)", sm: "auto" },
           mt: "auto",
           mb: "auto",
           borderRadius: 3,
@@ -308,7 +308,11 @@ export function SetupWizardPage() {
         </CardContent>
       </Card>
 
-      <Box>
+      <Box
+        sx={{
+          mt: 1,
+        }}
+      >
         <Link
           href="https://github.com/bvdcode/cotton"
           target="_blank"

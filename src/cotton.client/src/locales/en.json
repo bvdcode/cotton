@@ -151,8 +151,8 @@
           "deny": "No, don't send"
         },
         "descriptions": {
-          "allow": "Send anonymous metrics that we use for software feedback and bug fixes.",
-          "deny": "This is your choice, and we respect your decision."
+          "allow": "Send anonymous metrics that used for software feedback and bug fixes.",
+          "deny": "This is your choice."
         },
         "disabledTooltip": "To disable telemetry, you need to turn off the following services:"
       },
@@ -185,7 +185,7 @@
         "descriptions": {
           "all": "Use all available space for maximum performance.",
           "economical": "Aggressive space saving, compression and deduplication.",
-          "unknown": "We'll choose optimal settings for you."
+          "unknown": "It will choose optimal settings for you."
         }
       },
       "importSources": {
