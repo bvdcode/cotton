@@ -15,7 +15,13 @@ namespace Cotton.Server.Controllers
         [HttpPost("/api/v1/settings")]
         public async Task<IActionResult> CreateSettings(ServerSettingsRequestDto request)
         {
-
+            string? error = await _settings.ValidateServerSettingsAsync(request);
+            if (error is not null)
+            {
+                return BadRequest(new { error });
+            }
+            await _settings.SaveServerSettingsAsync(request);
+            return Ok();
         }
 
         [Authorize]
