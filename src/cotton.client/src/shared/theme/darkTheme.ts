@@ -21,6 +21,22 @@ export const darkTheme = createTheme({
   },
   shape: { borderRadius: 12 },
   components: {
+    MuiAlert: {
+      styleOverrides: {
+        standardInfo: {
+          backgroundColor: "rgba(33, 150, 243, 0.15)",
+        },
+        standardSuccess: {
+          backgroundColor: "rgba(76, 175, 80, 0.15)",
+        },
+        standardWarning: {
+          backgroundColor: "rgba(255, 152, 0, 0.15)",
+        },
+        standardError: {
+          backgroundColor: "rgba(244, 67, 54, 0.15)",
+        },
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: `
         input:-webkit-autofill,
