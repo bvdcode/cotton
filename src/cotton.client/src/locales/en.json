@@ -170,18 +170,6 @@
           "cloud": "Optimal balance, but may have limitations. Incredible generosity for free. Requires internet connection."
         }
       },
-      "masterKeyStorage": {
-        "title": "Where do you want to store the master key?",
-        "subtitle": "Choose the storage location for your encryption master key.",
-        "options": {
-          "local": "Locally",
-          "cloud": "Transfer key to Cotton"
-        },
-        "descriptions": {
-          "local": "I trust myself, storing the key locally",
-          "cloud": "You can restore encryption by obtaining a backup copy of the key. It's safe - the key doesn't provide any external access and is used by the app in process memory."
-        }
-      },
       "timezone": {
         "title": "Time Zone",
         "subtitle": "Select your time zone to avoid being disturbed by notifications and disk noise at night."
