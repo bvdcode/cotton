@@ -65,10 +65,8 @@ export function OptionCard({
                 theme.palette.mode === "dark" ? 0.25 : 0.08,
               )}`,
         cursor: disabled ? "not-allowed" : "pointer",
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
+        display: "block",
+        overflow: "hidden",
         gap: { xs: 1, sm: 1.5, md: 2 },
         opacity: disabled ? 0.4 : 1,
         transition: (theme) =>
@@ -101,13 +99,43 @@ export function OptionCard({
         userSelect: "none",
       }}
     >
-      <Stack spacing={{ xs: 0.4, sm: 0.5, md: 0.6 }} sx={{ flex: 1, minWidth: 0 }}>
+      {icon && (
+        <Box
+          sx={{
+            float: "right",
+            ml: { xs: 1, sm: 1.5, md: 2 },
+            mb: { xs: 0.5, sm: 1 },
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: (theme) =>
+              disabled
+                ? theme.palette.text.disabled
+                : active
+                ? theme.palette.primary.main
+                : theme.palette.text.disabled,
+            transition: (theme) =>
+              theme.transitions.create(["color"], {
+                duration: theme.transitions.duration.standard,
+                easing: theme.transitions.easing.easeInOut,
+              }),
+            "& > svg": {
+              width: { xs: 48, sm: 56, md: 72 },
+              height: { xs: 48, sm: 56, md: 72 },
+            },
+          }}
+        >
+          {icon}
+        </Box>
+      )}
+      <Box>
         <Typography 
           variant="subtitle1" 
           fontWeight={700}
           sx={{
             fontSize: { xs: "0.875rem", sm: "0.9rem", md: "1rem" },
             lineHeight: 1.3,
+            mb: { xs: 0.4, sm: 0.5, md: 0.6 },
           }}
         >
           {label}
@@ -124,34 +152,7 @@ export function OptionCard({
             {description}
           </Typography>
         ) : null}
-      </Stack>
-      {icon && (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: (theme) =>
-              disabled
-                ? theme.palette.text.disabled
-                : active
-                ? theme.palette.primary.main
-                : theme.palette.text.disabled,
-            transition: (theme) =>
-              theme.transitions.create(["color"], {
-                duration: theme.transitions.duration.standard,
-                easing: theme.transitions.easing.easeInOut,
-              }),
-            flexShrink: 0,
-            "& > svg": {
-              width: { xs: 48, sm: 56, md: 72 },
-              height: { xs: 48, sm: 56, md: 72 },
-            },
-          }}
-        >
-          {icon}
-        </Box>
-      )}
+      </Box>
     </Box>
   );
 
