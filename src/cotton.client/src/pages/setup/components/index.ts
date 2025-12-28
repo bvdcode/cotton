@@ -6,4 +6,5 @@ export { QuestionBlock } from "./QuestionBlock";
 export { QuestionBlockMulti } from "./QuestionBlockMulti";
 export { QuestionForm } from "./QuestionForm";
 export { QuestionDropdown } from "./QuestionDropdown";
+export { QuestionAutocomplete } from "./QuestionAutocomplete";
 export { FloatingBlobs } from "./FloatingBlobs";
