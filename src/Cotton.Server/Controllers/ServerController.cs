@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ namespace Cotton.Server.Controllers
     {
         [Authorize(Roles = "Admin")]
         [HttpPost("/api/v1/settings")]
-        public async Task<IActionResult> CreateSettings()
+        public async Task<IActionResult> CreateSettings(ServerSettingsRequestDto request)
         {
 
         }
