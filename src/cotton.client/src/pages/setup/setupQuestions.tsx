@@ -3,7 +3,6 @@ import { t } from "i18next";
 import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import DescriptionIcon from "@mui/icons-material/Description";
 import MovieIcon from "@mui/icons-material/Movie";
-import CodeIcon from "@mui/icons-material/Code";
 import {
   AttachEmail,
   AutoFixHigh,
@@ -15,6 +14,7 @@ import {
   Diversity1,
   Diversity3,
   Folder,
+  FolderCopy,
   Language,
   Memory,
   PrivacyTip,
@@ -142,7 +142,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "other",
         label: () => t("setup:questions.usage.options.other"),
-        icon: <CodeIcon />,
+        icon: <FolderCopy />,
         description: () => t("setup:questions.usage.descriptions.other"),
       },
     ],
