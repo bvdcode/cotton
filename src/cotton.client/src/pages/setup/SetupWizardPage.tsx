@@ -9,6 +9,7 @@ import {
   Alert,
   Typography,
   Link,
+  CircularProgress,
 } from "@mui/material";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +18,7 @@ import { WizardHeader, WizardProgressBar, FloatingBlobs } from "./components";
 import { useSetupSteps } from "./useSetupSteps.tsx";
 import { useAuth } from "../../features/auth/useAuth";
 import { UserRole } from "../../features/auth/types";
+import { settingsApi } from "../../shared/api/settingsApi";
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
@@ -24,6 +26,8 @@ export function SetupWizardPage() {
   const { user } = useAuth();
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Generic answers storage
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -56,15 +60,23 @@ export function SetupWizardPage() {
     setStepIndex(0);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!started) {
       handleStart();
       return;
     }
     if (isLastStep) {
-      // Placeholder submit; replace with API call/save later.
-      console.log("Setup completed with answers:", answers);
-      navigate("/");
+      setLoading(true);
+      setError(null);
+      try {
+        await settingsApi.saveSetupAnswers(answers);
+        navigate("/onboarding");
+      } catch (err) {
+        console.error("Failed to save setup:", err);
+        setError("Failed to save settings. Please try again.");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     setStepIndex((i) => Math.min(i + 1, steps.length - 1));
@@ -213,6 +225,11 @@ export function SetupWizardPage() {
                       total={steps.length}
                     />
                     {currentStep?.render()}
+                    {error && (
+                      <Alert severity="error" onClose={() => setError(null)}>
+                        {error}
+                      </Alert>
+                    )}
                   </Stack>
                 ) : (
                   <Alert severity="info">{t("intro")}</Alert>
@@ -229,7 +246,7 @@ export function SetupWizardPage() {
                   size="large"
                   fullWidth
                   onClick={handleBack}
-                  disabled={stepIndex === 0}
+                  disabled={stepIndex === 0 || loading}
                   sx={{
                     py: 1.3,
                     fontWeight: 700,
@@ -243,14 +260,31 @@ export function SetupWizardPage() {
                   size="large"
                   fullWidth
                   onClick={handleNext}
-                  disabled={!canProceed}
+                  disabled={!canProceed || loading}
                   sx={{
                     py: 1.3,
                     fontWeight: 700,
                     textTransform: "none",
+                    position: "relative",
                   }}
                 >
-                  {isLastStep ? t("actions.finish") : t("actions.next")}
+                  {loading ? (
+                    <>
+                      <CircularProgress
+                        size={24}
+                        sx={{
+                          position: "absolute",
+                          left: "50%",
+                          marginLeft: "-12px",
+                        }}
+                      />
+                      <span style={{ visibility: "hidden" }}>
+                        {isLastStep ? t("actions.finish") : t("actions.next")}
+                      </span>
+                    </>
+                  ) : (
+                    <>{isLastStep ? t("actions.finish") : t("actions.next")}</>
+                  )}
                 </Button>
               </>
             ) : (

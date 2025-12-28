@@ -31,4 +31,8 @@ export const settingsApi = {
       supportedHashAlgorithm,
     };
   },
+
+  saveSetupAnswers: async (answers: Record<string, unknown>): Promise<void> => {
+    await httpClient.post("settings/setup", answers);
+  },
 };
