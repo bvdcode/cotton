@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
@@ -39,6 +40,16 @@ namespace Cotton.Server.Services
         public Task<bool> ServerHasUsersAsync()
         {
             return _dbContext.Users.AnyAsync();
+        }
+
+        internal async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
+        {
+            throw new NotImplementedException();
         }
     }
 }

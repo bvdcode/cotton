@@ -19,6 +19,36 @@ import { useSetupSteps } from "./useSetupSteps.tsx";
 import { useAuth } from "../../features/auth/useAuth";
 import { UserRole } from "../../features/auth/types";
 import { settingsApi } from "../../shared/api/settingsApi";
+import { setupStepDefinitions } from "./setupQuestions.tsx";
+
+// Helper function to convert keys to values for server
+function convertAnswersToValues(answers: Record<string, unknown>): Record<string, unknown> {
+  const converted: Record<string, unknown> = {};
+  
+  for (const [questionKey, answer] of Object.entries(answers)) {
+    const stepDef = setupStepDefinitions.find(s => s.key === questionKey);
+    
+    if (!stepDef) {
+      // Keep as-is if not found (form fields, etc)
+      converted[questionKey] = answer;
+      continue;
+    }
+    
+    if (stepDef.type === "single" && typeof answer === "string") {
+      // Find the option and get its value
+      const options = "getOptions" in stepDef && stepDef.getOptions 
+        ? stepDef.getOptions() 
+        : stepDef.options;
+      const option = options.find(opt => opt.key === answer);
+      converted[questionKey] = option?.value ?? answer;
+    } else {
+      // Keep as-is for multi, form types
+      converted[questionKey] = answer;
+    }
+  }
+  
+  return converted;
+}
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
@@ -69,7 +99,9 @@ export function SetupWizardPage() {
       setLoading(true);
       setError(null);
       try {
-        await settingsApi.saveSetupAnswers(answers);
+        // Convert keys to values before sending to server
+        const convertedAnswers = convertAnswersToValues(answers);
+        await settingsApi.saveSetupAnswers(convertedAnswers);
         navigate("/onboarding");
       } catch (err) {
         console.error("Failed to save setup:", err);
