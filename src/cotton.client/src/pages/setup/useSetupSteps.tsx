@@ -139,7 +139,7 @@ export function useSetupSteps(
         steps.push({
           key: def.key,
           render: () => {
-            // Get selected key, or use default value if not set
+            // Get selected key
             let selectedKey: string | null = null;
             
             if (answers[def.key] !== undefined && typeof answers[def.key] === "string") {
@@ -164,10 +164,7 @@ export function useSetupSteps(
                   linkAriaLabel={def.linkAria?.()}
                   options={options}
                   selectedKey={selectedKey}
-                  onSelect={(key) => {
-                    const option = options.find(opt => opt.key === key);
-                    updateAnswer(def.key, option?.value ?? key);
-                  }}
+                  onSelect={(key) => updateAnswer(def.key, key)}
                 />
               );
             }
@@ -181,10 +178,7 @@ export function useSetupSteps(
                   linkAriaLabel={def.linkAria?.()}
                   options={options}
                   selectedKey={selectedKey}
-                  onSelect={(key) => {
-                    const option = options.find(opt => opt.key === key);
-                    updateAnswer(def.key, option?.value ?? key);
-                  }}
+                  onSelect={(key) => updateAnswer(def.key, key)}
                 />
               );
             }
@@ -197,11 +191,12 @@ export function useSetupSteps(
                 linkAriaLabel={def.linkAria?.()}
                 options={options}
                 selectedKey={selectedKey}
-                onSelect={(key, value) => updateAnswer(def.key, value)}
+                onSelect={(key) => updateAnswer(def.key, key)}
               />
             );
           },
-          isValid: (): boolean => answers[def.key] !== undefined && answers[def.key] !== null,
+          isValid: (): boolean =>
+            typeof answers[def.key] === "string" && answers[def.key] !== "",
         });
       } else if (def.type === "multi") {
         const options = def.options.map((opt) => {
