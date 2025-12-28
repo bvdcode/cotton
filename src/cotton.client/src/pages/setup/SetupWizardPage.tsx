@@ -7,6 +7,8 @@ import {
   Fade,
   alpha,
   Alert,
+  Typography,
+  Link,
 } from "@mui/material";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -103,9 +105,7 @@ export function SetupWizardPage() {
           }}
         >
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-            <Alert severity="warning">
-              {t("onlyAdminCanSetup")}
-            </Alert>
+            <Alert severity="warning">{t("onlyAdminCanSetup")}</Alert>
           </CardContent>
         </Card>
       </Box>
@@ -119,8 +119,8 @@ export function SetupWizardPage() {
         width: "100%",
         minHeight: "100vh",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
         p: { xs: 2, sm: 4 },
         overflow: "hidden",
         bgcolor: "background.default",
@@ -163,6 +163,8 @@ export function SetupWizardPage() {
           width: "100%",
           maxWidth: 920,
           minHeight: 600,
+          mt: "auto",
+          mb: "auto",
           borderRadius: 3,
           backdropFilter: "blur(10px)",
           borderColor: (theme) =>
@@ -269,6 +271,26 @@ export function SetupWizardPage() {
           </Stack>
         </CardContent>
       </Card>
+
+      <Box>
+        <Link
+          href="https://github.com/bvdcode/cotton"
+          target="_blank"
+          rel="noopener noreferrer"
+          underline="hover"
+          sx={{
+            color: "text.secondary",
+            transition: "color 0.2s",
+            "&:hover": {
+              color: "primary.main",
+            },
+          }}
+        >
+          <Typography variant="body2">
+            © {new Date().getFullYear()} Cotton Cloud • Vadim Belov
+          </Typography>
+        </Link>
+      </Box>
     </Box>
   );
 }
