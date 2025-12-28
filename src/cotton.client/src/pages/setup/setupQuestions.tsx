@@ -85,7 +85,7 @@ export type SetupStepDefinition =
 
 export const setupStepDefinitions: SetupStepDefinition[] = [
   {
-    key: "multiuser",
+    key: "sharedMode",
     type: "single",
     title: () => t("setup:questions.multiuser.title"),
     subtitle: () => t("setup:questions.multiuser.subtitle"),
@@ -367,7 +367,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         key: "all",
         label: () => t("setup:questions.storageSpace.options.all"),
         description: () => t("setup:questions.storageSpace.descriptions.all"),
-        value: "all",
+        value: "unlimited",
         icon: <SdStorage />,
       },
       {
@@ -375,7 +375,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         label: () => t("setup:questions.storageSpace.options.economical"),
         description: () =>
           t("setup:questions.storageSpace.descriptions.economical"),
-        value: "economical",
+        value: "limited",
         icon: <Save />,
       },
       {
@@ -383,7 +383,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         label: () => t("setup:questions.storageSpace.options.unknown"),
         description: () =>
           t("setup:questions.storageSpace.descriptions.unknown"),
-        value: "all",
+        value: "optimal",
         icon: <PsychologyAlt />,
       },
     ],
