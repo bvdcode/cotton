@@ -174,7 +174,8 @@ export function SetupWizardPage() {
           position: "relative",
           width: "100%",
           maxWidth: 920,
-          minHeight: 600,
+          minHeight: { xs: "calc(100vh - 56px)", sm: 600 },
+          height: { xs: "calc(100vh - 56px)", sm: "auto" },
           mt: "auto",
           mb: "auto",
           borderRadius: 3,
@@ -203,7 +204,8 @@ export function SetupWizardPage() {
             p: { xs: 3, sm: 4 },
             display: "flex",
             flexDirection: "column",
-            minHeight: "calc(600px - 48px)",
+            minHeight: { xs: "calc(100vh - 80px)", sm: "calc(600px - 48px)" },
+            height: "100%",
           }}
         >
           <WizardHeader t={t} />
