@@ -1,7 +1,7 @@
 import type { RouteConfig } from "./types";
 import { RequireAuth } from "../features/auth";
 import { Routes, Route } from "react-router-dom";
-import { LoginPage, NotFoundPage } from "../pages";
+import { LoginPage, NotFoundPage, OnboardingPage } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Dashboard, Folder, Home } from "@mui/icons-material";
 import { Box } from "@mui/material";
@@ -91,6 +91,15 @@ export function AppRoutes() {
             <SetupGate>
               <SetupWizardPage />
             </SetupGate>
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/onboarding"
+        element={
+          <RequireAuth>
+            <OnboardingPage />
           </RequireAuth>
         }
       />

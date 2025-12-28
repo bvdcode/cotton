@@ -226,5 +226,26 @@
         }
       }
     }
+  },
+  "onboarding": {
+    "skip": "Get Started",
+    "features": {
+      "cloud": {
+        "title": "Your Personal Cloud",
+        "description": "Store and sync your files securely across all your devices"
+      },
+      "storage": {
+        "title": "Unlimited Storage",
+        "description": "Never worry about running out of space with flexible storage options"
+      },
+      "security": {
+        "title": "Bank-Level Security",
+        "description": "Your data is encrypted and protected with industry-leading security"
+      },
+      "speed": {
+        "title": "Lightning Fast",
+        "description": "Experience blazing-fast uploads and downloads with optimized performance"
+      }
+    }
   }
 }
