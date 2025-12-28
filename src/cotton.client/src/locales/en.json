@@ -225,6 +225,9 @@
           "password": "Your password"
         }
       }
+    },
+    "common": {
+      "author": "Vadim Belov"
     }
   },
   "onboarding": {

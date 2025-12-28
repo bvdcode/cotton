@@ -321,7 +321,7 @@ export function SetupWizardPage() {
           }}
         >
           <Typography variant="body2">
-            © {new Date().getFullYear()} Cotton Cloud • Vadim Belov
+            © {new Date().getFullYear()} Cotton Cloud • {t("common.author")}
           </Typography>
         </Link>
       </Box>
