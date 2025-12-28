@@ -145,7 +145,7 @@
       },
       "telemetry": {
         "title": "Allow sending statistics?",
-        "subtitle": "This information helps us improve products and does not reveal your identity in any way.",
+        "subtitle": "This information helps us improve products and does not reveal your identity in any way. It's one of the few ways to support the project by providing automatic feedback.",
         "options": {
           "allow": "Yes, send",
           "deny": "No, don't send"
