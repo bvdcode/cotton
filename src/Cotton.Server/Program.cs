@@ -14,6 +14,7 @@ using EasyExtensions.AspNetCore.Authorization.Extensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
+using EasyExtensions.Quartz.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -30,6 +31,7 @@ namespace Cotton.Server
 
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
+                .AddQuartzJobs()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<IStorageProcessor, FileSystemStorageProcessor>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
