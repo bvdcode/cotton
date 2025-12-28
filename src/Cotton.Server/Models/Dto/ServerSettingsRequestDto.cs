@@ -1,9 +1,33 @@
-﻿namespace Cotton.Server.Models.Dto
+﻿using System.Text.Json.Serialization;
+
+namespace Cotton.Server.Models.Dto
 {
+    public enum MultiUserMode
+    {
+        Unknown = 0,
+        Family = 1,
+        Many = 2,
+    }
+
+    public enum ServerUsage
+    {
+        Other = 0,
+        Photos = 1,
+        Documents = 2,
+        Media = 3,
+    }
+
     public class ServerSettingsRequestDto
     {
-        public string Multiuser { get; set; } = null!;
-        public string[] Usage { get; set; } = [];
+        /// <summary>
+        /// Gets or sets the multiuser mode setting for the application.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MultiUserMode Multiuser { get; set; }
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ServerUsage[] Usage { get; set; } = [];
+
         public string Telemetry { get; set; } = null!;
         public string Storage { get; set; } = null!;
         public string Email { get; set; } = null!;
