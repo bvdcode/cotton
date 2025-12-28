@@ -164,7 +164,10 @@ export function useSetupSteps(
                   linkAriaLabel={def.linkAria?.()}
                   options={options}
                   selectedKey={selectedKey}
-                  onSelect={(key) => updateAnswer(def.key, key)}
+                  onSelect={(key) => {
+                    const option = options.find(opt => opt.key === key);
+                    updateAnswer(def.key, option?.value ?? key);
+                  }}
                 />
               );
             }
@@ -178,7 +181,10 @@ export function useSetupSteps(
                   linkAriaLabel={def.linkAria?.()}
                   options={options}
                   selectedKey={selectedKey}
-                  onSelect={(key) => updateAnswer(def.key, key)}
+                  onSelect={(key) => {
+                    const option = options.find(opt => opt.key === key);
+                    updateAnswer(def.key, option?.value ?? key);
+                  }}
                 />
               );
             }
@@ -191,12 +197,11 @@ export function useSetupSteps(
                 linkAriaLabel={def.linkAria?.()}
                 options={options}
                 selectedKey={selectedKey}
-                onSelect={(key) => updateAnswer(def.key, key)}
+                onSelect={(key, value) => updateAnswer(def.key, value)}
               />
             );
           },
-          isValid: (): boolean =>
-            typeof answers[def.key] === "string" && answers[def.key] !== "",
+          isValid: (): boolean => answers[def.key] !== undefined && answers[def.key] !== null,
         });
       } else if (def.type === "multi") {
         const options = def.options.map((opt) => {
