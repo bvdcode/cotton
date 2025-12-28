@@ -6,6 +6,7 @@ import {
   QuestionBlockMulti,
   QuestionForm,
   QuestionDropdown,
+  QuestionAutocomplete,
 } from "./components";
 
 type BuiltStep = {
@@ -153,10 +154,24 @@ export function useSetupSteps(
               }
             }
 
-            // Render as dropdown or cards based on renderAs field
+            // Render as dropdown, autocomplete or cards based on renderAs field
             if (def.renderAs === "dropdown") {
               return (
                 <QuestionDropdown
+                  title={def.title()}
+                  subtitle={def.subtitle()}
+                  linkUrl={def.linkUrl}
+                  linkAriaLabel={def.linkAria?.()}
+                  options={options}
+                  selectedKey={selectedKey}
+                  onSelect={(key) => updateAnswer(def.key, key)}
+                />
+              );
+            }
+
+            if (def.renderAs === "autocomplete") {
+              return (
+                <QuestionAutocomplete
                   title={def.title()}
                   subtitle={def.subtitle()}
                   linkUrl={def.linkUrl}
