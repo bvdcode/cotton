@@ -69,11 +69,11 @@ namespace Cotton.Server.Services
                     return "Telemetry must be enabled to use cloud AI service.";
                 }
             }
-            if (request.Email == EmailMode.Cloud)
+            if (request.Email == EmailMode.Custom)
             {
                 if (request.EmailConfig is null)
                 {
-                    return "EmailConfig must be provided when using cloud email service.";
+                    return "EmailConfig must be provided when using Custom email service.";
                 }
             }
             if (request.Storage == StorageType.S3)
@@ -83,14 +83,11 @@ namespace Cotton.Server.Services
                     return "S3Config must be provided when using S3 storage.";
                 }
             }
-            if (request.ImportSources.Length > 0)
+            if (request.ImportSource != ImportSource.None)
             {
-                foreach (var source in request.ImportSources)
+                if (request.ImportSource == ImportSource.Webdav && request.WebdavConfig is null)
                 {
-                    if (source == ImportSource.Webdav && request.WebdavConfig is null)
-                    {
-                        return "WebdavConfig must be provided when using Webdav import source.";
-                    }
+                    return "WebdavConfig must be provided when using Webdav import source.";
                 }
             }
             return null;
@@ -116,7 +113,7 @@ namespace Cotton.Server.Services
                 EmailMode = request.Email,
                 ComputionMode = request.ComputionMode,
                 StorageType = request.Storage,
-                ImportSources = request.ImportSources,
+                ImportSource = request.ImportSource,
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
