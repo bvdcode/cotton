@@ -5,11 +5,15 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
+using EasyExtensions.Abstractions;
+using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
-    public class SettingsProvider(CottonDbContext _dbContext)
+    public class SettingsProvider(
+        IStreamCipher _crypto,
+        CottonDbContext _dbContext)
     {
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
@@ -89,7 +93,52 @@ namespace Cotton.Server.Services
 
         public async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
         {
+            int? smtpPort = null;
+            if (request.EmailConfig?.Port is not null)
+            {
+                bool parsed = int.TryParse(request.EmailConfig.Port, out int port);
+                if (parsed)
+                {
+                    smtpPort = port;
+                }
+            }
+            var lastSettings = await _dbContext.ServerSettings
+                .OrderByDescending(s => s.Id)
+                .FirstOrDefaultAsync();
+            Guid instanceId = lastSettings?.InstanceId ?? Guid.NewGuid();
+            CottonServerSettings newSettings = new()
+            {
+                EncryptionThreads = defaultEncryptionThreads,
+                MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
+                CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                SessionTimeoutHours = 24 * 30,
+                AllowCrossUserDeduplication = request.TrustedMode,
+                AllowGlobalIndexing = request.TrustedMode,
+                TelemetryEnabled = request.Telemetry,
+                Timezone = request.Timezone,
+                SmtpServerAddress = request.EmailConfig?.SmtpServer,
+                SmtpServerPort = smtpPort,
+                SmtpUsername = request.EmailConfig?.Username,
+                SmtpPasswordEncrypted = TryEncrypt(request.EmailConfig?.Password),
+                SmtpSenderEmail = request.EmailConfig?.FromAddress,
+                SmtpUseSsl = request.EmailConfig?.UseSSL ?? false,
+                S3AccessKeyId = request.S3Config?.AccessKey,
+                S3SecretAccessKeyEncrypted = TryEncrypt(request.S3Config?.SecretKey),
+                S3BucketName = request.S3Config?.Bucket,
+                S3Region = request.S3Config?.Region,
+                S3EndpointUrl = request.S3Config?.Endpoint,
+                InstanceId = instanceId
+            };
+        }
 
+        private string? TryEncrypt(string? password)
+        {
+            if (password is null)
+            {
+                return null;
+            }
+            byte[] passwordBytes = _crypto.Encrypt(password);
+            return Convert.ToBase64String(passwordBytes);
         }
     }
 }
