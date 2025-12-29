@@ -21,7 +21,6 @@ import {
   PsychologyAlt,
   Save,
   SdStorage,
-  Sync,
 } from "@mui/icons-material";
 
 export type SetupSingleOption<T> = {
@@ -311,7 +310,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     ],
   },
   {
-    key: "ai",
+    key: "computionMode",
     type: "single",
     title: () => t("setup:questions.ai.title"),
     subtitle: () => t("setup:questions.ai.subtitle"),
@@ -397,7 +396,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
       {
         key: "webdav",
         label: () => t("setup:questions.importSources.options.webdav"),
-        icon: <Sync />,
+        icon: <Cloud />,
         value: "webdav",
       },
       {
