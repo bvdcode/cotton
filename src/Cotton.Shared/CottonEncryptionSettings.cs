@@ -8,5 +8,6 @@ namespace Cotton.Shared
         public string Pepper { get; set; } = string.Empty;
         public string MasterEncryptionKey { get; set; } = string.Empty;
         public int MasterEncryptionKeyId { get; set; }
+        public int EncryptionThreads { get; set; }
     }
 }
