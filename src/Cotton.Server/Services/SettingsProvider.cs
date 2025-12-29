@@ -51,11 +51,11 @@ namespace Cotton.Server.Services
         {
             if (!request.Telemetry)
             {
-                if (request.Email == Database.Models.Enums.EmailMode.Cloud)
+                if (request.Email == EmailMode.Cloud)
                 {
                     return "Telemetry must be enabled to use cloud email service.";
                 }
-                if (request.Ai == Database.Models.Enums.ComputionMode.Cloud)
+                if (request.Ai == ComputionMode.Cloud)
                 {
                     return "Telemetry must be enabled to use cloud AI service.";
                 }
@@ -78,10 +78,6 @@ namespace Cotton.Server.Services
             {
                 foreach (var source in request.ImportSources)
                 {
-                    if (source == ImportSource.Nextcloud && request.NextcloudConfig is null)
-                    {
-                        return "NextcloudConfig must be provided when using Nextcloud import source.";
-                    }
                     if (source == ImportSource.Webdav && request.WebdavConfig is null)
                     {
                         return "WebdavConfig must be provided when using Webdav import source.";
@@ -108,6 +104,10 @@ namespace Cotton.Server.Services
             Guid instanceId = lastSettings?.InstanceId ?? Guid.NewGuid();
             CottonServerSettings newSettings = new()
             {
+                EmailMode = request.Email,
+                ComputionMode = request.Ai,
+                StorageType = request.Storage,
+                ImportSources = request.ImportSources,
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
