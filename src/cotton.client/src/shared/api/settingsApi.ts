@@ -33,6 +33,6 @@ export const settingsApi = {
   },
 
   saveSetupAnswers: async (answers: Record<string, unknown>): Promise<void> => {
-    await httpClient.post("settings/setup", answers);
+    await httpClient.post("settings", answers);
   },
 };

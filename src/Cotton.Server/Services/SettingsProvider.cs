@@ -42,14 +42,14 @@ namespace Cotton.Server.Services
             return _dbContext.Users.AnyAsync();
         }
 
-        internal async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
+        public async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
         {
-            throw new NotImplementedException();
+
         }
 
-        internal async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
+        public async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
         {
-            throw new NotImplementedException();
+
         }
     }
 }
