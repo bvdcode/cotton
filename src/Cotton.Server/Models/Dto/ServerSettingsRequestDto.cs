@@ -36,8 +36,6 @@ namespace Cotton.Server.Models.Dto
 
         public EmailConfig? EmailConfig { get; init; }
 
-        public RemoteServiceConfig? NextcloudConfig { get; init; }
-
         public RemoteServiceConfig? WebdavConfig { get; init; }
     }
 
