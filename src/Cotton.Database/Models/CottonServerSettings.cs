@@ -69,8 +69,17 @@ namespace Cotton.Database.Models
 
         [Column("s3_endpoint_url")]
         public string? S3EndpointUrl { get; init; }
-        public EmailMode EmailMode { get; set; }
-        public ComputionMode ComputionMode { get; set; }
-        public StorageType StorageType { get; set; }
+
+        [Column("email_mode")]
+        public EmailMode EmailMode { get; init; }
+
+        [Column("compution_mode")]
+        public ComputionMode ComputionMode { get; init; }
+
+        [Column("storage_type")]
+        public StorageType StorageType { get; init; }
+
+        [Column("import_sources")]
+        public ImportSource[] ImportSources { get; init; } = [];
     }
 }

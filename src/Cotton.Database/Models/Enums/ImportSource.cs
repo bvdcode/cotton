@@ -7,6 +7,5 @@ namespace Cotton.Database.Models.Enums
     {
         None = 0,
         Webdav = 1,
-        Nextcloud = 2,
     }
 }
