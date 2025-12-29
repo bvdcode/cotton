@@ -189,7 +189,7 @@
         }
       },
       "importSources": {
-        "title": "Anything to import from legacy systems?",
+        "title": "Anything to import?",
         "subtitle": "Select sources from which you want to migrate data.",
         "options": {
           "nextcloud": "Nextcloud",
