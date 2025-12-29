@@ -47,7 +47,7 @@ namespace Cotton.Server.Controllers
             return Ok(user.Adapt<UserDto>());
         }
 
-        [EnableRateLimiting("auth")]
+        //[EnableRateLimiting("auth")]
         [HttpPost("/api/v1/auth/login")]
         public async Task<IActionResult> Login(LoginRequestDto request)
         {
