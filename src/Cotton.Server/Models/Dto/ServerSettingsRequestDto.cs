@@ -22,7 +22,7 @@ namespace Cotton.Server.Models.Dto
         public EmailMode Email { get; init; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ComputionMode Ai { get; init; }
+        public ComputionMode ComputionMode { get; init; }
 
         public string Timezone { get; init; } = null!;
 
