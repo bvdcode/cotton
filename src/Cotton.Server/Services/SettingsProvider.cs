@@ -18,12 +18,16 @@ namespace Cotton.Server.Services
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
-
-        //[nameof(CottonServerSettings.EncryptionThreads)] = defaultEncryptionThreads.ToString(),
-        //[nameof(CottonServerSettings.MaxChunkSizeBytes)] = defaultMaxChunkSizeBytes.ToString(),
-        //[nameof(CottonServerSettings.CipherChunkSizeBytes)] = defaultCipherChunkSizeBytes.ToString(),
         public CottonServerSettings GetServerSettings()
         {
+            var settings = _dbContext.ServerSettings
+                .AsNoTracking()
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefault();
+            if (settings is not null)
+            {
+                return settings;
+            }
             return new()
             {
                 AllowCrossUserDeduplication = false,
@@ -32,7 +36,7 @@ namespace Cotton.Server.Services
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 SessionTimeoutHours = 24 * 30,
-                TelemetryEnabled = true,
+                TelemetryEnabled = false,
                 Timezone = "America/Los_Angeles"
             };
         }
@@ -49,13 +53,18 @@ namespace Cotton.Server.Services
 
         public async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
         {
+            bool tzExists = TimeZoneInfo.TryFindSystemTimeZoneById(request.Timezone, out var _);
+            if (!tzExists)
+            {
+                return "Timezone not found: " + request.Timezone;
+            }
             if (!request.Telemetry)
             {
                 if (request.Email == EmailMode.Cloud)
                 {
                     return "Telemetry must be enabled to use cloud email service.";
                 }
-                if (request.Ai == ComputionMode.Cloud)
+                if (request.ComputionMode == ComputionMode.Cloud)
                 {
                     return "Telemetry must be enabled to use cloud AI service.";
                 }
@@ -99,13 +108,13 @@ namespace Cotton.Server.Services
                 }
             }
             var lastSettings = await _dbContext.ServerSettings
-                .OrderByDescending(s => s.Id)
+                .OrderByDescending(s => s.CreatedAt)
                 .FirstOrDefaultAsync();
             Guid instanceId = lastSettings?.InstanceId ?? Guid.NewGuid();
             CottonServerSettings newSettings = new()
             {
                 EmailMode = request.Email,
-                ComputionMode = request.Ai,
+                ComputionMode = request.ComputionMode,
                 StorageType = request.Storage,
                 ImportSources = request.ImportSources,
                 EncryptionThreads = defaultEncryptionThreads,
@@ -127,8 +136,15 @@ namespace Cotton.Server.Services
                 S3BucketName = request.S3Config?.Bucket,
                 S3Region = request.S3Config?.Region,
                 S3EndpointUrl = request.S3Config?.Endpoint,
-                InstanceId = instanceId
+                InstanceId = instanceId,
+                ServerUsage = request.Usage,
+                StorageSpaceMode = request.StorageSpace,
+                WebdavHost = request.WebdavConfig?.ServerUrl,
+                WebdavUsername = request.WebdavConfig?.Username,
+                WebdavPasswordEncrypted = TryEncrypt(request.WebdavConfig?.Password)
             };
+            await _dbContext.ServerSettings.AddAsync(newSettings);
+            await _dbContext.SaveChangesAsync();
         }
 
         private string? TryEncrypt(string? password)
