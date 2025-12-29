@@ -79,8 +79,8 @@ namespace Cotton.Database.Models
         [Column("storage_type")]
         public StorageType StorageType { get; init; }
 
-        [Column("import_sources")]
-        public ImportSource[] ImportSources { get; init; } = [];
+        [Column("import_source")]
+        public ImportSource ImportSource { get; init; }
 
         [Column("server_usage")]
         public ServerUsage[] ServerUsage { get; set; } = [];

@@ -25,7 +25,7 @@ namespace Cotton.Server.Infrastructure
             {
                 if (reader.TokenType == JsonTokenType.EndArray)
                 {
-                    return list.ToArray();
+                    return [.. list];
                 }
 
                 if (reader.TokenType == JsonTokenType.String)
