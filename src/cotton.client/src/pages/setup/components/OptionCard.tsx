@@ -1,4 +1,4 @@
-import { Box, Stack, Typography, alpha, Tooltip } from "@mui/material";
+import { Box, Typography, alpha, Tooltip } from "@mui/material";
 import { type ReactNode } from "react";
 
 export function OptionCard({
