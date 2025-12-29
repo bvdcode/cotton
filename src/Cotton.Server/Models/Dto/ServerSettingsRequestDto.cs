@@ -1,4 +1,5 @@
 ﻿using Cotton.Database.Models.Enums;
+using Cotton.Server.Infrastructure;
 using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Models.Dto
@@ -10,7 +11,7 @@ namespace Cotton.Server.Models.Dto
         /// </summary>
         public bool TrustedMode { get; init; }
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonConverter(typeof(JsonEnumArrayConverter<ServerUsage>))]
         public ServerUsage[] Usage { get; init; } = [];
 
         public bool Telemetry { get; init; }
@@ -29,7 +30,7 @@ namespace Cotton.Server.Models.Dto
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public StorageSpaceMode StorageSpace { get; init; }
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonConverter(typeof(JsonEnumArrayConverter<ImportSource>))]
         public ImportSource[] ImportSources { get; init; } = [];
 
         public S3Config? S3Config { get; init; }
