@@ -6,9 +6,9 @@ namespace Cotton.Server.Models.Dto
     public class ServerSettingsRequestDto
     {
         /// <summary>
-        /// Gets or sets the multiuser mode setting for the application.
+        /// Gets or sets the trusted mode flag which determines if the server can share chunks between users and use global indexing.
         /// </summary>
-        public bool SharedMode { get; init; }
+        public bool TrustedMode { get; init; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ServerUsage[] Usage { get; init; } = [];

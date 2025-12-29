@@ -3,6 +3,7 @@
 
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using EasyExtensions.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

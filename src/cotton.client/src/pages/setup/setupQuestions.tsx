@@ -85,7 +85,7 @@ export type SetupStepDefinition =
 
 export const setupStepDefinitions: SetupStepDefinition[] = [
   {
-    key: "sharedMode",
+    key: "trustedMode",
     type: "single",
     title: () => t("setup:questions.multiuser.title"),
     subtitle: () => t("setup:questions.multiuser.subtitle"),
@@ -390,24 +390,21 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
   },
   {
     key: "importSources",
-    type: "multi",
+    type: "single",
     title: () => t("setup:questions.importSources.title"),
     subtitle: () => t("setup:questions.importSources.subtitle"),
     options: [
       {
-        key: "nextcloud",
-        label: () => t("setup:questions.importSources.options.nextcloud"),
-        icon: <Cloud />,
-      },
-      {
         key: "webdav",
         label: () => t("setup:questions.importSources.options.webdav"),
         icon: <Sync />,
+        value: "webdav",
       },
       {
         key: "none",
         label: () => t("setup:questions.importSources.options.none"),
         icon: <Language />,
+        value: "none",
       },
     ],
   },
