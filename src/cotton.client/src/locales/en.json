@@ -192,7 +192,6 @@
         "title": "Anything to import?",
         "subtitle": "Select sources from which you want to migrate data.",
         "options": {
-          "nextcloud": "Nextcloud",
           "webdav": "WebDAV",
           "none": "Nothing"
         }

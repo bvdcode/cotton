@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -68,5 +69,8 @@ namespace Cotton.Database.Models
 
         [Column("s3_endpoint_url")]
         public string? S3EndpointUrl { get; init; }
+        public EmailMode EmailMode { get; set; }
+        public ComputionMode ComputionMode { get; set; }
+        public StorageType StorageType { get; set; }
     }
 }
