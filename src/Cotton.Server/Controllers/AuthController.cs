@@ -164,12 +164,6 @@ namespace Cotton.Server.Controllers
 
         private async Task<User?> TryGetNewUserAsync(LoginRequestDto request)
         {
-            bool hasUsers = await _dbContext.Users.AnyAsync();
-            if (hasUsers)
-            {
-                return null;
-            }
-
             bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
             if (isPublicInstance)
             {
@@ -183,6 +177,12 @@ namespace Cotton.Server.Controllers
                 await _dbContext.SaveChangesAsync();
                 _logger.LogInformation("Created guest user {Username} on public instance", guest.Username);
                 return guest;
+            }
+
+            bool hasUsers = await _dbContext.Users.AnyAsync();
+            if (hasUsers)
+            {
+                return null;
             }
 
             var uptime = DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
