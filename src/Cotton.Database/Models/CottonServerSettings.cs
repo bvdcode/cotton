@@ -81,10 +81,20 @@ namespace Cotton.Database.Models
 
         [Column("import_sources")]
         public ImportSource[] ImportSources { get; init; } = [];
-        public ServerUsage[] ServerUsage { get; set; }
+
+        [Column("server_usage")]
+        public ServerUsage[] ServerUsage { get; set; } = [];
+
+        [Column("storage_space_mode")]
         public StorageSpaceMode StorageSpaceMode { get; set; }
+
+        [Column("webdav_password_encrypted")]
         public string? WebdavPasswordEncrypted { get; set; }
+
+        [Column("webdav_username")]
         public string? WebdavUsername { get; set; }
+
+        [Column("webdav_host")]
         public string? WebdavHost { get; set; }
     }
 }
