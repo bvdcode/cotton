@@ -388,7 +388,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     ],
   },
   {
-    key: "importSources",
+    key: "importSource",
     type: "single",
     title: () => t("setup:questions.importSources.title"),
     subtitle: () => t("setup:questions.importSources.subtitle"),
@@ -410,7 +410,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
   {
     key: "nextcloudConfig",
     type: "form",
-    requires: "importSources:nextcloud",
+    requires: "importSource:nextcloud",
     title: () => t("setup:questions.nextcloudConfig.title"),
     subtitle: () => t("setup:questions.nextcloudConfig.subtitle"),
     fields: [
@@ -440,7 +440,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
   {
     key: "webdavConfig",
     type: "form",
-    requires: "importSources:webdav",
+    requires: "importSource:webdav",
     title: () => t("setup:questions.webdavConfig.title"),
     subtitle: () => t("setup:questions.webdavConfig.subtitle"),
     fields: [
