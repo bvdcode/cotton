@@ -331,10 +331,10 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         icon: <Computer />,
       },
       {
-        key: "runner",
+        key: "remote",
         label: () => t("setup:questions.ai.options.runner"),
         description: () => t("setup:questions.ai.descriptions.runner"),
-        value: "runner",
+        value: "remote",
         icon: <Memory />,
       },
     ],
@@ -363,27 +363,27 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     subtitle: () => t("setup:questions.storageSpace.subtitle"),
     options: [
       {
-        key: "all",
+        key: "unlimited",
         label: () => t("setup:questions.storageSpace.options.all"),
         description: () => t("setup:questions.storageSpace.descriptions.all"),
         value: "unlimited",
         icon: <SdStorage />,
       },
       {
-        key: "economical",
+        key: "optimal",
+        label: () => t("setup:questions.storageSpace.options.optimal"),
+        description: () =>
+          t("setup:questions.storageSpace.descriptions.unknown"),
+        value: "optimal",
+        icon: <PsychologyAlt />,
+      },
+      {
+        key: "limited",
         label: () => t("setup:questions.storageSpace.options.economical"),
         description: () =>
           t("setup:questions.storageSpace.descriptions.economical"),
         value: "limited",
         icon: <Save />,
-      },
-      {
-        key: "unknown",
-        label: () => t("setup:questions.storageSpace.options.unknown"),
-        description: () =>
-          t("setup:questions.storageSpace.descriptions.unknown"),
-        value: "optimal",
-        icon: <PsychologyAlt />,
       },
     ],
   },
