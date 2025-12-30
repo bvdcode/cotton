@@ -15,18 +15,29 @@ namespace Cotton.Storage.Tests.Backends
     {
         private FileSystemStorageBackend _backend = null!;
         private string _testBasePath = null!;
+        private static string NewUid() => Guid.NewGuid().ToString("N")[..12];
 
         [SetUp]
         public void Setup()
         {
             var logger = new Mock<ILogger<FileSystemStorageBackend>>();
             _backend = new FileSystemStorageBackend(logger.Object);
-            
-            // Setup test directory
+
             _testBasePath = Path.Combine(AppContext.BaseDirectory, "files");
             if (Directory.Exists(_testBasePath))
             {
-                Directory.Delete(_testBasePath, true);
+                try
+                {
+                    foreach (var file in Directory.GetFiles(_testBasePath, "*.*", SearchOption.AllDirectories))
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                    }
+                    Directory.Delete(_testBasePath, true);
+                }
+                catch
+                {
+                    // Best-effort cleanup; leftover files should not fail test setup
+                }
             }
         }
 
@@ -37,7 +48,6 @@ namespace Cotton.Storage.Tests.Backends
             {
                 try
                 {
-                    // Remove readonly attributes before deletion
                     foreach (var file in Directory.GetFiles(_testBasePath, "*.*", SearchOption.AllDirectories))
                     {
                         File.SetAttributes(file, FileAttributes.Normal);
@@ -55,16 +65,15 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_WriteAndRead_ReturnsOriginalData()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
             var originalData = Encoding.UTF8.GetBytes("Test content");
-            var writeStream = new MemoryStream(originalData);
 
             // Act
-            await _backend.WriteAsync(uid, writeStream);
-            var readStream = await _backend.ReadAsync(uid);
+            await _backend.WriteAsync(uid, new MemoryStream(originalData));
+            await using var readStream = await _backend.ReadAsync(uid);
 
             // Assert
-            var result = new MemoryStream();
+            using var result = new MemoryStream();
             await readStream.CopyToAsync(result);
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
         }
@@ -73,10 +82,9 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_Delete_AfterWrite_ReturnsTrue()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
             var data = Encoding.UTF8.GetBytes("Test content");
-            var stream = new MemoryStream(data);
-            await _backend.WriteAsync(uid, stream);
+            await _backend.WriteAsync(uid, new MemoryStream(data));
 
             // Act
             bool result = await _backend.DeleteAsync(uid);
@@ -89,10 +97,9 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_Delete_AfterDelete_ThrowsFileNotFound()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
             var data = Encoding.UTF8.GetBytes("Test content");
-            var stream = new MemoryStream(data);
-            await _backend.WriteAsync(uid, stream);
+            await _backend.WriteAsync(uid, new MemoryStream(data));
             await _backend.DeleteAsync(uid);
 
             // Act & Assert
@@ -103,7 +110,7 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_Delete_NonExistent_ReturnsFalse()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
 
             // Act
             bool result = await _backend.DeleteAsync(uid);
@@ -116,12 +123,11 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_Write_CreatesCorrectDirectoryStructure()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = "abcdef123456"; // keep deterministic for path assertion
             var data = Encoding.UTF8.GetBytes("Test content");
-            var stream = new MemoryStream(data);
 
             // Act
-            await _backend.WriteAsync(uid, stream);
+            await _backend.WriteAsync(uid, new MemoryStream(data));
 
             // Assert
             string expectedPath = Path.Combine(_testBasePath, "ab", "cd", "ef123456.ctn");
@@ -132,15 +138,14 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_Write_SetsReadOnlyAttribute()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
             var data = Encoding.UTF8.GetBytes("Test content");
-            var stream = new MemoryStream(data);
 
             // Act
-            await _backend.WriteAsync(uid, stream);
+            await _backend.WriteAsync(uid, new MemoryStream(data));
 
             // Assert
-            string filePath = Path.Combine(_testBasePath, "ab", "cd", "ef123456.ctn");
+            string filePath = Path.Combine(_testBasePath, uid[..2], uid.Substring(2, 2), uid.Substring(4) + ".ctn");
             var attributes = File.GetAttributes(filePath);
             Assert.That(attributes.HasFlag(FileAttributes.ReadOnly), Is.True);
         }
@@ -149,29 +154,26 @@ namespace Cotton.Storage.Tests.Backends
         public void FileSystemBackend_Write_DuplicateUid_ThrowsIOException()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
             var data1 = Encoding.UTF8.GetBytes("First");
             var data2 = Encoding.UTF8.GetBytes("Second");
-            var stream1 = new MemoryStream(data1);
-            var stream2 = new MemoryStream(data2);
 
             // Act & Assert
-            Assert.DoesNotThrowAsync(() => _backend.WriteAsync(uid, stream1));
-            Assert.ThrowsAsync<IOException>(() => _backend.WriteAsync(uid, stream2));
+            Assert.DoesNotThrowAsync(() => _backend.WriteAsync(uid, new MemoryStream(data1)));
+            Assert.ThrowsAsync<IOException>(() => _backend.WriteAsync(uid, new MemoryStream(data2)));
         }
 
         [Test]
         public async Task FileSystemBackend_Write_LargeFile_Success()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
             var data = new byte[10 * 1024 * 1024]; // 10 MB
             RandomNumberGenerator.Fill(data);
-            var stream = new MemoryStream(data);
 
             // Act
-            await _backend.WriteAsync(uid, stream);
-            var readStream = await _backend.ReadAsync(uid);
+            await _backend.WriteAsync(uid, new MemoryStream(data));
+            await using var readStream = await _backend.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
@@ -195,17 +197,16 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = "ab/cd";
             var data = Encoding.UTF8.GetBytes("Test");
-            var stream = new MemoryStream(data);
 
             // Act & Assert
-            Assert.ThrowsAsync<ArgumentException>(() => _backend.WriteAsync(uid, stream));
+            Assert.ThrowsAsync<ArgumentException>(() => _backend.WriteAsync(uid, new MemoryStream(data)));
         }
 
         [Test]
         public async Task FileSystemBackend_MultipleWrites_DifferentUids_Success()
         {
             // Arrange
-            var uids = new[] { "abcdef111111", "abcdef222222", "123456789abc" };
+            var uids = new[] { NewUid(), NewUid(), NewUid() };
             var dataMap = new Dictionary<string, byte[]>();
 
             foreach (var uid in uids)
@@ -218,7 +219,7 @@ namespace Cotton.Storage.Tests.Backends
             // Act & Assert
             foreach (var uid in uids)
             {
-                var readStream = await _backend.ReadAsync(uid);
+                await using var readStream = await _backend.ReadAsync(uid);
                 var result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 Assert.That(result.ToArray(), Is.EqualTo(dataMap[uid]));
@@ -229,21 +230,17 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_Write_StreamNotAtPositionZero_WritesFromCurrentPosition()
         {
             // Arrange
-            string uid = "abcdef123456";
+            string uid = NewUid();
             var data = Encoding.UTF8.GetBytes("0123456789");
-            var stream = new MemoryStream(data)
-            {
-                Position = 5
-            };
+            var stream = new MemoryStream(data) { Position = 5 };
 
             // Act
             await _backend.WriteAsync(uid, stream);
-            var readStream = await _backend.ReadAsync(uid);
+            await using var readStream = await _backend.ReadAsync(uid);
 
             // Assert
             var result = new MemoryStream();
             await readStream.CopyToAsync(result);
-            // FileSystemBackend resets position if CanSeek
             Assert.That(result.ToArray(), Is.EqualTo(data));
         }
 
@@ -252,14 +249,13 @@ namespace Cotton.Storage.Tests.Backends
         {
             // Arrange
             var tasks = new List<Task>();
-            var uids = Enumerable.Range(0, 10).Select(i => $"abc{i:D3}def{i:D3}").ToArray();
+            var uids = Enumerable.Range(0, 10).Select(_ => NewUid()).ToArray();
 
             // Act
             foreach (var uid in uids)
             {
                 var data = Encoding.UTF8.GetBytes($"Content {uid}");
-                var stream = new MemoryStream(data);
-                tasks.Add(_backend.WriteAsync(uid, stream));
+                tasks.Add(_backend.WriteAsync(uid, new MemoryStream(data)));
             }
 
             // Assert
