@@ -28,6 +28,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Autoconfig", "Cotton
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Autoconfig.Tests", "Cotton.Autoconfig.Tests\Cotton.Autoconfig.Tests.csproj", "{472C4C8E-D738-420F-9A5A-E8F246C53CD7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Storage.Tests", "Cotton.Storage.Tests\Cotton.Storage.Tests.csproj", "{A69C27DE-D249-4EB6-B13F-BFD3CF22BADD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,6 +78,10 @@ Global
 		{472C4C8E-D738-420F-9A5A-E8F246C53CD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{472C4C8E-D738-420F-9A5A-E8F246C53CD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{472C4C8E-D738-420F-9A5A-E8F246C53CD7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A69C27DE-D249-4EB6-B13F-BFD3CF22BADD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A69C27DE-D249-4EB6-B13F-BFD3CF22BADD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A69C27DE-D249-4EB6-B13F-BFD3CF22BADD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A69C27DE-D249-4EB6-B13F-BFD3CF22BADD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
