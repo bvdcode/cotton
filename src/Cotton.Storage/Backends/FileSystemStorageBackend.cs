@@ -130,5 +130,26 @@ namespace Cotton.Storage.Backends
                 throw;
             }
         }
+
+        public Task<bool> DeleteAsync(string uid)
+        {
+            uid = NormalizeIdentity(uid);
+            string dirPath = GetFolderByUid(uid);
+            string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                    return Task.FromResult(true);
+                }
+                return Task.FromResult(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete file {Uid}", uid);
+                return Task.FromResult(false);
+            }
+        }
     }
 }
