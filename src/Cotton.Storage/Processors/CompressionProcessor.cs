@@ -7,7 +7,7 @@ namespace Cotton.Storage.Processors
 {
     public class CompressionProcessor : IStorageProcessor
     {
-        public int Priority => 1000;
+        public int Priority => 10000;
 
         public Task<Stream> ReadAsync(string uid, Stream stream)
         {

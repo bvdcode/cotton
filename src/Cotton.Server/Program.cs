@@ -4,9 +4,11 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
 using Cotton.Server.Extensions;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Backends;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology;
@@ -30,12 +32,14 @@ namespace Cotton.Server
                 .Bind(builder.Configuration);
 
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
-            builder.Services.AddScoped<IStoragePipeline, FileStoragePipeline>()
+            builder.Services
                 .AddQuartzJobs()
                 .AddScoped<SettingsProvider>()
-                .AddScoped<IStorageProcessor, FileSystemStorageProcessor>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
+                .AddScoped<IStoragePipeline, FileStoragePipeline>()
+                .AddScoped<IStoragePipeline, CachedStoragePipeline>()
+                .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<StorageLayoutService>()
                 .AddPbkdf2PasswordHashService()

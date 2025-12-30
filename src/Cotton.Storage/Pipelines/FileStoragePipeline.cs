@@ -6,23 +6,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Pipelines
 {
-    /*
-     * Idea:
-     * L1: Memory Cache (RAM)
-     * L2: Compression
-     * L3: Encryption
-     * L4: Fast Storage Cache (SSD)
-     * L5: Cold Storage Cache (HDD, Cloud, S3 etc.)
-     */
-
     public class FileStoragePipeline(
         ILogger<FileStoragePipeline> _logger,
+        IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
         public async Task<Stream> ReadAsync(string uid)
         {
+            var backend = _backendProvider.GetBackend();
             var orderedProcessors = _processors.OrderBy(p => p.Priority);
-            Stream currentStream = Stream.Null;
+            Stream currentStream = await backend.ReadAsync(uid);
             foreach (var processor in orderedProcessors)
             {
                 currentStream = await processor.ReadAsync(uid, currentStream);
@@ -41,6 +34,7 @@ namespace Cotton.Storage.Pipelines
 
         public async Task WriteAsync(string uid, Stream stream)
         {
+            var backend = _backendProvider.GetBackend();
             var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
             Stream currentStream = stream;
             foreach (var processor in orderedProcessors)
@@ -52,10 +46,11 @@ namespace Cotton.Storage.Pipelines
                 currentStream = await processor.WriteAsync(uid, currentStream);
                 _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
             }
-            if (currentStream != Stream.Null)
+            if (currentStream == Stream.Null)
             {
-                throw new InvalidOperationException($"The final stream after writing should be Stream.Null for UID {uid}");
+                throw new InvalidOperationException($"No registered processor produced a valid stream to write for UID {uid}");
             }
+            await backend.WriteAsync(uid, currentStream);
         }
     }
 }
