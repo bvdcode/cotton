@@ -76,7 +76,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
         Assert.That(root, Is.Not.Null);
 
         // create child
-        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", new Cotton.Server.Models.Requests.CreateNodeRequest { ParentId = root!.Id, Name = "child" });
+        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", new Models.Requests.CreateNodeRequest { ParentId = root!.Id, Name = "child" });
         createNodeRes.EnsureSuccessStatusCode();
         var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
         Assert.That(child, Is.Not.Null);

@@ -1,36 +1,38 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-using Cotton.Server.IntegrationTests.Helpers;
-using Cotton.Storage.Abstractions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 
 namespace Cotton.Server.IntegrationTests.Common;
 
-public class TestAppFactory(IReadOnlyDictionary<string, string?> overrides) : WebApplicationFactory<Program>
+public class TestAppFactory : WebApplicationFactory<Cotton.Server.Program>
 {
+    private readonly IDictionary<string, string?> _overrides;
+
+    public TestAppFactory(IDictionary<string, string?> overrides)
+    {
+        _overrides = overrides;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting(WebHostDefaults.EnvironmentKey, "IntegrationTests");
-        builder.ConfigureAppConfiguration((ctx, cfg) =>
+        builder.ConfigureAppConfiguration((context, config) =>
         {
-            cfg.AddInMemoryCollection(overrides);
+            var dict = new Dictionary<string, string?>(_overrides)
+            {
+                ["Quartz:Enabled"] = "false" // disable Quartz for tests
+            };
+            config.AddInMemoryCollection(dict!);
         });
-        builder.ConfigureServices(services =>
-        {
-            var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
-            if (existing != null) services.Remove(existing);
-            services.AddSingleton<IStoragePipeline, InMemoryStorage>();
-        });
-        builder.ConfigureLogging((ctx, logging) =>
-        {
-            logging.ClearProviders();
-            logging.AddProvider(new NUnitLoggerProvider());
-            logging.SetMinimumLevel(LogLevel.Information);
-        });
+    }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        // Ensure host is created per test without cross-test reuse
+        builder.UseEnvironment("IntegrationTests");
+        return base.CreateHost(builder);
     }
 }

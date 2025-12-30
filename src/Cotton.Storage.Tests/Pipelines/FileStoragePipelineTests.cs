@@ -129,15 +129,16 @@ namespace Cotton.Storage.Tests.Pipelines
             
             var processors = new IStorageProcessor[]
             {
-                new MarkerProcessor(100, 0xAA), // Lower priority = applied first on read
+                new MarkerProcessor(100, 0xAA),
                 new MarkerProcessor(200, 0xBB),
                 new MarkerProcessor(50, 0xCC)   // Highest priority (lowest number)
             };
             
             var pipeline = new FileStoragePipeline(logger.Object, provider, processors);
 
-            // Backend has data with markers: CC, AA, BB (reverse order of write)
-            var backendData = new byte[] { 0x01, 0xCC, 0xAA, 0xBB };
+            // Arrange markers so that each processor actually sees its marker at the end
+            // Order: CC (50), AA (100), BB (200) on read
+            var backendData = new byte[] { 0x01, 0xBB, 0xAA, 0xCC };
             await backend.WriteAsync("test-uid", new MemoryStream(backendData));
 
             // Act
@@ -224,7 +225,7 @@ namespace Cotton.Storage.Tests.Pipelines
             // Act & Assert
             var ex = Assert.ThrowsAsync<InvalidOperationException>(
                 async () => await pipeline.WriteAsync("test-uid", new MemoryStream(data)));
-            Assert.That(ex.Message, Does.Contain("Stream.Null"));
+            Assert.That(ex.Message, Does.Contain("No registered processor produced a valid stream"));
         }
 
         [Test]
