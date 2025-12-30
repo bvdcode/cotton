@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Cloud, Storage, Security, Speed } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useServerSettings } from "../../shared/store/useServerSettings";
 
 const features = [
   { icon: <Cloud />, key: "cloud" },
@@ -14,6 +15,7 @@ const features = [
 export function OnboardingPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("onboarding");
+  const { fetchSettings } = useServerSettings();
   const [currentFeature, setCurrentFeature] = useState(0);
 
   useEffect(() => {
@@ -24,9 +26,8 @@ export function OnboardingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSkip = () => {
-    // refetch server settings
-
+  const handleSkip = async () => {
+    await fetchSettings({ force: true });
     navigate("/");
   };
 
