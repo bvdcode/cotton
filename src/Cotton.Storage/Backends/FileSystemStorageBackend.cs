@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Backends
@@ -10,14 +11,11 @@ namespace Cotton.Storage.Backends
     {
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
-        private const int MinFileUidLength = 6;
         private readonly string _basePath = Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
 
         private string GetFolderByUid(string uid)
         {
-            uid = NormalizeIdentity(uid);
-            string p1 = uid[..2];
-            string p2 = uid[2..4];
+            var (p1, p2, _) = StorageKeyHelper.GetSegments(uid);
             string dirPath = Path.Combine(_basePath, p1, p2);
             Directory.CreateDirectory(dirPath);
             return dirPath;
@@ -38,31 +36,37 @@ namespace Cotton.Storage.Backends
             }
         }
 
-        private static string NormalizeIdentity(string uid)
+        public Task<bool> DeleteAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
-            string normalized = uid.Trim().ToLowerInvariant();
-            if (normalized.Length < MinFileUidLength)
+            
+            var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
+            string dirPath = GetFolderByUid(uid);
+            string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
+            
+            if (!File.Exists(filePath))
             {
-                throw new ArgumentException("File UID is too short, minimum length is " + MinFileUidLength);
+                return Task.FromResult(false);
             }
-            for (int i = 0; i < normalized.Length; i++)
+
+            try
             {
-                char c = normalized[i];
-                bool isHex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z');
-                if (!isHex)
-                {
-                    throw new ArgumentException("File UID contains invalid character: " + c);
-                }
+                File.SetAttributes(filePath, FileAttributes.Normal);
+                File.Delete(filePath);
+                return Task.FromResult(true);
             }
-            return normalized;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete file {Uid}", uid);
+                return Task.FromResult(false);
+            }
         }
 
         public async Task<Stream> ReadAsync(string uid)
         {
-            uid = NormalizeIdentity(uid);
+            var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
             string dirPath = GetFolderByUid(uid);
-            string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
+            string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
             if (!File.Exists(filePath))
             {
                 throw new FileNotFoundException("File not found", filePath);
@@ -81,18 +85,18 @@ namespace Cotton.Storage.Backends
         {
             const int WriteBufferSize = 1024 * 1024;
 
-            uid = NormalizeIdentity(uid);
+            var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
             ArgumentNullException.ThrowIfNull(stream);
 
             string dirPath = GetFolderByUid(uid);
-            string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
+            string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
             if (File.Exists(filePath))
             {
                 _logger.LogCritical("File collision detected for file {Uid}: two different files have the same name", uid);
                 throw new IOException("File collision detected: two different files have the same name: " + uid);
             }
 
-            string tmpFilePath = Path.Combine(dirPath, $"{uid[4..]}.{Guid.NewGuid():N}.tmp");
+            string tmpFilePath = Path.Combine(dirPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
             var fso = new FileStreamOptions
             {
                 Share = FileShare.None,
@@ -128,27 +132,6 @@ namespace Cotton.Storage.Backends
             {
                 TryDelete(tmpFilePath);
                 throw;
-            }
-        }
-
-        public Task<bool> DeleteAsync(string uid)
-        {
-            uid = NormalizeIdentity(uid);
-            string dirPath = GetFolderByUid(uid);
-            string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
-            try
-            {
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                    return Task.FromResult(true);
-                }
-                return Task.FromResult(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to delete file {Uid}", uid);
-                return Task.FromResult(false);
             }
         }
     }
