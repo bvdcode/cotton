@@ -10,7 +10,7 @@ using NUnit.Framework;
 using Moq;
 using System.Security.Cryptography;
 using System.Text;
-using EasyExtensions.Abstractions;
+using EasyExtensions.Crypto;
 
 namespace Cotton.Storage.Tests.Integration
 {
@@ -18,6 +18,7 @@ namespace Cotton.Storage.Tests.Integration
     public class IntegrationTests
     {
         private string _testBasePath = null!;
+        private AesGcmStreamCipher _cipher = null!;
 
         [SetUp]
         public void Setup()
@@ -27,11 +28,17 @@ namespace Cotton.Storage.Tests.Integration
             {
                 CleanupDirectory(_testBasePath);
             }
+
+            var key = new byte[32];
+            RandomNumberGenerator.Fill(key);
+            _cipher = new AesGcmStreamCipher(key, keyId: 1, threads: null);
         }
 
         [TearDown]
         public void TearDown()
         {
+            _cipher?.Dispose();
+            
             if (Directory.Exists(_testBasePath))
             {
                 CleanupDirectory(_testBasePath);
@@ -68,9 +75,7 @@ namespace Cotton.Storage.Tests.Integration
             var provider = new FakeBackendProvider(backend);
             var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
             
-            var mockCipher = new Mock<IStreamCipher>();
-            SetupRoundTripCipher(mockCipher);
-            var cryptoProcessor = new CryptoProcessor(mockCipher.Object);
+            var cryptoProcessor = new CryptoProcessor(_cipher);
             
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
@@ -83,6 +88,13 @@ namespace Cotton.Storage.Tests.Integration
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
             
+            // Verify data on disk is encrypted (not plaintext)
+            var diskStream = await backend.ReadAsync(uid);
+            var diskData = new MemoryStream();
+            await diskStream.CopyToAsync(diskData);
+            Assert.That(diskData.ToArray(), Is.Not.EqualTo(originalData), 
+                "Data on disk should be encrypted");
+
             // Read through pipeline should decrypt
             var readStream = await pipeline.ReadAsync(uid);
             var result = new MemoryStream();
@@ -101,9 +113,7 @@ namespace Cotton.Storage.Tests.Integration
             var provider = new FakeBackendProvider(backend);
             var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
             
-            var mockCipher = new Mock<IStreamCipher>();
-            SetupRoundTripCipher(mockCipher);
-            var cryptoProcessor = new CryptoProcessor(mockCipher.Object);
+            var cryptoProcessor = new CryptoProcessor(_cipher);
             var compressionProcessor = new CompressionProcessor();
             
             // Priority: Compression (10000) > Crypto (1000)
@@ -136,9 +146,7 @@ namespace Cotton.Storage.Tests.Integration
             var provider = new FakeBackendProvider(backend);
             var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
             
-            var mockCipher = new Mock<IStreamCipher>();
-            SetupRoundTripCipher(mockCipher);
-            var cryptoProcessor = new CryptoProcessor(mockCipher.Object);
+            var cryptoProcessor = new CryptoProcessor(_cipher);
             
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
@@ -219,9 +227,7 @@ namespace Cotton.Storage.Tests.Integration
             var provider = new FakeBackendProvider(backend);
             var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
             
-            var mockCipher = new Mock<IStreamCipher>();
-            SetupRoundTripCipher(mockCipher);
-            var cryptoProcessor = new CryptoProcessor(mockCipher.Object);       // Priority: 1000
+            var cryptoProcessor = new CryptoProcessor(_cipher);       // Priority: 1000
             var compressionProcessor = new CompressionProcessor();    // Priority: 10000
             
             var pipeline = new FileStoragePipeline(
@@ -252,9 +258,7 @@ namespace Cotton.Storage.Tests.Integration
             var provider = new FakeBackendProvider(backend);
             var pipelineLogger = new Mock<ILogger<FileStoragePipeline>>();
             
-            var mockCipher = new Mock<IStreamCipher>();
-            SetupRoundTripCipher(mockCipher);
-            var cryptoProcessor = new CryptoProcessor(mockCipher.Object);
+            var cryptoProcessor = new CryptoProcessor(_cipher);
             
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
@@ -286,29 +290,6 @@ namespace Cotton.Storage.Tests.Integration
             {
                 Assert.That(actual, Is.EqualTo(expected), $"Data mismatch for UID: {uid}");
             }
-        }
-
-        private static void SetupRoundTripCipher(Mock<IStreamCipher> mockCipher)
-        {
-            mockCipher.Setup(c => c.EncryptAsync(It.IsAny<Stream>()))
-                .ReturnsAsync((Stream s) => XorStream(s, 0xAA));
-            
-            mockCipher.Setup(c => c.DecryptAsync(It.IsAny<Stream>()))
-                .ReturnsAsync((Stream s) => XorStream(s, 0xAA));
-        }
-
-        private static MemoryStream XorStream(Stream input, byte key)
-        {
-            var ms = new MemoryStream();
-            input.CopyTo(ms);
-            var bytes = ms.ToArray();
-            
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                bytes[i] ^= key;
-            }
-            
-            return new MemoryStream(bytes) { Position = 0 };
         }
     }
 }
