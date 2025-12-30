@@ -38,7 +38,7 @@ namespace Cotton.Storage.Tests.Integration
             }
         }
 
-        private void CleanupDirectory(string path)
+        private static void CleanupDirectory(string path)
         {
             try
             {
@@ -288,7 +288,7 @@ namespace Cotton.Storage.Tests.Integration
             }
         }
 
-        private void SetupRoundTripCipher(Mock<IStreamCipher> mockCipher)
+        private static void SetupRoundTripCipher(Mock<IStreamCipher> mockCipher)
         {
             mockCipher.Setup(c => c.EncryptAsync(It.IsAny<Stream>()))
                 .ReturnsAsync((Stream s) => XorStream(s, 0xAA));

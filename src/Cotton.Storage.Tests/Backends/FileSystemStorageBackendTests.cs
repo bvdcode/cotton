@@ -231,8 +231,10 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = "abcdef123456";
             var data = Encoding.UTF8.GetBytes("0123456789");
-            var stream = new MemoryStream(data);
-            stream.Position = 5;
+            var stream = new MemoryStream(data)
+            {
+                Position = 5
+            };
 
             // Act
             await _backend.WriteAsync(uid, stream);
