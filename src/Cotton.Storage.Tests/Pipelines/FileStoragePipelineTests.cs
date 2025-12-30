@@ -45,18 +45,9 @@ namespace Cotton.Storage.Tests.Pipelines
             public IStorageBackend GetBackend() => backend;
         }
 
-        private class MarkerProcessor : IStorageProcessor
+        private class MarkerProcessor(int priority, byte marker) : IStorageProcessor
         {
-            private readonly int _priority;
-            private readonly byte _marker;
-
-            public MarkerProcessor(int priority, byte marker)
-            {
-                _priority = priority;
-                _marker = marker;
-            }
-
-            public int Priority => _priority;
+            public int Priority => priority;
 
             public async Task<Stream> ReadAsync(string uid, Stream stream)
             {
@@ -65,7 +56,7 @@ namespace Cotton.Storage.Tests.Pipelines
                 var data = ms.ToArray();
                 
                 // Remove marker from end
-                if (data.Length > 0 && data[^1] == _marker)
+                if (data.Length > 0 && data[^1] == marker)
                 {
                     return new MemoryStream(data[..^1]) { Position = 0 };
                 }
@@ -77,10 +68,10 @@ namespace Cotton.Storage.Tests.Pipelines
             {
                 var ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
-                var data = ms.ToArray();
+                _ = ms.ToArray();
                 
                 // Add marker to end
-                ms.WriteByte(_marker);
+                ms.WriteByte(marker);
                 ms.Position = 0;
                 return ms;
             }

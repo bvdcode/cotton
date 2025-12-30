@@ -44,7 +44,7 @@ namespace Cotton.Storage.Tests.Streams
             storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
             storage.AddData("uid3", Encoding.UTF8.GetBytes("!"));
 
-            var stream = storage.GetBlobStream(new[] { "uid1", "uid2", "uid3" });
+            var stream = storage.GetBlobStream(["uid1", "uid2", "uid3"]);
 
             // Act
             using var reader = new StreamReader(stream);
@@ -60,10 +60,10 @@ namespace Cotton.Storage.Tests.Streams
             // Arrange
             var storage = new FakeStoragePipeline();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
-            storage.AddData("uid2", Array.Empty<byte>());
+            storage.AddData("uid2", []);
             storage.AddData("uid3", Encoding.UTF8.GetBytes("World"));
 
-            var stream = storage.GetBlobStream(new[] { "uid1", "uid2", "uid3" });
+            var stream = storage.GetBlobStream(["uid1", "uid2", "uid3"]);
 
             // Act
             using var reader = new StreamReader(stream);
@@ -81,7 +81,7 @@ namespace Cotton.Storage.Tests.Streams
             storage.AddData("uid1", Encoding.UTF8.GetBytes("ABCD"));
             storage.AddData("uid2", Encoding.UTF8.GetBytes("EFGH"));
 
-            var stream = storage.GetBlobStream(new[] { "uid1", "uid2" });
+            var stream = storage.GetBlobStream(["uid1", "uid2"]);
 
             // Act
             var result = new List<byte>();
@@ -111,7 +111,7 @@ namespace Cotton.Storage.Tests.Streams
             storage.AddData("uid1", data1);
             storage.AddData("uid2", data2);
 
-            var stream = storage.GetBlobStream(new[] { "uid1", "uid2" });
+            var stream = storage.GetBlobStream(["uid1", "uid2"]);
 
             // Act
             var result = new MemoryStream();
@@ -134,7 +134,7 @@ namespace Cotton.Storage.Tests.Streams
             var storage = new FakeStoragePipeline();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
 
-            var stream = storage.GetBlobStream(new[] { "uid1", "nonexistent" });
+            var stream = storage.GetBlobStream(["uid1", "nonexistent"]);
 
             // Act & Assert
             var buffer = new byte[1024];
@@ -149,7 +149,7 @@ namespace Cotton.Storage.Tests.Streams
             var storage = new FakeStoragePipeline();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
 
-            var stream = storage.GetBlobStream(new[] { "uid1" });
+            var stream = storage.GetBlobStream(["uid1"]);
 
             // Act
             await stream.DisposeAsync();
@@ -165,7 +165,7 @@ namespace Cotton.Storage.Tests.Streams
             var storage = new FakeStoragePipeline();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
 
-            var stream = storage.GetBlobStream(new[] { "uid1" });
+            var stream = storage.GetBlobStream(["uid1"]);
 
             // Act & Assert
             await stream.DisposeAsync();
@@ -177,11 +177,11 @@ namespace Cotton.Storage.Tests.Streams
         {
             // Arrange
             var storage = new FakeStoragePipeline();
-            storage.AddData("uid1", new byte[] { 1, 2, 3 });
-            storage.AddData("uid2", new byte[] { 4, 5, 6 });
-            storage.AddData("uid3", new byte[] { 7, 8, 9 });
+            storage.AddData("uid1", [1, 2, 3]);
+            storage.AddData("uid2", [4, 5, 6]);
+            storage.AddData("uid3", [7, 8, 9]);
 
-            var stream = storage.GetBlobStream(new[] { "uid1", "uid2", "uid3" });
+            var stream = storage.GetBlobStream(["uid1", "uid2", "uid3"]);
 
             // Act
             var result = new List<byte>();

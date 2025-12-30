@@ -192,7 +192,7 @@ namespace Cotton.Storage.Tests.Processors
             Assert.That(processor.Priority, Is.EqualTo(1000));
         }
 
-        private void SetupRoundTripCipher(Mock<IStreamCipher> mockCipher)
+        private static void SetupRoundTripCipher(Mock<IStreamCipher> mockCipher)
         {
             // Simple XOR cipher for testing round-trip
             mockCipher.Setup(c => c.EncryptAsync(It.IsAny<Stream>()))
@@ -202,13 +202,13 @@ namespace Cotton.Storage.Tests.Processors
                 .ReturnsAsync((Stream s) => XorStream(s, 0xAA));
         }
 
-        private void SetupEncryptMock(Mock<IStreamCipher> mockCipher)
+        private static void SetupEncryptMock(Mock<IStreamCipher> mockCipher)
         {
             mockCipher.Setup(c => c.EncryptAsync(It.IsAny<Stream>()))
                 .ReturnsAsync((Stream s) => PassthroughStream(s));
         }
 
-        private void SetupDecryptMock(Mock<IStreamCipher> mockCipher)
+        private static void SetupDecryptMock(Mock<IStreamCipher> mockCipher)
         {
             mockCipher.Setup(c => c.DecryptAsync(It.IsAny<Stream>()))
                 .ReturnsAsync((Stream s) => PassthroughStream(s));
