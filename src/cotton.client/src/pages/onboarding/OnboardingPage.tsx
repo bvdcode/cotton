@@ -19,12 +19,14 @@ export function OnboardingPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentFeature((prev) => (prev + 1) % features.length);
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
   const handleSkip = () => {
+    // refetch server settings
+
     navigate("/");
   };
 
@@ -60,7 +62,10 @@ export function OnboardingPage() {
           height: 300,
           borderRadius: "50%",
           background: (theme) =>
-            `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.2)}, transparent)`,
+            `radial-gradient(circle, ${alpha(
+              theme.palette.primary.main,
+              0.2,
+            )}, transparent)`,
           animation: "pulse 4s ease-in-out infinite",
         }}
       />
@@ -73,7 +78,10 @@ export function OnboardingPage() {
           height: 250,
           borderRadius: "50%",
           background: (theme) =>
-            `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.2)}, transparent)`,
+            `radial-gradient(circle, ${alpha(
+              theme.palette.secondary.main,
+              0.2,
+            )}, transparent)`,
           animation: "pulse 5s ease-in-out infinite",
           animationDelay: "1s",
         }}
@@ -128,8 +136,7 @@ export function OnboardingPage() {
                 border: (theme) => `3px solid ${theme.palette.primary.main}`,
                 transition: "all 0.5s ease-in-out",
                 opacity: currentFeature === index ? 1 : 0,
-                transform:
-                  currentFeature === index ? "scale(1)" : "scale(0.8)",
+                transform: currentFeature === index ? "scale(1)" : "scale(0.8)",
                 animation:
                   currentFeature === index
                     ? "floatFeature 3s ease-in-out infinite"
@@ -176,8 +183,7 @@ export function OnboardingPage() {
                 width: 12,
                 height: 12,
                 borderRadius: "50%",
-                bgcolor:
-                  currentFeature === index ? "primary.main" : "divider",
+                bgcolor: currentFeature === index ? "primary.main" : "divider",
                 transition: "all 0.3s ease-in-out",
                 transform: currentFeature === index ? "scale(1.2)" : "scale(1)",
               }}
