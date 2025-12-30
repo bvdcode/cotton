@@ -130,32 +130,37 @@ namespace Cotton.Storage.Tests.Streams
         [Test]
         public void ConcatenatedReadStream_StorageThrowsException_PropagatesException()
         {
-            // Arrange
             var storage = new FakeStoragePipeline();
             storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
 
             var stream = storage.GetBlobStream(["uid1", "nonexistent"]);
 
-            // Act & Assert
-            var buffer = new byte[1024];
-            stream.ReadExactly(buffer); // Read first
-            Assert.Throws<FileNotFoundException>(() => stream.ReadExactly(buffer)); // Try to read second
+            var buffer = new byte[4];
+            // Read exactly available bytes from first stream
+            var read1 = stream.Read(buffer, 0, 4);
+            Assert.That(read1, Is.EqualTo(4));
+
+            // Next read should trigger opening of second stream and throw
+            Assert.Throws<FileNotFoundException>(() => stream.Read(buffer, 0, 1));
         }
 
         [Test]
-        public async Task ConcatenatedReadStream_Dispose_DisposesCurrentStreamAndEnumerator()
+        public async Task ConcatenatedReadStream_Dispose_DisablesFurtherReads()
         {
-            // Arrange
             var storage = new FakeStoragePipeline();
-            storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("T"));
 
             var stream = storage.GetBlobStream(["uid1"]);
 
-            // Act
+            // consume first byte
+            var tmp = new byte[1];
+            var r = await stream.ReadAsync(tmp);
+            Assert.That(r, Is.EqualTo(1));
+
             await stream.DisposeAsync();
 
-            // Assert
-            Assert.Throws<ObjectDisposedException>(() => stream.ReadExactly(new byte[1], 0, 1));
+            var buffer = new byte[1];
+            Assert.Throws<ObjectDisposedException>(() => stream.Read(buffer, 0, 1));
         }
 
         [Test]

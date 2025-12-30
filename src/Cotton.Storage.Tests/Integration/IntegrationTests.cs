@@ -20,6 +20,8 @@ namespace Cotton.Storage.Tests.Integration
         private string _testBasePath = null!;
         private AesGcmStreamCipher _cipher = null!;
 
+        private static string NewUid() => Guid.NewGuid().ToString("N")[..12];
+
         [SetUp]
         public void Setup()
         {
@@ -45,7 +47,7 @@ namespace Cotton.Storage.Tests.Integration
             }
         }
 
-        private static void CleanupDirectory(string path)
+        private void CleanupDirectory(string path)
         {
             try
             {
@@ -61,9 +63,16 @@ namespace Cotton.Storage.Tests.Integration
             }
         }
 
-        private class FakeBackendProvider(IStorageBackend backend) : IStorageBackendProvider
+        private class FakeBackendProvider : IStorageBackendProvider
         {
-            public IStorageBackend GetBackend() => backend;
+            private readonly IStorageBackend _backend;
+
+            public FakeBackendProvider(IStorageBackend backend)
+            {
+                _backend = backend;
+            }
+
+            public IStorageBackend GetBackend() => _backend;
         }
 
         [Test]
@@ -80,10 +89,10 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                [cryptoProcessor]);
+                new IStorageProcessor[] { cryptoProcessor });
 
             var originalData = Encoding.UTF8.GetBytes("Sensitive information that should be encrypted");
-            string uid = "abcdef123456";
+            string uid = NewUid();
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
@@ -116,16 +125,13 @@ namespace Cotton.Storage.Tests.Integration
             var cryptoProcessor = new CryptoProcessor(_cipher);
             var compressionProcessor = new CompressionProcessor();
             
-            // Priority: Compression (10000) > Crypto (1000)
-            // On Write: Compress first, then encrypt
-            // On Read: Decrypt first, then decompress
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                [cryptoProcessor, compressionProcessor]);
+                new IStorageProcessor[] { cryptoProcessor, compressionProcessor });
 
             var originalData = Encoding.UTF8.GetBytes(new string('A', 10000)); // Highly compressible
-            string uid = "abcdef123456";
+            string uid = NewUid();
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
@@ -151,31 +157,28 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                [cryptoProcessor]);
+                new IStorageProcessor[] { cryptoProcessor });
 
-            var testData = new Dictionary<string, byte[]>
-            {
-                ["abcdef111111"] = Encoding.UTF8.GetBytes("File 1"),
-                ["abcdef222222"] = Encoding.UTF8.GetBytes("File 2"),
-                ["123456abcdef"] = Encoding.UTF8.GetBytes("File 3")
-            };
+            var testData = Enumerable.Range(0, 3)
+                .Select(i => (uid: NewUid(), data: Encoding.UTF8.GetBytes($"File {i+1}")))
+                .ToList();
 
             // Act - Write all
-            foreach (var kvp in testData)
+            foreach (var (uid, data) in testData)
             {
-                await pipeline.WriteAsync(kvp.Key, new MemoryStream(kvp.Value));
+                await pipeline.WriteAsync(uid, new MemoryStream(data));
             }
 
             // Act - Read all
-            foreach (var kvp in testData)
+            foreach (var (uid, data) in testData)
             {
-                var readStream = await pipeline.ReadAsync(kvp.Key);
-                var result = new MemoryStream();
+                var readStream = await pipeline.ReadAsync(uid);
+                using var result = new MemoryStream();
                 await readStream.CopyToAsync(result);
 
                 // Assert
-                Assert.That(result.ToArray(), Is.EqualTo(kvp.Value), 
-                    $"File {kvp.Key} should match original data");
+                Assert.That(result.ToArray(), Is.EqualTo(data), 
+                    $"File {uid} should match original data");
             }
         }
 
@@ -193,11 +196,9 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                [compressionProcessor]);
+                new IStorageProcessor[] { compressionProcessor });
 
-            string uid = "abcdef123456";
-            
-            // Create 5MB of data
+            string uid = NewUid();
             var originalData = new byte[5 * 1024 * 1024];
             RandomNumberGenerator.Fill(originalData);
 
@@ -233,17 +234,17 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                [compressionProcessor, cryptoProcessor]);
+                new IStorageProcessor[] { compressionProcessor, cryptoProcessor });
 
             var originalData = Encoding.UTF8.GetBytes("Test data for order verification");
-            string uid = "abcdef123456";
+            string uid = NewUid();
 
             // Act
             await pipeline.WriteAsync(uid, new MemoryStream(originalData));
 
             // Verify full round trip
             var readStream = await pipeline.ReadAsync(uid);
-            var result = new MemoryStream();
+            using var result = new MemoryStream();
             await readStream.CopyToAsync(result);
 
             Assert.That(result.ToArray(), Is.EqualTo(originalData));
@@ -263,7 +264,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                [cryptoProcessor]);
+                new IStorageProcessor[] { cryptoProcessor });
 
             var testData = Enumerable.Range(0, 20)
                 .Select(i => (uid: $"abc{i:D3}def{i:D3}", data: Encoding.UTF8.GetBytes($"Data {i}")))
@@ -278,7 +279,7 @@ namespace Cotton.Storage.Tests.Integration
             var readTasks = testData.Select(async item =>
             {
                 var readStream = await pipeline.ReadAsync(item.uid);
-                var result = new MemoryStream();
+                using var result = new MemoryStream();
                 await readStream.CopyToAsync(result);
                 return (item.uid, actual: result.ToArray(), expected: item.data);
             });

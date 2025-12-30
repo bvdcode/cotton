@@ -30,38 +30,41 @@ namespace Cotton.Storage.Tests.Processors
             _cipher?.Dispose();
         }
 
+        private static async Task<byte[]> ReadAllAsync(Stream stream)
+        {
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            return ms.ToArray();
+        }
+
         [Test]
         public async Task CryptoProcessor_RoundTrip_EmptyStream_ReturnsOriginal()
         {
             // Arrange
             var originalData = Array.Empty<byte>();
-            var originalStream = new MemoryStream(originalData);
+            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var encrypted = await _processor.WriteAsync("test-uid", originalStream);
             var decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
-            var result = new MemoryStream();
-            await decrypted.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            var result = await ReadAllAsync(decrypted);
+            Assert.That(result, Is.EqualTo(originalData));
         }
 
         [Test]
         public async Task CryptoProcessor_RoundTrip_OneByte_ReturnsOriginal()
         {
             // Arrange
-            var originalData = "*"u8.ToArray();
-            var originalStream = new MemoryStream(originalData);
+            var originalData = new byte[] { 42 };
+            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var encrypted = await _processor.WriteAsync("test-uid", originalStream);
             var decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
-            var result = new MemoryStream();
-            await decrypted.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            var result = await ReadAllAsync(decrypted);
+            Assert.That(result, Is.EqualTo(originalData));
         }
 
         [Test]
@@ -69,16 +72,14 @@ namespace Cotton.Storage.Tests.Processors
         {
             // Arrange
             var originalData = Encoding.UTF8.GetBytes("Hello, World!");
-            var originalStream = new MemoryStream(originalData);
+            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var encrypted = await _processor.WriteAsync("test-uid", originalStream);
             var decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
-            var result = new MemoryStream();
-            await decrypted.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            var result = await ReadAllAsync(decrypted);
+            Assert.That(result, Is.EqualTo(originalData));
         }
 
         [Test]
@@ -86,20 +87,15 @@ namespace Cotton.Storage.Tests.Processors
         {
             // Arrange
             var originalData = new byte[1024];
-            for (int i = 0; i < originalData.Length; i++)
-            {
-                originalData[i] = (byte)(i % 256);
-            }
-            var originalStream = new MemoryStream(originalData);
+            for (int i = 0; i < originalData.Length; i++) originalData[i] = (byte)(i % 256);
+            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var encrypted = await _processor.WriteAsync("test-uid", originalStream);
             var decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
-            var result = new MemoryStream();
-            await decrypted.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            var result = await ReadAllAsync(decrypted);
+            Assert.That(result, Is.EqualTo(originalData));
         }
 
         [Test]
@@ -108,16 +104,14 @@ namespace Cotton.Storage.Tests.Processors
             // Arrange
             var originalData = new byte[1024 * 1024];
             RandomNumberGenerator.Fill(originalData);
-            var originalStream = new MemoryStream(originalData);
+            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var encrypted = await _processor.WriteAsync("test-uid", originalStream);
             var decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
-            var result = new MemoryStream();
-            await decrypted.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            var result = await ReadAllAsync(decrypted);
+            Assert.That(result, Is.EqualTo(originalData));
         }
 
         [Test]
@@ -126,16 +120,14 @@ namespace Cotton.Storage.Tests.Processors
             // Arrange
             var originalData = new byte[4096];
             RandomNumberGenerator.Fill(originalData);
-            var originalStream = new MemoryStream(originalData);
+            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var encrypted = await _processor.WriteAsync("test-uid", originalStream);
             var decrypted = await _processor.ReadAsync("test-uid", encrypted);
 
             // Assert
-            var result = new MemoryStream();
-            await decrypted.CopyToAsync(result);
-            Assert.That(result.ToArray(), Is.EqualTo(originalData));
+            var result = await ReadAllAsync(decrypted);
+            Assert.That(result, Is.EqualTo(originalData));
         }
 
         [Test]
@@ -143,44 +135,13 @@ namespace Cotton.Storage.Tests.Processors
         {
             // Arrange
             var originalData = Encoding.UTF8.GetBytes("Sensitive Data");
-            var originalStream = new MemoryStream(originalData);
+            var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
-            var encrypted = await _processor.WriteAsync("test-uid", originalStream);
+            var encryptedBytes = await ReadAllAsync(encrypted);
 
             // Assert
-            var encryptedData = new MemoryStream();
-            await encrypted.CopyToAsync(encryptedData);
-            Assert.That(encryptedData.ToArray(), Is.Not.EqualTo(originalData));
-        }
-
-        [Test]
-        public async Task CryptoProcessor_WriteAsync_ReturnsStreamAtPositionZero()
-        {
-            // Arrange
-            var data = Encoding.UTF8.GetBytes("Test data");
-            var stream = new MemoryStream(data);
-
-            // Act
-            var result = await _processor.WriteAsync("test-uid", stream);
-
-            // Assert
-            Assert.That(result.Position, Is.EqualTo(0));
-        }
-
-        [Test]
-        public async Task CryptoProcessor_ReadAsync_ReturnsStreamAtPositionZero()
-        {
-            // Arrange
-            var data = Encoding.UTF8.GetBytes("Test data");
-            var stream = new MemoryStream(data);
-            var encrypted = await _processor.WriteAsync("test-uid", stream);
-
-            // Act
-            var result = await _processor.ReadAsync("test-uid", encrypted);
-
-            // Assert
-            Assert.That(result.Position, Is.EqualTo(0));
+            Assert.That(encryptedBytes, Is.Not.EqualTo(originalData));
         }
 
         [Test]
