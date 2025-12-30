@@ -4,11 +4,10 @@
 using Cotton.Storage.Abstractions;
 using Microsoft.Extensions.Logging;
 
-namespace Cotton.Storage.Processors
+namespace Cotton.Storage.Backends
 {
-    public class FileSystemStorageProcessor(ILogger<FileSystemStorageProcessor> _logger) : IStorageProcessor
+    public class FileSystemStorageBackend(ILogger<FileSystemStorageBackend> _logger) : IStorageBackend
     {
-        public int Priority => 10;
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
         private const int MinFileUidLength = 6;
@@ -59,12 +58,8 @@ namespace Cotton.Storage.Processors
             return normalized;
         }
 
-        public async Task<Stream> ReadAsync(string uid, Stream stream)
+        public async Task<Stream> ReadAsync(string uid)
         {
-            if (stream != Stream.Null)
-            {
-                throw new NotSupportedException("This processor does not support chained reading.");
-            }
             uid = NormalizeIdentity(uid);
             string dirPath = GetFolderByUid(uid);
             string filePath = Path.Combine(dirPath, uid[4..] + ChunkFileExtension);
@@ -82,7 +77,7 @@ namespace Cotton.Storage.Processors
             return new FileStream(filePath, fso);
         }
 
-        public async Task<Stream> WriteAsync(string uid, Stream stream)
+        public async Task WriteAsync(string uid, Stream stream)
         {
             const int WriteBufferSize = 1024 * 1024;
 
@@ -134,7 +129,6 @@ namespace Cotton.Storage.Processors
                 TryDelete(tmpFilePath);
                 throw;
             }
-            return Stream.Null;
         }
     }
 }
