@@ -180,7 +180,8 @@
         "options": {
           "all": "All you have",
           "economical": "Space saving",
-          "unknown": "Don't know, let's move on"
+          "unknown": "Don't know, let's move on",
+          "optimal": "Optimal"
         },
         "descriptions": {
           "all": "Use all available space for maximum performance.",
