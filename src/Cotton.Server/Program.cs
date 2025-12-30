@@ -5,7 +5,6 @@ using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
 using Cotton.Server.Extensions;
 using Cotton.Server.Providers;
-using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
@@ -35,6 +34,7 @@ namespace Cotton.Server
             builder.Services
                 .AddQuartzJobs()
                 .AddScoped<SettingsProvider>()
+                .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
