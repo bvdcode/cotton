@@ -9,7 +9,7 @@ using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cotton.Server.Services
+namespace Cotton.Server.Providers
 {
     public class SettingsProvider(
         IStreamCipher _crypto,
