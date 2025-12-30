@@ -13,7 +13,7 @@ namespace Cotton.Storage.Tests.Streams
     {
         private class FakeStoragePipeline : IStoragePipeline
         {
-            private readonly Dictionary<string, byte[]> _data = new();
+            private readonly Dictionary<string, byte[]> _data = [];
 
             public void AddData(string uid, byte[] data)
             {
@@ -93,7 +93,7 @@ namespace Cotton.Storage.Tests.Streams
             }
 
             // Assert
-            Assert.That(Encoding.UTF8.GetString(result.ToArray()), Is.EqualTo("ABCDEFGH"));
+            Assert.That(Encoding.UTF8.GetString([.. result]), Is.EqualTo("ABCDEFGH"));
         }
 
         [Test]

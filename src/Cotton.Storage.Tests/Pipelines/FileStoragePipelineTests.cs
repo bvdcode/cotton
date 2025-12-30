@@ -15,7 +15,7 @@ namespace Cotton.Storage.Tests.Pipelines
     {
         private class FakeStorageBackend : IStorageBackend
         {
-            private readonly Dictionary<string, byte[]> _storage = new();
+            private readonly Dictionary<string, byte[]> _storage = [];
 
             public Task<bool> DeleteAsync(string uid)
             {
@@ -84,7 +84,7 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(logger.Object, provider, Array.Empty<IStorageProcessor>());
+            var pipeline = new FileStoragePipeline(logger.Object, provider, []);
 
             var originalData = Encoding.UTF8.GetBytes("Test data");
             await backend.WriteAsync("test-uid", new MemoryStream(originalData));
@@ -105,7 +105,7 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            var pipeline = new FileStoragePipeline(logger.Object, provider, Array.Empty<IStorageProcessor>());
+            var pipeline = new FileStoragePipeline(logger.Object, provider, []);
 
             var originalData = Encoding.UTF8.GetBytes("Test data");
 
@@ -193,7 +193,7 @@ namespace Cotton.Storage.Tests.Pipelines
             mockProcessor.Setup(p => p.ReadAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
             
-            var pipeline = new FileStoragePipeline(logger.Object, provider, new[] { mockProcessor.Object });
+            var pipeline = new FileStoragePipeline(logger.Object, provider, [mockProcessor.Object]);
 
             var data = Encoding.UTF8.GetBytes("Test");
             backend.WriteAsync("test-uid", new MemoryStream(data)).Wait();
@@ -217,7 +217,7 @@ namespace Cotton.Storage.Tests.Pipelines
             mockProcessor.Setup(p => p.WriteAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
             
-            var pipeline = new FileStoragePipeline(logger.Object, provider, new[] { mockProcessor.Object });
+            var pipeline = new FileStoragePipeline(logger.Object, provider, [mockProcessor.Object]);
 
             var data = Encoding.UTF8.GetBytes("Test");
 

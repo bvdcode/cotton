@@ -75,7 +75,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor });
+                [cryptoProcessor]);
 
             var originalData = Encoding.UTF8.GetBytes("Sensitive information that should be encrypted");
             string uid = "abcdef123456";
@@ -112,7 +112,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor, compressionProcessor });
+                [cryptoProcessor, compressionProcessor]);
 
             var originalData = Encoding.UTF8.GetBytes(new string('A', 10000)); // Highly compressible
             string uid = "abcdef123456";
@@ -143,7 +143,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor });
+                [cryptoProcessor]);
 
             var testData = new Dictionary<string, byte[]>
             {
@@ -185,7 +185,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { compressionProcessor });
+                [compressionProcessor]);
 
             string uid = "abcdef123456";
             
@@ -227,7 +227,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { compressionProcessor, cryptoProcessor });
+                [compressionProcessor, cryptoProcessor]);
 
             var originalData = Encoding.UTF8.GetBytes("Test data for order verification");
             string uid = "abcdef123456";
@@ -259,7 +259,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor });
+                [cryptoProcessor]);
 
             var testData = Enumerable.Range(0, 20)
                 .Select(i => (uid: $"abc{i:D3}def{i:D3}", data: Encoding.UTF8.GetBytes($"Data {i}")))
