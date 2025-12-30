@@ -8,7 +8,7 @@ namespace Cotton.Storage.Processors
 {
     public class FileSystemStorageProcessor(ILogger<FileSystemStorageProcessor> _logger) : IStorageProcessor
     {
-        public int Priority => 1;
+        public int Priority => 10;
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
         private const int MinFileUidLength = 6;
