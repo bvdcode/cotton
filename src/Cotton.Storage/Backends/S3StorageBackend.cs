@@ -53,6 +53,21 @@ namespace Cotton.Storage.Backends
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(stream);
 
+            Stream uploadStream = stream;
+            MemoryStream? rewindBuffer = null;
+
+            if (!uploadStream.CanSeek)
+            {
+                rewindBuffer = new MemoryStream();
+                await uploadStream.CopyToAsync(rewindBuffer).ConfigureAwait(false);
+                rewindBuffer.Position = 0;
+                uploadStream = rewindBuffer;
+            }
+            else if (uploadStream.Position != 0)
+            {
+                uploadStream.Seek(default, SeekOrigin.Begin);
+            }
+
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
@@ -60,12 +75,15 @@ namespace Cotton.Storage.Backends
             PutObjectRequest req = new()
             {
                 Key = key,
-                InputStream = stream,
+                InputStream = uploadStream,
                 BucketName = bucket,
-                UseChunkEncoding = true,
+                UseChunkEncoding = false,
                 ContentType = MediaTypeNames.Application.Octet,
             };
-            await _s3.PutObjectAsync(req);
+            req.Headers.ContentLength = uploadStream.Length;
+            await _s3.PutObjectAsync(req).ConfigureAwait(false);
+
+            rewindBuffer?.Dispose();
         }
     }
 }
