@@ -2,7 +2,7 @@ import type { Guid } from "../api/layoutsApi";
 import { chunksApi } from "../api/chunksApi";
 import { filesApi } from "../api/filesApi";
 import { uploadConfig } from "./config";
-import { hashBlob, hashFile, toWebCryptoAlgorithm } from "./hash/hashing";
+import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "./hash/hashing";
 
 export interface UploadServerParams {
   maxChunkSizeBytes: number;
@@ -44,49 +44,64 @@ export async function uploadFileToNode(options: {
   const chunkCount = Math.ceil(file.size / chunkSize);
   const chunkHashesByIndex: string[] = new Array(chunkCount);
 
-  // Completion order (for diagnostics / if server ever needs it).
-  const completedChunkHashes: string[] = [];
-
   let completedBytes = 0;
   const report = () => {
     options.onProgress?.(completedBytes);
   };
 
-  let nextIndex = 0;
+  // Compute whole-file hash in a single sequential pass while we iterate chunks.
+  // Uploads (exists/uploadChunk) still run concurrently via a small in-flight pool.
+  const fileHasher = await createIncrementalHasher(algorithm);
 
-  const worker = async () => {
-    while (true) {
-      const index = nextIndex;
-      nextIndex += 1;
-      if (index >= chunkCount) return;
-
-      const start = index * chunkSize;
-      const end = Math.min(file.size, start + chunkSize);
-      const chunk = file.slice(start, end);
-      const chunkBytes = end - start;
-
-      const chunkHash = await hashBlob(chunk, algorithm);
-      chunkHashesByIndex[index] = chunkHash;
-
-      if (sendChunkHashForValidation) {
-        const exists = await chunksApi.exists(chunkHash);
-        if (!exists) {
-          await chunksApi.uploadChunk({ blob: chunk, fileName: file.name, hash: chunkHash });
-        }
-      } else {
-        // Server should compute its own hash and skip validation.
-        await chunksApi.uploadChunk({ blob: chunk, fileName: file.name, hash: null });
-      }
-
-      completedChunkHashes.push(chunkHash);
-      completedBytes += chunkBytes;
-      report();
+  const inFlight = new Set<Promise<void>>();
+  const waitForSlot = async () => {
+    while (inFlight.size >= concurrency) {
+      await Promise.race(inFlight);
     }
   };
 
-  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  const startUpload = (p: Promise<void>) => {
+    inFlight.add(p);
+    p.finally(() => inFlight.delete(p));
+  };
 
-  const fileHash = await hashFile(file, algorithm);
+  for (let index = 0; index < chunkCount; index += 1) {
+    const start = index * chunkSize;
+    const end = Math.min(file.size, start + chunkSize);
+    const chunk = file.slice(start, end);
+    const chunkBytes = end - start;
+
+    // Read this server-sized chunk ONCE and feed both hash computations.
+    const buffer = await chunk.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    fileHasher.update(bytes);
+    const chunkHash = await hashBytes(bytes, algorithm);
+    chunkHashesByIndex[index] = chunkHash;
+
+    await waitForSlot();
+
+    startUpload(
+      (async () => {
+        if (sendChunkHashForValidation) {
+          const exists = await chunksApi.exists(chunkHash);
+          if (!exists) {
+            await chunksApi.uploadChunk({ blob: chunk, fileName: file.name, hash: chunkHash });
+          }
+        } else {
+          // Server should compute its own hash and skip validation.
+          await chunksApi.uploadChunk({ blob: chunk, fileName: file.name, hash: null });
+        }
+
+        completedBytes += chunkBytes;
+        report();
+      })(),
+    );
+  }
+
+  await Promise.all(inFlight);
+
+  const fileHash = fileHasher.digestHex();
 
   options.onFinalizing?.();
 
