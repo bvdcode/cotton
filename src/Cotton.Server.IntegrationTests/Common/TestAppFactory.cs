@@ -35,8 +35,12 @@ public class TestAppFactory(Dictionary<string, string?> _overrides) : WebApplica
                 services.Remove(d);
             }
 
-            CottonServerSettings serverSettings = new();
-            services.AddSingleton(serverSettings);
+            services.AddSingleton(new CottonServerSettings
+            {
+                MaxChunkSizeBytes = 128 * 1024 * 1024,
+                CipherChunkSizeBytes = 20 * 1024 * 1024,
+                EncryptionThreads = 1,
+            });
         });
     }
 
