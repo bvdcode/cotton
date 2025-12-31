@@ -15,7 +15,7 @@ namespace Cotton.Storage.Helpers
             for (int i = 0; i < normalized.Length; i++)
             {
                 char c = normalized[i];
-                bool isHex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z');
+                bool isHex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
                 if (!isHex)
                 {
                     throw new ArgumentException("File UID contains invalid character: " + c);
