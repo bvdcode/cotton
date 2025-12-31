@@ -92,8 +92,8 @@ namespace Cotton.Storage.Backends
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
             if (File.Exists(filePath))
             {
-                _logger.LogCritical("File collision detected for file {Uid}: two different files have the same name", uid);
-                throw new IOException("File collision detected: two different files have the same name: " + uid);
+                _logger.LogInformation("File {Uid} deduplicated, skipping write", uid);
+                return;
             }
 
             string tmpFilePath = Path.Combine(dirPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
