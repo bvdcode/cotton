@@ -55,7 +55,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
             ["DatabaseSettings:Database"] = csb.Database,
             ["DatabaseSettings:Username"] = csb.Username,
             ["DatabaseSettings:Password"] = csb.Password,
-            ["MasterEncryptionKey"] = "IntegrationTestsKey",
+            ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
             ["MasterEncryptionKeyId"] = "1",
             ["EncryptionThreads"] = "1",
             ["MaxChunkSizeBytes"] = "16777216",
