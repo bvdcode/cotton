@@ -1,16 +1,14 @@
 import { httpClient } from "./httpClient";
-import type { Guid, NodeDto } from "./layoutsApi";
+import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
 
-export interface NodeFileManifestDto {
-  id: Guid;
+export interface NodeFileManifestDto extends Omit<BaseDto, "createdAt" | "updatedAt"> {
   ownerId: Guid;
   name: string;
   contentType: string;
   sizeBytes: number;
 }
 
-export interface NodeContentDto {
-  id: Guid;
+export interface NodeContentDto extends Omit<BaseDto, "createdAt" | "updatedAt"> {
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
 }
