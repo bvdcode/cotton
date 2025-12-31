@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Alert,
   Box,
   Breadcrumbs,
+  IconButton,
   Link as MuiLink,
+  Tooltip,
   Typography,
-  TextField,
-  Button,
 } from "@mui/material";
-import { Add, Folder, InsertDriveFile } from "@mui/icons-material";
+import { CreateNewFolder, Folder, InsertDriveFile } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
@@ -33,7 +33,6 @@ export const FilesPage: React.FC = () => {
   const { t } = useTranslation("files");
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
-  const [newFolderName, setNewFolderName] = useState("");
 
   const {
     currentNode,
@@ -90,75 +89,61 @@ export const FilesPage: React.FC = () => {
     );
   }, [sortedFolders, sortedFiles]);
 
-  const canCreateFolder = Boolean(nodeId) && !loading;
-
   if (loading && !content) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
-  const handleCreateFolder = async () => {
+  const handleNewFolder = async () => {
     if (!nodeId) return;
-    const created = await createFolder(nodeId, newFolderName);
-    if (created) {
-      setNewFolderName("");
-    }
+    const folderName = prompt(t("actions.newFolderPrompt"));
+    if (!folderName || folderName.trim().length === 0) return;
+    await createFolder(nodeId, folderName.trim());
   };
 
   return (
     <Box p={3} width="100%">
-      <Box mb={2}>
-        <Typography variant="h4">{t("title")}</Typography>
-        <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")}> 
-          <MuiLink component={RouterLink} underline="hover" color="inherit" to="/files">
-            {t("breadcrumbs.root")}
-          </MuiLink>
-          {breadcrumbs.map((crumb, idx) => {
-            const isLast = idx === breadcrumbs.length - 1;
-            if (isLast) {
+      <Box mb={2} display="flex" alignItems="center" justifyContent="space-between">
+        <Box>
+          <Typography variant="h4">{t("title")}</Typography>
+          <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")}>
+            <MuiLink component={RouterLink} underline="hover" color="inherit" to="/files">
+              {t("breadcrumbs.root")}
+            </MuiLink>
+            {breadcrumbs.map((crumb, idx) => {
+              const isLast = idx === breadcrumbs.length - 1;
+              if (isLast) {
+                return (
+                  <Typography key={crumb.id} color="text.primary">
+                    {crumb.name}
+                  </Typography>
+                );
+              }
               return (
-                <Typography key={crumb.id} color="text.primary">
+                <MuiLink
+                  key={crumb.id}
+                  component={RouterLink}
+                  underline="hover"
+                  color="inherit"
+                  to={`/files/${crumb.id}`}
+                >
                   {crumb.name}
-                </Typography>
+                </MuiLink>
               );
-            }
-            return (
-              <MuiLink
-                key={crumb.id}
-                component={RouterLink}
-                underline="hover"
-                color="inherit"
-                to={`/files/${crumb.id}`}
-              >
-                {crumb.name}
-              </MuiLink>
-            );
-          })}
-        </Breadcrumbs>
-      </Box>
+            })}
+          </Breadcrumbs>
+        </Box>
 
-      <Box
-        mb={2}
-        display="flex"
-        gap={1}
-        flexWrap="wrap"
-        alignItems="center"
-      >
-        <TextField
-          size="small"
-          label={t("actions.newFolderLabel")}
-          placeholder={t("actions.newFolderPlaceholder")}
-          value={newFolderName}
-          onChange={(e) => setNewFolderName(e.target.value)}
-          disabled={!canCreateFolder}
-        />
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => void handleCreateFolder()}
-          disabled={!canCreateFolder || newFolderName.trim().length === 0}
-        >
-          {t("actions.createFolder")}
-        </Button>
+        <Box>
+          <Tooltip title={t("actions.newFolder")}>
+            <IconButton
+              color="primary"
+              onClick={() => void handleNewFolder()}
+              disabled={!nodeId || loading}
+            >
+              <CreateNewFolder />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       {error && (

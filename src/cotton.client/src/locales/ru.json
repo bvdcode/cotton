@@ -283,9 +283,8 @@
     },
     "refreshing": "Обновляем…",
     "actions": {
-      "newFolderLabel": "Новая папка",
-      "newFolderPlaceholder": "Название папки",
-      "createFolder": "Создать"
+      "newFolder": "Новая папка",
+      "newFolderPrompt": "Введите имя папки:"
     },
     "breadcrumbs": {
       "ariaLabel": "Хлебные крошки",

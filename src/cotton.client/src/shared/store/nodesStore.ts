@@ -81,12 +81,46 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     if (trimmed.length === 0) return null;
     if (get().loading) return null;
 
+    const state = get();
+    const currentContent = state.contentByNodeId[parentNodeId];
+
+    // Check for duplicate name (case-insensitive) in cached content
+    if (currentContent) {
+      const normalizedName = trimmed.toLowerCase();
+      const duplicate = currentContent.nodes.find(
+        (n) => n.name.toLowerCase() === normalizedName,
+      );
+      if (duplicate) {
+        set({ error: "A folder with this name already exists" });
+        return null;
+      }
+    }
+
     set({ loading: true, error: null });
 
     try {
       const created = await nodesApi.createNode({ parentId: parentNodeId, name: trimmed });
-      // Refetch current folder to include the new node.
-      await get().loadNode(parentNodeId);
+
+      // Optimistic update: immediately add the new folder to local cache
+      set((prev) => {
+        const existing = prev.contentByNodeId[parentNodeId];
+        if (!existing) return { loading: false };
+
+        return {
+          contentByNodeId: {
+            ...prev.contentByNodeId,
+            [parentNodeId]: {
+              ...existing,
+              nodes: [...existing.nodes, created],
+            },
+          },
+          loading: false,
+        };
+      });
+
+      // Background refetch to ensure server state is correct
+      void get().loadNode(parentNodeId);
+
       return created;
     } catch (error) {
       console.error("Failed to create folder", error);
