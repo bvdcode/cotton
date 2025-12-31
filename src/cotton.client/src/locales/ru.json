@@ -298,5 +298,15 @@
     "empty": {
       "all": "Папка пуста"
     }
+  },
+  "upload": {
+    "title": "Загрузки",
+    "status": {
+      "queued": "В очереди",
+      "uploading": "Загружается",
+      "finalizing": "Завершается",
+      "completed": "Завершено",
+      "failed": "Ошибка"
+    }
   }
 }
