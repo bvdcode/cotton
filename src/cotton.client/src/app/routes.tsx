@@ -1,7 +1,7 @@
 import type { RouteConfig } from "./types";
 import { RequireAuth } from "../features/auth";
 import { Routes, Route } from "react-router-dom";
-import { LoginPage, NotFoundPage, OnboardingPage } from "../pages";
+import { HomePage, LoginPage, NotFoundPage, OnboardingPage } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Dashboard, Folder, Home } from "@mui/icons-material";
 import { Box } from "@mui/material";
@@ -18,11 +18,7 @@ const appRoutes: RouteConfig[] = [
     icon: <Home />,
     protected: true,
     displayName: "Home",
-    element: (
-      <Box bgcolor="#3a9b6f2a" width="100%" height="100%">
-        Home
-      </Box>
-    ),
+    element: <HomePage />,
   },
   {
     path: "/files",
