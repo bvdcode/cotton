@@ -1,5 +1,6 @@
 import type { RouteConfig } from "../types";
 import { UserMenu } from "./components/UserMenu";
+import { UploadQueueWidget } from "./components/UploadQueueWidget";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { AppBar, Toolbar, Box, Button, Container } from "@mui/material";
 import { useEffect } from "react";
@@ -99,6 +100,8 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
       >
         <Outlet />
       </Container>
+
+      <UploadQueueWidget />
     </Box>
   );
 };

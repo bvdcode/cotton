@@ -17,11 +17,18 @@ export interface UploadFileToNodeOptions {
   concurrency?: number;
 }
 
+export interface UploadFileToNodeCallbacks {
+  onProgress?: (bytesUploaded: number) => void;
+  onFinalizing?: () => void;
+}
+
 export async function uploadFileToNode(options: {
   file: File;
   nodeId: Guid;
   server: UploadServerParams;
   client?: UploadFileToNodeOptions;
+  onProgress?: UploadFileToNodeCallbacks["onProgress"];
+  onFinalizing?: UploadFileToNodeCallbacks["onFinalizing"];
 }): Promise<void> {
   const { file, nodeId, server } = options;
 
@@ -37,6 +44,14 @@ export async function uploadFileToNode(options: {
   const chunkCount = Math.ceil(file.size / chunkSize);
   const chunkHashesByIndex: string[] = new Array(chunkCount);
 
+  // Completion order (for diagnostics / if server ever needs it).
+  const completedChunkHashes: string[] = [];
+
+  let completedBytes = 0;
+  const report = () => {
+    options.onProgress?.(completedBytes);
+  };
+
   let nextIndex = 0;
 
   const worker = async () => {
@@ -48,6 +63,7 @@ export async function uploadFileToNode(options: {
       const start = index * chunkSize;
       const end = Math.min(file.size, start + chunkSize);
       const chunk = file.slice(start, end);
+      const chunkBytes = end - start;
 
       const chunkHash = await hashBlob(chunk, algorithm);
       chunkHashesByIndex[index] = chunkHash;
@@ -61,12 +77,18 @@ export async function uploadFileToNode(options: {
         // Server should compute its own hash and skip validation.
         await chunksApi.uploadChunk({ blob: chunk, fileName: file.name, hash: null });
       }
+
+      completedChunkHashes.push(chunkHash);
+      completedBytes += chunkBytes;
+      report();
     }
   };
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
   const fileHash = await hashFile(file, algorithm);
+
+  options.onFinalizing?.();
 
   await filesApi.createFromChunks({
     nodeId,

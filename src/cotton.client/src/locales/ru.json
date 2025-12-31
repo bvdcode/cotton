@@ -263,7 +263,9 @@
     "cards": {
       "folders": {
         "title": "Папки",
-        "caption": "Всего нод в лейауте"
+        "caption": "Всего нод в лейауте",
+        "layoutCaption": "Текущая раскладка по умолчанию",
+        "layoutTitle": "Раскладка"
       },
       "files": {
         "title": "Файлы",
