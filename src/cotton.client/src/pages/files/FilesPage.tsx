@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -15,13 +15,16 @@ import {
   Folder,
   Home,
   InsertDriveFile,
+  UploadFile,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
+import { useServerSettings } from "../../shared/store/useServerSettings";
 import type { NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
+import { UploadQueue } from "../../shared/upload";
 
 const formatBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -42,6 +45,21 @@ export const FilesPage: React.FC = () => {
   const params = useParams<{ nodeId?: string }>();
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const serverSettings = useServerSettings();
+  const uploadQueueRef = useRef<UploadQueue | null>(null);
+  if (uploadQueueRef.current == null) {
+    uploadQueueRef.current = new UploadQueue(() => {
+      const data = serverSettings.data;
+      if (!data) return null;
+      return {
+        maxChunkSizeBytes: data.maxChunkSizeBytes,
+        supportedHashAlgorithm: data.supportedHashAlgorithm,
+      };
+    });
+  }
 
   const {
     currentNode,
@@ -55,6 +73,12 @@ export const FilesPage: React.FC = () => {
   } = useNodesStore();
 
   const routeNodeId = params.nodeId;
+
+  useEffect(() => {
+    if (!serverSettings.loaded && !serverSettings.loading) {
+      void serverSettings.fetchSettings();
+    }
+  }, [serverSettings]);
 
   useEffect(() => {
     if (!routeNodeId) {
@@ -96,10 +120,6 @@ export const FilesPage: React.FC = () => {
     ];
   }, [sortedFolders, sortedFiles]);
 
-  if (loading && !content) {
-    return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
-  }
-
   const handleNewFolder = () => {
     setIsCreatingFolder(true);
     setNewFolderName("");
@@ -130,6 +150,37 @@ export const FilesPage: React.FC = () => {
     }
   };
 
+  const handleUploadFiles = (files: FileList | File[]) => {
+    if (!nodeId) return;
+    setUploadError(null);
+
+    uploadQueueRef.current?.enqueue(files, nodeId);
+
+    // Silent refresh after a short delay so new items appear when done.
+    setTimeout(() => {
+      void loadNode(nodeId);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    const queue = uploadQueueRef.current;
+    if (!queue) return;
+
+    const interval = setInterval(() => {
+      const snapshot = queue.getSnapshot();
+      const failed = snapshot.find((x) => x.status === "failed" && x.error);
+      if (failed?.error) {
+        setUploadError(failed.error);
+      }
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading && !content) {
+    return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
+  }
+
   return (
     <Box p={3} width="100%">
       <Box mb={2} display="flex" alignItems="center" gap={2}>
@@ -141,6 +192,15 @@ export const FilesPage: React.FC = () => {
               disabled={loading || ancestors.length === 0}
             >
               <ArrowUpward />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("actions.upload")}>
+            <IconButton
+              color="primary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!nodeId || loading}
+            >
+              <UploadFile />
             </IconButton>
           </Tooltip>
           <Tooltip title={t("actions.newFolder")}>
@@ -158,6 +218,20 @@ export const FilesPage: React.FC = () => {
             </IconButton>
           </Tooltip>
         </Box>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          hidden
+          onChange={(e) => {
+            const files = e.currentTarget.files;
+            if (files && files.length > 0) {
+              handleUploadFiles(files);
+            }
+            e.currentTarget.value = "";
+          }}
+        />
 
         <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")}>
           {breadcrumbs
@@ -187,9 +261,9 @@ export const FilesPage: React.FC = () => {
         </Breadcrumbs>
       </Box>
 
-      {error && (
+      {(error || uploadError) && (
         <Box mb={2}>
-          <Alert severity="error">{error}</Alert>
+          <Alert severity="error">{uploadError ?? error}</Alert>
         </Box>
       )}
 
@@ -197,6 +271,16 @@ export const FilesPage: React.FC = () => {
         <Typography color="text.secondary">{t("empty.all")}</Typography>
       ) : (
         <Box
+          onDragOver={(e) => {
+            e.preventDefault();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+              handleUploadFiles(files);
+            }
+          }}
           sx={{
             display: "grid",
             gap: 2,
@@ -359,14 +443,6 @@ export const FilesPage: React.FC = () => {
               </Box>
             );
           })}
-        </Box>
-      )}
-
-      {loading && content && (
-        <Box mt={2}>
-          <Typography variant="caption" color="text.secondary">
-            {t("refreshing")}
-          </Typography>
         </Box>
       )}
     </Box>
