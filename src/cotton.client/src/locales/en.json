@@ -283,6 +283,7 @@
     },
     "refreshing": "Refreshing…",
     "actions": {
+      "upload": "Upload",
       "newFolder": "New folder",
       "folderNamePlaceholder": "Folder name",
       "goUp": "Go up"

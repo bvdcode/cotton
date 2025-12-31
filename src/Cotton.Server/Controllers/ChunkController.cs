@@ -22,8 +22,8 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
-        [HttpGet(Routes.Chunks + "/{hash}")]
-        public async Task<IActionResult> GetChunk([FromRoute] string hash)
+        [HttpGet(Routes.Chunks + "/{hash}/exists")]
+        public async Task<IActionResult> CheckChunkExists([FromRoute] string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))
             {
@@ -42,7 +42,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiNotFound("Chunk not found or access denied.");
             }
-            return Ok();
+            return Ok(true);
         }
 
         [Authorize]
