@@ -116,7 +116,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // resolve root node
-        var root = await _client!.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client!.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         // upload chunk
@@ -135,6 +135,10 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             { new StringContent(chunkHashLower), "hash" }
         };
         var upRes = await _client.PostAsync("/api/v1/chunks", form);
+        if (!upRes.IsSuccessStatusCode)
+        {
+            throw new Exception($"Chunk upload failed with status code {upRes.StatusCode} and message: {await upRes.Content.ReadAsStringAsync()}");
+        }
         upRes.EnsureSuccessStatusCode();
 
         // create file from chunk
