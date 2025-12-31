@@ -22,54 +22,67 @@ namespace Cotton.Topology
         public async Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType nodeType)
         {
             _layoutSemaphore.Wait();
-            var currentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Include(x => x.Layout)
-                .Where(x => x.Layout.OwnerId == ownerId
-                    && x.LayoutId == layoutId
-                    && x.ParentId == null
-                    && x.Type == nodeType)
-                .FirstOrDefaultAsync();
-            if (currentNode == null)
+            try
             {
-                NameValidator.TryNormalizeAndValidate(nodeType.ToString(), out string normalized, out _);
-                Node newNode = new()
+                var currentNode = await _dbContext.Nodes
+                    .AsNoTracking()
+                    .Include(x => x.Layout)
+                    .Where(x => x.Layout.OwnerId == ownerId
+                        && x.LayoutId == layoutId
+                        && x.ParentId == null
+                        && x.Type == nodeType)
+                    .FirstOrDefaultAsync();
+                if (currentNode == null)
                 {
-                    Type = nodeType,
-                    OwnerId = ownerId,
-                    LayoutId = layoutId,
-                };
-                newNode.SetName(nodeType.ToString());
-                await _dbContext.Nodes.AddAsync(newNode);
-                await _dbContext.SaveChangesAsync();
-                _layoutSemaphore.Release();
-                return newNode;
+                    NameValidator.TryNormalizeAndValidate(nodeType.ToString(), out string normalized, out _);
+                    Node newNode = new()
+                    {
+                        Type = nodeType,
+                        OwnerId = ownerId,
+                        LayoutId = layoutId,
+                    };
+                    newNode.SetName(nodeType.ToString());
+                    await _dbContext.Nodes.AddAsync(newNode);
+                    await _dbContext.SaveChangesAsync();
+                    _layoutSemaphore.Release();
+                    return newNode;
+                }
+                return currentNode;
             }
-            _layoutSemaphore.Release();
-            return currentNode;
+            finally
+            {
+                _layoutSemaphore.Release();
+            }
         }
 
         public async Task<Layout> GetOrCreateLatestUserLayoutAsync(Guid ownerId)
         {
             _layoutSemaphore.Wait();
-            var found = await _dbContext.UserLayouts
-                .Where(x => x.OwnerId == ownerId && x.IsActive)
-                .OrderByDescending(x => x.CreatedAt)
-                .FirstOrDefaultAsync();
-            if (found == null)
+            try
             {
-                Layout newLayout = new()
+                var found = await _dbContext.UserLayouts
+                    .Where(x => x.OwnerId == ownerId && x.IsActive)
+                    .OrderByDescending(x => x.CreatedAt)
+                    .FirstOrDefaultAsync();
+                if (found == null)
                 {
-                    IsActive = true,
-                    OwnerId = ownerId,
-                };
-                await _dbContext.UserLayouts.AddAsync(newLayout);
-                await _dbContext.SaveChangesAsync();
+                    Layout newLayout = new()
+                    {
+                        IsActive = true,
+                        OwnerId = ownerId,
+                    };
+                    await _dbContext.UserLayouts.AddAsync(newLayout);
+                    await _dbContext.SaveChangesAsync();
+                    _layoutSemaphore.Release();
+                    return newLayout;
+                }
                 _layoutSemaphore.Release();
-                return newLayout;
+                return found;
             }
-            _layoutSemaphore.Release();
-            return found;
+            finally
+            {
+                _layoutSemaphore.Release();
+            }
         }
 
         public Task<Chunk?> FindChunkAsync(string hash)
