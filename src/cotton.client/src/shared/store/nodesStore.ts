@@ -13,6 +13,7 @@ type NodesState = {
 
   loadRoot: (options?: { force?: boolean }) => Promise<NodeDto | null>;
   loadNode: (nodeId: string) => Promise<void>;
+  createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
   reset: () => void;
 };
 
@@ -72,6 +73,25 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     } catch (error) {
       console.error("Failed to load node view", error);
       set({ loading: false, error: "Failed to load folder contents" });
+    }
+  },
+
+  createFolder: async (parentNodeId, name) => {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return null;
+    if (get().loading) return null;
+
+    set({ loading: true, error: null });
+
+    try {
+      const created = await nodesApi.createNode({ parentId: parentNodeId, name: trimmed });
+      // Refetch current folder to include the new node.
+      await get().loadNode(parentNodeId);
+      return created;
+    } catch (error) {
+      console.error("Failed to create folder", error);
+      set({ loading: false, error: "Failed to create folder" });
+      return null;
     }
   },
 
