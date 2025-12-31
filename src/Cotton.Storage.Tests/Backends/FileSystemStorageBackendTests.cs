@@ -3,7 +3,6 @@
 
 using Cotton.Storage.Backends;
 using Microsoft.Extensions.Logging;
-using NUnit.Framework;
 using Moq;
 using System.Security.Cryptography;
 using System.Text;

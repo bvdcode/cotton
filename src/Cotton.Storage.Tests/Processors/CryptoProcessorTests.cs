@@ -3,7 +3,6 @@
 
 using Cotton.Storage.Processors;
 using EasyExtensions.Crypto;
-using NUnit.Framework;
 using System.Security.Cryptography;
 using System.Text;
 
