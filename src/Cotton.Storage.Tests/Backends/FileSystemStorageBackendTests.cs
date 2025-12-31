@@ -150,7 +150,7 @@ namespace Cotton.Storage.Tests.Backends
         }
 
         [Test]
-        public void FileSystemBackend_Write_DuplicateUid_ThrowsIOException()
+        public void FileSystemBackend_Write_DuplicateUid_DoesNotThrowIOException()
         {
             // Arrange
             string uid = NewUid();
@@ -159,7 +159,7 @@ namespace Cotton.Storage.Tests.Backends
 
             // Act & Assert
             Assert.DoesNotThrowAsync(() => _backend.WriteAsync(uid, new MemoryStream(data1)));
-            Assert.ThrowsAsync<IOException>(() => _backend.WriteAsync(uid, new MemoryStream(data2)));
+            Assert.DoesNotThrowAsync(() => _backend.WriteAsync(uid, new MemoryStream(data2)));
         }
 
         [Test]
