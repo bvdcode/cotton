@@ -3,8 +3,7 @@ import { RequireAuth } from "../features/auth";
 import { Routes, Route } from "react-router-dom";
 import { FilesPage, HomePage, LoginPage, NotFoundPage, OnboardingPage } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Dashboard, Folder, Home } from "@mui/icons-material";
-import { Box } from "@mui/material";
+import { Folder, Home } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
 
@@ -26,30 +25,6 @@ const appRoutes: RouteConfig[] = [
     protected: true,
     displayName: "Files",
     element: <FilesPage />,
-  },
-  {
-    protected: true,
-    path: "/dashboard",
-    icon: <Dashboard />,
-    displayName: "Dashboard",
-    element: (
-      <Box
-        width="100%"
-        bgcolor="#fc6a6a3b"
-        display="flex"
-        flexDirection="column"
-      >
-        Dashboard
-        {/* Generate 100 random rows */}
-        <Box>
-          {Array.from({ length: 100 }).map((_, index) => (
-            <Box key={index} p={1} borderBottom="1px solid #cccccc56">
-              Row {index + 1}
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    ),
   },
 ];
 
