@@ -284,7 +284,8 @@
     "refreshing": "Обновляем…",
     "actions": {
       "newFolder": "Новая папка",
-      "newFolderPrompt": "Введите имя папки:"
+      "folderNamePlaceholder": "Название папки",
+      "goUp": "Вверх"
     },
     "breadcrumbs": {
       "ariaLabel": "Хлебные крошки",

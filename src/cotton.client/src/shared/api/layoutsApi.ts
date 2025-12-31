@@ -4,6 +4,8 @@ export type Guid = string;
 
 export interface NodeDto {
   id: Guid;
+  createdAt: string;
+  updatedAt: string;
   layoutId: Guid;
   parentId: Guid | null;
   name: string;
