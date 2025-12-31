@@ -283,6 +283,7 @@
     },
     "refreshing": "Обновляем…",
     "actions": {
+      "upload": "Загрузить",
       "newFolder": "Новая папка",
       "folderNamePlaceholder": "Название папки",
       "goUp": "Вверх"
