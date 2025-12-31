@@ -1,5 +1,6 @@
 import type { RouteConfig } from "../types";
 import { UserMenu } from "./components/UserMenu";
+import { UploadFilePicker } from "./components/UploadFilePicker";
 import { UploadQueueWidget } from "./components/UploadQueueWidget";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { AppBar, Toolbar, Box, Button, Container } from "@mui/material";
@@ -101,6 +102,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         <Outlet />
       </Container>
 
+      <UploadFilePicker />
       <UploadQueueWidget />
     </Box>
   );

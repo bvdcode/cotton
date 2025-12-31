@@ -36,8 +36,8 @@ export const FileSystemItemCard = ({
         borderColor: "divider",
         borderRadius: 2,
         p: {
-          xs: 0.5,
-          sm: 2.5,
+          xs: 1,
+          sm: 1.5,
         },
         cursor: clickable ? "pointer" : "default",
         userSelect: "none",
@@ -57,10 +57,9 @@ export const FileSystemItemCard = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          mb: 1,
           "& > svg": {
-            width: "100%",
-            height: "100%",
+            width: "120%",
+            height: "120%",
           },
         }}
       >
