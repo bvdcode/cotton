@@ -86,10 +86,13 @@ namespace Cotton.Server.Controllers
             _logger.LogInformation("2: Chunk hash verified after {ElapsedMilliseconds} ms", sw.ElapsedMilliseconds);
             sw.Restart();
 
+            // Use canonical lowercase hex from computed hash to ensure consistent storage keys
+            string storageKey = Convert.ToHexString(computedHash).ToLowerInvariant();
+
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)
             {
-                await _storage.WriteAsync(hash, stream);
+                await _storage.WriteAsync(storageKey, stream);
                 chunk = new Chunk
                 {
                     Hash = hashBytes,
@@ -120,7 +123,7 @@ namespace Cotton.Server.Controllers
             _logger.LogInformation("4: Chunk ownership recorded after {ElapsedMilliseconds} ms", sw.ElapsedMilliseconds);
 
             _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes in {ElapsedMilliseconds} ms",
-                hash, file.Length, total.ElapsedMilliseconds);
+                storageKey, file.Length, total.ElapsedMilliseconds);
             return Created();
         }
     }
