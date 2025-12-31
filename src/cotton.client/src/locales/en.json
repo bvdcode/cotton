@@ -250,5 +250,49 @@
         "description": "Experience blazing-fast uploads and downloads with optimized performance"
       }
     }
+  },
+  "home": {
+    "title": "Home",
+    "layoutLabelWithValue": "Layout: {{name}}",
+    "layoutLabelEmpty": "Layout: —",
+    "loading": {
+      "title": "Loading",
+      "caption": "Fetching layout stats…"
+    },
+    "refreshing": "Refreshing…",
+    "cards": {
+      "folders": {
+        "title": "Folders",
+        "caption": "Total nodes in the layout"
+      },
+      "files": {
+        "title": "Files",
+        "caption": "Total files across all nodes"
+      },
+      "data": {
+        "title": "Data",
+        "caption": "Sum of file sizes"
+      }
+    }
+  },
+  "files": {
+    "title": "Files",
+    "loading": {
+      "title": "Loading",
+      "caption": "Fetching folder contents…"
+    },
+    "refreshing": "Refreshing…",
+    "breadcrumbs": {
+      "ariaLabel": "Breadcrumbs",
+      "root": "Files"
+    },
+    "sections": {
+      "folders": "Folders",
+      "files": "Files"
+    },
+    "empty": {
+      "folders": "No folders",
+      "files": "No files"
+    }
   }
 }

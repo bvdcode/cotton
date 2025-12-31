@@ -1,7 +1,7 @@
 import type { RouteConfig } from "./types";
 import { RequireAuth } from "../features/auth";
 import { Routes, Route } from "react-router-dom";
-import { HomePage, LoginPage, NotFoundPage, OnboardingPage } from "../pages";
+import { FilesPage, HomePage, LoginPage, NotFoundPage, OnboardingPage } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Dashboard, Folder, Home } from "@mui/icons-material";
 import { Box } from "@mui/material";
@@ -25,11 +25,7 @@ const appRoutes: RouteConfig[] = [
     icon: <Folder />,
     protected: true,
     displayName: "Files",
-    element: (
-      <Box bgcolor="#6a63f02a" width="100%" height="100%">
-        Files
-      </Box>
-    ),
+    element: <FilesPage />,
   },
   {
     protected: true,
@@ -78,6 +74,9 @@ export function AppRoutes() {
         {appRoutes.map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
+
+        {/* Deep link into a specific folder by node id */}
+        <Route path="/files/:nodeId" element={<FilesPage />} />
       </Route>
 
       <Route
