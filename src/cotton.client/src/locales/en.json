@@ -298,5 +298,15 @@
     "empty": {
       "all": "This folder is empty"
     }
+  },
+  "upload": {
+    "title": "Uploads",
+    "status": {
+      "queued": "Queued",
+      "uploading": "Uploading",
+      "finalizing": "Finalizing",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { Box, IconButton, LinearProgress, Paper, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import { useCallback, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 
 const formatBytes = (bytes: number): string => {
@@ -17,6 +18,7 @@ const formatBytes = (bytes: number): string => {
 };
 
 export const UploadQueueWidget = () => {
+  const { t } = useTranslation("upload");
   const subscribe = useCallback((cb: () => void) => uploadManager.subscribe(cb), []);
   const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
   const snapshot = useSyncExternalStore(
@@ -51,7 +53,7 @@ export const UploadQueueWidget = () => {
       >
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
           <Typography variant="subtitle1" fontWeight={600}>
-            Uploads
+            {t("title")}
           </Typography>
           <IconButton
             size="small"
@@ -88,31 +90,31 @@ export const UploadQueueWidget = () => {
             },
           }}
         >
-          {tasks.map((t) => (
-            <Box key={t.id}>
+          {tasks.map((task) => (
+            <Box key={task.id}>
               <Box display="flex" justifyContent="space-between" gap={1}>
-                <Typography variant="body2" noWrap title={t.fileName}>
-                  {t.fileName}
+                <Typography variant="body2" noWrap title={task.fileName}>
+                  {task.fileName}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap title={t.nodeLabel}>
-                  {t.nodeLabel}
+                <Typography variant="caption" color="text.secondary" noWrap title={task.nodeLabel}>
+                  {task.nodeLabel}
                 </Typography>
               </Box>
 
               <LinearProgress
                 variant="determinate"
-                value={Math.round(t.progress01 * 100)}
+                value={Math.round(task.progress01 * 100)}
                 sx={{ mt: 0.5 }}
               />
 
               <Box display="flex" justifyContent="space-between" mt={0.5}>
                 <Typography variant="caption" color="text.secondary">
-                  {t.status === "uploading" && t.uploadSpeedBytesPerSec 
-                    ? `${formatBytes(t.uploadSpeedBytesPerSec)}/s`
-                    : t.status}
+                  {task.status === "uploading" && task.uploadSpeedBytesPerSec 
+                    ? `${formatBytes(task.uploadSpeedBytesPerSec)}/s`
+                    : t(`status.${task.status}`)}
                 </Typography>
-                <Typography variant="caption" color={t.status === "failed" ? "error" : "text.secondary"}>
-                  {t.status === "failed" ? t.error ?? "Failed" : `${Math.round(t.progress01 * 100)}%`}
+                <Typography variant="caption" color={task.status === "failed" ? "error" : "text.secondary"}>
+                  {task.status === "failed" ? task.error ?? "Failed" : `${Math.round(task.progress01 * 100)}%`}
                 </Typography>
               </Box>
             </Box>

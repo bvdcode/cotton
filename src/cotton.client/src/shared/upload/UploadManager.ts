@@ -179,7 +179,7 @@ export class UploadManager {
         next.error = undefined;
         next.uploadSpeedBytesPerSec = 0;
         
-        let uploadStartTime = Date.now();
+        const uploadStartTime = Date.now();
         let lastUpdateTime = Date.now();
         const speedSamples: number[] = [];
         const MAX_SAMPLES = 5;
