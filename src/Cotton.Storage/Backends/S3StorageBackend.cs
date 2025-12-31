@@ -18,11 +18,11 @@ namespace Cotton.Storage.Backends
         public async Task<bool> DeleteAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
-            
+
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            
+
             var response = await _s3.DeleteObjectAsync(new DeleteObjectRequest
             {
                 Key = key,
@@ -34,11 +34,11 @@ namespace Cotton.Storage.Backends
         public async Task<Stream> ReadAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
-            
+
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            
+
             var result = await _s3.GetObjectAsync(new GetObjectRequest
             {
                 Key = key,
@@ -52,11 +52,11 @@ namespace Cotton.Storage.Backends
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
             ArgumentNullException.ThrowIfNull(stream);
-            
+
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
-            
+
             PutObjectRequest req = new()
             {
                 Key = key,

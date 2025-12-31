@@ -3,7 +3,6 @@
 
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
-using NUnit.Framework;
 using System.Text;
 
 namespace Cotton.Storage.Tests.Streams
@@ -141,7 +140,7 @@ namespace Cotton.Storage.Tests.Streams
             Assert.That(read1, Is.EqualTo(4));
 
             // Next read should trigger opening of second stream and throw
-            Assert.Throws<FileNotFoundException>(() => stream.Read(buffer, 0, 1));
+            Assert.Throws<FileNotFoundException>(() => stream.ReadExactly(buffer, 0, 1));
         }
 
         [Test]
@@ -160,7 +159,7 @@ namespace Cotton.Storage.Tests.Streams
             await stream.DisposeAsync();
 
             var buffer = new byte[1];
-            Assert.Throws<ObjectDisposedException>(() => stream.Read(buffer, 0, 1));
+            Assert.Throws<ObjectDisposedException>(() => stream.ReadExactly(buffer, 0, 1));
         }
 
         [Test]

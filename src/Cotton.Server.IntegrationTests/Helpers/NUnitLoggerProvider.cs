@@ -11,7 +11,7 @@ public sealed class NUnitLoggerProvider : ILoggerProvider
     public ILogger CreateLogger(string categoryName) => new NUnitLogger(categoryName);
     public void Dispose() { }
 
-    private sealed class NUnitLogger(string category) : ILogger
+    private class NUnitLogger(string category) : ILogger
     {
         private static readonly Lock _lock = new();
         IDisposable ILogger.BeginScope<TState>(TState state) => NullScope.Instance;
@@ -19,7 +19,10 @@ public sealed class NUnitLoggerProvider : ILoggerProvider
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
         {
-            if (!IsEnabled(logLevel)) return;
+            if (!IsEnabled(logLevel))
+            {
+                return;
+            }
             var message = formatter(state, exception);
             lock (_lock)
             {

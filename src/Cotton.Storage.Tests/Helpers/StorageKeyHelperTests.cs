@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Helpers;
-using NUnit.Framework;
 
 namespace Cotton.Storage.Tests.Helpers
 {
@@ -39,12 +38,12 @@ namespace Cotton.Storage.Tests.Helpers
         public void NormalizeUid_InvalidCharacters_ThrowsException()
         {
             // Arrange
-            var invalidInputs = new[] 
-            { 
-                "abc def", 
-                "abc/def", 
-                "abc\\def", 
-                "abc:def", 
+            var invalidInputs = new[]
+            {
+                "abc def",
+                "abc/def",
+                "abc\\def",
+                "abc:def",
                 "abc..def",
                 "абвгде",
                 "abc@def"
@@ -55,7 +54,7 @@ namespace Cotton.Storage.Tests.Helpers
             {
                 var ex = Assert.Throws<ArgumentException>(() => StorageKeyHelper.NormalizeUid(input),
                     $"Should throw for input: {input}");
-                Assert.That(ex.Message, Does.Contain("invalid character"), 
+                Assert.That(ex.Message, Does.Contain("invalid character"),
                     $"Exception message should mention invalid character for: {input}");
             }
         }
@@ -78,8 +77,8 @@ namespace Cotton.Storage.Tests.Helpers
         public void NormalizeUid_ValidHexCharacters_Success()
         {
             // Arrange
-            var validInputs = new[] 
-            { 
+            var validInputs = new[]
+            {
                 "abcdef",
                 "123456",
                 "abc123",

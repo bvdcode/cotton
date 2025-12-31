@@ -39,11 +39,11 @@ namespace Cotton.Storage.Backends
         public Task<bool> DeleteAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
-            
+
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
             string dirPath = GetFolderByUid(uid);
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
-            
+
             if (!File.Exists(filePath))
             {
                 return Task.FromResult(false);

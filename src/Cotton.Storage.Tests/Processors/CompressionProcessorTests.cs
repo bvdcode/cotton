@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Processors;
-using NUnit.Framework;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -205,7 +204,7 @@ namespace Cotton.Storage.Tests.Processors
             var compressedLength = compressed.Length;
 
             // Assert
-            Assert.That(compressedLength, Is.LessThan(originalData.Length), 
+            Assert.That(compressedLength, Is.LessThan(originalData.Length),
                 "Compressed data should be smaller than original for compressible data");
         }
 
