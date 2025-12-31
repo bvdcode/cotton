@@ -37,7 +37,7 @@ namespace Cotton.Server
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
-                .AddScoped<IStoragePipeline, CachedStoragePipeline>()
+                //.AddScoped<IStoragePipeline, CachedStoragePipeline>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<StorageLayoutService>()
