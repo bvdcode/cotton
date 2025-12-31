@@ -179,8 +179,10 @@ export class UploadManager {
         next.error = undefined;
         next.uploadSpeedBytesPerSec = 0;
         
-        let lastProgressTime = Date.now();
-        let lastProgressBytes = 0;
+        let uploadStartTime = Date.now();
+        let lastUpdateTime = Date.now();
+        const speedSamples: number[] = [];
+        const MAX_SAMPLES = 5;
         
         this.emit();
 
@@ -196,18 +198,29 @@ export class UploadManager {
               next.bytesUploaded = Math.min(next.bytesTotal, bytesUploaded);
               next.progress01 = next.bytesTotal > 0 ? next.bytesUploaded / next.bytesTotal : 1;
               
-              // Calculate upload speed
+              // Calculate upload speed with proper averaging window
               const now = Date.now();
-              const timeDelta = now - lastProgressTime;
-              if (timeDelta > 0) {
-                const bytesDelta = next.bytesUploaded - lastProgressBytes;
-                // Calculate speed in bytes/sec with smoothing
-                const currentSpeed = (bytesDelta / timeDelta) * 1000;
-                next.uploadSpeedBytesPerSec = next.uploadSpeedBytesPerSec 
-                  ? next.uploadSpeedBytesPerSec * 0.7 + currentSpeed * 0.3 
-                  : currentSpeed;
-                lastProgressTime = now;
-                lastProgressBytes = next.bytesUploaded;
+              const timeSinceUpdate = now - lastUpdateTime;
+              
+              // Only update speed every 500ms to avoid jitter
+              if (timeSinceUpdate >= 500) {
+                const totalElapsed = now - uploadStartTime;
+                if (totalElapsed > 0 && next.bytesUploaded > 0) {
+                  // Calculate average speed over the entire upload
+                  const avgSpeed = (next.bytesUploaded / totalElapsed) * 1000;
+                  
+                  // Keep a sliding window of samples
+                  speedSamples.push(avgSpeed);
+                  if (speedSamples.length > MAX_SAMPLES) {
+                    speedSamples.shift();
+                  }
+                  
+                  // Average the samples for smooth display
+                  const smoothSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+                  next.uploadSpeedBytesPerSec = smoothSpeed;
+                  
+                  lastUpdateTime = now;
+                }
               }
               
               this.emit();
