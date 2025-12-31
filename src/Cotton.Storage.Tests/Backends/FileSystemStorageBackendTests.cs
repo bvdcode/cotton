@@ -184,7 +184,7 @@ namespace Cotton.Storage.Tests.Backends
         public async Task FileSystemBackend_Read_NonExistent_ThrowsFileNotFoundException()
         {
             // Arrange
-            string uid = "nonexistent";
+            string uid = "deadbeef"; // valid hex UID
 
             // Act & Assert
             Assert.ThrowsAsync<FileNotFoundException>(() => _backend.ReadAsync(uid));
