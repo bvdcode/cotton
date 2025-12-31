@@ -9,7 +9,13 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { ArrowUpward, CreateNewFolder, Folder, Home, InsertDriveFile } from "@mui/icons-material";
+import {
+  ArrowUpward,
+  CreateNewFolder,
+  Folder,
+  Home,
+  InsertDriveFile,
+} from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
@@ -84,12 +90,10 @@ export const FilesPage: React.FC = () => {
   const tiles = useMemo(() => {
     type FolderTile = { kind: "folder"; node: NodeDto };
     type FileTile = { kind: "file"; file: NodeFileManifestDto };
-    return (
-      [
-        ...sortedFolders.map((node) => ({ kind: "folder", node }) as FolderTile),
-        ...sortedFiles.map((file) => ({ kind: "file", file }) as FileTile),
-      ]
-    );
+    return [
+      ...sortedFolders.map((node) => ({ kind: "folder", node } as FolderTile)),
+      ...sortedFiles.map((file) => ({ kind: "file", file } as FileTile)),
+    ];
   }, [sortedFolders, sortedFiles]);
 
   if (loading && !content) {
@@ -129,24 +133,16 @@ export const FilesPage: React.FC = () => {
   return (
     <Box p={3} width="100%">
       <Box mb={2} display="flex" alignItems="center" gap={2}>
-        <Tooltip title={t("breadcrumbs.root")}>
-          <IconButton onClick={() => navigate("/files")} color="primary">
-            <Home />
-          </IconButton>
-        </Tooltip>
-        
         <Box display="flex" gap={1}>
-          {ancestors.length > 0 && (
-            <Tooltip title={t("actions.goUp")}>
-              <IconButton
-                color="primary"
-                onClick={handleGoUp}
-                disabled={loading}
-              >
-                <ArrowUpward />
-              </IconButton>
-            </Tooltip>
-          )}
+          <Tooltip title={t("actions.goUp")}>
+            <IconButton
+              color="primary"
+              onClick={handleGoUp}
+              disabled={loading || ancestors.length === 0}
+            >
+              <ArrowUpward />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={t("actions.newFolder")}>
             <IconButton
               color="primary"
@@ -154,6 +150,11 @@ export const FilesPage: React.FC = () => {
               disabled={!nodeId || loading || isCreatingFolder}
             >
               <CreateNewFolder />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t("breadcrumbs.root")}>
+            <IconButton onClick={() => navigate("/files")} color="primary">
+              <Home />
             </IconButton>
           </Tooltip>
         </Box>
@@ -251,7 +252,9 @@ export const FilesPage: React.FC = () => {
           )}
           {tiles.map((tile) => {
             if (tile.kind === "folder") {
-              const createdDate = tile.node.createdAt ? new Date(tile.node.createdAtUtc).toLocaleDateString() : "";
+              const createdDate = tile.node.createdAt
+                ? new Date(tile.node.createdAtUtc).toLocaleDateString()
+                : "";
               return (
                 <Box
                   key={tile.node.id}
@@ -274,7 +277,8 @@ export const FilesPage: React.FC = () => {
                     outline: "none",
                     "&:hover": { bgcolor: "action.hover" },
                     "&:focus-visible": {
-                      boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
+                      boxShadow: (theme) =>
+                        `0 0 0 2px ${theme.palette.primary.main}`,
                     },
                   }}
                 >
@@ -292,11 +296,20 @@ export const FilesPage: React.FC = () => {
                   >
                     <Folder sx={{ fontSize: 80 }} />
                   </Box>
-                  <Typography variant="body1" noWrap title={tile.node.name} fontWeight={500}>
+                  <Typography
+                    variant="body1"
+                    noWrap
+                    title={tile.node.name}
+                    fontWeight={500}
+                  >
                     {tile.node.name}
                   </Typography>
                   {createdDate && (
-                    <Typography variant="caption" color="text.secondary" display="block">
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
                       {createdDate}
                     </Typography>
                   )}
@@ -328,10 +341,19 @@ export const FilesPage: React.FC = () => {
                 >
                   <InsertDriveFile sx={{ fontSize: 80 }} />
                 </Box>
-                <Typography variant="body1" noWrap title={tile.file.name} fontWeight={500}>
+                <Typography
+                  variant="body1"
+                  noWrap
+                  title={tile.file.name}
+                  fontWeight={500}
+                >
                   {tile.file.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
                   {formatBytes(tile.file.sizeBytes)}
                 </Typography>
               </Box>

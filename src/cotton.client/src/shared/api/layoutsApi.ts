@@ -2,10 +2,13 @@ import { httpClient } from "./httpClient";
 
 export type Guid = string;
 
-export interface NodeDto {
+export interface BaseDto {
   id: Guid;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NodeDto extends BaseDto {
   layoutId: Guid;
   parentId: Guid | null;
   name: string;
