@@ -282,17 +282,17 @@
       "caption": "Fetching folder contents…"
     },
     "refreshing": "Refreshing…",
+    "actions": {
+      "newFolderLabel": "New folder",
+      "newFolderPlaceholder": "Folder name",
+      "createFolder": "Create"
+    },
     "breadcrumbs": {
       "ariaLabel": "Breadcrumbs",
       "root": "Files"
     },
-    "sections": {
-      "folders": "Folders",
-      "files": "Files"
-    },
     "empty": {
-      "folders": "No folders",
-      "files": "No files"
+      "all": "This folder is empty"
     }
   }
 }
