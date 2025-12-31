@@ -288,7 +288,8 @@
       "upload": "Upload",
       "newFolder": "New folder",
       "folderNamePlaceholder": "Folder name",
-      "goUp": "Go up"
+      "goUp": "Go up",
+      "dropFiles": "Drop files to upload"
     },
     "breadcrumbs": {
       "ariaLabel": "Breadcrumbs",
