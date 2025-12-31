@@ -237,7 +237,7 @@ export function SetupWizardPage() {
             display: "flex",
             flexDirection: "column",
             minHeight: { xs: "calc(100vh - 80px)", sm: "calc(600px - 48px)" },
-            maxHeight: { xs: "calc(100vh - 80px)", sm: "calc(700px - 48px)" },
+            maxHeight: { xs: "calc(100vh - 80px)", sm: "calc(800px - 48px)" },
             height: "100%",
             overflow: "auto",
           }}
