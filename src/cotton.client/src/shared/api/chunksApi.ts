@@ -2,8 +2,10 @@ import { httpClient } from "./httpClient";
 
 export const chunksApi = {
   exists: async (hash: string): Promise<boolean> => {
-    const response = await httpClient.get<boolean>(`/chunks/${encodeURIComponent(hash)}/exists`);
-    return response.data;
+    const response = await httpClient.get(`/chunks/${encodeURIComponent(hash)}/exists`, {
+      validateStatus: (status) => status === 200 || status === 404,
+    });
+    return response.status === 200;
   },
 
   uploadChunk: async (options: { blob: Blob; fileName: string; hash?: string | null }): Promise<void> => {

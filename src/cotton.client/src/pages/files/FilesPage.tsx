@@ -21,10 +21,10 @@ import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
-import { useServerSettings } from "../../shared/store/useServerSettings";
 import type { NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
-import { UploadQueue } from "../../shared/upload";
+import { uploadManager } from "../../shared/upload/UploadManager";
+import { FileSystemItemCard } from "./components/FileSystemItemCard";
 
 const formatBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -45,21 +45,8 @@ export const FilesPage: React.FC = () => {
   const params = useParams<{ nodeId?: string }>();
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const serverSettings = useServerSettings();
-  const uploadQueueRef = useRef<UploadQueue | null>(null);
-  if (uploadQueueRef.current == null) {
-    uploadQueueRef.current = new UploadQueue(() => {
-      const data = serverSettings.data;
-      if (!data) return null;
-      return {
-        maxChunkSizeBytes: data.maxChunkSizeBytes,
-        supportedHashAlgorithm: data.supportedHashAlgorithm,
-      };
-    });
-  }
+  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
   const {
     currentNode,
@@ -73,12 +60,6 @@ export const FilesPage: React.FC = () => {
   } = useNodesStore();
 
   const routeNodeId = params.nodeId;
-
-  useEffect(() => {
-    if (!serverSettings.loaded && !serverSettings.loading) {
-      void serverSettings.fetchSettings();
-    }
-  }, [serverSettings]);
 
   useEffect(() => {
     if (!routeNodeId) {
@@ -121,24 +102,30 @@ export const FilesPage: React.FC = () => {
   }, [sortedFolders, sortedFiles]);
 
   const handleNewFolder = () => {
+    // Lock destination folder at the moment user starts creation.
+    setNewFolderParentId(nodeId);
     setIsCreatingFolder(true);
     setNewFolderName("");
   };
 
   const handleConfirmNewFolder = async () => {
-    if (!nodeId || newFolderName.trim().length === 0) {
+    const parentId = newFolderParentId;
+    if (!parentId || newFolderName.trim().length === 0) {
       setIsCreatingFolder(false);
       setNewFolderName("");
+      setNewFolderParentId(null);
       return;
     }
-    await createFolder(nodeId, newFolderName.trim());
+    await createFolder(parentId, newFolderName.trim());
     setIsCreatingFolder(false);
     setNewFolderName("");
+    setNewFolderParentId(null);
   };
 
   const handleCancelNewFolder = () => {
     setIsCreatingFolder(false);
     setNewFolderName("");
+    setNewFolderParentId(null);
   };
 
   const handleGoUp = () => {
@@ -152,30 +139,14 @@ export const FilesPage: React.FC = () => {
 
   const handleUploadFiles = (files: FileList | File[]) => {
     if (!nodeId) return;
-    setUploadError(null);
-
-    uploadQueueRef.current?.enqueue(files, nodeId);
-
-    // Silent refresh after a short delay so new items appear when done.
-    setTimeout(() => {
-      void loadNode(nodeId);
-    }, 1000);
+    // Lock destination folder at the moment user adds files.
+    const label = breadcrumbs
+      .filter((c, idx) => idx > 0 || c.name !== "Default")
+      .map((c) => c.name)
+      .join(" / ")
+      .trim();
+    uploadManager.enqueue(files, nodeId, label.length > 0 ? label : t("breadcrumbs.root"));
   };
-
-  useEffect(() => {
-    const queue = uploadQueueRef.current;
-    if (!queue) return;
-
-    const interval = setInterval(() => {
-      const snapshot = queue.getSnapshot();
-      const failed = snapshot.find((x) => x.status === "failed" && x.error);
-      if (failed?.error) {
-        setUploadError(failed.error);
-      }
-    }, 800);
-
-    return () => clearInterval(interval);
-  }, []);
 
   if (loading && !content) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
@@ -261,9 +232,9 @@ export const FilesPage: React.FC = () => {
         </Breadcrumbs>
       </Box>
 
-      {(error || uploadError) && (
+      {error && (
         <Box mb={2}>
-          <Alert severity="error">{uploadError ?? error}</Alert>
+          <Alert severity="error">{error}</Alert>
         </Box>
       )}
 
@@ -283,12 +254,12 @@ export const FilesPage: React.FC = () => {
           }}
           sx={{
             display: "grid",
-            gap: 2,
+            gap: 1.5,
             gridTemplateColumns: {
-              xs: "repeat(2, minmax(0, 1fr))",
-              sm: "repeat(3, minmax(0, 1fr))",
-              md: "repeat(4, minmax(0, 1fr))",
-              lg: "repeat(5, minmax(0, 1fr))",
+              xs: "repeat(3, minmax(0, 1fr))",
+              sm: "repeat(4, minmax(0, 1fr))",
+              md: "repeat(6, minmax(0, 1fr))",
+              lg: "repeat(8, minmax(0, 1fr))",
             },
           }}
         >
@@ -298,7 +269,7 @@ export const FilesPage: React.FC = () => {
                 border: "2px solid",
                 borderColor: "primary.main",
                 borderRadius: 2,
-                p: 2,
+                p: 1.5,
                 bgcolor: "action.hover",
               }}
             >
@@ -311,10 +282,10 @@ export const FilesPage: React.FC = () => {
                   justifyContent: "center",
                   bgcolor: "background.default",
                   borderRadius: 1.5,
-                  mb: 1.5,
+                  mb: 1,
                 }}
               >
-                <Folder sx={{ fontSize: 80, color: "primary.main" }} />
+                <Folder sx={{ fontSize: 56, color: "primary.main" }} />
               </Box>
               <TextField
                 autoFocus
@@ -336,111 +307,23 @@ export const FilesPage: React.FC = () => {
           )}
           {tiles.map((tile) => {
             if (tile.kind === "folder") {
-              const createdDate = tile.node.createdAt
-                ? new Date(tile.node.createdAt).toLocaleDateString()
-                : "";
               return (
-                <Box
+                <FileSystemItemCard
                   key={tile.node.id}
-                  role="button"
-                  tabIndex={0}
+                  icon={<Folder sx={{ fontSize: 56 }} />}
+                  title={tile.node.name}
                   onClick={() => navigate(`/files/${tile.node.id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      navigate(`/files/${tile.node.id}`);
-                    }
-                  }}
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 2,
-                    p: 2,
-                    cursor: "pointer",
-                    userSelect: "none",
-                    outline: "none",
-                    "&:hover": { bgcolor: "action.hover" },
-                    "&:focus-visible": {
-                      boxShadow: (theme) =>
-                        `0 0 0 2px ${theme.palette.primary.main}`,
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor: "background.default",
-                      borderRadius: 1.5,
-                      mb: 1.5,
-                    }}
-                  >
-                    <Folder sx={{ fontSize: 80 }} />
-                  </Box>
-                  <Typography
-                    variant="body1"
-                    noWrap
-                    title={tile.node.name}
-                    fontWeight={500}
-                  >
-                    {tile.node.name}
-                  </Typography>
-                  {createdDate && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      display="block"
-                    >
-                      {createdDate}
-                    </Typography>
-                  )}
-                </Box>
+                />
               );
             }
 
             return (
-              <Box
+              <FileSystemItemCard
                 key={tile.file.id}
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: "100%",
-                    aspectRatio: "1 / 1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    bgcolor: "background.default",
-                    borderRadius: 1.5,
-                    mb: 1.5,
-                  }}
-                >
-                  <InsertDriveFile sx={{ fontSize: 80 }} />
-                </Box>
-                <Typography
-                  variant="body1"
-                  noWrap
-                  title={tile.file.name}
-                  fontWeight={500}
-                >
-                  {tile.file.name}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  {formatBytes(tile.file.sizeBytes)}
-                </Typography>
-              </Box>
+                icon={<InsertDriveFile sx={{ fontSize: 56 }} />}
+                title={tile.file.name}
+                subtitle={formatBytes(tile.file.sizeBytes)}
+              />
             );
           })}
         </Box>

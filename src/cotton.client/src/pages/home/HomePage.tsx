@@ -1,11 +1,5 @@
 import { useEffect } from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Alert,
-} from "@mui/material";
+import { Box, Card, CardContent, Typography, Alert } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
@@ -44,22 +38,11 @@ export const HomePage: React.FC = () => {
   const isLoading = loadingRoot || loadingStats;
 
   if (isLoading && !stats) {
-    return (
-      <Loader title={t("loading.title")} caption={t("loading.caption")} />
-    );
+    return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
   return (
     <Box p={3} width="100%">
-      <Box mb={2}>
-        <Typography variant="h4">{t("title")}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {rootNode
-            ? t("layoutLabelWithValue", { name: rootNode.name })
-            : t("layoutLabelEmpty")}
-        </Typography>
-      </Box>
-
       {error && (
         <Box mb={2}>
           <Alert severity="error">{error}</Alert>
@@ -72,10 +55,22 @@ export const HomePage: React.FC = () => {
           gap: 2,
           gridTemplateColumns: {
             xs: "1fr",
-            md: "repeat(3, 1fr)",
+            md: "repeat(4, 1fr)",
           },
         }}
       >
+        <Card>
+          <CardContent>
+            <Typography variant="overline" color="text.secondary">
+              {t("cards.folders.layoutTitle")}
+            </Typography>
+            <Typography variant="h4">{rootNode?.name ?? "—"}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t("cards.folders.layoutCaption")}
+            </Typography>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent>
             <Typography variant="overline" color="text.secondary">
