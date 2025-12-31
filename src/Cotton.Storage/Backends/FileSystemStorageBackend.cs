@@ -83,7 +83,7 @@ namespace Cotton.Storage.Backends
 
         public async Task WriteAsync(string uid, Stream stream)
         {
-            const int WriteBufferSize = 1024 * 1024;
+            const int WriteBufferSize = 2 * 1024 * 1024;
 
             var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
             ArgumentNullException.ThrowIfNull(stream);
@@ -125,7 +125,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                File.Move(tmpFilePath, filePath);
+                File.Move(tmpFilePath, filePath, overwrite: true);
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
             }
             catch (Exception)

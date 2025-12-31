@@ -112,7 +112,7 @@ public class LayoutAndFilesTests : IntegrationTestBase
         for (int i = 1; i <= 10; i++)
         {
             var content = Encoding.UTF8.GetBytes($"hello {i}");
-            var chunkHashLower = Convert.ToHexString(Hasher.HashData(content)).ToLowerInvariant();
+            var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
             // Upload chunk
             using var form = new MultipartFormDataContent
             {

@@ -75,12 +75,12 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // resolve root node
-        var root = await _client!.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        var root = await _client!.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
         Assert.That(root, Is.Not.Null);
 
         // upload chunk
         var content = Encoding.UTF8.GetBytes("hello world");
-        var chunkHashLower = Convert.ToHexString(Hasher.HashData(content)).ToLowerInvariant();
+        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
         using var form = new MultipartFormDataContent
         {
             {
@@ -121,7 +121,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         // upload chunk
         var content = Encoding.UTF8.GetBytes("download me");
-        var chunkHashLower = Convert.ToHexString(Hasher.HashData(content)).ToLowerInvariant();
+        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
         using var form = new MultipartFormDataContent
         {
             {

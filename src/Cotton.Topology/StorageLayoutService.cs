@@ -85,11 +85,6 @@ namespace Cotton.Topology
             }
         }
 
-        public Task<Chunk?> FindChunkAsync(string hash)
-        {
-            return FindChunkAsync(Convert.FromHexString(hash));
-        }
-
         public async Task<Chunk?> FindChunkAsync(byte[] hash)
         {
             return await _dbContext.Chunks.FindAsync(hash);
