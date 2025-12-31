@@ -4,11 +4,13 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Topology;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
+using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +18,7 @@ using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
-    public class ChunkController(CottonDbContext _dbContext, CottonServerSettings _settings,
+    public class ChunkController(CottonDbContext _dbContext, SettingsProvider _settings,
         IStoragePipeline _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
@@ -27,20 +29,19 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest("Invalid hash format.");
             }
-            byte[] hashBytes = Convert.FromHexString(hash);
+            byte[] hashBytes = Hasher.FromHexStringHash(hash);
             if (hashBytes.Length != Hasher.HashSizeInBytes)
             {
                 return CottonResult.BadRequest("Invalid hash format.");
             }
             Guid userId = User.GetUserId();
             var chunkOwnership = await _dbContext.ChunkOwnerships
-                .FirstOrDefaultAsync(co => co.ChunkHash.SequenceEqual(hashBytes)
+                .FirstOrDefaultAsync(co => co.ChunkHash == hashBytes
                     && co.OwnerId == userId);
             if (chunkOwnership == null)
             {
                 return this.ApiNotFound("Chunk not found or access denied.");
             }
-            var chunk = chunkOwnership.Chunk;
             return Ok();
         }
 
@@ -55,16 +56,16 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest("No file uploaded.");
             }
-            if (file.Length > _settings.MaxChunkSizeBytes)
+            if (file.Length > _settings.GetServerSettings().MaxChunkSizeBytes)
             {
-                return CottonResult.BadRequest($"File size exceeds maximum chunk size of {_settings.MaxChunkSizeBytes} bytes.");
+                return CottonResult.BadRequest($"File size exceeds maximum chunk size of {_settings.GetServerSettings().MaxChunkSizeBytes} bytes.");
             }
             if (string.IsNullOrWhiteSpace(hash))
             {
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
-            byte[] hashBytes = Convert.FromHexString(hash);
+            byte[] hashBytes = Hasher.FromHexStringHash(hash);
             if (hashBytes.Length != Hasher.HashSizeInBytes)
             {
                 return CottonResult.BadRequest("Invalid hash format.");
@@ -87,7 +88,7 @@ namespace Cotton.Server.Controllers
             sw.Restart();
 
             // Use canonical lowercase hex from computed hash to ensure consistent storage keys
-            string storageKey = Convert.ToHexString(computedHash).ToLowerInvariant();
+            string storageKey = Hasher.ToHexStringHash(computedHash);
 
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)

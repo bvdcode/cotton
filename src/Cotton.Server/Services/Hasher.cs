@@ -10,7 +10,7 @@ namespace Cotton.Server.Services
     /// </summary>
     /// <remarks>The Hasher class offers a simple interface for generating SHA-256 hashes from byte arrays or
     /// streams. All members are thread-safe and can be used concurrently across multiple threads.</remarks>
-    public class Hasher
+    public partial class Hasher
     {
         /// <summary>
         /// Gets the name of the hash algorithm supported by this implementation.
@@ -48,5 +48,38 @@ namespace Cotton.Server.Services
         {
             return await SHA256.HashDataAsync(stream);
         }
+
+        public static string ToHexStringHash(byte[] hash)
+        {
+            return Convert.ToHexString(hash).ToLowerInvariant();
+        }
+
+        public static byte[] FromHexStringHash(string hexString)
+        {
+            if (string.IsNullOrWhiteSpace(hexString))
+            {
+                throw new ArgumentException("Hex string cannot be null or empty.", nameof(hexString));
+            }
+            if (hexString.Length % 2 != 0)
+            {
+                throw new ArgumentException("Hex string must have an even length.", nameof(hexString));
+            }
+            if (hexString.Length / 2 != HashSizeInBytes)
+            {
+                throw new ArgumentException($"Hex string must represent a hash of {HashSizeInBytes} bytes.", nameof(hexString));
+            }
+            if (!HexStringRegex().IsMatch(hexString))
+            {
+                throw new ArgumentException("Hex string contains invalid characters.", nameof(hexString));
+            }
+            if (hexString.Length > 128)
+            {
+                throw new ArgumentException("Hex string is too long.", nameof(hexString));
+            }
+            return Convert.FromHexString(hexString);
+        }
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"\A\b[0-9a-fA-F]+\b\Z")]
+        private static partial System.Text.RegularExpressions.Regex HexStringRegex();
     }
 }
