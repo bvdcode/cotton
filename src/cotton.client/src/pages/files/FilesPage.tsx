@@ -18,12 +18,14 @@ import {
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "material-ui-confirm";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
-import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
+import { nodesApi, type NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { uploadManager } from "../../shared/upload/UploadManager";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
+import { resolveUploadConflicts } from "./utils/uploadConflicts";
 
 const formatBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -39,7 +41,8 @@ const formatBytes = (bytes: number): string => {
 };
 
 export const FilesPage: React.FC = () => {
-  const { t } = useTranslation("files");
+  const { t } = useTranslation(["files", "common"]);
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -139,21 +142,43 @@ export const FilesPage: React.FC = () => {
   };
 
   const handleUploadFiles = useMemo(
-    () => (files: FileList | File[]) => {
+    () => async (files: FileList | File[]) => {
       if (!nodeId) return;
+
       // Lock destination folder at the moment user adds files.
       const label = breadcrumbs
         .filter((c, idx) => idx > 0 || c.name !== "Default")
         .map((c) => c.name)
         .join(" / ")
         .trim();
-      uploadManager.enqueue(
-        files,
-        nodeId,
-        label.length > 0 ? label : t("breadcrumbs.root"),
-      );
+
+      const list = Array.isArray(files) ? files : Array.from(files);
+      if (list.length === 0) return;
+
+      // Prefer cached content; if missing (e.g. first load), fetch names once.
+      const contentForCheck = content ?? (await nodesApi.getChildren(nodeId));
+
+      const confirmRename = async (newName: string): Promise<{ confirmed: boolean }> => {
+        try {
+          await confirm({
+            title: t("conflicts.title", { ns: "files" }),
+            description: t("conflicts.description", { ns: "files", newName }),
+            confirmationText: t("common:actions.confirm"),
+            cancellationText: t("common:actions.cancel"),
+          });
+          return { confirmed: true };
+        } catch {
+          return { confirmed: false };
+        }
+      };
+
+      const resolved = await resolveUploadConflicts(list, contentForCheck, confirmRename);
+
+      if (resolved.length === 0) return;
+
+      uploadManager.enqueue(resolved, nodeId, label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" }));
     },
-    [nodeId, breadcrumbs, t],
+    [nodeId, breadcrumbs, content, confirm, t],
   );
 
   const handleUploadClick = () => {
@@ -164,7 +189,7 @@ export const FilesPage: React.FC = () => {
     input.onchange = (e) => {
       const files = (e.target as HTMLInputElement).files;
       if (files && files.length > 0) {
-        handleUploadFiles(Array.from(files));
+        void handleUploadFiles(Array.from(files));
       }
     };
     input.click();
@@ -256,11 +281,11 @@ export const FilesPage: React.FC = () => {
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       const files = await getAllFilesFromItems(e.dataTransfer.items);
       if (files.length > 0) {
-        handleUploadFiles(files);
+        void handleUploadFiles(files);
       }
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       // Fallback to simple file list
-      handleUploadFiles(Array.from(e.dataTransfer.files));
+      void handleUploadFiles(Array.from(e.dataTransfer.files));
     }
   };
 

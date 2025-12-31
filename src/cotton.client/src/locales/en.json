@@ -2,6 +2,10 @@
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
+    "actions": {
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
     "userMenu": {
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
@@ -297,6 +301,10 @@
     },
     "empty": {
       "all": "This folder is empty"
+    },
+    "conflicts": {
+      "title": "File already exists",
+      "description": "A file with this name already exists in this folder. Upload as {{newName}}?"
     }
   },
   "upload": {
