@@ -47,6 +47,7 @@ export const FilesPage: React.FC = () => {
   const [newFolderParentId, setNewFolderParentId] = useState<string | null>(
     null,
   );
+  const [isDragging, setIsDragging] = useState(false);
 
   const {
     currentNode,
@@ -169,6 +170,78 @@ export const FilesPage: React.FC = () => {
     input.click();
   };
 
+  // Recursively collect all files from a directory tree
+  const getAllFilesFromItems = async (items: DataTransferItemList): Promise<File[]> => {
+    const files: File[] = [];
+
+    const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
+      if (entry.isFile) {
+        const fileEntry = entry as FileSystemFileEntry;
+        const file = await new Promise<File>((resolve, reject) => {
+          fileEntry.file(resolve, reject);
+        });
+        files.push(file);
+      } else if (entry.isDirectory) {
+        const dirEntry = entry as FileSystemDirectoryEntry;
+        const reader = dirEntry.createReader();
+        const entries = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+          reader.readEntries(resolve, reject);
+        });
+        for (const childEntry of entries) {
+          await traverseEntry(childEntry);
+        }
+      }
+    };
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const entry = item.webkitGetAsEntry();
+        if (entry) {
+          await traverseEntry(entry);
+        }
+      }
+    }
+
+    return files;
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set to false if leaving the main container
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (!nodeId) return;
+
+    // Try to get files from DataTransferItemList (supports directories)
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const files = await getAllFilesFromItems(e.dataTransfer.items);
+      if (files.length > 0) {
+        handleUploadFiles(files);
+      }
+    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      // Fallback to simple file list
+      handleUploadFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
   useEffect(() => {
     // If user navigated while the inline-create is open, cancel it
     // so it doesn't "move" to another folder.
@@ -196,7 +269,31 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
-    <Box p={3} width="100%">
+    <Box 
+      p={3} 
+      width="100%"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      sx={{
+        position: 'relative',
+        '&::after': isDragging ? {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bgcolor: 'primary.main',
+          opacity: 0.1,
+          borderRadius: 2,
+          border: '3px dashed',
+          borderColor: 'primary.main',
+          pointerEvents: 'none',
+          zIndex: 1,
+        } : undefined,
+      }}
+    >
       <Box
         mb={2}
         sx={{

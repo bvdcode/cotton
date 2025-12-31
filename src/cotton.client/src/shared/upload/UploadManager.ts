@@ -20,6 +20,7 @@ export interface UploadTask {
   progress01: number;
   status: UploadTaskStatus;
   error?: string;
+  uploadSpeedBytesPerSec?: number;
 }
 
 export interface UploadFilePickerContext {
@@ -176,6 +177,11 @@ export class UploadManager {
         const file = (next as unknown as { _file: File })._file;
         next.status = "uploading";
         next.error = undefined;
+        next.uploadSpeedBytesPerSec = 0;
+        
+        let lastProgressTime = Date.now();
+        let lastProgressBytes = 0;
+        
         this.emit();
 
         try {
@@ -189,6 +195,21 @@ export class UploadManager {
             onProgress: (bytesUploaded) => {
               next.bytesUploaded = Math.min(next.bytesTotal, bytesUploaded);
               next.progress01 = next.bytesTotal > 0 ? next.bytesUploaded / next.bytesTotal : 1;
+              
+              // Calculate upload speed
+              const now = Date.now();
+              const timeDelta = now - lastProgressTime;
+              if (timeDelta > 0) {
+                const bytesDelta = next.bytesUploaded - lastProgressBytes;
+                // Calculate speed in bytes/sec with smoothing
+                const currentSpeed = (bytesDelta / timeDelta) * 1000;
+                next.uploadSpeedBytesPerSec = next.uploadSpeedBytesPerSec 
+                  ? next.uploadSpeedBytesPerSec * 0.7 + currentSpeed * 0.3 
+                  : currentSpeed;
+                lastProgressTime = now;
+                lastProgressBytes = next.bytesUploaded;
+              }
+              
               this.emit();
             },
             onFinalizing: () => {

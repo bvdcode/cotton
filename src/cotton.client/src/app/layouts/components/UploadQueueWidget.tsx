@@ -3,6 +3,19 @@ import { Close } from "@mui/icons-material";
 import { useCallback, useSyncExternalStore } from "react";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 
+const formatBytes = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const precision = unitIndex === 0 ? 0 : value < 10 ? 2 : 1;
+  return `${value.toFixed(precision)} ${units[unitIndex]}`;
+};
+
 export const UploadQueueWidget = () => {
   const subscribe = useCallback((cb: () => void) => uploadManager.subscribe(cb), []);
   const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
@@ -50,8 +63,32 @@ export const UploadQueueWidget = () => {
           </IconButton>
         </Box>
 
-        <Box display="flex" flexDirection="column" gap={1}>
-          {tasks.slice(0, 6).map((t) => (
+        <Box 
+          sx={{
+            maxHeight: '400px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            pr: 0.5,
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              bgcolor: 'action.hover',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              bgcolor: 'action.selected',
+              borderRadius: '4px',
+              '&:hover': {
+                bgcolor: 'action.disabled',
+              },
+            },
+          }}
+        >
+          {tasks.map((t) => (
             <Box key={t.id}>
               <Box display="flex" justifyContent="space-between" gap={1}>
                 <Typography variant="body2" noWrap title={t.fileName}>
@@ -70,7 +107,9 @@ export const UploadQueueWidget = () => {
 
               <Box display="flex" justifyContent="space-between" mt={0.5}>
                 <Typography variant="caption" color="text.secondary">
-                  {t.status}
+                  {t.status === "uploading" && t.uploadSpeedBytesPerSec 
+                    ? `${formatBytes(t.uploadSpeedBytesPerSec)}/s`
+                    : t.status}
                 </Typography>
                 <Typography variant="caption" color={t.status === "failed" ? "error" : "text.secondary"}>
                   {t.status === "failed" ? t.error ?? "Failed" : `${Math.round(t.progress01 * 100)}%`}
@@ -79,12 +118,6 @@ export const UploadQueueWidget = () => {
             </Box>
           ))}
         </Box>
-
-        {tasks.length > 6 && (
-          <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-            +{tasks.length - 6} more
-          </Typography>
-        )}
       </Paper>
     </Box>
   );
