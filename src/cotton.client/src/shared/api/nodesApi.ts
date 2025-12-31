@@ -17,19 +17,19 @@ export interface NodeContentDto {
 
 export const nodesApi = {
   getNode: async (nodeId: Guid): Promise<NodeDto> => {
-    const response = await httpClient.get<NodeDto>(`/nodes/${nodeId}`);
+    const response = await httpClient.get<NodeDto>(`/layouts/nodes/${nodeId}`);
     return response.data;
   },
 
   getAncestors: async (nodeId: Guid, options?: { nodeType?: string }): Promise<NodeDto[]> => {
-    const response = await httpClient.get<NodeDto[]>(`/nodes/${nodeId}/ancestors`, {
+    const response = await httpClient.get<NodeDto[]>(`/layouts/nodes/${nodeId}/ancestors`, {
       params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
     });
     return response.data;
   },
 
   getChildren: async (nodeId: Guid, options?: { nodeType?: string }): Promise<NodeContentDto> => {
-    const response = await httpClient.get<NodeContentDto>(`/nodes/${nodeId}/children`, {
+    const response = await httpClient.get<NodeContentDto>(`/layouts/nodes/${nodeId}/children`, {
       params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
     });
     return response.data;
