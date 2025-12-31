@@ -4,6 +4,7 @@
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -12,6 +13,7 @@ using Npgsql;
 using NUnit.Framework;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -47,7 +49,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
             ["DatabaseSettings:Database"] = csb.Database,
             ["DatabaseSettings:Username"] = csb.Username,
             ["DatabaseSettings:Password"] = csb.Password,
-            ["MasterEncryptionKey"] = "IntegrationTestsKey",
+            ["MasterEncryptionKey"] = Convert.ToBase64String(Hasher.HashData(Encoding.UTF8.GetBytes("super"))),
             ["MasterEncryptionKeyId"] = "1",
             ["EncryptionThreads"] = "1",
             ["MaxChunkSizeBytes"] = "16777216",
