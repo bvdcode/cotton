@@ -1,36 +1,53 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-using Cotton.Server.IntegrationTests.Helpers;
-using Cotton.Storage.Abstractions;
+using Cotton.Database.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+using Quartz;
 
 namespace Cotton.Server.IntegrationTests.Common;
 
-public class TestAppFactory(IReadOnlyDictionary<string, string?> overrides) : WebApplicationFactory<Program>
+public class TestAppFactory(Dictionary<string, string?> _overrides) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting(WebHostDefaults.EnvironmentKey, "IntegrationTests");
-        builder.ConfigureAppConfiguration((ctx, cfg) =>
+        builder.ConfigureAppConfiguration((context, config) =>
         {
-            cfg.AddInMemoryCollection(overrides);
+            config.AddInMemoryCollection(_overrides);
         });
+
+        builder.UseEnvironment("Testing");
+        base.ConfigureWebHost(builder);
+
         builder.ConfigureServices(services =>
         {
-            var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
-            if (existing != null) services.Remove(existing);
-            services.AddSingleton<IStoragePipeline, InMemoryStorage>();
+            var quartzHosted = services
+                .Where(d => d.ServiceType == typeof(IHostedService) &&
+                    (d.ImplementationType == typeof(QuartzHostedService) ||
+                        d.ImplementationFactory?.Method.ReturnType == typeof(QuartzHostedService)))
+                .ToList();
+            foreach (var d in quartzHosted)
+            {
+                services.Remove(d);
+            }
+
+            services.AddSingleton(new CottonServerSettings
+            {
+                MaxChunkSizeBytes = 128 * 1024 * 1024,
+                CipherChunkSizeBytes = 20 * 1024 * 1024,
+                EncryptionThreads = 1,
+            });
         });
-        builder.ConfigureLogging((ctx, logging) =>
-        {
-            logging.ClearProviders();
-            logging.AddProvider(new NUnitLoggerProvider());
-            logging.SetMinimumLevel(LogLevel.Information);
-        });
+    }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        // Ensure host is created per test without cross-test reuse
+        builder.UseEnvironment("IntegrationTests");
+        return base.CreateHost(builder);
     }
 }

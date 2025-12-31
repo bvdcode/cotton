@@ -2,23 +2,34 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
+using EasyExtensions.Models.Enums;
+using ZstdSharp;
 
 namespace Cotton.Storage.Processors
 {
     public class CompressionProcessor : IStorageProcessor
     {
-        public int Priority => 100;
+        public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
+        public int Priority => 10000;
 
-        public Task<Stream> ReadAsync(string uid, Stream stream)
+        public async Task<Stream> ReadAsync(string uid, Stream stream)
         {
-            return Task.FromResult(stream);
-            // return Task.FromResult<Stream>(new BrotliStream(stream, CompressionMode.Decompress, leaveOpen: true));
+            var decompressor = new DecompressionStream(stream);
+            var memoryStream = new MemoryStream();
+            await decompressor.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+            return memoryStream;
         }
 
-        public Task<Stream> WriteAsync(string uid, Stream stream)
+        public async Task<Stream> WriteAsync(string uid, Stream stream)
         {
-            return Task.FromResult(stream);
-            // return Task.FromResult<Stream>(new BrotliStream(stream, CompressionLevel.Fastest, leaveOpen: true));
+            var memoryStream = new MemoryStream();
+            using (var compressor = new CompressionStream(memoryStream, leaveOpen: true))
+            {
+                await stream.CopyToAsync(compressor);
+            }
+            memoryStream.Position = 0;
+            return memoryStream;
         }
     }
 }

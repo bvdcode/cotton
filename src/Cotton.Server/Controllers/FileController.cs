@@ -63,7 +63,7 @@ namespace Cotton.Server.Controllers
             }
             string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
                 .OrderBy(x => x.ChunkOrder)
-                .Select(x => Convert.ToHexString(x.ChunkHash))];
+                .Select(x => Convert.ToHexString(x.ChunkHash).ToLowerInvariant())];
             Stream stream = _storage.GetBlobStream(hashes);
             _logger.LogInformation("File {NodeFileId} downloaded.", nodeFileId);
             return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name);
@@ -99,8 +99,11 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
             }
 
+            // Normalize chunk hashes to lowercase for storage access
+            string[] normalizedChunkHashes = [.. request.ChunkHashes.Select(h => Convert.ToHexString(Convert.FromHexString(h)).ToLowerInvariant())];
+
             // TODO: Get rid of this (or not?)
-            using var blob = _storage.GetBlobStream(request.ChunkHashes);
+            using var blob = _storage.GetBlobStream(normalizedChunkHashes);
             byte[] computedHash = await Hasher.HashDataAsync(blob);
             if (!string.IsNullOrWhiteSpace(request.Hash))
             {

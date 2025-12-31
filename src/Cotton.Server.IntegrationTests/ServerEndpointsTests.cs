@@ -68,6 +68,8 @@ public class ServerEndpointsTests : IntegrationTestBase
     [Test]
     public async Task Get_Settings_Works()
     {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var res = await _client!.GetAsync("/api/v1/settings");
         res.EnsureSuccessStatusCode();
         var settings = await res.Content.ReadFromJsonAsync<Dictionary<string, object>>();
