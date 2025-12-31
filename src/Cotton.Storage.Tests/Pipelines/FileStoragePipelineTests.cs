@@ -4,7 +4,6 @@
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Microsoft.Extensions.Logging;
-using NUnit.Framework;
 using Moq;
 using System.Text;
 
@@ -54,13 +53,13 @@ namespace Cotton.Storage.Tests.Pipelines
                 var ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
                 var data = ms.ToArray();
-                
+
                 // Remove marker from end
                 if (data.Length > 0 && data[^1] == marker)
                 {
                     return new MemoryStream(data[..^1]) { Position = 0 };
                 }
-                
+
                 return new MemoryStream(data) { Position = 0 };
             }
 
@@ -69,7 +68,7 @@ namespace Cotton.Storage.Tests.Pipelines
                 var ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
                 _ = ms.ToArray();
-                
+
                 // Add marker to end
                 ms.WriteByte(marker);
                 ms.Position = 0;
@@ -126,14 +125,14 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            
+
             var processors = new IStorageProcessor[]
             {
                 new MarkerProcessor(100, 0xAA),
                 new MarkerProcessor(200, 0xBB),
                 new MarkerProcessor(50, 0xCC)   // Highest priority (lowest number)
             };
-            
+
             var pipeline = new FileStoragePipeline(logger.Object, provider, processors);
 
             // Arrange markers so that each processor actually sees its marker at the end
@@ -158,14 +157,14 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            
+
             var processors = new IStorageProcessor[]
             {
                 new MarkerProcessor(100, 0xAA),
                 new MarkerProcessor(200, 0xBB),
                 new MarkerProcessor(50, 0xCC)
             };
-            
+
             var pipeline = new FileStoragePipeline(logger.Object, provider, processors);
 
             var originalData = new byte[] { 0x01 };
@@ -188,12 +187,12 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            
+
             var mockProcessor = new Mock<IStorageProcessor>();
             mockProcessor.Setup(p => p.Priority).Returns(100);
             mockProcessor.Setup(p => p.ReadAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
-            
+
             var pipeline = new FileStoragePipeline(logger.Object, provider, [mockProcessor.Object]);
 
             var data = Encoding.UTF8.GetBytes("Test");
@@ -212,12 +211,12 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            
+
             var mockProcessor = new Mock<IStorageProcessor>();
             mockProcessor.Setup(p => p.Priority).Returns(100);
             mockProcessor.Setup(p => p.WriteAsync(It.IsAny<string>(), It.IsAny<Stream>()))
                 .ReturnsAsync(Stream.Null);
-            
+
             var pipeline = new FileStoragePipeline(logger.Object, provider, [mockProcessor.Object]);
 
             var data = Encoding.UTF8.GetBytes("Test");
@@ -235,13 +234,13 @@ namespace Cotton.Storage.Tests.Pipelines
             var backend = new FakeStorageBackend();
             var provider = new FakeBackendProvider(backend);
             var logger = new Mock<ILogger<FileStoragePipeline>>();
-            
+
             var processors = new IStorageProcessor[]
             {
                 new MarkerProcessor(100, 0xAA),
                 new MarkerProcessor(200, 0xBB)
             };
-            
+
             var pipeline = new FileStoragePipeline(logger.Object, provider, processors);
 
             var originalData = Encoding.UTF8.GetBytes("Hello, World!");

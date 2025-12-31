@@ -1,9 +1,9 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-using ZstdSharp;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Models.Enums;
+using ZstdSharp;
 
 namespace Cotton.Storage.Processors
 {
