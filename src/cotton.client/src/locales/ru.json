@@ -288,7 +288,8 @@
       "upload": "Загрузить",
       "newFolder": "Новая папка",
       "folderNamePlaceholder": "Название папки",
-      "goUp": "Вверх"
+      "goUp": "Вверх",
+      "dropFiles": "Перетащите файлы для загрузки"
     },
     "breadcrumbs": {
       "ariaLabel": "Хлебные крошки",

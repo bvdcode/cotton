@@ -19,6 +19,7 @@ import {
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDropzone } from "react-dropzone";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
@@ -156,28 +157,16 @@ export const FilesPage: React.FC = () => {
     [nodeId, breadcrumbs, t],
   );
 
-  useEffect(() => {
-    const handleWindowDragOver = (e: DragEvent) => {
-      // Allow drop.
-      e.preventDefault();
-    };
-
-    const handleWindowDrop = (e: DragEvent) => {
-      e.preventDefault();
-      const files = e.dataTransfer?.files;
-      if (files && files.length > 0) {
-        handleUploadFiles(files);
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        handleUploadFiles(acceptedFiles);
       }
-    };
-
-    window.addEventListener("dragover", handleWindowDragOver);
-    window.addEventListener("drop", handleWindowDrop);
-
-    return () => {
-      window.removeEventListener("dragover", handleWindowDragOver);
-      window.removeEventListener("drop", handleWindowDrop);
-    };
-  }, [nodeId, breadcrumbs, t, handleUploadFiles]);
+    },
+    noClick: true,
+    noKeyboard: true,
+    disabled: !nodeId,
+  });
 
   useEffect(() => {
     // If user navigated while the inline-create is open, cancel it
@@ -206,7 +195,8 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
-    <Box p={3} width="100%">
+    <Box p={3} width="100%" {...getRootProps()}>
+      <input {...getInputProps()} />
       <Box mb={2} display="flex" alignItems="center" gap={2}>
         <Box display="flex" gap={1}>
           <Tooltip title={t("actions.goUp")}>
@@ -226,18 +216,7 @@ export const FilesPage: React.FC = () => {
                 color="primary"
                 onClick={() => {
                   if (!nodeId) return;
-                  const label = breadcrumbs
-                    .filter((c, idx) => idx > 0 || c.name !== "Default")
-                    .map((c) => c.name)
-                    .join(" / ")
-                    .trim();
-
-                  uploadManager.openFilePicker({
-                    nodeId,
-                    nodeLabel: label.length > 0 ? label : t("breadcrumbs.root"),
-                    multiple: true,
-                    accept: "*/*",
-                  });
+                  open();
                 }}
                 disabled={!nodeId || loading}
               >
@@ -297,18 +276,31 @@ export const FilesPage: React.FC = () => {
         </Box>
       )}
 
-      <Box
-        onDragOver={(e) => {
-          e.preventDefault();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          const files = e.dataTransfer?.files;
-          if (files && files.length > 0) {
-            handleUploadFiles(files);
-          }
-        }}
-      >
+      {isDragActive && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "rgba(25, 118, 210, 0.08)",
+            border: "3px dashed",
+            borderColor: "primary.main",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <Typography variant="h4" color="primary.main" fontWeight={600}>
+            {t("actions.dropFiles")}
+          </Typography>
+        </Box>
+      )}
+
+      <Box>
         {tiles.length === 0 && !isCreatingInThisFolder ? (
           <Typography color="text.secondary">{t("empty.all")}</Typography>
         ) : (

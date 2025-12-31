@@ -37,7 +37,8 @@ export const FileSystemItemCard = ({
         borderRadius: 2,
         p: {
           xs: 1,
-          sm: 1.5,
+          sm: 1.25,
+          md: 1,
         },
         cursor: clickable ? "pointer" : "default",
         userSelect: "none",
@@ -54,19 +55,29 @@ export const FileSystemItemCard = ({
       <Box
         sx={{
           width: "100%",
+          aspectRatio: "1 / 1",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          borderRadius: 1.5,
+          overflow: "hidden",
+          mb: 0.75,
           "& > svg": {
-            width: "120%",
-            height: "120%",
+            width: "70%",
+            height: "70%",
           },
         }}
       >
         {icon}
       </Box>
 
-      <Typography variant="body2" noWrap title={title} fontWeight={500}>
+      <Typography
+        variant="body2"
+        noWrap
+        title={title}
+        fontWeight={500}
+        sx={{ fontSize: { xs: "0.8rem", md: "0.85rem" } }}
+      >
         {title}
       </Typography>
 
@@ -77,6 +88,7 @@ export const FileSystemItemCard = ({
           display="block"
           noWrap
           title={subtitle}
+          sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" } }}
         >
           {subtitle}
         </Typography>
