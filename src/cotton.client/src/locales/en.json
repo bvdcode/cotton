@@ -283,9 +283,8 @@
     },
     "refreshing": "Refreshing…",
     "actions": {
-      "newFolderLabel": "New folder",
-      "newFolderPlaceholder": "Folder name",
-      "createFolder": "Create"
+      "newFolder": "New folder",
+      "newFolderPrompt": "Enter folder name:"
     },
     "breadcrumbs": {
       "ariaLabel": "Breadcrumbs",
