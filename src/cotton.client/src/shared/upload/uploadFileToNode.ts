@@ -3,6 +3,7 @@ import { chunksApi } from "../api/chunksApi";
 import { filesApi } from "../api/filesApi";
 import { uploadConfig } from "./config";
 import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "./hash/hashing";
+import { canUseHashWorker, HashWorkerClient } from "./hash/hashWorkerClient";
 
 export interface UploadServerParams {
   maxChunkSizeBytes: number;
@@ -51,7 +52,12 @@ export async function uploadFileToNode(options: {
 
   // Compute whole-file hash in a single sequential pass while we iterate chunks.
   // Uploads (exists/uploadChunk) still run concurrently via a small in-flight pool.
-  const fileHasher = await createIncrementalHasher(algorithm);
+  const worker = canUseHashWorker() ? new HashWorkerClient() : null;
+  const fileHasher = worker ? null : await createIncrementalHasher(algorithm);
+
+  if (worker) {
+    await worker.init(algorithm);
+  }
 
   const inFlight = new Set<Promise<void>>();
   const waitForSlot = async () => {
@@ -75,8 +81,10 @@ export async function uploadFileToNode(options: {
     const buffer = await chunk.arrayBuffer();
     const bytes = new Uint8Array(buffer);
 
-    fileHasher.update(bytes);
-    const chunkHash = await hashBytes(bytes, algorithm);
+    // Offload hashing to worker when available to keep UI responsive.
+    const chunkHash = worker
+      ? await worker.hashChunk(buffer) // transfers buffer
+      : (fileHasher!.update(bytes), await hashBytes(bytes, algorithm));
     chunkHashesByIndex[index] = chunkHash;
 
     await waitForSlot();
@@ -101,7 +109,9 @@ export async function uploadFileToNode(options: {
 
   await Promise.all(inFlight);
 
-  const fileHash = fileHasher.digestHex();
+  const fileHash = worker ? await worker.digestFile() : fileHasher!.digestHex();
+
+  worker?.terminate();
 
   options.onFinalizing?.();
 
