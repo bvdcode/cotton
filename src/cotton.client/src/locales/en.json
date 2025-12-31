@@ -263,7 +263,9 @@
     "cards": {
       "folders": {
         "title": "Folders",
-        "caption": "Total nodes in the layout"
+        "caption": "Total nodes in the layout",
+        "layoutTitle": "Layout",
+        "layoutCaption": "Current default layout"
       },
       "files": {
         "title": "Files",
