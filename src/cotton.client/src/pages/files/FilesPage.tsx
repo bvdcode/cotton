@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -45,7 +45,6 @@ export const FilesPage: React.FC = () => {
   const params = useParams<{ nodeId?: string }>();
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [newFolderParentId, setNewFolderParentId] = useState<string | null>(
     null,
   );
@@ -199,7 +198,21 @@ export const FilesPage: React.FC = () => {
             <span style={{ display: "inline-flex" }}>
               <IconButton
                 color="primary"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (!nodeId) return;
+                  const label = breadcrumbs
+                    .filter((c, idx) => idx > 0 || c.name !== "Default")
+                    .map((c) => c.name)
+                    .join(" / ")
+                    .trim();
+
+                  uploadManager.openFilePicker({
+                    nodeId,
+                    nodeLabel: label.length > 0 ? label : t("breadcrumbs.root"),
+                    multiple: true,
+                    accept: "*/*",
+                  });
+                }}
                 disabled={!nodeId || loading}
               >
                 <UploadFile />
@@ -223,21 +236,6 @@ export const FilesPage: React.FC = () => {
             </IconButton>
           </Tooltip>
         </Box>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          style={{ display: "none" }}
-          onChange={(e) => {
-            console.log("[FilesPage] file input onChange", e.currentTarget.files);
-            const files = e.currentTarget.files;
-            if (files && files.length > 0) {
-              handleUploadFiles(files);
-            }
-            e.currentTarget.value = "";
-          }}
-        />
 
         <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")}>
           {breadcrumbs
@@ -350,6 +348,9 @@ export const FilesPage: React.FC = () => {
                     icon={<Folder fontSize="large" />}
                     title={tile.node.name}
                     onClick={() => navigate(`/files/${tile.node.id}`)}
+                    subtitle={new Date(
+                      tile.node.createdAt,
+                    ).toLocaleDateString()}
                   />
                 );
               }

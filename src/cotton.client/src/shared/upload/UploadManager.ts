@@ -21,6 +21,13 @@ export interface UploadTask {
   error?: string;
 }
 
+export interface UploadFilePickerContext {
+  nodeId: Guid;
+  nodeLabel: string;
+  multiple?: boolean;
+  accept?: string;
+}
+
 type Listener = () => void;
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -31,6 +38,9 @@ export class UploadManager {
   private running = false;
   private open = false;
   private snapshot: { open: boolean; tasks: UploadTask[] } = { open: false, tasks: [] };
+
+  private filePickerOpen: ((options: { multiple: boolean; accept?: string }) => void) | null = null;
+  private pendingFilePickerContext: UploadFilePickerContext | null = null;
 
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
@@ -50,8 +60,26 @@ export class UploadManager {
     return this.snapshot;
   }
 
+  setFilePickerOpen(fn: ((options: { multiple: boolean; accept?: string }) => void) | null) {
+    this.filePickerOpen = fn;
+  }
+
+  openFilePicker(context: UploadFilePickerContext) {
+    this.pendingFilePickerContext = context;
+    this.filePickerOpen?.({
+      multiple: context.multiple ?? true,
+      accept: context.accept,
+    });
+  }
+
+  handleFilePickerSelection(files: FileList | File[]) {
+    const context = this.pendingFilePickerContext;
+    this.pendingFilePickerContext = null;
+    if (!context) return;
+    this.enqueue(files, context.nodeId, context.nodeLabel);
+  }
+
   enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
-    console.log("[UploadManager] enqueue called", { files, nodeId, nodeLabel });
     const list = Array.isArray(files) ? files : Array.from(files);
     for (const file of list) {
       this.tasks.unshift({
