@@ -79,12 +79,19 @@ export async function uploadFileToNode(options: {
 
     // Read this server-sized chunk ONCE and feed both hash computations.
     const buffer = await chunk.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-
+    
     // Offload hashing to worker when available to keep UI responsive.
-    const chunkHash = worker
-      ? await worker.hashChunk(buffer) // transfers buffer
-      : (fileHasher!.update(bytes), await hashBytes(bytes, algorithm));
+    let chunkHash: string;
+    if (worker) {
+      // Worker handles both file hash and chunk hash.
+      // Buffer is transferred to worker, so create it before transferring.
+      chunkHash = await worker.hashChunk(buffer); // transfers buffer
+    } else {
+      // Non-worker path: update file hasher and compute chunk hash.
+      const bytes = new Uint8Array(buffer);
+      fileHasher!.update(bytes);
+      chunkHash = await hashBytes(bytes, algorithm);
+    }
     chunkHashesByIndex[index] = chunkHash;
 
     await waitForSlot();
