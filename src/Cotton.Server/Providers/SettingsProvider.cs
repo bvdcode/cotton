@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Amazon.S3;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
@@ -82,6 +83,14 @@ namespace Cotton.Server.Providers
                 {
                     return "S3Config must be provided when using S3 storage.";
                 }
+                try
+                {
+                    await ValidateS3Async(request.S3Config);
+                }
+                catch (Exception ex)
+                {
+                    return ex.Message;
+                }
             }
             if (request.ImportSource != ImportSource.None)
             {
@@ -91,6 +100,59 @@ namespace Cotton.Server.Providers
                 }
             }
             return null;
+        }
+
+        private static async Task ValidateS3Async(S3Config s3Config)
+        {
+            var config = new AmazonS3Config
+            {
+                UseHttp = false,
+                MaxErrorRetry = 5,
+                ForcePathStyle = true,
+                ServiceURL = s3Config.Endpoint,
+                AuthenticationRegion = s3Config.Region,
+                RequestChecksumCalculation = Amazon.Runtime.RequestChecksumCalculation.WHEN_REQUIRED,
+                ResponseChecksumValidation = Amazon.Runtime.ResponseChecksumValidation.WHEN_REQUIRED
+            };
+            var s3 = new AmazonS3Client(s3Config.AccessKey, s3Config.SecretKey, config);
+
+            // try write access by creating and deleting a test object
+            string testKey = "cotton_server_test_object_" + Guid.NewGuid().ToString("N");
+            await s3.PutObjectAsync(new Amazon.S3.Model.PutObjectRequest
+            {
+                BucketName = s3Config.Bucket,
+                Key = testKey,
+                ContentBody = "test"
+            });
+
+            // try read access by getting the test object
+            var getResponse = await s3.GetObjectAsync(s3Config.Bucket, testKey);
+            using (var reader = new StreamReader(getResponse.ResponseStream))
+            {
+                string content = await reader.ReadToEndAsync();
+                if (content != "test")
+                {
+                    throw new Exception("S3 read access validation failed: content mismatch.");
+                }
+            }
+
+            // try list all objects in the bucket
+            var listResponse = await s3.ListObjectsV2Async(new Amazon.S3.Model.ListObjectsV2Request
+            {
+                BucketName = s3Config.Bucket,
+                MaxKeys = 1
+            });
+            if (listResponse.HttpStatusCode != System.Net.HttpStatusCode.OK)
+            {
+                throw new Exception("S3 list access validation failed: " + listResponse.HttpStatusCode);
+            }
+            if (listResponse.KeyCount <= 0)
+            {
+                throw new Exception("S3 list access validation failed: bucket is empty or inaccessible.");
+            }
+
+            // clean up the test object
+            await s3.DeleteObjectAsync(s3Config.Bucket, testKey);
         }
 
         public async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
