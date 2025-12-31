@@ -21,7 +21,7 @@ namespace Cotton.Server.Extensions
                     throw new InvalidOperationException("MasterEncryptionKey is not configured.");
                 }
                 // Derive 32-byte key (SHA-256 of provided string)
-                byte[] keyMaterial = Hasher.HashData(Encoding.UTF8.GetBytes(settings.MasterEncryptionKey));
+                byte[] keyMaterial = Convert.FromBase64String(settings.MasterEncryptionKey);
                 int keyId = settings.MasterEncryptionKeyId;
                 int? threads = settings.EncryptionThreads > 0 ? settings.EncryptionThreads : null;
                 return new AesGcmStreamCipher(keyMaterial, keyId, threads);

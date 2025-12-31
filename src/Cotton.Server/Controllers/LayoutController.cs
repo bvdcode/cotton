@@ -99,7 +99,7 @@ namespace Cotton.Server.Controllers
                 OwnerId = userId,
                 ParentId = parentNode.Id,
                 Type = NodeType.Default,
-                LayoutId = parentNode.LayoutId,
+                LayoutId = layout.Id,
             };
             newNode.SetName(request.Name);
             await _dbContext.Nodes.AddAsync(newNode);
@@ -174,23 +174,23 @@ namespace Cotton.Server.Controllers
                 .ProjectToType<NodeDto>()
                 .ToListAsync();
 
-            var files = _dbContext.NodeFiles
+            var files = await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Include(x => x.FileManifest)
                 .Where(x => x.NodeId == parentNode.Id)
-                .ToList()
-                .Select(x =>
-                {
-                    NodeFileManifestDto dto = x.Adapt<NodeFileManifestDto>();
-                    dto.ReadMetadataFromManifest(x.FileManifest);
-                    return dto;
-                });
+                .ToListAsync();
+            var mappedFiles = files.Select(x =>
+            {
+                NodeFileManifestDto dto = x.Adapt<NodeFileManifestDto>();
+                dto.ReadMetadataFromManifest(x.FileManifest);
+                return dto;
+            });
 
             NodeContentDto result = new()
             {
                 Id = nodeId,
                 Nodes = nodes,
-                Files = files
+                Files = mappedFiles
             };
             return Ok(result);
         }
@@ -214,11 +214,12 @@ namespace Cotton.Server.Controllers
             // search for the root node of this layout and user, using node type
             foreach (var part in parts)
             {
+                string normalizedPart = NameValidator.NormalizeAndGetNameKey(part);
                 var nextNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.Layout.OwnerId == userId
                         && x.ParentId == currentNode.Id
-                        && x.Name == part
+                        && x.NameKey == normalizedPart
                         && x.Type == nodeType)
                     .SingleOrDefaultAsync();
                 if (nextNode == null)

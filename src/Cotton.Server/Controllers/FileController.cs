@@ -63,7 +63,7 @@ namespace Cotton.Server.Controllers
             }
             string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
                 .OrderBy(x => x.ChunkOrder)
-                .Select(x => Convert.ToHexString(x.ChunkHash).ToLowerInvariant())];
+                .Select(x => Hasher.ToHexStringHash(x.ChunkHash).ToLowerInvariant())];
             Stream stream = _storage.GetBlobStream(hashes);
             _logger.LogInformation("File {NodeFileId} downloaded.", nodeFileId);
             return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name);
@@ -100,14 +100,16 @@ namespace Cotton.Server.Controllers
             }
 
             // Normalize chunk hashes to lowercase for storage access
-            string[] normalizedChunkHashes = [.. request.ChunkHashes.Select(h => Convert.ToHexString(Convert.FromHexString(h)).ToLowerInvariant())];
+            string[] normalizedChunkHashes = [.. request.ChunkHashes
+                .Select(Hasher.FromHexStringHash)
+                .Select(Hasher.ToHexStringHash)];
 
             // TODO: Get rid of this (or not?)
             using var blob = _storage.GetBlobStream(normalizedChunkHashes);
             byte[] computedHash = await Hasher.HashDataAsync(blob);
             if (!string.IsNullOrWhiteSpace(request.Hash))
             {
-                byte[] providedHash = Convert.FromHexString(request.Hash);
+                byte[] providedHash = Hasher.FromHexStringHash(request.Hash);
                 if (!computedHash.SequenceEqual(providedHash))
                 {
                     return CottonResult.BadRequest("Provided Hash does not match the computed hash of the file.");
@@ -145,7 +147,8 @@ namespace Cotton.Server.Controllers
             List<Chunk> chunks = [];
             foreach (var item in chunkHashes)
             {
-                var foundChunk = await _layouts.FindChunkAsync(item) ?? throw new EntityNotFoundException(nameof(Chunk));
+                byte[] hashBytes = Hasher.FromHexStringHash(item);
+                var foundChunk = await _layouts.FindChunkAsync(hashBytes) ?? throw new EntityNotFoundException(nameof(Chunk));
                 // TODO: Add safety check to ensure chunks belong to the user
                 // Must depend on owner/user authentication, no reason to delay for the same user
                 chunks.Add(foundChunk);
