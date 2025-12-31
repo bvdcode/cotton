@@ -58,7 +58,6 @@ export const FileSystemItemCard = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 1.5,
           mb: 1,
           bgcolor: "green",
           "svg, img": { width: "100%", height: "100%" },
