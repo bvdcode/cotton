@@ -180,28 +180,50 @@ export const FilesPage: React.FC = () => {
         const file = await new Promise<File>((resolve, reject) => {
           fileEntry.file(resolve, reject);
         });
-        files.push(file);
+        // Clone the File object to avoid "file could not be read" errors with large files
+        const clonedFile = new File([file], file.name, {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+        files.push(clonedFile);
       } else if (entry.isDirectory) {
         const dirEntry = entry as FileSystemDirectoryEntry;
         const reader = dirEntry.createReader();
-        const entries = await new Promise<FileSystemEntry[]>((resolve, reject) => {
-          reader.readEntries(resolve, reject);
-        });
+        
+        // Read all entries (might need multiple calls for large directories)
+        const readAllEntries = async (): Promise<FileSystemEntry[]> => {
+          const allEntries: FileSystemEntry[] = [];
+          let batch: FileSystemEntry[] = [];
+          
+          do {
+            batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+              reader.readEntries(resolve, reject);
+            });
+            allEntries.push(...batch);
+          } while (batch.length > 0);
+          
+          return allEntries;
+        };
+        
+        const entries = await readAllEntries();
         for (const childEntry of entries) {
           await traverseEntry(childEntry);
         }
       }
     };
 
+    // Process all items in parallel for better performance
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === 'file') {
         const entry = item.webkitGetAsEntry();
         if (entry) {
-          await traverseEntry(entry);
+          promises.push(traverseEntry(entry));
         }
       }
     }
+    await Promise.all(promises);
 
     return files;
   };
@@ -269,31 +291,51 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
-    <Box 
-      p={3} 
-      width="100%"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      sx={{
-        position: 'relative',
-        '&::after': isDragging ? {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          bgcolor: 'primary.main',
-          opacity: 0.1,
-          borderRadius: 2,
-          border: '3px dashed',
-          borderColor: 'primary.main',
-          pointerEvents: 'none',
-          zIndex: 1,
-        } : undefined,
-      }}
-    >
+    <>
+      {isDragging && (
+        <Box
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: 'primary.main',
+            opacity: 0.15,
+            border: '4px dashed',
+            borderColor: 'primary.main',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography
+            variant="h3"
+            sx={{
+              color: 'primary.main',
+              fontWeight: 'bold',
+              textShadow: '0 0 10px rgba(255,255,255,0.8)',
+              pointerEvents: 'none',
+            }}
+          >
+            Drop files here
+          </Typography>
+        </Box>
+      )}
+      <Box 
+        p={3} 
+        width="100%"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        sx={{
+          position: 'relative',
+        }}
+      >
       <Box
         mb={2}
         sx={{
@@ -482,5 +524,6 @@ export const FilesPage: React.FC = () => {
         )}
       </Box>
     </Box>
+    </>
   );
 };
