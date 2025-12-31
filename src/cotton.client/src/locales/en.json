@@ -284,7 +284,8 @@
     "refreshing": "Refreshing…",
     "actions": {
       "newFolder": "New folder",
-      "newFolderPrompt": "Enter folder name:"
+      "folderNamePlaceholder": "Folder name",
+      "goUp": "Go up"
     },
     "breadcrumbs": {
       "ariaLabel": "Breadcrumbs",

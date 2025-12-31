@@ -1,14 +1,15 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
   Breadcrumbs,
   IconButton,
   Link as MuiLink,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { CreateNewFolder, Folder, InsertDriveFile } from "@mui/icons-material";
+import { ArrowUpward, CreateNewFolder, Folder, Home, InsertDriveFile } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
@@ -33,6 +34,8 @@ export const FilesPage: React.FC = () => {
   const { t } = useTranslation("files");
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   const {
     currentNode,
@@ -93,27 +96,76 @@ export const FilesPage: React.FC = () => {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
-  const handleNewFolder = async () => {
-    if (!nodeId) return;
-    const folderName = prompt(t("actions.newFolderPrompt"));
-    if (!folderName || folderName.trim().length === 0) return;
-    await createFolder(nodeId, folderName.trim());
+  const handleNewFolder = () => {
+    setIsCreatingFolder(true);
+    setNewFolderName("");
+  };
+
+  const handleConfirmNewFolder = async () => {
+    if (!nodeId || newFolderName.trim().length === 0) {
+      setIsCreatingFolder(false);
+      setNewFolderName("");
+      return;
+    }
+    await createFolder(nodeId, newFolderName.trim());
+    setIsCreatingFolder(false);
+    setNewFolderName("");
+  };
+
+  const handleCancelNewFolder = () => {
+    setIsCreatingFolder(false);
+    setNewFolderName("");
+  };
+
+  const handleGoUp = () => {
+    if (ancestors.length > 0) {
+      const parent = ancestors[ancestors.length - 1];
+      navigate(`/files/${parent.id}`);
+    } else {
+      navigate("/files");
+    }
   };
 
   return (
     <Box p={3} width="100%">
-      <Box mb={2} display="flex" alignItems="center" justifyContent="space-between">
-        <Box>
-          <Typography variant="h4">{t("title")}</Typography>
-          <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")}>
-            <MuiLink component={RouterLink} underline="hover" color="inherit" to="/files">
-              {t("breadcrumbs.root")}
-            </MuiLink>
-            {breadcrumbs.map((crumb, idx) => {
-              const isLast = idx === breadcrumbs.length - 1;
+      <Box mb={2} display="flex" alignItems="center" gap={2}>
+        <Tooltip title={t("breadcrumbs.root")}>
+          <IconButton onClick={() => navigate("/files")} color="primary">
+            <Home />
+          </IconButton>
+        </Tooltip>
+        
+        <Box display="flex" gap={1}>
+          {ancestors.length > 0 && (
+            <Tooltip title={t("actions.goUp")}>
+              <IconButton
+                color="primary"
+                onClick={handleGoUp}
+                disabled={loading}
+              >
+                <ArrowUpward />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title={t("actions.newFolder")}>
+            <IconButton
+              color="primary"
+              onClick={handleNewFolder}
+              disabled={!nodeId || loading || isCreatingFolder}
+            >
+              <CreateNewFolder />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")}>
+          {breadcrumbs
+            .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
+            .map((crumb, idx, filtered) => {
+              const isLast = idx === filtered.length - 1;
               if (isLast) {
                 return (
-                  <Typography key={crumb.id} color="text.primary">
+                  <Typography key={crumb.id} color="text.primary" variant="h6">
                     {crumb.name}
                   </Typography>
                 );
@@ -125,25 +177,13 @@ export const FilesPage: React.FC = () => {
                   underline="hover"
                   color="inherit"
                   to={`/files/${crumb.id}`}
+                  sx={{ fontSize: "1.1rem" }}
                 >
                   {crumb.name}
                 </MuiLink>
               );
             })}
-          </Breadcrumbs>
-        </Box>
-
-        <Box>
-          <Tooltip title={t("actions.newFolder")}>
-            <IconButton
-              color="primary"
-              onClick={() => void handleNewFolder()}
-              disabled={!nodeId || loading}
-            >
-              <CreateNewFolder />
-            </IconButton>
-          </Tooltip>
-        </Box>
+        </Breadcrumbs>
       </Box>
 
       {error && (
@@ -162,13 +202,56 @@ export const FilesPage: React.FC = () => {
             gridTemplateColumns: {
               xs: "repeat(2, minmax(0, 1fr))",
               sm: "repeat(3, minmax(0, 1fr))",
-              md: "repeat(5, minmax(0, 1fr))",
-              lg: "repeat(7, minmax(0, 1fr))",
+              md: "repeat(4, minmax(0, 1fr))",
+              lg: "repeat(5, minmax(0, 1fr))",
             },
           }}
         >
+          {isCreatingFolder && (
+            <Box
+              sx={{
+                border: "2px solid",
+                borderColor: "primary.main",
+                borderRadius: 2,
+                p: 2,
+                bgcolor: "action.hover",
+              }}
+            >
+              <Box
+                sx={{
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "background.default",
+                  borderRadius: 1.5,
+                  mb: 1.5,
+                }}
+              >
+                <Folder sx={{ fontSize: 80, color: "primary.main" }} />
+              </Box>
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void handleConfirmNewFolder();
+                  } else if (e.key === "Escape") {
+                    handleCancelNewFolder();
+                  }
+                }}
+                onBlur={handleConfirmNewFolder}
+                placeholder={t("actions.folderNamePlaceholder")}
+              />
+            </Box>
+          )}
           {tiles.map((tile) => {
             if (tile.kind === "folder") {
+              const createdDate = tile.node.createdAt ? new Date(tile.node.createdAtUtc).toLocaleDateString() : "";
               return (
                 <Box
                   key={tile.node.id}
@@ -185,7 +268,7 @@ export const FilesPage: React.FC = () => {
                     border: "1px solid",
                     borderColor: "divider",
                     borderRadius: 2,
-                    p: 1.5,
+                    p: 2,
                     cursor: "pointer",
                     userSelect: "none",
                     outline: "none",
@@ -204,14 +287,19 @@ export const FilesPage: React.FC = () => {
                       justifyContent: "center",
                       bgcolor: "background.default",
                       borderRadius: 1.5,
-                      mb: 1,
+                      mb: 1.5,
                     }}
                   >
-                    <Folder sx={{ fontSize: 56 }} />
+                    <Folder sx={{ fontSize: 80 }} />
                   </Box>
-                  <Typography variant="body2" noWrap title={tile.node.name}>
+                  <Typography variant="body1" noWrap title={tile.node.name} fontWeight={500}>
                     {tile.node.name}
                   </Typography>
+                  {createdDate && (
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {createdDate}
+                    </Typography>
+                  )}
                 </Box>
               );
             }
@@ -223,7 +311,7 @@ export const FilesPage: React.FC = () => {
                   border: "1px solid",
                   borderColor: "divider",
                   borderRadius: 2,
-                  p: 1.5,
+                  p: 2,
                 }}
               >
                 <Box
@@ -235,15 +323,15 @@ export const FilesPage: React.FC = () => {
                     justifyContent: "center",
                     bgcolor: "background.default",
                     borderRadius: 1.5,
-                    mb: 1,
+                    mb: 1.5,
                   }}
                 >
-                  <InsertDriveFile sx={{ fontSize: 56 }} />
+                  <InsertDriveFile sx={{ fontSize: 80 }} />
                 </Box>
-                <Typography variant="body2" noWrap title={tile.file.name}>
+                <Typography variant="body1" noWrap title={tile.file.name} fontWeight={500}>
                   {tile.file.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
+                <Typography variant="caption" color="text.secondary" display="block">
                   {formatBytes(tile.file.sizeBytes)}
                 </Typography>
               </Box>
