@@ -144,7 +144,7 @@ namespace Cotton.Storage.Tests.Backends
             await _backend.WriteAsync(uid, new MemoryStream(data));
 
             // Assert
-            string filePath = Path.Combine(_testBasePath, uid[..2], uid.Substring(2, 2), uid.Substring(4) + ".ctn");
+            string filePath = Path.Combine(_testBasePath, uid[..2], uid.Substring(2, 2), string.Concat(uid.AsSpan(4), ".ctn"));
             var attributes = File.GetAttributes(filePath);
             Assert.That(attributes.HasFlag(FileAttributes.ReadOnly), Is.True);
         }

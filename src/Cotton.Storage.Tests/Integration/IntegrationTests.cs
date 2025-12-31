@@ -46,7 +46,7 @@ namespace Cotton.Storage.Tests.Integration
             }
         }
 
-        private void CleanupDirectory(string path)
+        private static void CleanupDirectory(string path)
         {
             try
             {
@@ -62,16 +62,9 @@ namespace Cotton.Storage.Tests.Integration
             }
         }
 
-        private class FakeBackendProvider : IStorageBackendProvider
+        private class FakeBackendProvider(IStorageBackend backend) : IStorageBackendProvider
         {
-            private readonly IStorageBackend _backend;
-
-            public FakeBackendProvider(IStorageBackend backend)
-            {
-                _backend = backend;
-            }
-
-            public IStorageBackend GetBackend() => _backend;
+            public IStorageBackend GetBackend() => backend;
         }
 
         [Test]
@@ -88,7 +81,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor });
+                [cryptoProcessor]);
 
             var originalData = Encoding.UTF8.GetBytes("Sensitive information that should be encrypted");
             string uid = NewUid();
@@ -127,7 +120,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor, compressionProcessor });
+                [cryptoProcessor, compressionProcessor]);
 
             var originalData = Encoding.UTF8.GetBytes(new string('A', 10000)); // Highly compressible
             string uid = NewUid();
@@ -156,7 +149,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor });
+                [cryptoProcessor]);
 
             var testData = Enumerable.Range(0, 3)
                 .Select(i => (uid: NewUid(), data: Encoding.UTF8.GetBytes($"File {i + 1}")))
@@ -195,7 +188,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { compressionProcessor });
+                [compressionProcessor]);
 
             string uid = NewUid();
             var originalData = new byte[5 * 1024 * 1024];
@@ -233,7 +226,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { compressionProcessor, cryptoProcessor });
+                [compressionProcessor, cryptoProcessor]);
 
             var originalData = Encoding.UTF8.GetBytes("Test data for order verification");
             string uid = NewUid();
@@ -263,7 +256,7 @@ namespace Cotton.Storage.Tests.Integration
             var pipeline = new FileStoragePipeline(
                 pipelineLogger.Object,
                 provider,
-                new IStorageProcessor[] { cryptoProcessor });
+                [cryptoProcessor]);
 
             var testData = Enumerable.Range(0, 20)
                 .Select(i => (uid: $"abc{i:D3}def{i:D3}", data: Encoding.UTF8.GetBytes($"Data {i}")))
