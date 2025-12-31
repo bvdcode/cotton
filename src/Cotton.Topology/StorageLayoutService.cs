@@ -44,7 +44,6 @@ namespace Cotton.Topology
                     newNode.SetName(nodeType.ToString());
                     await _dbContext.Nodes.AddAsync(newNode);
                     await _dbContext.SaveChangesAsync();
-                    _layoutSemaphore.Release();
                     return newNode;
                 }
                 return currentNode;
@@ -76,7 +75,6 @@ namespace Cotton.Topology
                     _layoutSemaphore.Release();
                     return newLayout;
                 }
-                _layoutSemaphore.Release();
                 return found;
             }
             finally
