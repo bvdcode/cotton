@@ -237,7 +237,9 @@ export function SetupWizardPage() {
             display: "flex",
             flexDirection: "column",
             minHeight: { xs: "calc(100vh - 80px)", sm: "calc(600px - 48px)" },
+            maxHeight: { xs: "calc(100vh - 80px)", sm: "calc(600px - 48px)" },
             height: "100%",
+            overflow: "auto",
           }}
         >
           <WizardHeader t={t} />
@@ -247,8 +249,6 @@ export function SetupWizardPage() {
               flex: 1,
               mt: 3.5,
               mb: 3.5,
-              overflow: "auto",
-              maxHeight: { xs: "calc(100vh - 300px)", sm: "calc(600px - 200px)" },
             }}
           >
             <Fade in={true} timeout={600} key={started ? stepIndex : "intro"}>
