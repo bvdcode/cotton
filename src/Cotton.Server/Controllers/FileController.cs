@@ -137,8 +137,6 @@ namespace Cotton.Server.Controllers
                 newNodeFile.OriginalNodeFileId = request.OriginalNodeFileId.Value;
             }
             await _dbContext.SaveChangesAsync();
-            var dto = newNodeFile.Adapt<NodeFileManifestDto>();
-            dto.ReadMetadataFromManifest(newFile);
             return Ok();
         }
 
