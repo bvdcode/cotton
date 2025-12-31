@@ -34,6 +34,7 @@ public class TestAppFactory(Dictionary<string, string?> _overrides) : WebApplica
             {
                 services.Remove(d);
             }
+
             CottonServerSettings serverSettings = new();
             services.AddSingleton(serverSettings);
         });

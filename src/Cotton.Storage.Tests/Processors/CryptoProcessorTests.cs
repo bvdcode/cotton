@@ -55,7 +55,7 @@ namespace Cotton.Storage.Tests.Processors
         public async Task CryptoProcessor_RoundTrip_OneByte_ReturnsOriginal()
         {
             // Arrange
-            var originalData = new byte[] { 42 };
+            var originalData = "*"u8.ToArray();
             var encrypted = await _processor.WriteAsync("test-uid", new MemoryStream(originalData));
 
             // Act
