@@ -17,7 +17,7 @@ namespace Cotton.Server.Providers
         CottonDbContext _dbContext)
     {
         private const int defaultEncryptionThreads = 2;
-        private const int defaultMaxChunkSizeBytes = 64 * 1024 * 1024;
+        private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
         public CottonServerSettings GetServerSettings()
         {
