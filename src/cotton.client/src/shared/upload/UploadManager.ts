@@ -160,7 +160,7 @@ export class UploadManager {
                   this.emit();
                 }
                 this.autoCloseTimeout = null;
-              }, 10_000);
+              }, 60_000);
             }
           }
           return;
