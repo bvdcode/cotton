@@ -34,7 +34,6 @@ export const FileSystemItemCard = ({
       sx={{
         border: "1px solid",
         borderColor: "divider",
-        bgcolor: "red",
         borderRadius: 2,
         p: {
           xs: 0.5,
@@ -59,8 +58,10 @@ export const FileSystemItemCard = ({
           alignItems: "center",
           justifyContent: "center",
           mb: 1,
-          bgcolor: "green",
-          "svg, img": { width: "100%", height: "100%" },
+          "& > svg": {
+            width: "100%",
+            height: "100%",
+          },
         }}
       >
         {icon}

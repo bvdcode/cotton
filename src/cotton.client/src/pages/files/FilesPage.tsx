@@ -228,8 +228,9 @@ export const FilesPage: React.FC = () => {
           ref={fileInputRef}
           type="file"
           multiple
-          hidden
+          style={{ display: "none" }}
           onChange={(e) => {
+            console.log("[FilesPage] file input onChange", e.currentTarget.files);
             const files = e.currentTarget.files;
             if (files && files.length > 0) {
               handleUploadFiles(files);
