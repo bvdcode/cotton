@@ -253,7 +253,7 @@ export const FilesPage: React.FC = () => {
           {tiles.map((tile) => {
             if (tile.kind === "folder") {
               const createdDate = tile.node.createdAt
-                ? new Date(tile.node.createdAtUtc).toLocaleDateString()
+                ? new Date(tile.node.createdAt).toLocaleDateString()
                 : "";
               return (
                 <Box
