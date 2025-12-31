@@ -158,7 +158,7 @@ namespace Cotton.Server.Controllers
                 Secure = true,
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(sessionTimeoutHours)
+                Expires = DateTimeOffset.UtcNow.AddHours(sessionTimeoutHours)
             });
         }
 
