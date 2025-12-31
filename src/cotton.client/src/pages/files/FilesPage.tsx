@@ -6,7 +6,6 @@ import {
   IconButton,
   Link as MuiLink,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -19,7 +18,6 @@ import {
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useDropzone } from "react-dropzone";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
@@ -157,16 +155,19 @@ export const FilesPage: React.FC = () => {
     [nodeId, breadcrumbs, t],
   );
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    onDrop: (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        handleUploadFiles(acceptedFiles);
+  const handleUploadClick = () => {
+    if (!nodeId) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        handleUploadFiles(Array.from(files));
       }
-    },
-    noClick: true,
-    noKeyboard: true,
-    disabled: !nodeId,
-  });
+    };
+    input.click();
+  };
 
   useEffect(() => {
     // If user navigated while the inline-create is open, cancel it
@@ -195,8 +196,7 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
-    <Box p={3} width="100%" {...getRootProps()}>
-      <input {...getInputProps()} />
+    <Box p={3} width="100%">
       <Box
         mb={2}
         sx={{
@@ -214,47 +214,37 @@ export const FilesPage: React.FC = () => {
             mb: { xs: 1, sm: 0 },
           }}
         >
-          <Tooltip title={t("actions.goUp")}>
-            <span style={{ display: "inline-flex" }}>
-              <IconButton
-                color="primary"
-                onClick={handleGoUp}
-                disabled={loading || ancestors.length === 0}
-              >
-                <ArrowUpward />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title={t("actions.upload")}>
-            <span style={{ display: "inline-flex" }}>
-              <IconButton
-                color="primary"
-                onClick={() => {
-                  if (!nodeId) return;
-                  open();
-                }}
-                disabled={!nodeId || loading}
-              >
-                <UploadFile />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title={t("actions.newFolder")}>
-            <span style={{ display: "inline-flex" }}>
-              <IconButton
-                color="primary"
-                onClick={handleNewFolder}
-                disabled={!nodeId || loading || isCreatingFolder}
-              >
-                <CreateNewFolder />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title={t("breadcrumbs.root")}>
-            <IconButton onClick={() => navigate("/files")} color="primary">
-              <Home />
-            </IconButton>
-          </Tooltip>
+          <IconButton
+            color="primary"
+            onClick={handleGoUp}
+            disabled={loading || ancestors.length === 0}
+            title={t("actions.goUp")}
+          >
+            <ArrowUpward />
+          </IconButton>
+          <IconButton
+            color="primary"
+            onClick={handleUploadClick}
+            disabled={!nodeId || loading}
+            title={t("actions.upload")}
+          >
+            <UploadFile />
+          </IconButton>
+          <IconButton
+            color="primary"
+            onClick={handleNewFolder}
+            disabled={!nodeId || isCreatingFolder}
+            title={t("actions.newFolder")}
+          >
+            <CreateNewFolder />
+          </IconButton>
+          <IconButton 
+            onClick={() => navigate("/files")} 
+            color="primary"
+            title={t("breadcrumbs.root")}
+          >
+            <Home />
+          </IconButton>
         </Box>
 
         <Breadcrumbs
@@ -294,30 +284,6 @@ export const FilesPage: React.FC = () => {
         </Box>
       )}
 
-      {isDragActive && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bgcolor: "rgba(25, 118, 210, 0.08)",
-            border: "3px dashed",
-            borderColor: "primary.main",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-          }}
-        >
-          <Typography variant="h4" color="primary.main" fontWeight={600}>
-            {t("actions.dropFiles")}
-          </Typography>
-        </Box>
-      )}
-
       <Box>
         {tiles.length === 0 && !isCreatingInThisFolder ? (
           <Typography color="text.secondary">{t("empty.all")}</Typography>
@@ -340,7 +306,11 @@ export const FilesPage: React.FC = () => {
                   border: "2px solid",
                   borderColor: "primary.main",
                   borderRadius: 2,
-                  p: 1.5,
+                  p: {
+                    xs: 1,
+                    sm: 1.25,
+                    md: 1,
+                  },
                   bgcolor: "action.hover",
                 }}
               >
@@ -351,12 +321,16 @@ export const FilesPage: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    bgcolor: "background.default",
                     borderRadius: 1.5,
-                    mb: 1,
+                    overflow: "hidden",
+                    mb: 0.75,
+                    "& > svg": {
+                      width: "70%",
+                      height: "70%",
+                    },
                   }}
                 >
-                  <Folder sx={{ fontSize: 56, color: "primary.main" }} />
+                  <Folder sx={{ color: "primary.main" }} />
                 </Box>
                 <TextField
                   autoFocus
@@ -373,6 +347,13 @@ export const FilesPage: React.FC = () => {
                   }}
                   onBlur={handleConfirmNewFolder}
                   placeholder={t("actions.folderNamePlaceholder")}
+                  slotProps={{
+                    input: {
+                      sx: {
+                        fontSize: { xs: "0.8rem", md: "0.85rem" },
+                      },
+                    },
+                  }}
                 />
               </Box>
             )}
