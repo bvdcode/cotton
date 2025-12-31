@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using NUnit.Framework;
 using System.Net.Http.Json;
+using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -59,7 +60,7 @@ public class AuthSmokeTests : IntegrationTestBase
          ["DatabaseSettings:Database"] = csb.Database,
          ["DatabaseSettings:Username"] = csb.Username,
          ["DatabaseSettings:Password"] = csb.Password,
-         ["MasterEncryptionKey"] = "IntegrationTestsKey",
+         ["MasterEncryptionKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("0123456789ABCDEF0123456789ABCDEF")),
          ["MasterEncryptionKeyId"] = "1",
          ["EncryptionThreads"] = "1",
          ["MaxChunkSizeBytes"] = "16777216",
