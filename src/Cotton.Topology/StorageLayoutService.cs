@@ -72,7 +72,6 @@ namespace Cotton.Topology
                     };
                     await _dbContext.UserLayouts.AddAsync(newLayout);
                     await _dbContext.SaveChangesAsync();
-                    _layoutSemaphore.Release();
                     return newLayout;
                 }
                 return found;
