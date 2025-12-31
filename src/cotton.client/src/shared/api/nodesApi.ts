@@ -15,6 +15,11 @@ export interface NodeContentDto {
   files: NodeFileManifestDto[];
 }
 
+export interface CreateNodeRequest {
+  parentId: Guid;
+  name: string;
+}
+
 export const nodesApi = {
   getNode: async (nodeId: Guid): Promise<NodeDto> => {
     const response = await httpClient.get<NodeDto>(`/layouts/nodes/${nodeId}`);
@@ -32,6 +37,11 @@ export const nodesApi = {
     const response = await httpClient.get<NodeContentDto>(`/layouts/nodes/${nodeId}/children`, {
       params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
     });
+    return response.data;
+  },
+
+  createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
+    const response = await httpClient.put<NodeDto>("/layouts/nodes", request);
     return response.data;
   },
 };

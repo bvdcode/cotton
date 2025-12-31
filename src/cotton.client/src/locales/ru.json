@@ -282,17 +282,17 @@
       "caption": "Загружаем содержимое папки…"
     },
     "refreshing": "Обновляем…",
+    "actions": {
+      "newFolderLabel": "Новая папка",
+      "newFolderPlaceholder": "Название папки",
+      "createFolder": "Создать"
+    },
     "breadcrumbs": {
       "ariaLabel": "Хлебные крошки",
       "root": "Файлы"
     },
-    "sections": {
-      "folders": "Папки",
-      "files": "Файлы"
-    },
     "empty": {
-      "folders": "Папок нет",
-      "files": "Файлов нет"
+      "all": "Папка пуста"
     }
   }
 }
