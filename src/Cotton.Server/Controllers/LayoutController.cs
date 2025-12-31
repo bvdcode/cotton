@@ -176,21 +176,15 @@ namespace Cotton.Server.Controllers
 
             var files = await _dbContext.NodeFiles
                 .AsNoTracking()
-                .Include(x => x.FileManifest)
                 .Where(x => x.NodeId == parentNode.Id)
+                .ProjectToType<NodeFileManifestDto>()
                 .ToListAsync();
-            var mappedFiles = files.Select(x =>
-            {
-                NodeFileManifestDto dto = x.Adapt<NodeFileManifestDto>();
-                dto.ReadMetadataFromManifest(x.FileManifest);
-                return dto;
-            });
 
             NodeContentDto result = new()
             {
                 Id = nodeId,
                 Nodes = nodes,
-                Files = mappedFiles
+                Files = files
             };
             return Ok(result);
         }
@@ -218,6 +212,7 @@ namespace Cotton.Server.Controllers
                 var nextNode = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.Layout.OwnerId == userId
+                        && x.LayoutId == found.Id
                         && x.ParentId == currentNode.Id
                         && x.NameKey == normalizedPart
                         && x.Type == nodeType)
