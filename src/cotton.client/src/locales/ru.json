@@ -250,5 +250,49 @@
         "description": "Наслаждайтесь быстрой загрузкой и выгрузкой с оптимизированной производительностью"
       }
     }
+  },
+  "home": {
+    "title": "Главная",
+    "layoutLabelWithValue": "Лейаут: {{name}}",
+    "layoutLabelEmpty": "Лейаут: —",
+    "loading": {
+      "title": "Загрузка",
+      "caption": "Загружаем статистику лейаута…"
+    },
+    "refreshing": "Обновляем…",
+    "cards": {
+      "folders": {
+        "title": "Папки",
+        "caption": "Всего нод в лейауте"
+      },
+      "files": {
+        "title": "Файлы",
+        "caption": "Всего файлов во всех нодах"
+      },
+      "data": {
+        "title": "Данные",
+        "caption": "Сумма размеров файлов"
+      }
+    }
+  },
+  "files": {
+    "title": "Файлы",
+    "loading": {
+      "title": "Загрузка",
+      "caption": "Загружаем содержимое папки…"
+    },
+    "refreshing": "Обновляем…",
+    "breadcrumbs": {
+      "ariaLabel": "Хлебные крошки",
+      "root": "Файлы"
+    },
+    "sections": {
+      "folders": "Папки",
+      "files": "Файлы"
+    },
+    "empty": {
+      "folders": "Папок нет",
+      "files": "Файлов нет"
+    }
   }
 }

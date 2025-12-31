@@ -6,6 +6,7 @@ import {
   Typography,
   Alert,
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
 
@@ -23,6 +24,7 @@ const formatBytes = (bytes: number): string => {
 };
 
 export const HomePage: React.FC = () => {
+  const { t } = useTranslation("home");
   const {
     rootNode,
     statsByLayoutId,
@@ -42,15 +44,19 @@ export const HomePage: React.FC = () => {
   const isLoading = loadingRoot || loadingStats;
 
   if (isLoading && !stats) {
-    return <Loader title="Loading" caption="Fetching layout stats…" />;
+    return (
+      <Loader title={t("loading.title")} caption={t("loading.caption")} />
+    );
   }
 
   return (
     <Box p={3} width="100%">
       <Box mb={2}>
-        <Typography variant="h4">Home</Typography>
+        <Typography variant="h4">{t("title")}</Typography>
         <Typography variant="body2" color="text.secondary">
-          {rootNode ? `Layout: ${rootNode.name}` : "Layout: —"}
+          {rootNode
+            ? t("layoutLabelWithValue", { name: rootNode.name })
+            : t("layoutLabelEmpty")}
         </Typography>
       </Box>
 
@@ -73,13 +79,13 @@ export const HomePage: React.FC = () => {
         <Card>
           <CardContent>
             <Typography variant="overline" color="text.secondary">
-              Folders
+              {t("cards.folders.title")}
             </Typography>
             <Typography variant="h4">
               {stats ? stats.nodeCount.toLocaleString() : "—"}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Total nodes in the layout
+              {t("cards.folders.caption")}
             </Typography>
           </CardContent>
         </Card>
@@ -87,13 +93,13 @@ export const HomePage: React.FC = () => {
         <Card>
           <CardContent>
             <Typography variant="overline" color="text.secondary">
-              Files
+              {t("cards.files.title")}
             </Typography>
             <Typography variant="h4">
               {stats ? stats.fileCount.toLocaleString() : "—"}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Total files across all nodes
+              {t("cards.files.caption")}
             </Typography>
           </CardContent>
         </Card>
@@ -101,13 +107,13 @@ export const HomePage: React.FC = () => {
         <Card>
           <CardContent>
             <Typography variant="overline" color="text.secondary">
-              Data
+              {t("cards.data.title")}
             </Typography>
             <Typography variant="h4">
               {stats ? formatBytes(stats.sizeBytes) : "—"}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Sum of file sizes
+              {t("cards.data.caption")}
             </Typography>
           </CardContent>
         </Card>
@@ -116,7 +122,7 @@ export const HomePage: React.FC = () => {
       {isLoading && stats && (
         <Box mt={2}>
           <Typography variant="caption" color="text.secondary">
-            Refreshing…
+            {t("refreshing")}
           </Typography>
         </Box>
       )}
