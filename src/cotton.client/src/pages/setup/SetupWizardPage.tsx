@@ -166,7 +166,7 @@ export function SetupWizardPage() {
         flexDirection: "column",
         alignItems: "center",
         p: { xs: 2, sm: 4 },
-        overflow: "hidden",
+        overflow: "auto",
         bgcolor: "background.default",
         "@keyframes floatA": {
           "0%": { transform: "translate3d(0, 0, 0) rotate(0deg)" },
@@ -247,7 +247,8 @@ export function SetupWizardPage() {
               flex: 1,
               mt: 3.5,
               mb: 3.5,
-              overflow: "visible",
+              overflow: "auto",
+              maxHeight: { xs: "calc(100vh - 300px)", sm: "calc(600px - 200px)" },
             }}
           >
             <Fade in={true} timeout={600} key={started ? stepIndex : "intro"}>
