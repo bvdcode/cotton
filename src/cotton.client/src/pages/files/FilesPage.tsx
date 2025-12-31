@@ -46,7 +46,9 @@ export const FilesPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
+  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(
+    null,
+  );
 
   const {
     currentNode,
@@ -145,8 +147,34 @@ export const FilesPage: React.FC = () => {
       .map((c) => c.name)
       .join(" / ")
       .trim();
-    uploadManager.enqueue(files, nodeId, label.length > 0 ? label : t("breadcrumbs.root"));
+    uploadManager.enqueue(
+      files,
+      nodeId,
+      label.length > 0 ? label : t("breadcrumbs.root"),
+    );
   };
+
+  useEffect(() => {
+    // If user navigated while the inline-create is open, cancel it
+    // so it doesn't "move" to another folder.
+    if (!isCreatingFolder) return;
+    if (!newFolderParentId) return;
+    if (nodeId && newFolderParentId === nodeId) return;
+
+    const timeout = setTimeout(() => {
+      setIsCreatingFolder(false);
+      setNewFolderName("");
+      setNewFolderParentId(null);
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [isCreatingFolder, newFolderParentId, nodeId]);
+
+  const isCreatingInThisFolder =
+    isCreatingFolder &&
+    !!newFolderParentId &&
+    !!nodeId &&
+    newFolderParentId === nodeId;
 
   if (loading && !content) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
@@ -157,31 +185,37 @@ export const FilesPage: React.FC = () => {
       <Box mb={2} display="flex" alignItems="center" gap={2}>
         <Box display="flex" gap={1}>
           <Tooltip title={t("actions.goUp")}>
-            <IconButton
-              color="primary"
-              onClick={handleGoUp}
-              disabled={loading || ancestors.length === 0}
-            >
-              <ArrowUpward />
-            </IconButton>
+            <span style={{ display: "inline-flex" }}>
+              <IconButton
+                color="primary"
+                onClick={handleGoUp}
+                disabled={loading || ancestors.length === 0}
+              >
+                <ArrowUpward />
+              </IconButton>
+            </span>
           </Tooltip>
           <Tooltip title={t("actions.upload")}>
-            <IconButton
-              color="primary"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!nodeId || loading}
-            >
-              <UploadFile />
-            </IconButton>
+            <span style={{ display: "inline-flex" }}>
+              <IconButton
+                color="primary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!nodeId || loading}
+              >
+                <UploadFile />
+              </IconButton>
+            </span>
           </Tooltip>
           <Tooltip title={t("actions.newFolder")}>
-            <IconButton
-              color="primary"
-              onClick={handleNewFolder}
-              disabled={!nodeId || loading || isCreatingFolder}
-            >
-              <CreateNewFolder />
-            </IconButton>
+            <span style={{ display: "inline-flex" }}>
+              <IconButton
+                color="primary"
+                onClick={handleNewFolder}
+                disabled={!nodeId || loading || isCreatingFolder}
+              >
+                <CreateNewFolder />
+              </IconButton>
+            </span>
           </Tooltip>
           <Tooltip title={t("breadcrumbs.root")}>
             <IconButton onClick={() => navigate("/files")} color="primary">
@@ -238,96 +272,99 @@ export const FilesPage: React.FC = () => {
         </Box>
       )}
 
-      {tiles.length === 0 ? (
-        <Typography color="text.secondary">{t("empty.all")}</Typography>
-      ) : (
-        <Box
-          onDragOver={(e) => {
-            e.preventDefault();
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const files = e.dataTransfer?.files;
-            if (files && files.length > 0) {
-              handleUploadFiles(files);
-            }
-          }}
-          sx={{
-            display: "grid",
-            gap: 1.5,
-            gridTemplateColumns: {
-              xs: "repeat(3, minmax(0, 1fr))",
-              sm: "repeat(4, minmax(0, 1fr))",
-              md: "repeat(6, minmax(0, 1fr))",
-              lg: "repeat(8, minmax(0, 1fr))",
-            },
-          }}
-        >
-          {isCreatingFolder && (
-            <Box
-              sx={{
-                border: "2px solid",
-                borderColor: "primary.main",
-                borderRadius: 2,
-                p: 1.5,
-                bgcolor: "action.hover",
-              }}
-            >
+      <Box
+        onDragOver={(e) => {
+          e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const files = e.dataTransfer?.files;
+          if (files && files.length > 0) {
+            handleUploadFiles(files);
+          }
+        }}
+      >
+        {tiles.length === 0 && !isCreatingInThisFolder ? (
+          <Typography color="text.secondary">{t("empty.all")}</Typography>
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              gap: 1.5,
+              gridTemplateColumns: {
+                xs: "repeat(3, minmax(0, 1fr))",
+                sm: "repeat(4, minmax(0, 1fr))",
+                md: "repeat(6, minmax(0, 1fr))",
+                lg: "repeat(8, minmax(0, 1fr))",
+              },
+            }}
+          >
+            {isCreatingInThisFolder && (
               <Box
                 sx={{
-                  width: "100%",
-                  aspectRatio: "1 / 1",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  bgcolor: "background.default",
-                  borderRadius: 1.5,
-                  mb: 1,
+                  border: "2px solid",
+                  borderColor: "primary.main",
+                  borderRadius: 2,
+                  p: 1.5,
+                  bgcolor: "action.hover",
                 }}
               >
-                <Folder sx={{ fontSize: 56, color: "primary.main" }} />
+                <Box
+                  sx={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: "background.default",
+                    borderRadius: 1.5,
+                    mb: 1,
+                  }}
+                >
+                  <Folder sx={{ fontSize: 56, color: "primary.main" }} />
+                </Box>
+                <TextField
+                  autoFocus
+                  fullWidth
+                  size="small"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      void handleConfirmNewFolder();
+                    } else if (e.key === "Escape") {
+                      handleCancelNewFolder();
+                    }
+                  }}
+                  onBlur={handleConfirmNewFolder}
+                  placeholder={t("actions.folderNamePlaceholder")}
+                />
               </Box>
-              <TextField
-                autoFocus
-                fullWidth
-                size="small"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void handleConfirmNewFolder();
-                  } else if (e.key === "Escape") {
-                    handleCancelNewFolder();
-                  }
-                }}
-                onBlur={handleConfirmNewFolder}
-                placeholder={t("actions.folderNamePlaceholder")}
-              />
-            </Box>
-          )}
-          {tiles.map((tile) => {
-            if (tile.kind === "folder") {
+            )}
+            {tiles.map((tile) => {
+              if (tile.kind === "folder") {
+                return (
+                  <FileSystemItemCard
+                    key={tile.node.id}
+                    icon={<Folder fontSize="large" />}
+                    title={tile.node.name}
+                    onClick={() => navigate(`/files/${tile.node.id}`)}
+                  />
+                );
+              }
+
               return (
                 <FileSystemItemCard
-                  key={tile.node.id}
-                  icon={<Folder sx={{ fontSize: 56 }} />}
-                  title={tile.node.name}
-                  onClick={() => navigate(`/files/${tile.node.id}`)}
+                  key={tile.file.id}
+                  icon={<InsertDriveFile sx={{ fontSize: 56 }} />}
+                  title={tile.file.name}
+                  subtitle={formatBytes(tile.file.sizeBytes)}
                 />
               );
-            }
-
-            return (
-              <FileSystemItemCard
-                key={tile.file.id}
-                icon={<InsertDriveFile sx={{ fontSize: 56 }} />}
-                title={tile.file.name}
-                subtitle={formatBytes(tile.file.sizeBytes)}
-              />
-            );
-          })}
-        </Box>
-      )}
+            })}
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };
