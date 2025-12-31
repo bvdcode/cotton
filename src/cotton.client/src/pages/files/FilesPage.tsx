@@ -138,20 +138,46 @@ export const FilesPage: React.FC = () => {
     }
   };
 
-  const handleUploadFiles = (files: FileList | File[]) => {
-    if (!nodeId) return;
-    // Lock destination folder at the moment user adds files.
-    const label = breadcrumbs
-      .filter((c, idx) => idx > 0 || c.name !== "Default")
-      .map((c) => c.name)
-      .join(" / ")
-      .trim();
-    uploadManager.enqueue(
-      files,
-      nodeId,
-      label.length > 0 ? label : t("breadcrumbs.root"),
-    );
-  };
+  const handleUploadFiles = useMemo(
+    () => (files: FileList | File[]) => {
+      if (!nodeId) return;
+      // Lock destination folder at the moment user adds files.
+      const label = breadcrumbs
+        .filter((c, idx) => idx > 0 || c.name !== "Default")
+        .map((c) => c.name)
+        .join(" / ")
+        .trim();
+      uploadManager.enqueue(
+        files,
+        nodeId,
+        label.length > 0 ? label : t("breadcrumbs.root"),
+      );
+    },
+    [nodeId, breadcrumbs, t],
+  );
+
+  useEffect(() => {
+    const handleWindowDragOver = (e: DragEvent) => {
+      // Allow drop.
+      e.preventDefault();
+    };
+
+    const handleWindowDrop = (e: DragEvent) => {
+      e.preventDefault();
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        handleUploadFiles(files);
+      }
+    };
+
+    window.addEventListener("dragover", handleWindowDragOver);
+    window.addEventListener("drop", handleWindowDrop);
+
+    return () => {
+      window.removeEventListener("dragover", handleWindowDragOver);
+      window.removeEventListener("drop", handleWindowDrop);
+    };
+  }, [nodeId, breadcrumbs, t, handleUploadFiles]);
 
   useEffect(() => {
     // If user navigated while the inline-create is open, cancel it

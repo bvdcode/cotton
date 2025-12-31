@@ -39,6 +39,8 @@ export class UploadManager {
   private open = false;
   private snapshot: { open: boolean; tasks: UploadTask[] } = { open: false, tasks: [] };
 
+  private autoCloseTimeout: ReturnType<typeof setTimeout> | null = null;
+
   private filePickerOpen: ((options: { multiple: boolean; accept?: string }) => void) | null = null;
   private pendingFilePickerContext: UploadFilePickerContext | null = null;
 
@@ -80,6 +82,11 @@ export class UploadManager {
   }
 
   enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
+    if (this.autoCloseTimeout) {
+      clearTimeout(this.autoCloseTimeout);
+      this.autoCloseTimeout = null;
+    }
+
     const list = Array.isArray(files) ? files : Array.from(files);
     for (const file of list) {
       this.tasks.unshift({
@@ -122,8 +129,21 @@ export class UploadManager {
       while (true) {
         const next = this.tasks.find((t) => t.status === "queued");
         if (!next) {
-          // Auto-close only if user closed it; if open, keep open.
-          if (!this.hasActiveTasks()) this.emit();
+          if (!this.hasActiveTasks()) {
+            this.emit();
+
+            // Auto-close a moment after completion so user sees the result.
+            if (this.open && !this.autoCloseTimeout) {
+              this.autoCloseTimeout = setTimeout(() => {
+                // Only close if nothing new started.
+                if (!this.hasActiveTasks()) {
+                  this.open = false;
+                  this.emit();
+                }
+                this.autoCloseTimeout = null;
+              }, 1200);
+            }
+          }
           return;
         }
 
