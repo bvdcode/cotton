@@ -197,8 +197,23 @@ export const FilesPage: React.FC = () => {
   return (
     <Box p={3} width="100%" {...getRootProps()}>
       <input {...getInputProps()} />
-      <Box mb={2} display="flex" alignItems="center" gap={2}>
-        <Box display="flex" gap={1}>
+      <Box
+        mb={2}
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: { xs: "flex-start", sm: "center" },
+          justifyContent: "space-between",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            alignItems: "center",
+            mb: { xs: 1, sm: 0 },
+          }}
+        >
           <Tooltip title={t("actions.goUp")}>
             <span style={{ display: "inline-flex" }}>
               <IconButton
@@ -242,14 +257,17 @@ export const FilesPage: React.FC = () => {
           </Tooltip>
         </Box>
 
-        <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")}>
+        <Breadcrumbs
+          aria-label={t("breadcrumbs.ariaLabel")}
+          sx={{ width: { xs: "100%", sm: "auto" } }}
+        >
           {breadcrumbs
             .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
             .map((crumb, idx, filtered) => {
               const isLast = idx === filtered.length - 1;
               if (isLast) {
                 return (
-                  <Typography key={crumb.id} color="text.primary" variant="h6">
+                  <Typography key={crumb.id} color="text.primary">
                     {crumb.name}
                   </Typography>
                 );
