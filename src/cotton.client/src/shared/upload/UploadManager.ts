@@ -1,4 +1,5 @@
 import type { Guid } from "../api/layoutsApi";
+import { useNodesStore } from "../store/nodesStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { uploadFileToNode } from "./uploadFileToNode";
 
@@ -40,6 +41,8 @@ export class UploadManager {
   private snapshot: { open: boolean; tasks: UploadTask[] } = { open: false, tasks: [] };
 
   private autoCloseTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly refreshNodeIds = new Set<Guid>();
+  private refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
   private filePickerOpen: ((options: { multiple: boolean; accept?: string }) => void) | null = null;
   private pendingFilePickerContext: UploadFilePickerContext | null = null;
@@ -117,6 +120,21 @@ export class UploadManager {
     for (const l of this.listeners) l();
   }
 
+  private scheduleNodeRefresh(nodeId: Guid) {
+    this.refreshNodeIds.add(nodeId);
+    if (this.refreshTimeout) return;
+
+    this.refreshTimeout = setTimeout(() => {
+      const ids = Array.from(this.refreshNodeIds);
+      this.refreshNodeIds.clear();
+      this.refreshTimeout = null;
+
+      for (const id of ids) {
+        void useNodesStore.getState().loadNode(id);
+      }
+    }, 300);
+  }
+
   private hasActiveTasks(): boolean {
     return this.tasks.some((t) => t.status === "queued" || t.status === "uploading" || t.status === "finalizing");
   }
@@ -141,7 +159,7 @@ export class UploadManager {
                   this.emit();
                 }
                 this.autoCloseTimeout = null;
-              }, 1200);
+              }, 10_000);
             }
           }
           return;
@@ -183,6 +201,9 @@ export class UploadManager {
           next.bytesUploaded = next.bytesTotal;
           next.progress01 = 1;
           this.emit();
+
+          // Ensure the Files UI picks up the new file manifests.
+          this.scheduleNodeRefresh(next.nodeId);
         } catch (e) {
           next.status = "failed";
           next.error = e instanceof Error ? e.message : "Upload failed";
