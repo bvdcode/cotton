@@ -1,13 +1,15 @@
 import { Box, IconButton, LinearProgress, Paper, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 
 export const UploadQueueWidget = () => {
+  const subscribe = useCallback((cb: () => void) => uploadManager.subscribe(cb), []);
+  const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
   const snapshot = useSyncExternalStore(
-    (cb) => uploadManager.subscribe(cb),
-    () => uploadManager.getSnapshot(),
-    () => uploadManager.getSnapshot(),
+    subscribe,
+    getSnapshot,
+    getSnapshot,
   );
 
   const tasks = snapshot.tasks;
