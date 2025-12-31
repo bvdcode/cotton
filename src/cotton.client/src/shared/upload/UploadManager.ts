@@ -51,6 +51,7 @@ export class UploadManager {
   }
 
   enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
+    console.log("[UploadManager] enqueue called", { files, nodeId, nodeLabel });
     const list = Array.isArray(files) ? files : Array.from(files);
     for (const file of list) {
       this.tasks.unshift({
