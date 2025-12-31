@@ -20,24 +20,14 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    if (settingsLoaded || settingsLoading) return;
+    if (!isAuthenticated) {
+      return;
+    }
+    if (settingsLoaded || settingsLoading) {
+      return;
+    }
     fetchSettings();
   }, [isAuthenticated, settingsLoaded, settingsLoading, fetchSettings]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const handleFocus = () => {
-      fetchSettings({ force: true });
-    };
-
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [isAuthenticated, fetchSettings]);
 
   return (
     <Box
