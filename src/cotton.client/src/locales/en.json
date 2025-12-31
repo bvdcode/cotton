@@ -165,7 +165,7 @@
           "cloud": "Cotton Cloud computations"
         },
         "descriptions": {
-          "local": "Slow, most heavy features disabled and model quality is simplified.",
+          "local": "Slow, most heavy features disabled and model quality is simplified. But the quality is still great - more than enough for any tasks.",
           "runner": "Connect a separate GPU runner for computations. Fast, high quality - best models and support for all features.",
           "cloud": "Optimal balance, but may have limitations. Incredible generosity for free. Requires internet connection."
         }
