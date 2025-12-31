@@ -4,6 +4,7 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
 using Cotton.Server.Extensions;
+using Cotton.Server.Mapping;
 using Cotton.Server.Providers;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
@@ -25,6 +26,7 @@ namespace Cotton.Server
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions();
+            MapsterConfig.Register();
             builder.Services
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
