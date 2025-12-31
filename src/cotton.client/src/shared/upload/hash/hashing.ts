@@ -2,6 +2,17 @@ import { createSHA1, createSHA256, createSHA384, createSHA512 } from 'hash-wasm'
 
 export type SupportedHashAlgorithm = "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512";
 
+type HashWasmHasher = {
+  init(): void;
+  update(data: Uint8Array): void;
+  digest(encoding: 'hex'): string;
+};
+
+export type IncrementalHasher = {
+  update(data: Uint8Array): void;
+  digestHex(): string;
+};
+
 const normalize = (algorithm: string): string => algorithm.trim().toUpperCase();
 
 export function toWebCryptoAlgorithm(serverAlgorithm: string): SupportedHashAlgorithm {
@@ -15,6 +26,61 @@ export function toWebCryptoAlgorithm(serverAlgorithm: string): SupportedHashAlgo
 
   // Safe default. If server advertises something else, we can extend later.
   return "SHA-256";
+}
+
+async function createHashWasmHasher(algorithm: SupportedHashAlgorithm): Promise<HashWasmHasher> {
+  const hasher = await (async () => {
+    switch (algorithm) {
+      case "SHA-1":
+        return createSHA1();
+      case "SHA-256":
+        return createSHA256();
+      case "SHA-384":
+        return createSHA384();
+      case "SHA-512":
+        return createSHA512();
+      default:
+        return createSHA256();
+    }
+  })();
+
+  (hasher as unknown as HashWasmHasher).init();
+  return hasher as unknown as HashWasmHasher;
+}
+
+export async function createIncrementalHasher(algorithm: SupportedHashAlgorithm): Promise<IncrementalHasher> {
+  const hasher = await createHashWasmHasher(algorithm);
+  return {
+    update: (data) => hasher.update(data),
+    digestHex: () => hasher.digest('hex'),
+  };
+}
+
+export async function updateHasherFromBlob(blob: Blob, hasher: IncrementalHasher): Promise<void> {
+  const anyBlob = blob as unknown as { stream?: () => ReadableStream<Uint8Array> };
+  if (typeof anyBlob.stream === 'function') {
+    const reader = anyBlob.stream().getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value && value.byteLength > 0) hasher.update(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    return;
+  }
+
+  // Fallback for environments without Blob.stream().
+  const buffer = await blob.arrayBuffer();
+  hasher.update(new Uint8Array(buffer));
+}
+
+export async function hashBytes(bytes: Uint8Array, algorithm: SupportedHashAlgorithm): Promise<string> {
+  const hasher = await createHashWasmHasher(algorithm);
+  hasher.update(bytes);
+  return hasher.digest('hex');
 }
 
 /**
@@ -38,39 +104,7 @@ export async function hashFile(file: File, algorithm: SupportedHashAlgorithm): P
  * Reads file in chunks, updates hash incrementally without keeping entire file in memory.
  */
 async function hashBlobStreaming(blob: Blob, algorithm: SupportedHashAlgorithm): Promise<string> {
-  // Create hasher based on algorithm
-  const hasher = await (async () => {
-    switch (algorithm) {
-      case "SHA-1": return createSHA1();
-      case "SHA-256": return createSHA256();
-      case "SHA-384": return createSHA384();
-      case "SHA-512": return createSHA512();
-      default: return createSHA256();
-    }
-  })();
-
-  hasher.init();
-
-  const CHUNK_SIZE = 64 * 1024 * 1024; // 64MB chunks
-  let offset = 0;
-
-  // Process file in chunks
-  while (offset < blob.size) {
-    const end = Math.min(offset + CHUNK_SIZE, blob.size);
-    const chunkBlob = blob.slice(offset, end);
-    const buffer = await chunkBlob.arrayBuffer();
-    
-    // Update hash incrementally - only this chunk is in memory!
-    hasher.update(new Uint8Array(buffer));
-    
-    offset = end;
-
-    // Yield to event loop to keep UI responsive
-    if (offset < blob.size) {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-  }
-
-  // Finalize and return hex digest
-  return hasher.digest('hex');
+  const hasher = await createIncrementalHasher(algorithm);
+  await updateHasherFromBlob(blob, hasher);
+  return hasher.digestHex();
 }
