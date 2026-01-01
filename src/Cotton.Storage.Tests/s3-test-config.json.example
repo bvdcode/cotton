@@ -1,0 +1,7 @@
+{
+  "AccessKey": "YOUR_ACCESS_KEY_HERE",
+  "SecretKey": "YOUR_SECRET_KEY_HERE",
+  "Endpoint": "https://s3.your.domain",
+  "Bucket": "cotton-test",
+  "Region": "us"
+}
