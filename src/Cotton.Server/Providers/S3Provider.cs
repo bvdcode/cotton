@@ -32,6 +32,10 @@ namespace Cotton.Server.Providers
             {
                 ServiceURL = settings.S3EndpointUrl,
                 ForcePathStyle = true,
+                AuthenticationRegion = settings.S3Region,
+                UseHttp = false,
+                MaxErrorRetry = 3,
+                Timeout = TimeSpan.FromMinutes(5),
             };
             byte[] encryptedSecret = Convert.FromBase64String(settings.S3SecretAccessKeyEncrypted);
             string decryptedSecretKey = _crypto.Decrypt(encryptedSecret);

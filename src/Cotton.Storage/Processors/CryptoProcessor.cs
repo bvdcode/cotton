@@ -10,14 +10,22 @@ namespace Cotton.Storage.Processors
     {
         public int Priority => 1000;
 
-        public Task<Stream> ReadAsync(string uid, Stream stream)
+        public async Task<Stream> ReadAsync(string uid, Stream stream)
         {
-            return cipher.DecryptAsync(stream);
+            var decryptedStream = await cipher.DecryptAsync(stream);
+            var buffer = new MemoryStream();
+            await decryptedStream.CopyToAsync(buffer);
+            buffer.Position = 0;
+            return buffer;
         }
 
-        public Task<Stream> WriteAsync(string uid, Stream stream)
+        public async Task<Stream> WriteAsync(string uid, Stream stream)
         {
-            return cipher.EncryptAsync(stream);
+            var encryptedStream = await cipher.EncryptAsync(stream);
+            var buffer = new MemoryStream();
+            await encryptedStream.CopyToAsync(buffer);
+            buffer.Position = 0;
+            return buffer;
         }
     }
 }
