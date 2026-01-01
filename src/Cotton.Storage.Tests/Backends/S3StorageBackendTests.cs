@@ -19,9 +19,9 @@ namespace Cotton.Storage.Tests.Backends
     public class S3StorageBackendTests
     {
         private S3StorageBackend _backend = null!;
-        private IAmazonS3 _s3Client = null!;
+        private AmazonS3Client _s3Client = null!;
         private string _bucketName = null!;
-        private readonly List<string> _createdKeys = new();
+        private readonly List<string> _createdKeys = [];
         private S3TestConfig? _testConfig;
 
         private static string NewUid() => Guid.NewGuid().ToString("N")[..12];
@@ -368,9 +368,8 @@ namespace Cotton.Storage.Tests.Backends
             }
         }
 
-        private class NonSeekableMemoryStream : MemoryStream
+        private class NonSeekableMemoryStream(byte[] buffer) : MemoryStream(buffer)
         {
-            public NonSeekableMemoryStream(byte[] buffer) : base(buffer) { }
             public override bool CanSeek => false;
             public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
             public override long Position
