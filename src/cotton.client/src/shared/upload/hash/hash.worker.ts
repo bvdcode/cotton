@@ -7,7 +7,7 @@ type HashWasmHasher = {
   digest(encoding: "hex"): string;
 };
 
-type InitMessage = { type: "init"; algorithm: SupportedHashAlgorithm };
+type InitMessage = { type: "init"; requestId: string; algorithm: SupportedHashAlgorithm };
 
 type HashChunkMessage = {
   type: "hashChunk";
@@ -19,13 +19,15 @@ type DigestFileMessage = { type: "digestFile"; requestId: string };
 
 type InMessage = InitMessage | HashChunkMessage | DigestFileMessage;
 
+type InitResult = { type: "initResult"; requestId: string };
+
 type HashChunkResult = { type: "hashChunkResult"; requestId: string; chunkHash: string };
 
 type DigestFileResult = { type: "digestFileResult"; requestId: string; fileHash: string };
 
 type ErrorResult = { type: "error"; requestId?: string; message: string };
 
-type OutMessage = HashChunkResult | DigestFileResult | ErrorResult;
+type OutMessage = InitResult | HashChunkResult | DigestFileResult | ErrorResult;
 
 let initialized = false;
 let currentAlgorithm: SupportedHashAlgorithm | null = null;
@@ -68,6 +70,8 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
   try {
     if (msg.type === "init") {
       await ensureInitialized(msg.algorithm);
+      const out: OutMessage = { type: "initResult", requestId: msg.requestId };
+      self.postMessage(out);
       return;
     }
 
