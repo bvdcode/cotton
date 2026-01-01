@@ -10,7 +10,7 @@ namespace Cotton.Database.Models
 {
     [Table("node_files")]
     [Index(nameof(NodeId), nameof(NameKey), IsUnique = true)]
-    [Index(nameof(FileManifestId), nameof(NodeId), IsUnique = true)]
+    [Index(nameof(FileManifestId), nameof(NodeId))]
     public class NodeFile : BaseOwnedEntity
     {
         [Column("file_manifest_hash")]
