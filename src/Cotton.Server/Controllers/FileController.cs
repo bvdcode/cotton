@@ -144,13 +144,13 @@ namespace Cotton.Server.Controllers
 
         private async Task<FileManifest> CreateNewFileManifestAsync(List<Chunk> chunks, CreateFileRequest request, byte[] proposedContentHash)
         {
-            var newFile = new FileManifest()
+            var newFileManifest = new FileManifest()
             {
                 ContentType = request.ContentType,
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
                 ProposedContentHash = proposedContentHash,
             };
-            await _dbContext.FileManifests.AddAsync(newFile);
+            await _dbContext.FileManifests.AddAsync(newFileManifest);
 
             for (int i = 0; i < chunks.Count; i++)
             {
@@ -158,12 +158,12 @@ namespace Cotton.Server.Controllers
                 {
                     ChunkOrder = i,
                     ChunkHash = chunks[i].Hash,
-
+                    FileManifest = newFileManifest,
                 };
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk);
             }
             await _dbContext.SaveChangesAsync();
-            return newFile;
+            return newFileManifest;
         }
     }
 }
