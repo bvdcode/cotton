@@ -29,7 +29,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             var uid = GenerateUid();
-            
+
             // Write to disk
             await using var writeStream = new MemoryStream(_testData);
             await _backend.WriteAsync(uid, writeStream);

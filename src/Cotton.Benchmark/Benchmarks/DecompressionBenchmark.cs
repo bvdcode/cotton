@@ -22,7 +22,7 @@ namespace Cotton.Benchmark.Benchmarks
         {
             // Use REAL CompressionProcessor
             _processor = new CompressionProcessor();
-            
+
             // Pre-compress REAL compressible data
             var testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
             _originalSize = testData.Length;
@@ -55,7 +55,7 @@ namespace Cotton.Benchmark.Benchmarks
 
             await using var inputStream = new MemoryStream(_compressedData);
             var outputStream = await _processor.ReadAsync("test-uid", inputStream);
-            
+
             // Read all decompressed data
             await using var resultStream = new MemoryStream();
             await outputStream.CopyToAsync(resultStream, cancellationToken);
