@@ -11,14 +11,20 @@ namespace Cotton.Server.Providers
         SettingsProvider _settingsProvider) : IS3Provider
     {
         private IAmazonS3? _s3Client;
+        private string? _bucketName;
 
         public string GetBucketName()
         {
+            if (!string.IsNullOrEmpty(_bucketName))
+            {
+                return _bucketName;
+            }
             string? result = _settingsProvider.GetServerSettings().S3BucketName;
             if (string.IsNullOrEmpty(result))
             {
                 throw new InvalidOperationException("S3 bucket name is not configured.");
             }
+            _bucketName = result;
             return result;
         }
 

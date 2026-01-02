@@ -35,7 +35,7 @@ namespace Cotton.Server
             builder.Services
                 .AddQuartzJobs()
                 .AddScoped<SettingsProvider>()
-                .AddSingleton<IS3Provider, S3Provider>()
+                .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, CachedStoragePipeline>()
