@@ -17,6 +17,22 @@ const formatBytes = (bytes: number): string => {
   return `${value.toFixed(precision)} ${units[unitIndex]}`;
 };
 
+const sortTasksByPriority = (tasks: typeof uploadManager extends { getSnapshot(): { tasks: infer T } } ? T : never[]) => {
+  const statusPriority = {
+    uploading: 1,
+    finalizing: 1,
+    queued: 2,
+    completed: 3,
+    failed: 4,
+  };
+
+  return [...tasks].sort((a, b) => {
+    const priorityA = statusPriority[a.status];
+    const priorityB = statusPriority[b.status];
+    return priorityA - priorityB;
+  });
+};
+
 export const UploadQueueWidget = () => {
   const { t } = useTranslation("upload");
   const subscribe = useCallback((cb: () => void) => uploadManager.subscribe(cb), []);
@@ -27,7 +43,7 @@ export const UploadQueueWidget = () => {
     getSnapshot,
   );
 
-  const tasks = snapshot.tasks;
+  const tasks = sortTasksByPriority(snapshot.tasks);
   const hasActive = tasks.some((t) => t.status === "queued" || t.status === "uploading" || t.status === "finalizing");
   const visible = snapshot.open || hasActive;
 
