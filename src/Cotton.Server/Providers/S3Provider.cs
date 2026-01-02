@@ -10,6 +10,8 @@ namespace Cotton.Server.Providers
         IStreamCipher _crypto,
         SettingsProvider _settingsProvider) : IS3Provider
     {
+        private IAmazonS3? _s3Client;
+
         public string GetBucketName()
         {
             string? result = _settingsProvider.GetServerSettings().S3BucketName;
@@ -22,6 +24,10 @@ namespace Cotton.Server.Providers
 
         public IAmazonS3 GetS3Client()
         {
+            if (_s3Client != null)
+            {
+                return _s3Client;
+            }
             var settings = _settingsProvider.GetServerSettings();
             ArgumentNullException.ThrowIfNull(settings.S3EndpointUrl, nameof(settings.S3EndpointUrl));
             ArgumentNullException.ThrowIfNull(settings.S3AccessKeyId, nameof(settings.S3AccessKeyId));
@@ -40,7 +46,8 @@ namespace Cotton.Server.Providers
             byte[] encryptedSecret = Convert.FromBase64String(settings.S3SecretAccessKeyEncrypted);
             string decryptedSecretKey = _crypto.Decrypt(encryptedSecret);
             var credentials = new BasicAWSCredentials(settings.S3AccessKeyId, decryptedSecretKey);
-            return new AmazonS3Client(credentials, config);
+            _s3Client = new AmazonS3Client(credentials, config);
+            return _s3Client;
         }
     }
 }
