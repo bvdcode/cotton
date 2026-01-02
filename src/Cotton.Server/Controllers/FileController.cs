@@ -47,7 +47,7 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
-        // TODO: Authorization: Ensure the user has access to this file
+        [Authorize]
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
         public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId)
         {
