@@ -89,9 +89,9 @@ namespace Cotton.Benchmark
                 new HashingBenchmark(configuration),
                 new CompressionBenchmark(configuration),
                 new DecompressionBenchmark(configuration),
-                new MultiSizeCompressionBenchmark(configuration),
                 new EncryptionBenchmark(configuration),
                 new DecryptionBenchmark(configuration),
+                new FileSystemBenchmark(configuration),
                 new PipelineBenchmark(configuration)
             ];
         }
@@ -118,14 +118,14 @@ namespace Cotton.Benchmark
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine();
-            Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║                                                                ║");
-            Console.WriteLine("║           Cotton Cloud - Performance Benchmark Suite          ║");
-            Console.WriteLine("║                                                                ║");
-            Console.WriteLine("║  Testing cloud storage pipeline: compression, encryption,      ║");
-            Console.WriteLine("║  hashing, and full cycle performance                           ║");
-            Console.WriteLine("║                                                                ║");
-            Console.WriteLine("╚════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine("==================================================================");
+            Console.WriteLine("                                                                  ");
+            Console.WriteLine("           Cotton Cloud - Performance Benchmark Suite            ");
+            Console.WriteLine("                                                                  ");
+            Console.WriteLine("  Testing cloud storage pipeline: compression, encryption,       ");
+            Console.WriteLine("  hashing, and full cycle performance                            ");
+            Console.WriteLine("                                                                  ");
+            Console.WriteLine("==================================================================");
             Console.ResetColor();
             Console.WriteLine();
         }
@@ -134,12 +134,13 @@ namespace Cotton.Benchmark
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("Configuration:");
-            Console.WriteLine($"  • Data Size:          {FormatBytes(configuration.DataSizeBytes)}");
-            Console.WriteLine($"  • Warmup Iterations:  {configuration.WarmupIterations}");
+            Console.WriteLine($"  • Data Size:           {FormatBytes(configuration.DataSizeBytes)}");
+            Console.WriteLine($"  • Warmup Iterations:   {configuration.WarmupIterations}");
             Console.WriteLine($"  • Measured Iterations: {configuration.MeasuredIterations}");
-            Console.WriteLine($"  • Encryption Threads: {configuration.EncryptionThreads}");
-            Console.WriteLine($"  • Cipher Chunk Size:  {FormatBytes(configuration.CipherChunkSizeBytes)}");
-            Console.WriteLine($"  • Compression Level:  {configuration.CompressionLevel}");
+            Console.WriteLine($"  • Encryption Threads:  {configuration.EncryptionThreads}");
+            Console.WriteLine($"  • Cipher Chunk Size:   {FormatBytes(configuration.CipherChunkSizeBytes)}");
+            Console.WriteLine($"  • Compression Level:   {configuration.CompressionLevel}");
+            Console.WriteLine($"  • Encryption Key Size: {configuration.EncryptionKeySize * 8} bits");
             Console.ResetColor();
             Console.WriteLine();
         }
