@@ -10,16 +10,10 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark that tests multiple data sizes for compression.
     /// </summary>
-    public sealed class MultiSizeCompressionBenchmark : BenchmarkBase
+    public sealed class MultiSizeCompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly int[] _dataSizes = [1024, 64 * 1024, 1024 * 1024, 10 * 1024 * 1024]; // 1KB, 64KB, 1MB, 10MB
-        private readonly int _compressionLevel;
-
-        public MultiSizeCompressionBenchmark(BenchmarkConfiguration configuration)
-            : base(configuration)
-        {
-            _compressionLevel = configuration.CompressionLevel;
-        }
+        private readonly int _compressionLevel = configuration.CompressionLevel;
 
         /// <inheritdoc/>
         public override string Name => "Multi-Size Compression";
@@ -34,10 +28,8 @@ namespace Cotton.Benchmark.Benchmarks
             {
                 var testData = GenerateTestData(size);
                 await using var outputStream = new MemoryStream();
-                await using (var compressor = new CompressionStream(outputStream, level: _compressionLevel, leaveOpen: true))
-                {
-                    await compressor.WriteAsync(testData, cancellationToken);
-                }
+                await using var compressor = new CompressionStream(outputStream, level: _compressionLevel, leaveOpen: true);
+                await compressor.WriteAsync(testData, cancellationToken);
             }
         }
 
@@ -53,10 +45,8 @@ namespace Cotton.Benchmark.Benchmarks
                 totalBytes += testData.Length;
 
                 await using var outputStream = new MemoryStream();
-                await using (var compressor = new CompressionStream(outputStream, level: _compressionLevel, leaveOpen: true))
-                {
-                    await compressor.WriteAsync(testData, cancellationToken);
-                }
+                await using var compressor = new CompressionStream(outputStream, level: _compressionLevel, leaveOpen: true);
+                await compressor.WriteAsync(testData, cancellationToken);
             }
 
             stopwatch.Stop();

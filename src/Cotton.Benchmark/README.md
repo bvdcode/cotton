@@ -4,7 +4,9 @@ Professional performance benchmarking tool for Cotton Cloud storage engine.
 
 ## Overview
 
-Cotton.Benchmark is a comprehensive console application designed to measure and report performance metrics of Cotton Cloud's core operations: compression, encryption, hashing, and the complete storage pipeline.
+Cotton.Benchmark is a comprehensive console application designed to measure and report performance metrics of Cotton Cloud's **REAL** storage components: compression, encryption, hashing, disk I/O, and the complete storage pipeline.
+
+**All benchmarks use REAL production code from Cotton.Storage**, not mock implementations.
 
 ## Architecture
 
@@ -24,18 +26,28 @@ The application follows SOLID principles and object-oriented design:
 
 ### Benchmarks (`Benchmarks/`)
 - **BenchmarkBase** - Abstract base with warmup/measurement logic
+- **MemoryStreamBenchmark** - Baseline memory stream operations
 - **HashingBenchmark** - SHA-256 hashing for content addressing
-- **CompressionBenchmark** - Zstd compression performance
-- **DecompressionBenchmark** - Zstd decompression performance
-- **EncryptionBenchmark** - AES-GCM encryption with streaming
-- **DecryptionBenchmark** - AES-GCM decryption with streaming
-- **PipelineBenchmark** - Full cycle: compression ? encryption ? decryption ? decompression
+- **CompressionBenchmark** - **REAL** `Cotton.Storage.Processors.CompressionProcessor` with compressible text
+- **DecompressionBenchmark** - **REAL** Zstd decompression with compressible text
+- **EncryptionBenchmark** - **REAL** `Cotton.Storage.Processors.CryptoProcessor` with AES-GCM streaming
+- **DecryptionBenchmark** - **REAL** AES-GCM decryption with streaming
+- **FileSystemBenchmark** - **REAL** `Cotton.Storage.Backends.FileSystemStorageBackend` disk I/O
+- **PipelineBenchmark** - **REAL** `Cotton.Storage.Pipelines.FileStoragePipeline` full cycle test
 
 ### Infrastructure (`Infrastructure/`)
 - **BenchmarkRunner** - Main orchestration engine with logging
+- **MemoryMonitor** - Memory usage tracking
+- **SystemInfo** - System information reporting
+- **TestDataGenerator** - Realistic test data generation:
+  - `GenerateCompressibleText()` - Log-like text data (highly compressible)
+  - `GenerateJsonData()` - JSON documents (moderately compressible)
+  - `GenerateMixedData()` - Semi-compressible realistic file content
+  - `GenerateRandomBinary()` - Pure random data (incompressible)
 
 ### Reporting (`Reporting/`)
 - **TableResultFormatter** - Formats results as ASCII tables
+- **SummaryResultFormatter** - Compact summary format
 - **ConsoleReporter** - Outputs to console with color support
 
 ## Usage
@@ -52,34 +64,87 @@ dotnet run --project Cotton.Benchmark -- --help
 
 ## Default Configuration
 
-- **Data Size**: 10 MB
-- **Warmup Iterations**: 2
-- **Measured Iterations**: 5
-- **Encryption Threads**: 2
+- **Data Size**: **100 MB** (realistic workload)
+- **Warmup Iterations**: **3**
+- **Measured Iterations**: **10** (statistical validity)
+- **Encryption Threads**: **2**
 - **Cipher Chunk Size**: 1 MB
 - **Compression Level**: 3 (Zstd)
+- **Encryption Key**: 256-bit AES
 
-## Output
+## What Makes This Benchmark Real
 
-The tool produces a comprehensive report with:
-- Individual benchmark results in table format
-- Performance metrics (throughput in MB/s or GB/s)
-- Min/Max/Average statistics
-- Success/failure status
-- Summary with total execution time
+### 1. Real Components
+- Uses **actual** `CompressionProcessor` from `Cotton.Storage.Processors`
+- Uses **actual** `CryptoProcessor` with `AesGcmStreamCipher` from `EasyExtensions.Crypto`
+- Uses **actual** `FileSystemStorageBackend` from `Cotton.Storage.Backends`
+- Uses **actual** `FileStoragePipeline` from `Cotton.Storage.Pipelines`
 
-### Sample Output
+### 2. Realistic Test Data
+- **Compressible Text**: Log-like patterns (compression benchmark)
+- **JSON Data**: Structured documents (pipeline benchmark)
+- **Mixed Data**: Semi-compressible file content (encryption benchmark)
+- **NOT** zero-filled arrays or trivial patterns
+
+### 3. Large Workloads
+- **100 MB** data size (not 10 MB toys)
+- **10 measured iterations** for statistical significance
+- **3 warmup iterations** to eliminate JIT effects
+
+### 4. Real Disk I/O
+- FileSystemBenchmark tests **actual** file system write/read/delete cycles
+- Measures real storage path performance
+- Tests the complete storage backend lifecycle
+
+## Sample Output
+
 ```
-???????????????????????????????????????????????????????????????
-                    BENCHMARK RESULTS SUMMARY                   
-???????????????????????????????????????????????????????????????
+==================================================================
+                                                                  
+           Cotton Cloud - Performance Benchmark Suite            
+                                                                  
+  Testing cloud storage pipeline: compression, encryption,       
+  hashing, and full cycle performance                            
+                                                                  
+==================================================================
 
-?????????????????????????????????????????????????????????????
-? Hashing (SHA-256)                 ? Status                  ?
-?????????????????????????????????????????????????????????????
-? Result                            ? ? SUCCESS               ?
-? AvgThroughput                     ? 2500.45 MB/s            ?
+System Information:
+  • OS:          Windows 11 ...
+  • Framework:   .NET 10.0.0
+  • Architecture: X64
+  • Processors:  16
+  • Memory:      32.50 GB
+
+Configuration:
+  • Data Size:           100.00 MB
+  • Warmup Iterations:   3
+  • Measured Iterations: 10
+  • Encryption Threads:  2
+  • Cipher Chunk Size:   1.00 MB
+  • Compression Level:   3
+  • Encryption Key Size: 256 bits
+
+======================================================================
+                    BENCHMARK RESULTS SUMMARY                   
+======================================================================
+
+----------------------------------------------------------------
+| Compression (Real Zstd Processor)   | Status                      |
+----------------------------------------------------------------
+| Result                               | SUCCESS                     |
+| AvgThroughput                        | 2100.45 MB/s                |
+| Processor                            | CompressionProcessor        |
+| DataType                             | Compressible Text (Logs)    |
 ...
+
+Total Benchmarks:  8
+Successful:        8
+Failed:            0
+Total Time:        9.50 sec
+
+Memory Statistics:
+  • Current Usage:  950.25 MB
+  • GC Collections: Gen0: 45, Gen1: 35, Gen2: 28
 ```
 
 ## Design Principles
@@ -102,42 +167,54 @@ The tool produces a comprehensive report with:
 ### Adding New Benchmarks
 1. Inherit from `BenchmarkBase`
 2. Implement `ExecuteIterationAsync` and `MeasureIterationAsync`
-3. Register in `Program.CreateBenchmarks()`
+3. Use **REAL** components from Cotton.Storage
+4. Register in `Program.CreateBenchmarks()`
 
-### Adding New Formatters
-1. Implement `IResultFormatter`
-2. Register in DI container
-3. Inject into reporter
-
-### Adding New Reporters
-1. Implement `IReporter`
-2. Register in DI container
-3. Use in main execution flow
+### Adding New Test Data Patterns
+1. Add method to `TestDataGenerator`
+2. Use in benchmark constructor
+3. Document compression characteristics
 
 ## Dependencies
 
 - **Microsoft.Extensions.DependencyInjection** - IoC container
 - **Microsoft.Extensions.Logging** - Structured logging
-- **ZstdSharp.Port** - Zstd compression
-- **Cotton.Storage** - Storage pipeline components
-  - Includes EasyExtensions.Crypto for AES-GCM
+- **ZstdSharp.Port 0.8.6** - Zstd compression (REAL)
+- **Cotton.Storage** - Storage pipeline components (REAL)
+  - Includes `CompressionProcessor`, `CryptoProcessor`
+  - Includes `FileSystemStorageBackend`, `FileStoragePipeline`
+  - Includes `EasyExtensions.Crypto` for `AesGcmStreamCipher`
 
 ## Performance Considerations
 
-- Warmup iterations prevent JIT compilation effects
-- Multiple measured iterations provide statistical reliability
-- Release build recommended for accurate measurements
-- Large data sizes (10 MB default) minimize measurement overhead
+- **Warmup iterations** prevent JIT compilation effects
+- **10 measured iterations** provide statistical reliability
+- **Release build** mandatory for accurate measurements
+- **Large data sizes** (100 MB) minimize measurement overhead
+- **Real components** ensure production-representative results
+- **Compressible data** provides realistic compression ratios
+
+## Key Differences from Toy Benchmarks
+
+| Aspect | This Benchmark | Typical Toy Benchmarks |
+|--------|---------------|----------------------|
+| Components | **REAL** production code | Mock/stub implementations |
+| Data Size | **100 MB** per test | 1-10 MB |
+| Test Data | Realistic compressible patterns | Zero-filled or sequential |
+| Iterations | 10 measured + 3 warmup | 1-3 total |
+| Disk I/O | **REAL** file system operations | In-memory only |
+| Pipeline | **REAL** multi-processor chain | Single operations |
 
 ## Future Enhancements
 
 - [ ] Command-line parameter parsing for configuration
 - [ ] JSON/CSV output formats
 - [ ] Comparative benchmarking across runs
-- [ ] Memory allocation tracking
+- [ ] GC pause time tracking
 - [ ] Percentile calculations (P50, P95, P99)
-- [ ] Storage backend benchmarks (FileSystem, S3)
+- [ ] S3StorageBackend benchmarks
 - [ ] Concurrent operation benchmarks
+- [ ] CPU/memory profiling integration
 
 ## License
 

@@ -10,14 +10,9 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Base class for all benchmarks with common functionality.
     /// </summary>
-    public abstract class BenchmarkBase : IBenchmark
+    public abstract class BenchmarkBase(BenchmarkConfiguration configuration) : IBenchmark
     {
-        protected readonly BenchmarkConfiguration _configuration;
-
-        protected BenchmarkBase(BenchmarkConfiguration configuration)
-        {
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        }
+        protected readonly BenchmarkConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         /// <inheritdoc/>
         public abstract string Name { get; }
