@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -12,6 +13,24 @@ namespace Cotton.Database.Migrations
         {
             migrationBuilder.AlterDatabase()
                 .Annotation("Npgsql:PostgresExtension:citext", ",,");
+
+            migrationBuilder.CreateTable(
+                name: "benchmarks",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<int>(type: "integer", nullable: false),
+                    name = table.Column<string>(type: "text", nullable: false),
+                    value = table.Column<long>(type: "bigint", nullable: false),
+                    units = table.Column<string>(type: "text", nullable: false),
+                    elapsed = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_benchmarks", x => x.id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "chunks",
@@ -30,13 +49,17 @@ namespace Cotton.Database.Migrations
                 name: "file_manifests",
                 columns: table => new
                 {
-                    hash = table.Column<byte[]>(type: "bytea", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    computed_content_hash = table.Column<byte[]>(type: "bytea", nullable: true),
+                    proposed_content_hash = table.Column<byte[]>(type: "bytea", nullable: false),
                     content_type = table.Column<string>(type: "text", nullable: false),
-                    size_bytes = table.Column<long>(type: "bigint", nullable: false)
+                    size_bytes = table.Column<long>(type: "bigint", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_file_manifests", x => x.hash);
+                    table.PrimaryKey("PK_file_manifests", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -68,6 +91,27 @@ namespace Cotton.Database.Migrations
                     allow_global_indexing = table.Column<bool>(type: "boolean", nullable: false),
                     telemetry_enabled = table.Column<bool>(type: "boolean", nullable: false),
                     timezone = table.Column<string>(type: "text", nullable: false),
+                    instance_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    smtp_server_address = table.Column<string>(type: "text", nullable: true),
+                    smtp_server_port = table.Column<int>(type: "integer", nullable: true),
+                    smtp_username = table.Column<string>(type: "text", nullable: true),
+                    smtp_password_encrypted = table.Column<string>(type: "text", nullable: true),
+                    smtp_sender_email = table.Column<string>(type: "text", nullable: true),
+                    smtp_use_ssl = table.Column<bool>(type: "boolean", nullable: false),
+                    s3_access_key_id = table.Column<string>(type: "text", nullable: true),
+                    s3_secret_access_key_encrypted = table.Column<string>(type: "text", nullable: true),
+                    s3_bucket_name = table.Column<string>(type: "text", nullable: true),
+                    s3_region = table.Column<string>(type: "text", nullable: true),
+                    s3_endpoint_url = table.Column<string>(type: "text", nullable: true),
+                    email_mode = table.Column<int>(type: "integer", nullable: false),
+                    compution_mode = table.Column<int>(type: "integer", nullable: false),
+                    storage_type = table.Column<int>(type: "integer", nullable: false),
+                    import_source = table.Column<int>(type: "integer", nullable: false),
+                    server_usage = table.Column<int[]>(type: "integer[]", nullable: false),
+                    storage_space_mode = table.Column<int>(type: "integer", nullable: false),
+                    webdav_password_encrypted = table.Column<string>(type: "text", nullable: true),
+                    webdav_username = table.Column<string>(type: "text", nullable: true),
+                    webdav_host = table.Column<string>(type: "text", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -83,6 +127,7 @@ namespace Cotton.Database.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     username = table.Column<string>(type: "citext", nullable: false),
                     password_phc = table.Column<string>(type: "text", nullable: true),
+                    role = table.Column<int>(type: "integer", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -96,8 +141,8 @@ namespace Cotton.Database.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
+                    file_manifest_id = table.Column<Guid>(type: "uuid", nullable: false),
                     chunk_order = table.Column<int>(type: "integer", nullable: false),
-                    file_manifest_hash = table.Column<byte[]>(type: "bytea", nullable: false),
                     chunk_hash = table.Column<byte[]>(type: "bytea", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -112,10 +157,10 @@ namespace Cotton.Database.Migrations
                         principalColumn: "hash",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_file_manifest_chunks_file_manifests_file_manifest_hash",
-                        column: x => x.file_manifest_hash,
+                        name: "FK_file_manifest_chunks_file_manifests_file_manifest_id",
+                        column: x => x.file_manifest_id,
                         principalTable: "file_manifests",
-                        principalColumn: "hash",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -208,7 +253,7 @@ namespace Cotton.Database.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    file_manifest_hash = table.Column<byte[]>(type: "bytea", nullable: false),
+                    file_manifest_id = table.Column<Guid>(type: "uuid", nullable: false),
                     node_id = table.Column<Guid>(type: "uuid", nullable: false),
                     original_node_file_id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
@@ -221,10 +266,10 @@ namespace Cotton.Database.Migrations
                 {
                     table.PrimaryKey("PK_node_files", x => x.id);
                     table.ForeignKey(
-                        name: "FK_node_files_file_manifests_file_manifest_hash",
-                        column: x => x.file_manifest_hash,
+                        name: "FK_node_files_file_manifests_file_manifest_id",
+                        column: x => x.file_manifest_id,
                         principalTable: "file_manifests",
-                        principalColumn: "hash",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_node_files_nodes_node_id",
@@ -257,9 +302,21 @@ namespace Cotton.Database.Migrations
                 column: "chunk_hash");
 
             migrationBuilder.CreateIndex(
-                name: "IX_file_manifest_chunks_file_manifest_hash_chunk_order",
+                name: "IX_file_manifest_chunks_file_manifest_id_chunk_order",
                 table: "file_manifest_chunks",
-                columns: ["file_manifest_hash", "chunk_order"],
+                columns: ["file_manifest_id", "chunk_order"],
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_file_manifests_computed_content_hash",
+                table: "file_manifests",
+                column: "computed_content_hash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_file_manifests_proposed_content_hash",
+                table: "file_manifests",
+                column: "proposed_content_hash",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -268,10 +325,9 @@ namespace Cotton.Database.Migrations
                 column: "owner_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_node_files_file_manifest_hash_node_id",
+                name: "IX_node_files_file_manifest_id_node_id",
                 table: "node_files",
-                columns: ["file_manifest_hash", "node_id"],
-                unique: true);
+                columns: ["file_manifest_id", "node_id"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_node_files_node_id_name_key",
@@ -316,6 +372,9 @@ namespace Cotton.Database.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "benchmarks");
+
             migrationBuilder.DropTable(
                 name: "chunk_ownerships");
 

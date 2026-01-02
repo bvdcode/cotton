@@ -9,7 +9,7 @@ namespace Cotton.Server.Models.Requests
         public string[] ChunkHashes { get; set; } = [];
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
-        public string? Hash { get; set; } = null!;
+        public string Hash { get; set; } = null!;
         public Guid? OriginalNodeFileId { get; set; }
     }
 }
