@@ -19,28 +19,28 @@ namespace Cotton.Benchmark.Reporting
         {
             var sb = new StringBuilder();
             sb.AppendLine();
-            sb.AppendLine(new string('?', NameWidth + ValueWidth + 7));
-            sb.AppendLine($"? {result.BenchmarkName.PadRight(NameWidth)} ? {"Status".PadRight(ValueWidth)} ?");
-            sb.AppendLine(new string('?', NameWidth + ValueWidth + 7));
+            sb.AppendLine(new string('-', NameWidth + ValueWidth + 7));
+            sb.AppendLine($"| {result.BenchmarkName.PadRight(NameWidth)} | {"Status".PadRight(ValueWidth)} |");
+            sb.AppendLine(new string('-', NameWidth + ValueWidth + 7));
 
             if (result.IsSuccess)
             {
-                sb.AppendLine($"? {"Result".PadRight(NameWidth)} ? {"? SUCCESS".PadRight(ValueWidth)} ?");
-                sb.AppendLine($"? {"Total Duration".PadRight(NameWidth)} ? {FormatDuration(result.TotalDuration).PadRight(ValueWidth)} ?");
+                sb.AppendLine($"| {"Result".PadRight(NameWidth)} | {"SUCCESS".PadRight(ValueWidth)} |");
+                sb.AppendLine($"| {"Total Duration".PadRight(NameWidth)} | {FormatDuration(result.TotalDuration).PadRight(ValueWidth)} |");
 
                 foreach (var metric in result.Metrics.OrderBy(m => m.Key))
                 {
-                    sb.AppendLine($"? {metric.Key.PadRight(NameWidth)} ? {FormatValue(metric.Value).PadRight(ValueWidth)} ?");
+                    sb.AppendLine($"| {metric.Key.PadRight(NameWidth)} | {FormatValue(metric.Value).PadRight(ValueWidth)} |");
                 }
             }
             else
             {
-                sb.AppendLine($"? {"Result".PadRight(NameWidth)} ? {"? FAILED".PadRight(ValueWidth)} ?");
-                sb.AppendLine($"? {"Error".PadRight(NameWidth)} ? {TruncateString(result.ErrorMessage ?? "Unknown", ValueWidth).PadRight(ValueWidth)} ?");
-                sb.AppendLine($"? {"Duration Before Failure".PadRight(NameWidth)} ? {FormatDuration(result.TotalDuration).PadRight(ValueWidth)} ?");
+                sb.AppendLine($"| {"Result".PadRight(NameWidth)} | {"FAILED".PadRight(ValueWidth)} |");
+                sb.AppendLine($"| {"Error".PadRight(NameWidth)} | {TruncateString(result.ErrorMessage ?? "Unknown", ValueWidth).PadRight(ValueWidth)} |");
+                sb.AppendLine($"| {"Duration Before Failure".PadRight(NameWidth)} | {FormatDuration(result.TotalDuration).PadRight(ValueWidth)} |");
             }
 
-            sb.AppendLine(new string('?', NameWidth + ValueWidth + 7));
+            sb.AppendLine(new string('-', NameWidth + ValueWidth + 7));
 
             return sb.ToString();
         }
@@ -50,9 +50,9 @@ namespace Cotton.Benchmark.Reporting
         {
             var sb = new StringBuilder();
             sb.AppendLine();
-            sb.AppendLine("???????????????????????????????????????????????????????????????");
+            sb.AppendLine(new string('=', 70));
             sb.AppendLine("                    BENCHMARK RESULTS SUMMARY                   ");
-            sb.AppendLine("???????????????????????????????????????????????????????????????");
+            sb.AppendLine(new string('=', 70));
 
             foreach (var result in results)
             {
@@ -65,14 +65,14 @@ namespace Cotton.Benchmark.Reporting
             var totalTime = TimeSpan.FromMilliseconds(results.Sum(r => r.TotalDuration.TotalMilliseconds));
 
             sb.AppendLine();
-            sb.AppendLine("???????????????????????????????????????????????????????????????");
+            sb.AppendLine(new string('=', 70));
             sb.AppendLine("                         SUMMARY                                ");
-            sb.AppendLine("???????????????????????????????????????????????????????????????");
+            sb.AppendLine(new string('=', 70));
             sb.AppendLine($"Total Benchmarks:  {results.Count()}");
-            sb.AppendLine($"Successful:        {successCount} ?");
-            sb.AppendLine($"Failed:            {failureCount} ?");
+            sb.AppendLine($"Successful:        {successCount}");
+            sb.AppendLine($"Failed:            {failureCount}");
             sb.AppendLine($"Total Time:        {FormatDuration(totalTime)}");
-            sb.AppendLine("???????????????????????????????????????????????????????????????");
+            sb.AppendLine(new string('=', 70));
             sb.AppendLine();
 
             return sb.ToString();

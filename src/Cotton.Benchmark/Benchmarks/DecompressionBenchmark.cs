@@ -1,48 +1,51 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
+using Cotton.Storage.Processors;
 using System.Diagnostics;
-using ZstdSharp;
 
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark for decompression performance using Zstd.
+    /// Benchmark for decompression performance using REAL CompressionProcessor from Cotton.Storage.
     /// </summary>
     public sealed class DecompressionBenchmark : BenchmarkBase
     {
         private readonly byte[] _compressedData;
         private readonly int _originalSize;
+        private readonly CompressionProcessor _processor;
 
         public DecompressionBenchmark(BenchmarkConfiguration configuration)
             : base(configuration)
         {
-            var testData = GenerateTestData(configuration.DataSizeBytes);
+            // Use REAL CompressionProcessor
+            _processor = new CompressionProcessor();
+            
+            // Pre-compress REAL compressible data
+            var testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
             _originalSize = testData.Length;
 
-            // Pre-compress data for decompression benchmark
+            using var inputStream = new MemoryStream(testData);
+            var compressedStream = _processor.WriteAsync("test-uid", inputStream).Result;
             using var outputStream = new MemoryStream();
-            using (var compressor = new CompressionStream(outputStream, level: configuration.CompressionLevel, leaveOpen: true))
-            {
-                compressor.Write(testData);
-            }
+            compressedStream.CopyTo(outputStream);
             _compressedData = outputStream.ToArray();
         }
 
         /// <inheritdoc/>
-        public override string Name => "Decompression (Zstd)";
+        public override string Name => "Decompression (Real Zstd Processor)";
 
         /// <inheritdoc/>
-        public override string Description => "Tests Zstd decompression performance";
+        public override string Description => "Tests REAL Cotton.Storage.Processors.CompressionProcessor decompression";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
             await using var inputStream = new MemoryStream(_compressedData);
-            await using var decompressor = new DecompressionStream(inputStream);
-            await using var outputStream = new MemoryStream();
-            await decompressor.CopyToAsync(outputStream, cancellationToken);
+            var outputStream = await _processor.ReadAsync("test-uid", inputStream);
+            await outputStream.DisposeAsync();
         }
 
         /// <inheritdoc/>
@@ -51,9 +54,11 @@ namespace Cotton.Benchmark.Benchmarks
             var stopwatch = Stopwatch.StartNew();
 
             await using var inputStream = new MemoryStream(_compressedData);
-            await using var decompressor = new DecompressionStream(inputStream);
-            await using var outputStream = new MemoryStream();
-            await decompressor.CopyToAsync(outputStream, cancellationToken);
+            var outputStream = await _processor.ReadAsync("test-uid", inputStream);
+            
+            // Read all decompressed data
+            await using var resultStream = new MemoryStream();
+            await outputStream.CopyToAsync(resultStream, cancellationToken);
 
             stopwatch.Stop();
 
@@ -64,6 +69,7 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
+            baseMetrics["Processor"] = "Cotton.Storage.Processors.CompressionProcessor";
             baseMetrics["CompressedSize"] = FormatBytes(_compressedData.Length);
             baseMetrics["CompressionRatio"] = $"{(double)_originalSize / _compressedData.Length:F2}x";
             return baseMetrics;

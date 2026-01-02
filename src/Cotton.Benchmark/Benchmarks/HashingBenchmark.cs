@@ -10,15 +10,9 @@ namespace Cotton.Benchmark.Benchmarks
     /// <summary>
     /// Benchmark for SHA-256 hashing performance.
     /// </summary>
-    public sealed class HashingBenchmark : BenchmarkBase
+    public sealed class HashingBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
-        private readonly byte[] _testData;
-
-        public HashingBenchmark(BenchmarkConfiguration configuration)
-            : base(configuration)
-        {
-            _testData = GenerateTestData(configuration.DataSizeBytes);
-        }
+        private readonly byte[] _testData = GenerateTestData(configuration.DataSizeBytes);
 
         /// <inheritdoc/>
         public override string Name => "Hashing (SHA-256)";
