@@ -24,7 +24,7 @@ namespace Cotton.Storage.Processors
         public async Task<Stream> WriteAsync(string uid, Stream stream)
         {
             var memoryStream = new MemoryStream();
-            using (var compressor = new CompressionStream(memoryStream, leaveOpen: true))
+            using (var compressor = new CompressionStream(memoryStream, level: 2, leaveOpen: true))
             {
                 await stream.CopyToAsync(compressor);
             }

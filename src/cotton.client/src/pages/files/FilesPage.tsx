@@ -365,55 +365,45 @@ export const FilesPage: React.FC = () => {
         mb={2}
         sx={{
           display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "flex-start", sm: "center" },
-          justifyContent: "space-between",
+          gap: 1,
+          alignItems: "center",
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            alignItems: "center",
-            mb: { xs: 1, sm: 0 },
-          }}
+        <IconButton
+          color="primary"
+          onClick={handleGoUp}
+          disabled={loading || ancestors.length === 0}
+          title={t("actions.goUp")}
         >
-          <IconButton
-            color="primary"
-            onClick={handleGoUp}
-            disabled={loading || ancestors.length === 0}
-            title={t("actions.goUp")}
-          >
-            <ArrowUpward />
-          </IconButton>
-          <IconButton
-            color="primary"
-            onClick={handleUploadClick}
-            disabled={!nodeId || loading}
-            title={t("actions.upload")}
-          >
-            <UploadFile />
-          </IconButton>
-          <IconButton
-            color="primary"
-            onClick={handleNewFolder}
-            disabled={!nodeId || isCreatingFolder}
-            title={t("actions.newFolder")}
-          >
-            <CreateNewFolder />
-          </IconButton>
-          <IconButton 
-            onClick={() => navigate("/files")} 
-            color="primary"
-            title={t("breadcrumbs.root")}
-          >
-            <Home />
-          </IconButton>
-        </Box>
+          <ArrowUpward />
+        </IconButton>
+        <IconButton
+          color="primary"
+          onClick={handleUploadClick}
+          disabled={!nodeId || loading}
+          title={t("actions.upload")}
+        >
+          <UploadFile />
+        </IconButton>
+        <IconButton
+          color="primary"
+          onClick={handleNewFolder}
+          disabled={!nodeId || isCreatingFolder}
+          title={t("actions.newFolder")}
+        >
+          <CreateNewFolder />
+        </IconButton>
+        <IconButton 
+          onClick={() => navigate("/files")} 
+          color="primary"
+          title={t("breadcrumbs.root")}
+        >
+          <Home />
+        </IconButton>
 
         <Breadcrumbs
           aria-label={t("breadcrumbs.ariaLabel")}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
+          sx={{ ml: 1 }}
         >
           {breadcrumbs
             .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")

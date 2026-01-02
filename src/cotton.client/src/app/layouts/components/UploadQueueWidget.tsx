@@ -1,6 +1,6 @@
 import { Box, IconButton, LinearProgress, Paper, Typography } from "@mui/material";
-import { Close } from "@mui/icons-material";
-import { useCallback, useSyncExternalStore } from "react";
+import { Close, ExpandMore, ExpandLess } from "@mui/icons-material";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 
@@ -35,6 +35,7 @@ const sortTasksByPriority = (tasks: typeof uploadManager extends { getSnapshot()
 
 export const UploadQueueWidget = () => {
   const { t } = useTranslation("upload");
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const subscribe = useCallback((cb: () => void) => uploadManager.subscribe(cb), []);
   const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
   const snapshot = useSyncExternalStore(
@@ -67,45 +68,55 @@ export const UploadQueueWidget = () => {
           borderRadius: 2,
         }}
       >
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={isCollapsed ? 0 : 1}>
           <Typography variant="subtitle1" fontWeight={600}>
             {t("title")}
           </Typography>
-          <IconButton
-            size="small"
-            onClick={() => uploadManager.setOpen(false)}
-            disabled={hasActive}
-            aria-label="Close"
-          >
-            <Close fontSize="small" />
-          </IconButton>
+          <Box display="flex" gap={0.5}>
+            <IconButton
+              size="small"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              aria-label={isCollapsed ? "Expand" : "Collapse"}
+            >
+              {isCollapsed ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => uploadManager.setOpen(false)}
+              disabled={hasActive}
+              aria-label="Close"
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
 
-        <Box 
-          sx={{
-            maxHeight: '400px',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            pr: 0.5,
-            '&::-webkit-scrollbar': {
-              width: '8px',
-            },
-            '&::-webkit-scrollbar-track': {
-              bgcolor: 'action.hover',
-              borderRadius: '4px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              bgcolor: 'action.selected',
-              borderRadius: '4px',
-              '&:hover': {
-                bgcolor: 'action.disabled',
+        {!isCollapsed && (
+          <Box 
+            sx={{
+              maxHeight: '400px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              pr: 0.5,
+              '&::-webkit-scrollbar': {
+                width: '8px',
               },
-            },
-          }}
-        >
+              '&::-webkit-scrollbar-track': {
+                bgcolor: 'action.hover',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                bgcolor: 'action.selected',
+                borderRadius: '4px',
+                '&:hover': {
+                  bgcolor: 'action.disabled',
+                },
+              },
+            }}
+          >
           {tasks.map((task) => (
             <Box key={task.id}>
               <Box display="flex" justifyContent="space-between" gap={1}>
@@ -135,7 +146,8 @@ export const UploadQueueWidget = () => {
               </Box>
             </Box>
           ))}
-        </Box>
+          </Box>
+        )}
       </Paper>
     </Box>
   );
