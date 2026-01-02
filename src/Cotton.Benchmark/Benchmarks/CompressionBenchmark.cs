@@ -37,7 +37,7 @@ namespace Cotton.Benchmark.Benchmarks
 
             await using var inputStream = new MemoryStream(_testData);
             var outputStream = await _processor.WriteAsync("test-uid", inputStream);
-            
+
             // Read all compressed data to ensure compression is complete
             await using var resultStream = new MemoryStream();
             await outputStream.CopyToAsync(resultStream, cancellationToken);

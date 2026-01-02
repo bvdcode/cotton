@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
@@ -14,9 +15,11 @@ using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Quartz;
 
 namespace Cotton.Server.Controllers
 {
@@ -24,6 +27,7 @@ namespace Cotton.Server.Controllers
     public class FileController(
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
+        ISchedulerFactory _scheduler,
         ILogger<FileController> _logger,
         StorageLayoutService _layouts) : ControllerBase
     {
@@ -61,7 +65,7 @@ namespace Cotton.Server.Controllers
             }
             string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
                 .OrderBy(x => x.ChunkOrder)
-                .Select(x => Hasher.ToHexStringHash(x.ChunkHash).ToLowerInvariant())];
+                .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
             Stream stream = _storage.GetBlobStream(hashes);
             _logger.LogInformation("File {NodeFileId} downloaded.", nodeFileId);
             return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name);
@@ -125,6 +129,7 @@ namespace Cotton.Server.Controllers
                 newNodeFile.OriginalNodeFileId = request.OriginalNodeFileId.Value;
             }
             await _dbContext.SaveChangesAsync();
+            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             return Ok();
         }
 

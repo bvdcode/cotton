@@ -1,5 +1,4 @@
-﻿using Cotton.Server.Models;
-using Cotton.Storage.Abstractions;
+﻿using Cotton.Storage.Abstractions;
 using EasyExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

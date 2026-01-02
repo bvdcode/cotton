@@ -67,7 +67,7 @@ namespace Cotton.Benchmark.Benchmarks
 
             await using var inputStream = new MemoryStream(_encryptedData);
             var outputStream = await _processor.ReadAsync("test-uid", inputStream);
-            
+
             // Read all decrypted data
             await using var resultStream = new MemoryStream();
             await outputStream.CopyToAsync(resultStream, cancellationToken);
