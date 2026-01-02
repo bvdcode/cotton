@@ -16,7 +16,7 @@ namespace Cotton.Benchmark
     /// </summary>
     internal class Program
     {
-        static async Task<int> Main(string[] args)
+        private static async Task<int> Main(string[] args)
         {
             // Configure dependency injection
             var services = new ServiceCollection();

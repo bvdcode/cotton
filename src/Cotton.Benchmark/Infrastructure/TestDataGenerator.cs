@@ -18,8 +18,8 @@ namespace Cotton.Benchmark.Infrastructure
         {
             var sb = new StringBuilder();
             var random = new Random(42); // Fixed seed for reproducibility
-            
-            string[] patterns = 
+
+            string[] patterns =
             [
                 "INFO: Processing request from user {0} at {1}\n",
                 "DEBUG: Database query executed successfully, returned {0} rows\n",
@@ -31,8 +31,8 @@ namespace Cotton.Benchmark.Infrastructure
             while (sb.Length < sizeBytes)
             {
                 var pattern = patterns[random.Next(patterns.Length)];
-                var message = string.Format(pattern, 
-                    random.Next(1000), 
+                var message = string.Format(pattern,
+                    random.Next(1000),
                     DateTime.Now.AddSeconds(-random.Next(3600)));
                 sb.Append(message);
             }
@@ -58,7 +58,7 @@ namespace Cotton.Benchmark.Infrastructure
         {
             var data = new byte[sizeBytes];
             var random = new Random(42);
-            
+
             // Fill with patterns that have some repetition
             for (int i = 0; i < sizeBytes; i++)
             {
@@ -73,7 +73,7 @@ namespace Cotton.Benchmark.Infrastructure
                     data[i] = (byte)random.Next(256);
                 }
             }
-            
+
             return data;
         }
 
@@ -84,9 +84,9 @@ namespace Cotton.Benchmark.Infrastructure
         {
             var sb = new StringBuilder();
             var random = new Random(42);
-            
+
             sb.Append("[\n");
-            
+
             while (sb.Length < sizeBytes - 100)
             {
                 sb.Append("  {\n");
@@ -97,9 +97,9 @@ namespace Cotton.Benchmark.Infrastructure
                 sb.Append($"    \"active\": {(random.Next(2) == 0 ? "true" : "false")}\n");
                 sb.Append("  },\n");
             }
-            
+
             sb.Append("]\n");
-            
+
             var text = sb.ToString();
             return Encoding.UTF8.GetBytes(text[..Math.Min(text.Length, sizeBytes)]);
         }
