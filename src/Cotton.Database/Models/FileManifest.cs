@@ -1,17 +1,22 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-using System.ComponentModel.DataAnnotations;
+using EasyExtensions.EntityFrameworkCore.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
 {
     [Table("file_manifests")]
-    public class FileManifest
+    [Index(nameof(ProposedContentHash), IsUnique = true)]
+    [Index(nameof(ComputedContentHash), IsUnique = true)]
+    public class FileManifest : BaseEntity<Guid>
     {
-        [Key]
-        [Column("hash")]
-        public byte[] Hash { get; set; } = null!;
+        [Column("computed_content_hash")]
+        public byte[]? ComputedContentHash { get; set; }
+
+        [Column("proposed_content_hash")]
+        public byte[] ProposedContentHash { get; set; } = null!;
 
         [Column("content_type")]
         public string ContentType { get; set; } = null!;

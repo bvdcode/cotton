@@ -102,20 +102,10 @@ namespace Cotton.Server.Controllers
                 .Select(Hasher.FromHexStringHash)
                 .Select(Hasher.ToHexStringHash)];
 
-            // TODO: Get rid of this (or not?)
-            using var blob = _storage.GetBlobStream(normalizedChunkHashes);
-            byte[] computedHash = await Hasher.HashDataAsync(blob);
-            if (!string.IsNullOrWhiteSpace(request.Hash))
-            {
-                byte[] providedHash = Hasher.FromHexStringHash(request.Hash);
-                if (!computedHash.SequenceEqual(providedHash))
-                {
-                    return CottonResult.BadRequest("Provided Hash does not match the computed hash of the file.");
-                }
-            }
-
-            var newFile = await _dbContext.FileManifests.FindAsync(computedHash)
-                ?? await CreateNewFileManifestAsync(chunks, request, computedHash);
+            byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
+            var newFile = await _dbContext.FileManifests
+                .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
+                ?? await CreateNewFileManifestAsync(chunks, request, proposedHash);
 
             NodeFile newNodeFile = new()
             {
@@ -152,13 +142,13 @@ namespace Cotton.Server.Controllers
             return chunks;
         }
 
-        private async Task<FileManifest> CreateNewFileManifestAsync(List<Chunk> chunks, CreateFileRequest request, byte[] computedHash)
+        private async Task<FileManifest> CreateNewFileManifestAsync(List<Chunk> chunks, CreateFileRequest request, byte[] proposedContentHash)
         {
             var newFile = new FileManifest()
             {
                 ContentType = request.ContentType,
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
-                Hash = computedHash,
+                ProposedContentHash = proposedContentHash,
             };
             await _dbContext.FileManifests.AddAsync(newFile);
 
@@ -168,7 +158,7 @@ namespace Cotton.Server.Controllers
                 {
                     ChunkOrder = i,
                     ChunkHash = chunks[i].Hash,
-                    FileManifestHash = computedHash,
+
                 };
                 await _dbContext.FileManifestChunks.AddAsync(fileChunk);
             }

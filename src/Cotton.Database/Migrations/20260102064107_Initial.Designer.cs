@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20251226084044_AddNewServerSettingsFields")]
-    partial class AddNewServerSettingsFields
+    [Migration("20260102064107_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,6 +25,48 @@ namespace Cotton.Database.Migrations
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Cotton.Database.Models.Benchmark", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<TimeSpan>("Elapsed")
+                        .HasColumnType("interval")
+                        .HasColumnName("elapsed");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.Property<string>("Units")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("units");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Value")
+                        .HasColumnType("bigint")
+                        .HasColumnName("value");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("benchmarks");
+                });
 
             modelBuilder.Entity("Cotton.Database.Models.Chunk", b =>
                 {
@@ -98,13 +140,25 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("cipher_chunk_size_bytes");
 
+                    b.Property<int>("ComputionMode")
+                        .HasColumnType("integer")
+                        .HasColumnName("compution_mode");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("EmailMode")
+                        .HasColumnType("integer")
+                        .HasColumnName("email_mode");
+
                     b.Property<int>("EncryptionThreads")
                         .HasColumnType("integer")
                         .HasColumnName("encryption_threads");
+
+                    b.Property<int>("ImportSource")
+                        .HasColumnType("integer")
+                        .HasColumnName("import_source");
 
                     b.Property<Guid>("InstanceId")
                         .HasColumnType("uuid")
@@ -134,6 +188,11 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("s3_secret_access_key_encrypted");
 
+                    b.PrimitiveCollection<int[]>("ServerUsage")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("server_usage");
+
                     b.Property<int>("SessionTimeoutHours")
                         .HasColumnType("integer")
                         .HasColumnName("session_timeout_hours");
@@ -162,6 +221,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("text")
                         .HasColumnName("smtp_username");
 
+                    b.Property<int>("StorageSpaceMode")
+                        .HasColumnType("integer")
+                        .HasColumnName("storage_space_mode");
+
+                    b.Property<int>("StorageType")
+                        .HasColumnType("integer")
+                        .HasColumnName("storage_type");
+
                     b.Property<bool>("TelemetryEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("telemetry_enabled");
@@ -175,6 +242,18 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<string>("WebdavHost")
+                        .HasColumnType("text")
+                        .HasColumnName("webdav_host");
+
+                    b.Property<string>("WebdavPasswordEncrypted")
+                        .HasColumnType("text")
+                        .HasColumnName("webdav_password_encrypted");
+
+                    b.Property<string>("WebdavUsername")
+                        .HasColumnType("text")
+                        .HasColumnName("webdav_username");
+
                     b.HasKey("Id");
 
                     b.ToTable("server_settings");
@@ -182,20 +261,44 @@ namespace Cotton.Database.Migrations
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
                 {
-                    b.Property<byte[]>("Hash")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("ComputedContentHash")
                         .HasColumnType("bytea")
-                        .HasColumnName("hash");
+                        .HasColumnName("computed_content_hash");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("content_type");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<byte[]>("ProposedContentHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("proposed_content_hash");
+
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
 
-                    b.HasKey("Hash");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComputedContentHash")
+                        .IsUnique();
+
+                    b.HasIndex("ProposedContentHash")
+                        .IsUnique();
 
                     b.ToTable("file_manifests");
                 });
@@ -220,10 +323,9 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("FileManifestHash")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("file_manifest_hash");
+                    b.Property<Guid>("FileManifestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_manifest_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -233,7 +335,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("ChunkHash");
 
-                    b.HasIndex("FileManifestHash", "ChunkOrder")
+                    b.HasIndex("FileManifestId", "ChunkOrder")
                         .IsUnique();
 
                     b.ToTable("file_manifest_chunks");
@@ -333,10 +435,9 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("FileManifestId")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("file_manifest_hash");
+                    b.Property<Guid>("FileManifestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_manifest_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -368,8 +469,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.HasIndex("FileManifestId", "NodeId")
-                        .IsUnique();
+                    b.HasIndex("FileManifestId", "NodeId");
 
                     b.HasIndex("NodeId", "NameKey")
                         .IsUnique();
@@ -478,7 +578,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasOne("Cotton.Database.Models.FileManifest", "FileManifest")
                         .WithMany("FileManifestChunks")
-                        .HasForeignKey("FileManifestHash")
+                        .HasForeignKey("FileManifestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
