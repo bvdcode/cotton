@@ -10,7 +10,6 @@ using Cotton.Storage.Abstractions;
 using Cotton.Topology;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
