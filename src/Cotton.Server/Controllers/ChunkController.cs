@@ -7,9 +7,11 @@ using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Processors;
 using Cotton.Topology;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -89,6 +91,7 @@ namespace Cotton.Server.Controllers
                 {
                     Hash = hashBytes,
                     SizeBytes = file.Length,
+                    CompressionAlgorithm = CompressionProcessor.Algorithm
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
             }
