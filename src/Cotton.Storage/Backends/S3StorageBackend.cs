@@ -48,6 +48,31 @@ namespace Cotton.Storage.Backends
             return result.ResponseStream;
         }
 
+        public async Task<bool?> ExistsAsync(string uid)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(uid);
+            IAmazonS3 _s3 = _s3Provider.GetS3Client();
+            string bucket = _s3Provider.GetBucketName();
+            string key = GetS3Key(uid);
+
+            var req = new GetObjectMetadataRequest
+            {
+                Key = key,
+                BucketName = bucket,
+            };
+
+            try
+            {
+                var res = await _s3.GetObjectMetadataAsync(req);
+                bool? result = res.HttpStatusCode == HttpStatusCode.OK;
+                return result;
+            }
+            catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                return false;
+            }
+        }
+
         public async Task WriteAsync(string uid, Stream stream)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
@@ -56,6 +81,12 @@ namespace Cotton.Storage.Backends
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
+
+            bool exists = await ExistsAsync(uid) ?? false;
+            if (exists)
+            {
+                return;
+            }
 
             if (!stream.CanSeek || stream.Position != 0)
             {

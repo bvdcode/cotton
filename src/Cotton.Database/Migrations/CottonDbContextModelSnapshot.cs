@@ -258,20 +258,44 @@ namespace Cotton.Database.Migrations
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
                 {
-                    b.Property<byte[]>("Hash")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("ComputedContentHash")
                         .HasColumnType("bytea")
-                        .HasColumnName("hash");
+                        .HasColumnName("computed_content_hash");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("content_type");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<byte[]>("ProposedContentHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("proposed_content_hash");
+
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
 
-                    b.HasKey("Hash");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComputedContentHash")
+                        .IsUnique();
+
+                    b.HasIndex("ProposedContentHash")
+                        .IsUnique();
 
                     b.ToTable("file_manifests");
                 });
@@ -296,10 +320,9 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("FileManifestHash")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("file_manifest_hash");
+                    b.Property<Guid>("FileManifestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_manifest_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -309,7 +332,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("ChunkHash");
 
-                    b.HasIndex("FileManifestHash", "ChunkOrder")
+                    b.HasIndex("FileManifestId", "ChunkOrder")
                         .IsUnique();
 
                     b.ToTable("file_manifest_chunks");
@@ -409,10 +432,9 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("FileManifestId")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("file_manifest_hash");
+                    b.Property<Guid>("FileManifestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_manifest_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -553,7 +575,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasOne("Cotton.Database.Models.FileManifest", "FileManifest")
                         .WithMany("FileManifestChunks")
-                        .HasForeignKey("FileManifestHash")
+                        .HasForeignKey("FileManifestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
