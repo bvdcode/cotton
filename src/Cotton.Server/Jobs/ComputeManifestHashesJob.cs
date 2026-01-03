@@ -27,7 +27,7 @@ namespace Cotton.Server.Jobs
                 .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
                 using Stream stream = _storage.GetBlobStream(hashes);
                 var computedContentHash = Hasher.HashData(stream);
-                if (!manifest.ComputedContentHash.SequenceEqual(manifest.ProposedContentHash))
+                if (!computedContentHash.SequenceEqual(manifest.ProposedContentHash))
                 {
                     _logger.LogWarning("Hash mismatch for manifest {ManifestId}: computed {ComputedHash}, proposed {ProposedHash}",
                         manifest.Id,
