@@ -12,13 +12,10 @@ namespace Cotton.Storage.Processors
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
         public int Priority => 10000;
 
-        public async Task<Stream> ReadAsync(string uid, Stream stream)
+        public Task<Stream> ReadAsync(string uid, Stream stream)
         {
             var decompressor = new DecompressionStream(stream);
-            var memoryStream = new MemoryStream();
-            await decompressor.CopyToAsync(memoryStream);
-            memoryStream.Position = 0;
-            return memoryStream;
+            return Task.FromResult<Stream>(decompressor);
         }
 
         public async Task<Stream> WriteAsync(string uid, Stream stream)

@@ -73,18 +73,9 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
-            // Copy to MemoryStream to avoid stream seeking issues and ensure full content availability
-            // This prevents timeouts if the network stream is slow or doesn't support seeking properly
-            using var memoryStream = new MemoryStream();
-            using (var stream = file.OpenReadStream())
-            {
-                await stream.CopyToAsync(memoryStream);
-            }
-            memoryStream.Position = 0;
-
-            // Verify hash
-            byte[] computedHash = await Hasher.HashDataAsync(memoryStream);
-            memoryStream.Position = 0; // Reset position for processing
+            using var stream = file.OpenReadStream();
+            byte[] computedHash = await Hasher.HashDataAsync(stream);
+            stream.Seek(default, SeekOrigin.Begin);
 
             if (!computedHash.SequenceEqual(hashBytes))
             {
@@ -97,7 +88,7 @@ namespace Cotton.Server.Controllers
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)
             {
-                await _storage.WriteAsync(storageKey, memoryStream);
+                await _storage.WriteAsync(storageKey, stream);
                 chunk = new Chunk
                 {
                     Hash = hashBytes,
