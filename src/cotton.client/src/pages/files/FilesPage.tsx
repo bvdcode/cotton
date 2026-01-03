@@ -24,6 +24,7 @@ import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
 import { nodesApi, type NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { uploadManager } from "../../shared/upload/UploadManager";
+import { filesApi } from "../../shared/api/filesApi";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
 import { resolveUploadConflicts } from "./utils/uploadConflicts";
 
@@ -193,6 +194,15 @@ export const FilesPage: React.FC = () => {
       }
     };
     input.click();
+  };
+
+  const handleDownloadFile = async (nodeFileId: string) => {
+    try {
+      const downloadLink = await filesApi.getDownloadLink(nodeFileId);
+      window.open(downloadLink, '_blank');
+    } catch (error) {
+      console.error('Failed to download file:', error);
+    }
   };
 
   // Recursively collect all files from a directory tree
@@ -532,6 +542,7 @@ export const FilesPage: React.FC = () => {
                   icon={<InsertDriveFile sx={{ fontSize: 56 }} />}
                   title={tile.file.name}
                   subtitle={formatBytes(tile.file.sizeBytes)}
+                  onClick={() => handleDownloadFile(tile.file.id)}
                 />
               );
             })}
