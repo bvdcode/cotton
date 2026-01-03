@@ -17,6 +17,7 @@ namespace Cotton.Database
         public DbSet<Benchmark> Benchmarks => Set<Benchmark>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<FileManifest> FileManifests => Set<FileManifest>();
+        public DbSet<DownloadToken> DownloadTokens => Set<DownloadToken>();
         public DbSet<ChunkOwnership> ChunkOwnerships => Set<ChunkOwnership>();
         public DbSet<FileManifestChunk> FileManifestChunks => Set<FileManifestChunk>();
         public DbSet<CottonServerSettings> ServerSettings => Set<CottonServerSettings>();
