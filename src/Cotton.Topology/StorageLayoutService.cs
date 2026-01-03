@@ -21,7 +21,7 @@ namespace Cotton.Topology
 
         public async Task<Node> GetOrCreateRootNodeAsync(Guid layoutId, Guid ownerId, NodeType nodeType)
         {
-            _layoutSemaphore.Wait();
+            await _layoutSemaphore.WaitAsync();
             try
             {
                 var currentNode = await _dbContext.Nodes
@@ -56,7 +56,7 @@ namespace Cotton.Topology
 
         public async Task<Layout> GetOrCreateLatestUserLayoutAsync(Guid ownerId)
         {
-            _layoutSemaphore.Wait();
+            await _layoutSemaphore.WaitAsync();
             try
             {
                 var found = await _dbContext.UserLayouts
