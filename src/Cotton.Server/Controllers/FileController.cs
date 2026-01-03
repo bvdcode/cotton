@@ -15,6 +15,7 @@ using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
+using EasyExtensions.Helpers;
 using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -53,6 +54,46 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
+        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId, [FromQuery] string token)
+        {
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
+            if (nodeFile == null)
+            {
+                return CottonResult.NotFound("Node file not found");
+            }
+            var downloadToken = await _dbContext.DownloadTokens
+                .FirstOrDefaultAsync(x => x.Token == token && x.FileManifestId == nodeFile.FileManifestId);
+            if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
+            {
+                return CottonResult.NotFound("Node file not found");
+            }
+            for (int i = 0; i < nodeFile.FileManifest.FileManifestChunks.Count; i++)
+            {
+                if (!nodeFile.FileManifest.FileManifestChunks.Any(x => x.ChunkOrder == i))
+                {
+                    return CottonResult.InternalError("File manifest is corrupted: missing chunk order " + i);
+                }
+            }
+
+            _dbContext.DownloadTokens.Remove(downloadToken);
+            await _dbContext.SaveChangesAsync();
+
+            string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
+                .OrderBy(x => x.ChunkOrder)
+                .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
+            Stream stream = _storage.GetBlobStream(hashes);
+            Response.ContentLength = nodeFile.FileManifest.SizeBytes;
+            Response.Headers.ETag = $"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}";
+            Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
+            Response.Headers.CacheControl = "private, no-store";
+            return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name, enableRangeProcessing: false);
+        }
+
+        [Authorize]
+        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
         public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId)
         {
             var nodeFile = await _dbContext.NodeFiles
@@ -63,12 +104,17 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Node file not found");
             }
-            string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
-                .OrderBy(x => x.ChunkOrder)
-                .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
-            Stream stream = _storage.GetBlobStream(hashes);
-            _logger.LogInformation("File {NodeFileId} downloaded.", nodeFileId);
-            return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name);
+            DownloadToken token = new()
+            {
+                CreatedByUserId = User.GetUserId(),
+                FileManifestId = nodeFile.FileManifestId,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                Token = StringHelpers.CreateRandomString(128),
+            };
+            await _dbContext.DownloadTokens.AddAsync(token);
+            await _dbContext.SaveChangesAsync();
+            string link = Routes.Files + $"/{nodeFileId}/download?token={token.Token}";
+            return Ok(link);
         }
 
         [Authorize]
