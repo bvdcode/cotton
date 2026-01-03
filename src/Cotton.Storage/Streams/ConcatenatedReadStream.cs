@@ -37,6 +37,19 @@ namespace Cotton.Storage.Streams
             return true;
         }
 
+        private async ValueTask<bool> EnsureCurrentAsync()
+        {
+            while (_current == null)
+            {
+                if (!_hashes.MoveNext())
+                {
+                    return false;
+                }
+                _current = await storage.ReadAsync(_hashes.Current).ConfigureAwait(false);
+            }
+            return true;
+        }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             if (!EnsureCurrent()) return 0;
@@ -52,7 +65,7 @@ namespace Cotton.Storage.Streams
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (!EnsureCurrent()) return 0;
+            if (!await EnsureCurrentAsync().ConfigureAwait(false)) return 0;
             int read = await _current!.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
             if (read == 0)
             {

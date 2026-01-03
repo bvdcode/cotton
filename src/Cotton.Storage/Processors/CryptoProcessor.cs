@@ -12,20 +12,12 @@ namespace Cotton.Storage.Processors
 
         public async Task<Stream> ReadAsync(string uid, Stream stream)
         {
-            var decryptedStream = await cipher.DecryptAsync(stream);
-            var buffer = new MemoryStream();
-            await decryptedStream.CopyToAsync(buffer);
-            buffer.Position = 0;
-            return buffer;
+            return await cipher.DecryptAsync(stream);
         }
 
         public async Task<Stream> WriteAsync(string uid, Stream stream)
         {
-            var encryptedStream = await cipher.EncryptAsync(stream);
-            var buffer = new MemoryStream();
-            await encryptedStream.CopyToAsync(buffer);
-            buffer.Position = 0;
-            return buffer;
+            return await cipher.EncryptAsync(stream);
         }
     }
 }
