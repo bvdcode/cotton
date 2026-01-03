@@ -8,6 +8,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Providers
@@ -16,11 +17,16 @@ namespace Cotton.Server.Providers
         IStreamCipher _crypto,
         CottonDbContext _dbContext)
     {
+        private static CottonServerSettings? _cache;
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
         public CottonServerSettings GetServerSettings()
         {
+            if (_cache != null)
+            {
+                return _cache;
+            }
             var settings = _dbContext.ServerSettings
                 .AsNoTracking()
                 .OrderByDescending(s => s.CreatedAt)
@@ -29,7 +35,7 @@ namespace Cotton.Server.Providers
             {
                 return settings;
             }
-            return new()
+            _cache = new()
             {
                 AllowCrossUserDeduplication = false,
                 AllowGlobalIndexing = false,
@@ -40,6 +46,7 @@ namespace Cotton.Server.Providers
                 TelemetryEnabled = false,
                 Timezone = "America/Los_Angeles"
             };
+            return _cache.Adapt<CottonServerSettings>();
         }
 
         public Task<bool> IsServerInitializedAsync()
@@ -204,6 +211,7 @@ namespace Cotton.Server.Providers
             };
             await _dbContext.ServerSettings.AddAsync(newSettings);
             await _dbContext.SaveChangesAsync();
+            _cache = null;
         }
 
         private string? TryEncrypt(string? password)
