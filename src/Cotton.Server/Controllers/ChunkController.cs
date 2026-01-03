@@ -17,8 +17,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
-    public class ChunkController(CottonDbContext _dbContext, SettingsProvider _settings,
-        IStoragePipeline _storage, ILogger<ChunkController> _logger, StorageLayoutService _layouts) : ControllerBase
+    public class ChunkController(
+        PerfTracker _perf,
+        CottonDbContext _dbContext,
+        SettingsProvider _settings,
+        IStoragePipeline _storage,
+        ILogger<ChunkController> _logger,
+        StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpGet(Routes.Chunks + "/{hash}/exists")]
@@ -110,6 +115,7 @@ namespace Cotton.Server.Controllers
             }
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes", storageKey, file.Length);
+            _perf.OnChunkCreated();
             return Created();
         }
     }

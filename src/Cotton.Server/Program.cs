@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Server.Extensions;
 using Cotton.Server.Mapping;
 using Cotton.Server.Providers;
+using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
@@ -34,6 +35,7 @@ namespace Cotton.Server
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services
                 .AddQuartzJobs()
+                .AddSingleton<PerfTracker>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()

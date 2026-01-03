@@ -10,12 +10,18 @@ namespace Cotton.Server.Jobs
 {
     [JobTrigger(hours: 1)]
     public class ComputeManifestHashesJob(
+        PerfTracker _perf,
         IStoragePipeline _storage,
         ILogger<ComputeManifestHashesJob> _logger,
         CottonDbContext _dbContext) : IJob
     {
         public async Task Execute(IJobExecutionContext context)
         {
+            if (_perf.IsUploading())
+            {
+                _logger.LogInformation("ComputeManifestHashesJob skipped: upload in progress.");
+                return;
+            }
             var unprocessedManifests = _dbContext.FileManifests
                 .Include(fm => fm.FileManifestChunks)
                 .Where(fm => fm.ComputedContentHash == null)
