@@ -52,8 +52,38 @@ namespace Cotton.Server.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
-        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId, [FromQuery] string token)
+        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId, [FromQuery] string? token)
+        {
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                return await DownloadFileInternal(nodeFileId, token);
+            }
+
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
+            if (nodeFile == null)
+            {
+                return CottonResult.NotFound("Node file not found");
+            }
+
+            DownloadToken newToken = new()
+            {
+                CreatedByUserId = User.GetUserId(),
+                FileManifestId = nodeFile.FileManifestId,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                Token = StringHelpers.CreateRandomString(128),
+            };
+            await _dbContext.DownloadTokens.AddAsync(newToken);
+            await _dbContext.SaveChangesAsync();
+            string link = Routes.Files + $"/{nodeFileId}/download?token={newToken.Token}";
+            return Ok(link);
+        }
+
+        private async Task<IActionResult> DownloadFileInternal([FromRoute] Guid nodeFileId, [FromQuery] string token)
         {
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
@@ -89,31 +119,6 @@ namespace Cotton.Server.Controllers
             Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
             Response.Headers.CacheControl = "private, no-store";
             return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name, enableRangeProcessing: false);
-        }
-
-        [Authorize]
-        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
-        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId)
-        {
-            var nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null)
-            {
-                return CottonResult.NotFound("Node file not found");
-            }
-            DownloadToken token = new()
-            {
-                CreatedByUserId = User.GetUserId(),
-                FileManifestId = nodeFile.FileManifestId,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(15),
-                Token = StringHelpers.CreateRandomString(128),
-            };
-            await _dbContext.DownloadTokens.AddAsync(token);
-            await _dbContext.SaveChangesAsync();
-            string link = Routes.Files + $"/{nodeFileId}/download?token={token.Token}";
-            return Ok(link);
         }
 
         [Authorize]
