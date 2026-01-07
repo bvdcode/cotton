@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Pipelines;
 using System.Collections.Concurrent;
 
 namespace Cotton.Server.IntegrationTests.Helpers;
@@ -14,7 +15,7 @@ public sealed class InMemoryStorage : IStoragePipeline
 {
     private readonly ConcurrentDictionary<string, byte[]> _blobs = new(StringComparer.OrdinalIgnoreCase);
 
-    public Task<Stream> ReadAsync(string uid)
+    public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
     {
         ArgumentNullException.ThrowIfNull(uid);
         MemoryStream ms = new();
@@ -30,7 +31,7 @@ public sealed class InMemoryStorage : IStoragePipeline
         return Task.FromResult(result: (Stream)ms);
     }
 
-    public async Task WriteAsync(string uid, Stream stream)
+    public async Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(uid);
         ArgumentNullException.ThrowIfNull(stream);

@@ -13,7 +13,7 @@ namespace Cotton.Storage.Pipelines
         private readonly FileStoragePipeline _innerStorage = ActivatorUtilities.CreateInstance<FileStoragePipeline>(_serviceProvider);
         private readonly ILogger<CachedStoragePipeline> _logger = _serviceProvider.GetRequiredService<ILogger<CachedStoragePipeline>>();
 
-        public async Task<Stream> ReadAsync(string uid)
+        public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var cached = _cache.TryGetValue(uid, out var data);
             if (cached)
@@ -22,8 +22,8 @@ namespace Cotton.Storage.Pipelines
                     uid, _cache.Sum(kvp => kvp.Value.Length), _cache.Count);
                 return new MemoryStream(data!, writable: false);
             }
-            var stream = await _innerStorage.ReadAsync(uid);
-            if (stream.Length > MaxItemSizeBytes)
+            var stream = await _innerStorage.ReadAsync(uid, context);
+            if (context?.FileSizeBytes > MaxItemSizeBytes)
             {
                 _logger.LogDebug("Item size {ItemSize} bytes exceeds max cache item size {MaxItemSize} bytes for UID {UID}, not caching", stream.Length, MaxItemSizeBytes, uid);
                 return stream;
@@ -47,10 +47,10 @@ namespace Cotton.Storage.Pipelines
             return new MemoryStream(data, writable: false);
         }
 
-        public Task WriteAsync(string uid, Stream stream)
+        public Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             // Bypass cache for writes
-            return _innerStorage.WriteAsync(uid, stream);
+            return _innerStorage.WriteAsync(uid, stream, context);
         }
     }
 }
