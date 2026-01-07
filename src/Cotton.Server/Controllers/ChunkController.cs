@@ -11,7 +11,6 @@ using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology;
 using EasyExtensions;
-using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
