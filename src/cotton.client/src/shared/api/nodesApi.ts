@@ -6,6 +6,7 @@ export interface NodeFileManifestDto extends Omit<BaseDto, "createdAt" | "update
   name: string;
   contentType: string;
   sizeBytes: number;
+  previewImageHash?: string | null;
 }
 
 export interface NodeContentDto extends Omit<BaseDto, "createdAt" | "updatedAt"> {
