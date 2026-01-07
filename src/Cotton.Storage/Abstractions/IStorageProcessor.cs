@@ -1,6 +1,8 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Storage.Pipelines;
+
 namespace Cotton.Storage.Abstractions
 {
     public interface IStorageProcessor
@@ -19,7 +21,7 @@ namespace Cotton.Storage.Abstractions
         /// <param name="stream">The stream to which the data will be written. Must be writable and not null.</param>
         /// <returns>A task that represents the asynchronous read operation. The task result is the stream containing the read
         /// data.</returns>
-        Task<Stream> ReadAsync(string uid, Stream stream);
+        Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null);
 
         /// <summary>
         /// Asynchronously writes the contents of the specified stream to the resource identified by the given unique
@@ -30,6 +32,6 @@ namespace Cotton.Storage.Abstractions
         /// written. Cannot be null.</param>
         /// <returns>A task that represents the asynchronous write operation. The task result contains a stream referencing the
         /// written resource.</returns>
-        Task<Stream> WriteAsync(string uid, Stream stream);
+        Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null);
     }
 }

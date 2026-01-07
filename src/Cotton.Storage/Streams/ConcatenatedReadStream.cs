@@ -1,12 +1,15 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Pipelines;
 
 namespace Cotton.Storage.Streams
 {
-    internal class ConcatenatedReadStream(IStoragePipeline storage, IEnumerable<string> hashes) : Stream
+    internal class ConcatenatedReadStream(
+        IStoragePipeline storage,
+        IEnumerable<string> hashes,
+        PipelineContext? pipelineContext = null) : Stream
     {
         private readonly IEnumerator<string> _hashes = hashes.GetEnumerator();
         private Stream? _current;
@@ -32,7 +35,7 @@ namespace Cotton.Storage.Streams
             while (_current == null)
             {
                 if (!_hashes.MoveNext()) return false;
-                _current = storage.ReadAsync(_hashes.Current).GetAwaiter().GetResult();
+                _current = storage.ReadAsync(_hashes.Current, pipelineContext).GetAwaiter().GetResult();
             }
             return true;
         }
@@ -45,7 +48,7 @@ namespace Cotton.Storage.Streams
                 {
                     return false;
                 }
-                _current = await storage.ReadAsync(_hashes.Current).ConfigureAwait(false);
+                _current = await storage.ReadAsync(_hashes.Current, pipelineContext).ConfigureAwait(false);
             }
             return true;
         }

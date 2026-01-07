@@ -13,7 +13,9 @@ namespace Cotton.Server.Controllers
         [HttpGet("/api/v1/preview/{previewId:guid}")]
         public async Task<IActionResult> GetFilePreview([FromRoute] Guid previewId)
         {
-            Guid userId = User.GetUserId();
+            _ = previewId;
+            _ = _storage;
+            //Guid userId = User.GetUserId();
             //var nodeFile = await _dbContext.NodeFiles
             //    .FirstOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId);
             //if (nodeFile == null)
