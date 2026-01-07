@@ -1,11 +1,13 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Storage.Pipelines;
+
 namespace Cotton.Storage.Abstractions
 {
     public interface IStoragePipeline
     {
-        Task<Stream> ReadAsync(string uid);
-        Task WriteAsync(string uid, Stream stream);
+        Task<Stream> ReadAsync(string uid, PipelineContext? context);
+        Task WriteAsync(string uid, Stream stream, PipelineContext? context);
     }
 }

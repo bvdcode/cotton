@@ -2,6 +2,7 @@
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
+using Cotton.Storage.Pipelines;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -29,9 +30,13 @@ namespace Cotton.Server.Jobs
             foreach (var manifest in unprocessedManifests)
             {
                 string[] hashes = [.. manifest.FileManifestChunks
-                .OrderBy(x => x.ChunkOrder)
-                .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
-                using Stream stream = _storage.GetBlobStream(hashes);
+                    .OrderBy(x => x.ChunkOrder)
+                    .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
+                PipelineContext pipelineContext = new()
+                {
+                    FileSizeBytes = manifest.SizeBytes
+                };
+                using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
                 var computedContentHash = Hasher.HashData(stream);
                 if (computedContentHash.SequenceEqual(manifest.ProposedContentHash))
                 {

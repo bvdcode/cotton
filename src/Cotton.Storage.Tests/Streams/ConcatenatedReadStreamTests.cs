@@ -3,6 +3,7 @@
 
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
+using Cotton.Storage.Pipelines;
 using System.Text;
 
 namespace Cotton.Storage.Tests.Streams
@@ -19,7 +20,7 @@ namespace Cotton.Storage.Tests.Streams
                 _data[uid] = data;
             }
 
-            public Task<Stream> ReadAsync(string uid)
+            public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
             {
                 if (!_data.TryGetValue(uid, out var data))
                 {
@@ -28,7 +29,7 @@ namespace Cotton.Storage.Tests.Streams
                 return Task.FromResult<Stream>(new MemoryStream(data));
             }
 
-            public Task WriteAsync(string uid, Stream stream)
+            public Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
             {
                 throw new NotImplementedException();
             }

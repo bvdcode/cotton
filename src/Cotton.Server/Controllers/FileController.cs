@@ -10,6 +10,7 @@ using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
+using Cotton.Storage.Pipelines;
 using Cotton.Topology;
 using Cotton.Validators;
 using EasyExtensions;
@@ -113,7 +114,11 @@ namespace Cotton.Server.Controllers
             string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
                 .OrderBy(x => x.ChunkOrder)
                 .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
-            Stream stream = _storage.GetBlobStream(hashes);
+            PipelineContext context = new()
+            {
+                FileSizeBytes = nodeFile.FileManifest.SizeBytes,
+            };
+            Stream stream = _storage.GetBlobStream(hashes, context);
             Response.ContentLength = nodeFile.FileManifest.SizeBytes;
             Response.Headers.ETag = $"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}";
             Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");

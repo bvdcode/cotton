@@ -7,6 +7,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology;
 using EasyExtensions;
@@ -88,7 +89,7 @@ namespace Cotton.Server.Controllers
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)
             {
-                await _storage.WriteAsync(storageKey, stream);
+                await _storage.WriteAsync(storageKey, stream, new PipelineContext());
                 chunk = new Chunk
                 {
                     Hash = hashBytes,

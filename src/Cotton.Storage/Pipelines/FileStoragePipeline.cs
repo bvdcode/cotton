@@ -11,14 +11,14 @@ namespace Cotton.Storage.Pipelines
         IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
-        public async Task<Stream> ReadAsync(string uid)
+        public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var backend = _backendProvider.GetBackend();
             var orderedProcessors = _processors.OrderBy(p => p.Priority);
             Stream currentStream = await backend.ReadAsync(uid);
             foreach (var processor in orderedProcessors)
             {
-                currentStream = await processor.ReadAsync(uid, currentStream);
+                currentStream = await processor.ReadAsync(uid, currentStream, context);
                 _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
                 if (currentStream == Stream.Null)
                 {
@@ -32,7 +32,7 @@ namespace Cotton.Storage.Pipelines
             return currentStream;
         }
 
-        public async Task WriteAsync(string uid, Stream stream)
+        public async Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             var backend = _backendProvider.GetBackend();
             var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
@@ -43,7 +43,7 @@ namespace Cotton.Storage.Pipelines
                 {
                     throw new InvalidOperationException($"Processor BEFORE {processor} returned Stream.Null for UID {uid} but it should pass a valid stream to the next processor.");
                 }
-                currentStream = await processor.WriteAsync(uid, currentStream);
+                currentStream = await processor.WriteAsync(uid, currentStream, context);
                 _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
             }
             if (currentStream == Stream.Null)

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;
 
 namespace Cotton.Storage.Processors
@@ -10,12 +11,12 @@ namespace Cotton.Storage.Processors
     {
         public int Priority => 1000;
 
-        public Task<Stream> ReadAsync(string uid, Stream stream)
+        public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             return cipher.DecryptAsync(stream);
         }
 
-        public Task<Stream> WriteAsync(string uid, Stream stream)
+        public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
             return cipher.EncryptAsync(stream);
         }

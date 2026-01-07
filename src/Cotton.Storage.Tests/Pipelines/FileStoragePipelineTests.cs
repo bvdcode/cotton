@@ -48,7 +48,7 @@ namespace Cotton.Storage.Tests.Pipelines
         {
             public int Priority => priority;
 
-            public async Task<Stream> ReadAsync(string uid, Stream stream)
+            public async Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
             {
                 var ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
@@ -63,7 +63,7 @@ namespace Cotton.Storage.Tests.Pipelines
                 return new MemoryStream(data) { Position = 0 };
             }
 
-            public async Task<Stream> WriteAsync(string uid, Stream stream)
+            public async Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
             {
                 var ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
