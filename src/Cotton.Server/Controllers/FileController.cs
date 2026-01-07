@@ -185,6 +185,7 @@ namespace Cotton.Server.Controllers
             }
             await _dbContext.SaveChangesAsync();
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
+            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             return Ok();
         }
 
