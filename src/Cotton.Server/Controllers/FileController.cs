@@ -53,14 +53,9 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
-        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId, [FromQuery] string? token)
+        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download-link")]
+        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId)
         {
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                return await DownloadFileInternal(nodeFileId, token);
-            }
-
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
@@ -83,8 +78,13 @@ namespace Cotton.Server.Controllers
             return Ok(link);
         }
 
-        private async Task<IActionResult> DownloadFileInternal([FromRoute] Guid nodeFileId, [FromQuery] string token)
+        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
+        public async Task<IActionResult> DownloadFileInternal([FromRoute] Guid nodeFileId, [FromQuery] string token)
         {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return CottonResult.BadRequest("Download token is required");
+            }
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
