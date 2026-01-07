@@ -41,11 +41,12 @@ namespace Cotton.Server.Controllers
             }
             Guid userId = User.GetUserId();
             var chunkOwnership = await _dbContext.ChunkOwnerships
-                .FirstOrDefaultAsync(co => co.ChunkHash == hashBytes
-                    && co.OwnerId == userId);
+                .FirstOrDefaultAsync(co =>
+                    co.ChunkHash == hashBytes &&
+                    co.OwnerId == userId);
             if (chunkOwnership == null)
             {
-                return this.ApiNotFound("Chunk not found or access denied.");
+                return Ok(false);
             }
             return Ok(true);
         }
