@@ -11,5 +11,6 @@ namespace Cotton.Server.Models.Dto
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
         public long SizeBytes { get; set; }
+        public string? PreviewImageHash { get; set; }
     }
 }
