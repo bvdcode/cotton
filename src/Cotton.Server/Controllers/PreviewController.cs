@@ -10,18 +10,10 @@ namespace Cotton.Server.Controllers
     public class PreviewController(IStoragePipeline _storage) : ControllerBase
     {
         [Authorize]
-        [HttpGet("/api/v1/preview/{previewId:guid}")]
-        public async Task<IActionResult> GetFilePreview([FromRoute] Guid previewId)
+        [HttpGet("/api/v1/preview/{previewImageHash}")]
+        public async Task<IActionResult> GetFilePreview([FromRoute] string previewImageHash)
         {
-            _ = previewId;
-            _ = _storage;
-            //Guid userId = User.GetUserId();
-            //var nodeFile = await _dbContext.NodeFiles
-            //    .FirstOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId);
-            //if (nodeFile == null)
-            //{
-            //    return CottonResult.NotFound("Node file not found");
-            //}
+            bool exists = await _storage.ExistsAsync(previewImageHash);
             return Ok();
         }
     }

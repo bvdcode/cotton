@@ -20,6 +20,11 @@ namespace Cotton.Storage.Tests.Streams
                 _data[uid] = data;
             }
 
+            public Task<bool> ExistsAsync(string uid)
+            {
+                return Task.FromResult(_data.ContainsKey(uid));
+            }
+
             public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
             {
                 if (!_data.TryGetValue(uid, out var data))
