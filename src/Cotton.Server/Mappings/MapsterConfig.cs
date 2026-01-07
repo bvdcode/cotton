@@ -6,7 +6,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Mapster;
 
-namespace Cotton.Server.Mapping
+namespace Cotton.Server.Mappings
 {
     public static class MapsterConfig
     {
