@@ -24,6 +24,9 @@ namespace Cotton.Database.Models
         [Column("size_bytes")]
         public long SizeBytes { get; set; }
 
+        [Column("preview_image_hash")]
+        public byte[]? PreviewImageHash { get; set; }
+
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
     }
 }

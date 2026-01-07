@@ -11,6 +11,11 @@ namespace Cotton.Storage.Pipelines
         IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
+        public Task<bool> ExistsAsync(string uid)
+        {
+            return _backendProvider.GetBackend().ExistsAsync(uid);
+        }
+
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var backend = _backendProvider.GetBackend();

@@ -114,6 +114,11 @@ namespace Cotton.Benchmark.Benchmarks
                 return Task.FromResult(_storage.Remove(uid));
             }
 
+            public Task<bool> ExistsAsync(string uid)
+            {
+                return Task.FromResult(_storage.ContainsKey(uid));
+            }
+
             public Task<Stream> ReadAsync(string uid)
             {
                 if (!_storage.TryGetValue(uid, out var data))

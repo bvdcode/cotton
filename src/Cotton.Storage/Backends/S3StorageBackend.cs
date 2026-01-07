@@ -48,7 +48,7 @@ namespace Cotton.Storage.Backends
             return result.ResponseStream;
         }
 
-        public async Task<bool?> ExistsAsync(string uid)
+        public async Task<bool> ExistsAsync(string uid)
         {
             ArgumentException.ThrowIfNullOrEmpty(uid);
             IAmazonS3 _s3 = _s3Provider.GetS3Client();
@@ -64,8 +64,7 @@ namespace Cotton.Storage.Backends
             try
             {
                 var res = await _s3.GetObjectMetadataAsync(req);
-                bool? result = res.HttpStatusCode == HttpStatusCode.OK;
-                return result;
+                return res.HttpStatusCode == HttpStatusCode.OK;
             }
             catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
             {
@@ -82,7 +81,7 @@ namespace Cotton.Storage.Backends
             string bucket = _s3Provider.GetBucketName();
             string key = GetS3Key(uid);
 
-            bool exists = await ExistsAsync(uid) ?? false;
+            bool exists = await ExistsAsync(uid);
             if (exists)
             {
                 return;

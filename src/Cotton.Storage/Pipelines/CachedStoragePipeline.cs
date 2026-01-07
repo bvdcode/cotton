@@ -13,6 +13,11 @@ namespace Cotton.Storage.Pipelines
         private readonly FileStoragePipeline _innerStorage = ActivatorUtilities.CreateInstance<FileStoragePipeline>(_serviceProvider);
         private readonly ILogger<CachedStoragePipeline> _logger = _serviceProvider.GetRequiredService<ILogger<CachedStoragePipeline>>();
 
+        public Task<bool> ExistsAsync(string uid)
+        {
+            return _innerStorage.ExistsAsync(uid);
+        }
+
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var cached = _cache.TryGetValue(uid, out var data);

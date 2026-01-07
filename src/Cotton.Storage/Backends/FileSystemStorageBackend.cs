@@ -134,5 +134,13 @@ namespace Cotton.Storage.Backends
                 throw;
             }
         }
+
+        public Task<bool> ExistsAsync(string uid)
+        {
+            var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
+            string dirPath = GetFolderByUid(uid);
+            string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
+            return Task.FromResult(File.Exists(filePath));
+        }
     }
 }
