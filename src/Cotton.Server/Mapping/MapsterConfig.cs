@@ -5,7 +5,6 @@ using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Mapster;
-using System.Linq;
 
 namespace Cotton.Server.Mapping
 {
