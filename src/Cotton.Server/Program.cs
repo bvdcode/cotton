@@ -4,7 +4,7 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
 using Cotton.Server.Extensions;
-using Cotton.Server.Mapping;
+using Cotton.Server.Mappings;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Shared;
