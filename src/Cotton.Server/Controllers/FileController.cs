@@ -22,6 +22,7 @@ using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
 using Quartz;
 
 namespace Cotton.Server.Controllers
@@ -89,7 +90,7 @@ namespace Cotton.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(token))
             {
-                return CottonResult.BadRequest("Download token is required");
+                return CottonResult.NotFound("File not found");
             }
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
@@ -97,20 +98,13 @@ namespace Cotton.Server.Controllers
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
             if (nodeFile == null)
             {
-                return CottonResult.NotFound("Node file not found");
+                return CottonResult.NotFound("File not found");
             }
             var downloadToken = await _dbContext.DownloadTokens
                 .FirstOrDefaultAsync(x => x.Token == token && x.FileManifestId == nodeFile.FileManifestId);
             if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
             {
-                return CottonResult.NotFound("Node file not found");
-            }
-            for (int i = 0; i < nodeFile.FileManifest.FileManifestChunks.Count; i++)
-            {
-                if (!nodeFile.FileManifest.FileManifestChunks.Any(x => x.ChunkOrder == i))
-                {
-                    return CottonResult.InternalError("File manifest is corrupted: missing chunk order " + i);
-                }
+                return CottonResult.NotFound("File not found");
             }
 
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
@@ -119,21 +113,20 @@ namespace Cotton.Server.Controllers
                 FileSizeBytes = nodeFile.FileManifest.SizeBytes,
             };
             Stream stream = _storage.GetBlobStream(uids, context);
-            Response.ContentLength = nodeFile.FileManifest.SizeBytes;
-            Response.Headers.ETag = $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"";
-            Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
             Response.Headers.CacheControl = "private, no-store";
-            Response.Headers.ContentDisposition = $"attachment; filename*=UTF-8''{Uri.EscapeDataString(nodeFile.Name)}";
             HttpContext.Response.OnCompleted(() =>
             {
                 _dbContext.DownloadTokens.Remove(downloadToken);
                 return _dbContext.SaveChangesAsync();
             });
-            await using (stream)
-            {
-                await stream.CopyToAsync(Response.Body, HttpContext.RequestAborted);
-            }
-            return new EmptyResult();
+            var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+            return File(
+                stream,
+                nodeFile.FileManifest.ContentType,
+                nodeFile.Name,
+                lastModified: new(nodeFile.CreatedAt),
+                entityTag: entityTag,
+                enableRangeProcessing: true);
         }
 
         [Authorize]
