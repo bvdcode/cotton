@@ -3,17 +3,17 @@ import type { ReactNode } from "react";
 
 /**
  * Get the preview image source or icon for a file
- * @param previewImageHash - The preview image hash from the server
+ * @param filePreviewId - The preview image id from the server
  * @param fileName - The file name to determine the extension
  * @returns Either a URL string for preview images or a Material-UI icon component
  */
 export function getFilePreview(
-  previewImageHash: string | null | undefined,
+  filePreviewId: string | null | undefined,
   fileName: string,
 ): string | ReactNode {
   // If preview hash is available, use the API endpoint
-  if (previewImageHash) {
-    return `/api/v1/preview/${previewImageHash}.webp`;
+  if (filePreviewId) {
+    return `/api/v1/preview/${filePreviewId}.webp`;
   }
 
   // Fallback to icon based on file extension
