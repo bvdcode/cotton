@@ -16,6 +16,7 @@ namespace Cotton.Storage.Streams
         private Stream? _current;
         private int _currentChunkIndex = -1;
         private long _position;
+        private long _currentChunkPosition;
 
         public override bool CanRead => true;
         public override bool CanSeek => _canSeek;
@@ -57,45 +58,115 @@ namespace Cotton.Storage.Streams
             return (_hashes.Count, 0);
         }
 
-        private bool EnsureCurrentChunk(int targetChunkIndex)
+        private bool EnsureCurrentChunk(int targetChunkIndex, long requiredOffset)
         {
             if (targetChunkIndex >= _hashes.Count)
             {
                 return false;
             }
 
-            if (_currentChunkIndex == targetChunkIndex && _current != null)
+            if (_currentChunkIndex != targetChunkIndex)
             {
-                return true;
+                _current?.Dispose();
+                _current = null;
+                _currentChunkIndex = targetChunkIndex;
+                _currentChunkPosition = 0;
+                _current = storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult();
             }
 
-            _current?.Dispose();
-            _current = null;
-            _currentChunkIndex = targetChunkIndex;
-            _current = storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult();
+            if (_currentChunkPosition < requiredOffset)
+            {
+                long toSkip = requiredOffset - _currentChunkPosition;
+                SkipBytes(_current, toSkip);
+                _currentChunkPosition = requiredOffset;
+            }
+            else if (_currentChunkPosition > requiredOffset)
+            {
+                _current?.Dispose();
+                _current = null;
+                _currentChunkPosition = 0;
+                _current = storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult();
+                if (requiredOffset > 0)
+                {
+                    SkipBytes(_current, requiredOffset);
+                    _currentChunkPosition = requiredOffset;
+                }
+            }
+
             return true;
         }
 
-        private async ValueTask<bool> EnsureCurrentChunkAsync(int targetChunkIndex)
+        private async ValueTask<bool> EnsureCurrentChunkAsync(int targetChunkIndex, long requiredOffset)
         {
             if (targetChunkIndex >= _hashes.Count)
             {
                 return false;
             }
 
-            if (_currentChunkIndex == targetChunkIndex && _current != null)
+            if (_currentChunkIndex != targetChunkIndex)
             {
-                return true;
+                if (_current != null)
+                {
+                    await _current.DisposeAsync().ConfigureAwait(false);
+                }
+                _current = null;
+                _currentChunkIndex = targetChunkIndex;
+                _currentChunkPosition = 0;
+                _current = await storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false);
             }
 
-            if (_current != null)
+            if (_currentChunkPosition < requiredOffset)
             {
-                await _current.DisposeAsync().ConfigureAwait(false);
+                long toSkip = requiredOffset - _currentChunkPosition;
+                await SkipBytesAsync(_current!, toSkip).ConfigureAwait(false);
+                _currentChunkPosition = requiredOffset;
             }
-            _current = null;
-            _currentChunkIndex = targetChunkIndex;
-            _current = await storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false);
+            else if (_currentChunkPosition > requiredOffset)
+            {
+                await _current!.DisposeAsync().ConfigureAwait(false);
+                _current = null;
+                _currentChunkPosition = 0;
+                _current = await storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false);
+                if (requiredOffset > 0)
+                {
+                    await SkipBytesAsync(_current, requiredOffset).ConfigureAwait(false);
+                    _currentChunkPosition = requiredOffset;
+                }
+            }
+
             return true;
+        }
+
+        private static void SkipBytes(Stream stream, long count)
+        {
+            byte[] buffer = new byte[Math.Min(81920, count)];
+            long remaining = count;
+            while (remaining > 0)
+            {
+                int toRead = (int)Math.Min(buffer.Length, remaining);
+                int read = stream.Read(buffer, 0, toRead);
+                if (read == 0)
+                {
+                    throw new EndOfStreamException("Unexpected end of stream while skipping bytes");
+                }
+                remaining -= read;
+            }
+        }
+
+        private static async ValueTask SkipBytesAsync(Stream stream, long count)
+        {
+            byte[] buffer = new byte[Math.Min(81920, count)];
+            long remaining = count;
+            while (remaining > 0)
+            {
+                int toRead = (int)Math.Min(buffer.Length, remaining);
+                int read = await stream.ReadAsync(buffer.AsMemory(0, toRead)).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    throw new EndOfStreamException("Unexpected end of stream while skipping bytes");
+                }
+                remaining -= read;
+            }
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -106,14 +177,9 @@ namespace Cotton.Storage.Streams
             }
 
             var (chunkIndex, offsetInChunk) = GetChunkAtPosition(_position);
-            if (!EnsureCurrentChunk(chunkIndex))
+            if (!EnsureCurrentChunk(chunkIndex, offsetInChunk))
             {
                 return 0;
-            }
-
-            if (_current!.Position != offsetInChunk)
-            {
-                _current.Seek(offsetInChunk, SeekOrigin.Begin);
             }
 
             int totalRead = 0;
@@ -123,7 +189,7 @@ namespace Cotton.Storage.Streams
                 if (read == 0)
                 {
                     chunkIndex++;
-                    if (!EnsureCurrentChunk(chunkIndex))
+                    if (!EnsureCurrentChunk(chunkIndex, 0))
                     {
                         break;
                     }
@@ -134,6 +200,7 @@ namespace Cotton.Storage.Streams
                 offset += read;
                 count -= read;
                 _position += read;
+                _currentChunkPosition += read;
             }
 
             return totalRead;
@@ -144,6 +211,7 @@ namespace Cotton.Storage.Streams
             if (_currentChunkIndex < 0)
             {
                 _currentChunkIndex = 0;
+                _currentChunkPosition = 0;
                 if (_hashes.Count == 0)
                 {
                     return 0;
@@ -162,6 +230,7 @@ namespace Cotton.Storage.Streams
                 _current.Dispose();
                 _current = null;
                 _currentChunkIndex++;
+                _currentChunkPosition = 0;
                 if (_currentChunkIndex >= _hashes.Count)
                 {
                     return 0;
@@ -171,6 +240,7 @@ namespace Cotton.Storage.Streams
             }
 
             _position += read;
+            _currentChunkPosition += read;
             return read;
         }
 
@@ -182,14 +252,9 @@ namespace Cotton.Storage.Streams
             }
 
             var (chunkIndex, offsetInChunk) = GetChunkAtPosition(_position);
-            if (!await EnsureCurrentChunkAsync(chunkIndex).ConfigureAwait(false))
+            if (!await EnsureCurrentChunkAsync(chunkIndex, offsetInChunk).ConfigureAwait(false))
             {
                 return 0;
-            }
-
-            if (_current!.Position != offsetInChunk)
-            {
-                _current.Seek(offsetInChunk, SeekOrigin.Begin);
             }
 
             int totalRead = 0;
@@ -199,7 +264,7 @@ namespace Cotton.Storage.Streams
                 if (read == 0)
                 {
                     chunkIndex++;
-                    if (!await EnsureCurrentChunkAsync(chunkIndex).ConfigureAwait(false))
+                    if (!await EnsureCurrentChunkAsync(chunkIndex, 0).ConfigureAwait(false))
                     {
                         break;
                     }
@@ -209,6 +274,7 @@ namespace Cotton.Storage.Streams
                 totalRead += read;
                 buffer = buffer[read..];
                 _position += read;
+                _currentChunkPosition += read;
             }
 
             return totalRead;
@@ -219,6 +285,7 @@ namespace Cotton.Storage.Streams
             if (_currentChunkIndex < 0)
             {
                 _currentChunkIndex = 0;
+                _currentChunkPosition = 0;
                 if (_hashes.Count == 0)
                 {
                     return 0;
@@ -237,6 +304,7 @@ namespace Cotton.Storage.Streams
                 await _current.DisposeAsync().ConfigureAwait(false);
                 _current = null;
                 _currentChunkIndex++;
+                _currentChunkPosition = 0;
                 if (_currentChunkIndex >= _hashes.Count)
                 {
                     return 0;
@@ -246,6 +314,7 @@ namespace Cotton.Storage.Streams
             }
 
             _position += read;
+            _currentChunkPosition += read;
             return read;
         }
 

@@ -86,7 +86,9 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
-        public async Task<IActionResult> DownloadFileByToken([FromRoute] Guid nodeFileId, [FromQuery] string token)
+        public async Task<IActionResult> DownloadFileByToken(
+            [FromRoute] Guid nodeFileId,
+            [FromQuery] string token)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -116,11 +118,6 @@ namespace Cotton.Server.Controllers
             };
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.CacheControl = "private, no-store";
-            HttpContext.Response.OnCompleted(() =>
-            {
-                _dbContext.DownloadTokens.Remove(downloadToken);
-                return _dbContext.SaveChangesAsync();
-            });
             var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
             return File(
                 stream,
