@@ -17,6 +17,8 @@ export function getFilePreview(
     return `/api/v1/preview/${filePreviewId}.webp`;
   }
 
+  const iconFontSize = 120;
+
   // Fallback to icon based on file extension
   const extension = fileName.toLowerCase().split(".").pop() || "";
 
@@ -24,27 +26,33 @@ export function getFilePreview(
   const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
 
   if (imageExtensions.includes(extension)) {
-    return <Image sx={{ fontSize: 56 }} />;
+    return <Image sx={{ fontSize: iconFontSize }} />;
   }
+
+  const maxExtensionLength = 6;
+  const displayExtension =
+    extension.length > maxExtensionLength
+      ? extension.slice(0, maxExtensionLength)
+      : extension;
 
   return (
     <Box sx={{ position: "relative", display: "inline-flex" }}>
-      <InsertDriveFile sx={{ fontSize: 56 }} />
+      <InsertDriveFile sx={{ fontSize: iconFontSize }} />
       <Typography
         variant="caption"
         sx={{
           position: "absolute",
-          top: "50%",
+          top: "54%",
           left: "50%",
           transform: "translate(-50%, -50%)",
           fontWeight: 700,
-          fontSize: "1rem",
+          fontSize: 14,
           textTransform: "uppercase",
           color: "text.secondary",
           pointerEvents: "none",
         }}
       >
-        {extension}
+        {displayExtension}
       </Typography>
     </Box>
   );
