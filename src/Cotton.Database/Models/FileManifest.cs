@@ -24,13 +24,10 @@ namespace Cotton.Database.Models
         [Column("size_bytes")]
         public long SizeBytes { get; set; }
 
-        /// <summary>
-        /// Gets or sets the hash value of the preview image associated with this entity.
-        /// Image stored in WebP format.
-        /// </summary>
-        [Column("preview_image_hash")]
-        public byte[]? PreviewImageHash { get; set; }
+        [Column("file_preview_id")]
+        public Guid? FilePreviewId { get; set; }
 
+        public virtual FilePreview? FilePreview { get; set; }
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
     }
 }

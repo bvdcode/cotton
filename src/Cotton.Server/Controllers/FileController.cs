@@ -124,7 +124,6 @@ namespace Cotton.Server.Controllers
             Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
             Response.Headers.CacheControl = "private, no-store";
             Response.Headers.ContentDisposition = $"attachment; filename*=UTF-8''{Uri.EscapeDataString(nodeFile.Name)}";
-            Response.Headers.AcceptRanges = "none";
             HttpContext.Response.OnCompleted(() =>
             {
                 _dbContext.DownloadTokens.Remove(downloadToken);
