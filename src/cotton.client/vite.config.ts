@@ -8,7 +8,7 @@ export default defineConfig(() => {
     server: {
       proxy: {
         "/api": {
-          target: "https://cotton.belov.us",
+          target: "https://cotton.splidex.com",
           changeOrigin: true,
           secure: true,
           ws: true,
@@ -21,8 +21,6 @@ export default defineConfig(() => {
         registerType: "prompt",
         injectRegister: "auto",
         includeAssets: [
-          "/icon.png",
-          "/icon.svg",
           "/favicon.ico",
           "/assets/icons/icon.svg",
         ],
