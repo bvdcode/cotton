@@ -20,7 +20,12 @@ export default defineConfig(() => {
       VitePWA({
         registerType: "prompt",
         injectRegister: "auto",
-        includeAssets: ["/icon.png", "/icon.svg"],
+        includeAssets: [
+          "/icon.png",
+          "/icon.svg",
+          "/favicon.ico",
+          "/assets/icons/icon.svg",
+        ],
         workbox: {
           skipWaiting: true,
           clientsClaim: true,
