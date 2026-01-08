@@ -205,5 +205,353 @@ namespace Cotton.Storage.Tests.Streams
             // Assert
             Assert.That(result.ToArray(), Is.EqualTo(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }));
         }
+
+        [Test]
+        public void ConcatenatedReadStream_WithoutChunkLengths_CanSeekIsFalse()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Test"));
+
+            var stream = storage.GetBlobStream(["uid1"]);
+
+            // Assert
+            Assert.That(stream.CanSeek, Is.False);
+            Assert.Throws<NotSupportedException>(() => stream.Seek(0, SeekOrigin.Begin));
+        }
+
+        [Test]
+        public void ConcatenatedReadStream_WithChunkLengths_CanSeekIsTrue()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 10,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5,
+                    ["uid2"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            using (Assert.EnterMultipleScope())
+            {
+                // Assert
+                Assert.That(stream.CanSeek, Is.True);
+                Assert.That(stream.Length, Is.EqualTo(10));
+            }
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_SeekBegin_ReadsFromCorrectPosition()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 10,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5,
+                    ["uid2"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            // Act
+            stream.Seek(5, SeekOrigin.Begin); // Jump to second chunk
+            using var reader = new StreamReader(stream);
+            string result = await reader.ReadToEndAsync();
+
+            // Assert
+            Assert.That(result, Is.EqualTo("World"));
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_SeekCurrent_ReadsFromCorrectPosition()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 10,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5,
+                    ["uid2"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            // Act
+            var buffer = new byte[2];
+            await stream.ReadExactlyAsync(buffer); // Read "He"
+            stream.Seek(3, SeekOrigin.Current); // Skip "llo"
+            
+            using var reader = new StreamReader(stream);
+            string result = await reader.ReadToEndAsync();
+
+            // Assert
+            Assert.That(result, Is.EqualTo("World"));
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_SeekEnd_ReadsFromCorrectPosition()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 10,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5,
+                    ["uid2"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            // Act
+            stream.Seek(-5, SeekOrigin.End); // Jump to "World"
+            using var reader = new StreamReader(stream);
+            string result = await reader.ReadToEndAsync();
+
+            // Assert
+            Assert.That(result, Is.EqualTo("World"));
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_SeekWithinChunk_ReadsCorrectly()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 10,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5,
+                    ["uid2"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            // Act
+            stream.Seek(7, SeekOrigin.Begin); // "o" in "World"
+            var buffer = new byte[3];
+            int read = await stream.ReadAsync(buffer);
+
+            using (Assert.EnterMultipleScope())
+            {
+                // Assert
+                Assert.That(read, Is.EqualTo(3));
+                Assert.That(Encoding.UTF8.GetString(buffer), Is.EqualTo("rld"));
+            }
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_SeekBackward_ReadsCorrectly()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 10,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5,
+                    ["uid2"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            // Act
+            stream.Seek(7, SeekOrigin.Begin);
+            var buffer1 = new byte[3];
+            await stream.ReadExactlyAsync(buffer1); // Read "rld"
+
+            stream.Seek(2, SeekOrigin.Begin); // Go back to "llo"
+            var buffer2 = new byte[3];
+            await stream.ReadExactlyAsync(buffer2);
+
+            // Assert
+            Assert.That(Encoding.UTF8.GetString(buffer2), Is.EqualTo("llo"));
+        }
+
+        [Test]
+        public void ConcatenatedReadStream_SeekBeforeStart_ThrowsException()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 5,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1"], context);
+
+            // Assert
+            Assert.Throws<IOException>(() => stream.Seek(-1, SeekOrigin.Begin));
+        }
+
+        [Test]
+        public void ConcatenatedReadStream_SeekAfterEnd_ThrowsException()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 5,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1"], context);
+
+            // Assert
+            Assert.Throws<IOException>(() => stream.Seek(6, SeekOrigin.Begin));
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_PositionProperty_WorksCorrectly()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("Hello"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("World"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 10,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 5,
+                    ["uid2"] = 5
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            // Act & Assert
+            Assert.That(stream.Position, Is.EqualTo(0));
+            
+            var buffer = new byte[3];
+            await stream.ReadExactlyAsync(buffer);
+            Assert.That(stream.Position, Is.EqualTo(3));
+
+            stream.Position = 7;
+            Assert.That(stream.Position, Is.EqualTo(7));
+            
+            await stream.ReadExactlyAsync(buffer);
+            Assert.That(stream.Position, Is.EqualTo(10));
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_MultipleChunks_SeekAndRead()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", [1, 2, 3]);
+            storage.AddData("uid2", [4, 5, 6]);
+            storage.AddData("uid3", [7, 8, 9]);
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 9,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 3,
+                    ["uid2"] = 3,
+                    ["uid3"] = 3
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2", "uid3"], context);
+
+            // Act - Jump around and read
+            stream.Seek(4, SeekOrigin.Begin); // Middle of second chunk
+            var buffer1 = new byte[1];
+            await stream.ReadExactlyAsync(buffer1);
+            Assert.That(buffer1[0], Is.EqualTo(5));
+
+            stream.Seek(0, SeekOrigin.Begin); // Back to start
+            var buffer2 = new byte[1];
+            await stream.ReadExactlyAsync(buffer2);
+            Assert.That(buffer2[0], Is.EqualTo(1));
+
+            stream.Seek(8, SeekOrigin.Begin); // Last byte
+            var buffer3 = new byte[1];
+            await stream.ReadExactlyAsync(buffer3);
+            Assert.That(buffer3[0], Is.EqualTo(9));
+        }
+
+        [Test]
+        public async Task ConcatenatedReadStream_ReadAcrossChunkBoundariesWithSeek_NoGaps()
+        {
+            // Arrange
+            var storage = new FakeStoragePipeline();
+            storage.AddData("uid1", Encoding.UTF8.GetBytes("ABC"));
+            storage.AddData("uid2", Encoding.UTF8.GetBytes("DEF"));
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = 6,
+                ChunkLengths = new Dictionary<string, long>
+                {
+                    ["uid1"] = 3,
+                    ["uid2"] = 3
+                }
+            };
+
+            var stream = storage.GetBlobStream(["uid1", "uid2"], context);
+
+            // Act - Seek to near boundary and read across
+            stream.Seek(2, SeekOrigin.Begin);
+            var buffer = new byte[3];
+            int read = await stream.ReadAsync(buffer);
+
+            using (Assert.EnterMultipleScope())
+            {
+                // Assert
+                Assert.That(read, Is.EqualTo(3));
+                Assert.That(Encoding.UTF8.GetString(buffer), Is.EqualTo("CDE"));
+            }
+        }
     }
 }
