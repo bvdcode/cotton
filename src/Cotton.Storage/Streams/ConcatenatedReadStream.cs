@@ -65,13 +65,17 @@ namespace Cotton.Storage.Streams
                 return false;
             }
 
-            if (_currentChunkIndex != targetChunkIndex)
+            if (_currentChunkIndex != targetChunkIndex || _current == null)
             {
                 _current?.Dispose();
                 _current = null;
                 _currentChunkIndex = targetChunkIndex;
                 _currentChunkPosition = 0;
                 _current = storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult();
+                if (_current == null)
+                {
+                    throw new InvalidOperationException("Storage pipeline returned null stream.");
+                }
             }
 
             if (_currentChunkPosition < requiredOffset)
@@ -82,10 +86,14 @@ namespace Cotton.Storage.Streams
             }
             else if (_currentChunkPosition > requiredOffset)
             {
-                _current?.Dispose();
+                _current.Dispose();
                 _current = null;
                 _currentChunkPosition = 0;
                 _current = storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult();
+                if (_current == null)
+                {
+                    throw new InvalidOperationException("Storage pipeline returned null stream.");
+                }
                 if (requiredOffset > 0)
                 {
                     SkipBytes(_current, requiredOffset);
@@ -103,7 +111,7 @@ namespace Cotton.Storage.Streams
                 return false;
             }
 
-            if (_currentChunkIndex != targetChunkIndex)
+            if (_currentChunkIndex != targetChunkIndex || _current == null)
             {
                 if (_current != null)
                 {
@@ -113,20 +121,28 @@ namespace Cotton.Storage.Streams
                 _currentChunkIndex = targetChunkIndex;
                 _currentChunkPosition = 0;
                 _current = await storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false);
+                if (_current == null)
+                {
+                    throw new InvalidOperationException("Storage pipeline returned null stream.");
+                }
             }
 
             if (_currentChunkPosition < requiredOffset)
             {
                 long toSkip = requiredOffset - _currentChunkPosition;
-                await SkipBytesAsync(_current!, toSkip).ConfigureAwait(false);
+                await SkipBytesAsync(_current, toSkip).ConfigureAwait(false);
                 _currentChunkPosition = requiredOffset;
             }
             else if (_currentChunkPosition > requiredOffset)
             {
-                await _current!.DisposeAsync().ConfigureAwait(false);
+                await _current.DisposeAsync().ConfigureAwait(false);
                 _current = null;
                 _currentChunkPosition = 0;
                 _current = await storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false);
+                if (_current == null)
+                {
+                    throw new InvalidOperationException("Storage pipeline returned null stream.");
+                }
                 if (requiredOffset > 0)
                 {
                     await SkipBytesAsync(_current, requiredOffset).ConfigureAwait(false);
