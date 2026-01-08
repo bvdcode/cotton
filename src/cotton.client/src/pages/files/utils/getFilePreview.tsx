@@ -1,4 +1,5 @@
 import { InsertDriveFile, Image } from "@mui/icons-material";
+import { Box, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 
 /**
@@ -26,5 +27,25 @@ export function getFilePreview(
     return <Image sx={{ fontSize: 56 }} />;
   }
 
-  return <InsertDriveFile sx={{ fontSize: 56 }} />;
+  return (
+    <Box sx={{ position: "relative", display: "inline-flex" }}>
+      <InsertDriveFile sx={{ fontSize: 56 }} />
+      <Typography
+        variant="caption"
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          fontWeight: 700,
+          fontSize: "1rem",
+          textTransform: "uppercase",
+          color: "text.secondary",
+          pointerEvents: "none",
+        }}
+      >
+        {extension}
+      </Typography>
+    </Box>
+  );
 }
