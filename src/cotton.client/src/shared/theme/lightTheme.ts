@@ -15,8 +15,8 @@ export const lightTheme = createTheme({
     },
     divider: "rgba(0,0,0,.08)",
     text: {
-      primary: "#3f3f3fff",
-      secondary: "rgba(0,0,0,.6)",
+      primary: "#646464",
+      secondary: "#323232",
     },
   },
   shape: { borderRadius: 12 },
