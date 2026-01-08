@@ -95,6 +95,7 @@ namespace Cotton.Server.Controllers
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
+                .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
             if (nodeFile == null)
             {
