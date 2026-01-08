@@ -56,8 +56,9 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download-link")]
-        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId)
+        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId, [FromQuery] int expireAfterMinutes = 15)
         {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
@@ -66,12 +67,11 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Node file not found");
             }
-
             DownloadToken newToken = new()
             {
                 CreatedByUserId = User.GetUserId(),
                 FileManifestId = nodeFile.FileManifestId,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
                 Token = StringHelpers.CreateRandomString(128),
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
