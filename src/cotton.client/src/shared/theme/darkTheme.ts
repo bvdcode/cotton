@@ -15,8 +15,8 @@ export const darkTheme = createTheme({
     },
     divider: "rgba(255,255,255,.06)",
     text: {
-      primary: "#ffffff",
-      secondary: "#cecece",
+      primary: "#eeeeee",
+      secondary: "#868686",
     },
   },
   shape: { borderRadius: 12 },
