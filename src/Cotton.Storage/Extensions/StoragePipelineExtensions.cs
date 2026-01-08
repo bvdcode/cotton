@@ -11,11 +11,6 @@ namespace Cotton.Storage.Extensions
     {
         public static Stream GetBlobStream(this IStoragePipeline _storage, string[] uids, PipelineContext? pipelineContext = null)
         {
-            ArgumentNullException.ThrowIfNull(uids);
-            foreach (var uid in uids)
-            {
-                ArgumentException.ThrowIfNullOrWhiteSpace(uid);
-            }
             return new ConcatenatedReadStream(storage: _storage, hashes: uids, pipelineContext);
         }
     }

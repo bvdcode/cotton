@@ -1,4 +1,5 @@
 ﻿using Cotton.Storage.Abstractions;
+using Cotton.Storage.Pipelines;
 using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,11 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiNotFound("Preview image not found.");
             }
-            var stream = await _storage.ReadAsync(previewImageHash);
+            PipelineContext context = new()
+            {
+                StoreInMemoryCache = true
+            };
+            var stream = await _storage.ReadAsync(previewImageHash, context);
             return File(stream, "image/webp", previewImageHash + ".webp");
         }
     }

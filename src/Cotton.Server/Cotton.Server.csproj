@@ -24,6 +24,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Mapster" Version="7.4.0" />
+		<ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
 		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
 		<ProjectReference Include="..\Cotton.Topology\Cotton.Topology.csproj" />
