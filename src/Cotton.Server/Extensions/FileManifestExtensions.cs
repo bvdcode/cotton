@@ -10,7 +10,7 @@ namespace Cotton.Server.Extensions
             List<string> result = [];
             ArgumentNullException.ThrowIfNull(chunks);
             int? lastOrder = null;
-            foreach (var chunk in chunks)
+            foreach (var chunk in chunks.OrderBy(x => x.ChunkOrder))
             {
                 lastOrder ??= chunk.ChunkOrder - 1;
                 ArgumentNullException.ThrowIfNull(chunk.ChunkHash);
@@ -18,7 +18,8 @@ namespace Cotton.Server.Extensions
                 ArgumentException.ThrowIfNullOrWhiteSpace(hashString);
                 if (lastOrder + 1 != chunk.ChunkOrder)
                 {
-                    throw new ArgumentException("Chunks are out of order or have missing entries.");
+                    string orders = string.Join(", ", chunks.Select(c => c.ChunkOrder));
+                    throw new ArgumentException("Chunks are out of order or have missing entries, order: " + orders);
                 }
                 result.Add(hashString);
                 lastOrder = chunk.ChunkOrder;
