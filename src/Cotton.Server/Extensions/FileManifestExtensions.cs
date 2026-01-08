@@ -12,7 +12,7 @@ namespace Cotton.Server.Extensions
             int? lastOrder = null;
             foreach (var chunk in chunks)
             {
-                lastOrder ??= chunk.ChunkOrder;
+                lastOrder ??= chunk.ChunkOrder - 1;
                 ArgumentNullException.ThrowIfNull(chunk.ChunkHash);
                 string hashString = Hasher.ToHexStringHash(chunk.ChunkHash);
                 ArgumentException.ThrowIfNullOrWhiteSpace(hashString);
