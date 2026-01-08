@@ -39,8 +39,8 @@ export default defineConfig(() => {
           scope: "/",
           start_url: "/",
           display: "fullscreen",
-          background_color: "#101010",
-          theme_color: "#202020",
+          background_color: "#1f2022",
+          theme_color: "#c6ff00",
           screenshots: [
             {
               src: "/assets/images/screenshot1.jpg",
