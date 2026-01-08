@@ -79,6 +79,23 @@ namespace Cotton.Server.Services
             return Convert.FromHexString(hexString);
         }
 
+        public static bool IsValidHash(string hash)
+        {
+            if (string.IsNullOrWhiteSpace(hash))
+            {
+                return false;
+            }
+            if (hash.Length != HashSizeInBytes * 2)
+            {
+                return false;
+            }
+            if (!HexStringRegex().IsMatch(hash))
+            {
+                return false;
+            }
+            return true;
+        }
+
         [System.Text.RegularExpressions.GeneratedRegex(@"\A\b[0-9a-fA-F]+\b\Z")]
         private static partial System.Text.RegularExpressions.Regex HexStringRegex();
     }
