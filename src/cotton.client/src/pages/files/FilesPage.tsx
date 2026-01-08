@@ -546,7 +546,7 @@ export const FilesPage: React.FC = () => {
                 }
 
                 const preview = getFilePreview(
-                  tile.file.previewImageHash,
+                  tile.file.filePreviewId,
                   tile.file.name,
                 );
                 const icon =
