@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
@@ -23,7 +24,7 @@ namespace Cotton.Server.Jobs
         {
             // Placeholder implementation
             var itemsToProcess = _dbContext.FileManifests
-                .Where(fm => fm.PreviewImageHash == null)
+                .Where(fm => fm.FilePreviewId == null)
                 .Include(fm => fm.FileManifestChunks)
                 .Take(MaxItemsPerRun)
                 .ToList();
@@ -43,10 +44,22 @@ namespace Cotton.Server.Jobs
                 var fs = _storage.GetBlobStream(uids, pipelineContext);
                 var previewImage = await generator.GeneratePreviewWebPAsync(fs);
                 byte[] hash = Hasher.HashData(previewImage);
+                var existing = await _dbContext.FilePreviews.FirstOrDefaultAsync(fp => fp.Hash == hash);
+                if (existing != null)
+                {
+                    item.FilePreviewId = existing.Id;
+                    _logger.LogInformation("Reused existing preview for file manifest {FileManifestId}", item.Id);
+                    continue;
+                }
                 string hashStr = Hasher.ToHexStringHash(hash);
                 using var resultStream = new MemoryStream(previewImage);
                 await _storage.WriteAsync(hashStr, resultStream);
-                item.PreviewImageHash = hash;
+                FilePreview preview = new()
+                {
+                    Hash = hash
+                };
+                await _dbContext.FilePreviews.AddAsync(preview);
+                item.FilePreview = preview;
                 await _dbContext.SaveChangesAsync();
                 _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
             }

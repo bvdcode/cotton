@@ -1,4 +1,4 @@
-﻿using Cotton.Database.Models;
+﻿using Cotton.Database;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
@@ -10,12 +10,25 @@ using Microsoft.Net.Http.Headers;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class PreviewController(IStoragePipeline _storage) : ControllerBase
+    public class PreviewController(IStoragePipeline _storage, CottonDbContext _dbContext) : ControllerBase
     {
-        [HttpGet("/api/v1/preview/{previewImageHash}")]
-        [HttpGet("/api/v1/preview/{previewImageHash}.webp")]
-        public async Task<IActionResult> GetFilePreview([FromRoute] string previewImageHash)
+        [HttpGet("/api/v1/preview/{previewId:guid}")]
+        [HttpGet("/api/v1/preview/{previewId:guid}.webp")]
+        public async Task<IActionResult> GetFilePreview([FromRoute] Guid previewId)
         {
+            var found = await _dbContext.FilePreviews
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == previewId);
+            if (found == null)
+            {
+                return this.ApiNotFound("Preview not found.");
+            }
+            string previewImageHash = Hasher.ToHexStringHash(found.Hash);
+            bool validHash = Hasher.IsValidHash(previewImageHash);
+            if (!validHash)
+            {
+                return this.ApiBadRequest("Invalid preview image hash.");
+            }
             bool exists = await _storage.ExistsAsync(previewImageHash);
             if (!exists)
             {
