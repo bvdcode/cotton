@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Requests;
@@ -111,14 +112,12 @@ namespace Cotton.Server.Controllers
             _dbContext.DownloadTokens.Remove(downloadToken);
             await _dbContext.SaveChangesAsync();
 
-            string[] hashes = [.. nodeFile.FileManifest.FileManifestChunks
-                .OrderBy(x => x.ChunkOrder)
-                .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
+            string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
                 FileSizeBytes = nodeFile.FileManifest.SizeBytes,
             };
-            Stream stream = _storage.GetBlobStream(hashes, context);
+            Stream stream = _storage.GetBlobStream(uids, context);
             Response.ContentLength = nodeFile.FileManifest.SizeBytes;
             Response.Headers.ETag = $"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}";
             Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
