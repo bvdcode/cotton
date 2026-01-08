@@ -12,7 +12,7 @@ namespace Cotton.Previews
             image.Mutate(x => x.Resize(new ResizeOptions
             {
                 Size = new Size(size, size),
-                Mode = ResizeMode.Crop
+                Mode = ResizeMode.Max
             }));
             using var outputStream = new MemoryStream();
             await image.SaveAsWebpAsync(outputStream);
