@@ -15,10 +15,10 @@ namespace Cotton.Previews
                 "image/bmp" or "image/tiff" or 
                 "image/webp" or "image/avif" =>
                     new ImagePreviewGenerator(),
-                "application/pdf" =>
-                    new PdfPreviewGenerator(),
-                "text/plain" =>
-                    new TextPreviewGenerator(),
+                //"application/pdf" =>
+                //    new PdfPreviewGenerator(),
+                //"text/plain" =>
+                //    new TextPreviewGenerator(),
                 _ => null,
             };
         }

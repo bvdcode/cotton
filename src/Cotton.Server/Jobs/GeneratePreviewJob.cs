@@ -1,6 +1,7 @@
 ﻿using Cotton.Database;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
+using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -41,6 +42,13 @@ namespace Cotton.Server.Jobs
                 var uids = item.FileManifestChunks.GetChunkHashes();
                 var fs = _storage.GetBlobStream(uids, pipelineContext);
                 var previewImage = await generator.GeneratePreviewWebPAsync(fs);
+                byte[] hash = Hasher.HashData(previewImage);
+                string hashStr = Hasher.ToHexStringHash(hash);
+                using var resultStream = new MemoryStream(previewImage);
+                await _storage.WriteAsync(hashStr, resultStream);
+                item.PreviewImageHash = hash;
+                await _dbContext.SaveChangesAsync();
+                _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
             }
             await _dbContext.SaveChangesAsync();
         }
