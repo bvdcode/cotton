@@ -17,14 +17,17 @@ namespace Cotton.Storage.Streams
         public override bool CanRead => true;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
-        public override long Length => throw new NotSupportedException();
+        public override long Length => pipelineContext?.FileSizeBytes ?? throw new NotSupportedException();
         public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
         private bool EnsureCurrent()
         {
             while (_current == null)
             {
-                if (!_hashes.MoveNext()) return false;
+                if (!_hashes.MoveNext())
+                {
+                    return false;
+                }
                 _current = storage.ReadAsync(_hashes.Current, pipelineContext).GetAwaiter().GetResult();
             }
             return true;
@@ -45,7 +48,10 @@ namespace Cotton.Storage.Streams
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (!EnsureCurrent()) return 0;
+            if (!EnsureCurrent())
+            {
+                return 0;
+            }
             int read = _current!.Read(buffer, offset, count);
             if (read == 0)
             {
@@ -58,7 +64,10 @@ namespace Cotton.Storage.Streams
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (!await EnsureCurrentAsync().ConfigureAwait(false)) return 0;
+            if (!await EnsureCurrentAsync().ConfigureAwait(false))
+            {
+                return 0;
+            }
             int read = await _current!.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
             if (read == 0)
             {
