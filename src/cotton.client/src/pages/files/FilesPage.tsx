@@ -26,7 +26,7 @@ import { uploadManager } from "../../shared/upload/UploadManager";
 import { filesApi } from "../../shared/api/filesApi";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
 import { resolveUploadConflicts } from "./utils/uploadConflicts";
-import { getFilePreviewSrc } from "./utils/getFilePreview";
+import { getFilePreview } from "./utils/getFilePreview";
 
 const formatBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -545,24 +545,30 @@ export const FilesPage: React.FC = () => {
                   );
                 }
 
+                const preview = getFilePreview(
+                  tile.file.previewImageHash,
+                  tile.file.name,
+                );
+                const icon =
+                  typeof preview === "string" ? (
+                    <Box
+                      component="img"
+                      src={preview}
+                      alt={tile.file.name}
+                      sx={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                      }}
+                    />
+                  ) : (
+                    preview
+                  );
+
                 return (
                   <FileSystemItemCard
                     key={tile.file.id}
-                    icon={
-                      <Box
-                        component="img"
-                        src={getFilePreviewSrc(
-                          tile.file.previewImageHash,
-                          tile.file.name,
-                        )}
-                        alt={tile.file.name}
-                        sx={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                        }}
-                      />
-                    }
+                    icon={icon}
                     title={tile.file.name}
                     subtitle={formatBytes(tile.file.sizeBytes)}
                     onClick={() => handleDownloadFile(tile.file.id)}
