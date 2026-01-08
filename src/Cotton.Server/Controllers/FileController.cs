@@ -118,7 +118,7 @@ namespace Cotton.Server.Controllers
                 FileSizeBytes = nodeFile.FileManifest.SizeBytes,
             };
             Stream stream = _storage.GetBlobStream(uids, context);
-            Response.Headers.ETag = $"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}";
+            Response.Headers.ETag = $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"";
             Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
             Response.Headers.CacheControl = "private, no-store";
             HttpContext.Response.OnStarting(() =>
