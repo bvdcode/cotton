@@ -117,8 +117,10 @@ namespace Cotton.Server.Controllers
                 ChunkLengths = nodeFile.FileManifest.FileManifestChunks.ToDictionary(x => Hasher.ToHexStringHash(x.ChunkHash), x => x.Chunk.SizeBytes),
             };
             Stream stream = _storage.GetBlobStream(uids, context);
-            Response.Headers.CacheControl = "private, no-store";
+            Response.Headers.ContentEncoding = "identity";
+            Response.Headers.CacheControl = "private, no-store, no-transform";
             var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+
             return File(
                 stream,
                 nodeFile.FileManifest.ContentType,
