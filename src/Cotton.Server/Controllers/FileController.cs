@@ -81,7 +81,7 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
-        public async Task<IActionResult> DownloadFileInternal([FromRoute] Guid nodeFileId, [FromQuery] string token)
+        public async Task<IActionResult> DownloadFileByToken([FromRoute] Guid nodeFileId, [FromQuery] string token)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -109,24 +109,28 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            _dbContext.DownloadTokens.Remove(downloadToken);
-            await _dbContext.SaveChangesAsync();
-
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
             PipelineContext context = new()
             {
                 FileSizeBytes = nodeFile.FileManifest.SizeBytes,
             };
             Stream stream = _storage.GetBlobStream(uids, context);
+            Response.ContentLength = nodeFile.FileManifest.SizeBytes;
             Response.Headers.ETag = $"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"";
             Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
             Response.Headers.CacheControl = "private, no-store";
-            HttpContext.Response.OnStarting(() =>
+            Response.Headers.ContentDisposition = $"attachment; filename*=UTF-8''{Uri.EscapeDataString(nodeFile.Name)}";
+            Response.Headers.AcceptRanges = "none";
+            HttpContext.Response.OnCompleted(() =>
             {
-                HttpContext.Response.ContentLength = nodeFile.FileManifest.SizeBytes;
-                return Task.CompletedTask;
+                _dbContext.DownloadTokens.Remove(downloadToken);
+                return _dbContext.SaveChangesAsync();
             });
-            return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name, enableRangeProcessing: false);
+            await using (stream)
+            {
+                await stream.CopyToAsync(Response.Body, HttpContext.RequestAborted);
+            }
+            return new EmptyResult();
         }
 
         [Authorize]
