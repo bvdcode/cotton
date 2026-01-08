@@ -58,7 +58,10 @@ namespace Cotton.Server.Controllers
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download-link")]
         public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId, [FromQuery] int expireAfterMinutes = 15)
         {
+            const int maxExpireMinutes = 60 * 24 * 365; // 1 year
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
+
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
@@ -67,6 +70,7 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Node file not found");
             }
+
             DownloadToken newToken = new()
             {
                 CreatedByUserId = User.GetUserId(),
