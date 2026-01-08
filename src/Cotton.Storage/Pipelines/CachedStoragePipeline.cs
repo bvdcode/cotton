@@ -28,9 +28,15 @@ namespace Cotton.Storage.Pipelines
                 return new MemoryStream(data!, writable: false);
             }
             var stream = await _innerStorage.ReadAsync(uid, context);
-            if (context?.FileSizeBytes > MaxItemSizeBytes)
+            if (context == null)
             {
-                _logger.LogDebug("Item size {ItemSize} bytes exceeds max cache item size {MaxItemSize} bytes for UID {UID}, not caching", stream.Length, MaxItemSizeBytes, uid);
+                _logger.LogDebug("Item has no context, bypassing cache for UID {UID}", uid);
+                return stream;
+            }
+            if (!context.StoreInMemoryCache && context.FileSizeBytes.HasValue && context.FileSizeBytes.Value > MaxItemSizeBytes)
+            {
+                _logger.LogDebug("Item size {ItemSize} bytes exceeds max cacheable size for UID {UID}, bypassing cache",
+                    context.FileSizeBytes.Value, uid);
                 return stream;
             }
             using var memoryStream = new MemoryStream();
