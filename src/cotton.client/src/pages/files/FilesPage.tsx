@@ -391,20 +391,19 @@ export const FilesPage: React.FC = () => {
           }}
         >
           <IconButton
+            onClick={() => navigate("/files")}
+            color="primary"
+            title={t("breadcrumbs.root")}
+          >
+            <Home />
+          </IconButton>
+          <IconButton
             color="primary"
             onClick={handleGoUp}
             disabled={loading || ancestors.length === 0}
             title={t("actions.goUp")}
           >
             <ArrowUpward />
-          </IconButton>
-          <IconButton
-            color="primary"
-            onClick={handleUploadClick}
-            disabled={!nodeId || loading}
-            title={t("actions.upload")}
-          >
-            <UploadFile />
           </IconButton>
           <IconButton
             color="primary"
@@ -415,11 +414,12 @@ export const FilesPage: React.FC = () => {
             <CreateNewFolder />
           </IconButton>
           <IconButton
-            onClick={() => navigate("/files")}
             color="primary"
-            title={t("breadcrumbs.root")}
+            onClick={handleUploadClick}
+            disabled={!nodeId || loading}
+            title={t("actions.upload")}
           >
-            <Home />
+            <UploadFile />
           </IconButton>
 
           <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")} sx={{ ml: 1 }}>
