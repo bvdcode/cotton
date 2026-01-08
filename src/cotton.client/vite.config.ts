@@ -57,6 +57,12 @@ export default defineConfig(() => {
           ],
           icons: [
             {
+              src: "/assets/icons/icon.svg",
+              sizes: "any",
+              type: "image/svg+xml",
+              purpose: "any",
+            },
+            {
               src: "/assets/icons/icon-192.png",
               sizes: "192x192",
               type: "image/png",
