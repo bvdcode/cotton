@@ -118,10 +118,14 @@ namespace Cotton.Server.Controllers
                 FileSizeBytes = nodeFile.FileManifest.SizeBytes,
             };
             Stream stream = _storage.GetBlobStream(uids, context);
-            Response.ContentLength = nodeFile.FileManifest.SizeBytes;
             Response.Headers.ETag = $"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}";
             Response.Headers.LastModified = nodeFile.UpdatedAt.ToString("R");
             Response.Headers.CacheControl = "private, no-store";
+            HttpContext.Response.OnStarting(() =>
+            {
+                HttpContext.Response.ContentLength = nodeFile.FileManifest.SizeBytes;
+                return Task.CompletedTask;
+            });
             return File(stream, nodeFile.FileManifest.ContentType, nodeFile.Name, enableRangeProcessing: false);
         }
 
