@@ -58,7 +58,7 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
             sx={{ flexWrap: "nowrap" }}
           >
             <Avatar 
-              src="/icon.svg" 
+              src="/assets/icons/icon.svg" 
               alt="Cotton Logo" 
               sx={{ width: { xs: 32, sm: 40 }, height: { xs: 32, sm: 40 } }}
             />

@@ -91,7 +91,7 @@ export const LoginPage = () => {
             <Typography variant="h4" component="h1" gutterBottom>
               {t("title")}
             </Typography>
-            <Avatar src="/icon.svg" alt="App Logo" />
+            <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
           </Box>
           <Box
             component="form"
