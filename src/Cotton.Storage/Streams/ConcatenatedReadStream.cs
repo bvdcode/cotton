@@ -15,10 +15,10 @@ namespace Cotton.Storage.Streams
         private Stream? _current;
 
         public override bool CanRead => true;
-        public override bool CanSeek => false;
+        public override bool CanSeek => true;
         public override bool CanWrite => false;
         public override long Length => pipelineContext?.FileSizeBytes ?? throw new NotSupportedException();
-        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override long Position { get; set; }
 
         private bool EnsureCurrent()
         {
