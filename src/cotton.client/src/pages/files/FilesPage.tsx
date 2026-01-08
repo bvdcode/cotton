@@ -374,7 +374,6 @@ export const FilesPage: React.FC = () => {
         </Box>
       )}
       <Box
-        p={3}
         width="100%"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
