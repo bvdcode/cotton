@@ -2,6 +2,7 @@
 {
     public interface IPreviewGenerator
     {
-        Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 256);
+        IEnumerable<string> SupportedContentTypes { get; }
+        Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize);
     }
 }

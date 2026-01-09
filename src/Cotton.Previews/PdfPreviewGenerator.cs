@@ -1,17 +1,17 @@
 ﻿using Docnet.Core;
 using Docnet.Core.Models;
-
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
-    internal sealed class PdfPreviewGenerator : IPreviewGenerator
+    public sealed class PdfPreviewGenerator : IPreviewGenerator
     {
+        public IEnumerable<string> SupportedContentTypes => ["application/pdf"];
         private static readonly DocLib _docLib = DocLib.Instance;
 
-        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 256)
+        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
