@@ -22,12 +22,14 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            // Placeholder implementation
+            var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             var itemsToProcess = _dbContext.FileManifests
                 .Where(fm => fm.FilePreviewId == null)
+                .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.FileManifestChunks)
                 .Take(MaxItemsPerRun)
                 .ToList();
+
             foreach (var item in itemsToProcess)
             {
                 var generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
