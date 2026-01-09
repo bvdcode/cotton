@@ -18,7 +18,7 @@ namespace Cotton.Database.Models
         [Column("proposed_content_hash")]
         public byte[] ProposedContentHash { get; set; } = null!;
 
-        [Column("content_type")]
+        [Column("content_type", TypeName = "citext")]
         public string ContentType { get; set; } = null!;
 
         [Column("size_bytes")]
