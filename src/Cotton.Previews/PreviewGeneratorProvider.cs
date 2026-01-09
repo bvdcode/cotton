@@ -21,9 +21,9 @@
                     x => x.Generator,
                     StringComparer.OrdinalIgnoreCase);
 
-        public static ICollection<string> GetAllSupportedMimeTypes()
+        public static string[] GetAllSupportedMimeTypes()
         {
-            return GeneratorsByContentType.Keys;
+            return [.. GeneratorsByContentType.Keys];
         }
 
         public static IPreviewGenerator? GetGeneratorByContentType(string contentType)
