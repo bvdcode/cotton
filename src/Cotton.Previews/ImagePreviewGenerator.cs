@@ -4,9 +4,12 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Cotton.Previews
 {
-    internal class ImagePreviewGenerator : IPreviewGenerator
+    public class ImagePreviewGenerator : IPreviewGenerator
     {
-        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 256)
+        public IEnumerable<string> SupportedContentTypes =>
+            Configuration.Default.ImageFormats.SelectMany(x => x.MimeTypes);
+
+        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
         {
             using Image<Rgba32> image = Image.Load<Rgba32>(stream);
             image.Mutate(x => x.Resize(new ResizeOptions
