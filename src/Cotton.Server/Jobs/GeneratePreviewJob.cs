@@ -31,6 +31,11 @@ namespace Cotton.Server.Jobs
                 .Take(MaxItemsPerRun)
                 .ToList();
 
+            if (itemsToProcess.Count > 0)
+            {
+                _logger.LogInformation("Generating previews for {Count} file manifests", itemsToProcess.Count);
+            }
+
             foreach (var item in itemsToProcess)
             {
                 var generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
