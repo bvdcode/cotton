@@ -301,7 +301,7 @@ namespace Cotton.Storage.Tests.Streams
             var buffer = new byte[2];
             await stream.ReadExactlyAsync(buffer); // Read "He"
             stream.Seek(3, SeekOrigin.Current); // Skip "llo"
-            
+
             using var reader = new StreamReader(stream);
             string result = await reader.ReadToEndAsync();
 
@@ -470,14 +470,14 @@ namespace Cotton.Storage.Tests.Streams
 
             // Act & Assert
             Assert.That(stream.Position, Is.EqualTo(0));
-            
+
             var buffer = new byte[3];
             await stream.ReadExactlyAsync(buffer);
             Assert.That(stream.Position, Is.EqualTo(3));
 
             stream.Position = 7;
             Assert.That(stream.Position, Is.EqualTo(7));
-            
+
             await stream.ReadExactlyAsync(buffer);
             Assert.That(stream.Position, Is.EqualTo(10));
         }

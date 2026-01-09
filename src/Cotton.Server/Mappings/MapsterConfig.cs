@@ -3,7 +3,6 @@
 
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Services;
 using Mapster;
 
 namespace Cotton.Server.Mappings
