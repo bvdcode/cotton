@@ -23,13 +23,13 @@ namespace Cotton.Previews
 
         private static readonly FontFamily _fontFamily = LoadFontFamily();
 
-        public Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
+        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
             string text = ReadSomeText(stream, MaxCharsToRead);
             int renderSize = Math.Max(size * 4, 512);
-            using var canvas = new Image<Rgba32>(renderSize, renderSize); // по умолчанию прозрачный
+            using var canvas = new Image<Rgba32>(renderSize, renderSize);
             float padding = renderSize * PaddingRatio;
             float wrapWidth = renderSize - padding * 2;
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
@@ -59,8 +59,8 @@ namespace Cotton.Previews
             }));
 
             using var ms = new MemoryStream();
-            output.SaveAsWebpAsync(ms);
-            return Task.FromResult(ms.ToArray());
+            await output.SaveAsWebpAsync(ms).ConfigureAwait(false);
+            return ms.ToArray();
         }
 
         private static FontFamily LoadFontFamily()
@@ -158,14 +158,27 @@ namespace Cotton.Previews
                 return text;
             }
 
+            const int minKeep = 64;
+            if (text.Length <= minKeep)
+            {
+                return text.TrimEnd() + "\n…";
+            }
+
             int lo = 0;
             int hi = text.Length;
-            const int minKeep = 64;
 
             while (lo + 1 < hi)
             {
                 int mid = (lo + hi) / 2;
                 int cut = Math.Max(minKeep, mid);
+                if (cut >= hi)
+                {
+                    cut = hi - 1;
+                }
+                if (cut <= lo)
+                {
+                    break;
+                }
 
                 string candidate = text[..cut].TrimEnd() + "\n…";
                 var s = TextMeasurer.MeasureSize(candidate, options);
@@ -180,12 +193,8 @@ namespace Cotton.Previews
                 }
             }
 
-            if (lo >= text.Length)
-            {
-                return text;
-            }
-
-            return text[..lo].TrimEnd() + "\n…";
+            int finalLen = Math.Clamp(lo, minKeep, text.Length);
+            return text[..finalLen].TrimEnd() + "\n…";
         }
     }
 }
