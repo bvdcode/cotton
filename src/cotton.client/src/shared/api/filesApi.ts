@@ -15,8 +15,11 @@ export const filesApi = {
     await httpClient.post("/files/from-chunks", request);
   },
 
-  getDownloadLink: async (nodeFileId: Guid): Promise<string> => {
-    const response = await httpClient.get<string>(`/files/${nodeFileId}/download`);
+  getDownloadLink: async (nodeFileId: Guid, expireAfterMinutes = 1440): Promise<string> => {
+    const response = await httpClient.get<string>(
+      `/files/${nodeFileId}/download-link`,
+      { params: { expireAfterMinutes } }
+    );
     return response.data;
   },
 };

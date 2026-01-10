@@ -558,7 +558,7 @@ export const FilesPage: React.FC = () => {
                       if (previewUrl && isImage) {
                         return (
                           <PhotoView
-                            src={`/api/v1/files/${tile.file.id}/download`}
+                            src={`/api/v1/files/${tile.file.id}/download-link`}
                           >
                             <Box
                               component="img"
