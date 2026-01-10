@@ -18,7 +18,6 @@ import {
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
-import { PhotoView } from "react-photo-view";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
@@ -26,103 +25,11 @@ import { nodesApi, type NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { uploadManager } from "../../shared/upload/UploadManager";
 import { filesApi } from "../../shared/api/filesApi";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
+import { ImagePreviewIcon } from "./components/ImagePreviewIcon";
 import { resolveUploadConflicts } from "./utils/uploadConflicts";
 import { getFilePreview } from "./utils/getFilePreview";
-
-const formatBytes = (bytes: number): string => {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-  const precision = unitIndex === 0 ? 0 : value < 10 ? 2 : 1;
-  return `${value.toFixed(precision)} ${units[unitIndex]}`;
-};
-
-const isImageFile = (fileName: string): boolean => {
-  const extension = fileName.toLowerCase().split(".").pop() || "";
-  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
-  return imageExtensions.includes(extension);
-};
-
-type ImagePreviewIconProps = {
-  nodeFileId: string;
-  fileName: string;
-  previewUrl: string;
-};
-
-const LazyPhotoViewContent: React.FC<{ nodeFileId: string; fileName: string }> = ({ nodeFileId, fileName }) => {
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-
-    (async () => {
-      try {
-        const url = await filesApi.getDownloadLink(nodeFileId, 60 * 24);
-        if (cancelled) return;
-        setDownloadUrl(url);
-      } catch (error) {
-        console.error("Failed to get download link:", error);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [nodeFileId]);
-
-  if (loading || !downloadUrl) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
-          color: "white",
-        }}
-      >
-        <Typography>Loading...</Typography>
-      </Box>
-    );
-  }
-
-  return <img src={downloadUrl} alt={fileName} style={{ maxWidth: "100%", maxHeight: "100%" }} />;
-};
-
-const ImagePreviewIcon: React.FC<ImagePreviewIconProps> = ({
-  nodeFileId,
-  fileName,
-  previewUrl,
-}) => {
-  return (
-    <PhotoView
-      render={() => <LazyPhotoViewContent nodeFileId={nodeFileId} fileName={fileName} />}
-    >
-      <Box
-        component="img"
-        src={previewUrl}
-        alt={fileName}
-        loading="lazy"
-        decoding="async"
-        sx={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          cursor: "pointer",
-        }}
-      />
-    </PhotoView>
-  );
-};
+import { formatBytes } from "./utils/formatBytes";
+import { isImageFile } from "./utils/isImageFile";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
