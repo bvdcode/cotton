@@ -27,6 +27,7 @@ import { uploadManager } from "../../shared/upload/UploadManager";
 import { filesApi } from "../../shared/api/filesApi";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
 import { resolveUploadConflicts } from "./utils/uploadConflicts";
+import { getFilePreview } from "./utils/getFilePreview";
 
 const formatBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -539,7 +540,29 @@ export const FilesPage: React.FC = () => {
               return (
                 <FileSystemItemCard
                   key={tile.file.id}
-                  icon={<InsertDriveFile sx={{ fontSize: 56 }} />}
+                  icon={
+                    (() => {
+                      const preview = getFilePreview(
+                        tile.file.encryptedFilePreviewHashHex ?? null,
+                        tile.file.name
+                      );
+                      if (typeof preview === 'string') {
+                        return (
+                          <Box
+                            component="img"
+                            src={preview}
+                            alt={tile.file.name}
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        );
+                      }
+                      return preview;
+                    })()
+                  }
                   title={tile.file.name}
                   subtitle={formatBytes(tile.file.sizeBytes)}
                   onClick={() => handleDownloadFile(tile.file.id)}
