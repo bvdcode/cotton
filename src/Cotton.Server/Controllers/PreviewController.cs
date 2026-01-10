@@ -15,14 +15,14 @@ namespace Cotton.Server.Controllers
         IStreamCipher _crypto,
         IStoragePipeline _storage) : ControllerBase
     {
-        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashBase64}")]
-        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashBase64}.webp")]
-        public async Task<IActionResult> GetFilePreview([FromRoute] string encryptedFilePreviewHashBase64)
+        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashHex}")]
+        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashHex}.webp")]
+        public async Task<IActionResult> GetFilePreview([FromRoute] string encryptedFilePreviewHashHex)
         {
             string? decryptedPreviewHash;
             try
             {
-                byte[] encryptedPreviewHash = Convert.FromBase64String(encryptedFilePreviewHashBase64);
+                byte[] encryptedPreviewHash = Convert.FromHexString(encryptedFilePreviewHashHex);
                 decryptedPreviewHash = _crypto.Decrypt(encryptedPreviewHash);
             }
             catch (Exception)

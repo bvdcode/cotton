@@ -8,7 +8,7 @@ export default defineConfig(() => {
     server: {
       proxy: {
         "/api": {
-          target: "https://cotton.splidex.com",
+          target: "http://localhost:5182",
           changeOrigin: true,
           secure: true,
           ws: true,

@@ -11,6 +11,6 @@ namespace Cotton.Server.Models.Dto
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
         public long SizeBytes { get; set; }
-        public string? EncryptedFilePreviewHashBase64 { get; set; }
+        public string? EncryptedFilePreviewHashHex { get; set; }
     }
 }
