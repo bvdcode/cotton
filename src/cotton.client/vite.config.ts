@@ -1,24 +1,17 @@
-import { defineConfig, mergeConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
-import { existsSync } from "fs";
-import { resolve } from "path";
 
 // https://vite.dev/config/
-export default defineConfig(async () => {
-  const localConfigPath = resolve(__dirname, "vite.config.local.ts");
-  let localConfig = {};
-  
-  if (existsSync(localConfigPath)) {
-    const localModule = await import(localConfigPath);
-    localConfig = localModule.default;
-  }
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiTarget = env.VITE_API_TARGET || "http://localhost:5182";
 
-  const baseConfig = {
+  return {
     server: {
       proxy: {
         "/api": {
-          target: "http://localhost:5182",
+          target: apiTarget,
           changeOrigin: true,
           secure: true,
           ws: true,
@@ -110,6 +103,4 @@ export default defineConfig(async () => {
       }),
     ],
   };
-  
-  return mergeConfig(baseConfig, localConfig);
 });

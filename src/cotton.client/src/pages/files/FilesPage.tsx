@@ -13,7 +13,6 @@ import {
   CreateNewFolder,
   Folder,
   Home,
-  InsertDriveFile,
   UploadFile,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
