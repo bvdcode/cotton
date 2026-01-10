@@ -190,7 +190,9 @@ export const FilesPage: React.FC = () => {
   const handleDownloadFile = async (nodeFileId: string) => {
     try {
       const downloadLink = await filesApi.getDownloadLink(nodeFileId);
-      window.location.href = downloadLink;
+      const link = document.createElement('a');
+      link.href = downloadLink;
+      link.click();
     } catch (error) {
       console.error('Failed to download file:', error);
     }
@@ -570,7 +572,7 @@ export const FilesPage: React.FC = () => {
                   }
                   title={tile.file.name}
                   subtitle={formatBytes(tile.file.sizeBytes)}
-                  onClick={isImage ? undefined : () => handleDownloadFile(tile.file.id)}
+                  onClick={() => handleDownloadFile(tile.file.id)}
                 />
               );
             })}
