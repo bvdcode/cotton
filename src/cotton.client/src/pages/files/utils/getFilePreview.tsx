@@ -9,14 +9,14 @@ import type { ReactNode } from "react";
  * @returns Either a URL string for preview images or a Material-UI icon component
  */
 export function getFilePreview(
-    encryptedFilePreviewHashHex: string | null,
+  encryptedFilePreviewHashHex: string | null,
   fileName: string,
 ): string | ReactNode {
   // If preview hash is available, use the API endpoint
-    if (encryptedFilePreviewHashHex) {
+  if (encryptedFilePreviewHashHex) {
     return `/api/v1/preview/${encodeURIComponent(
-        encryptedFilePreviewHashHex,
-    )}`;
+      encryptedFilePreviewHashHex,
+    )}.webp`;
   }
 
   const iconFontSize = 120;
