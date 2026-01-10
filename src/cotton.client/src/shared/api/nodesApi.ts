@@ -7,7 +7,7 @@ export interface NodeFileManifestDto
   name: string;
   contentType: string;
   sizeBytes: number;
-  encryptedFilePreviewHash?: string | null;
+  encryptedFilePreviewHashBase64?: string | null;
 }
 
 export interface NodeContentDto
