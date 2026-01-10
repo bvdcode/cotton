@@ -8,6 +8,6 @@ namespace Cotton.Server.Models.Dto
     public class NodeContentDto : BaseDto<Guid>
     {
         public IEnumerable<NodeDto> Nodes { get; set; } = [];
-        public IEnumerable<NodeFileManifestDto> Files { get; set; } = [];
+        public IEnumerable<FileManifestDto> Files { get; set; } = [];
     }
 }
