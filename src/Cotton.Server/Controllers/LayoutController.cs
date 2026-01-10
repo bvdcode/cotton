@@ -213,7 +213,7 @@ namespace Cotton.Server.Controllers
             var files = await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Where(x => x.NodeId == parentNode.Id)
-                .ProjectToType<NodeFileManifestDto>()
+                .ProjectToType<FileManifestDto>()
                 .ToListAsync();
 
             NodeContentDto result = new()
