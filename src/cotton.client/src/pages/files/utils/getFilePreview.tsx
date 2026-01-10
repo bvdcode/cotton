@@ -4,17 +4,17 @@ import type { ReactNode } from "react";
 
 /**
  * Get the preview image source or icon for a file
- * @param encryptedFilePreviewHash - The preview image id from the server
+ * @param encryptedFilePreviewHashBase64 - The preview image id from the server
  * @param fileName - The file name to determine the extension
  * @returns Either a URL string for preview images or a Material-UI icon component
  */
 export function getFilePreview(
-  encryptedFilePreviewHash: string | null | undefined,
+  encryptedFilePreviewHashBase64: string | null | undefined,
   fileName: string,
 ): string | ReactNode {
   // If preview hash is available, use the API endpoint
-  if (encryptedFilePreviewHash) {
-    return `/api/v1/preview/${encryptedFilePreviewHash}.webp`;
+  if (encryptedFilePreviewHashBase64) {
+    return `/api/v1/preview/${encryptedFilePreviewHashBase64}.webp`;
   }
 
   const iconFontSize = 120;
