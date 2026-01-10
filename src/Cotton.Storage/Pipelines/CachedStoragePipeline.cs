@@ -8,7 +8,7 @@ namespace Cotton.Storage.Pipelines
     public class CachedStoragePipeline(IServiceProvider _serviceProvider) : IStoragePipeline
     {
         private const int MaxCacheSizeBytes = 100 * 1024 * 1024;
-        private const int MaxItemSizeBytes = 1 * 1024 * 1024;
+        private const int MaxItemSizeBytes = 100 * 1024;
         private static readonly ConcurrentDictionary<string, byte[]> _cache = new();
         private readonly FileStoragePipeline _innerStorage = ActivatorUtilities.CreateInstance<FileStoragePipeline>(_serviceProvider);
         private readonly ILogger<CachedStoragePipeline> _logger = _serviceProvider.GetRequiredService<ILogger<CachedStoragePipeline>>();
