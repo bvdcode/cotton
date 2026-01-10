@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Box } from "@mui/material";
 import { PhotoView } from "react-photo-view";
-import { useImageLoader } from "./ImageLoaderContext";
+import { useImageLoader } from "./useImageLoader";
 
 type ImagePreviewIconProps = {
   nodeFileId: string;
