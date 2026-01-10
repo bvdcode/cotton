@@ -26,6 +26,7 @@ import { uploadManager } from "../../shared/upload/UploadManager";
 import { filesApi } from "../../shared/api/filesApi";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
 import { ImagePreviewIcon } from "./components/ImagePreviewIcon";
+import { ImageLoaderProvider } from "./components/ImageLoaderContext";
 import { resolveUploadConflicts } from "./utils/uploadConflicts";
 import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";
@@ -316,6 +317,7 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
+    <ImageLoaderProvider>
     <>
       {isDragging && (
         <Box
@@ -577,5 +579,6 @@ export const FilesPage: React.FC = () => {
       </Box>
     </Box>
     </>
+    </ImageLoaderProvider>
   );
 };
