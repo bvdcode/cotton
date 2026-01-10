@@ -572,7 +572,7 @@ export const FilesPage: React.FC = () => {
                   }
                   title={tile.file.name}
                   subtitle={formatBytes(tile.file.sizeBytes)}
-                  onClick={() => handleDownloadFile(tile.file.id)}
+                  onClick={isImage && previewUrl ? undefined : () => handleDownloadFile(tile.file.id)}
                 />
               );
             })}
