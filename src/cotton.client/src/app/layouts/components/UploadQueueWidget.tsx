@@ -1,11 +1,19 @@
-import { Box, IconButton, LinearProgress, Paper, Typography } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  LinearProgress,
+  Paper,
+  Typography,
+} from "@mui/material";
 import { Close, ExpandMore, ExpandLess } from "@mui/icons-material";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 
 const formatBytes = (bytes: number): string => {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes;
   let unitIndex = 0;
@@ -17,7 +25,11 @@ const formatBytes = (bytes: number): string => {
   return `${value.toFixed(precision)} ${units[unitIndex]}`;
 };
 
-const sortTasksByPriority = (tasks: typeof uploadManager extends { getSnapshot(): { tasks: infer T } } ? T : never[]) => {
+const sortTasksByPriority = (
+  tasks: typeof uploadManager extends { getSnapshot(): { tasks: infer T } }
+    ? T
+    : never[],
+) => {
   const statusPriority = {
     uploading: 1,
     finalizing: 1,
@@ -36,16 +48,20 @@ const sortTasksByPriority = (tasks: typeof uploadManager extends { getSnapshot()
 export const UploadQueueWidget = () => {
   const { t } = useTranslation("upload");
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const subscribe = useCallback((cb: () => void) => uploadManager.subscribe(cb), []);
-  const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
-  const snapshot = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getSnapshot,
+  const subscribe = useCallback(
+    (cb: () => void) => uploadManager.subscribe(cb),
+    [],
   );
+  const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const tasks = sortTasksByPriority(snapshot.tasks);
-  const hasActive = tasks.some((t) => t.status === "queued" || t.status === "uploading" || t.status === "finalizing");
+  const hasActive = tasks.some(
+    (t) =>
+      t.status === "queued" ||
+      t.status === "uploading" ||
+      t.status === "finalizing",
+  );
   const visible = snapshot.open || hasActive;
 
   if (!visible) return null;
@@ -68,7 +84,12 @@ export const UploadQueueWidget = () => {
           borderRadius: 2,
         }}
       >
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={isCollapsed ? 0 : 1}>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={isCollapsed ? 0 : 1}
+        >
           <Typography variant="subtitle1" fontWeight={600}>
             {t("title")}
           </Typography>
@@ -78,7 +99,11 @@ export const UploadQueueWidget = () => {
               onClick={() => setIsCollapsed(!isCollapsed)}
               aria-label={isCollapsed ? "Expand" : "Collapse"}
             >
-              {isCollapsed ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+              {isCollapsed ? (
+                <ExpandLess fontSize="small" />
+              ) : (
+                <ExpandMore fontSize="small" />
+              )}
             </IconButton>
             <IconButton
               size="small"
@@ -92,60 +117,72 @@ export const UploadQueueWidget = () => {
         </Box>
 
         {!isCollapsed && (
-          <Box 
+          <Box
             sx={{
-              maxHeight: '400px',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
+              maxHeight: "400px",
+              overflowY: "auto",
+              overflowX: "hidden",
+              display: "flex",
+              flexDirection: "column",
               gap: 1,
               pr: 0.5,
-              '&::-webkit-scrollbar': {
-                width: '8px',
+              "&::-webkit-scrollbar": {
+                width: "8px",
               },
-              '&::-webkit-scrollbar-track': {
-                bgcolor: 'action.hover',
-                borderRadius: '4px',
+              "&::-webkit-scrollbar-track": {
+                bgcolor: "action.hover",
+                borderRadius: "4px",
               },
-              '&::-webkit-scrollbar-thumb': {
-                bgcolor: 'action.selected',
-                borderRadius: '4px',
-                '&:hover': {
-                  bgcolor: 'action.disabled',
+              "&::-webkit-scrollbar-thumb": {
+                bgcolor: "action.selected",
+                borderRadius: "4px",
+                "&:hover": {
+                  bgcolor: "action.disabled",
                 },
               },
             }}
           >
-          {tasks.map((task) => (
-            <Box key={task.id}>
-              <Box display="flex" justifyContent="space-between" gap={1}>
-                <Typography variant="body2" noWrap title={task.fileName}>
-                  {task.fileName}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap title={task.nodeLabel}>
-                  {task.nodeLabel}
-                </Typography>
-              </Box>
+            {tasks.map((task) => (
+              <Box key={task.id}>
+                <Box display="flex" justifyContent="space-between" gap={1}>
+                  <Typography variant="body2" noWrap title={task.fileName}>
+                    {task.fileName}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    title={task.nodeLabel}
+                  >
+                    {task.nodeLabel}
+                  </Typography>
+                </Box>
 
-              <LinearProgress
-                variant="determinate"
-                value={Math.round(task.progress01 * 100)}
-                sx={{ mt: 0.5 }}
-              />
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.round(task.progress01 * 100)}
+                  sx={{ mt: 0.5 }}
+                />
 
-              <Box display="flex" justifyContent="space-between" mt={0.5}>
-                <Typography variant="caption" color="text.secondary">
-                  {task.status === "uploading" && task.uploadSpeedBytesPerSec 
-                    ? `${formatBytes(task.uploadSpeedBytesPerSec)}/s`
-                    : t(`status.${task.status}`)}
-                </Typography>
-                <Typography variant="caption" color={task.status === "failed" ? "error" : "text.secondary"}>
-                  {task.status === "failed" ? task.error ?? "Failed" : `${Math.round(task.progress01 * 100)}%`}
-                </Typography>
+                <Box display="flex" justifyContent="space-between" mt={0.5}>
+                  <Typography variant="caption" color="text.secondary">
+                    {task.status === "uploading" && task.uploadSpeedBytesPerSec
+                      ? `${formatBytes(task.uploadSpeedBytesPerSec)}/s`
+                      : t(`status.${task.status}`)}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color={
+                      task.status === "failed" ? "error" : "text.secondary"
+                    }
+                  >
+                    {task.status === "failed"
+                      ? task.error ?? "Failed"
+                      : `${Math.round(task.progress01 * 100)}%`}
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
-          ))}
+            ))}
           </Box>
         )}
       </Paper>
