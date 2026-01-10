@@ -3,7 +3,6 @@
 
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
-using Cotton.Server.Services;
 using Mapster;
 
 namespace Cotton.Server.Mappings
@@ -26,7 +25,8 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.OwnerId, src => src.OwnerId)
                 .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
                 .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
-                .Map(dest => dest.EncryptedFilePreviewHashBase64, src => src.FileManifest.EncryptedFilePreviewHash);
+                .Map(dest => dest.EncryptedFilePreviewHashBase64,
+                src => src.FileManifest.EncryptedFilePreviewHash == null ? null : Convert.ToBase64String(src.FileManifest.EncryptedFilePreviewHash));
 
             _isConfigured = true;
         }
