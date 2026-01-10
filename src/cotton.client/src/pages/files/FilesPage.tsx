@@ -190,7 +190,7 @@ export const FilesPage: React.FC = () => {
   const handleDownloadFile = async (nodeFileId: string) => {
     try {
       const downloadLink = await filesApi.getDownloadLink(nodeFileId);
-      window.open(downloadLink, '_blank');
+      window.location.href = downloadLink;
     } catch (error) {
       console.error('Failed to download file:', error);
     }
