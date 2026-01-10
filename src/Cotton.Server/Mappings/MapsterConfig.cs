@@ -19,14 +19,14 @@ namespace Cotton.Server.Mappings
                 return;
             }
 
-            TypeAdapterConfig<NodeFile, NodeFileManifestDto>
+            TypeAdapterConfig<NodeFile, FileManifestDto>
                 .NewConfig()
                 .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.Name, src => src.Name)
                 .Map(dest => dest.OwnerId, src => src.OwnerId)
                 .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
                 .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
-                .Map(dest => dest.FilePreviewId, src => src.FileManifest.FilePreviewId);
+                .Map(dest => dest.EncryptedFilePreviewHashBase64, src => src.FileManifest.EncryptedFilePreviewHash);
 
             _isConfigured = true;
         }

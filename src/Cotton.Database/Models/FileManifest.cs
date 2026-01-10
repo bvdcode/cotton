@@ -24,10 +24,9 @@ namespace Cotton.Database.Models
         [Column("size_bytes")]
         public long SizeBytes { get; set; }
 
-        [Column("file_preview_id")]
-        public Guid? FilePreviewId { get; set; }
+        [Column("encrypted_file_preview_hash")]
+        public byte[]? EncryptedFilePreviewHash { get; set; }
 
-        public virtual FilePreview? FilePreview { get; set; }
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
     }
 }
