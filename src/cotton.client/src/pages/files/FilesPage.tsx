@@ -48,6 +48,82 @@ const isImageFile = (fileName: string): boolean => {
   return imageExtensions.includes(extension);
 };
 
+type ImagePreviewIconProps = {
+  nodeFileId: string;
+  fileName: string;
+  previewUrl: string;
+};
+
+const LazyPhotoViewContent: React.FC<{ nodeFileId: string; fileName: string }> = ({ nodeFileId, fileName }) => {
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    (async () => {
+      try {
+        const url = await filesApi.getDownloadLink(nodeFileId, 60 * 24);
+        if (cancelled) return;
+        setDownloadUrl(url);
+      } catch (error) {
+        console.error("Failed to get download link:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nodeFileId]);
+
+  if (loading || !downloadUrl) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "400px",
+          color: "white",
+        }}
+      >
+        <Typography>Loading...</Typography>
+      </Box>
+    );
+  }
+
+  return <img src={downloadUrl} alt={fileName} style={{ maxWidth: "100%", maxHeight: "100%" }} />;
+};
+
+const ImagePreviewIcon: React.FC<ImagePreviewIconProps> = ({
+  nodeFileId,
+  fileName,
+  previewUrl,
+}) => {
+  return (
+    <PhotoView
+      render={() => <LazyPhotoViewContent nodeFileId={nodeFileId} fileName={fileName} />}
+    >
+      <Box
+        component="img"
+        src={previewUrl}
+        alt={fileName}
+        loading="lazy"
+        decoding="async"
+        sx={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          cursor: "pointer",
+        }}
+      />
+    </PhotoView>
+  );
+};
+
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
@@ -557,21 +633,11 @@ export const FilesPage: React.FC = () => {
                     (() => {
                       if (previewUrl && isImage) {
                         return (
-                          <PhotoView
-                            src={`/api/v1/files/${tile.file.id}/download-link`}
-                          >
-                            <Box
-                              component="img"
-                              src={previewUrl}
-                              alt={tile.file.name}
-                              sx={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                cursor: 'pointer',
-                              }}
-                            />
-                          </PhotoView>
+                          <ImagePreviewIcon
+                            nodeFileId={tile.file.id}
+                            fileName={tile.file.name}
+                            previewUrl={previewUrl}
+                          />
                         );
                       }
                       if (previewUrl) {
@@ -580,6 +646,8 @@ export const FilesPage: React.FC = () => {
                             component="img"
                             src={previewUrl}
                             alt={tile.file.name}
+                            loading="lazy"
+                            decoding="async"
                             sx={{
                               width: '100%',
                               height: '100%',
