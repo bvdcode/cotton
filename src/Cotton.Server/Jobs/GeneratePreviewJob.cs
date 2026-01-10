@@ -1,11 +1,12 @@
 ﻿using Cotton.Database;
-using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.Abstractions;
+using EasyExtensions.Extensions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -14,6 +15,7 @@ namespace Cotton.Server.Jobs
 {
     [JobTrigger(hours: 1)]
     public class GeneratePreviewJob(
+        IStreamCipher _crypto,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
@@ -24,7 +26,7 @@ namespace Cotton.Server.Jobs
         {
             // Placeholder implementation
             var itemsToProcess = _dbContext.FileManifests
-                .Where(fm => fm.FilePreviewId == null)
+                .Where(fm => fm.EncryptedFilePreviewHash == null)
                 .Include(fm => fm.FileManifestChunks)
                 .Take(MaxItemsPerRun)
                 .ToList();
@@ -44,22 +46,10 @@ namespace Cotton.Server.Jobs
                 var fs = _storage.GetBlobStream(uids, pipelineContext);
                 var previewImage = await generator.GeneratePreviewWebPAsync(fs);
                 byte[] hash = Hasher.HashData(previewImage);
-                var existing = await _dbContext.FilePreviews.FirstOrDefaultAsync(fp => fp.Hash == hash);
-                if (existing != null)
-                {
-                    item.FilePreviewId = existing.Id;
-                    _logger.LogInformation("Reused existing preview for file manifest {FileManifestId}", item.Id);
-                    continue;
-                }
                 string hashStr = Hasher.ToHexStringHash(hash);
                 using var resultStream = new MemoryStream(previewImage);
                 await _storage.WriteAsync(hashStr, resultStream);
-                FilePreview preview = new()
-                {
-                    Hash = hash
-                };
-                await _dbContext.FilePreviews.AddAsync(preview);
-                item.FilePreview = preview;
+                item.EncryptedFilePreviewHash = _crypto.Encrypt(hashStr);
                 await _dbContext.SaveChangesAsync();
                 _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
             }

@@ -1,8 +1,9 @@
-﻿using Cotton.Database;
-using Cotton.Server.Services;
+﻿using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
@@ -10,31 +11,35 @@ using Microsoft.Net.Http.Headers;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class PreviewController(IStoragePipeline _storage, CottonDbContext _dbContext) : ControllerBase
+    public class PreviewController(
+        IStreamCipher _crypto,
+        IStoragePipeline _storage) : ControllerBase
     {
-        [HttpGet("/api/v1/preview/{previewId:guid}")]
-        [HttpGet("/api/v1/preview/{previewId:guid}.webp")]
-        public async Task<IActionResult> GetFilePreview([FromRoute] Guid previewId)
+        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashBase64}")]
+        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashBase64}.webp")]
+        public async Task<IActionResult> GetFilePreview([FromRoute] string encryptedFilePreviewHashBase64)
         {
-            var found = await _dbContext.FilePreviews
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == previewId);
-            if (found == null)
+            string? decryptedPreviewHash;
+            try
             {
-                return this.ApiNotFound("Preview not found.");
+                byte[] encryptedPreviewHash = Convert.FromBase64String(encryptedFilePreviewHashBase64);
+                decryptedPreviewHash = _crypto.Decrypt(encryptedPreviewHash);
             }
-            string previewImageHash = Hasher.ToHexStringHash(found.Hash);
-            bool validHash = Hasher.IsValidHash(previewImageHash);
+            catch (Exception)
+            {
+                return this.ApiNotFound("Preview image not found.");
+            }
+            bool validHash = Hasher.IsValidHash(decryptedPreviewHash);
             if (!validHash)
             {
-                return this.ApiBadRequest("Invalid preview image hash.");
+                return this.ApiNotFound("Preview image not found.");
             }
-            bool exists = await _storage.ExistsAsync(previewImageHash);
+            bool exists = await _storage.ExistsAsync(decryptedPreviewHash);
             if (!exists)
             {
                 return this.ApiNotFound("Preview image not found.");
             }
-            string etag = $"\"sha256-{previewImageHash}\"";
+            string etag = $"\"sha256-{decryptedPreviewHash}\"";
             var etagHeader = new EntityTagHeaderValue(etag);
             if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var inmValues))
             {
@@ -52,7 +57,7 @@ namespace Cotton.Server.Controllers
             };
             Response.Headers.ETag = etag;
             Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-            var stream = await _storage.ReadAsync(previewImageHash, context);
+            var stream = await _storage.ReadAsync(decryptedPreviewHash, context);
             return File(stream, "image/webp");
         }
     }
