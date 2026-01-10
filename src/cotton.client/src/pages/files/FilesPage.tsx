@@ -18,6 +18,7 @@ import {
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
+import { PhotoView } from "react-photo-view";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
@@ -39,6 +40,12 @@ const formatBytes = (bytes: number): string => {
   }
   const precision = unitIndex === 0 ? 0 : value < 10 ? 2 : 1;
   return `${value.toFixed(precision)} ${units[unitIndex]}`;
+};
+
+const isImageFile = (fileName: string): boolean => {
+  const extension = fileName.toLowerCase().split(".").pop() || "";
+  const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+  return imageExtensions.includes(extension);
 };
 
 export const FilesPage: React.FC = () => {
@@ -536,20 +543,42 @@ export const FilesPage: React.FC = () => {
                 );
               }
 
+              const isImage = isImageFile(tile.file.name);
+              const preview = getFilePreview(
+                tile.file.encryptedFilePreviewHashHex ?? null,
+                tile.file.name
+              );
+              const previewUrl = typeof preview === 'string' ? preview : null;
+
               return (
                 <FileSystemItemCard
                   key={tile.file.id}
                   icon={
                     (() => {
-                      const preview = getFilePreview(
-                        tile.file.encryptedFilePreviewHashHex ?? null,
-                        tile.file.name
-                      );
-                      if (typeof preview === 'string') {
+                      if (previewUrl && isImage) {
+                        return (
+                          <PhotoView
+                            src={`/api/v1/files/${tile.file.id}/download`}
+                          >
+                            <Box
+                              component="img"
+                              src={previewUrl}
+                              alt={tile.file.name}
+                              sx={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                cursor: 'pointer',
+                              }}
+                            />
+                          </PhotoView>
+                        );
+                      }
+                      if (previewUrl) {
                         return (
                           <Box
                             component="img"
-                            src={preview}
+                            src={previewUrl}
                             alt={tile.file.name}
                             sx={{
                               width: '100%',
@@ -564,7 +593,7 @@ export const FilesPage: React.FC = () => {
                   }
                   title={tile.file.name}
                   subtitle={formatBytes(tile.file.sizeBytes)}
-                  onClick={() => handleDownloadFile(tile.file.id)}
+                  onClick={isImage ? undefined : () => handleDownloadFile(tile.file.id)}
                 />
               );
             })}
