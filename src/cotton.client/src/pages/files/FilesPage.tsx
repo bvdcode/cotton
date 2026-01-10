@@ -26,7 +26,7 @@ import { uploadManager } from "../../shared/upload/UploadManager";
 import { filesApi } from "../../shared/api/filesApi";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
 import { ImagePreviewIcon } from "./components/ImagePreviewIcon";
-import { ImageLoaderProvider } from "./components/ImageLoaderContext";
+import { ImageLoaderProvider } from "./components/ImageLoaderProvider";
 import { resolveUploadConflicts } from "./utils/uploadConflicts";
 import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";

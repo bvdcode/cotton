@@ -1,13 +1,9 @@
-import { createContext, useCallback, useState } from "react";
+import React, { useState, useCallback } from "react";
 import { PhotoProvider } from "react-photo-view";
+import { filesApi } from "../../../shared/api/filesApi";
+import { ImageLoaderContext } from "./ImageLoaderContext";
 
-export interface ImageLoaderContextType {
-  getImageUrl: (nodeFileId: string, previewUrl: string) => string;
-  preloadImage: (nodeFileId: string) => void;
-  registerImage: (nodeFileId: string) => void;
-}
-
-export const ImageLoaderContext = createContext<ImageLoaderContextType | null>(null);
+type ImageUrlCache = Record<string, string>;
 
 export const ImageLoaderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cache, setCache] = useState<ImageUrlCache>({});
