@@ -24,12 +24,21 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            // Placeholder implementation
+            var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
+            _logger.LogInformation("Starting preview generation job. Supported mime types: {MimeTypes}", string.Join(", ", allSupportedMimeTypes));
+
             var itemsToProcess = _dbContext.FileManifests
                 .Where(fm => fm.EncryptedFilePreviewHash == null)
+                .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.FileManifestChunks)
+                .OrderBy(fm => fm.CreatedAt)
                 .Take(MaxItemsPerRun)
                 .ToList();
+
+            if (itemsToProcess.Count > 0)
+            {
+                _logger.LogInformation("Generating previews for {Count} file manifests", itemsToProcess.Count);
+            }
             foreach (var item in itemsToProcess)
             {
                 var generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
