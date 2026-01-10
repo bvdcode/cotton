@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { useEffect, useState, useCallback } from "react";
+import { Box } from "@mui/material";
 import { PhotoView } from "react-photo-view";
 import { filesApi } from "../../../shared/api/filesApi";
 
@@ -9,69 +9,47 @@ type ImagePreviewIconProps = {
   previewUrl: string;
 };
 
-const LazyPhotoViewContent: React.FC<{ nodeFileId: string; fileName: string }> = ({ nodeFileId, fileName }) => {
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+export const ImagePreviewIcon: React.FC<ImagePreviewIconProps> = ({
+  nodeFileId,
+  fileName,
+  previewUrl,
+}) => {
+  const [fullSrc, setFullSrc] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   useEffect(() => {
+    if (!isViewerOpen) return;
+    
     let cancelled = false;
-    setLoading(true);
 
     (async () => {
       try {
         const url = await filesApi.getDownloadLink(nodeFileId, 60 * 24);
         if (cancelled) return;
-        setDownloadUrl(url);
+        setFullSrc(url);
       } catch (error) {
         console.error("Failed to get download link:", error);
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [nodeFileId]);
+  }, [isViewerOpen, nodeFileId]);
 
-  if (loading || !downloadUrl) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
-          color: "white",
-        }}
-      >
-        <Typography>Loading...</Typography>
-      </Box>
-    );
-  }
+  const handleClick = useCallback(() => {
+    setIsViewerOpen(true);
+  }, []);
 
-  return <img src={downloadUrl} alt={fileName} />;
-};
-
-export const ImagePreviewIcon: React.FC<ImagePreviewIconProps> = ({
-  nodeFileId,
-  fileName,
-  previewUrl,
-}) => {
   return (
-    <PhotoView
-      render={({ attrs }) => (
-        <div {...attrs}>
-          <LazyPhotoViewContent nodeFileId={nodeFileId} fileName={fileName} />
-        </div>
-      )}
-    >
+    <PhotoView src={fullSrc ?? previewUrl}>
       <Box
         component="img"
         src={previewUrl}
         alt={fileName}
         loading="lazy"
         decoding="async"
+        onClick={handleClick}
         sx={{
           width: "100%",
           height: "100%",
