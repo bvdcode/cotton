@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect } from "react";
 import { Box } from "@mui/material";
 import { PhotoView } from "react-photo-view";
-import { filesApi } from "../../../shared/api/filesApi";
+import { useImageLoader } from "./ImageLoaderContext";
 
 type ImagePreviewIconProps = {
   nodeFileId: string;
@@ -14,35 +14,19 @@ export const ImagePreviewIcon: React.FC<ImagePreviewIconProps> = ({
   fileName,
   previewUrl,
 }) => {
-  const [fullSrc, setFullSrc] = useState<string | null>(null);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const { getImageUrl, preloadImage, registerImage } = useImageLoader();
+  const src = getImageUrl(nodeFileId, previewUrl);
 
   useEffect(() => {
-    if (!isViewerOpen) return;
-    
-    let cancelled = false;
+    registerImage(nodeFileId);
+  }, [nodeFileId, registerImage]);
 
-    (async () => {
-      try {
-        const url = await filesApi.getDownloadLink(nodeFileId, 60 * 24);
-        if (cancelled) return;
-        setFullSrc(url);
-      } catch (error) {
-        console.error("Failed to get download link:", error);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isViewerOpen, nodeFileId]);
-
-  const handleClick = useCallback(() => {
-    setIsViewerOpen(true);
-  }, []);
+  const handleClick = () => {
+    preloadImage(nodeFileId);
+  };
 
   return (
-    <PhotoView src={fullSrc ?? previewUrl}>
+    <PhotoView src={src}>
       <Box
         component="img"
         src={previewUrl}
