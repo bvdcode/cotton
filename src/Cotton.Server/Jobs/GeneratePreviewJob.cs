@@ -20,7 +20,7 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
-        private const int MaxItemsPerRun = 100;
+        private const int MaxItemsPerRun = 1000;
 
         public async Task Execute(IJobExecutionContext context)
         {
