@@ -6,9 +6,10 @@
 
         private static readonly IPreviewGenerator[] Generators =
         [
-            new ImagePreviewGenerator(),
             new PdfPreviewGenerator(),
             new TextPreviewGenerator(),
+            new VideoPreviewGenerator(),
+            new ImagePreviewGenerator(),
         ];
 
         private static readonly Dictionary<string, IPreviewGenerator> GeneratorsByContentType =
