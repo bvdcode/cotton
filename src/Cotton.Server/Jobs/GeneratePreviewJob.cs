@@ -49,7 +49,8 @@ namespace Cotton.Server.Jobs
                 }
                 PipelineContext pipelineContext = new()
                 {
-                    FileSizeBytes = item.SizeBytes
+                    FileSizeBytes = item.SizeBytes,
+                    ChunkLengths = item.FileManifestChunks.GetChunkLengths()
                 };
                 var uids = item.FileManifestChunks.GetChunkHashes();
                 var fs = _storage.GetBlobStream(uids, pipelineContext);
