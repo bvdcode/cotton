@@ -192,7 +192,10 @@ export const FilesPage: React.FC = () => {
       const downloadLink = await filesApi.getDownloadLink(nodeFileId);
       const link = document.createElement('a');
       link.href = downloadLink;
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('Failed to download file:', error);
     }
