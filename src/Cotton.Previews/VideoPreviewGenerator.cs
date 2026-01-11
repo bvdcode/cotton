@@ -19,9 +19,28 @@ namespace Cotton.Previews
         {
             await CheckFfmpegAsync();
 
-            if (stream.CanSeek)
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+
+            // Snapshot stream capabilities for diagnostics.
+            var canSeek = stream.CanSeek;
+            long? declaredLength = null;
+            long? startPos = null;
+            if (canSeek)
             {
-                stream.Seek(0, SeekOrigin.Begin);
+                try
+                {
+                    declaredLength = stream.Length;
+                    startPos = stream.Position;
+                    stream.Seek(0, SeekOrigin.Begin);
+                }
+                catch
+                {
+                    // Ignore: some streams lie about CanSeek or throw.
+                    canSeek = false;
+                    declaredLength = null;
+                    startPos = null;
+                }
             }
 
             var filter =
@@ -53,26 +72,55 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Failed to start ffmpeg for video preview.");
             }
 
-            var stdin = process.StandardInput.BaseStream;
-            var stdout = process.StandardOutput.BaseStream;
+            await using var stdin = process.StandardInput.BaseStream;
+            await using var stdout = process.StandardOutput.BaseStream;
 
-            var outputMs = new MemoryStream();
-            var copyInputTask = stream.CopyToAsync(stdin);
+            await using var outputMs = new MemoryStream();
+
+            long bytesWritten = 0;
+            var copyInputTask = CopyToWithCountAsync(stream, stdin, onWritten: n => bytesWritten += n);
             var copyOutputTask = stdout.CopyToAsync(outputMs);
             var errorTask = process.StandardError.ReadToEndAsync();
 
-            await copyInputTask;
+            await copyInputTask.ConfigureAwait(false);
             process.StandardInput.Close();
 
-            await Task.WhenAll(copyOutputTask, errorTask, process.WaitForExitAsync());
+            await Task.WhenAll(copyOutputTask, errorTask, process.WaitForExitAsync()).ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
-                var err = errorTask.Result;
-                throw new InvalidOperationException($"ffmpeg video preview failed: {err}");
+                var err = await errorTask.ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"ffmpeg video preview failed. exitCode={process.ExitCode}; " +
+                    $"bytesWritten={bytesWritten}; canSeek={canSeek}; length={declaredLength?.ToString() ?? "n/a"}; startPos={startPos?.ToString() ?? "n/a"}; " +
+                    $"stderr={err}");
+            }
+
+            if (outputMs.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"ffmpeg produced empty output. bytesWritten={bytesWritten}; canSeek={canSeek}; length={declaredLength?.ToString() ?? "n/a"}");
             }
 
             return outputMs.ToArray();
+        }
+
+        private static async Task CopyToWithCountAsync(Stream input, Stream output, Action<long> onWritten, int bufferSize = 1024 * 1024)
+        {
+            var buffer = new byte[bufferSize];
+            while (true)
+            {
+                int read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length)).ConfigureAwait(false);
+                if (read <= 0)
+                {
+                    break;
+                }
+
+                await output.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
+                onWritten(read);
+            }
+
+            await output.FlushAsync().ConfigureAwait(false);
         }
 
         // ---------- FFmpeg presence ----------
