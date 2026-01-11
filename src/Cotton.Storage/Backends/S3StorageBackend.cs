@@ -12,7 +12,7 @@ namespace Cotton.Storage.Backends
         private static string GetS3Key(string uid)
         {
             var (p1, p2, fileName) = StorageKeyHelper.GetSegments(uid);
-            return $"{p1}/{p2}/{fileName}";
+            return $"{p1}/{p2}/{fileName}.ctn";
         }
 
         public async Task<bool> DeleteAsync(string uid)
