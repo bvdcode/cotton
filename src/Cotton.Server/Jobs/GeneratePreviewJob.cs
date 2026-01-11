@@ -31,6 +31,7 @@ namespace Cotton.Server.Jobs
                 .Where(fm => fm.EncryptedFilePreviewHash == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.FileManifestChunks)
+                .ThenInclude(fmc => fmc.Chunk)
                 .OrderBy(fm => fm.CreatedAt)
                 .Take(MaxItemsPerRun)
                 .ToList();
