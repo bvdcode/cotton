@@ -5,6 +5,11 @@ namespace Cotton.Server.Extensions
 {
     public static class FileManifestExtensions
     {
+        public static Dictionary<string, long> GetChunkLengths(this IEnumerable<FileManifestChunk> fileManifestChunks)
+        {
+            return fileManifestChunks.ToDictionary(x => Hasher.ToHexStringHash(x.ChunkHash), x => x.Chunk.SizeBytes);
+        }
+
         public static string[] GetChunkHashes(this IEnumerable<FileManifestChunk> chunks)
         {
             List<string> result = [];

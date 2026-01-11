@@ -114,7 +114,7 @@ namespace Cotton.Server.Controllers
             PipelineContext context = new()
             {
                 FileSizeBytes = nodeFile.FileManifest.SizeBytes,
-                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.ToDictionary(x => Hasher.ToHexStringHash(x.ChunkHash), x => x.Chunk.SizeBytes),
+                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths()
             };
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
