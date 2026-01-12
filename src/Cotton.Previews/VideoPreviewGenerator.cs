@@ -44,7 +44,6 @@ namespace Cotton.Previews
             var args =
                 "-hide_banner -loglevel error " +
                 // Let ffmpeg do ranged probing/reading via HTTP.
-                "-http_persistent 0 " +
                 $"-i \"{url}\" " +
                 $"-vf {filter} " +
                 "-frames:v 1 " +
