@@ -53,6 +53,25 @@ namespace Cotton.Previews
             {
                 long length = declaredLength.Value;
 
+                // Try a tiny header window first (cheap, helps for faststart/mp4 with moov at beginning).
+                try
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                    var headerProbe = new BoundedReadStream(stream, maxBytes: 4L * 1024 * 1024);
+                    return await RunFfmpegPipeAsync(
+                        input: headerProbe,
+                        filter: filter,
+                        canSeek: canSeek,
+                        declaredLength: declaredLength,
+                        startPos: startPos,
+                        windowOffset: 0,
+                        windowBytes: 4L * 1024 * 1024).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // ignore and try more expensive attempts below
+                }
+
                 long[] windows =
                 [
                     16L * 1024 * 1024,
