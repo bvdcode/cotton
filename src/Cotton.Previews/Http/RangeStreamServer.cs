@@ -9,6 +9,8 @@ namespace Cotton.Previews.Http
         private readonly long _length;
         private readonly CancellationTokenSource _cts = new();
         private readonly Task _loop;
+        private readonly string _token;
+        private readonly object _gate = new();
 
         public Uri Url { get; }
 
@@ -19,13 +21,13 @@ namespace Cotton.Previews.Http
                 throw new ArgumentException("Stream must be seekable", nameof(seekableStream));
             }
 
-            string token = Guid.NewGuid().ToString("N");
+            _token = Guid.NewGuid().ToString("N");
             _stream = seekableStream;
             _length = seekableStream.Length;
 
             int port = GetFreeTcpPort();
             string prefix = $"http://127.0.0.1:{port}/";
-            Url = new Uri(prefix + "video" + "?token=" + token);
+            Url = new Uri(prefix + "video" + "?token=" + _token);
 
             _listener = new HttpListener();
             _listener.Prefixes.Add(prefix);
@@ -76,21 +78,28 @@ namespace Cotton.Previews.Http
                     return;
                 }
 
+                var token = ctx.Request.QueryString["token"];
+                if (!string.Equals(token, _token, StringComparison.Ordinal))
+                {
+                    ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    ctx.Response.Close();
+                    return;
+                }
+
                 ctx.Response.SendChunked = false;
                 ctx.Response.Headers["Accept-Ranges"] = "bytes";
+                ctx.Response.ContentType = "application/octet-stream";
 
                 string? range = ctx.Request.Headers["Range"];
                 if (string.IsNullOrWhiteSpace(range))
                 {
                     ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                    ctx.Response.ContentType = "application/octet-stream";
                     ctx.Response.ContentLength64 = _length;
                     await CopyRangeAsync(start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
-                    ctx.Response.OutputStream.Close();
+                    ctx.Response.Close();
                     return;
                 }
 
-                // Range: bytes=start-end
                 if (!range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
                 {
                     ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
@@ -105,7 +114,6 @@ namespace Cotton.Previews.Http
 
                 if (parts.Length == 2 && parts[0].Length == 0)
                 {
-                    // suffix range: bytes=-N
                     if (!long.TryParse(parts[1], out var suffixLen) || suffixLen <= 0)
                     {
                         ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
@@ -142,13 +150,19 @@ namespace Cotton.Previews.Http
                     end = Math.Min(end, _length - 1);
                 }
 
+                if (start >= _length)
+                {
+                    ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                    ctx.Response.Close();
+                    return;
+                }
+
                 ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
-                ctx.Response.ContentType = "application/octet-stream";
                 ctx.Response.ContentLength64 = (end - start) + 1;
                 ctx.Response.Headers["Content-Range"] = $"bytes {start}-{end}/{_length}";
 
                 await CopyRangeAsync(start, end, ctx.Response.OutputStream, ct).ConfigureAwait(false);
-                ctx.Response.OutputStream.Close();
+                ctx.Response.Close();
             }
             catch
             {
@@ -158,27 +172,27 @@ namespace Cotton.Previews.Http
 
         private async Task CopyRangeAsync(long start, long endInclusive, Stream destination, CancellationToken ct)
         {
-            // Not thread-safe: guard the underlying stream to keep seeks consistent.
-            // Serialized access is fine: ffmpeg will request ranges sequentially for probing.
-            lock (_stream)
+            long remaining = (endInclusive - start) + 1;
+            byte[] buffer = new byte[1024 * 1024];
+
+            lock (_gate)
             {
                 _stream.Seek(start, SeekOrigin.Begin);
             }
 
-            long remaining = (endInclusive - start) + 1;
-            byte[] buffer = new byte[1024 * 1024];
-
             while (remaining > 0)
             {
                 int toRead = (int)Math.Min(buffer.Length, remaining);
+
                 int read;
-                lock (_stream)
+                lock (_gate)
                 {
                     read = _stream.Read(buffer, 0, toRead);
                 }
 
                 if (read <= 0)
                 {
+                    // Underlying stream ended early; stop to avoid hanging.
                     break;
                 }
 
