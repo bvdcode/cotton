@@ -42,7 +42,11 @@ namespace Cotton.Previews
                 }
             }
 
-            var filter = $"\"thumbnail,scale='min({size},iw)':'min({size},ih)':force_original_aspect_ratio=decrease\"";
+            // Produce a high-quality 150x150 preview:
+            // - pick a representative frame (via seeking at the container level by choosing window)
+            // - scale with lanczos for sharpness
+            // - pad to square so UI layout is consistent
+            var filter = $"\"scale={size}:{size}:force_original_aspect_ratio=decrease:flags=lanczos,pad={size}:{size}:(ow-iw)/2:(oh-ih)/2\"";
 
             if (canSeek && declaredLength is not null && declaredLength.Value > 0)
             {
@@ -88,9 +92,8 @@ namespace Cotton.Previews
                     }
                 }
 
-                // 3) Last resort: write full stream to temp file and let ffmpeg seek normally.
-                // This is heavy, but makes previews as "always generate" as possible.
-                return await RunFfmpegTempFileAsync(stream, filter).ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"ffmpeg video preview failed for all seek-window attempts. canSeek={canSeek}; length={declaredLength}; startPos={startPos}");
             }
 
             if (canSeek)
@@ -174,69 +177,6 @@ namespace Cotton.Previews
             }
 
             return outputMs.ToArray();
-        }
-
-        private static async Task<byte[]> RunFfmpegTempFileAsync(Stream stream, string filter)
-        {
-            var tempPath = Path.Combine(Path.GetTempPath(), $"cotton-video-preview-{Guid.NewGuid():N}.bin");
-            try
-            {
-                await using (var fs = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                {
-                    stream.Seek(0, SeekOrigin.Begin);
-                    await stream.CopyToAsync(fs).ConfigureAwait(false);
-                    await fs.FlushAsync().ConfigureAwait(false);
-                }
-
-                var args =
-                    "-hide_banner -loglevel error " +
-                    "-err_detect ignore_err -fflags +discardcorrupt " +
-                    $"-i \"{tempPath}\" " +
-                    $"-vf {filter} " +
-                    "-frames:v 1 " +
-                    "-an -sn -dn " +
-                    "-f webp pipe:1";
-
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = GetFfmpegPath(),
-                    Arguments = args,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                using var process = new Process { StartInfo = startInfo };
-                if (!process.Start())
-                {
-                    throw new InvalidOperationException("Failed to start ffmpeg for video preview.");
-                }
-
-                await using var stdout = process.StandardOutput.BaseStream;
-                await using var outputMs = new MemoryStream();
-                var copyOutputTask = stdout.CopyToAsync(outputMs);
-                var errorTask = process.StandardError.ReadToEndAsync();
-
-                await Task.WhenAll(copyOutputTask, errorTask, process.WaitForExitAsync()).ConfigureAwait(false);
-
-                if (process.ExitCode != 0)
-                {
-                    var err = await errorTask.ConfigureAwait(false);
-                    throw new InvalidOperationException($"ffmpeg video preview failed (temp file). exitCode={process.ExitCode}; stderr={err}");
-                }
-
-                if (outputMs.Length == 0)
-                {
-                    throw new InvalidOperationException("ffmpeg produced empty output (temp file).");
-                }
-
-                return outputMs.ToArray();
-            }
-            finally
-            {
-                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
-            }
         }
 
         private static bool IsBrokenPipe(IOException ex)
