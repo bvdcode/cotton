@@ -40,6 +40,7 @@ namespace Cotton.Server.Jobs
             {
                 _logger.LogInformation("Generating previews for {Count} file manifests", itemsToProcess.Count);
             }
+
             foreach (var item in itemsToProcess)
             {
                 var generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
@@ -48,22 +49,33 @@ namespace Cotton.Server.Jobs
                     _logger.LogWarning("No preview generator found for content type {ContentType}", item.ContentType);
                     continue;
                 }
+
                 PipelineContext pipelineContext = new()
                 {
                     FileSizeBytes = item.SizeBytes,
                     ChunkLengths = item.FileManifestChunks.GetChunkLengths()
                 };
                 var uids = item.FileManifestChunks.GetChunkHashes();
-                var fs = _storage.GetBlobStream(uids, pipelineContext);
-                var previewImage = await generator.GeneratePreviewWebPAsync(fs);
-                byte[] hash = Hasher.HashData(previewImage);
-                string hashStr = Hasher.ToHexStringHash(hash);
-                using var resultStream = new MemoryStream(previewImage);
-                await _storage.WriteAsync(hashStr, resultStream);
-                item.EncryptedFilePreviewHash = _crypto.Encrypt(hashStr);
-                await _dbContext.SaveChangesAsync();
-                _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
+
+                try
+                {
+                    await using var fs = _storage.GetBlobStream(uids, pipelineContext);
+                    var previewImage = await generator.GeneratePreviewWebPAsync(fs);
+
+                    byte[] hash = Hasher.HashData(previewImage);
+                    string hashStr = Hasher.ToHexStringHash(hash);
+                    using var resultStream = new MemoryStream(previewImage);
+                    await _storage.WriteAsync(hashStr, resultStream);
+                    item.EncryptedFilePreviewHash = _crypto.Encrypt(hashStr);
+                    await _dbContext.SaveChangesAsync();
+                    _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
+                }
             }
+
             await _dbContext.SaveChangesAsync();
         }
     }
