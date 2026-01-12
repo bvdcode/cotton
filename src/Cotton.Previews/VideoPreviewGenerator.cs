@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
+using System.Net.Sockets;
 using Cotton.Previews.Streams;
 using Xabe.FFmpeg.Downloader;
 
@@ -42,46 +43,51 @@ namespace Cotton.Previews
                 }
             }
 
-            var filter =
-                $"\"thumbnail,scale='min({size},iw)':'min({size},ih)':force_original_aspect_ratio=decrease\"";
+            var filter = $"\"thumbnail,scale='min({size},iw)':'min({size},ih)':force_original_aspect_ratio=decrease\"";
 
             // Strategy:
-            // - For seekable streams: try a few offsets and only pipe a bounded byte window to ffmpeg.
-            //   This keeps reads small for huge videos and avoids some MP4/MOV stdin demux issues by
-            //   giving ffmpeg a self-contained chunk that often includes moov+keyframes.
+            // - For seekable streams: try offsets with progressively larger read windows.
+            //   This minimizes reads for very large videos and increases chance of finding a decodable segment.
             // - For non-seekable streams: fall back to piping the full stream.
-
             if (canSeek && declaredLength is not null && declaredLength.Value > 0)
             {
-                const long windowBytes = 256L * 1024 * 1024;
                 long length = declaredLength.Value;
 
-                // offsets as % of file length, plus a near-start probe
+                long[] windows =
+                [
+                    16L * 1024 * 1024,
+                    64L * 1024 * 1024,
+                    256L * 1024 * 1024,
+                ];
+
                 double[] ratios = [0.0, 0.02, 0.05, 0.15, 0.30, 0.50];
 
                 Exception? last = null;
-                foreach (var ratio in ratios)
+                foreach (var windowBytes in windows)
                 {
-                    long offset = (long)(length * ratio);
-                    // keep offset within bounds and avoid seeking past EOF
-                    offset = Math.Clamp(offset, 0, Math.Max(0, length - 1));
+                    foreach (var ratio in ratios)
+                    {
+                        long offset = (long)(length * ratio);
+                        offset = Math.Clamp(offset, 0, Math.Max(0, length - 1));
 
-                    try
-                    {
-                        stream.Seek(offset, SeekOrigin.Begin);
-                        var bounded = new BoundedReadStream(stream, maxBytes: windowBytes);
-                        return await RunFfmpegPipeAsync(
-                            input: bounded,
-                            filter: filter,
-                            canSeek: canSeek,
-                            declaredLength: declaredLength,
-                            startPos: startPos,
-                            windowOffset: offset,
-                            windowBytes: windowBytes).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        last = ex;
+                        try
+                        {
+                            stream.Seek(offset, SeekOrigin.Begin);
+                            var bounded = new BoundedReadStream(stream, maxBytes: windowBytes);
+
+                            return await RunFfmpegPipeAsync(
+                                input: bounded,
+                                filter: filter,
+                                canSeek: canSeek,
+                                declaredLength: declaredLength,
+                                startPos: startPos,
+                                windowOffset: offset,
+                                windowBytes: windowBytes).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            last = ex;
+                        }
                     }
                 }
 
@@ -157,8 +163,15 @@ namespace Cotton.Previews
             var copyOutputTask = stdout.CopyToAsync(outputMs);
             var errorTask = process.StandardError.ReadToEndAsync();
 
-            await copyInputTask.ConfigureAwait(false);
-            process.StandardInput.Close();
+            try
+            {
+                await copyInputTask.ConfigureAwait(false);
+                process.StandardInput.Close();
+            }
+            catch (IOException ex) when (IsBrokenPipe(ex))
+            {
+                // ffmpeg may exit early and close stdin; ignore broken pipe and evaluate exit code/output.
+            }
 
             await Task.WhenAll(copyOutputTask, errorTask, process.WaitForExitAsync()).ConfigureAwait(false);
 
@@ -178,6 +191,11 @@ namespace Cotton.Previews
             }
 
             return outputMs.ToArray();
+        }
+
+        private static bool IsBrokenPipe(IOException ex)
+        {
+            return ex.InnerException is SocketException { ErrorCode: 32 };
         }
 
         private static async Task CopyToWithCountAsync(Stream input, Stream output, Action<long> onWritten, int bufferSize = 1024 * 1024)
