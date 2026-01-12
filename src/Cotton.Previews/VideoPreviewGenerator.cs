@@ -30,13 +30,30 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Video preview generation requires a seekable stream.");
             }
 
-            // Ensure we start from the beginning for consistent probing.
             try { stream.Seek(0, SeekOrigin.Begin); } catch { }
 
             var filter = $"\"scale={size}:{size}:force_original_aspect_ratio=decrease:flags=lanczos,pad={size}:{size}:(ow-iw)/2:(oh-ih)/2\"";
 
-            await using var server = new RangeStreamServer(stream);
-            return await RunFfmpegHttpAsync(server.Url, filter).ConfigureAwait(false);
+            Exception? last = null;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    await using var server = new RangeStreamServer(stream);
+                    return await RunFfmpegHttpAsync(server.Url, filter).ConfigureAwait(false);
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("End of file", StringComparison.OrdinalIgnoreCase)
+                                                     || ex.Message.Contains("prematurely", StringComparison.OrdinalIgnoreCase))
+                {
+                    last = ex;
+
+                    // Reset and retry (ffmpeg may have probed ranges while server was being torn down).
+                    try { stream.Seek(0, SeekOrigin.Begin); } catch { }
+                    await Task.Delay(TimeSpan.FromMilliseconds(100 * (attempt + 1))).ConfigureAwait(false);
+                }
+            }
+
+            throw last ?? new InvalidOperationException("ffmpeg video preview failed.");
         }
 
         private static async Task<byte[]> RunFfmpegHttpAsync(Uri url, string filter)
