@@ -32,7 +32,18 @@ namespace Cotton.Previews
 
             try { stream.Seek(0, SeekOrigin.Begin); } catch { }
 
-            var filter = $"\"scale={size}:{size}:force_original_aspect_ratio=decrease:flags=lanczos,pad={size}:{size}:(ow-iw)/2:(oh-ih)/2\"";
+            // Extracting the very first visible frame often produces tiny/low-res thumbnails (e.g. 16x16),
+            // especially for some formats/encodes. Seek a bit into the timeline and decode at a higher
+            // intermediate size, then downscale sharply to the requested preview size.
+            int intermediate = Math.Max(size * 4, 512);
+            const int seekSeconds = 10;
+
+            var filter =
+                $"\"" +
+                $"scale={intermediate}:{intermediate}:force_original_aspect_ratio=decrease:flags=lanczos," +
+                $"scale={size}:{size}:force_original_aspect_ratio=decrease:flags=lanczos," +
+                $"pad={size}:{size}:(ow-iw)/2:(oh-ih)/2" +
+                $"\"";
 
             Exception? last = null;
             for (int attempt = 0; attempt < 3; attempt++)
@@ -40,14 +51,12 @@ namespace Cotton.Previews
                 try
                 {
                     await using var server = new RangeStreamServer(stream);
-                    return await RunFfmpegHttpAsync(server.Url, filter).ConfigureAwait(false);
+                    return await RunFfmpegHttpAsync(server.Url, filter, seekSeconds).ConfigureAwait(false);
                 }
                 catch (InvalidOperationException ex) when (ex.Message.Contains("End of file", StringComparison.OrdinalIgnoreCase)
                                                      || ex.Message.Contains("prematurely", StringComparison.OrdinalIgnoreCase))
                 {
                     last = ex;
-
-                    // Reset and retry (ffmpeg may have probed ranges while server was being torn down).
                     try { stream.Seek(0, SeekOrigin.Begin); } catch { }
                     await Task.Delay(TimeSpan.FromMilliseconds(100 * (attempt + 1))).ConfigureAwait(false);
                 }
@@ -56,11 +65,11 @@ namespace Cotton.Previews
             throw last ?? new InvalidOperationException("ffmpeg video preview failed.");
         }
 
-        private static async Task<byte[]> RunFfmpegHttpAsync(Uri url, string filter)
+        private static async Task<byte[]> RunFfmpegHttpAsync(Uri url, string filter, int seekSeconds)
         {
             var args =
                 "-hide_banner -loglevel error " +
-                // Let ffmpeg do ranged probing/reading via HTTP.
+                $"-ss {seekSeconds} " +
                 $"-i \"{url}\" " +
                 $"-vf {filter} " +
                 "-frames:v 1 " +
