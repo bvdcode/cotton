@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Cotton.Previews.Streams;
 using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
@@ -32,7 +33,6 @@ namespace Cotton.Previews
                 {
                     declaredLength = stream.Length;
                     startPos = stream.Position;
-                    stream.Seek(0, SeekOrigin.Begin);
                 }
                 catch
                 {
@@ -45,40 +45,97 @@ namespace Cotton.Previews
             var filter =
                 $"\"thumbnail,scale='min({size},iw)':'min({size},ih)':force_original_aspect_ratio=decrease\"";
 
-            // For MP4/MOV it is common that piping via stdin still breaks demuxing in some cases.
-            // Use a temp file input (still preserves the original stream abstraction) to let ffmpeg seek.
-            await using var tempInput = await TrySpoolToTempFileAsync(stream, canSeek, declaredLength).ConfigureAwait(false);
+            // Strategy:
+            // - For seekable streams: try a few offsets and only pipe a bounded byte window to ffmpeg.
+            //   This keeps reads small for huge videos and avoids some MP4/MOV stdin demux issues by
+            //   giving ffmpeg a self-contained chunk that often includes moov+keyframes.
+            // - For non-seekable streams: fall back to piping the full stream.
 
-            string args;
-            if (tempInput != null)
+            if (canSeek && declaredLength is not null && declaredLength.Value > 0)
             {
-                args =
-                    "-hide_banner -loglevel error " +
-                    "-err_detect ignore_err -fflags +discardcorrupt " +
-                    $"-i \"{tempInput.Name}\" " +
-                    $"-vf {filter} " +
-                    "-frames:v 1 " +
-                    "-an -sn -dn " +
-                    "-f webp pipe:1";
+                const long windowBytes = 256L * 1024 * 1024;
+                long length = declaredLength.Value;
+
+                // offsets as % of file length, plus a near-start probe
+                double[] ratios = [0.0, 0.02, 0.05, 0.15, 0.30, 0.50];
+
+                Exception? last = null;
+                foreach (var ratio in ratios)
+                {
+                    long offset = (long)(length * ratio);
+                    // keep offset within bounds and avoid seeking past EOF
+                    offset = Math.Clamp(offset, 0, Math.Max(0, length - 1));
+
+                    try
+                    {
+                        stream.Seek(offset, SeekOrigin.Begin);
+                        var bounded = new BoundedReadStream(stream, maxBytes: windowBytes);
+                        return await RunFfmpegPipeAsync(
+                            input: bounded,
+                            filter: filter,
+                            canSeek: canSeek,
+                            declaredLength: declaredLength,
+                            startPos: startPos,
+                            windowOffset: offset,
+                            windowBytes: windowBytes).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        last = ex;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"ffmpeg video preview failed for all seek+window attempts. canSeek={canSeek}; length={declaredLength}; startPos={startPos}; lastError={last}",
+                    last);
             }
-            else
+
+            if (canSeek)
             {
-                args =
-                    "-hide_banner -loglevel error " +
-                    "-err_detect ignore_err -fflags +discardcorrupt " +
-                    "-i pipe:0 " +
-                    $"-vf {filter} " +
-                    "-frames:v 1 " +
-                    "-an -sn -dn " +
-                    "-f webp pipe:1";
+                try
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                }
+                catch
+                {
+                    // ignore
+                }
             }
+
+            return await RunFfmpegPipeAsync(
+                input: stream,
+                filter: filter,
+                canSeek: canSeek,
+                declaredLength: declaredLength,
+                startPos: startPos,
+                windowOffset: null,
+                windowBytes: null).ConfigureAwait(false);
+        }
+
+        private static async Task<byte[]> RunFfmpegPipeAsync(
+            Stream input,
+            string filter,
+            bool canSeek,
+            long? declaredLength,
+            long? startPos,
+            long? windowOffset,
+            long? windowBytes)
+        {
+            var args =
+                "-hide_banner -loglevel error " +
+                "-err_detect ignore_err -fflags +discardcorrupt " +
+                "-i pipe:0 " +
+                $"-vf {filter} " +
+                "-frames:v 1 " +
+                "-an -sn -dn " +
+                "-f webp pipe:1";
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = GetFfmpegPath(),
                 Arguments = args,
                 UseShellExecute = false,
-                RedirectStandardInput = tempInput == null,
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
@@ -91,30 +148,17 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Failed to start ffmpeg for video preview.");
             }
 
+            await using var stdin = process.StandardInput.BaseStream;
             await using var stdout = process.StandardOutput.BaseStream;
             await using var outputMs = new MemoryStream();
 
-            Task copyInputTask;
             long bytesWritten = 0;
-            if (tempInput == null)
-            {
-                await using var stdin = process.StandardInput.BaseStream;
-                copyInputTask = CopyToWithCountAsync(stream, stdin, onWritten: n => bytesWritten += n);
-            }
-            else
-            {
-                copyInputTask = Task.CompletedTask;
-                bytesWritten = declaredLength ?? 0;
-            }
-
+            var copyInputTask = CopyToWithCountAsync(input, stdin, onWritten: n => bytesWritten += n);
             var copyOutputTask = stdout.CopyToAsync(outputMs);
             var errorTask = process.StandardError.ReadToEndAsync();
 
             await copyInputTask.ConfigureAwait(false);
-            if (tempInput == null)
-            {
-                process.StandardInput.Close();
-            }
+            process.StandardInput.Close();
 
             await Task.WhenAll(copyOutputTask, errorTask, process.WaitForExitAsync()).ConfigureAwait(false);
 
@@ -124,61 +168,16 @@ namespace Cotton.Previews
                 throw new InvalidOperationException(
                     $"ffmpeg video preview failed. exitCode={process.ExitCode}; " +
                     $"bytesWritten={bytesWritten}; canSeek={canSeek}; length={declaredLength?.ToString() ?? "n/a"}; startPos={startPos?.ToString() ?? "n/a"}; " +
-                    $"stdinMode={(tempInput == null ? "pipe" : "file")}; stderr={err}");
+                    $"stdinMode=pipe; windowOffset={windowOffset?.ToString() ?? "n/a"}; windowBytes={windowBytes?.ToString() ?? "n/a"}; stderr={err}");
             }
 
             if (outputMs.Length == 0)
             {
                 throw new InvalidOperationException(
-                    $"ffmpeg produced empty output. bytesWritten={bytesWritten}; canSeek={canSeek}; length={declaredLength?.ToString() ?? "n/a"}; stdinMode={(tempInput == null ? "pipe" : "file")}");
+                    $"ffmpeg produced empty output. bytesWritten={bytesWritten}; canSeek={canSeek}; length={declaredLength?.ToString() ?? "n/a"}; windowOffset={windowOffset?.ToString() ?? "n/a"}; windowBytes={windowBytes?.ToString() ?? "n/a"}");
             }
 
             return outputMs.ToArray();
-        }
-
-        private static async Task<FileStream?> TrySpoolToTempFileAsync(Stream stream, bool canSeek, long? declaredLength)
-        {
-            // Only spool when we can reliably rewind and the file is not absurdly large.
-            if (!canSeek)
-            {
-                return null;
-            }
-
-            // Avoid unexpected disk usage for extremely large videos; keep stdin path available.
-            const long maxSpoolBytes = 512L * 1024 * 1024;
-            if (declaredLength is not null && declaredLength.Value > maxSpoolBytes)
-            {
-                return null;
-            }
-
-            var tempPath = Path.Combine(Path.GetTempPath(), $"cotton-video-preview-{Guid.NewGuid():N}.mp4");
-            var writeOptions = new FileStreamOptions
-            {
-                Mode = FileMode.CreateNew,
-                Access = FileAccess.Write,
-                Share = FileShare.Read,
-                BufferSize = 1024 * 1024,
-                Options = FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.DeleteOnClose
-            };
-
-            await using (var tmpWrite = new FileStream(tempPath, writeOptions))
-            {
-                stream.Seek(0, SeekOrigin.Begin);
-                await stream.CopyToAsync(tmpWrite).ConfigureAwait(false);
-                await tmpWrite.FlushAsync().ConfigureAwait(false);
-            }
-
-            // Open for read; DeleteOnClose cleans it up when disposed.
-            var readOptions = new FileStreamOptions
-            {
-                Mode = FileMode.Open,
-                Access = FileAccess.Read,
-                Share = FileShare.Read,
-                BufferSize = 1024 * 1024,
-                Options = FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.DeleteOnClose
-            };
-
-            return new FileStream(tempPath, readOptions);
         }
 
         private static async Task CopyToWithCountAsync(Stream input, Stream output, Action<long> onWritten, int bufferSize = 1024 * 1024)
