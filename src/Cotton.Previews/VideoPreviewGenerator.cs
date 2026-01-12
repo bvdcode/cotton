@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
-using Cotton.Previews.Streams;
+using Cotton.Previews.Http;
+
 using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
@@ -24,100 +25,27 @@ namespace Cotton.Previews
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
-            var canSeek = stream.CanSeek;
-            long? declaredLength = null;
-            long? startPos = null;
-            if (canSeek)
+            if (!stream.CanSeek)
             {
-                try
-                {
-                    declaredLength = stream.Length;
-                    startPos = stream.Position;
-                }
-                catch
-                {
-                    canSeek = false;
-                    declaredLength = null;
-                    startPos = null;
-                }
+                throw new InvalidOperationException("Video preview generation requires a seekable stream.");
             }
 
-            // Produce a high-quality 150x150 preview:
-            // - pick a representative frame (via seeking at the container level by choosing window)
-            // - scale with lanczos for sharpness
-            // - pad to square so UI layout is consistent
+            // Ensure we start from the beginning for consistent probing.
+            try { stream.Seek(0, SeekOrigin.Begin); } catch { }
+
             var filter = $"\"scale={size}:{size}:force_original_aspect_ratio=decrease:flags=lanczos,pad={size}:{size}:(ow-iw)/2:(oh-ih)/2\"";
 
-            if (canSeek && declaredLength is not null && declaredLength.Value > 0)
-            {
-                long total = declaredLength.Value;
-                long[] windows =
-                [
-                    4L * 1024 * 1024,
-                    16L * 1024 * 1024,
-                    64L * 1024 * 1024,
-                    256L * 1024 * 1024,
-                ];
-
-                // 1) Prefer start-of-file window growth (best for faststart moov-at-begin)
-                foreach (var window in windows)
-                {
-                    long len = Math.Min(window, total);
-                    try
-                    {
-                        var w = new WindowedSeekStream(stream, start: 0, length: len);
-                        return await RunFfmpegPipeAsync(w, filter, canSeek, declaredLength, startPos, windowOffset: 0, windowBytes: len)
-                            .ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        // try next window
-                    }
-                }
-
-                // 2) Probe end-of-file window growth (helps when moov is at the end)
-                foreach (var window in windows)
-                {
-                    long len = Math.Min(window, total);
-                    long start = Math.Max(0, total - len);
-                    try
-                    {
-                        var w = new WindowedSeekStream(stream, start: start, length: len);
-                        return await RunFfmpegPipeAsync(w, filter, canSeek, declaredLength, startPos, windowOffset: start, windowBytes: len)
-                            .ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        // try next window
-                    }
-                }
-
-                throw new InvalidOperationException(
-                    $"ffmpeg video preview failed for all seek-window attempts. canSeek={canSeek}; length={declaredLength}; startPos={startPos}");
-            }
-
-            if (canSeek)
-            {
-                try { stream.Seek(0, SeekOrigin.Begin); } catch { }
-            }
-
-            return await RunFfmpegPipeAsync(stream, filter, canSeek, declaredLength, startPos, windowOffset: null, windowBytes: null)
-                .ConfigureAwait(false);
+            await using var server = new RangeStreamServer(stream);
+            return await RunFfmpegHttpAsync(server.Url, filter).ConfigureAwait(false);
         }
 
-        private static async Task<byte[]> RunFfmpegPipeAsync(
-            Stream input,
-            string filter,
-            bool canSeek,
-            long? declaredLength,
-            long? startPos,
-            long? windowOffset,
-            long? windowBytes)
+        private static async Task<byte[]> RunFfmpegHttpAsync(Uri url, string filter)
         {
             var args =
                 "-hide_banner -loglevel error " +
-                "-err_detect ignore_err -fflags +discardcorrupt " +
-                "-i pipe:0 " +
+                // Let ffmpeg do ranged probing/reading via HTTP.
+                "-http_persistent 0 " +
+                $"-i \"{url}\" " +
                 $"-vf {filter} " +
                 "-frames:v 1 " +
                 "-an -sn -dn " +
@@ -128,7 +56,6 @@ namespace Cotton.Previews
                 FileName = GetFfmpegPath(),
                 Arguments = args,
                 UseShellExecute = false,
-                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
@@ -140,40 +67,22 @@ namespace Cotton.Previews
                 throw new InvalidOperationException("Failed to start ffmpeg for video preview.");
             }
 
-            await using var stdin = process.StandardInput.BaseStream;
             await using var stdout = process.StandardOutput.BaseStream;
             await using var outputMs = new MemoryStream();
-
-            long bytesWritten = 0;
-            var copyInputTask = CopyToWithCountAsync(input, stdin, onWritten: n => bytesWritten += n);
             var copyOutputTask = stdout.CopyToAsync(outputMs);
             var errorTask = process.StandardError.ReadToEndAsync();
-
-            try
-            {
-                await copyInputTask.ConfigureAwait(false);
-                process.StandardInput.Close();
-            }
-            catch (IOException ex) when (IsBrokenPipe(ex))
-            {
-                // ignore; ffmpeg may exit early
-            }
 
             await Task.WhenAll(copyOutputTask, errorTask, process.WaitForExitAsync()).ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
                 var err = await errorTask.ConfigureAwait(false);
-                throw new InvalidOperationException(
-                    $"ffmpeg video preview failed. exitCode={process.ExitCode}; " +
-                    $"bytesWritten={bytesWritten}; canSeek={canSeek}; length={declaredLength?.ToString() ?? "n/a"}; startPos={startPos?.ToString() ?? "n/a"}; " +
-                    $"stdinMode=pipe; windowOffset={windowOffset?.ToString() ?? "n/a"}; windowBytes={windowBytes?.ToString() ?? "n/a"}; stderr={err}");
+                throw new InvalidOperationException($"ffmpeg video preview failed. exitCode={process.ExitCode}; stderr={err}");
             }
 
             if (outputMs.Length == 0)
             {
-                throw new InvalidOperationException(
-                    $"ffmpeg produced empty output. bytesWritten={bytesWritten}; canSeek={canSeek}; length={declaredLength?.ToString() ?? "n/a"}; windowOffset={windowOffset?.ToString() ?? "n/a"}; windowBytes={windowBytes?.ToString() ?? "n/a"}");
+                throw new InvalidOperationException("ffmpeg produced empty output.");
             }
 
             return outputMs.ToArray();
