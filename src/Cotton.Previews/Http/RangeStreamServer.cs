@@ -217,42 +217,46 @@ namespace Cotton.Previews.Http
         private async Task<bool> CopyRangeAsync(string reqId, long start, long endInclusive, Stream destination, CancellationToken ct)
         {
             long remaining = (endInclusive - start) + 1;
+            long currentPosition = start;
             byte[] buffer = new byte[1024 * 1024];
+            long totalRead = 0;
 
-            _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync waiting for semaphore...", _serverId, reqId);
-            await _sem.WaitAsync(ct).ConfigureAwait(false);
-            _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync acquired semaphore", _serverId, reqId);
+            _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync starting: {Start}-{End} ({ContentLength} bytes)", _serverId, reqId, start, endInclusive, remaining);
 
-            try
+            while (remaining > 0)
             {
-                _stream.Seek(start, SeekOrigin.Begin);
-                long totalRead = 0;
+                int toRead = (int)Math.Min(buffer.Length, remaining);
+                int read;
 
-                while (remaining > 0)
+                // Lock only Seek+Read to allow interleaving of multiple concurrent requests
+                // This is critical: ffprobe/ffmpeg request full file AND moov simultaneously
+                // Without interleaving, moov request waits for 500MB+ transfer ? timeout
+                await _sem.WaitAsync(ct).ConfigureAwait(false);
+                try
                 {
-                    int toRead = (int)Math.Min(buffer.Length, remaining);
-                    int read = await _stream.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
-
-                    if (read <= 0)
-                    {
-                        _logger?.LogError("[RangeServer {ServerId} Req {ReqId}] Premature EOF: totalRead={TotalRead}, expected={Expected}", _serverId, reqId, totalRead, (endInclusive - start) + 1);
-                        return false;
-                    }
-
-                    await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                    remaining -= read;
-                    totalRead += read;
+                    _stream.Seek(currentPosition, SeekOrigin.Begin);
+                    read = _stream.Read(buffer, 0, toRead);
+                }
+                finally
+                {
+                    _sem.Release();
                 }
 
-                await destination.FlushAsync(ct).ConfigureAwait(false);
-                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync completed: totalRead={TotalRead}", _serverId, reqId, totalRead);
-                return true;
+                if (read <= 0)
+                {
+                    _logger?.LogError("[RangeServer {ServerId} Req {ReqId}] Premature EOF at position {Position}: totalRead={TotalRead}, expected={Expected}", _serverId, reqId, currentPosition, totalRead, (endInclusive - start) + 1);
+                    return false;
+                }
+
+                await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                remaining -= read;
+                currentPosition += read;
+                totalRead += read;
             }
-            finally
-            {
-                _sem.Release();
-                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync released semaphore", _serverId, reqId);
-            }
+
+            await destination.FlushAsync(ct).ConfigureAwait(false);
+            _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync completed: totalRead={TotalRead}", _serverId, reqId, totalRead);
+            return true;
         }
 
         public async ValueTask DisposeAsync()
