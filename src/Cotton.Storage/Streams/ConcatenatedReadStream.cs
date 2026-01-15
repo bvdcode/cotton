@@ -12,10 +12,7 @@ namespace Cotton.Storage.Streams
         PipelineContext? pipelineContext = null) : Stream
     {
         private readonly Materialized _materialized = Materialize(hashes, pipelineContext);
-        private List<string> Hashes => _materialized.Hashes;
         private readonly bool _canSeek = pipelineContext?.ChunkLengths != null;
-        private ChunkIndexEntry[]? Index => _materialized.Index;
-        private long? LengthFromIndex => _materialized.Length;
         private Stream? _current;
         private int _currentChunkIndex = -1;
         private long _position;
@@ -24,6 +21,10 @@ namespace Cotton.Storage.Streams
         private readonly record struct ChunkIndexEntry(string Hash, long StartOffset, long Length);
 
         private readonly record struct Materialized(List<string> Hashes, ChunkIndexEntry[]? Index, long? Length);
+
+        private List<string> Hashes => _materialized.Hashes;
+        private ChunkIndexEntry[]? Index => _materialized.Index;
+        private long? LengthFromIndex => _materialized.Length;
 
         public override bool CanRead => true;
         public override bool CanSeek => _canSeek;
@@ -35,23 +36,20 @@ namespace Cotton.Storage.Streams
             set => Seek(value, SeekOrigin.Begin);
         }
 
-        private static Materialized Materialize(IEnumerable<string> hashes, PipelineContext? context)
+        private static Materialized Materialize(
+            IEnumerable<string> hashes,
+            PipelineContext? context)
         {
             var list = new List<string>(hashes);
-            var index = BuildIndex(list, context);
-            var length = ComputeLengthFromIndex(list, context);
-            return new(list, index, length);
-        }
 
-        private static ChunkIndexEntry[]? BuildIndex(IReadOnlyList<string> list, PipelineContext? context)
-        {
             if (context?.ChunkLengths == null)
             {
-                return null;
+                return new(list, null, null);
             }
 
             var index = new ChunkIndexEntry[list.Count];
             long start = 0;
+            long total = 0;
 
             for (int i = 0; i < list.Count; i++)
             {
@@ -62,26 +60,6 @@ namespace Cotton.Storage.Streams
                 }
                 index[i] = new(hash, start, len);
                 start += len;
-            }
-
-            return index;
-        }
-
-        private static long? ComputeLengthFromIndex(IReadOnlyList<string> list, PipelineContext? context)
-        {
-            if (context?.ChunkLengths == null)
-            {
-                return null;
-            }
-
-            long total = 0;
-            for (int i = 0; i < list.Count; i++)
-            {
-                string hash = list[i];
-                if (!context.ChunkLengths.TryGetValue(hash, out long len))
-                {
-                    throw new InvalidOperationException($"Chunk length is missing for hash '{hash}'.");
-                }
                 total += len;
             }
 
@@ -90,7 +68,7 @@ namespace Cotton.Storage.Streams
                 throw new InvalidOperationException("PipelineContext.FileSizeBytes does not match sum of ChunkLengths.");
             }
 
-            return total;
+            return new(list, index, total);
         }
 
         private (int chunkIndex, long offsetInChunk) GetChunkAtPosition(long position)
