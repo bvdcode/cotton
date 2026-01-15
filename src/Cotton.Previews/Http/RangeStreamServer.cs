@@ -159,9 +159,13 @@ namespace Cotton.Previews.Http
                 if (start >= _length)
                 {
                     ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                    ctx.Response.Headers["Content-Range"] = $"bytes */{_length}";
                     ctx.Response.Close();
                     return;
                 }
+
+                // Clamp end after checking start.
+                end = Math.Clamp(end, start, _length - 1);
 
                 ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
                 ctx.Response.ContentLength64 = (end - start) + 1;
