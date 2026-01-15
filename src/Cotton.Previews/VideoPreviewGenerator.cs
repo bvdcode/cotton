@@ -29,15 +29,11 @@ namespace Cotton.Previews
             }
 
             try { stream.Seek(0, SeekOrigin.Begin); } catch { }
-
-            // 1) Get a raw frame from ffmpeg as PNG (no filters). This avoids ffmpeg doing any scaling.
-            // 2) Resize/encode with ImageSharp (consistent quality with other previews).
             byte[] pngFrame;
             await using (var server = new RangeStreamServer(stream))
             {
                 pngFrame = await RunFfmpegHttpPngAsync(server.Url).ConfigureAwait(false);
             }
-
             ImagePreviewGenerator imagePreviewGenerator = new();
             await using var pngStream = new MemoryStream(pngFrame);
             return await imagePreviewGenerator.GeneratePreviewWebPAsync(pngStream);
