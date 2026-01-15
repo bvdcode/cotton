@@ -11,9 +11,11 @@ namespace Cotton.Storage.Streams
         IEnumerable<string> hashes,
         PipelineContext? pipelineContext = null) : Stream
     {
-        private readonly List<string> _hashes = [.. hashes];
+        private readonly Materialized _materialized = Materialize(hashes, pipelineContext);
+        private List<string> Hashes => _materialized.Hashes;
         private readonly bool _canSeek = pipelineContext?.ChunkLengths != null;
-        private readonly ChunkIndexEntry[]? _index = BuildIndex(hashes, pipelineContext);
+        private ChunkIndexEntry[]? Index => _materialized.Index;
+        private long? LengthFromIndex => _materialized.Length;
         private Stream? _current;
         private int _currentChunkIndex = -1;
         private long _position;
@@ -21,24 +23,33 @@ namespace Cotton.Storage.Streams
 
         private readonly record struct ChunkIndexEntry(string Hash, long StartOffset, long Length);
 
+        private readonly record struct Materialized(List<string> Hashes, ChunkIndexEntry[]? Index, long? Length);
+
         public override bool CanRead => true;
         public override bool CanSeek => _canSeek;
         public override bool CanWrite => false;
-        public override long Length => pipelineContext?.FileSizeBytes ?? throw new NotSupportedException();
+        public override long Length => pipelineContext?.FileSizeBytes ?? LengthFromIndex ?? throw new NotSupportedException();
         public override long Position
         {
             get => _position;
             set => Seek(value, SeekOrigin.Begin);
         }
 
-        private static ChunkIndexEntry[]? BuildIndex(IEnumerable<string> hashes, PipelineContext? context)
+        private static Materialized Materialize(IEnumerable<string> hashes, PipelineContext? context)
+        {
+            var list = new List<string>(hashes);
+            var index = BuildIndex(list, context);
+            var length = ComputeLengthFromIndex(list, context);
+            return new(list, index, length);
+        }
+
+        private static ChunkIndexEntry[]? BuildIndex(IReadOnlyList<string> list, PipelineContext? context)
         {
             if (context?.ChunkLengths == null)
             {
                 return null;
             }
 
-            var list = hashes as IReadOnlyList<string> ?? [.. hashes];
             var index = new ChunkIndexEntry[list.Count];
             long start = 0;
 
@@ -53,22 +64,41 @@ namespace Cotton.Storage.Streams
                 start += len;
             }
 
-            if (context.FileSizeBytes.HasValue && context.FileSizeBytes.Value != start)
+            return index;
+        }
+
+        private static long? ComputeLengthFromIndex(IReadOnlyList<string> list, PipelineContext? context)
+        {
+            if (context?.ChunkLengths == null)
             {
-                // Not fatal, but indicates inconsistent metadata.
-                // Keep behavior strict to avoid incorrect range reads.
+                return null;
+            }
+
+            long total = 0;
+            for (int i = 0; i < list.Count; i++)
+            {
+                string hash = list[i];
+                if (!context.ChunkLengths.TryGetValue(hash, out long len))
+                {
+                    throw new InvalidOperationException($"Chunk length is missing for hash '{hash}'.");
+                }
+                total += len;
+            }
+
+            if (context.FileSizeBytes.HasValue && context.FileSizeBytes.Value != total)
+            {
                 throw new InvalidOperationException("PipelineContext.FileSizeBytes does not match sum of ChunkLengths.");
             }
 
-            return index;
+            return total;
         }
 
         private (int chunkIndex, long offsetInChunk) GetChunkAtPosition(long position)
         {
-            var index = _index;
+            var index = Index;
             if (index == null || index.Length == 0)
             {
-                return (_hashes.Count, 0);
+                return (Hashes.Count, 0);
             }
 
             // Find the last chunk with StartOffset <= position.
@@ -122,7 +152,7 @@ namespace Cotton.Storage.Streams
 
         private bool EnsureCurrentChunk(int targetChunkIndex, long requiredOffset)
         {
-            if (targetChunkIndex >= _hashes.Count)
+            if (targetChunkIndex >= Hashes.Count)
             {
                 return false;
             }
@@ -130,7 +160,7 @@ namespace Cotton.Storage.Streams
             if (_currentChunkIndex != targetChunkIndex || _current == null)
             {
                 _current?.Dispose();
-                _current = storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult()
+                _current = storage.ReadAsync(Hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult()
                     ?? throw new InvalidOperationException("Storage pipeline returned null stream.");
 
                 _currentChunkIndex = targetChunkIndex;
@@ -152,7 +182,7 @@ namespace Cotton.Storage.Streams
 
             // _currentChunkPosition > requiredOffset : reopen same chunk and skip from start
             _current.Dispose();
-            _current = storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult()
+            _current = storage.ReadAsync(Hashes[targetChunkIndex], pipelineContext).GetAwaiter().GetResult()
                 ?? throw new InvalidOperationException("Storage pipeline returned null stream.");
             _currentChunkPosition = 0;
 
@@ -167,7 +197,7 @@ namespace Cotton.Storage.Streams
 
         private async ValueTask<bool> EnsureCurrentChunkAsync(int targetChunkIndex, long requiredOffset)
         {
-            if (targetChunkIndex >= _hashes.Count)
+            if (targetChunkIndex >= Hashes.Count)
             {
                 return false;
             }
@@ -179,7 +209,7 @@ namespace Cotton.Storage.Streams
                     await _current.DisposeAsync().ConfigureAwait(false);
                 }
 
-                _current = await storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false)
+                _current = await storage.ReadAsync(Hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false)
                     ?? throw new InvalidOperationException("Storage pipeline returned null stream.");
 
                 _currentChunkIndex = targetChunkIndex;
@@ -201,7 +231,7 @@ namespace Cotton.Storage.Streams
 
             // _currentChunkPosition > requiredOffset : reopen same chunk and skip from start
             await _current.DisposeAsync().ConfigureAwait(false);
-            _current = await storage.ReadAsync(_hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false)
+            _current = await storage.ReadAsync(Hashes[targetChunkIndex], pipelineContext).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Storage pipeline returned null stream.");
             _currentChunkPosition = 0;
 
@@ -270,7 +300,7 @@ namespace Cotton.Storage.Streams
             }
 
             int totalRead = 0;
-            while (count > 0 && chunkIndex < _hashes.Count)
+            while (count > 0 && chunkIndex < Hashes.Count)
             {
                 int read = _current!.Read(buffer, offset, count);
                 if (read == 0)
@@ -299,12 +329,12 @@ namespace Cotton.Storage.Streams
             {
                 _currentChunkIndex = 0;
                 _currentChunkPosition = 0;
-                if (_hashes.Count == 0)
+                if (Hashes.Count == 0)
                 {
                     return 0;
                 }
 
-                _current = storage.ReadAsync(_hashes[0], pipelineContext).GetAwaiter().GetResult();
+                _current = storage.ReadAsync(Hashes[0], pipelineContext).GetAwaiter().GetResult();
             }
 
             if (_current == null)
@@ -319,12 +349,12 @@ namespace Cotton.Storage.Streams
                 _current = null;
                 _currentChunkIndex++;
                 _currentChunkPosition = 0;
-                if (_currentChunkIndex >= _hashes.Count)
+                if (_currentChunkIndex >= Hashes.Count)
                 {
                     return 0;
                 }
 
-                _current = storage.ReadAsync(_hashes[_currentChunkIndex], pipelineContext).GetAwaiter().GetResult();
+                _current = storage.ReadAsync(Hashes[_currentChunkIndex], pipelineContext).GetAwaiter().GetResult();
                 return ReadSequential(buffer, offset, count);
             }
 
@@ -347,7 +377,7 @@ namespace Cotton.Storage.Streams
             }
 
             int totalRead = 0;
-            while (buffer.Length > 0 && chunkIndex < _hashes.Count)
+            while (buffer.Length > 0 && chunkIndex < Hashes.Count)
             {
                 int read = await _current!.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
                 if (read == 0)
@@ -375,12 +405,12 @@ namespace Cotton.Storage.Streams
             {
                 _currentChunkIndex = 0;
                 _currentChunkPosition = 0;
-                if (_hashes.Count == 0)
+                if (Hashes.Count == 0)
                 {
                     return 0;
                 }
 
-                _current = await storage.ReadAsync(_hashes[0], pipelineContext).ConfigureAwait(false);
+                _current = await storage.ReadAsync(Hashes[0], pipelineContext).ConfigureAwait(false);
             }
 
             if (_current == null)
@@ -395,12 +425,12 @@ namespace Cotton.Storage.Streams
                 _current = null;
                 _currentChunkIndex++;
                 _currentChunkPosition = 0;
-                if (_currentChunkIndex >= _hashes.Count)
+                if (_currentChunkIndex >= Hashes.Count)
                 {
                     return 0;
                 }
 
-                _current = await storage.ReadAsync(_hashes[_currentChunkIndex], pipelineContext).ConfigureAwait(false);
+                _current = await storage.ReadAsync(Hashes[_currentChunkIndex], pipelineContext).ConfigureAwait(false);
                 return await ReadSequentialAsync(buffer, cancellationToken).ConfigureAwait(false);
             }
 
