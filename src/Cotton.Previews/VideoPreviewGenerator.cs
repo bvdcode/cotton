@@ -1,7 +1,5 @@
-using System.Diagnostics;
-using System.Net.Sockets;
 using Cotton.Previews.Http;
-
+using System.Diagnostics;
 using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
@@ -32,49 +30,27 @@ namespace Cotton.Previews
 
             try { stream.Seek(0, SeekOrigin.Begin); } catch { }
 
-            // Extracting the very first visible frame often produces tiny/low-res thumbnails (e.g. 16x16),
-            // especially for some formats/encodes. Seek a bit into the timeline and decode at a higher
-            // intermediate size, then downscale sharply to the requested preview size.
-            int intermediate = Math.Max(size * 4, 512);
-            const int seekSeconds = 10;
-
-            var filter =
-                $"\"" +
-                $"scale={intermediate}:{intermediate}:force_original_aspect_ratio=decrease:flags=lanczos," +
-                $"scale={size}:{size}:force_original_aspect_ratio=decrease:flags=lanczos," +
-                $"pad={size}:{size}:(ow-iw)/2:(oh-ih)/2" +
-                $"\"";
-
-            Exception? last = null;
-            for (int attempt = 0; attempt < 3; attempt++)
+            // 1) Get a raw frame from ffmpeg as PNG (no filters). This avoids ffmpeg doing any scaling.
+            // 2) Resize/encode with ImageSharp (consistent quality with other previews).
+            byte[] pngFrame;
+            await using (var server = new RangeStreamServer(stream))
             {
-                try
-                {
-                    await using var server = new RangeStreamServer(stream);
-                    return await RunFfmpegHttpAsync(server.Url, filter, seekSeconds).ConfigureAwait(false);
-                }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("End of file", StringComparison.OrdinalIgnoreCase)
-                                                     || ex.Message.Contains("prematurely", StringComparison.OrdinalIgnoreCase))
-                {
-                    last = ex;
-                    try { stream.Seek(0, SeekOrigin.Begin); } catch { }
-                    await Task.Delay(TimeSpan.FromMilliseconds(100 * (attempt + 1))).ConfigureAwait(false);
-                }
+                pngFrame = await RunFfmpegHttpPngAsync(server.Url).ConfigureAwait(false);
             }
 
-            throw last ?? new InvalidOperationException("ffmpeg video preview failed.");
+            ImagePreviewGenerator imagePreviewGenerator = new();
+            await using var pngStream = new MemoryStream(pngFrame);
+            return await imagePreviewGenerator.GeneratePreviewWebPAsync(pngStream);
         }
 
-        private static async Task<byte[]> RunFfmpegHttpAsync(Uri url, string filter, int seekSeconds)
+        private static async Task<byte[]> RunFfmpegHttpPngAsync(Uri url)
         {
             var args =
                 "-hide_banner -loglevel error " +
-                $"-ss {seekSeconds} " +
                 $"-i \"{url}\" " +
-                $"-vf {filter} " +
                 "-frames:v 1 " +
                 "-an -sn -dn " +
-                "-f webp pipe:1";
+                "-f image2pipe -vcodec png pipe:1";
 
             var startInfo = new ProcessStartInfo
             {
@@ -111,29 +87,6 @@ namespace Cotton.Previews
             }
 
             return outputMs.ToArray();
-        }
-
-        private static bool IsBrokenPipe(IOException ex)
-        {
-            return ex.InnerException is SocketException { ErrorCode: 32 };
-        }
-
-        private static async Task CopyToWithCountAsync(Stream input, Stream output, Action<long> onWritten, int bufferSize = 1024 * 1024)
-        {
-            var buffer = new byte[bufferSize];
-            while (true)
-            {
-                int read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length)).ConfigureAwait(false);
-                if (read <= 0)
-                {
-                    break;
-                }
-
-                await output.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
-                onWritten(read);
-            }
-
-            await output.FlushAsync().ConfigureAwait(false);
         }
 
         private static async Task CheckFfmpegAsync()
