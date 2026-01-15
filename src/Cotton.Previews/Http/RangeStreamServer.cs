@@ -10,7 +10,7 @@ namespace Cotton.Previews.Http
         private readonly CancellationTokenSource _cts = new();
         private readonly Task _loop;
         private readonly string _token;
-        private readonly Lock _gate = new();
+        private readonly SemaphoreSlim _sem = new(1, 1);
 
         public Uri Url { get; }
 
@@ -63,7 +63,7 @@ namespace Cotton.Previews.Http
                     continue;
                 }
 
-                await HandleAsync(ctx, ct).ConfigureAwait(false);
+                _ = Task.Run(() => HandleAsync(ctx, ct), ct);
             }
         }
 
@@ -152,8 +152,6 @@ namespace Cotton.Previews.Http
                     {
                         end = _length - 1;
                     }
-
-                    end = Math.Min(end, _length - 1);
                 }
 
                 if (start >= _length)
@@ -164,7 +162,6 @@ namespace Cotton.Previews.Http
                     return;
                 }
 
-                // Clamp end after checking start.
                 end = Math.Clamp(end, start, _length - 1);
 
                 ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
@@ -189,41 +186,32 @@ namespace Cotton.Previews.Http
             long remaining = (endInclusive - start) + 1;
             byte[] buffer = new byte[1024 * 1024];
 
-            lock (_gate)
+            await _sem.WaitAsync(ct).ConfigureAwait(false);
+            try
             {
                 _stream.Seek(start, SeekOrigin.Begin);
-            }
 
-            int zeroReads = 0;
-            while (remaining > 0)
-            {
-                int toRead = (int)Math.Min(buffer.Length, remaining);
-                int read;
-
-                lock (_gate)
+                while (remaining > 0)
                 {
-                    read = _stream.Read(buffer, 0, toRead);
-                }
+                    int toRead = (int)Math.Min(buffer.Length, remaining);
+                    int read = await _stream.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
 
-                if (read <= 0)
-                {
-                    // Some stream implementations may yield transient 0 reads; retry a few times.
-                    if (++zeroReads <= 10)
+                    if (read <= 0)
                     {
-                        await Task.Delay(5, ct).ConfigureAwait(false);
-                        continue;
+                        return false;
                     }
 
-                    return false;
+                    await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                    remaining -= read;
                 }
 
-                zeroReads = 0;
-                await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                remaining -= read;
+                await destination.FlushAsync(ct).ConfigureAwait(false);
+                return true;
             }
-
-            await destination.FlushAsync(ct).ConfigureAwait(false);
-            return true;
+            finally
+            {
+                _sem.Release();
+            }
         }
 
         public async ValueTask DisposeAsync()
@@ -233,6 +221,7 @@ namespace Cotton.Previews.Http
             try { _listener.Close(); } catch { }
             try { await _loop.ConfigureAwait(false); } catch { }
             _cts.Dispose();
+            _sem.Dispose();
         }
     }
 }
