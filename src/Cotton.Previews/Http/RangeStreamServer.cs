@@ -207,7 +207,7 @@ namespace Cotton.Previews.Http
                 }
                 ctx.Response.Close();
             }
-            catch (HttpListenerException ex) when (ex.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase) 
+            catch (HttpListenerException ex) when (ex.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase)
                                                   || ex.Message.Contains("forcibly closed", StringComparison.OrdinalIgnoreCase)
                                                   || ex.Message.Contains("broken pipe", StringComparison.OrdinalIgnoreCase))
             {
