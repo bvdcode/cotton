@@ -13,10 +13,13 @@ namespace Cotton.Storage.Streams
     {
         private readonly List<string> _hashes = [.. hashes];
         private readonly bool _canSeek = pipelineContext?.ChunkLengths != null;
+        private readonly ChunkIndexEntry[]? _index = BuildIndex(hashes, pipelineContext);
         private Stream? _current;
         private int _currentChunkIndex = -1;
         private long _position;
         private long _currentChunkPosition;
+
+        private readonly record struct ChunkIndexEntry(string Hash, long StartOffset, long Length);
 
         public override bool CanRead => true;
         public override bool CanSeek => _canSeek;
@@ -28,21 +31,93 @@ namespace Cotton.Storage.Streams
             set => Seek(value, SeekOrigin.Begin);
         }
 
+        private static ChunkIndexEntry[]? BuildIndex(IEnumerable<string> hashes, PipelineContext? context)
+        {
+            if (context?.ChunkLengths == null)
+            {
+                return null;
+            }
+
+            var list = hashes as IReadOnlyList<string> ?? [.. hashes];
+            var index = new ChunkIndexEntry[list.Count];
+            long start = 0;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                string hash = list[i];
+                if (!context.ChunkLengths.TryGetValue(hash, out long len))
+                {
+                    throw new InvalidOperationException($"Chunk length is missing for hash '{hash}'.");
+                }
+                index[i] = new(hash, start, len);
+                start += len;
+            }
+
+            if (context.FileSizeBytes.HasValue && context.FileSizeBytes.Value != start)
+            {
+                // Not fatal, but indicates inconsistent metadata.
+                // Keep behavior strict to avoid incorrect range reads.
+                throw new InvalidOperationException("PipelineContext.FileSizeBytes does not match sum of ChunkLengths.");
+            }
+
+            return index;
+        }
+
         private (int chunkIndex, long offsetInChunk) GetChunkAtPosition(long position)
         {
-            long currentPosition = 0;
-            for (int i = 0; i < _hashes.Count; i++)
+            var index = _index;
+            if (index == null || index.Length == 0)
             {
-                if (pipelineContext!.ChunkLengths!.TryGetValue(_hashes[i], out long length))
+                return (_hashes.Count, 0);
+            }
+
+            // Find the last chunk with StartOffset <= position.
+            int lo = 0;
+            int hi = index.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                long start = index[mid].StartOffset;
+                if (start == position)
                 {
-                    if (currentPosition + length > position)
-                    {
-                        return (i, position - currentPosition);
-                    }
-                    currentPosition += length;
+                    lo = mid;
+                    break;
+                }
+
+                if (start < position)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid - 1;
                 }
             }
-            return (_hashes.Count, 0);
+
+            int idx = lo;
+            if (idx >= index.Length || index[idx].StartOffset > position)
+            {
+                idx--;
+            }
+
+            if (idx < 0)
+            {
+                return (0, position);
+            }
+
+            var entry = index[idx];
+            long offsetInChunk = position - entry.StartOffset;
+            if (offsetInChunk < 0)
+            {
+                offsetInChunk = 0;
+            }
+            else if (offsetInChunk > entry.Length)
+            {
+                // Position equals or exceeds end.
+                return (index.Length, 0);
+            }
+
+            return (idx, offsetInChunk);
         }
 
         private bool EnsureCurrentChunk(int targetChunkIndex, long requiredOffset)
