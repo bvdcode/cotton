@@ -372,11 +372,19 @@ namespace Cotton.Storage.Streams
             base.Dispose(disposing);
         }
 
-        public override ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
-            _current?.Dispose();
+            if (_current is IAsyncDisposable ad)
+            {
+                await ad.DisposeAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                _current?.Dispose();
+            }
+
+            await base.DisposeAsync().ConfigureAwait(false);
             GC.SuppressFinalize(this);
-            return ValueTask.CompletedTask;
         }
 
         public override void Flush() => throw new NotSupportedException();
