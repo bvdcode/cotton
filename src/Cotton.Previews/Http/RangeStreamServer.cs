@@ -207,6 +207,15 @@ namespace Cotton.Previews.Http
                 }
                 ctx.Response.Close();
             }
+            catch (HttpListenerException ex) when (ex.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase) 
+                                                  || ex.Message.Contains("forcibly closed", StringComparison.OrdinalIgnoreCase)
+                                                  || ex.Message.Contains("broken pipe", StringComparison.OrdinalIgnoreCase))
+            {
+                // Client (ffmpeg/ffprobe) closed connection early - this is normal behavior
+                // when they got what they needed (moov atom) and don't need the rest of the file
+                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Client closed connection early (normal for ffmpeg)", _serverId, reqId);
+                try { ctx.Response.Abort(); } catch { }
+            }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "[RangeServer {ServerId} Req {ReqId}] HandleAsync exception", _serverId, reqId);
