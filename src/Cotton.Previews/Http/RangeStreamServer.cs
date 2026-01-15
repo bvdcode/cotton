@@ -63,7 +63,7 @@ namespace Cotton.Previews.Http
                     continue;
                 }
 
-                _ = Task.Run(() => HandleAsync(ctx, ct), ct);
+                await HandleAsync(ctx, ct).ConfigureAwait(false);
             }
         }
 
@@ -194,6 +194,7 @@ namespace Cotton.Previews.Http
                 _stream.Seek(start, SeekOrigin.Begin);
             }
 
+            int zeroReads = 0;
             while (remaining > 0)
             {
                 int toRead = (int)Math.Min(buffer.Length, remaining);
@@ -206,13 +207,22 @@ namespace Cotton.Previews.Http
 
                 if (read <= 0)
                 {
+                    // Some stream implementations may yield transient 0 reads; retry a few times.
+                    if (++zeroReads <= 10)
+                    {
+                        await Task.Delay(5, ct).ConfigureAwait(false);
+                        continue;
+                    }
+
                     return false;
                 }
 
+                zeroReads = 0;
                 await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
                 remaining -= read;
             }
 
+            await destination.FlushAsync(ct).ConfigureAwait(false);
             return true;
         }
 
