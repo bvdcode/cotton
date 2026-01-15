@@ -1,5 +1,5 @@
-using Cotton.Previews.Http;
 using System.Diagnostics;
+using Cotton.Previews.Http;
 using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
@@ -29,20 +29,88 @@ namespace Cotton.Previews
             }
 
             try { stream.Seek(0, SeekOrigin.Begin); } catch { }
+
             byte[] pngFrame;
             await using (var server = new RangeStreamServer(stream))
             {
-                pngFrame = await RunFfmpegHttpPngAsync(server.Url).ConfigureAwait(false);
+                double? durationSeconds = await TryGetDurationSecondsAsync(server.Url).ConfigureAwait(false);
+                double seekSeconds = ComputeSeekSeconds(durationSeconds);
+
+                pngFrame = await RunFfmpegHttpPngAsync(server.Url, seekSeconds).ConfigureAwait(false);
             }
+
             ImagePreviewGenerator imagePreviewGenerator = new();
             await using var pngStream = new MemoryStream(pngFrame);
-            return await imagePreviewGenerator.GeneratePreviewWebPAsync(pngStream);
+            return await imagePreviewGenerator.GeneratePreviewWebPAsync(pngStream, size);
         }
 
-        private static async Task<byte[]> RunFfmpegHttpPngAsync(Uri url)
+        private static double ComputeSeekSeconds(double? durationSeconds)
         {
+            if (durationSeconds is null || durationSeconds <= 0)
+            {
+                return 0;
+            }
+
+            double t = durationSeconds.Value * 0.5;
+            t = Math.Clamp(t, 0.5, Math.Max(0.5, durationSeconds.Value - 0.5));
+            return t;
+        }
+
+        private static async Task<double?> TryGetDurationSecondsAsync(Uri url)
+        {
+            var args = $"-v error -show_entries format=duration -of default=nw=1:nk=1 \"{url}\"";
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = GetFfprobePath(),
+                Arguments = args,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            if (!process.Start())
+            {
+                return null;
+            }
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            try
+            {
+                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+            }
+            catch
+            {
+                try { process.Kill(true); } catch { }
+                return null;
+            }
+
+            if (process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            var s = (await stdoutTask.ConfigureAwait(false)).Trim();
+            if (double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var duration))
+            {
+                return duration;
+            }
+
+            return null;
+        }
+
+        private static async Task<byte[]> RunFfmpegHttpPngAsync(Uri url, double seekSeconds)
+        {
+            string ss = seekSeconds > 0 ? $"-ss {seekSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)} " : string.Empty;
+
             var args =
                 "-hide_banner -loglevel error " +
+                ss +
                 $"-i \"{url}\" " +
                 "-frames:v 1 " +
                 "-an -sn -dn " +
@@ -69,7 +137,16 @@ namespace Cotton.Previews
             var copyOutputTask = stdout.CopyToAsync(outputMs);
             var errorTask = process.StandardError.ReadToEndAsync();
 
-            await Task.WhenAll(copyOutputTask, errorTask, process.WaitForExitAsync()).ConfigureAwait(false);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            try
+            {
+                await Task.WhenAll(copyOutputTask, process.WaitForExitAsync(cts.Token)).ConfigureAwait(false);
+            }
+            catch
+            {
+                try { process.Kill(true); } catch { }
+                throw new InvalidOperationException("ffmpeg video preview timed out.");
+            }
 
             if (process.ExitCode != 0)
             {
