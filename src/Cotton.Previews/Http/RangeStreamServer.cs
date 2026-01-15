@@ -10,7 +10,7 @@ namespace Cotton.Previews.Http
         private readonly CancellationTokenSource _cts = new();
         private readonly Task _loop;
         private readonly string _token;
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
 
         public Uri Url { get; }
 
@@ -87,6 +87,8 @@ namespace Cotton.Previews.Http
                 }
 
                 ctx.Response.SendChunked = false;
+                ctx.Response.KeepAlive = false;
+                ctx.Response.Headers["Connection"] = "close";
                 ctx.Response.Headers["Accept-Ranges"] = "bytes";
                 ctx.Response.ContentType = "application/octet-stream";
 
@@ -95,7 +97,11 @@ namespace Cotton.Previews.Http
                 {
                     ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                     ctx.Response.ContentLength64 = _length;
-                    await CopyRangeAsync(start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+                    bool ok = await CopyRangeAsync(start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+                    if (!ok)
+                    {
+                        ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    }
                     ctx.Response.Close();
                     return;
                 }
@@ -161,7 +167,11 @@ namespace Cotton.Previews.Http
                 ctx.Response.ContentLength64 = (end - start) + 1;
                 ctx.Response.Headers["Content-Range"] = $"bytes {start}-{end}/{_length}";
 
-                await CopyRangeAsync(start, end, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+                bool okRange = await CopyRangeAsync(start, end, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+                if (!okRange)
+                {
+                    ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                }
                 ctx.Response.Close();
             }
             catch
@@ -170,7 +180,7 @@ namespace Cotton.Previews.Http
             }
         }
 
-        private async Task CopyRangeAsync(long start, long endInclusive, Stream destination, CancellationToken ct)
+        private async Task<bool> CopyRangeAsync(long start, long endInclusive, Stream destination, CancellationToken ct)
         {
             long remaining = (endInclusive - start) + 1;
             byte[] buffer = new byte[1024 * 1024];
@@ -183,8 +193,8 @@ namespace Cotton.Previews.Http
             while (remaining > 0)
             {
                 int toRead = (int)Math.Min(buffer.Length, remaining);
-
                 int read;
+
                 lock (_gate)
                 {
                     read = _stream.Read(buffer, 0, toRead);
@@ -192,13 +202,14 @@ namespace Cotton.Previews.Http
 
                 if (read <= 0)
                 {
-                    // Underlying stream ended early; stop to avoid hanging.
-                    break;
+                    return false;
                 }
 
                 await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
                 remaining -= read;
             }
+
+            return true;
         }
 
         public async ValueTask DisposeAsync()
