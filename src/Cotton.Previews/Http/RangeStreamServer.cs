@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace Cotton.Previews.Http
@@ -11,16 +12,20 @@ namespace Cotton.Previews.Http
         private readonly Task _loop;
         private readonly string _token;
         private readonly SemaphoreSlim _sem = new(1, 1);
+        private readonly ILogger? _logger;
+        private readonly string _serverId;
 
         public Uri Url { get; }
 
-        public RangeStreamServer(Stream seekableStream)
+        public RangeStreamServer(Stream seekableStream, ILogger? logger = null)
         {
             if (!seekableStream.CanSeek)
             {
                 throw new ArgumentException("Stream must be seekable", nameof(seekableStream));
             }
 
+            _logger = logger;
+            _serverId = Guid.NewGuid().ToString("N")[..8];
             _token = Guid.NewGuid().ToString("N");
             _stream = seekableStream;
             _length = seekableStream.Length;
@@ -32,6 +37,8 @@ namespace Cotton.Previews.Http
             _listener = new HttpListener();
             _listener.Prefixes.Add(prefix);
             _listener.Start();
+
+            _logger?.LogInformation("[RangeServer {ServerId}] Started on {Url}, stream length={Length}", _serverId, Url, _length);
 
             _loop = Task.Run(() => LoopAsync(_cts.Token));
         }
@@ -58,21 +65,26 @@ namespace Cotton.Previews.Http
                 {
                     break;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger?.LogWarning(ex, "[RangeServer {ServerId}] GetContextAsync exception", _serverId);
                     continue;
                 }
 
                 _ = Task.Run(() => HandleAsync(ctx, ct), ct);
             }
+
+            _logger?.LogInformation("[RangeServer {ServerId}] Loop ended", _serverId);
         }
 
         private async Task HandleAsync(HttpListenerContext ctx, CancellationToken ct)
         {
+            var reqId = Guid.NewGuid().ToString("N")[..6];
             try
             {
                 if (!string.Equals(ctx.Request.Url?.AbsolutePath, Url.AbsolutePath, StringComparison.OrdinalIgnoreCase))
                 {
+                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid path: {Path}", _serverId, reqId, ctx.Request.Url?.AbsolutePath);
                     ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     ctx.Response.Close();
                     return;
@@ -81,6 +93,7 @@ namespace Cotton.Previews.Http
                 var token = ctx.Request.QueryString["token"];
                 if (!string.Equals(token, _token, StringComparison.Ordinal))
                 {
+                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid token", _serverId, reqId);
                     ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     ctx.Response.Close();
                     return;
@@ -95,12 +108,18 @@ namespace Cotton.Previews.Http
                 string? range = ctx.Request.Headers["Range"];
                 if (string.IsNullOrWhiteSpace(range))
                 {
+                    _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Full file request, length={Length}", _serverId, reqId, _length);
                     ctx.Response.StatusCode = (int)HttpStatusCode.OK;
                     ctx.Response.ContentLength64 = _length;
-                    bool ok = await CopyRangeAsync(start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+                    bool ok = await CopyRangeAsync(reqId, start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
                     if (!ok)
                     {
+                        _logger?.LogError("[RangeServer {ServerId} Req {ReqId}] Full file copy failed", _serverId, reqId);
                         ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    }
+                    else
+                    {
+                        _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Full file copy succeeded", _serverId, reqId);
                     }
                     ctx.Response.Close();
                     return;
@@ -108,6 +127,7 @@ namespace Cotton.Previews.Http
 
                 if (!range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
                 {
+                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid range header: {Range}", _serverId, reqId, range);
                     ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                     ctx.Response.Close();
                     return;
@@ -122,6 +142,7 @@ namespace Cotton.Previews.Http
                 {
                     if (!long.TryParse(parts[1], out var suffixLen) || suffixLen <= 0)
                     {
+                        _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid suffix range: {Range}", _serverId, reqId, range);
                         ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                         ctx.Response.Close();
                         return;
@@ -134,6 +155,7 @@ namespace Cotton.Previews.Http
                 {
                     if (!long.TryParse(parts[0], out start) || start < 0)
                     {
+                        _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid start in range: {Range}", _serverId, reqId, range);
                         ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                         ctx.Response.Close();
                         return;
@@ -143,6 +165,7 @@ namespace Cotton.Previews.Http
                     {
                         if (!long.TryParse(parts[1], out end) || end < start)
                         {
+                            _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid end in range: {Range}", _serverId, reqId, range);
                             ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                             ctx.Response.Close();
                             return;
@@ -156,6 +179,7 @@ namespace Cotton.Previews.Http
 
                 if (start >= _length)
                 {
+                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Start beyond length: start={Start}, length={Length}", _serverId, reqId, start, _length);
                     ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                     ctx.Response.Headers["Content-Range"] = $"bytes */{_length}";
                     ctx.Response.Close();
@@ -163,33 +187,46 @@ namespace Cotton.Previews.Http
                 }
 
                 end = Math.Clamp(end, start, _length - 1);
+                long contentLength = (end - start) + 1;
+
+                _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Range request: {Start}-{End} (contentLength={ContentLength})", _serverId, reqId, start, end, contentLength);
 
                 ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
-                ctx.Response.ContentLength64 = (end - start) + 1;
+                ctx.Response.ContentLength64 = contentLength;
                 ctx.Response.Headers["Content-Range"] = $"bytes {start}-{end}/{_length}";
 
-                bool okRange = await CopyRangeAsync(start, end, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+                bool okRange = await CopyRangeAsync(reqId, start, end, ctx.Response.OutputStream, ct).ConfigureAwait(false);
                 if (!okRange)
                 {
+                    _logger?.LogError("[RangeServer {ServerId} Req {ReqId}] Range copy failed", _serverId, reqId);
                     ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                }
+                else
+                {
+                    _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Range copy succeeded", _serverId, reqId);
                 }
                 ctx.Response.Close();
             }
-            catch
+            catch (Exception ex)
             {
+                _logger?.LogError(ex, "[RangeServer {ServerId} Req {ReqId}] HandleAsync exception", _serverId, reqId);
                 try { ctx.Response.Abort(); } catch { }
             }
         }
 
-        private async Task<bool> CopyRangeAsync(long start, long endInclusive, Stream destination, CancellationToken ct)
+        private async Task<bool> CopyRangeAsync(string reqId, long start, long endInclusive, Stream destination, CancellationToken ct)
         {
             long remaining = (endInclusive - start) + 1;
             byte[] buffer = new byte[1024 * 1024];
 
+            _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync waiting for semaphore...", _serverId, reqId);
             await _sem.WaitAsync(ct).ConfigureAwait(false);
+            _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync acquired semaphore", _serverId, reqId);
+
             try
             {
                 _stream.Seek(start, SeekOrigin.Begin);
+                long totalRead = 0;
 
                 while (remaining > 0)
                 {
@@ -198,30 +235,36 @@ namespace Cotton.Previews.Http
 
                     if (read <= 0)
                     {
+                        _logger?.LogError("[RangeServer {ServerId} Req {ReqId}] Premature EOF: totalRead={TotalRead}, expected={Expected}", _serverId, reqId, totalRead, (endInclusive - start) + 1);
                         return false;
                     }
 
                     await destination.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
                     remaining -= read;
+                    totalRead += read;
                 }
 
                 await destination.FlushAsync(ct).ConfigureAwait(false);
+                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync completed: totalRead={TotalRead}", _serverId, reqId, totalRead);
                 return true;
             }
             finally
             {
                 _sem.Release();
+                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] CopyRangeAsync released semaphore", _serverId, reqId);
             }
         }
 
         public async ValueTask DisposeAsync()
         {
+            _logger?.LogInformation("[RangeServer {ServerId}] Disposing...", _serverId);
             _cts.Cancel();
             try { _listener.Stop(); } catch { }
             try { _listener.Close(); } catch { }
             try { await _loop.ConfigureAwait(false); } catch { }
             _cts.Dispose();
             _sem.Dispose();
+            _logger?.LogInformation("[RangeServer {ServerId}] Disposed", _serverId);
         }
     }
 }

@@ -24,6 +24,9 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            // Initialize logger for VideoPreviewGenerator
+            VideoPreviewGenerator.SetLogger(_logger);
+
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             _logger.LogInformation("Starting preview generation job. Supported mime types: {MimeTypes}", string.Join(", ", allSupportedMimeTypes));
 
@@ -41,8 +44,13 @@ namespace Cotton.Server.Jobs
                 _logger.LogInformation("Generating previews for {Count} file manifests", itemsToProcess.Count);
             }
 
+            int processed = 0;
             foreach (var item in itemsToProcess)
             {
+                processed++;
+                _logger.LogInformation("[Job] Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}", 
+                    processed, itemsToProcess.Count, item.Id, item.ContentType, item.SizeBytes);
+
                 var generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
                 if (generator == null)
                 {
@@ -59,15 +67,22 @@ namespace Cotton.Server.Jobs
 
                 try
                 {
+                    _logger.LogInformation("[Job] Getting blob stream for FileManifest {FileManifestId}...", item.Id);
                     await using var fs = _storage.GetBlobStream(uids, pipelineContext);
+                    
+                    _logger.LogInformation("[Job] Calling GeneratePreviewWebPAsync for FileManifest {FileManifestId}...", item.Id);
                     var previewImage = await generator.GeneratePreviewWebPAsync(fs);
 
                     byte[] hash = Hasher.HashData(previewImage);
                     string hashStr = Hasher.ToHexStringHash(hash);
+                    
+                    _logger.LogInformation("[Job] Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
+                    
                     item.EncryptedFilePreviewHash = _crypto.Encrypt(hashStr);
                     await _dbContext.SaveChangesAsync();
+                    
                     _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
                 }
                 catch (Exception ex)
@@ -80,6 +95,7 @@ namespace Cotton.Server.Jobs
             }
 
             await _dbContext.SaveChangesAsync();
+            _logger.LogInformation("[Job] Preview generation job completed successfully. Processed {Count} items", processed);
         }
     }
 }
