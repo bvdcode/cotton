@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using Cotton.Previews.Http;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
