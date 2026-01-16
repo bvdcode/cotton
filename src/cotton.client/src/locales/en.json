@@ -5,7 +5,8 @@
     "actions": {
       "confirm": "Confirm",
       "cancel": "Cancel",
-      "delete": "Delete"
+      "delete": "Delete",
+      "rename": "Rename"
     },
     "userMenu": {
       "lightMode": "Light Mode",

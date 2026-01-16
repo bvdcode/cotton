@@ -5,7 +5,8 @@
     "actions": {
       "confirm": "Подтвердить",
       "cancel": "Отмена",
-      "delete": "Удалить"
+      "delete": "Удалить",
+      "rename": "Переименовать"
     },
     "userMenu": {
       "lightMode": "Светлая тема",

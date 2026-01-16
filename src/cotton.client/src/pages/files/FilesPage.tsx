@@ -12,6 +12,7 @@ import {
   ArrowUpward,
   CreateNewFolder,
   Delete,
+  Edit,
   Folder,
   Home,
   UploadFile,
@@ -43,6 +44,8 @@ export const FilesPage: React.FC = () => {
   const [newFolderParentId, setNewFolderParentId] = useState<string | null>(
     null,
   );
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renamingFolderName, setRenamingFolderName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
 
   const {
@@ -55,6 +58,7 @@ export const FilesPage: React.FC = () => {
     loadNode,
     createFolder,
     deleteFolder,
+    renameFolder,
   } = useNodesStore();
 
   const routeNodeId = params.nodeId;
@@ -544,6 +548,69 @@ export const FilesPage: React.FC = () => {
                 )}
                 {tiles.map((tile) => {
                   if (tile.kind === "folder") {
+                    const isRenaming = renamingFolderId === tile.node.id;
+
+                    if (isRenaming) {
+                      return (
+                        <Box
+                          key={tile.node.id}
+                          sx={{
+                            border: "2px solid",
+                            borderColor: "primary.main",
+                            borderRadius: 2,
+                            p: {
+                              xs: 1,
+                              sm: 1.25,
+                              md: 1,
+                            },
+                            bgcolor: "action.hover",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: "100%",
+                              aspectRatio: "1 / 1",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 1.5,
+                              overflow: "hidden",
+                              mb: 0.75,
+                              "& > svg": {
+                                width: "70%",
+                                height: "70%",
+                              },
+                            }}
+                          >
+                            <Folder sx={{ color: "primary.main" }} />
+                          </Box>
+                          <TextField
+                            autoFocus
+                            fullWidth
+                            size="small"
+                            value={renamingFolderName}
+                            onChange={(e) => setRenamingFolderName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                void handleConfirmRename();
+                              } else if (e.key === "Escape") {
+                                handleCancelRename();
+                              }
+                            }}
+                            onBlur={handleConfirmRename}
+                            placeholder={t("actions.folderNamePlaceholder")}
+                            slotProps={{
+                              input: {
+                                sx: {
+                                  fontSize: { xs: "0.8rem", md: "0.85rem" },
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
+                      );
+                    }
+
                     return (
                       <FileSystemItemCard
                         key={tile.node.id}
@@ -555,10 +622,14 @@ export const FilesPage: React.FC = () => {
                         ).toLocaleDateString()}
                         actions={[
                           {
-                            label: t("common:actions.delete"),
-                            onClick: () =>
-                              handleDeleteFolder(tile.node.id, tile.node.name),
+                            icon: <Edit fontSize="small" />,
+                            onClick: () => handleRenameFolder(tile.node.id, tile.node.name),
+                            tooltip: t("common:actions.rename"),
+                          },
+                          {
                             icon: <Delete fontSize="small" />,
+                            onClick: () => handleDeleteFolder(tile.node.id, tile.node.name),
+                            tooltip: t("common:actions.delete"),
                           },
                         ]}
                       />
