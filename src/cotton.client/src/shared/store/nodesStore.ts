@@ -15,6 +15,7 @@ type NodesState = {
   loadNode: (nodeId: string) => Promise<void>;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
   deleteFolder: (nodeId: string, parentNodeId?: string) => Promise<boolean>;
+  renameFolder: (nodeId: string, newName: string, parentNodeId?: string) => Promise<boolean>;
   reset: () => void;
 };
 
@@ -166,6 +167,63 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     } catch (error) {
       console.error("Failed to delete folder", error);
       set({ loading: false, error: "Failed to delete folder" });
+      return false;
+    }
+  },
+
+  renameFolder: async (nodeId, newName, parentNodeId) => {
+    const trimmed = newName.trim();
+    if (trimmed.length === 0) return false;
+    if (get().loading) return false;
+
+    const state = get();
+    const currentContent = parentNodeId ? state.contentByNodeId[parentNodeId] : undefined;
+
+    // Check for duplicate name (case-insensitive) in cached content
+    if (currentContent) {
+      const normalizedName = trimmed.toLowerCase();
+      const duplicate = currentContent.nodes.find(
+        (n) => n.id !== nodeId && n.name.toLowerCase() === normalizedName,
+      );
+      if (duplicate) {
+        set({ error: "A folder with this name already exists" });
+        return false;
+      }
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const updated = await nodesApi.renameNode(nodeId, { name: trimmed });
+
+      // Optimistic update: rename folder in local cache
+      if (parentNodeId) {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return { loading: false };
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                nodes: existing.nodes.map((n) => n.id === nodeId ? updated : n),
+              },
+            },
+            loading: false,
+          };
+        });
+
+        // Background refetch to ensure server state is correct
+        void get().loadNode(parentNodeId);
+      } else {
+        set({ loading: false });
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Failed to rename folder", error);
+      set({ loading: false, error: "Failed to rename folder" });
       return false;
     }
   },
