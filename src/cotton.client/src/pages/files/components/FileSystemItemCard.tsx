@@ -142,24 +142,20 @@ export const FileSystemItemCard = ({
         <Box
           sx={{
             position: "absolute",
-            top: "50%",
-            right: 30,
-            transform: "translateY(-50%)",
+            bottom: subtitle ? 48 : 28,
+            right: 4,
             display: "flex",
+            flexDirection: "column",
             gap: 0.5,
-            bgcolor: "background.paper",
-            borderRadius: 1,
-            boxShadow: 2,
-            p: 0.5,
-            animation: "slideIn 0.3s ease-out",
-            "@keyframes slideIn": {
+            animation: "slideUp 0.2s ease-out",
+            "@keyframes slideUp": {
               from: {
                 opacity: 0,
-                transform: "translateY(-50%) translateX(10px)",
+                transform: "translateY(10px)",
               },
               to: {
                 opacity: 1,
-                transform: "translateY(-50%) translateX(0)",
+                transform: "translateY(0)",
               },
             },
           }}
@@ -173,6 +169,8 @@ export const FileSystemItemCard = ({
               title={action.tooltip}
               sx={{
                 p: 0.5,
+                bgcolor: "background.paper",
+                boxShadow: 1,
                 "&:hover": {
                   bgcolor: "action.hover",
                 },
