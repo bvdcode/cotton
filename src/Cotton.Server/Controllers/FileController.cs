@@ -195,16 +195,27 @@ namespace Cotton.Server.Controllers
 
         private async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes)
         {
-            List<Chunk> chunks = [];
-            foreach (var item in chunkHashes)
+            Guid userId = User.GetUserId();
+
+            List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
+            List<Chunk> ownedChunks = await _dbContext.Chunks
+                .Where(c => normalizedHashes.Contains(c.Hash))
+                .Where(c => _dbContext.FileManifestChunks
+                    .Any(fmc => fmc.ChunkHash == c.Hash && 
+                        _dbContext.NodeFiles.Any(nf => nf.FileManifestId == fmc.FileManifestId && nf.OwnerId == userId)))
+                .ToListAsync();
+
+            var chunkMap = ownedChunks.ToDictionary(c => Hasher.ToHexStringHash(c.Hash), StringComparer.OrdinalIgnoreCase);
+            List<Chunk> result = [];
+            foreach (var hash in chunkHashes)
             {
-                byte[] hashBytes = Hasher.FromHexStringHash(item);
-                var foundChunk = await _layouts.FindChunkAsync(hashBytes) ?? throw new EntityNotFoundException(nameof(Chunk));
-                // TODO: Add safety check to ensure chunks belong to the user
-                // Must depend on owner/user authentication, no reason to delay for the same user
-                chunks.Add(foundChunk);
+                if (!chunkMap.TryGetValue(hash, out var chunk))
+                {
+                    throw new UnauthorizedAccessException($"Access denied: chunk {hash} not found or not owned by user");
+                }
+                result.Add(chunk);
             }
-            return chunks;
+            return result;
         }
 
         private async Task<FileManifest> CreateNewFileManifestAsync(List<Chunk> chunks, CreateFileRequest request, byte[] proposedContentHash)
