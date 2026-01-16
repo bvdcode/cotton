@@ -191,6 +191,7 @@ export const FilesPage: React.FC = () => {
                 position: "sticky",
                 top: 0,
                 zIndex: 20,
+                bgcolor: "background.default",
                 px: 3,
                 pt: 0,
                 pb: 1,
