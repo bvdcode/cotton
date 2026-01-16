@@ -15,7 +15,8 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
     setRenamingFileName(currentName);
   };
 
-  const handleConfirmRename = async (fileId: string) => {
+  const handleConfirmRename = async () => {
+    const fileId = renamingFileId;
     if (!fileId || renamingFileName.trim().length === 0) {
       setRenamingFileId(null);
       setRenamingFileName("");
@@ -42,17 +43,27 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
   };
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
-    await confirm({
-      title: t("delete.confirmTitle", { ns: "files", name: fileName }),
-      description: t("delete.confirmDescription", { ns: "files" }),
-      confirmationText: t("common:actions.delete"),
-      cancellationText: t("common:actions.cancel"),
-      confirmationButtonProps: { color: "error" },
-    }).then(async (result) => {
-      if (result.confirmed) {
-        await filesApi.deleteFile(fileId);
-      }
-    });
+    const confirmed = await Promise.resolve(
+      confirm({
+        title: t("deleteFile.confirmTitle", { ns: "files", name: fileName }),
+        description: t("deleteFile.confirmDescription", { ns: "files" }),
+        confirmationText: t("common:actions.delete"),
+        cancellationText: t("common:actions.cancel"),
+        confirmationButtonProps: { color: "error" },
+      }),
+    )
+      .then((result) => {
+        if (typeof result === "boolean") return result;
+        if (result && typeof result === "object" && "confirmed" in result) {
+          return Boolean((result as { confirmed?: unknown }).confirmed);
+        }
+        return true;
+      })
+      .catch(() => false);
+
+    if (!confirmed) return;
+
+    await filesApi.deleteFile(fileId);
 
     // Trigger parent refresh
     if (onFileDeleted) {
