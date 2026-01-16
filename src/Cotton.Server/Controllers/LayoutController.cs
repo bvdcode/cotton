@@ -282,19 +282,39 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("Parent node not found.");
             }
 
-            var nodes = await _dbContext.Nodes
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+
+            int skip = (page - 1) * pageSize;
+            var nodesQuery = _dbContext.Nodes
                 .AsNoTracking()
                 .OrderBy(x => x.NameKey)
-                .Where(x => x.ParentId == parentNode.Id && x.OwnerId == userId && x.LayoutId == layout.Id && x.Type == nodeType)
-                .ProjectToType<NodeDto>()
-                .ToListAsync();
+                .Where(x => x.ParentId == parentNode.Id
+                    && x.OwnerId == userId
+                    && x.LayoutId == layout.Id
+                    && x.Type == nodeType)
+                .ProjectToType<NodeDto>();
 
-            var files = await _dbContext.NodeFiles
+            var filesQuery = _dbContext.NodeFiles
                 .AsNoTracking()
                 .OrderBy(x => x.NameKey)
                 .Where(x => x.NodeId == parentNode.Id)
-                .ProjectToType<FileManifestDto>()
-                .ToListAsync();
+                .ProjectToType<FileManifestDto>();
+
+            int nodesCount = await nodesQuery.CountAsync();
+            int filesCount = await filesQuery.CountAsync();
+
+            var nodesToTake = Math.Max(0, Math.Min(pageSize, nodesCount - skip));
+            int filesSkip = Math.Max(0, skip - nodesCount);
+            int filesToTake = Math.Max(0, pageSize - nodesToTake);
+
+            var nodes = nodesToTake == 0
+                ? []
+                : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync();
+
+            var files = filesToTake == 0
+                ? []
+                : await filesQuery.Skip(filesSkip).Take(filesToTake).ToListAsync();
 
             NodeContentDto result = new()
             {
