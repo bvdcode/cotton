@@ -62,7 +62,44 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> RenameLayoutNode([FromRoute] Guid nodeId,
             [FromBody] RenameNodeRequest request)
         {
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
+                out string normalizedName,
+                out string? errorMessage);
+            if (!isValidName)
+            {
+                return CottonResult.BadRequest(errorMessage);
+            }
 
+            Guid userId = User.GetUserId();
+            var node = await _dbContext.Nodes
+                .Where(x => x.Id == nodeId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (node == null)
+            {
+                return CottonResult.NotFound("Node not found.");
+            }
+
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+            bool nameExists = await _dbContext.Nodes
+                .AnyAsync(x =>
+                    x.ParentId == node.ParentId &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey &&
+                    x.LayoutId == layout.Id &&
+                    x.Type == node.Type &&
+                    x.Id != nodeId);
+            if (nameExists)
+            {
+                return this.ApiConflict("A node with the same name key already exists in the parent node: " + nameKey);
+            }
+
+            node.SetName(request.Name);
+            await _dbContext.SaveChangesAsync();
+            
+            var mapped = node.Adapt<NodeDto>();
+            return Ok(mapped);
         }
 
         [Authorize]
