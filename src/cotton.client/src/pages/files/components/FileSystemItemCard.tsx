@@ -1,4 +1,4 @@
-import { Box, IconButton, Menu, MenuItem, Typography } from "@mui/material";
+import { Box, IconButton, Typography } from "@mui/material";
 import { MoreVert } from "@mui/icons-material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode, MouseEvent } from "react";
@@ -28,22 +28,16 @@ export const FileSystemItemCard = ({
   sx,
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const menuOpen = Boolean(anchorEl);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
-  const handleMenuClick = (e: MouseEvent<HTMLButtonElement>) => {
+  const handleToggleActions = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    setAnchorEl(e.currentTarget);
+    setActionsOpen(!actionsOpen);
   };
 
-  const handleMenuClose = (e?: MouseEvent) => {
-    if (e) e.stopPropagation();
-    setAnchorEl(null);
-  };
-
-  const handleActionClick = (action: FileSystemItemCardAction) => (e: MouseEvent) => {
+  const handleActionClick = (action: FileSystemItemCardAction) => (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    handleMenuClose();
+    setActionsOpen(false);
     action.onClick();
   };
 
@@ -117,12 +111,13 @@ export const FileSystemItemCard = ({
         {actions && actions.length > 0 && (
           <IconButton
             size="small"
-            onClick={handleMenuClick}
+            onClick={handleToggleActions}
             className="card-menu-button"
             sx={{
               p: 0.25,
-              opacity: menuOpen ? 1 : 0,
-              transition: "opacity 0.2s",
+              opacity: actionsOpen ? 1 : 0,
+              transition: "opacity 0.2s, transform 0.3s",
+              transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
             }}
           >
             <MoreVert sx={{ fontSize: "1rem" }} />
@@ -143,22 +138,50 @@ export const FileSystemItemCard = ({
         </Typography>
       )}
 
-      {actions && actions.length > 0 && (
-        <Menu
-          anchorEl={anchorEl}
-          open={menuOpen}
-          onClose={() => handleMenuClose()}
+      {actions && actions.length > 0 && actionsOpen && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            right: 30,
+            transform: "translateY(-50%)",
+            display: "flex",
+            gap: 0.5,
+            bgcolor: "background.paper",
+            borderRadius: 1,
+            boxShadow: 2,
+            p: 0.5,
+            animation: "slideIn 0.3s ease-out",
+            "@keyframes slideIn": {
+              from: {
+                opacity: 0,
+                transform: "translateY(-50%) translateX(10px)",
+              },
+              to: {
+                opacity: 1,
+                transform: "translateY(-50%) translateX(0)",
+              },
+            },
+          }}
           onClick={(e) => e.stopPropagation()}
-          anchorOrigin={{ vertical: "top", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
           {actions.map((action, idx) => (
-            <MenuItem key={idx} onClick={handleActionClick(action)}>
-              <Box sx={{ mr: 1, display: "flex" }}>{action.icon}</Box>
-              {action.tooltip}
-            </MenuItem>
+            <IconButton
+              key={idx}
+              size="small"
+              onClick={handleActionClick(action)}
+              title={action.tooltip}
+              sx={{
+                p: 0.5,
+                "&:hover": {
+                  bgcolor: "action.hover",
+                },
+              }}
+            >
+              {action.icon}
+            </IconButton>
           ))}
-        </Menu>
+        </Box>
       )}
     </Box>
   );
