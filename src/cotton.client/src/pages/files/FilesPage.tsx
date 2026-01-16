@@ -149,9 +149,8 @@ export const FilesPage: React.FC = () => {
 
   return (
     <ImageLoaderProvider>
-      <>
-        {fileUpload.isDragging && (
-          <Box
+      {fileUpload.isDragging && (
+        <Box
             onDragOver={fileUpload.handleDragOver}
             onDragLeave={fileUpload.handleDragLeave}
             onDrop={fileUpload.handleDrop}
@@ -184,49 +183,108 @@ export const FilesPage: React.FC = () => {
             </Typography>
           </Box>
         )}
-        <Box
-          p={3}
-          width="100%"
-          onDragOver={fileUpload.handleDragOver}
-          onDragLeave={fileUpload.handleDragLeave}
-          onDrop={fileUpload.handleDrop}
-          sx={{ position: "relative" }}
-        >
-          <Box mb={2} sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-            <IconButton
-              color="primary"
-              onClick={handleGoUp}
-              disabled={loading || ancestors.length === 0}
-              title={t("actions.goUp")}
+      <Box
+        p={3}
+        width="100%"
+        onDragOver={fileUpload.handleDragOver}
+        onDragLeave={fileUpload.handleDragLeave}
+        onDrop={fileUpload.handleDrop}
+        sx={{ position: "relative" }}
+      >
+        <Box mb={2}>
+            {/* Breadcrumbs на мобилке над кнопками */}
+            <Box
+              sx={{
+                display: { xs: "flex", sm: "none" },
+                mb: 1,
+                overflow: "auto",
+                "&::-webkit-scrollbar": { display: "none" },
+                msOverflowStyle: "none",
+                scrollbarWidth: "none",
+              }}
+              ref={(el: HTMLDivElement | null) => {
+                if (el) el.scrollLeft = el.scrollWidth;
+              }}
             >
-              <ArrowUpward />
-            </IconButton>
-            <IconButton
-              color="primary"
-              onClick={fileUpload.handleUploadClick}
-              disabled={!nodeId || loading}
-              title={t("actions.upload")}
-            >
-              <UploadFile />
-            </IconButton>
-            <IconButton
-              color="primary"
-              onClick={folderOps.handleNewFolder}
-              disabled={!nodeId || folderOps.isCreatingFolder}
-              title={t("actions.newFolder")}
-            >
-              <CreateNewFolder />
-            </IconButton>
-            <IconButton
-              onClick={() => navigate("/files")}
-              color="primary"
-              title={t("breadcrumbs.root")}
-            >
-              <Home />
-            </IconButton>
+              <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")} sx={{ whiteSpace: "nowrap" }}>
+                {breadcrumbs
+                  .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
+                  .map((crumb, idx, filtered) => {
+                    const isLast = idx === filtered.length - 1;
+                    if (isLast) {
+                      return (
+                        <Typography key={crumb.id} color="text.primary">
+                          {crumb.name}
+                        </Typography>
+                      );
+                    }
+                    return (
+                      <MuiLink
+                        key={crumb.id}
+                        component={RouterLink}
+                        underline="hover"
+                        color="inherit"
+                        to={`/files/${crumb.id}`}
+                        sx={{ fontSize: "1.1rem" }}
+                      >
+                        {crumb.name}
+                      </MuiLink>
+                    );
+                  })}
+              </Breadcrumbs>
+            </Box>
 
-            <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")} sx={{ ml: 1 }}>
-              {breadcrumbs
+            {/* Кнопки и breadcrumbs на больших экранах */}
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+              <IconButton
+                color="primary"
+                onClick={handleGoUp}
+                disabled={loading || ancestors.length === 0}
+                title={t("actions.goUp")}
+              >
+                <ArrowUpward />
+              </IconButton>
+              <IconButton
+                color="primary"
+                onClick={fileUpload.handleUploadClick}
+                disabled={!nodeId || loading}
+                title={t("actions.upload")}
+              >
+                <UploadFile />
+              </IconButton>
+              <IconButton
+                color="primary"
+                onClick={folderOps.handleNewFolder}
+                disabled={!nodeId || folderOps.isCreatingFolder}
+                title={t("actions.newFolder")}
+              >
+                <CreateNewFolder />
+              </IconButton>
+              <IconButton
+                onClick={() => navigate("/files")}
+                color="primary"
+                title={t("breadcrumbs.root")}
+              >
+                <Home />
+              </IconButton>
+
+              {/* Breadcrumbs на больших экранах */}
+              <Box
+                sx={{
+                  display: { xs: "none", sm: "flex" },
+                  ml: 1,
+                  overflow: "auto",
+                  flex: 1,
+                  "&::-webkit-scrollbar": { display: "none" },
+                  msOverflowStyle: "none",
+                  scrollbarWidth: "none",
+                }}
+                ref={(el: HTMLDivElement | null) => {
+                  if (el) el.scrollLeft = el.scrollWidth;
+                }}
+              >
+                <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")} sx={{ whiteSpace: "nowrap" }}>
+                  {breadcrumbs
                 .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
                 .map((crumb, idx, filtered) => {
                   const isLast = idx === filtered.length - 1;
@@ -250,7 +308,9 @@ export const FilesPage: React.FC = () => {
                     </MuiLink>
                   );
                 })}
-            </Breadcrumbs>
+                </Breadcrumbs>
+              </Box>
+            </Box>
           </Box>
 
           {error && (
@@ -407,9 +467,8 @@ export const FilesPage: React.FC = () => {
                 })}
               </Box>
             )}
-          </Box>
         </Box>
-      </>
+      </Box>
     </ImageLoaderProvider>
   );
 };

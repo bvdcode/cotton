@@ -150,7 +150,7 @@ export const FileSystemItemCard = ({
           sx={{
             position: "absolute",
             bottom: subtitle ? 56 : 36,
-            right: 0,
+            right: 4,
             display: "flex",
             flexDirection: "column",
             gap: 0.75,
