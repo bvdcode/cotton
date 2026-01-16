@@ -180,7 +180,6 @@ export const FilesPage: React.FC = () => {
           )}
 
           <Box
-            p={3}
             width="100%"
             onDragOver={fileUpload.handleDragOver}
             onDragLeave={fileUpload.handleDragLeave}
@@ -193,6 +192,7 @@ export const FilesPage: React.FC = () => {
                 top: 0,
                 zIndex: 20,
                 bgcolor: "background.default",
+                px: 3,
                 pt: 1,
                 pb: 1,
                 mb: 2,
@@ -332,12 +332,12 @@ export const FilesPage: React.FC = () => {
             </Box>
 
             {error && (
-              <Box mb={2}>
+              <Box mb={2} px={3}>
                 <Alert severity="error">{error}</Alert>
               </Box>
             )}
 
-            <Box>
+            <Box px={3} pb={3}>
               {tiles.length === 0 && !isCreatingInThisFolder ? (
                 <Typography color="text.secondary">{t("empty.all")}</Typography>
               ) : (
@@ -438,6 +438,11 @@ export const FilesPage: React.FC = () => {
                       ? {
                           mx: { xs: -1, sm: -1.25, md: -1 },
                           mt: { xs: -1, sm: -1.25, md: -1 },
+                          width: {
+                            xs: "calc(100% + 16px)",
+                            sm: "calc(100% + 20px)",
+                            md: "calc(100% + 16px)",
+                          },
                           borderRadius: 0,
                         }
                       : undefined;
