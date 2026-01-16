@@ -262,8 +262,11 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}/children")]
-        public async Task<IActionResult> GetChildNodes([FromRoute] Guid nodeId,
-            [FromQuery] NodeType nodeType = NodeType.Default)
+        public async Task<IActionResult> GetChildNodes(
+            [FromRoute] Guid nodeId,
+            [FromQuery] NodeType nodeType = NodeType.Default,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 100)
         {
             Guid userId = User.GetUserId();
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
@@ -281,12 +284,14 @@ namespace Cotton.Server.Controllers
 
             var nodes = await _dbContext.Nodes
                 .AsNoTracking()
+                .OrderBy(x => x.NameKey)
                 .Where(x => x.ParentId == parentNode.Id && x.OwnerId == userId && x.LayoutId == layout.Id && x.Type == nodeType)
                 .ProjectToType<NodeDto>()
                 .ToListAsync();
 
             var files = await _dbContext.NodeFiles
                 .AsNoTracking()
+                .OrderBy(x => x.NameKey)
                 .Where(x => x.NodeId == parentNode.Id)
                 .ProjectToType<FileManifestDto>()
                 .ToListAsync();
