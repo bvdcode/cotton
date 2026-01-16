@@ -82,7 +82,7 @@ namespace Cotton.Server.Controllers
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            
+
             // Check for duplicate nodes in the same parent
             bool nodeExists = await _dbContext.Nodes
                 .AnyAsync(x =>
@@ -113,7 +113,7 @@ namespace Cotton.Server.Controllers
 
             node.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
-            
+
             var mapped = node.Adapt<NodeDto>();
             return Ok(mapped);
         }
@@ -180,7 +180,7 @@ namespace Cotton.Server.Controllers
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            
+
             // Check for duplicate nodes in the parent
             bool nodeExists = await _dbContext.Nodes
                 .AnyAsync(x =>
@@ -221,34 +221,44 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}/ancestors")]
-        public async Task<IActionResult> GetAncestorNodes([FromRoute] Guid nodeId,
+        public async Task<IActionResult> GetAncestorNodes(
+            [FromRoute] Guid nodeId,
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
-            // TODO: Optimize to a single query
-            // TODO: Guard against circular references
             Guid userId = User.GetUserId();
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-            var currentNode = await _dbContext.Nodes
+
+            var nodesQuery = _dbContext.Nodes
                 .AsNoTracking()
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == userId
+                .Where(x => x.OwnerId == userId
                     && x.LayoutId == layout.Id
-                    && x.Type == nodeType)
-                .SingleOrDefaultAsync();
+                    && x.Type == nodeType);
+
+            var currentNode = await nodesQuery
+                .SingleOrDefaultAsync(x => x.Id == nodeId);
+
             if (currentNode == null)
             {
-                return CottonResult.NotFound("Node not found.");
+                return this.ApiNotFound("Node not found.");
             }
+
+            const int MaxDepth = 256;
+            var visited = new HashSet<Guid> { currentNode.Id };
+            int depth = 0;
             List<NodeDto> ancestors = [];
             while (currentNode.ParentId != null)
             {
-                var parentNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.Id == currentNode.ParentId
-                        && x.OwnerId == userId
-                        && x.LayoutId == layout.Id
-                        && x.Type == nodeType)
-                    .SingleOrDefaultAsync();
+                if (depth++ >= MaxDepth)
+                {
+                    return this.ApiConflict("Maximum node hierarchy depth exceeded.");
+                }
+                var parentId = currentNode.ParentId.Value;
+                if (!visited.Add(parentId))
+                {
+                    return this.ApiConflict("Circular reference detected in node hierarchy.");
+                }
+                var parentNode = await nodesQuery
+                    .SingleOrDefaultAsync(x => x.Id == parentId);
                 if (parentNode == null)
                 {
                     break;
@@ -308,12 +318,10 @@ namespace Cotton.Server.Controllers
             int filesSkip = Math.Max(0, skip - nodesCount);
             int filesToTake = Math.Max(0, pageSize - nodesToTake);
 
-            var nodes = nodesToTake == 0
-                ? []
+            var nodes = nodesToTake == 0 ? []
                 : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync();
 
-            var files = filesToTake == 0
-                ? []
+            var files = filesToTake == 0 ? []
                 : await filesQuery.Skip(filesSkip).Take(filesToTake).ToListAsync();
 
             NodeContentDto result = new()
