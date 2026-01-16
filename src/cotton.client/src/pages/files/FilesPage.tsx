@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -11,42 +11,31 @@ import {
 import {
   ArrowUpward,
   CreateNewFolder,
-  Delete,
-  Edit,
   Folder,
   Home,
   UploadFile,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useConfirm } from "material-ui-confirm";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
-import { nodesApi, type NodeFileManifestDto } from "../../shared/api/nodesApi";
-import { uploadManager } from "../../shared/upload/UploadManager";
+import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { filesApi } from "../../shared/api/filesApi";
 import { FileSystemItemCard } from "./components/FileSystemItemCard";
 import { ImagePreviewIcon } from "./components/ImagePreviewIcon";
 import { ImageLoaderProvider } from "./components/ImageLoaderProvider";
-import { resolveUploadConflicts } from "./utils/uploadConflicts";
+import { FolderCard } from "./components/FolderCard";
 import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";
 import { isImageFile } from "./utils/isImageFile";
+import { useFolderOperations } from "./hooks/useFolderOperations";
+import { useFileUpload } from "./hooks/useFileUpload";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
-  const confirm = useConfirm();
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(
-    null,
-  );
-  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
-  const [renamingFolderName, setRenamingFolderName] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
 
   const {
     currentNode,
@@ -56,9 +45,6 @@ export const FilesPage: React.FC = () => {
     error,
     loadRoot,
     loadNode,
-    createFolder,
-    deleteFolder,
-    renameFolder,
   } = useNodesStore();
 
   const routeNodeId = params.nodeId;
@@ -68,8 +54,6 @@ export const FilesPage: React.FC = () => {
       void loadRoot({ force: false });
       return;
     }
-
-    // Store shows cached content immediately (if available), and refetches.
     void loadNode(routeNodeId);
   }, [routeNodeId, loadRoot, loadNode]);
 
@@ -103,32 +87,8 @@ export const FilesPage: React.FC = () => {
     ];
   }, [sortedFolders, sortedFiles]);
 
-  const handleNewFolder = () => {
-    // Lock destination folder at the moment user starts creation.
-    setNewFolderParentId(nodeId);
-    setIsCreatingFolder(true);
-    setNewFolderName("");
-  };
-
-  const handleConfirmNewFolder = async () => {
-    const parentId = newFolderParentId;
-    if (!parentId || newFolderName.trim().length === 0) {
-      setIsCreatingFolder(false);
-      setNewFolderName("");
-      setNewFolderParentId(null);
-      return;
-    }
-    await createFolder(parentId, newFolderName.trim());
-    setIsCreatingFolder(false);
-    setNewFolderName("");
-    setNewFolderParentId(null);
-  };
-
-  const handleCancelNewFolder = () => {
-    setIsCreatingFolder(false);
-    setNewFolderName("");
-    setNewFolderParentId(null);
-  };
+  const folderOps = useFolderOperations(nodeId);
+  const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
 
   const handleGoUp = () => {
     if (ancestors.length > 0) {
@@ -137,66 +97,6 @@ export const FilesPage: React.FC = () => {
     } else {
       navigate("/files");
     }
-  };
-
-  const handleUploadFiles = useMemo(
-    () => async (files: FileList | File[]) => {
-      if (!nodeId) return;
-
-      // Lock destination folder at the moment user adds files.
-      const label = breadcrumbs
-        .filter((c, idx) => idx > 0 || c.name !== "Default")
-        .map((c) => c.name)
-        .join(" / ")
-        .trim();
-
-      const list = Array.isArray(files) ? files : Array.from(files);
-      if (list.length === 0) return;
-
-      // Prefer cached content; if missing (e.g. first load), fetch names once.
-      const contentForCheck = content ?? (await nodesApi.getChildren(nodeId));
-
-      const confirmRename = async (
-        newName: string,
-      ): Promise<{ confirmed: boolean }> => {
-        const result = await confirm({
-          title: t("conflicts.title", { ns: "files" }),
-          description: t("conflicts.description", { ns: "files", newName }),
-          confirmationText: t("common:actions.confirm"),
-          cancellationText: t("common:actions.cancel"),
-        });
-        return { confirmed: result.confirmed };
-      };
-
-      const resolved = await resolveUploadConflicts(
-        list,
-        contentForCheck,
-        confirmRename,
-      );
-
-      if (resolved.length === 0) return;
-
-      uploadManager.enqueue(
-        resolved,
-        nodeId,
-        label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" }),
-      );
-    },
-    [nodeId, breadcrumbs, content, confirm, t],
-  );
-
-  const handleUploadClick = () => {
-    if (!nodeId) return;
-    const input = document.createElement("input");
-    input.type = "file";
-    input.multiple = true;
-    input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (files && files.length > 0) {
-        void handleUploadFiles(Array.from(files));
-      }
-    };
-    input.click();
   };
 
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
@@ -216,137 +116,23 @@ export const FilesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteFolder = async (folderId: string, folderName: string) => {
-    await confirm({
-      title: t("delete.confirmTitle", { ns: "files", name: folderName }),
-      description: t("delete.confirmDescription", { ns: "files" }),
-      confirmationText: t("common:actions.delete"),
-      cancellationText: t("common:actions.cancel"),
-      confirmationButtonProps: { color: "error" },
-    }).then(async (result) => {
-      if (result.confirmed) {
-        await deleteFolder(folderId, nodeId ?? undefined);
-      }
-    });
-  };
-
-  // Recursively collect all files from a directory tree
-  const getAllFilesFromItems = async (
-    items: DataTransferItemList,
-  ): Promise<File[]> => {
-    const files: File[] = [];
-
-    const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
-      if (entry.isFile) {
-        const fileEntry = entry as FileSystemFileEntry;
-        const file = await new Promise<File>((resolve, reject) => {
-          fileEntry.file(resolve, reject);
-        });
-        // Clone the File object to avoid "file could not be read" errors with large files
-        const clonedFile = new File([file], file.name, {
-          type: file.type,
-          lastModified: file.lastModified,
-        });
-        files.push(clonedFile);
-      } else if (entry.isDirectory) {
-        const dirEntry = entry as FileSystemDirectoryEntry;
-        const reader = dirEntry.createReader();
-
-        // Read all entries (might need multiple calls for large directories)
-        const readAllEntries = async (): Promise<FileSystemEntry[]> => {
-          const allEntries: FileSystemEntry[] = [];
-          let batch: FileSystemEntry[] = [];
-
-          do {
-            batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
-              reader.readEntries(resolve, reject);
-            });
-            allEntries.push(...batch);
-          } while (batch.length > 0);
-
-          return allEntries;
-        };
-
-        const entries = await readAllEntries();
-        for (const childEntry of entries) {
-          await traverseEntry(childEntry);
-        }
-      }
-    };
-
-    // Process all items in parallel for better performance
-    const promises: Promise<void>[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.kind === "file") {
-        const entry = item.webkitGetAsEntry();
-        if (entry) {
-          promises.push(traverseEntry(entry));
-        }
-      }
-    }
-    await Promise.all(promises);
-
-    return files;
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isDragging) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only set to false if leaving the main container
-    if (e.currentTarget === e.target) {
-      setIsDragging(false);
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    if (!nodeId) return;
-
-    // Try to get files from DataTransferItemList (supports directories)
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      const files = await getAllFilesFromItems(e.dataTransfer.items);
-      if (files.length > 0) {
-        void handleUploadFiles(files);
-      }
-    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      // Fallback to simple file list
-      void handleUploadFiles(Array.from(e.dataTransfer.files));
-    }
-  };
-
   useEffect(() => {
-    // If user navigated while the inline-create is open, cancel it
-    // so it doesn't "move" to another folder.
-    if (!isCreatingFolder) return;
-    if (!newFolderParentId) return;
-    if (nodeId && newFolderParentId === nodeId) return;
+    if (!folderOps.isCreatingFolder) return;
+    if (!folderOps.newFolderParentId) return;
+    if (nodeId && folderOps.newFolderParentId === nodeId) return;
 
     const timeout = setTimeout(() => {
-      setIsCreatingFolder(false);
-      setNewFolderName("");
-      setNewFolderParentId(null);
+      folderOps.handleCancelNewFolder();
     }, 0);
 
     return () => clearTimeout(timeout);
-  }, [isCreatingFolder, newFolderParentId, nodeId]);
+  }, [folderOps, nodeId]);
 
   const isCreatingInThisFolder =
-    isCreatingFolder &&
-    !!newFolderParentId &&
+    folderOps.isCreatingFolder &&
+    !!folderOps.newFolderParentId &&
     !!nodeId &&
-    newFolderParentId === nodeId;
+    folderOps.newFolderParentId === nodeId;
 
   if (loading && !content) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
@@ -355,11 +141,11 @@ export const FilesPage: React.FC = () => {
   return (
     <ImageLoaderProvider>
       <>
-        {isDragging && (
+        {fileUpload.isDragging && (
           <Box
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            onDragOver={fileUpload.handleDragOver}
+            onDragLeave={fileUpload.handleDragLeave}
+            onDrop={fileUpload.handleDrop}
             sx={{
               position: "fixed",
               top: 0,
@@ -392,21 +178,12 @@ export const FilesPage: React.FC = () => {
         <Box
           p={3}
           width="100%"
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          sx={{
-            position: "relative",
-          }}
+          onDragOver={fileUpload.handleDragOver}
+          onDragLeave={fileUpload.handleDragLeave}
+          onDrop={fileUpload.handleDrop}
+          sx={{ position: "relative" }}
         >
-          <Box
-            mb={2}
-            sx={{
-              display: "flex",
-              gap: 1,
-              alignItems: "center",
-            }}
-          >
+          <Box mb={2} sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <IconButton
               color="primary"
               onClick={handleGoUp}
@@ -417,7 +194,7 @@ export const FilesPage: React.FC = () => {
             </IconButton>
             <IconButton
               color="primary"
-              onClick={handleUploadClick}
+              onClick={fileUpload.handleUploadClick}
               disabled={!nodeId || loading}
               title={t("actions.upload")}
             >
@@ -425,8 +202,8 @@ export const FilesPage: React.FC = () => {
             </IconButton>
             <IconButton
               color="primary"
-              onClick={handleNewFolder}
-              disabled={!nodeId || isCreatingFolder}
+              onClick={folderOps.handleNewFolder}
+              disabled={!nodeId || folderOps.isCreatingFolder}
               title={t("actions.newFolder")}
             >
               <CreateNewFolder />
@@ -495,11 +272,7 @@ export const FilesPage: React.FC = () => {
                       border: "2px solid",
                       borderColor: "primary.main",
                       borderRadius: 2,
-                      p: {
-                        xs: 1,
-                        sm: 1.25,
-                        md: 1,
-                      },
+                      p: { xs: 1, sm: 1.25, md: 1 },
                       bgcolor: "action.hover",
                     }}
                   >
@@ -513,10 +286,7 @@ export const FilesPage: React.FC = () => {
                         borderRadius: 1.5,
                         overflow: "hidden",
                         mb: 0.75,
-                        "& > svg": {
-                          width: "70%",
-                          height: "70%",
-                        },
+                        "& > svg": { width: "70%", height: "70%" },
                       }}
                     >
                       <Folder sx={{ color: "primary.main" }} />
@@ -525,22 +295,20 @@ export const FilesPage: React.FC = () => {
                       autoFocus
                       fullWidth
                       size="small"
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
+                      value={folderOps.newFolderName}
+                      onChange={(e) => folderOps.setNewFolderName(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          void handleConfirmNewFolder();
+                          void folderOps.handleConfirmNewFolder();
                         } else if (e.key === "Escape") {
-                          handleCancelNewFolder();
+                          folderOps.handleCancelNewFolder();
                         }
                       }}
-                      onBlur={handleConfirmNewFolder}
+                      onBlur={folderOps.handleConfirmNewFolder}
                       placeholder={t("actions.folderNamePlaceholder")}
                       slotProps={{
                         input: {
-                          sx: {
-                            fontSize: { xs: "0.8rem", md: "0.85rem" },
-                          },
+                          sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
                         },
                       }}
                     />
@@ -548,90 +316,22 @@ export const FilesPage: React.FC = () => {
                 )}
                 {tiles.map((tile) => {
                   if (tile.kind === "folder") {
-                    const isRenaming = renamingFolderId === tile.node.id;
-
-                    if (isRenaming) {
-                      return (
-                        <Box
-                          key={tile.node.id}
-                          sx={{
-                            border: "2px solid",
-                            borderColor: "primary.main",
-                            borderRadius: 2,
-                            p: {
-                              xs: 1,
-                              sm: 1.25,
-                              md: 1,
-                            },
-                            bgcolor: "action.hover",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: "100%",
-                              aspectRatio: "1 / 1",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderRadius: 1.5,
-                              overflow: "hidden",
-                              mb: 0.75,
-                              "& > svg": {
-                                width: "70%",
-                                height: "70%",
-                              },
-                            }}
-                          >
-                            <Folder sx={{ color: "primary.main" }} />
-                          </Box>
-                          <TextField
-                            autoFocus
-                            fullWidth
-                            size="small"
-                            value={renamingFolderName}
-                            onChange={(e) => setRenamingFolderName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                void handleConfirmRename();
-                              } else if (e.key === "Escape") {
-                                handleCancelRename();
-                              }
-                            }}
-                            onBlur={handleConfirmRename}
-                            placeholder={t("actions.folderNamePlaceholder")}
-                            slotProps={{
-                              input: {
-                                sx: {
-                                  fontSize: { xs: "0.8rem", md: "0.85rem" },
-                                },
-                              },
-                            }}
-                          />
-                        </Box>
-                      );
-                    }
-
                     return (
-                      <FileSystemItemCard
+                      <FolderCard
                         key={tile.node.id}
-                        icon={<Folder fontSize="large" />}
-                        title={tile.node.name}
+                        folder={tile.node}
+                        isRenaming={folderOps.renamingFolderId === tile.node.id}
+                        renamingName={folderOps.renamingFolderName}
+                        onRenamingNameChange={folderOps.setRenamingFolderName}
+                        onConfirmRename={folderOps.handleConfirmRename}
+                        onCancelRename={folderOps.handleCancelRename}
+                        onStartRename={() =>
+                          folderOps.handleRenameFolder(tile.node.id, tile.node.name)
+                        }
+                        onDelete={() =>
+                          folderOps.handleDeleteFolder(tile.node.id, tile.node.name)
+                        }
                         onClick={() => navigate(`/files/${tile.node.id}`)}
-                        subtitle={new Date(
-                          tile.node.createdAt,
-                        ).toLocaleDateString()}
-                        actions={[
-                          {
-                            icon: <Edit fontSize="small" />,
-                            onClick: () => handleRenameFolder(tile.node.id, tile.node.name),
-                            tooltip: t("common:actions.rename"),
-                          },
-                          {
-                            icon: <Delete fontSize="small" />,
-                            onClick: () => handleDeleteFolder(tile.node.id, tile.node.name),
-                            tooltip: t("common:actions.delete"),
-                          },
-                        ]}
                       />
                     );
                   }
@@ -641,8 +341,7 @@ export const FilesPage: React.FC = () => {
                     tile.file.encryptedFilePreviewHashHex ?? null,
                     tile.file.name,
                   );
-                  const previewUrl =
-                    typeof preview === "string" ? preview : null;
+                  const previewUrl = typeof preview === "string" ? preview : null;
 
                   return (
                     <FileSystemItemCard
@@ -680,8 +379,7 @@ export const FilesPage: React.FC = () => {
                       onClick={
                         isImage && previewUrl
                           ? undefined
-                          : () =>
-                              handleDownloadFile(tile.file.id, tile.file.name)
+                          : () => handleDownloadFile(tile.file.id, tile.file.name)
                       }
                     />
                   );
