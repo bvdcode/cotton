@@ -57,4 +57,8 @@ export const nodesApi = {
     const response = await httpClient.put<NodeDto>("/layouts/nodes", request);
     return response.data;
   },
+
+  deleteNode: async (nodeId: Guid): Promise<void> => {
+    await httpClient.delete(`/layouts/nodes/${nodeId}`);
+  },
 };

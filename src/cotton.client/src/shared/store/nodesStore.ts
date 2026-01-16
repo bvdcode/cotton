@@ -14,6 +14,7 @@ type NodesState = {
   loadRoot: (options?: { force?: boolean }) => Promise<NodeDto | null>;
   loadNode: (nodeId: string) => Promise<void>;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
+  deleteFolder: (nodeId: string, parentNodeId?: string) => Promise<boolean>;
   reset: () => void;
 };
 
@@ -126,6 +127,46 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       console.error("Failed to create folder", error);
       set({ loading: false, error: "Failed to create folder" });
       return null;
+    }
+  },
+
+  deleteFolder: async (nodeId, parentNodeId) => {
+    if (get().loading) return false;
+
+    set({ loading: true, error: null });
+
+    try {
+      await nodesApi.deleteNode(nodeId);
+
+      // Optimistic update: remove folder from local cache
+      if (parentNodeId) {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return { loading: false };
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                nodes: existing.nodes.filter((n) => n.id !== nodeId),
+              },
+            },
+            loading: false,
+          };
+        });
+
+        // Background refetch to ensure server state is correct
+        void get().loadNode(parentNodeId);
+      } else {
+        set({ loading: false });
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Failed to delete folder", error);
+      set({ loading: false, error: "Failed to delete folder" });
+      return false;
     }
   },
 

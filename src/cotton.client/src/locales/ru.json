@@ -4,7 +4,8 @@
     "switchToThisLanguage": "Переключить на русский",
     "actions": {
       "confirm": "Подтвердить",
-      "cancel": "Отмена"
+      "cancel": "Отмена",
+      "delete": "Удалить"
     },
     "userMenu": {
       "lightMode": "Светлая тема",
@@ -305,6 +306,10 @@
     "conflicts": {
       "title": "Файл уже существует",
       "description": "В этой папке уже есть файл с таким именем. Загрузить как {{newName}}?"
+    },
+    "delete": {
+      "confirmTitle": "Удалить папку \"{{name}}\"?",
+      "confirmDescription": "Это действие нельзя отменить. Всё содержимое папки будет удалено."
     }
   },
   "upload": {
