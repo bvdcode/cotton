@@ -26,7 +26,7 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
       await filesApi.renameFile(fileId, { name: renamingFileName.trim() });
       setRenamingFileId(null);
       setRenamingFileName("");
-      
+
       // Trigger parent refresh
       if (onFileDeleted) {
         onFileDeleted();
@@ -42,23 +42,21 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
   };
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
-    try {
-      await confirm({
-        title: t("delete.confirmTitle", { ns: "files", name: fileName }),
-        description: t("delete.confirmDescription", { ns: "files" }),
-        confirmationText: t("common:actions.delete"),
-        cancellationText: t("common:actions.cancel"),
-        confirmationButtonProps: { color: "error" },
-      });
-
-      await filesApi.deleteFile(fileId);
-      
-      // Trigger parent refresh
-      if (onFileDeleted) {
-        onFileDeleted();
+    await confirm({
+      title: t("delete.confirmTitle", { ns: "files", name: fileName }),
+      description: t("delete.confirmDescription", { ns: "files" }),
+      confirmationText: t("common:actions.delete"),
+      cancellationText: t("common:actions.cancel"),
+      confirmationButtonProps: { color: "error" },
+    }).then(async (result) => {
+      if (result.confirmed) {
+        await filesApi.deleteFile(fileId);
       }
-    } catch {
-      // User cancelled
+    });
+
+    // Trigger parent refresh
+    if (onFileDeleted) {
+      onFileDeleted();
     }
   };
 
