@@ -35,11 +35,13 @@ export const FileSystemItemCard = ({
     setActionsOpen(!actionsOpen);
   };
 
-  const handleActionClick = (action: FileSystemItemCardAction) => (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    setActionsOpen(false);
-    action.onClick();
-  };
+  const handleActionClick =
+    (action: FileSystemItemCardAction) =>
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      setActionsOpen(false);
+      action.onClick();
+    };
 
   return (
     <Box
@@ -115,14 +117,17 @@ export const FileSystemItemCard = ({
             className="card-menu-button"
             sx={{
               p: 0.5,
+              width: 28,
+              height: 28,
               opacity: actionsOpen ? 1 : 0,
               transition: "opacity 0.2s, transform 0.3s",
               transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
-              bgcolor: actionsOpen ? "background.paper" : "transparent",
-              boxShadow: actionsOpen ? 1 : 0,
+              "& svg": {
+                fontSize: "1rem",
+              },
             }}
           >
-            <MoreVert sx={{ fontSize: "1rem" }} />
+            <MoreVert />
           </IconButton>
         )}
       </Box>
@@ -145,7 +150,7 @@ export const FileSystemItemCard = ({
           sx={{
             position: "absolute",
             bottom: subtitle ? 56 : 36,
-            right: 4,
+            right: 0,
             display: "flex",
             flexDirection: "column",
             gap: 0.75,
@@ -171,13 +176,8 @@ export const FileSystemItemCard = ({
               title={action.tooltip}
               sx={{
                 p: 0.5,
-                bgcolor: "background.paper",
-                boxShadow: 1,
                 width: 28,
                 height: 28,
-                "&:hover": {
-                  bgcolor: "action.hover",
-                },
                 "& svg": {
                   fontSize: "1rem",
                 },
