@@ -11,6 +11,8 @@ import {
 import {
   ArrowUpward,
   CreateNewFolder,
+  Delete,
+  Edit,
   Folder,
   Home,
   UploadFile,
@@ -31,6 +33,7 @@ import { formatBytes } from "./utils/formatBytes";
 import { isImageFile } from "./utils/isImageFile";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
+import { useFileOperations } from "./hooks/useFileOperations";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -89,6 +92,12 @@ export const FilesPage: React.FC = () => {
 
   const folderOps = useFolderOperations(nodeId);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
+  const fileOps = useFileOperations(() => {
+    // Reload current folder after file operation
+    if (nodeId) {
+      void loadNode(nodeId);
+    }
+  });
 
   const handleGoUp = () => {
     if (ancestors.length > 0) {
@@ -381,6 +390,18 @@ export const FilesPage: React.FC = () => {
                           ? undefined
                           : () => handleDownloadFile(tile.file.id, tile.file.name)
                       }
+                      actions={[
+                        {
+                          icon: <Edit fontSize="small" />,
+                          onClick: () => fileOps.handleRenameFile(tile.file.id, tile.file.name),
+                          tooltip: t("common:actions.rename"),
+                        },
+                        {
+                          icon: <Delete fontSize="small" />,
+                          onClick: () => fileOps.handleDeleteFile(tile.file.id, tile.file.name),
+                          tooltip: t("common:actions.delete"),
+                        },
+                      ]}
                     />
                   );
                 })}

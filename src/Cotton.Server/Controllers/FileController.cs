@@ -72,6 +72,7 @@ namespace Cotton.Server.Controllers
 
             Guid userId = User.GetUserId();
             var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
@@ -81,15 +82,29 @@ namespace Cotton.Server.Controllers
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            bool nameExists = await _dbContext.NodeFiles
+            
+            // Check for duplicate files in the same folder
+            bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x =>
                     x.NodeId == nodeFile.NodeId &&
                     x.OwnerId == userId &&
                     x.NameKey == nameKey &&
                     x.Id != nodeFileId);
-            if (nameExists)
+            if (fileExists)
             {
                 return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
+            }
+
+            // Check for duplicate nodes (subfolders) in the same folder
+            bool nodeExists = await _dbContext.Nodes
+                .AnyAsync(x =>
+                    x.ParentId == nodeFile.NodeId &&
+                    x.OwnerId == userId &&
+                    x.Type == nodeFile.Node.Type &&
+                    x.NameKey == nameKey);
+            if (nodeExists)
+            {
+                return this.ApiConflict("A folder with the same name key already exists in this folder: " + nameKey);
             }
 
             nodeFile.SetName(request.Name);
@@ -189,11 +204,25 @@ namespace Cotton.Server.Controllers
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            bool nameExists = await _dbContext.NodeFiles
+            
+            // Check for duplicate files in the target folder
+            bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x => x.NodeId == node.Id && x.OwnerId == userId && x.NameKey == nameKey);
-            if (nameExists)
+            if (fileExists)
             {
                 return this.ApiConflict("A file with the same name key already exists in the target node: " + nameKey);
+            }
+
+            // Check for duplicate nodes (subfolders) in the target folder
+            bool nodeExists = await _dbContext.Nodes
+                .AnyAsync(x =>
+                    x.ParentId == node.Id &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey &&
+                    x.Type == NodeType.Default);
+            if (nodeExists)
+            {
+                return this.ApiConflict("A folder with the same name key already exists in the target node: " + nameKey);
             }
 
             List<Chunk> chunks = await GetChunksAsync(request.ChunkHashes);
