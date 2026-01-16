@@ -16,6 +16,7 @@ export interface FileSystemItemCardProps {
   subtitle?: string;
   onClick?: () => void;
   actions?: FileSystemItemCardAction[];
+  iconContainerSx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
 }
 
@@ -25,6 +26,7 @@ export const FileSystemItemCard = ({
   subtitle,
   onClick,
   actions,
+  iconContainerSx,
   sx,
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
@@ -57,6 +59,7 @@ export const FileSystemItemCard = ({
       }}
       sx={{
         position: "relative",
+        overflow: "hidden",
         border: "1px solid",
         borderColor: "divider",
         borderRadius: 2,
@@ -94,6 +97,7 @@ export const FileSystemItemCard = ({
             width: "70%",
             height: "70%",
           },
+          ...iconContainerSx,
         }}
       >
         {icon}
@@ -111,24 +115,70 @@ export const FileSystemItemCard = ({
         </Typography>
 
         {actions && actions.length > 0 && (
-          <IconButton
-            size="small"
-            onClick={handleToggleActions}
-            className="card-menu-button"
-            sx={{
-              p: 0.5,
-              width: 28,
-              height: 28,
-              opacity: actionsOpen ? 1 : 0,
-              transition: "opacity 0.2s, transform 0.3s",
-              transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
-              "& svg": {
-                fontSize: "1rem",
-              },
-            }}
-          >
-            <MoreVert />
-          </IconButton>
+          <Box sx={{ position: "relative", width: 28, height: 28, flex: "0 0 auto" }}>
+            <IconButton
+              size="small"
+              onClick={handleToggleActions}
+              className="card-menu-button"
+              sx={{
+                p: 0.5,
+                width: 28,
+                height: 28,
+                opacity: actionsOpen ? 1 : 0,
+                transition: "opacity 0.2s, transform 0.3s",
+                transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
+                "& svg": {
+                  fontSize: "1rem",
+                },
+              }}
+            >
+              <MoreVert />
+            </IconButton>
+
+            {actionsOpen && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  bottom: 32,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0.75,
+                  animation: "slideUp 0.2s ease-out",
+                  "@keyframes slideUp": {
+                    from: {
+                      opacity: 0,
+                      transform: "translateY(10px)",
+                    },
+                    to: {
+                      opacity: 1,
+                      transform: "translateY(0)",
+                    },
+                  },
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {actions.map((action, idx) => (
+                  <IconButton
+                    key={idx}
+                    size="small"
+                    onClick={handleActionClick(action)}
+                    title={action.tooltip}
+                    sx={{
+                      p: 0.5,
+                      width: 28,
+                      height: 28,
+                      "& svg": {
+                        fontSize: "1rem",
+                      },
+                    }}
+                  >
+                    {action.icon}
+                  </IconButton>
+                ))}
+              </Box>
+            )}
+          </Box>
         )}
       </Box>
 
@@ -145,49 +195,6 @@ export const FileSystemItemCard = ({
         </Typography>
       )}
 
-      {actions && actions.length > 0 && actionsOpen && (
-        <Box
-          sx={{
-            position: "absolute",
-            bottom: subtitle ? 56 : 36,
-            right: 4,
-            display: "flex",
-            flexDirection: "column",
-            gap: 0.75,
-            animation: "slideUp 0.2s ease-out",
-            "@keyframes slideUp": {
-              from: {
-                opacity: 0,
-                transform: "translateY(10px)",
-              },
-              to: {
-                opacity: 1,
-                transform: "translateY(0)",
-              },
-            },
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {actions.map((action, idx) => (
-            <IconButton
-              key={idx}
-              size="small"
-              onClick={handleActionClick(action)}
-              title={action.tooltip}
-              sx={{
-                p: 0.5,
-                width: 28,
-                height: 28,
-                "& svg": {
-                  fontSize: "1rem",
-                },
-              }}
-            >
-              {action.icon}
-            </IconButton>
-          ))}
-        </Box>
-      )}
     </Box>
   );
 };
