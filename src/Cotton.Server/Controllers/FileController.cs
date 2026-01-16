@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -19,6 +20,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Quartz.Extensions;
+using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -53,6 +55,48 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.", userId, nodeFileId);
             return NoContent();
+        }
+
+        [Authorize]
+        [HttpPatch($"{Routes.Files}/{{nodeFileId:guid}}/rename")]
+        public async Task<IActionResult> RenameFile([FromRoute] Guid nodeFileId,
+            [FromBody] RenameFileRequest request)
+        {
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
+                out string normalizedName,
+                out string? errorMessage);
+            if (!isValidName)
+            {
+                return CottonResult.BadRequest(errorMessage);
+            }
+
+            Guid userId = User.GetUserId();
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (nodeFile == null)
+            {
+                return CottonResult.NotFound("File not found.");
+            }
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+            bool nameExists = await _dbContext.NodeFiles
+                .AnyAsync(x =>
+                    x.NodeId == nodeFile.NodeId &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey &&
+                    x.Id != nodeFileId);
+            if (nameExists)
+            {
+                return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
+            }
+
+            nodeFile.SetName(request.Name);
+            await _dbContext.SaveChangesAsync();
+
+            var mapped = nodeFile.Adapt<FileManifestDto>();
+            return Ok(mapped);
         }
 
         [Authorize]
