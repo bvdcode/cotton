@@ -21,6 +21,10 @@ export interface CreateNodeRequest {
   name: string;
 }
 
+export interface RenameNodeRequest {
+  name: string;
+}
+
 export const nodesApi = {
   getNode: async (nodeId: Guid): Promise<NodeDto> => {
     const response = await httpClient.get<NodeDto>(`/layouts/nodes/${nodeId}`);
@@ -55,6 +59,15 @@ export const nodesApi = {
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
     const response = await httpClient.put<NodeDto>("/layouts/nodes", request);
+    return response.data;
+  },
+
+  deleteNode: async (nodeId: Guid): Promise<void> => {
+    await httpClient.delete(`/layouts/nodes/${nodeId}`);
+  },
+
+  renameNode: async (nodeId: Guid, request: RenameNodeRequest): Promise<NodeDto> => {
+    const response = await httpClient.patch<NodeDto>(`/layouts/nodes/${nodeId}/rename`, request);
     return response.data;
   },
 };

@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -19,6 +20,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Quartz.Extensions;
+using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -53,6 +55,63 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.", userId, nodeFileId);
             return NoContent();
+        }
+
+        [Authorize]
+        [HttpPatch($"{Routes.Files}/{{nodeFileId:guid}}/rename")]
+        public async Task<IActionResult> RenameFile([FromRoute] Guid nodeFileId,
+            [FromBody] RenameFileRequest request)
+        {
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
+                out string normalizedName,
+                out string? errorMessage);
+            if (!isValidName)
+            {
+                return CottonResult.BadRequest(errorMessage);
+            }
+
+            Guid userId = User.GetUserId();
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (nodeFile == null)
+            {
+                return CottonResult.NotFound("File not found.");
+            }
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+            
+            // Check for duplicate files in the same folder
+            bool fileExists = await _dbContext.NodeFiles
+                .AnyAsync(x =>
+                    x.NodeId == nodeFile.NodeId &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey &&
+                    x.Id != nodeFileId);
+            if (fileExists)
+            {
+                return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
+            }
+
+            // Check for duplicate nodes (subfolders) in the same folder
+            bool nodeExists = await _dbContext.Nodes
+                .AnyAsync(x =>
+                    x.ParentId == nodeFile.NodeId &&
+                    x.OwnerId == userId &&
+                    x.Type == nodeFile.Node.Type &&
+                    x.NameKey == nameKey);
+            if (nodeExists)
+            {
+                return this.ApiConflict("A folder with the same name key already exists in this folder: " + nameKey);
+            }
+
+            nodeFile.SetName(request.Name);
+            await _dbContext.SaveChangesAsync();
+
+            var mapped = nodeFile.Adapt<FileManifestDto>();
+            return Ok(mapped);
         }
 
         [Authorize]
@@ -145,11 +204,25 @@ namespace Cotton.Server.Controllers
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            bool nameExists = await _dbContext.NodeFiles
+            
+            // Check for duplicate files in the target folder
+            bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x => x.NodeId == node.Id && x.OwnerId == userId && x.NameKey == nameKey);
-            if (nameExists)
+            if (fileExists)
             {
                 return this.ApiConflict("A file with the same name key already exists in the target node: " + nameKey);
+            }
+
+            // Check for duplicate nodes (subfolders) in the target folder
+            bool nodeExists = await _dbContext.Nodes
+                .AnyAsync(x =>
+                    x.ParentId == node.Id &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey &&
+                    x.Type == NodeType.Default);
+            if (nodeExists)
+            {
+                return this.ApiConflict("A folder with the same name key already exists in the target node: " + nameKey);
             }
 
             List<Chunk> chunks = await GetChunksAsync(request.ChunkHashes);
@@ -195,16 +268,27 @@ namespace Cotton.Server.Controllers
 
         private async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes)
         {
-            List<Chunk> chunks = [];
-            foreach (var item in chunkHashes)
+            Guid userId = User.GetUserId();
+
+            List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
+            List<Chunk> ownedChunks = await _dbContext.Chunks
+                .Where(c => normalizedHashes.Contains(c.Hash))
+                .Where(c => _dbContext.FileManifestChunks
+                    .Any(fmc => fmc.ChunkHash == c.Hash && 
+                        _dbContext.NodeFiles.Any(nf => nf.FileManifestId == fmc.FileManifestId && nf.OwnerId == userId)))
+                .ToListAsync();
+
+            var chunkMap = ownedChunks.ToDictionary(c => Hasher.ToHexStringHash(c.Hash), StringComparer.OrdinalIgnoreCase);
+            List<Chunk> result = [];
+            foreach (var hash in chunkHashes)
             {
-                byte[] hashBytes = Hasher.FromHexStringHash(item);
-                var foundChunk = await _layouts.FindChunkAsync(hashBytes) ?? throw new EntityNotFoundException(nameof(Chunk));
-                // TODO: Add safety check to ensure chunks belong to the user
-                // Must depend on owner/user authentication, no reason to delay for the same user
-                chunks.Add(foundChunk);
+                if (!chunkMap.TryGetValue(hash, out var chunk))
+                {
+                    throw new UnauthorizedAccessException($"Access denied: chunk {hash} not found or not owned by user");
+                }
+                result.Add(chunk);
             }
-            return chunks;
+            return result;
         }
 
         private async Task<FileManifest> CreateNewFileManifestAsync(List<Chunk> chunks, CreateFileRequest request, byte[] proposedContentHash)

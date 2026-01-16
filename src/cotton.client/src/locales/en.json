@@ -4,7 +4,9 @@
     "switchToThisLanguage": "Switch to English",
     "actions": {
       "confirm": "Confirm",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "rename": "Rename"
     },
     "userMenu": {
       "lightMode": "Light Mode",
@@ -305,6 +307,24 @@
     "conflicts": {
       "title": "File already exists",
       "description": "A file with this name already exists in this folder. Upload as {{newName}}?"
+    },
+    "delete": {
+      "confirmTitle": "Delete folder \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
+    },
+    "deleteFolder": {
+      "confirmTitle": "Delete folder \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
+    },
+    "deleteFile": {
+      "confirmTitle": "Delete file \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone."
+    },
+    "stats": {
+      "summary": "{{folders}} folders • {{files}} files • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "File name"
     }
   },
   "upload": {
