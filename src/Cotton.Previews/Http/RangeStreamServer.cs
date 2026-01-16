@@ -239,7 +239,7 @@ namespace Cotton.Previews.Http
 
                 // Lock only Seek+Read to allow interleaving of multiple concurrent requests
                 // This is critical: ffprobe/ffmpeg request full file AND moov simultaneously
-                // Without interleaving, moov request waits for 500MB+ transfer ? timeout
+                // Without interleaving, moov request waits for 500MB+ transfer, as result is timeout
                 await _sem.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
