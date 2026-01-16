@@ -58,6 +58,14 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch($"{Routes.Nodes}/{{nodeId:guid}}/rename")]
+        public async Task<IActionResult> RenameLayoutNode([FromRoute] Guid nodeId,
+            [FromBody] RenameNodeRequest request)
+        {
+
+        }
+
+        [Authorize]
         [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
