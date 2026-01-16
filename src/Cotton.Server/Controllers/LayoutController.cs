@@ -89,6 +89,7 @@ namespace Cotton.Server.Controllers
             // TODO: Change root node? Or change node type? Or something else?
             var trash = await _layouts.GetUserTrashNodeAsync(userId);
             node.ParentId = trash.Id;
+            node.Type = NodeType.Trash;
             await _dbContext.SaveChangesAsync();
             return Ok();
         }
