@@ -273,9 +273,7 @@ namespace Cotton.Server.Controllers
             List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
             List<Chunk> ownedChunks = await _dbContext.Chunks
                 .Where(c => normalizedHashes.Contains(c.Hash))
-                .Where(c => _dbContext.FileManifestChunks
-                    .Any(fmc => fmc.ChunkHash == c.Hash && 
-                        _dbContext.NodeFiles.Any(nf => nf.FileManifestId == fmc.FileManifestId && nf.OwnerId == userId)))
+                .Where(c => _dbContext.ChunkOwnerships.Any(co => co.ChunkHash == c.Hash && co.OwnerId == userId))
                 .ToListAsync();
 
             var chunkMap = ownedChunks.ToDictionary(c => Hasher.ToHexStringHash(c.Hash), StringComparer.OrdinalIgnoreCase);
