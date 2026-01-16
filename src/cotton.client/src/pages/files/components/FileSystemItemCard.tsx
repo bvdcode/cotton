@@ -114,10 +114,12 @@ export const FileSystemItemCard = ({
             onClick={handleToggleActions}
             className="card-menu-button"
             sx={{
-              p: 0.25,
+              p: 0.5,
               opacity: actionsOpen ? 1 : 0,
               transition: "opacity 0.2s, transform 0.3s",
               transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
+              bgcolor: actionsOpen ? "background.paper" : "transparent",
+              boxShadow: actionsOpen ? 1 : 0,
             }}
           >
             <MoreVert sx={{ fontSize: "1rem" }} />
@@ -142,11 +144,11 @@ export const FileSystemItemCard = ({
         <Box
           sx={{
             position: "absolute",
-            bottom: subtitle ? 48 : 28,
+            bottom: subtitle ? 56 : 36,
             right: 4,
             display: "flex",
             flexDirection: "column",
-            gap: 0.5,
+            gap: 0.75,
             animation: "slideUp 0.2s ease-out",
             "@keyframes slideUp": {
               from: {
@@ -171,8 +173,13 @@ export const FileSystemItemCard = ({
                 p: 0.5,
                 bgcolor: "background.paper",
                 boxShadow: 1,
+                width: 28,
+                height: 28,
                 "&:hover": {
                   bgcolor: "action.hover",
+                },
+                "& svg": {
+                  fontSize: "1rem",
                 },
               }}
             >
