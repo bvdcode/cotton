@@ -10,6 +10,11 @@ interface UseBreadcrumb {
   name: string;
 }
 
+type DroppedFile = {
+  file: File;
+  relativePath: string;
+};
+
 export const useFileUpload = (
   nodeId: string | null,
   breadcrumbs: UseBreadcrumb[],
@@ -19,15 +24,18 @@ export const useFileUpload = (
   const confirm = useConfirm();
   const [isDragging, setIsDragging] = useState(false);
 
+  const baseLabel = useMemo(() => {
+    const label = breadcrumbs
+      .filter((c, idx) => idx > 0 || c.name !== "Default")
+      .map((c) => c.name)
+      .join(" / ")
+      .trim();
+    return label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" });
+  }, [breadcrumbs, t]);
+
   const handleUploadFiles = useMemo(
     () => async (files: FileList | File[]) => {
       if (!nodeId) return;
-
-      const label = breadcrumbs
-        .filter((c, idx) => idx > 0 || c.name !== "Default")
-        .map((c) => c.name)
-        .join(" / ")
-        .trim();
 
       const list = Array.isArray(files) ? files : Array.from(files);
       if (list.length === 0) return;
@@ -61,10 +69,136 @@ export const useFileUpload = (
       uploadManager.enqueue(
         resolved,
         nodeId,
-        label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" }),
+        baseLabel,
       );
     },
-    [nodeId, breadcrumbs, content, confirm, t],
+    [nodeId, content, confirm, t, baseLabel],
+  );
+
+  const handleUploadDroppedFiles = useMemo(
+    () => async (dropped: DroppedFile[]) => {
+      if (!nodeId) return;
+      if (dropped.length === 0) return;
+
+      const confirmRename = async (
+        newName: string,
+      ): Promise<{ confirmed: boolean }> => {
+        try {
+          await confirm({
+            title: t("conflicts.title", { ns: "files" }),
+            description: t("conflicts.description", { ns: "files", newName }),
+            confirmationText: t("common:actions.confirm"),
+            cancellationText: t("common:actions.cancel"),
+          });
+          return { confirmed: true };
+        } catch {
+          return { confirmed: false };
+        }
+      };
+
+      const folderIdByKey = new Map<string, string>();
+      const childrenByNodeId = new Map<string, NodeContentDto>();
+
+      const getChildrenCached = async (id: string): Promise<NodeContentDto> => {
+        const cached = childrenByNodeId.get(id);
+        if (cached) return cached;
+        const loaded = await nodesApi.getChildren(id);
+        childrenByNodeId.set(id, loaded);
+        return loaded;
+      };
+
+      const findAvailableFolderName = async (parentId: string, baseName: string): Promise<string> => {
+        const content = await getChildrenCached(parentId);
+        const takenLower = new Set<string>([
+          ...content.nodes.map((n) => n.name.toLowerCase()),
+          ...content.files.map((f) => f.name.toLowerCase()),
+        ]);
+
+        const preferred = `${baseName} (folder)`;
+        if (!takenLower.has(preferred.toLowerCase())) return preferred;
+
+        for (let i = 2; i < 10_000; i += 1) {
+          const candidate = `${baseName} (folder ${i})`;
+          if (!takenLower.has(candidate.toLowerCase())) return candidate;
+        }
+        return `${baseName}-${Date.now()}`;
+      };
+
+      const ensureFolder = async (parentId: string, desiredName: string): Promise<{ id: string; name: string }> => {
+        const key = `${parentId}::${desiredName}`;
+        const cachedId = folderIdByKey.get(key);
+        if (cachedId) return { id: cachedId, name: desiredName };
+
+        const content = await getChildrenCached(parentId);
+        const existing = content.nodes.find((n) => n.name === desiredName);
+        if (existing) {
+          folderIdByKey.set(key, existing.id);
+          return { id: existing.id, name: desiredName };
+        }
+
+        // If a file exists with the same name, we can't create a folder with that name.
+        const hasFileConflict = content.files.some((f) => f.name === desiredName);
+        const nameToCreate = hasFileConflict
+          ? await findAvailableFolderName(parentId, desiredName)
+          : desiredName;
+
+        const created = await nodesApi.createNode({ parentId, name: nameToCreate });
+        // Update caches optimistically.
+        content.nodes.push(created);
+        folderIdByKey.set(`${parentId}::${nameToCreate}`, created.id);
+
+        return { id: created.id, name: nameToCreate };
+      };
+
+      const ensureFolderPath = async (rootId: string, segments: string[]): Promise<{ nodeId: string; labelSuffix: string }> => {
+        let currentId = rootId;
+        const effectiveSegments: string[] = [];
+
+        for (const raw of segments) {
+          const seg = raw.trim();
+          if (seg.length === 0) continue;
+          const next = await ensureFolder(currentId, seg);
+          currentId = next.id;
+          effectiveSegments.push(next.name);
+        }
+
+        return {
+          nodeId: currentId,
+          labelSuffix: effectiveSegments.join(" / "),
+        };
+      };
+
+      const filesByTarget = new Map<string, { label: string; files: File[] }>();
+
+      for (const item of dropped) {
+        const normalized = item.relativePath.replace(/^\\+|^\/+/, "");
+        const parts = normalized.split(/[\\/]+/).filter((p) => p.length > 0);
+
+        // If we somehow don't get a filename, fall back to the File's name.
+        if (parts.length === 0) {
+          const bucket = filesByTarget.get(nodeId) ?? { label: baseLabel, files: [] };
+          bucket.files.push(item.file);
+          filesByTarget.set(nodeId, bucket);
+          continue;
+        }
+
+        parts.pop();
+        const { nodeId: targetNodeId, labelSuffix } = await ensureFolderPath(nodeId, parts);
+        const label = labelSuffix.length > 0 ? `${baseLabel} / ${labelSuffix}` : baseLabel;
+
+        const bucket = filesByTarget.get(targetNodeId) ?? { label, files: [] };
+        bucket.files.push(item.file);
+        filesByTarget.set(targetNodeId, bucket);
+      }
+
+      for (const [targetNodeId, bucket] of filesByTarget) {
+        const contentForCheck = await nodesApi.getChildren(targetNodeId);
+        const resolved = await resolveUploadConflicts(bucket.files, contentForCheck, confirmRename);
+        if (resolved.length === 0) continue;
+        uploadManager.enqueue(resolved, targetNodeId, bucket.label);
+      }
+    },
+    [nodeId, baseLabel, confirm, t],
   );
 
   const handleUploadClick = () => {
@@ -83,8 +217,8 @@ export const useFileUpload = (
 
   const getAllFilesFromItems = async (
     items: DataTransferItemList,
-  ): Promise<File[]> => {
-    const files: File[] = [];
+  ): Promise<DroppedFile[]> => {
+    const files: DroppedFile[] = [];
 
     const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
       if (entry.isFile) {
@@ -96,7 +230,10 @@ export const useFileUpload = (
           type: file.type,
           lastModified: file.lastModified,
         });
-        files.push(clonedFile);
+
+        const fullPath = (entry as unknown as { fullPath?: string }).fullPath;
+        const relativePath = (fullPath ?? file.name).replace(/^\/+/, "");
+        files.push({ file: clonedFile, relativePath });
       } else if (entry.isDirectory) {
         const dirEntry = entry as FileSystemDirectoryEntry;
         const reader = dirEntry.createReader();
@@ -163,7 +300,7 @@ export const useFileUpload = (
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       const files = await getAllFilesFromItems(e.dataTransfer.items);
       if (files.length > 0) {
-        void handleUploadFiles(files);
+        void handleUploadDroppedFiles(files);
       }
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       void handleUploadFiles(Array.from(e.dataTransfer.files));
