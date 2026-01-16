@@ -11,6 +11,7 @@ import {
 import {
   ArrowUpward,
   CreateNewFolder,
+  Delete,
   Folder,
   Home,
   UploadFile,
@@ -53,6 +54,7 @@ export const FilesPage: React.FC = () => {
     loadRoot,
     loadNode,
     createFolder,
+    deleteFolder,
   } = useNodesStore();
 
   const routeNodeId = params.nodeId;
@@ -150,33 +152,39 @@ export const FilesPage: React.FC = () => {
       // Prefer cached content; if missing (e.g. first load), fetch names once.
       const contentForCheck = content ?? (await nodesApi.getChildren(nodeId));
 
-      const confirmRename = async (newName: string): Promise<{ confirmed: boolean }> => {
-        try {
-          await confirm({
-            title: t("conflicts.title", { ns: "files" }),
-            description: t("conflicts.description", { ns: "files", newName }),
-            confirmationText: t("common:actions.confirm"),
-            cancellationText: t("common:actions.cancel"),
-          });
-          return { confirmed: true };
-        } catch {
-          return { confirmed: false };
-        }
+      const confirmRename = async (
+        newName: string,
+      ): Promise<{ confirmed: boolean }> => {
+        const result = await confirm({
+          title: t("conflicts.title", { ns: "files" }),
+          description: t("conflicts.description", { ns: "files", newName }),
+          confirmationText: t("common:actions.confirm"),
+          cancellationText: t("common:actions.cancel"),
+        });
+        return { confirmed: result.confirmed };
       };
 
-      const resolved = await resolveUploadConflicts(list, contentForCheck, confirmRename);
+      const resolved = await resolveUploadConflicts(
+        list,
+        contentForCheck,
+        confirmRename,
+      );
 
       if (resolved.length === 0) return;
 
-      uploadManager.enqueue(resolved, nodeId, label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" }));
+      uploadManager.enqueue(
+        resolved,
+        nodeId,
+        label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" }),
+      );
     },
     [nodeId, breadcrumbs, content, confirm, t],
   );
 
   const handleUploadClick = () => {
     if (!nodeId) return;
-    const input = document.createElement('input');
-    input.type = 'file';
+    const input = document.createElement("input");
+    input.type = "file";
     input.multiple = true;
     input.onchange = (e) => {
       const files = (e.target as HTMLInputElement).files;
@@ -190,22 +198,38 @@ export const FilesPage: React.FC = () => {
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
     try {
       const downloadLink = await filesApi.getDownloadLink(nodeFileId);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = downloadLink;
       link.download = fileName;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.style.display = 'none';
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.style.display = "none";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error('Failed to download file:', error);
+      console.error("Failed to download file:", error);
     }
   };
 
+  const handleDeleteFolder = async (folderId: string, folderName: string) => {
+    await confirm({
+      title: t("delete.confirmTitle", { ns: "files", name: folderName }),
+      description: t("delete.confirmDescription", { ns: "files" }),
+      confirmationText: t("common:actions.delete"),
+      cancellationText: t("common:actions.cancel"),
+      confirmationButtonProps: { color: "error" },
+    }).then(async (result) => {
+      if (result.confirmed) {
+        await deleteFolder(folderId, nodeId ?? undefined);
+      }
+    });
+  };
+
   // Recursively collect all files from a directory tree
-  const getAllFilesFromItems = async (items: DataTransferItemList): Promise<File[]> => {
+  const getAllFilesFromItems = async (
+    items: DataTransferItemList,
+  ): Promise<File[]> => {
     const files: File[] = [];
 
     const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
@@ -223,22 +247,22 @@ export const FilesPage: React.FC = () => {
       } else if (entry.isDirectory) {
         const dirEntry = entry as FileSystemDirectoryEntry;
         const reader = dirEntry.createReader();
-        
+
         // Read all entries (might need multiple calls for large directories)
         const readAllEntries = async (): Promise<FileSystemEntry[]> => {
           const allEntries: FileSystemEntry[] = [];
           let batch: FileSystemEntry[] = [];
-          
+
           do {
             batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
               reader.readEntries(resolve, reject);
             });
             allEntries.push(...batch);
           } while (batch.length > 0);
-          
+
           return allEntries;
         };
-        
+
         const entries = await readAllEntries();
         for (const childEntry of entries) {
           await traverseEntry(childEntry);
@@ -250,7 +274,7 @@ export const FilesPage: React.FC = () => {
     const promises: Promise<void>[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item.kind === 'file') {
+      if (item.kind === "file") {
         const entry = item.webkitGetAsEntry();
         if (entry) {
           promises.push(traverseEntry(entry));
@@ -326,267 +350,276 @@ export const FilesPage: React.FC = () => {
 
   return (
     <ImageLoaderProvider>
-    <>
-      {isDragging && (
+      <>
+        {isDragging && (
+          <Box
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            sx={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: "primary.main",
+              opacity: 0.15,
+              border: "4px dashed",
+              borderColor: "primary.main",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Typography
+              variant="h3"
+              sx={{
+                color: "primary.main",
+                fontWeight: "bold",
+                textShadow: "0 0 10px rgba(255,255,255,0.8)",
+                pointerEvents: "none",
+              }}
+            >
+              Drop files here
+            </Typography>
+          </Box>
+        )}
         <Box
+          p={3}
+          width="100%"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bgcolor: 'primary.main',
-            opacity: 0.15,
-            border: '4px dashed',
-            borderColor: 'primary.main',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            position: "relative",
           }}
         >
-          <Typography
-            variant="h3"
-            sx={{
-              color: 'primary.main',
-              fontWeight: 'bold',
-              textShadow: '0 0 10px rgba(255,255,255,0.8)',
-              pointerEvents: 'none',
-            }}
-          >
-            Drop files here
-          </Typography>
-        </Box>
-      )}
-      <Box 
-        p={3} 
-        width="100%"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        sx={{
-          position: 'relative',
-        }}
-      >
-      <Box
-        mb={2}
-        sx={{
-          display: "flex",
-          gap: 1,
-          alignItems: "center",
-        }}
-      >
-        <IconButton
-          color="primary"
-          onClick={handleGoUp}
-          disabled={loading || ancestors.length === 0}
-          title={t("actions.goUp")}
-        >
-          <ArrowUpward />
-        </IconButton>
-        <IconButton
-          color="primary"
-          onClick={handleUploadClick}
-          disabled={!nodeId || loading}
-          title={t("actions.upload")}
-        >
-          <UploadFile />
-        </IconButton>
-        <IconButton
-          color="primary"
-          onClick={handleNewFolder}
-          disabled={!nodeId || isCreatingFolder}
-          title={t("actions.newFolder")}
-        >
-          <CreateNewFolder />
-        </IconButton>
-        <IconButton 
-          onClick={() => navigate("/files")} 
-          color="primary"
-          title={t("breadcrumbs.root")}
-        >
-          <Home />
-        </IconButton>
-
-        <Breadcrumbs
-          aria-label={t("breadcrumbs.ariaLabel")}
-          sx={{ ml: 1 }}
-        >
-          {breadcrumbs
-            .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
-            .map((crumb, idx, filtered) => {
-              const isLast = idx === filtered.length - 1;
-              if (isLast) {
-                return (
-                  <Typography key={crumb.id} color="text.primary">
-                    {crumb.name}
-                  </Typography>
-                );
-              }
-              return (
-                <MuiLink
-                  key={crumb.id}
-                  component={RouterLink}
-                  underline="hover"
-                  color="inherit"
-                  to={`/files/${crumb.id}`}
-                  sx={{ fontSize: "1.1rem" }}
-                >
-                  {crumb.name}
-                </MuiLink>
-              );
-            })}
-        </Breadcrumbs>
-      </Box>
-
-      {error && (
-        <Box mb={2}>
-          <Alert severity="error">{error}</Alert>
-        </Box>
-      )}
-
-      <Box>
-        {tiles.length === 0 && !isCreatingInThisFolder ? (
-          <Typography color="text.secondary">{t("empty.all")}</Typography>
-        ) : (
           <Box
+            mb={2}
             sx={{
-              display: "grid",
-              gap: 1.5,
-              gridTemplateColumns: {
-                xs: "repeat(3, minmax(0, 1fr))",
-                sm: "repeat(4, minmax(0, 1fr))",
-                md: "repeat(6, minmax(0, 1fr))",
-                lg: "repeat(8, minmax(0, 1fr))",
-              },
+              display: "flex",
+              gap: 1,
+              alignItems: "center",
             }}
           >
-            {isCreatingInThisFolder && (
+            <IconButton
+              color="primary"
+              onClick={handleGoUp}
+              disabled={loading || ancestors.length === 0}
+              title={t("actions.goUp")}
+            >
+              <ArrowUpward />
+            </IconButton>
+            <IconButton
+              color="primary"
+              onClick={handleUploadClick}
+              disabled={!nodeId || loading}
+              title={t("actions.upload")}
+            >
+              <UploadFile />
+            </IconButton>
+            <IconButton
+              color="primary"
+              onClick={handleNewFolder}
+              disabled={!nodeId || isCreatingFolder}
+              title={t("actions.newFolder")}
+            >
+              <CreateNewFolder />
+            </IconButton>
+            <IconButton
+              onClick={() => navigate("/files")}
+              color="primary"
+              title={t("breadcrumbs.root")}
+            >
+              <Home />
+            </IconButton>
+
+            <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")} sx={{ ml: 1 }}>
+              {breadcrumbs
+                .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
+                .map((crumb, idx, filtered) => {
+                  const isLast = idx === filtered.length - 1;
+                  if (isLast) {
+                    return (
+                      <Typography key={crumb.id} color="text.primary">
+                        {crumb.name}
+                      </Typography>
+                    );
+                  }
+                  return (
+                    <MuiLink
+                      key={crumb.id}
+                      component={RouterLink}
+                      underline="hover"
+                      color="inherit"
+                      to={`/files/${crumb.id}`}
+                      sx={{ fontSize: "1.1rem" }}
+                    >
+                      {crumb.name}
+                    </MuiLink>
+                  );
+                })}
+            </Breadcrumbs>
+          </Box>
+
+          {error && (
+            <Box mb={2}>
+              <Alert severity="error">{error}</Alert>
+            </Box>
+          )}
+
+          <Box>
+            {tiles.length === 0 && !isCreatingInThisFolder ? (
+              <Typography color="text.secondary">{t("empty.all")}</Typography>
+            ) : (
               <Box
                 sx={{
-                  border: "2px solid",
-                  borderColor: "primary.main",
-                  borderRadius: 2,
-                  p: {
-                    xs: 1,
-                    sm: 1.25,
-                    md: 1,
+                  display: "grid",
+                  gap: 1.5,
+                  gridTemplateColumns: {
+                    xs: "repeat(3, minmax(0, 1fr))",
+                    sm: "repeat(4, minmax(0, 1fr))",
+                    md: "repeat(6, minmax(0, 1fr))",
+                    lg: "repeat(8, minmax(0, 1fr))",
                   },
-                  bgcolor: "action.hover",
                 }}
               >
-                <Box
-                  sx={{
-                    width: "100%",
-                    aspectRatio: "1 / 1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 1.5,
-                    overflow: "hidden",
-                    mb: 0.75,
-                    "& > svg": {
-                      width: "70%",
-                      height: "70%",
-                    },
-                  }}
-                >
-                  <Folder sx={{ color: "primary.main" }} />
-                </Box>
-                <TextField
-                  autoFocus
-                  fullWidth
-                  size="small"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      void handleConfirmNewFolder();
-                    } else if (e.key === "Escape") {
-                      handleCancelNewFolder();
-                    }
-                  }}
-                  onBlur={handleConfirmNewFolder}
-                  placeholder={t("actions.folderNamePlaceholder")}
-                  slotProps={{
-                    input: {
-                      sx: {
-                        fontSize: { xs: "0.8rem", md: "0.85rem" },
+                {isCreatingInThisFolder && (
+                  <Box
+                    sx={{
+                      border: "2px solid",
+                      borderColor: "primary.main",
+                      borderRadius: 2,
+                      p: {
+                        xs: 1,
+                        sm: 1.25,
+                        md: 1,
                       },
-                    },
-                  }}
-                />
+                      bgcolor: "action.hover",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: "100%",
+                        aspectRatio: "1 / 1",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 1.5,
+                        overflow: "hidden",
+                        mb: 0.75,
+                        "& > svg": {
+                          width: "70%",
+                          height: "70%",
+                        },
+                      }}
+                    >
+                      <Folder sx={{ color: "primary.main" }} />
+                    </Box>
+                    <TextField
+                      autoFocus
+                      fullWidth
+                      size="small"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          void handleConfirmNewFolder();
+                        } else if (e.key === "Escape") {
+                          handleCancelNewFolder();
+                        }
+                      }}
+                      onBlur={handleConfirmNewFolder}
+                      placeholder={t("actions.folderNamePlaceholder")}
+                      slotProps={{
+                        input: {
+                          sx: {
+                            fontSize: { xs: "0.8rem", md: "0.85rem" },
+                          },
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+                {tiles.map((tile) => {
+                  if (tile.kind === "folder") {
+                    return (
+                      <FileSystemItemCard
+                        key={tile.node.id}
+                        icon={<Folder fontSize="large" />}
+                        title={tile.node.name}
+                        onClick={() => navigate(`/files/${tile.node.id}`)}
+                        subtitle={new Date(
+                          tile.node.createdAt,
+                        ).toLocaleDateString()}
+                        actions={[
+                          {
+                            label: t("common:actions.delete"),
+                            onClick: () =>
+                              handleDeleteFolder(tile.node.id, tile.node.name),
+                            icon: <Delete fontSize="small" />,
+                          },
+                        ]}
+                      />
+                    );
+                  }
+
+                  const isImage = isImageFile(tile.file.name);
+                  const preview = getFilePreview(
+                    tile.file.encryptedFilePreviewHashHex ?? null,
+                    tile.file.name,
+                  );
+                  const previewUrl =
+                    typeof preview === "string" ? preview : null;
+
+                  return (
+                    <FileSystemItemCard
+                      key={tile.file.id}
+                      icon={(() => {
+                        if (previewUrl && isImage) {
+                          return (
+                            <ImagePreviewIcon
+                              nodeFileId={tile.file.id}
+                              fileName={tile.file.name}
+                              previewUrl={previewUrl}
+                            />
+                          );
+                        }
+                        if (previewUrl) {
+                          return (
+                            <Box
+                              component="img"
+                              src={previewUrl}
+                              alt={tile.file.name}
+                              loading="lazy"
+                              decoding="async"
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          );
+                        }
+                        return preview;
+                      })()}
+                      title={tile.file.name}
+                      subtitle={formatBytes(tile.file.sizeBytes)}
+                      onClick={
+                        isImage && previewUrl
+                          ? undefined
+                          : () =>
+                              handleDownloadFile(tile.file.id, tile.file.name)
+                      }
+                    />
+                  );
+                })}
               </Box>
             )}
-            {tiles.map((tile) => {
-              if (tile.kind === "folder") {
-                return (
-                  <FileSystemItemCard
-                    key={tile.node.id}
-                    icon={<Folder fontSize="large" />}
-                    title={tile.node.name}
-                    onClick={() => navigate(`/files/${tile.node.id}`)}
-                    subtitle={new Date(
-                      tile.node.createdAt,
-                    ).toLocaleDateString()}
-                  />
-                );
-              }
-
-              const isImage = isImageFile(tile.file.name);
-              const preview = getFilePreview(
-                tile.file.encryptedFilePreviewHashHex ?? null,
-                tile.file.name
-              );
-              const previewUrl = typeof preview === 'string' ? preview : null;
-
-              return (
-                <FileSystemItemCard
-                  key={tile.file.id}
-                  icon={
-                    (() => {
-                      if (previewUrl && isImage) {
-                        return (
-                          <ImagePreviewIcon
-                            nodeFileId={tile.file.id}
-                            fileName={tile.file.name}
-                            previewUrl={previewUrl}
-                          />
-                        );
-                      }
-                      if (previewUrl) {
-                        return (
-                          <Box
-                            component="img"
-                            src={previewUrl}
-                            alt={tile.file.name}
-                            loading="lazy"
-                            decoding="async"
-                            sx={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                            }}
-                          />
-                        );
-                      }
-                      return preview;
-                    })()
-                  }
-                  title={tile.file.name}
-                  subtitle={formatBytes(tile.file.sizeBytes)}
-                  onClick={isImage && previewUrl ? undefined : () => handleDownloadFile(tile.file.id, tile.file.name)}
-                />
-              );
-            })}
           </Box>
-        )}
-      </Box>
-    </Box>
-    </>
+        </Box>
+      </>
     </ImageLoaderProvider>
   );
 };
