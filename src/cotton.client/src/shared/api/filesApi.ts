@@ -10,6 +10,10 @@ export interface CreateFileFromChunksRequest {
   originalNodeFileId?: Guid | null;
 }
 
+export interface RenameFileRequest {
+  name: string;
+}
+
 export const filesApi = {
   createFromChunks: async (request: CreateFileFromChunksRequest): Promise<void> => {
     await httpClient.post("/files/from-chunks", request);
@@ -21,5 +25,13 @@ export const filesApi = {
       { params: { expireAfterMinutes } }
     );
     return response.data;
+  },
+
+  deleteFile: async (nodeFileId: Guid): Promise<void> => {
+    await httpClient.delete(`/files/${nodeFileId}`);
+  },
+
+  renameFile: async (nodeFileId: Guid, request: RenameFileRequest): Promise<void> => {
+    await httpClient.patch(`/files/${nodeFileId}/rename`, request);
   },
 };

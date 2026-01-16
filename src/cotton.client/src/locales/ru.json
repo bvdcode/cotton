@@ -4,7 +4,9 @@
     "switchToThisLanguage": "Переключить на русский",
     "actions": {
       "confirm": "Подтвердить",
-      "cancel": "Отмена"
+      "cancel": "Отмена",
+      "delete": "Удалить",
+      "rename": "Переименовать"
     },
     "userMenu": {
       "lightMode": "Светлая тема",
@@ -305,6 +307,24 @@
     "conflicts": {
       "title": "Файл уже существует",
       "description": "В этой папке уже есть файл с таким именем. Загрузить как {{newName}}?"
+    },
+    "delete": {
+      "confirmTitle": "Удалить папку \"{{name}}\"?",
+      "confirmDescription": "Это действие нельзя отменить. Всё содержимое папки будет удалено."
+    },
+    "deleteFolder": {
+      "confirmTitle": "Удалить папку \"{{name}}\"?",
+      "confirmDescription": "Это действие нельзя отменить. Всё содержимое папки будет удалено."
+    },
+    "deleteFile": {
+      "confirmTitle": "Удалить файл \"{{name}}\"?",
+      "confirmDescription": "Это действие нельзя отменить."
+    },
+    "stats": {
+      "summary": "{{folders}} папок • {{files}} файлов • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "Имя файла"
     }
   },
   "upload": {

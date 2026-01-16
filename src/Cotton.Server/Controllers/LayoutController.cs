@@ -58,6 +58,67 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch($"{Routes.Nodes}/{{nodeId:guid}}/rename")]
+        public async Task<IActionResult> RenameLayoutNode([FromRoute] Guid nodeId,
+            [FromBody] RenameNodeRequest request)
+        {
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
+                out string normalizedName,
+                out string? errorMessage);
+            if (!isValidName)
+            {
+                return CottonResult.BadRequest(errorMessage);
+            }
+
+            Guid userId = User.GetUserId();
+            var node = await _dbContext.Nodes
+                .Where(x => x.Id == nodeId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (node == null)
+            {
+                return CottonResult.NotFound("Node not found.");
+            }
+
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
+            
+            // Check for duplicate nodes in the same parent
+            bool nodeExists = await _dbContext.Nodes
+                .AnyAsync(x =>
+                    x.ParentId == node.ParentId &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey &&
+                    x.LayoutId == layout.Id &&
+                    x.Type == node.Type &&
+                    x.Id != nodeId);
+            if (nodeExists)
+            {
+                return this.ApiConflict("A folder with the same name key already exists in the parent folder: " + nameKey);
+            }
+
+            // Check for duplicate files in the same parent
+            if (node.ParentId.HasValue)
+            {
+                bool fileExists = await _dbContext.NodeFiles
+                    .AnyAsync(x =>
+                        x.NodeId == node.ParentId.Value &&
+                        x.OwnerId == userId &&
+                        x.NameKey == nameKey);
+                if (fileExists)
+                {
+                    return this.ApiConflict("A file with the same name key already exists in the parent folder: " + nameKey);
+                }
+            }
+
+            node.SetName(request.Name);
+            await _dbContext.SaveChangesAsync();
+            
+            var mapped = node.Adapt<NodeDto>();
+            return Ok(mapped);
+        }
+
+        [Authorize]
         [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
@@ -89,6 +150,7 @@ namespace Cotton.Server.Controllers
             // TODO: Change root node? Or change node type? Or something else?
             var trash = await _layouts.GetUserTrashNodeAsync(userId);
             node.ParentId = trash.Id;
+            node.Type = NodeType.Trash;
             await _dbContext.SaveChangesAsync();
             return Ok();
         }
@@ -118,16 +180,29 @@ namespace Cotton.Server.Controllers
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            bool nameExists = await _dbContext.Nodes
+            
+            // Check for duplicate nodes in the parent
+            bool nodeExists = await _dbContext.Nodes
                 .AnyAsync(x =>
                     x.ParentId == parentNode.Id &&
                     x.OwnerId == userId &&
                     x.NameKey == nameKey &&
                     x.LayoutId == layout.Id &&
                     x.Type == NodeType.Default);
-            if (nameExists)
+            if (nodeExists)
             {
-                return this.ApiConflict("A node with the same name key already exists in the target layout: " + nameKey);
+                return this.ApiConflict("A folder with the same name key already exists in the target layout: " + nameKey);
+            }
+
+            // Check for duplicate files in the parent
+            bool fileExists = await _dbContext.NodeFiles
+                .AnyAsync(x =>
+                    x.NodeId == parentNode.Id &&
+                    x.OwnerId == userId &&
+                    x.NameKey == nameKey);
+            if (fileExists)
+            {
+                return this.ApiConflict("A file with the same name key already exists in the target layout: " + nameKey);
             }
 
             var newNode = new Node

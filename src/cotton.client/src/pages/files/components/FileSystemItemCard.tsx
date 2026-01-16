@@ -1,12 +1,22 @@
-import { Box, Typography } from "@mui/material";
+import { Box, IconButton, Typography } from "@mui/material";
+import { MoreVert } from "@mui/icons-material";
 import type { SxProps, Theme } from "@mui/material/styles";
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEvent } from "react";
+import { useState } from "react";
+
+export interface FileSystemItemCardAction {
+  icon: ReactNode;
+  onClick: () => void;
+  tooltip?: string;
+}
 
 export interface FileSystemItemCardProps {
   icon: ReactNode;
   title: string;
   subtitle?: string;
   onClick?: () => void;
+  actions?: FileSystemItemCardAction[];
+  iconContainerSx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
 }
 
@@ -15,9 +25,25 @@ export const FileSystemItemCard = ({
   title,
   subtitle,
   onClick,
+  actions,
+  iconContainerSx,
   sx,
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
+  const [actionsOpen, setActionsOpen] = useState(false);
+
+  const handleToggleActions = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setActionsOpen(!actionsOpen);
+  };
+
+  const handleActionClick =
+    (action: FileSystemItemCardAction) =>
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      setActionsOpen(false);
+      action.onClick();
+    };
 
   return (
     <Box
@@ -32,6 +58,8 @@ export const FileSystemItemCard = ({
         }
       }}
       sx={{
+        position: "relative",
+        overflow: "hidden",
         border: "1px solid",
         borderColor: "divider",
         borderRadius: 2,
@@ -44,6 +72,9 @@ export const FileSystemItemCard = ({
         userSelect: "none",
         outline: "none",
         "&:hover": clickable ? { bgcolor: "action.hover" } : undefined,
+        "&:hover .card-menu-button": {
+          opacity: 1,
+        },
         "&:focus-visible": clickable
           ? {
               boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
@@ -66,20 +97,90 @@ export const FileSystemItemCard = ({
             width: "70%",
             height: "70%",
           },
+          ...iconContainerSx,
         }}
       >
         {icon}
       </Box>
 
-      <Typography
-        variant="body2"
-        noWrap
-        title={title}
-        fontWeight={500}
-        sx={{ fontSize: { xs: "0.8rem", md: "0.85rem" } }}
-      >
-        {title}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <Typography
+          variant="body2"
+          noWrap
+          title={title}
+          fontWeight={500}
+          sx={{ flex: 1, fontSize: { xs: "0.8rem", md: "0.85rem" } }}
+        >
+          {title}
+        </Typography>
+
+        {actions && actions.length > 0 && (
+          <Box sx={{ position: "relative", width: 28, height: 28, flex: "0 0 auto" }}>
+            <IconButton
+              size="small"
+              onClick={handleToggleActions}
+              className="card-menu-button"
+              sx={{
+                p: 0.5,
+                width: 28,
+                height: 28,
+                opacity: actionsOpen ? 1 : 0,
+                transition: "opacity 0.2s, transform 0.3s",
+                transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
+                "& svg": {
+                  fontSize: "1rem",
+                },
+              }}
+            >
+              <MoreVert />
+            </IconButton>
+
+            {actionsOpen && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  bottom: 32,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0.75,
+                  animation: "slideUp 0.2s ease-out",
+                  "@keyframes slideUp": {
+                    from: {
+                      opacity: 0,
+                      transform: "translateY(10px)",
+                    },
+                    to: {
+                      opacity: 1,
+                      transform: "translateY(0)",
+                    },
+                  },
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {actions.map((action, idx) => (
+                  <IconButton
+                    key={idx}
+                    size="small"
+                    onClick={handleActionClick(action)}
+                    title={action.tooltip}
+                    sx={{
+                      p: 0.5,
+                      width: 28,
+                      height: 28,
+                      "& svg": {
+                        fontSize: "1rem",
+                      },
+                    }}
+                  >
+                    {action.icon}
+                  </IconButton>
+                ))}
+              </Box>
+            )}
+          </Box>
+        )}
+      </Box>
 
       {subtitle && (
         <Typography
@@ -93,6 +194,7 @@ export const FileSystemItemCard = ({
           {subtitle}
         </Typography>
       )}
+
     </Box>
   );
 };
