@@ -83,9 +83,10 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Hash mismatch: the provided hash does not match the uploaded file.");
             }
 
-            // Use canonical lowercase hex from computed hash to ensure consistent storage keys
+            Guid userId = User.GetUserId();
+            var foundOwnership = await _dbContext.ChunkOwnerships
+                .FirstOrDefaultAsync(co => co.ChunkHash == hashBytes && co.OwnerId == userId);
             string storageKey = Hasher.ToHexStringHash(computedHash);
-
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)
             {
@@ -99,11 +100,6 @@ namespace Cotton.Server.Controllers
                 await _dbContext.Chunks.AddAsync(chunk);
             }
 
-            // TODO: Add Simulated Write Delay to prevent Proof-of-Storage attacks
-            // Must depend on owner/user authentication, no reason to delay for the same user
-            var foundOwnership = await _dbContext.ChunkOwnerships
-                .FirstOrDefaultAsync(co => co.ChunkHash.SequenceEqual(hashBytes)
-                    && co.OwnerId == User.GetUserId());
             if (foundOwnership == null)
             {
                 ChunkOwnership chunkOwnership = new()
