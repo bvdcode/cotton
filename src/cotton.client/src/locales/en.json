@@ -311,6 +311,20 @@
     "delete": {
       "confirmTitle": "Delete folder \"{{name}}\"?",
       "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
+    },
+    "deleteFolder": {
+      "confirmTitle": "Delete folder \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
+    },
+    "deleteFile": {
+      "confirmTitle": "Delete file \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone."
+    },
+    "stats": {
+      "summary": "{{folders}} folders • {{files}} files • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "File name"
     }
   },
   "upload": {

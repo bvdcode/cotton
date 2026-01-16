@@ -73,8 +73,8 @@ export const useFolderOperations = (currentNodeId: string | null) => {
   const handleDeleteFolder = async (folderId: string, folderName: string) => {
     try {
       await confirm({
-        title: t("delete.confirmTitle", { ns: "files", name: folderName }),
-        description: t("delete.confirmDescription", { ns: "files" }),
+        title: t("deleteFolder.confirmTitle", { ns: "files", name: folderName }),
+        description: t("deleteFolder.confirmDescription", { ns: "files" }),
         confirmationText: t("common:actions.delete"),
         cancellationText: t("common:actions.cancel"),
         confirmationButtonProps: { color: "error" },
