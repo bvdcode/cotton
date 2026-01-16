@@ -282,7 +282,7 @@ namespace Cotton.Server.Controllers
             {
                 if (!chunkMap.TryGetValue(hash, out var chunk))
                 {
-                    throw new UnauthorizedAccessException($"Access denied: chunk {hash} not found or not owned by user");
+                    throw new EntityNotFoundException(nameof(Chunk));
                 }
                 result.Add(chunk);
             }
