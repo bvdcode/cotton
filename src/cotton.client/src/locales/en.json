@@ -329,6 +329,8 @@
   },
   "upload": {
     "title": "Uploads",
+    "titleWithTotal": "Uploads ({{total}})",
+    "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",
     "status": {
       "queued": "Queued",
       "uploading": "Uploading",
