@@ -132,7 +132,7 @@ export const RenamableItemCard = ({
           display="block"
           noWrap
           title={subtitle}
-          sx={{ mt: 0.5, fontSize: { xs: "0.7rem", md: "0.75rem" } }}
+          sx={{ mt: 0.5, fontSize: { xs: "0.7rem", md: "0.75rem" }, lineHeight: 1.4 }}
         >
           {subtitle}
         </Typography>

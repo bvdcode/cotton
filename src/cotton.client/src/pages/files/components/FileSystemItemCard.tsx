@@ -291,7 +291,7 @@ export const FileSystemItemCard = ({
               flex: 1,
               minWidth: 0,
               fontSize: { xs: "0.8rem", md: "0.85rem" },
-              lineHeight: 1.2,
+              lineHeight: 1.4,
             }}
           >
             <HoverMarqueeText text={title} />
@@ -389,7 +389,7 @@ export const FileSystemItemCard = ({
             display="block"
             noWrap
             title={subtitle}
-            sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" } }}
+            sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" }, lineHeight: 1.4 }}
           >
             {subtitle}
           </Typography>
