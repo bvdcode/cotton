@@ -1,37 +1,11 @@
 import { useState, useEffect } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import { filesApi } from "../../../../shared/api/filesApi";
+import { urlCache, getOrLoadUrl } from "./lazyLoadUtils";
 
 interface VideoPreviewProps {
   fileUrl: string;
   fileName: string;
 }
-
-interface PhotoRenderParams {
-  attrs: React.HTMLAttributes<HTMLDivElement> & { style?: React.CSSProperties };
-  scale: number;
-}
-
-// Shared cache with LazyImage
-const urlCache = new Map<string, string>();
-const loadingPromises = new Map<string, Promise<string>>();
-
-const getOrLoadUrl = async (fileId: string): Promise<string> => {
-  const cached = urlCache.get(fileId);
-  if (cached) return cached;
-
-  const existingPromise = loadingPromises.get(fileId);
-  if (existingPromise) return existingPromise;
-
-  const promise = filesApi.getDownloadLink(fileId, 60 * 24).then((url) => {
-    urlCache.set(fileId, url);
-    loadingPromises.delete(fileId);
-    return url;
-  });
-
-  loadingPromises.set(fileId, promise);
-  return promise;
-};
 
 export const VideoPreview: React.FC<VideoPreviewProps> = ({
   fileUrl,
@@ -59,21 +33,21 @@ export const VIDEO_WIDTH = 960;
 export const VIDEO_HEIGHT = 540;
 
 // Lazy video component
-const LazyVideoContent: React.FC<{
+export const LazyVideoContent: React.FC<{
   fileId: string;
   fileName: string;
   width: number;
   height: number;
 }> = ({ fileId, fileName, width, height }) => {
-  const [url, setUrl] = useState<string | null>(() => urlCache.get(fileId) ?? null);
-  const [loading, setLoading] = useState(!url);
+  const cachedUrl = urlCache.get(fileId);
+  const [url, setUrl] = useState<string | null>(cachedUrl ?? null);
+  const [loading, setLoading] = useState(!cachedUrl);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     if (url) return;
 
     let cancelled = false;
-    setLoading(true);
 
     getOrLoadUrl(fileId)
       .then((loadedUrl) => {
@@ -148,38 +122,4 @@ const LazyVideoContent: React.FC<{
       {fileName}
     </video>
   );
-};
-
-// Render function for PhotoView custom render - now with lazy loading
-export const renderVideoPreview = (fileId: string, fileName: string) => {
-  return ({ attrs, scale }: PhotoRenderParams) => {
-    const width = attrs.style?.width
-      ? parseFloat(attrs.style.width as string)
-      : VIDEO_WIDTH;
-    const offset = (width - VIDEO_WIDTH) / VIDEO_WIDTH;
-    const childScale = scale === 1 ? scale + offset : 1 + offset;
-
-    return (
-      <div {...attrs}>
-        <div
-          style={{
-            width: VIDEO_WIDTH,
-            height: VIDEO_HEIGHT,
-            transformOrigin: "0 0",
-            transform: `scale(${childScale})`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <LazyVideoContent
-            fileId={fileId}
-            fileName={fileName}
-            width={VIDEO_WIDTH}
-            height={VIDEO_HEIGHT}
-          />
-        </div>
-      </div>
-    );
-  };
 };

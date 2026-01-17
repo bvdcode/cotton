@@ -11,17 +11,15 @@ interface PdfPreviewProps {
 const blobUrlCache = new Map<string, string>();
 
 export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
-  const [blobUrl, setBlobUrl] = useState<string | null>(() => blobUrlCache.get(fileId) ?? null);
-  const [loading, setLoading] = useState(true);
+  const cachedBlobUrl = blobUrlCache.get(fileId);
+  const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
+  const [loading, setLoading] = useState(!cachedBlobUrl);
   const [loadingStage, setLoadingStage] = useState<"link" | "download">("link");
   const [error, setError] = useState<string | null>(null);
 
   // Load PDF as blob on mount
   useEffect(() => {
-    if (blobUrl) {
-      setLoading(false);
-      return;
-    }
+    if (blobUrl) return;
 
     let cancelled = false;
     
