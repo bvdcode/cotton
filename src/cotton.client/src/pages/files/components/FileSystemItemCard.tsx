@@ -263,6 +263,10 @@ export const FileSystemItemCard = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            "& > svg": {
+              width: "70%",
+              height: "70%",
+            },
             ...iconContainerSx,
           }}
         >
