@@ -75,6 +75,17 @@ export const UploadQueueWidget = () => {
   );
   const visible = snapshot.open && total > 0;
 
+  // Calculate overall progress (0-100)
+  const totalProgress = (() => {
+    if (total === 0) return 0;
+    const taskProgress = tasks.reduce((sum, task) => {
+      if (task.status === "completed") return sum + 100;
+      if (task.status === "failed") return sum + 100;
+      return sum + (task.progress01 ?? 0) * 100;
+    }, 0);
+    return taskProgress / total;
+  })();
+
   if (!visible) return null;
 
   return (
@@ -93,6 +104,23 @@ export const UploadQueueWidget = () => {
         sx={{
           p: 1.5,
           borderRadius: 2,
+          position: "relative",
+          overflow: "hidden",
+          // Battery fill effect
+          "&::before": hasActive
+            ? {
+                content: '""',
+                position: "absolute",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: `${totalProgress}%`,
+                bgcolor: "success.main",
+                opacity: 0.15,
+                transition: "width 0.3s ease-out",
+                zIndex: 0,
+              }
+            : undefined,
         }}
       >
         <Box
@@ -100,6 +128,7 @@ export const UploadQueueWidget = () => {
           alignItems="center"
           justifyContent="space-between"
           mb={isCollapsed ? 0 : 1}
+          sx={{ position: "relative", zIndex: 1 }}
         >
           <Typography
             variant="subtitle1"
