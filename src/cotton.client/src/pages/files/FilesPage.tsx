@@ -226,6 +226,7 @@ export const FilesPage: React.FC = () => {
                 display: "flex",
                 gap: 1,
                 alignItems: "center",
+                marginBottom: 1,
               }}
             >
               <Box
