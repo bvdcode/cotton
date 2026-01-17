@@ -18,14 +18,14 @@ import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { filesApi } from "../../shared/api/filesApi";
-import { ImagePreviewIcon } from "./components/ImagePreviewIcon";
+import { PhotoProvider, PhotoView } from "react-photo-view";
 import { ImageLoaderProvider } from "./components/ImageLoaderProvider";
 import { FolderCard } from "./components/FolderCard";
 import { RenamableItemCard } from "./components/RenamableItemCard";
 import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";
-import { isImageFile } from "./utils/isImageFile";
-import { PreviewModal, PdfPreview } from "./components/preview";
+import { isImageFile, isVideoFile } from "./utils/fileTypes";
+import { PreviewModal, PdfPreview, renderVideoPreview } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
@@ -147,7 +147,14 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
-    <ImageLoaderProvider>
+    <PhotoProvider
+      maskOpacity={0.95}
+      bannerVisible={true}
+      photoClosable={true}
+      maskClosable={true}
+      pullClosable={true}
+    >
+      <ImageLoaderProvider>
       {fileUpload.isDragging && (
         <Box
           onDragOver={fileUpload.handleDragOver}
@@ -205,6 +212,7 @@ export const FilesPage: React.FC = () => {
               top: 0,
               zIndex: 20,
               bgcolor: "background.default",
+              display: "flex",
             }}
           >
             <Box
@@ -371,11 +379,13 @@ export const FilesPage: React.FC = () => {
                 }
 
                 const isImage = isImageFile(tile.file.name);
+                const isVideo = isVideoFile(tile.file.name);
                 const preview = getFilePreview(
                   tile.file.encryptedFilePreviewHashHex ?? null,
                   tile.file.name,
                 );
                 const previewUrl = typeof preview === "string" ? preview : null;
+                const fileDownloadUrl = `/api/v1/files/${tile.file.id}/download`;
 
                 const iconContainerSx = previewUrl
                   ? {
@@ -391,81 +401,103 @@ export const FilesPage: React.FC = () => {
                   : undefined;
 
                 return (
-                  <RenamableItemCard
+                  <PhotoView
                     key={tile.file.id}
-                    icon={(() => {
-                      if (previewUrl && isImage) {
-                        return (
-                          <ImagePreviewIcon
-                            nodeFileId={tile.file.id}
-                            fileName={tile.file.name}
-                            previewUrl={previewUrl}
-                          />
-                        );
-                      }
-                      if (previewUrl) {
-                        return (
-                          <Box
-                            component="img"
-                            src={previewUrl}
-                            alt={tile.file.name}
-                            loading="lazy"
-                            decoding="async"
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                          />
-                        );
-                      }
-                      return preview;
-                    })()}
-                    title={tile.file.name}
-                    subtitle={formatBytes(tile.file.sizeBytes)}
-                    onClick={
-                      isImage && previewUrl
-                        ? undefined
-                        : () => handleFileClick(tile.file.id, tile.file.name)
+                    src={isImage ? fileDownloadUrl : undefined}
+                    render={
+                      isVideo
+                        ? renderVideoPreview(
+                            fileDownloadUrl,
+                            tile.file.name,
+                            1280,
+                            720,
+                          )
+                        : undefined
                     }
-                    iconContainerSx={iconContainerSx}
-                    actions={[
-                      {
-                        icon: <Download />,
-                        onClick: () =>
-                          handleDownloadFile(tile.file.id, tile.file.name),
-                        tooltip: t("common:actions.download"),
-                      },
-                      {
-                        icon: <Edit />,
-                        onClick: () =>
-                          fileOps.handleRenameFile(
-                            tile.file.id,
-                            tile.file.name,
-                          ),
-                        tooltip: t("common:actions.rename"),
-                      },
-                      {
-                        icon: <Delete />,
-                        onClick: () =>
-                          fileOps.handleDeleteFile(
-                            tile.file.id,
-                            tile.file.name,
-                          ),
-                        tooltip: t("common:actions.delete"),
-                      },
-                    ]}
-                    isRenaming={fileOps.renamingFileId === tile.file.id}
-                    renamingValue={fileOps.renamingFileName}
-                    onRenamingValueChange={fileOps.setRenamingFileName}
-                    onConfirmRename={() => {
-                      void fileOps.handleConfirmRename();
-                    }}
-                    onCancelRename={fileOps.handleCancelRename}
-                    placeholder={t("rename.fileNamePlaceholder", {
-                      ns: "files",
-                    })}
-                  />
+                  >
+                    <RenamableItemCard
+                      icon={(() => {
+                        if (previewUrl && isImage) {
+                          return (
+                            <Box
+                              component="img"
+                              src={previewUrl}
+                              alt={tile.file.name}
+                              loading="lazy"
+                              decoding="async"
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                cursor: "pointer",
+                              }}
+                            />
+                          );
+                        }
+                        if (previewUrl) {
+                          return (
+                            <Box
+                              component="img"
+                              src={previewUrl}
+                              alt={tile.file.name}
+                              loading="lazy"
+                              decoding="async"
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          );
+                        }
+                        return preview;
+                      })()}
+                      title={tile.file.name}
+                      subtitle={formatBytes(tile.file.sizeBytes)}
+                      onClick={
+                        isImage || isVideo
+                          ? undefined
+                          : () => handleFileClick(tile.file.id, tile.file.name)
+                      }
+                      iconContainerSx={iconContainerSx}
+                      actions={[
+                        {
+                          icon: <Download />,
+                          onClick: () =>
+                            handleDownloadFile(tile.file.id, tile.file.name),
+                          tooltip: t("common:actions.download"),
+                        },
+                        {
+                          icon: <Edit />,
+                          onClick: () =>
+                            fileOps.handleRenameFile(
+                              tile.file.id,
+                              tile.file.name,
+                            ),
+                          tooltip: t("common:actions.rename"),
+                        },
+                        {
+                          icon: <Delete />,
+                          onClick: () =>
+                            fileOps.handleDeleteFile(
+                              tile.file.id,
+                              tile.file.name,
+                            ),
+                          tooltip: t("common:actions.delete"),
+                        },
+                      ]}
+                      isRenaming={fileOps.renamingFileId === tile.file.id}
+                      renamingValue={fileOps.renamingFileName}
+                      onRenamingValueChange={fileOps.setRenamingFileName}
+                      onConfirmRename={() => {
+                        void fileOps.handleConfirmRename();
+                      }}
+                      onCancelRename={fileOps.handleCancelRename}
+                      placeholder={t("rename.fileNamePlaceholder", {
+                        ns: "files",
+                      })}
+                    />
+                  </PhotoView>
                 );
               })}
             </Box>
@@ -483,6 +515,7 @@ export const FilesPage: React.FC = () => {
           )}
         </PreviewModal>
       )}
-    </ImageLoaderProvider>
+      </ImageLoaderProvider>
+    </PhotoProvider>
   );
 };

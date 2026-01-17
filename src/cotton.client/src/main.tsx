@@ -1,5 +1,6 @@
 import "./i18n.ts";
 import "./index.css";
+import "react-photo-view/dist/react-photo-view.css";
 import App from "./App.tsx";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
