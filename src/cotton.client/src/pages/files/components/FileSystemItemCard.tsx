@@ -293,13 +293,17 @@ export const FileSystemItemCard = ({
           <Box
             className="card-menu-slot"
             sx={{
-              width: actionsOpen ? 28 : 0,
+              width: 0,
               height: 28,
-              overflow: "hidden",
-              opacity: actionsOpen ? 1 : 0,
-              pointerEvents: actionsOpen ? "auto" : "none",
+              overflow: "visible",
+              opacity: 0,
+              pointerEvents: "auto",
               transition: "width 0.2s, opacity 0.2s",
               flex: "0 0 auto",
+              ...(actionsOpen && {
+                width: 28,
+                opacity: 1,
+              }),
             }}
             onClick={(e) => e.stopPropagation()}
           >
