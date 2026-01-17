@@ -134,7 +134,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       // Настройка Slideshow
       slideshow={{
         autoplay: false,
-        delay: 3000,
+        delay: 5000,
       }}
       // Настройка Thumbnails
       thumbnails={{
@@ -216,7 +216,7 @@ function buildSlidesFromItems(
       sources: [
         {
           src,
-          type: item.mimeType ?? "video/mp4",
+          type: item.mimeType ?? "video/mp4", // ВОТ ТУТ ЧТО ЗА ХУЙНЯ???
         },
       ],
     } as Slide;
