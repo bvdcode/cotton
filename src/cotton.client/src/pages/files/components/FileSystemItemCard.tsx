@@ -106,7 +106,7 @@ const HoverMarqueeText = ({
           if (hoveredRef.current && overflowingRef.current) {
             setAnimate(true);
           }
-        }, 900);
+        }, 300);
       }}
       onMouseLeave={() => {
         hoveredRef.current = false;
