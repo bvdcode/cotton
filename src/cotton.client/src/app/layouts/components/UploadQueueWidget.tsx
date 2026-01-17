@@ -59,6 +59,7 @@ export const UploadQueueWidget = () => {
   const tasks = sortTasksByPriority(snapshot.tasks);
   const total = tasks.length;
   const completed = tasks.filter((t) => t.status === "completed").length;
+  const failed = tasks.filter((t) => t.status === "failed").length;
   const activeTasks = tasks.filter(
     (t) =>
       t.status === "queued" ||
@@ -66,6 +67,8 @@ export const UploadQueueWidget = () => {
       t.status === "finalizing",
   );
   const hasActive = activeTasks.length > 0;
+  const allCompleted = total > 0 && completed + failed === total;
+  const hasErrors = failed > 0;
   const totalSpeed = activeTasks.reduce(
     (sum, t) => sum + (t.uploadSpeedBytesPerSec ?? 0),
     0,
@@ -98,13 +101,26 @@ export const UploadQueueWidget = () => {
           justifyContent="space-between"
           mb={isCollapsed ? 0 : 1}
         >
-          <Typography variant="subtitle1" fontWeight={600}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={600}
+            sx={{
+              color:
+                isCollapsed && allCompleted && hasErrors
+                  ? "error.main"
+                  : "text.primary",
+            }}
+          >
             {hasActive
               ? t("titleWithProgress", {
                   completed,
                   total,
                   speed: formatBytes(totalSpeed),
                 })
+              : isCollapsed && allCompleted && hasErrors
+              ? t("error", { defaultValue: "Ошибка" })
+              : isCollapsed && allCompleted
+              ? t("title", { defaultValue: "Загрузки" })
               : t("titleWithTotal", { total })}
           </Typography>
           <Box display="flex" gap={0.5}>
@@ -129,39 +145,41 @@ export const UploadQueueWidget = () => {
           </Box>
         </Box>
 
-        {!isCollapsed && (
-          <Box
-            sx={{
-              maxHeight: "400px",
-              overflowY: "auto",
-              overflowX: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              gap: 1,
-              pr: 0.5,
-              "&::-webkit-scrollbar": {
-                width: "8px",
+        <Box
+          sx={{
+            maxHeight: isCollapsed ? 0 : "400px",
+            overflowY: isCollapsed ? "hidden" : "auto",
+            overflowX: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+            pr: 0.5,
+            transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
+            opacity: isCollapsed ? 0 : 1,
+            "&::-webkit-scrollbar": {
+              width: "8px",
+            },
+            "&::-webkit-scrollbar-track": {
+              bgcolor: "action.hover",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              bgcolor: "action.selected",
+              borderRadius: "4px",
+              "&:hover": {
+                bgcolor: "action.disabled",
               },
-              "&::-webkit-scrollbar-track": {
-                bgcolor: "action.hover",
-                borderRadius: "4px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                bgcolor: "action.selected",
-                borderRadius: "4px",
-                "&:hover": {
-                  bgcolor: "action.disabled",
-                },
-              },
-            }}
-          >
-            {tasks.map((task, idx) => (
+            },
+          }}
+        >
+          {!isCollapsed &&
+            tasks.map((task, idx) => (
               <Box key={task.id}>
                 {idx > 0 && <Divider sx={{ mb: 1 }} />}
                 <Box>
-                  <Typography 
-                    variant="body2" 
-                    noWrap 
+                  <Typography
+                    variant="body2"
+                    noWrap
                     title={task.fileName}
                     sx={{ fontWeight: 500 }}
                   >
@@ -208,8 +226,7 @@ export const UploadQueueWidget = () => {
                 </Box>
               </Box>
             ))}
-          </Box>
-        )}
+        </Box>
       </Paper>
     </Box>
   );
