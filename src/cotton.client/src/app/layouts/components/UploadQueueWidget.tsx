@@ -148,7 +148,7 @@ export const UploadQueueWidget = () => {
         <Box
           sx={{
             maxHeight: isCollapsed ? 0 : "400px",
-            overflowY: "hidden",
+            overflowY: isCollapsed ? "hidden" : "auto",
             overflowX: "hidden",
             display: "flex",
             flexDirection: "column",
