@@ -39,10 +39,8 @@ export interface MediaLightboxProps {
 }
 
 /**
- * MediaLightbox
- * - показывает элементы items как слайды (фото + видео)
- * - использует previewUrl как src/poster
- * - при первом показе конкретного слайда запрашивает signed URL и подменяет src
+ * MediaLightbox component
+ * Displays media items (images/videos) as slides with lazy-loaded signed URLs
  */
 export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   items,
@@ -54,7 +52,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [index, setIndex] = React.useState(initialIndex);
   const thumbnailsRef = React.useRef(null);
 
-  // map: mediaId -> оригинальный URL (подписанный)
   const [originalUrls, setOriginalUrls] = React.useState<
     Record<string, string>
   >({});
@@ -64,33 +61,28 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     return buildSlidesFromItems(items, originalUrls);
   }, [items, originalUrls]);
 
-  // Reset index when items change
-  React.useEffect(() => {
-    setIndex(initialIndex);
-  }, [initialIndex]);
-
-  // следим за сменой open -> при открытии можно сразу подгрузить текущий слайд
-  React.useEffect(() => {
-    if (!open) return;
-    // подстрахуемся — загрузим текущий слайд
-    void ensureSlideHasOriginal(index);
-  }, [open, index]);
-
   async function ensureSlideHasOriginal(targetIndex: number) {
     const item = items[targetIndex];
     if (!item) return;
 
-    // если уже есть оригинал — выходим
     if (originalUrls[item.id]) return;
 
     try {
       const url = await getSignedMediaUrl(item.id);
-      // Просто обновляем кэш URL - slides пересоберутся автоматически через useMemo
       setOriginalUrls((prev) => ({ ...prev, [item.id]: url }));
     } catch (e) {
       console.error("Failed to load media original URL", e);
     }
   }
+
+  React.useEffect(() => {
+    setIndex(initialIndex);
+  }, [initialIndex]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    void ensureSlideHasOriginal(index);
+  }, [open, index]);
 
   return (
     <Lightbox
@@ -115,12 +107,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           void ensureSlideHasOriginal(currentIndex);
         },
       }}
-      // Настройка Captions - имя файла и размер внизу
       captions={{
         descriptionTextAlign: "center",
         descriptionMaxLines: 1,
       }}
-      // Настройка Zoom - плавный зум на колесике
       zoom={{
         maxZoomPixelRatio: 8,
         zoomInMultiplier: 1,
@@ -132,12 +122,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         pinchZoomDistanceFactor: 100,
         scrollToZoom: true,
       }}
-      // Настройка Slideshow
       slideshow={{
         autoplay: false,
         delay: 5000,
       }}
-      // Настройка Thumbnails - скрыты по умолчанию с сохранением состояния
       thumbnails={{
         ref: thumbnailsRef,
         position: "bottom",
@@ -150,13 +138,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         showToggle: true,
         hidden: true,
       }}
-      // дефолтные настройки видео
       video={{
         controls: true,
         playsInline: true,
         autoPlay: true,
       }}
-      // можно подкрутить карусель, если надо
       carousel={{
         finite: false,
         preload: 2,
@@ -166,14 +152,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   );
 };
 
-// вспомогательная функция, создает слайды на основе превью и уже известных оригиналов
 function buildSlidesFromItems(
   items: MediaItem[],
   originalUrls: Record<string, string>,
 ): Slide[] {
   return items.map<Slide>((item) => {
     const maybeOriginal = originalUrls[item.id];
-    // Формируем description: "имя файла | размер"
     const sizeStr = item.sizeBytes ? formatFileSize(item.sizeBytes) : "";
     const description = sizeStr ? `${item.name} | ${sizeStr}` : item.name;
 
@@ -191,12 +175,10 @@ function buildSlidesFromItems(
       };
     }
 
-    // video
     const poster = item.previewUrl;
     const src = maybeOriginal;
 
     if (!src) {
-      // на старте показываем только постер, без video-сорца
       return {
         type: "video",
         poster,
@@ -223,7 +205,6 @@ function buildSlidesFromItems(
   });
 }
 
-// Helper to format file size
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
