@@ -106,7 +106,7 @@ const HoverMarqueeText = ({
           if (hoveredRef.current && overflowingRef.current) {
             setAnimate(true);
           }
-        }, 300);
+        }, 1000);
       }}
       onMouseLeave={() => {
         hoveredRef.current = false;
@@ -116,8 +116,10 @@ const HoverMarqueeText = ({
         }
         setAnimate(false);
       }}
-      title={text}
       sx={{
+        display: "flex",
+        alignItems: "center",
+        lineHeight: "inherit",
         minWidth: 0,
         overflow: "hidden",
         whiteSpace: "nowrap",
@@ -128,13 +130,14 @@ const HoverMarqueeText = ({
         component="span"
         ref={textRef}
         sx={{
-          display: "inline-block",
+          display: "block",
+          lineHeight: "inherit",
           maxWidth: animate ? "none" : "100%",
           overflow: animate ? "visible" : "hidden",
           textOverflow: animate ? "clip" : "ellipsis",
           whiteSpace: "nowrap",
           willChange: animate ? "transform" : "auto",
-          transform: "translateX(0)",
+          transform: "translate3d(0,0,0)",
           "--marquee-distance": `${distancePx}px`,
           "--marquee-duration": `${durationSeconds}s`,
           ...(animate &&
@@ -143,16 +146,16 @@ const HoverMarqueeText = ({
                 "fsCardMarquee var(--marquee-duration) linear infinite",
             }),
           "@keyframes fsCardMarquee": {
-            "0%": { transform: "translateX(0)" },
-            "10%": { transform: "translateX(0)" },
+            "0%": { transform: "translate3d(0,0,0)" },
+            "10%": { transform: "translate3d(0,0,0)" },
             "45%": {
-              transform: "translateX(calc(-1 * var(--marquee-distance)))",
+              transform: "translate3d(calc(-1 * var(--marquee-distance)),0,0)",
             },
             "60%": {
-              transform: "translateX(calc(-1 * var(--marquee-distance)))",
+              transform: "translate3d(calc(-1 * var(--marquee-distance)),0,0)",
             },
-            "90%": { transform: "translateX(0)" },
-            "100%": { transform: "translateX(0)" },
+            "90%": { transform: "translate3d(0,0,0)" },
+            "100%": { transform: "translate3d(0,0,0)" },
           },
         }}
       >
@@ -173,6 +176,7 @@ export const FileSystemItemCard = ({
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
   const [actionsOpen, setActionsOpen] = useState(false);
+  const hasActions = Boolean(actions && actions.length > 0);
 
   const handleToggleActions = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -214,10 +218,15 @@ export const FileSystemItemCard = ({
         userSelect: "none",
         outline: "none",
         "&:hover": clickable ? { bgcolor: "action.hover" } : undefined,
-        "&:hover .card-menu-button, &:focus-within .card-menu-button": {
-          opacity: 1,
-          pointerEvents: "auto",
-        },
+        ...(hasActions
+          ? {
+              "&:hover .card-menu-slot, &:focus-within .card-menu-slot": {
+                width: 28,
+                opacity: 1,
+                pointerEvents: "auto",
+              },
+            }
+          : undefined),
         "&:focus-visible": clickable
           ? {
               boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
@@ -246,7 +255,7 @@ export const FileSystemItemCard = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            "& svg": {
+            "& > svg": {
               width: "70%",
               height: "70%",
             },
@@ -263,6 +272,7 @@ export const FileSystemItemCard = ({
           display: "flex",
           alignItems: "center",
           minHeight: 28,
+          gap: 0.5,
         }}
       >
         <Typography
@@ -279,15 +289,17 @@ export const FileSystemItemCard = ({
           <HoverMarqueeText text={title} />
         </Typography>
 
-        {actions && actions.length > 0 && (
+        {hasActions && (
           <Box
+            className="card-menu-slot"
             sx={{
-              position: "absolute",
-              right: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              display: "flex",
-              alignItems: "center",
+              width: actionsOpen ? 28 : 0,
+              height: 28,
+              overflow: "hidden",
+              opacity: actionsOpen ? 1 : 0,
+              pointerEvents: actionsOpen ? "auto" : "none",
+              transition: "width 0.2s, opacity 0.2s",
+              flex: "0 0 auto",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -302,13 +314,8 @@ export const FileSystemItemCard = ({
                   p: 0.5,
                   width: 28,
                   height: 28,
-                  opacity: actionsOpen ? 1 : 0,
-                  pointerEvents: actionsOpen ? "auto" : "none",
-                  transition: "opacity 0.2s, transform 0.3s",
+                  transition: "transform 0.3s",
                   transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
-                  "& svg": {
-                    fontSize: "1rem",
-                  },
                 }}
               >
                 <MoreVert />
@@ -336,7 +343,7 @@ export const FileSystemItemCard = ({
                     },
                   }}
                 >
-                  {actions.map((action, idx) => (
+                  {actions!.map((action, idx) => (
                     <IconButton
                       key={idx}
                       size="small"
