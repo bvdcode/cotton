@@ -56,13 +56,20 @@ export const UploadQueueWidget = () => {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const tasks = sortTasksByPriority(snapshot.tasks);
-  const hasActive = tasks.some(
+  const total = tasks.length;
+  const completed = tasks.filter((t) => t.status === "completed").length;
+  const activeTasks = tasks.filter(
     (t) =>
       t.status === "queued" ||
       t.status === "uploading" ||
       t.status === "finalizing",
   );
-  const visible = snapshot.open || hasActive;
+  const hasActive = activeTasks.length > 0;
+  const totalSpeed = activeTasks.reduce(
+    (sum, t) => sum + (t.uploadSpeedBytesPerSec ?? 0),
+    0,
+  );
+  const visible = snapshot.open && total > 0;
 
   if (!visible) return null;
 
@@ -91,7 +98,13 @@ export const UploadQueueWidget = () => {
           mb={isCollapsed ? 0 : 1}
         >
           <Typography variant="subtitle1" fontWeight={600}>
-            {t("title")}
+            {hasActive
+              ? t("titleWithProgress", {
+                  completed,
+                  total,
+                  speed: formatBytes(totalSpeed),
+                })
+              : t("titleWithTotal", { total })}
           </Typography>
           <Box display="flex" gap={0.5}>
             <IconButton
@@ -108,7 +121,6 @@ export const UploadQueueWidget = () => {
             <IconButton
               size="small"
               onClick={() => uploadManager.setOpen(false)}
-              disabled={hasActive}
               aria-label="Close"
             >
               <Close fontSize="small" />

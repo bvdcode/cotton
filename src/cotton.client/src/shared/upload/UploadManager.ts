@@ -40,8 +40,6 @@ export class UploadManager {
   private running = false;
   private open = false;
   private snapshot: { open: boolean; tasks: UploadTask[] } = { open: false, tasks: [] };
-
-  private autoCloseTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly refreshNodeIds = new Set<Guid>();
   private refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -86,11 +84,6 @@ export class UploadManager {
   }
 
   enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
-    if (this.autoCloseTimeout) {
-      clearTimeout(this.autoCloseTimeout);
-      this.autoCloseTimeout = null;
-    }
-
     const list = Array.isArray(files) ? files : Array.from(files);
     for (const file of list) {
       this.tasks.unshift({
@@ -131,7 +124,7 @@ export class UploadManager {
       this.refreshTimeout = null;
 
       for (const id of ids) {
-        void useNodesStore.getState().loadNode(id);
+        void useNodesStore.getState().refreshNodeContent(id);
       }
     }, 300);
   }
@@ -150,18 +143,6 @@ export class UploadManager {
         if (!next) {
           if (!this.hasActiveTasks()) {
             this.emit();
-
-            // Auto-close a moment after completion so user sees the result.
-            if (this.open && !this.autoCloseTimeout) {
-              this.autoCloseTimeout = setTimeout(() => {
-                // Only close if nothing new started.
-                if (!this.hasActiveTasks()) {
-                  this.open = false;
-                  this.emit();
-                }
-                this.autoCloseTimeout = null;
-              }, 60_000);
-            }
           }
           return;
         }

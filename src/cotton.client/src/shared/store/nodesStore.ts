@@ -13,6 +13,8 @@ type NodesState = {
 
   loadRoot: (options?: { force?: boolean }) => Promise<NodeDto | null>;
   loadNode: (nodeId: string) => Promise<void>;
+  refreshNodeContent: (nodeId: string) => Promise<void>;
+  addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
   deleteFolder: (nodeId: string, parentNodeId?: string) => Promise<boolean>;
   renameFolder: (nodeId: string, newName: string, parentNodeId?: string) => Promise<boolean>;
@@ -78,6 +80,41 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     }
   },
 
+  refreshNodeContent: async (nodeId) => {
+    try {
+      const content = await nodesApi.getChildren(nodeId);
+      set((prev) => ({
+        contentByNodeId: {
+          ...prev.contentByNodeId,
+          [nodeId]: content,
+        },
+        lastUpdatedByNodeId: {
+          ...prev.lastUpdatedByNodeId,
+          [nodeId]: Date.now(),
+        },
+      }));
+    } catch (error) {
+      console.error("Failed to refresh node content", error);
+    }
+  },
+
+  addFolderToCache: (parentNodeId, folder) => {
+    set((prev) => {
+      const existing = prev.contentByNodeId[parentNodeId];
+      if (!existing) return {};
+      if (existing.nodes.some((n) => n.id === folder.id)) return {};
+      return {
+        contentByNodeId: {
+          ...prev.contentByNodeId,
+          [parentNodeId]: {
+            ...existing,
+            nodes: [...existing.nodes, folder],
+          },
+        },
+      };
+    });
+  },
+
   createFolder: async (parentNodeId, name) => {
     const trimmed = name.trim();
     if (trimmed.length === 0) return null;
@@ -121,7 +158,7 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       });
 
       // Background refetch to ensure server state is correct
-      void get().loadNode(parentNodeId);
+      void get().refreshNodeContent(parentNodeId);
 
       return created;
     } catch (error) {
@@ -158,7 +195,7 @@ export const useNodesStore = create<NodesState>((set, get) => ({
         });
 
         // Background refetch to ensure server state is correct
-        void get().loadNode(parentNodeId);
+        void get().refreshNodeContent(parentNodeId);
       } else {
         set({ loading: false });
       }
@@ -215,7 +252,7 @@ export const useNodesStore = create<NodesState>((set, get) => ({
         });
 
         // Background refetch to ensure server state is correct
-        void get().loadNode(parentNodeId);
+        void get().refreshNodeContent(parentNodeId);
       } else {
         set({ loading: false });
       }

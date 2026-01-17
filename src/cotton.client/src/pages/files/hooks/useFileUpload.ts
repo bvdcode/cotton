@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
+import { useNodesStore } from "../../../shared/store/nodesStore";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import { resolveUploadConflicts } from "../utils/uploadConflicts";
 
@@ -45,17 +46,13 @@ export const useFileUpload = (
       const confirmRename = async (
         newName: string,
       ): Promise<{ confirmed: boolean }> => {
-        try {
-          await confirm({
-            title: t("conflicts.title", { ns: "files" }),
-            description: t("conflicts.description", { ns: "files", newName }),
-            confirmationText: t("common:actions.confirm"),
-            cancellationText: t("common:actions.cancel"),
-          });
-          return { confirmed: true };
-        } catch {
-          return { confirmed: false };
-        }
+        const result = await confirm({
+          title: t("conflicts.title", { ns: "files" }),
+          description: t("conflicts.description", { ns: "files", newName }),
+          confirmationText: t("common:actions.confirm"),
+          cancellationText: t("common:actions.cancel"),
+        });
+        return { confirmed: result.confirmed };
       };
 
       const resolved = await resolveUploadConflicts(
@@ -66,11 +63,7 @@ export const useFileUpload = (
 
       if (resolved.length === 0) return;
 
-      uploadManager.enqueue(
-        resolved,
-        nodeId,
-        baseLabel,
-      );
+      uploadManager.enqueue(resolved, nodeId, baseLabel);
     },
     [nodeId, content, confirm, t, baseLabel],
   );
@@ -83,17 +76,13 @@ export const useFileUpload = (
       const confirmRename = async (
         newName: string,
       ): Promise<{ confirmed: boolean }> => {
-        try {
-          await confirm({
-            title: t("conflicts.title", { ns: "files" }),
-            description: t("conflicts.description", { ns: "files", newName }),
-            confirmationText: t("common:actions.confirm"),
-            cancellationText: t("common:actions.cancel"),
-          });
-          return { confirmed: true };
-        } catch {
-          return { confirmed: false };
-        }
+        const result = await confirm({
+          title: t("conflicts.title", { ns: "files" }),
+          description: t("conflicts.description", { ns: "files", newName }),
+          confirmationText: t("common:actions.confirm"),
+          cancellationText: t("common:actions.cancel"),
+        });
+        return { confirmed: result.confirmed };
       };
 
       const folderIdByKey = new Map<string, string>();
@@ -107,7 +96,10 @@ export const useFileUpload = (
         return loaded;
       };
 
-      const findAvailableFolderName = async (parentId: string, baseName: string): Promise<string> => {
+      const findAvailableFolderName = async (
+        parentId: string,
+        baseName: string,
+      ): Promise<string> => {
         const content = await getChildrenCached(parentId);
         const takenLower = new Set<string>([
           ...content.nodes.map((n) => n.name.toLowerCase()),
@@ -124,7 +116,10 @@ export const useFileUpload = (
         return `${baseName}-${Date.now()}`;
       };
 
-      const ensureFolder = async (parentId: string, desiredName: string): Promise<{ id: string; name: string }> => {
+      const ensureFolder = async (
+        parentId: string,
+        desiredName: string,
+      ): Promise<{ id: string; name: string }> => {
         const key = `${parentId}::${desiredName}`;
         const cachedId = folderIdByKey.get(key);
         if (cachedId) return { id: cachedId, name: desiredName };
@@ -137,20 +132,29 @@ export const useFileUpload = (
         }
 
         // If a file exists with the same name, we can't create a folder with that name.
-        const hasFileConflict = content.files.some((f) => f.name === desiredName);
+        const hasFileConflict = content.files.some(
+          (f) => f.name === desiredName,
+        );
         const nameToCreate = hasFileConflict
           ? await findAvailableFolderName(parentId, desiredName)
           : desiredName;
 
-        const created = await nodesApi.createNode({ parentId, name: nameToCreate });
+        const created = await nodesApi.createNode({
+          parentId,
+          name: nameToCreate,
+        });
         // Update caches optimistically.
         content.nodes.push(created);
+        useNodesStore.getState().addFolderToCache(parentId, created);
         folderIdByKey.set(`${parentId}::${nameToCreate}`, created.id);
 
         return { id: created.id, name: nameToCreate };
       };
 
-      const ensureFolderPath = async (rootId: string, segments: string[]): Promise<{ nodeId: string; labelSuffix: string }> => {
+      const ensureFolderPath = async (
+        rootId: string,
+        segments: string[],
+      ): Promise<{ nodeId: string; labelSuffix: string }> => {
         let currentId = rootId;
         const effectiveSegments: string[] = [];
 
@@ -176,15 +180,22 @@ export const useFileUpload = (
 
         // If we somehow don't get a filename, fall back to the File's name.
         if (parts.length === 0) {
-          const bucket = filesByTarget.get(nodeId) ?? { label: baseLabel, files: [] };
+          const bucket = filesByTarget.get(nodeId) ?? {
+            label: baseLabel,
+            files: [],
+          };
           bucket.files.push(item.file);
           filesByTarget.set(nodeId, bucket);
           continue;
         }
 
         parts.pop();
-        const { nodeId: targetNodeId, labelSuffix } = await ensureFolderPath(nodeId, parts);
-        const label = labelSuffix.length > 0 ? `${baseLabel} / ${labelSuffix}` : baseLabel;
+        const { nodeId: targetNodeId, labelSuffix } = await ensureFolderPath(
+          nodeId,
+          parts,
+        );
+        const label =
+          labelSuffix.length > 0 ? `${baseLabel} / ${labelSuffix}` : baseLabel;
 
         const bucket = filesByTarget.get(targetNodeId) ?? { label, files: [] };
         bucket.files.push(item.file);
@@ -193,7 +204,11 @@ export const useFileUpload = (
 
       for (const [targetNodeId, bucket] of filesByTarget) {
         const contentForCheck = await nodesApi.getChildren(targetNodeId);
-        const resolved = await resolveUploadConflicts(bucket.files, contentForCheck, confirmRename);
+        const resolved = await resolveUploadConflicts(
+          bucket.files,
+          contentForCheck,
+          confirmRename,
+        );
         if (resolved.length === 0) continue;
         uploadManager.enqueue(resolved, targetNodeId, bucket.label);
       }
