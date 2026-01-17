@@ -18,6 +18,9 @@ namespace Cotton.Database.Models
         [Column("created_by_user_id")]
         public Guid CreatedByUserId { get; set; }
 
+        [Column("delete_after_use")]
+        public bool DeleteAfterUse { get; set; }
+
         public virtual User CreatedByUser { get; set; } = null!;
         public virtual FileManifest FileManifest { get; set; } = null!;
     }
