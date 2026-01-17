@@ -6,3 +6,4 @@ export {
   VIDEO_WIDTH,
   VIDEO_HEIGHT,
 } from "./VideoPreview";
+export { renderLazyImage, getCachedUrl } from "./LazyImage";
