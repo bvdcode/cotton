@@ -117,7 +117,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       }}
       // Настройка Captions - имя файла и размер внизу
       captions={{
-        descriptionTextAlign: "end",
+        descriptionTextAlign: "center",
         descriptionMaxLines: 1,
       }}
       // Настройка Zoom - плавный зум на колесике
