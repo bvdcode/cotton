@@ -223,7 +223,6 @@ export const FilesPage: React.FC = () => {
             marginBottom: 2,
             borderBottom: 1,
             borderColor: "divider",
-            paddingX: 3,
             paddingTop: 1,
             paddingBottom: 1,
           }}
@@ -337,14 +336,14 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box px={3} pb={3}>
+        <Box pb={{ xs: 2, sm: 3 }}>
           {tiles.length === 0 && !isCreatingInThisFolder ? (
             <Typography color="text.secondary">{t("empty.all")}</Typography>
           ) : (
             <Box
               sx={{
                 display: "grid",
-                gap: 1.5,
+                gap: { xs: 1, sm: 1.5 },
                 gridTemplateColumns: {
                   xs: "repeat(3, minmax(0, 1fr))",
                   sm: "repeat(4, minmax(0, 1fr))",
