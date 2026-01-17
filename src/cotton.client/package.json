@@ -15,6 +15,7 @@
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "@mui/styled-engine": "^7.3.6",
+    "@types/react-window": "^1.8.8",
     "axios": "^1.13.2",
     "hash-wasm": "^4.12.0",
     "i18next": "^25.7.2",
@@ -25,6 +26,7 @@
     "react-i18next": "^16.4.0",
     "react-photo-view": "^1.2.7",
     "react-router-dom": "^7.10.1",
+    "react-window": "^2.2.5",
     "vite-plugin-pwa": "^1.2.0",
     "zustand": "^5.0.9"
   },
