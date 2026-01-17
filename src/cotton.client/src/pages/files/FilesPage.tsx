@@ -80,13 +80,17 @@ export const FilesPage: React.FC = () => {
 
   const sortedFolders = useMemo(() => {
     const nodes = (content?.nodes ?? []).slice();
-    nodes.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    nodes.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true }),
+    );
     return nodes;
   }, [content?.nodes]);
 
   const sortedFiles = useMemo(() => {
     const files = (content?.files ?? []).slice();
-    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    files.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true }),
+    );
     return files;
   }, [content?.files]);
 
@@ -94,8 +98,8 @@ export const FilesPage: React.FC = () => {
     type FolderTile = { kind: "folder"; node: NodeDto };
     type FileTile = { kind: "file"; file: NodeFileManifestDto };
     return [
-      ...sortedFolders.map((node) => ({ kind: "folder", node } as FolderTile)),
-      ...sortedFiles.map((file) => ({ kind: "file", file } as FileTile)),
+      ...sortedFolders.map((node) => ({ kind: "folder", node }) as FolderTile),
+      ...sortedFiles.map((file) => ({ kind: "file", file }) as FileTile),
     ];
   }, [sortedFolders, sortedFiles]);
 
@@ -210,26 +214,25 @@ export const FilesPage: React.FC = () => {
       >
         <Box
           sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 20,
+            bgcolor: "background.default",
             display: "flex",
             flexDirection: "column",
-            marginTop: 1,
-            marginBottom: 5,
+            marginBottom: 2,
             borderBottom: 1,
             borderColor: "divider",
-            zIndex: 10,
             paddingX: 3,
+            paddingTop: 1,
+            paddingBottom: 1,
           }}
         >
           <Box
             sx={{
-              position: "sticky",
-              top: 0,
-              zIndex: 20,
-              bgcolor: "background.default",
               display: "flex",
               gap: 1,
               alignItems: "center",
-              marginBottom: 1,
             }}
           >
             <Box
