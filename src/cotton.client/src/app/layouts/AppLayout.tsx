@@ -84,7 +84,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         sx={{
           pt: 0,
           pb: 2,
-          px: { xs: 0, sm: 0 },
+          px: { xs: 1, sm: 1 },
           flexGrow: 1,
           minHeight: 0,
           scrollbarGutter: "stable both-edges",
