@@ -106,7 +106,7 @@ const HoverMarqueeText = ({
           if (hoveredRef.current && overflowingRef.current) {
             setAnimate(true);
           }
-        }, 1000);
+        }, 300);
       }}
       onMouseLeave={() => {
         hoveredRef.current = false;
@@ -350,7 +350,6 @@ export const FileSystemItemCard = ({
                   {actions!.map((action, idx) => (
                     <IconButton
                       key={idx}
-                      size="small"
                       onClick={handleActionClick(action)}
                       title={action.tooltip}
                       sx={{
