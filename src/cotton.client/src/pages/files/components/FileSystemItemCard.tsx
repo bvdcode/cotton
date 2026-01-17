@@ -2,7 +2,14 @@ import { Box, IconButton, Typography } from "@mui/material";
 import { MoreVert } from "@mui/icons-material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode, MouseEvent } from "react";
-import { useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 export interface FileSystemItemCardAction {
   icon: ReactNode;
@@ -19,6 +26,141 @@ export interface FileSystemItemCardProps {
   iconContainerSx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
 }
+
+const HoverMarqueeText = ({
+  text,
+  sx,
+}: {
+  text: string;
+  sx?: SxProps<Theme>;
+}) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  const hoverTimerRef = useRef<number | null>(null);
+  const hoveredRef = useRef(false);
+  const overflowingRef = useRef(false);
+  const animateRef = useRef(false);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const [distancePx, setDistancePx] = useState(0);
+  const [animate, setAnimate] = useState(false);
+
+  const durationSeconds = useMemo(() => {
+    // Keep it slow and readable; tune by distance.
+    // ~40px/s with bounds.
+    const seconds = distancePx > 0 ? distancePx / 40 : 0;
+    return Math.max(4, Math.min(14, seconds));
+  }, [distancePx]);
+
+  useEffect(() => {
+    animateRef.current = animate;
+  }, [animate]);
+
+  const measure = useCallback(() => {
+    const container = containerRef.current;
+    const inner = textRef.current;
+    if (!container || !inner) return;
+
+    const available = container.clientWidth;
+    const needed = inner.scrollWidth;
+    const distance = Math.max(0, needed - available);
+    const overflow = distance > 1;
+    overflowingRef.current = overflow;
+    setIsOverflowing(overflow);
+    setDistancePx(distance);
+
+    if (!overflow && animateRef.current) {
+      setAnimate(false);
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [text, measure]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        window.clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <Box
+      ref={containerRef}
+      onMouseEnter={() => {
+        hoveredRef.current = true;
+        if (hoverTimerRef.current) {
+          window.clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = null;
+        }
+        hoverTimerRef.current = window.setTimeout(() => {
+          if (hoveredRef.current && overflowingRef.current) {
+            setAnimate(true);
+          }
+        }, 900);
+      }}
+      onMouseLeave={() => {
+        hoveredRef.current = false;
+        if (hoverTimerRef.current) {
+          window.clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = null;
+        }
+        setAnimate(false);
+      }}
+      title={text}
+      sx={{
+        minWidth: 0,
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        ...sx,
+      }}
+    >
+      <Box
+        component="span"
+        ref={textRef}
+        sx={{
+          display: "inline-block",
+          maxWidth: animate ? "none" : "100%",
+          overflow: animate ? "visible" : "hidden",
+          textOverflow: animate ? "clip" : "ellipsis",
+          whiteSpace: "nowrap",
+          willChange: animate ? "transform" : "auto",
+          transform: "translateX(0)",
+          "--marquee-distance": `${distancePx}px`,
+          "--marquee-duration": `${durationSeconds}s`,
+          ...(animate &&
+            isOverflowing && {
+              animation:
+                "fsCardMarquee var(--marquee-duration) linear infinite",
+            }),
+          "@keyframes fsCardMarquee": {
+            "0%": { transform: "translateX(0)" },
+            "10%": { transform: "translateX(0)" },
+            "45%": {
+              transform: "translateX(calc(-1 * var(--marquee-distance)))",
+            },
+            "60%": {
+              transform: "translateX(calc(-1 * var(--marquee-distance)))",
+            },
+            "90%": { transform: "translateX(0)" },
+            "100%": { transform: "translateX(0)" },
+          },
+        }}
+      >
+        {text}
+      </Box>
+    </Box>
+  );
+};
 
 export const FileSystemItemCard = ({
   icon,
@@ -72,8 +214,9 @@ export const FileSystemItemCard = ({
         userSelect: "none",
         outline: "none",
         "&:hover": clickable ? { bgcolor: "action.hover" } : undefined,
-        "&:hover .card-menu-button": {
+        "&:hover .card-menu-button, &:focus-within .card-menu-button": {
           opacity: 1,
+          pointerEvents: "auto",
         },
         "&:focus-visible": clickable
           ? {
@@ -87,97 +230,133 @@ export const FileSystemItemCard = ({
         sx={{
           width: "100%",
           aspectRatio: "1 / 1",
+          position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 1.5,
           overflow: "hidden",
           mb: 0.75,
-          "& > svg": {
-            width: "70%",
-            height: "70%",
-          },
-          ...iconContainerSx,
         }}
       >
-        {icon}
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            "& svg": {
+              width: "70%",
+              height: "70%",
+            },
+            ...iconContainerSx,
+          }}
+        >
+          {icon}
+        </Box>
       </Box>
 
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Box
+        sx={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          minHeight: 28,
+        }}
+      >
         <Typography
+          component="div"
           variant="body2"
-          noWrap
-          title={title}
           fontWeight={500}
-          sx={{ flex: 1, fontSize: { xs: "0.8rem", md: "0.85rem" } }}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: { xs: "0.8rem", md: "0.85rem" },
+            lineHeight: 1.2,
+          }}
         >
-          {title}
+          <HoverMarqueeText text={title} />
         </Typography>
 
         {actions && actions.length > 0 && (
-          <Box sx={{ position: "relative", width: 28, height: 28, flex: "0 0 auto" }}>
-            <IconButton
-              size="small"
-              onClick={handleToggleActions}
-              className="card-menu-button"
-              sx={{
-                p: 0.5,
-                width: 28,
-                height: 28,
-                opacity: actionsOpen ? 1 : 0,
-                transition: "opacity 0.2s, transform 0.3s",
-                transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
-                "& svg": {
-                  fontSize: "1rem",
-                },
-              }}
-            >
-              <MoreVert />
-            </IconButton>
-
-            {actionsOpen && (
-              <Box
+          <Box
+            sx={{
+              position: "absolute",
+              right: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Box sx={{ position: "relative", width: 28, height: 28 }}>
+              <IconButton
+                size="small"
+                onClick={handleToggleActions}
+                aria-haspopup="menu"
+                aria-expanded={actionsOpen ? true : undefined}
+                className="card-menu-button"
                 sx={{
-                  position: "absolute",
-                  right: 0,
-                  bottom: 32,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.75,
-                  animation: "slideUp 0.2s ease-out",
-                  "@keyframes slideUp": {
-                    from: {
-                      opacity: 0,
-                      transform: "translateY(10px)",
-                    },
-                    to: {
-                      opacity: 1,
-                      transform: "translateY(0)",
-                    },
+                  p: 0.5,
+                  width: 28,
+                  height: 28,
+                  opacity: actionsOpen ? 1 : 0,
+                  pointerEvents: actionsOpen ? "auto" : "none",
+                  transition: "opacity 0.2s, transform 0.3s",
+                  transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  "& svg": {
+                    fontSize: "1rem",
                   },
                 }}
-                onClick={(e) => e.stopPropagation()}
               >
-                {actions.map((action, idx) => (
-                  <IconButton
-                    key={idx}
-                    size="small"
-                    onClick={handleActionClick(action)}
-                    title={action.tooltip}
-                    sx={{
-                      p: 0.5,
-                      width: 28,
-                      height: 28,
-                      "& svg": {
-                        fontSize: "1rem",
+                <MoreVert />
+              </IconButton>
+
+              {actionsOpen && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    right: 0,
+                    bottom: 32,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0.75,
+                    animation: "slideUp 0.2s ease-out",
+                    "@keyframes slideUp": {
+                      from: {
+                        opacity: 0,
+                        transform: "translateY(10px)",
                       },
-                    }}
-                  >
-                    {action.icon}
-                  </IconButton>
-                ))}
-              </Box>
-            )}
+                      to: {
+                        opacity: 1,
+                        transform: "translateY(0)",
+                      },
+                    },
+                  }}
+                >
+                  {actions.map((action, idx) => (
+                    <IconButton
+                      key={idx}
+                      size="small"
+                      onClick={handleActionClick(action)}
+                      title={action.tooltip}
+                      sx={{
+                        p: 0.5,
+                        width: 28,
+                        height: 28,
+                        "& svg": {
+                          fontSize: "1rem",
+                        },
+                      }}
+                    >
+                      {action.icon}
+                    </IconButton>
+                  ))}
+                </Box>
+              )}
+            </Box>
           </Box>
         )}
       </Box>
@@ -194,7 +373,6 @@ export const FileSystemItemCard = ({
           {subtitle}
         </Typography>
       )}
-
     </Box>
   );
 };
