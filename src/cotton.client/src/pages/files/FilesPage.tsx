@@ -36,6 +36,8 @@ import {
   PreviewModal,
   PdfPreview,
   renderVideoPreview,
+  VIDEO_WIDTH,
+  VIDEO_HEIGHT,
 } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
@@ -211,7 +213,8 @@ export const FilesPage: React.FC = () => {
             sx={{
               display: "flex",
               flexDirection: "column",
-              marginY: 1,
+              marginTop: 1,
+              marginBottom: 1,
               borderBottom: 1,
               borderColor: "divider",
               zIndex: 10,
@@ -430,14 +433,11 @@ export const FilesPage: React.FC = () => {
                     <PhotoView
                       key={tile.file.id}
                       src={isImage ? fileDownloadUrl : undefined}
+                      width={isVideo ? VIDEO_WIDTH : undefined}
+                      height={isVideo ? VIDEO_HEIGHT : undefined}
                       render={
                         isVideo
-                          ? renderVideoPreview(
-                              fileDownloadUrl,
-                              tile.file.name,
-                              1280,
-                              720,
-                            )
+                          ? renderVideoPreview(fileDownloadUrl, tile.file.name)
                           : undefined
                       }
                     >
