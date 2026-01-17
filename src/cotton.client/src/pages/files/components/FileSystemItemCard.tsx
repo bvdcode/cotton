@@ -209,11 +209,6 @@ export const FileSystemItemCard = ({
         border: "1px solid",
         borderColor: "divider",
         borderRadius: 2,
-        p: {
-          xs: 1,
-          sm: 1.25,
-          md: 1,
-        },
         cursor: clickable ? "pointer" : "default",
         userSelect: "none",
         outline: "none",
@@ -243,7 +238,6 @@ export const FileSystemItemCard = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 1.5,
           overflow: "hidden",
           mb: 0.75,
         }}
@@ -261,126 +255,127 @@ export const FileSystemItemCard = ({
           {icon}
         </Box>
       </Box>
-
-      <Box
-        sx={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          minHeight: 28,
-          gap: 0.5,
-        }}
-      >
-        <Typography
-          component="div"
-          variant="body2"
-          fontWeight={500}
+      <Box sx={{ px: 1, pb: 1 }}>
+        <Box
           sx={{
-            flex: 1,
-            minWidth: 0,
-            fontSize: { xs: "0.8rem", md: "0.85rem" },
-            lineHeight: 1.2,
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            minHeight: 28,
+            gap: 0.5,
           }}
         >
-          <HoverMarqueeText text={title} />
-        </Typography>
-
-        {hasActions && (
-          <Box
-            className="card-menu-slot"
+          <Typography
+            component="div"
+            variant="body2"
+            fontWeight={500}
             sx={{
-              width: 0,
-              height: 28,
-              overflow: "visible",
-              opacity: 0,
-              pointerEvents: "auto",
-              transition: "width 0.2s, opacity 0.2s",
-              flex: "0 0 auto",
-              ...(actionsOpen && {
-                width: 28,
-                opacity: 1,
-              }),
+              flex: 1,
+              minWidth: 0,
+              fontSize: { xs: "0.8rem", md: "0.85rem" },
+              lineHeight: 1.2,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <Box sx={{ position: "relative", width: 28, height: 28 }}>
-              <IconButton
-                size="small"
-                onClick={handleToggleActions}
-                aria-haspopup="menu"
-                aria-expanded={actionsOpen ? true : undefined}
-                className="card-menu-button"
-                sx={{
-                  p: 0.5,
-                  width: 28,
-                  height: 28,
-                  transition: "transform 0.3s",
-                  transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
-                }}
-              >
-                <MoreVert />
-              </IconButton>
+            <HoverMarqueeText text={title} />
+          </Typography>
 
-              {actionsOpen && (
-                <Box
+          {hasActions && (
+            <Box
+              className="card-menu-slot"
+              sx={{
+                width: 0,
+                height: 28,
+                overflow: "visible",
+                opacity: 0,
+                pointerEvents: "auto",
+                transition: "width 0.2s, opacity 0.2s",
+                flex: "0 0 auto",
+                ...(actionsOpen && {
+                  width: 28,
+                  opacity: 1,
+                }),
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Box sx={{ position: "relative", width: 28, height: 28 }}>
+                <IconButton
+                  size="small"
+                  onClick={handleToggleActions}
+                  aria-haspopup="menu"
+                  aria-expanded={actionsOpen ? true : undefined}
+                  className="card-menu-button"
                   sx={{
-                    position: "absolute",
-                    right: 0,
-                    bottom: 32,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 0.75,
-                    bgcolor: "background.paper",
-                    boxShadow: 3,
-                    borderRadius: 1,
-                    py: 0.5,
-                    zIndex: 10,
-                    animation: "slideUp 0.2s ease-out",
-                    "@keyframes slideUp": {
-                      from: {
-                        opacity: 0,
-                        transform: "translateY(10px)",
-                      },
-                      to: {
-                        opacity: 1,
-                        transform: "translateY(0)",
-                      },
-                    },
+                    p: 0.5,
+                    width: 28,
+                    height: 28,
+                    transition: "transform 0.3s",
+                    transform: actionsOpen ? "rotate(90deg)" : "rotate(0deg)",
                   }}
                 >
-                  {actions!.map((action, idx) => (
-                    <IconButton
-                      key={idx}
-                      onClick={handleActionClick(action)}
-                      title={action.tooltip}
-                      sx={{
-                        p: 0.5,
-                        width: 28,
-                        height: 28,
-                      }}
-                    >
-                      {action.icon}
-                    </IconButton>
-                  ))}
-                </Box>
-              )}
+                  <MoreVert />
+                </IconButton>
+
+                {actionsOpen && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      right: 0,
+                      bottom: 32,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 0.75,
+                      bgcolor: "background.paper",
+                      boxShadow: 3,
+                      borderRadius: 1,
+                      py: 0.5,
+                      zIndex: 10,
+                      animation: "slideUp 0.2s ease-out",
+                      "@keyframes slideUp": {
+                        from: {
+                          opacity: 0,
+                          transform: "translateY(10px)",
+                        },
+                        to: {
+                          opacity: 1,
+                          transform: "translateY(0)",
+                        },
+                      },
+                    }}
+                  >
+                    {actions!.map((action, idx) => (
+                      <IconButton
+                        key={idx}
+                        onClick={handleActionClick(action)}
+                        title={action.tooltip}
+                        sx={{
+                          p: 0.5,
+                          width: 28,
+                          height: 28,
+                        }}
+                      >
+                        {action.icon}
+                      </IconButton>
+                    ))}
+                  </Box>
+                )}
+              </Box>
             </Box>
-          </Box>
+          )}
+        </Box>
+
+        {subtitle && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            display="block"
+            noWrap
+            title={subtitle}
+            sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" } }}
+          >
+            {subtitle}
+          </Typography>
         )}
       </Box>
-
-      {subtitle && (
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          display="block"
-          noWrap
-          title={subtitle}
-          sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" } }}
-        >
-          {subtitle}
-        </Typography>
-      )}
     </Box>
   );
 };
