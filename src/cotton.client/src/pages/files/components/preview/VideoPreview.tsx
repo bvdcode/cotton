@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 
 interface VideoPreviewProps {
   fileUrl: string;
@@ -36,8 +36,13 @@ export const VIDEO_WIDTH = 960;
 export const VIDEO_HEIGHT = 540;
 
 // Render function for PhotoView custom render
-export const renderVideoPreview = (fileUrl: string, fileName: string) => {
+export const renderVideoPreview = (
+  getUrl: () => string | null,
+  fileName: string,
+) => {
   return ({ attrs, scale }: PhotoRenderParams) => {
+    const fileUrl = getUrl();
+    
     // Calculate actual width from attrs style
     const width = attrs.style?.width
       ? parseFloat(attrs.style.width as string)
@@ -56,24 +61,28 @@ export const renderVideoPreview = (fileUrl: string, fileName: string) => {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            backgroundColor: "#000",
           }}
         >
-          <video
-            controls
-            autoPlay
-            style={{
-              width: "100%",
-              height: "100%",
-              outline: "none",
-              backgroundColor: "#000",
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <source src={fileUrl} type="video/mp4" />
-            <source src={fileUrl} type="video/webm" />
-            <source src={fileUrl} type="video/ogg" />
-            {fileName}
-          </video>
+          {fileUrl ? (
+            <video
+              controls
+              autoPlay
+              style={{
+                width: "100%",
+                height: "100%",
+                outline: "none",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <source src={fileUrl} type="video/mp4" />
+              <source src={fileUrl} type="video/webm" />
+              <source src={fileUrl} type="video/ogg" />
+              {fileName}
+            </video>
+          ) : (
+            <CircularProgress sx={{ color: "white" }} />
+          )}
         </div>
       </div>
     );

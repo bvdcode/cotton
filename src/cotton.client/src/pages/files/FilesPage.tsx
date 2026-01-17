@@ -27,11 +27,12 @@ import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { filesApi } from "../../shared/api/filesApi";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import { ImageLoaderProvider } from "./components/ImageLoaderProvider";
+import { useImageLoader } from "./components/useImageLoader";
 import { FolderCard } from "./components/FolderCard";
 import { RenamableItemCard } from "./components/RenamableItemCard";
 import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";
-import { isImageFile, isVideoFile } from "./utils/fileTypes";
+import { isImageFile, isVideoFile, isPdfFile } from "./utils/fileTypes";
 import {
   PreviewModal,
   PdfPreview,
@@ -160,14 +161,84 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
+    <ImageLoaderProvider>
+      <FilesPageContent
+        isCreatingInThisFolder={isCreatingInThisFolder}
+        fileUpload={fileUpload}
+        t={t}
+        nodeId={nodeId}
+        loading={loading}
+        error={error}
+        handleGoUp={handleGoUp}
+        ancestors={ancestors}
+        breadcrumbs={breadcrumbs}
+        stats={stats}
+        folderOps={folderOps}
+        fileOps={fileOps}
+        tiles={tiles}
+        navigate={navigate}
+        handleFileClick={handleFileClick}
+        handleDownloadFile={handleDownloadFile}
+        previewState={previewState}
+        closePreview={closePreview}
+      />
+    </ImageLoaderProvider>
+  );
+};
+
+// Inner component that has access to ImageLoaderContext
+interface FilesPageContentProps {
+  isCreatingInThisFolder: boolean;
+  fileUpload: ReturnType<typeof useFileUpload>;
+  t: ReturnType<typeof useTranslation>["t"];
+  nodeId: string | null;
+  loading: boolean;
+  error: string | null;
+  handleGoUp: () => void;
+  ancestors: NodeDto[];
+  breadcrumbs: Array<{ id: string; name: string }>;
+  stats: { folders: number; files: number; sizeBytes: number };
+  folderOps: ReturnType<typeof useFolderOperations>;
+  fileOps: ReturnType<typeof useFileOperations>;
+  tiles: Array<{ kind: "folder"; node: NodeDto } | { kind: "file"; file: NodeFileManifestDto }>;
+  navigate: ReturnType<typeof useNavigate>;
+  handleFileClick: (fileId: string, fileName: string) => void;
+  handleDownloadFile: (fileId: string, fileName: string) => Promise<void>;
+  previewState: ReturnType<typeof useFilePreview>["previewState"];
+  closePreview: () => void;
+}
+
+const FilesPageContent: React.FC<FilesPageContentProps> = ({
+  isCreatingInThisFolder,
+  fileUpload,
+  t,
+  nodeId,
+  loading,
+  error,
+  handleGoUp,
+  ancestors,
+  breadcrumbs,
+  stats,
+  folderOps,
+  fileOps,
+  tiles,
+  navigate,
+  handleFileClick,
+  handleDownloadFile,
+  previewState,
+  closePreview,
+}) => {
+  const { handleIndexChange, getMediaUrl, registerMedia } = useImageLoader();
+
+  return (
     <PhotoProvider
       maskOpacity={0.95}
       bannerVisible={true}
       photoClosable={true}
       maskClosable={true}
       pullClosable={true}
+      onIndexChange={handleIndexChange}
     >
-      <ImageLoaderProvider>
         {fileUpload.isDragging && (
           <Box
             onDragOver={fileUpload.handleDragOver}
@@ -214,7 +285,7 @@ export const FilesPage: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               marginTop: 1,
-              marginBottom: 1,
+              marginBottom: 5,
               borderBottom: 1,
               borderColor: "divider",
               zIndex: 10,
@@ -408,13 +479,18 @@ export const FilesPage: React.FC = () => {
 
                   const isImage = isImageFile(tile.file.name);
                   const isVideo = isVideoFile(tile.file.name);
+                  const isPdf = isPdfFile(tile.file.name);
                   const preview = getFilePreview(
                     tile.file.encryptedFilePreviewHashHex ?? null,
                     tile.file.name,
                   );
                   const previewUrl =
                     typeof preview === "string" ? preview : null;
-                  const fileDownloadUrl = `/api/v1/files/${tile.file.id}/download`;
+                  
+                  // Register media files for URL preloading
+                  if (isImage || isVideo || isPdf) {
+                    registerMedia(tile.file.id);
+                  }
 
                   const iconContainerSx = previewUrl
                     ? {
@@ -432,12 +508,15 @@ export const FilesPage: React.FC = () => {
                   return (
                     <PhotoView
                       key={tile.file.id}
-                      src={isImage ? fileDownloadUrl : undefined}
+                      src={isImage ? (getMediaUrl(tile.file.id) ?? undefined) : undefined}
                       width={isVideo ? VIDEO_WIDTH : undefined}
                       height={isVideo ? VIDEO_HEIGHT : undefined}
                       render={
                         isVideo
-                          ? renderVideoPreview(fileDownloadUrl, tile.file.name)
+                          ? renderVideoPreview(
+                              () => getMediaUrl(tile.file.id),
+                              tile.file.name,
+                            )
                           : undefined
                       }
                     >
@@ -538,13 +617,12 @@ export const FilesPage: React.FC = () => {
             <PreviewModal open={previewState.isOpen} onClose={closePreview}>
               {previewState.fileType === "pdf" && (
                 <PdfPreview
-                  fileUrl={`/api/v1/files/${previewState.fileId}/download`}
+                  fileUrl={getMediaUrl(previewState.fileId) ?? ""}
                   fileName={previewState.fileName}
                 />
               )}
             </PreviewModal>
           )}
-      </ImageLoaderProvider>
-    </PhotoProvider>
+      </PhotoProvider>
   );
 };
