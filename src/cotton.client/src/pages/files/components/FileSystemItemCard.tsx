@@ -30,14 +30,15 @@ export interface FileSystemItemCardProps {
 const HoverMarqueeText = ({
   text,
   sx,
+  cardHovered = false,
 }: {
   text: string;
   sx?: SxProps<Theme>;
+  cardHovered?: boolean;
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
   const hoverTimerRef = useRef<number | null>(null);
-  const hoveredRef = useRef(false);
   const overflowingRef = useRef(false);
   const animateRef = useRef(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -93,29 +94,30 @@ const HoverMarqueeText = ({
     };
   }, []);
 
+  // React to cardHovered prop changes
+  useEffect(() => {
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+
+    if (cardHovered) {
+      hoverTimerRef.current = window.setTimeout(() => {
+        if (overflowingRef.current) {
+          setAnimate(true);
+        }
+      }, 300);
+    } else {
+      // Use a microtask to avoid synchronous setState in effect
+      Promise.resolve().then(() => {
+        setAnimate(false);
+      });
+    }
+  }, [cardHovered]);
+
   return (
     <Box
       ref={containerRef}
-      onMouseEnter={() => {
-        hoveredRef.current = true;
-        if (hoverTimerRef.current) {
-          window.clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = null;
-        }
-        hoverTimerRef.current = window.setTimeout(() => {
-          if (hoveredRef.current && overflowingRef.current) {
-            setAnimate(true);
-          }
-        }, 300);
-      }}
-      onMouseLeave={() => {
-        hoveredRef.current = false;
-        if (hoverTimerRef.current) {
-          window.clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = null;
-        }
-        setAnimate(false);
-      }}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -176,6 +178,7 @@ export const FileSystemItemCard = ({
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const hasActions = Boolean(actions && actions.length > 0);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -210,6 +213,8 @@ export const FileSystemItemCard = ({
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onKeyDown={(e) => {
         if (!clickable) return;
         if (e.key === "Enter" || e.key === " ") {
@@ -294,7 +299,7 @@ export const FileSystemItemCard = ({
               lineHeight: 1.4,
             }}
           >
-            <HoverMarqueeText text={title} />
+            <HoverMarqueeText text={title} cardHovered={isHovered} />
           </Typography>
 
           {hasActions && (
