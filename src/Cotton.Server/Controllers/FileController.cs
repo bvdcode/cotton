@@ -23,9 +23,11 @@ using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Quartz;
+using System.Net.Mime;
 
 namespace Cotton.Server.Controllers
 {
@@ -37,6 +39,8 @@ namespace Cotton.Server.Controllers
         ILogger<FileController> _logger,
         StorageLayoutService _layouts) : ControllerBase
     {
+        private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
+
         [Authorize]
         [HttpDelete($"{Routes.Files}/{{nodeFileId:guid}}")]
         public async Task<IActionResult> DeleteFile([FromRoute] Guid nodeFileId)
@@ -297,8 +301,20 @@ namespace Cotton.Server.Controllers
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
                 ProposedContentHash = proposedContentHash,
             };
-            await _dbContext.FileManifests.AddAsync(newFileManifest);
+            if (newFileManifest.ContentType == "application/octet-stream")
+            {
+                string? extension = Path.GetExtension(request.Name);
+                if (!string.IsNullOrWhiteSpace(extension))
+                {
+                    bool recognized = fileExtensionContentTypeProvider.TryGetContentType(request.Name, out string? contentType);
+                    if (recognized && !string.IsNullOrWhiteSpace(contentType))
+                    {
+                        newFileManifest.ContentType = contentType;
+                    }
+                }
+            }
 
+            await _dbContext.FileManifests.AddAsync(newFileManifest);
             for (int i = 0; i < chunks.Count; i++)
             {
                 var fileChunk = new FileManifestChunk
