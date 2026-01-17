@@ -39,7 +39,7 @@ namespace Cotton.Server.Controllers
         ILogger<FileController> _logger,
         StorageLayoutService _layouts) : ControllerBase
     {
-        private const int DefaultSharedFileTokenLength = 8;
+        private const int DefaultSharedFileTokenLength = 16;
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
 
         [Authorize]
@@ -121,7 +121,11 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download-link")]
-        public async Task<IActionResult> DownloadFile([FromRoute] Guid nodeFileId, [FromQuery] int expireAfterMinutes = 1440)
+        public async Task<IActionResult> DownloadFile(
+            [FromRoute] Guid nodeFileId,
+            [FromQuery] int expireAfterMinutes = 1440,
+            [FromQuery] string? customToken = "",
+            [FromQuery] bool deactivateAfterUse = false)
         {
             const int maxExpireMinutes = 60 * 24 * 365; // 1 year
             ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
