@@ -80,13 +80,13 @@ export const FilesPage: React.FC = () => {
 
   const sortedFolders = useMemo(() => {
     const nodes = (content?.nodes ?? []).slice();
-    nodes.sort((a, b) => a.name.localeCompare(b.name));
+    nodes.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     return nodes;
   }, [content?.nodes]);
 
   const sortedFiles = useMemo(() => {
     const files = (content?.files ?? []).slice();
-    files.sort((a, b) => a.name.localeCompare(b.name));
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     return files;
   }, [content?.files]);
 
