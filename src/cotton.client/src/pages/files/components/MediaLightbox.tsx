@@ -26,7 +26,7 @@ export interface MediaItem {
   previewUrl: string;
   width?: number;
   height?: number;
-  mimeType?: string;
+  mimeType: string;
   sizeBytes?: number;
 }
 
@@ -52,6 +52,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   getSignedMediaUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
+  const thumbnailsRef = React.useRef(null);
 
   // map: mediaId -> оригинальный URL (подписанный)
   const [originalUrls, setOriginalUrls] = React.useState<
@@ -114,12 +115,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           void ensureSlideHasOriginal(currentIndex);
         },
       }}
-      // Настройка Captions - переносим их вниз по центру
+      // Настройка Captions - имя файла и размер внизу
       captions={{
-        descriptionTextAlign: "center",
+        descriptionTextAlign: "end",
         descriptionMaxLines: 1,
       }}
-      // Настройка Zoom
+      // Настройка Zoom - плавный зум на колесике
       zoom={{
         maxZoomPixelRatio: 8,
         zoomInMultiplier: 1,
@@ -127,7 +128,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         doubleClickDelay: 300,
         doubleClickMaxStops: 2,
         keyboardMoveDistance: 50,
-        wheelZoomDistanceFactor: 100,
+        wheelZoomDistanceFactor: 500,
         pinchZoomDistanceFactor: 100,
         scrollToZoom: true,
       }}
@@ -136,8 +137,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         autoplay: false,
         delay: 5000,
       }}
-      // Настройка Thumbnails
+      // Настройка Thumbnails - скрыты по умолчанию с сохранением состояния
       thumbnails={{
+        ref: thumbnailsRef,
         position: "bottom",
         width: 120,
         height: 80,
@@ -146,6 +148,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         padding: 2,
         gap: 4,
         showToggle: true,
+        hidden: true,
       }}
       // дефолтные настройки видео
       video={{
@@ -170,9 +173,9 @@ function buildSlidesFromItems(
 ): Slide[] {
   return items.map<Slide>((item) => {
     const maybeOriginal = originalUrls[item.id];
-    const description = item.sizeBytes
-      ? formatFileSize(item.sizeBytes)
-      : undefined;
+    // Формируем description: "имя файла | размер"
+    const sizeStr = item.sizeBytes ? formatFileSize(item.sizeBytes) : "";
+    const description = sizeStr ? `${item.name} | ${sizeStr}` : item.name;
 
     if (item.kind === "image") {
       const src = maybeOriginal ?? item.previewUrl;
@@ -181,7 +184,6 @@ function buildSlidesFromItems(
         src,
         width: item.width,
         height: item.height,
-        title: item.name,
         description,
         download: maybeOriginal
           ? { url: maybeOriginal, filename: item.name }
@@ -200,7 +202,6 @@ function buildSlidesFromItems(
         poster,
         width: item.width,
         height: item.height,
-        title: item.name,
         description,
       } as Slide;
     }
@@ -210,13 +211,12 @@ function buildSlidesFromItems(
       poster,
       width: item.width,
       height: item.height,
-      title: item.name,
       description,
       download: { url: src, filename: item.name },
       sources: [
         {
           src,
-          type: item.mimeType ?? "video/mp4", // ВОТ ТУТ ЧТО ЗА ХУЙНЯ???
+          type: item.mimeType,
         },
       ],
     } as Slide;
