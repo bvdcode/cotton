@@ -259,14 +259,17 @@ export const UploadQueueWidget = () => {
           </Box>
         </Box>
 
-        {!isCollapsed && tasks.length > 0 && (
-          <Box
-            sx={{
-              height: Math.min(tasks.length * 90, 400), // ~90px per item, max 400px
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
+        <Box
+          sx={{
+            maxHeight: isCollapsed ? 0 : `${Math.min(tasks.length * 90, 400)}px`,
+            overflow: "hidden",
+            position: "relative",
+            zIndex: 1,
+            transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
+            opacity: isCollapsed ? 0 : 1,
+          }}
+        >
+          {tasks.length > 0 && (
             <List<AdditionalRowProps>
               rowComponent={UploadTaskRow}
               rowCount={tasks.length}
@@ -278,8 +281,8 @@ export const UploadQueueWidget = () => {
               }}
               overscanCount={5} // Render 5 extra items above/below viewport for smooth scrolling
             />
-          </Box>
-        )}
+          )}
+        </Box>
       </Paper>
     </Box>
   );
