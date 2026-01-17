@@ -25,7 +25,6 @@ import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { filesApi } from "../../shared/api/filesApi";
-import { PhotoProvider, PhotoView } from "react-photo-view";
 import { FolderCard } from "./components/FolderCard";
 import { RenamableItemCard } from "./components/RenamableItemCard";
 import { getFilePreview } from "./utils/getFilePreview";
@@ -34,10 +33,6 @@ import { isImageFile, isVideoFile } from "./utils/fileTypes";
 import {
   PreviewModal,
   PdfPreview,
-  renderVideoPreview,
-  renderLazyImage,
-  VIDEO_WIDTH,
-  VIDEO_HEIGHT,
 } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
@@ -164,13 +159,7 @@ export const FilesPage: React.FC = () => {
   }
 
   return (
-    <PhotoProvider
-      maskOpacity={0.95}
-      bannerVisible={true}
-      photoClosable={true}
-      maskClosable={true}
-      pullClosable={true}
-    >
+    <>
       {fileUpload.isDragging && (
         <Box
           onDragOver={fileUpload.handleDragOver}
@@ -541,25 +530,6 @@ export const FilesPage: React.FC = () => {
                   />
                 );
 
-                // Only wrap images and videos in PhotoView
-                if (isImage || isVideo) {
-                  return (
-                    <PhotoView
-                      key={tile.file.id}
-                      width={isVideo ? VIDEO_WIDTH : undefined}
-                      height={isVideo ? VIDEO_HEIGHT : undefined}
-                      render={
-                        isVideo
-                          ? renderVideoPreview(tile.file.id, tile.file.name)
-                          : renderLazyImage(tile.file.id, tile.file.name)
-                      }
-                    >
-                      {fileCard}
-                    </PhotoView>
-                  );
-                }
-
-                // Other files without PhotoView wrapper
                 return (
                   <React.Fragment key={tile.file.id}>{fileCard}</React.Fragment>
                 );
@@ -579,6 +549,6 @@ export const FilesPage: React.FC = () => {
           )}
         </PreviewModal>
       )}
-    </PhotoProvider>
+    </>
   );
 };

@@ -11,17 +11,3 @@ body,
   padding: 0;
   height: 100%;
 }
-
-/* Custom styles for react-photo-view gallery */
-.PhotoView-Slider__BannerWrap {
-  background: rgba(0, 0, 0, 0.85) !important;
-}
-
-.PhotoView-Slider__toolbarIcon {
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.PhotoView-Slider__toolbarIcon:hover {
-  opacity: 0.7;
-}
