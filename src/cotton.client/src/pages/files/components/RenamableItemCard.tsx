@@ -88,7 +88,7 @@ export const RenamableItemCard = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            "& svg": {
+            "& > svg": {
               width: "70%",
               height: "70%",
             },
