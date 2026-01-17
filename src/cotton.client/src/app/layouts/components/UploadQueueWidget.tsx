@@ -148,7 +148,7 @@ export const UploadQueueWidget = () => {
         <Box
           sx={{
             maxHeight: isCollapsed ? 0 : "400px",
-            overflowY: isCollapsed ? "hidden" : "auto",
+            overflowY: "hidden",
             overflowX: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -172,8 +172,7 @@ export const UploadQueueWidget = () => {
             },
           }}
         >
-          {!isCollapsed &&
-            tasks.map((task, idx) => (
+          {tasks.map((task, idx) => (
               <Box key={task.id}>
                 {idx > 0 && <Divider sx={{ mb: 1 }} />}
                 <Box>
