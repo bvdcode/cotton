@@ -55,7 +55,7 @@ export const RenamableItemCard = ({
   return (
     <Box
       sx={{
-        border: "2px solid",
+        border: "1px solid",
         borderColor: "primary.main",
         borderRadius: 2,
         p: {
@@ -72,20 +72,31 @@ export const RenamableItemCard = ({
         sx={{
           width: "100%",
           aspectRatio: "1 / 1",
+          position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 1.5,
           overflow: "hidden",
           mb: 0.75,
-          "& > svg": {
-            width: "70%",
-            height: "70%",
-          },
-          ...iconContainerSx,
         }}
       >
-        {renamingIcon ?? icon}
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            "& svg": {
+              width: "70%",
+              height: "70%",
+            },
+            ...iconContainerSx,
+          }}
+        >
+          {renamingIcon ?? icon}
+        </Box>
       </Box>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
