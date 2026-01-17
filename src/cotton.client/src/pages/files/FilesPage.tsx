@@ -252,18 +252,20 @@ export const FilesPage: React.FC = () => {
               <FileBreadcrumbs breadcrumbs={breadcrumbs} />
             </Box>
 
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ mt: 0.75, display: "block" }}
-            >
-              {t("stats.summary", {
-                ns: "files",
-                folders: stats.folders,
-                files: stats.files,
-                size: formatBytes(stats.sizeBytes),
-              })}
-            </Typography>
+            <Box sx={{ flexGrow: 1, textAlign: "right" }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 0.75, display: "block" }}
+              >
+                {t("stats.summary", {
+                  ns: "files",
+                  folders: stats.folders,
+                  files: stats.files,
+                  size: formatBytes(stats.sizeBytes),
+                })}
+              </Typography>
+            </Box>
           </Box>
         </Box>
         {error && (
