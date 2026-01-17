@@ -1,0 +1,67 @@
+/**
+ * File type detection utilities for preview system
+ */
+
+export type FileType = 'image' | 'pdf' | 'video' | 'audio' | 'document' | 'archive' | 'other';
+
+export interface FileTypeInfo {
+  type: FileType;
+  supportsPreview: boolean;
+  supportsInlineView: boolean;
+}
+
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+const PDF_EXTENSIONS = ['pdf'];
+const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
+const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'm4a'];
+const DOCUMENT_EXTENSIONS = ['doc', 'docx', 'txt', 'rtf', 'odt'];
+const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
+
+export const getFileExtension = (fileName: string): string => {
+  return fileName.toLowerCase().split('.').pop() || '';
+};
+
+export const isImageFile = (fileName: string): boolean => {
+  const ext = getFileExtension(fileName);
+  return IMAGE_EXTENSIONS.includes(ext);
+};
+
+export const isPdfFile = (fileName: string): boolean => {
+  const ext = getFileExtension(fileName);
+  return PDF_EXTENSIONS.includes(ext);
+};
+
+export const isVideoFile = (fileName: string): boolean => {
+  const ext = getFileExtension(fileName);
+  return VIDEO_EXTENSIONS.includes(ext);
+};
+
+export const isAudioFile = (fileName: string): boolean => {
+  const ext = getFileExtension(fileName);
+  return AUDIO_EXTENSIONS.includes(ext);
+};
+
+export const getFileTypeInfo = (fileName: string): FileTypeInfo => {
+  const ext = getFileExtension(fileName);
+
+  if (IMAGE_EXTENSIONS.includes(ext)) {
+    return { type: 'image', supportsPreview: true, supportsInlineView: true };
+  }
+  if (PDF_EXTENSIONS.includes(ext)) {
+    return { type: 'pdf', supportsPreview: true, supportsInlineView: true };
+  }
+  if (VIDEO_EXTENSIONS.includes(ext)) {
+    return { type: 'video', supportsPreview: true, supportsInlineView: true };
+  }
+  if (AUDIO_EXTENSIONS.includes(ext)) {
+    return { type: 'audio', supportsPreview: true, supportsInlineView: true };
+  }
+  if (DOCUMENT_EXTENSIONS.includes(ext)) {
+    return { type: 'document', supportsPreview: false, supportsInlineView: false };
+  }
+  if (ARCHIVE_EXTENSIONS.includes(ext)) {
+    return { type: 'archive', supportsPreview: false, supportsInlineView: false };
+  }
+
+  return { type: 'other', supportsPreview: false, supportsInlineView: false };
+};

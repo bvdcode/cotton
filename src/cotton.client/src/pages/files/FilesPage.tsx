@@ -5,6 +5,7 @@ import {
   ArrowUpward,
   CreateNewFolder,
   Delete,
+  Download,
   Edit,
   Folder,
   Home,
@@ -24,9 +25,11 @@ import { RenamableItemCard } from "./components/RenamableItemCard";
 import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";
 import { isImageFile } from "./utils/isImageFile";
+import { PreviewModal, PdfPreview } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
+import { useFilePreview } from "./hooks/useFilePreview";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -91,6 +94,7 @@ export const FilesPage: React.FC = () => {
       void loadNode(nodeId);
     }
   });
+  const { previewState, openPreview, closePreview } = useFilePreview();
 
   const stats = useMemo(() => {
     const folders = content?.nodes?.length ?? 0;
@@ -125,6 +129,13 @@ export const FilesPage: React.FC = () => {
       document.body.removeChild(link);
     } catch (error) {
       console.error("Failed to download file:", error);
+    }
+  };
+
+  const handleFileClick = (fileId: string, fileName: string) => {
+    const opened = openPreview(fileId, fileName);
+    if (!opened) {
+      void handleDownloadFile(fileId, fileName);
     }
   };
 
@@ -171,7 +182,6 @@ export const FilesPage: React.FC = () => {
           </Typography>
         </Box>
       )}
-
       <Box
         width="100%"
         onDragOver={fileUpload.handleDragOver}
@@ -181,79 +191,83 @@ export const FilesPage: React.FC = () => {
       >
         <Box
           sx={{
-            position: "sticky",
-            top: 0,
-            zIndex: 20,
-            bgcolor: "background.default",
-            px: 3,
-            pt: 0,
-            pb: 1,
-            mb: 2,
-            borderBottom: "1px solid",
+            display: "flex",
+            flexDirection: "column",
+            marginY: 1,
+            borderBottom: 1,
             borderColor: "divider",
+            zIndex: 10,
           }}
         >
           <Box
             sx={{
-              display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
-              gap: 1,
-              alignItems: { xs: "stretch", sm: "center" },
+              position: "sticky",
+              top: 0,
+              zIndex: 20,
+              bgcolor: "background.default",
             }}
           >
-            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-              <IconButton
-                color="primary"
-                onClick={handleGoUp}
-                disabled={loading || ancestors.length === 0}
-                title={t("actions.goUp")}
-              >
-                <ArrowUpward />
-              </IconButton>
-              <IconButton
-                color="primary"
-                onClick={fileUpload.handleUploadClick}
-                disabled={!nodeId || loading}
-                title={t("actions.upload")}
-              >
-                <UploadFile />
-              </IconButton>
-              <IconButton
-                color="primary"
-                onClick={folderOps.handleNewFolder}
-                disabled={!nodeId || folderOps.isCreatingFolder}
-                title={t("actions.newFolder")}
-              >
-                <CreateNewFolder />
-              </IconButton>
-              <IconButton
-                onClick={() => navigate("/files")}
-                color="primary"
-                title={t("breadcrumbs.root")}
-              >
-                <Home />
-              </IconButton>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 1,
+                alignItems: { xs: "stretch", sm: "center" },
+              }}
+            >
+              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                <IconButton
+                  color="primary"
+                  onClick={handleGoUp}
+                  disabled={loading || ancestors.length === 0}
+                  title={t("actions.goUp")}
+                >
+                  <ArrowUpward />
+                </IconButton>
+                <IconButton
+                  color="primary"
+                  onClick={fileUpload.handleUploadClick}
+                  disabled={!nodeId || loading}
+                  title={t("actions.upload")}
+                >
+                  <UploadFile />
+                </IconButton>
+                <IconButton
+                  color="primary"
+                  onClick={folderOps.handleNewFolder}
+                  disabled={!nodeId || folderOps.isCreatingFolder}
+                  title={t("actions.newFolder")}
+                >
+                  <CreateNewFolder />
+                </IconButton>
+                <IconButton
+                  onClick={() => navigate("/files")}
+                  color="primary"
+                  title={t("breadcrumbs.root")}
+                >
+                  <Home />
+                </IconButton>
+              </Box>
+
+              <FileBreadcrumbs breadcrumbs={breadcrumbs} />
             </Box>
 
-            <FileBreadcrumbs breadcrumbs={breadcrumbs} />
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 0.75, display: "block" }}
+            >
+              {t("stats.summary", {
+                ns: "files",
+                folders: stats.folders,
+                files: stats.files,
+                size: formatBytes(stats.sizeBytes),
+              })}
+            </Typography>
           </Box>
-
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ mt: 0.75, display: "block" }}
-          >
-            {t("stats.summary", {
-              ns: "files",
-              folders: stats.folders,
-              files: stats.files,
-              size: formatBytes(stats.sizeBytes),
-            })}
-          </Typography>
         </Box>
-
         {error && (
-          <Box mb={2} px={3}>
+          <Box mb={1} px={1}>
             <Alert severity="error">{error}</Alert>
           </Box>
         )}
@@ -410,10 +424,16 @@ export const FilesPage: React.FC = () => {
                     onClick={
                       isImage && previewUrl
                         ? undefined
-                        : () => handleDownloadFile(tile.file.id, tile.file.name)
+                        : () => handleFileClick(tile.file.id, tile.file.name)
                     }
                     iconContainerSx={iconContainerSx}
                     actions={[
+                      {
+                        icon: <Download />,
+                        onClick: () =>
+                          handleDownloadFile(tile.file.id, tile.file.name),
+                        tooltip: t("common:actions.download"),
+                      },
                       {
                         icon: <Edit />,
                         onClick: () =>
@@ -450,6 +470,17 @@ export const FilesPage: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      {previewState.isOpen && previewState.fileId && previewState.fileName && (
+        <PreviewModal open={previewState.isOpen} onClose={closePreview}>
+          {previewState.fileType === "pdf" && (
+            <PdfPreview
+              fileUrl={`/api/v1/files/${previewState.fileId}/download`}
+              fileName={previewState.fileName}
+            />
+          )}
+        </PreviewModal>
+      )}
     </ImageLoaderProvider>
   );
 };

@@ -6,7 +6,8 @@
       "confirm": "Подтвердить",
       "cancel": "Отмена",
       "delete": "Удалить",
-      "rename": "Переименовать"
+      "rename": "Переименовать",
+      "download": "Скачать"
     },
     "userMenu": {
       "lightMode": "Светлая тема",

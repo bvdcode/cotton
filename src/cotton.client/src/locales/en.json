@@ -6,7 +6,8 @@
       "confirm": "Confirm",
       "cancel": "Cancel",
       "delete": "Delete",
-      "rename": "Rename"
+      "rename": "Rename",
+      "download": "Download"
     },
     "userMenu": {
       "lightMode": "Light Mode",
