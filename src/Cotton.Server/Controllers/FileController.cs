@@ -125,11 +125,21 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromQuery] int expireAfterMinutes = 1440,
             [FromQuery] string? customToken = "",
-            [FromQuery] bool deactivateAfterUse = false)
+            [FromQuery] bool deleteAfterUse = false)
         {
             const int maxExpireMinutes = 60 * 24 * 365; // 1 year
             ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
+
+            if (!string.IsNullOrWhiteSpace(customToken))
+            {
+                bool exists = await _dbContext.DownloadTokens
+                    .AnyAsync(x => x.Token == customToken);
+                if (exists)
+                {
+                    return this.ApiConflict("The custom token is already in use. Please choose a different one.");
+                }
+            }
 
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
@@ -142,6 +152,7 @@ namespace Cotton.Server.Controllers
 
             DownloadToken newToken = new()
             {
+                DeleteAfterUse = deleteAfterUse,
                 CreatedByUserId = User.GetUserId(),
                 FileManifestId = nodeFile.FileManifestId,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
