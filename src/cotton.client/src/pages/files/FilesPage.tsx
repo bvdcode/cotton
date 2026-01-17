@@ -231,19 +231,17 @@ export const FilesPage: React.FC = () => {
           <Box
             sx={{
               display: "flex",
-              gap: 1,
-              alignItems: "center",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: { xs: 1, sm: 1 },
+              alignItems: { xs: "stretch", sm: "center" },
             }}
           >
             <Box
               sx={{
                 display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
                 gap: 1,
-                alignItems: { xs: "stretch", sm: "center" },
-                minWidth: 0,
-                flex: "1 1 auto",
-                overflow: "hidden",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
               <Box
@@ -287,10 +285,41 @@ export const FilesPage: React.FC = () => {
                 </IconButton>
               </Box>
 
-              <FileBreadcrumbs breadcrumbs={breadcrumbs} />
+              <Box
+                sx={{
+                  display: { xs: "flex", sm: "none" },
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <Typography
+                  color="text.secondary"
+                  sx={{ fontSize: "0.875rem" }}
+                >
+                  {t("stats.summary", {
+                    ns: "files",
+                    folders: stats.folders,
+                    files: stats.files,
+                    size: formatBytes(stats.sizeBytes),
+                  })}
+                </Typography>
+              </Box>
             </Box>
-            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-            <Box sx={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+
+            <FileBreadcrumbs breadcrumbs={breadcrumbs} />
+
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ mx: 1, display: { xs: "none", sm: "block" } }}
+            />
+            <Box
+              sx={{
+                flexShrink: 0,
+                whiteSpace: "nowrap",
+                display: { xs: "none", sm: "block" },
+              }}
+            >
               <Typography color="text.secondary" sx={{ fontSize: "0.875rem" }}>
                 {t("stats.summary", {
                   ns: "files",
