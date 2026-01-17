@@ -1,11 +1,5 @@
 import { useEffect, useMemo } from "react";
-import {
-  Alert,
-  Box,
-  IconButton,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, IconButton, TextField, Typography } from "@mui/material";
 import { FileBreadcrumbs } from "./components";
 import {
   ArrowUpward,
@@ -143,303 +137,319 @@ export const FilesPage: React.FC = () => {
 
   return (
     <ImageLoaderProvider>
-          {fileUpload.isDragging && (
-            <Box
-              onDragOver={fileUpload.handleDragOver}
-              onDragLeave={fileUpload.handleDragLeave}
-              onDrop={fileUpload.handleDrop}
-              sx={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                bgcolor: "primary.main",
-                opacity: 0.15,
-                border: "4px dashed",
-                borderColor: "primary.main",
-                zIndex: 9999,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Typography
-                variant="h3"
-                sx={{
-                  color: "primary.main",
-                  fontWeight: "bold",
-                  textShadow: "0 0 10px rgba(255,255,255,0.8)",
-                  pointerEvents: "none",
-                }}
-              >
-                {t("actions.dropFiles")}
-              </Typography>
-            </Box>
-          )}
-
-          <Box
-            width="100%"
-            onDragOver={fileUpload.handleDragOver}
-            onDragLeave={fileUpload.handleDragLeave}
-            onDrop={fileUpload.handleDrop}
-            sx={{ position: "relative" }}
+      {fileUpload.isDragging && (
+        <Box
+          onDragOver={fileUpload.handleDragOver}
+          onDragLeave={fileUpload.handleDragLeave}
+          onDrop={fileUpload.handleDrop}
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "primary.main",
+            opacity: 0.15,
+            border: "4px dashed",
+            borderColor: "primary.main",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Typography
+            variant="h3"
+            sx={{
+              color: "primary.main",
+              fontWeight: "bold",
+              textShadow: "0 0 10px rgba(255,255,255,0.8)",
+              pointerEvents: "none",
+            }}
           >
-            <Box
-              sx={{
-                position: "sticky",
-                top: 0,
-                zIndex: 20,
-                bgcolor: "background.default",
-                px: 3,
-                pt: 0,
-                pb: 1,
-                mb: 2,
-                borderBottom: "1px solid",
-                borderColor: "divider",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", sm: "row" },
-                  gap: 1,
-                  alignItems: { xs: "stretch", sm: "center" },
-                }}
-              >
-                <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                  <IconButton
-                    color="primary"
-                    onClick={handleGoUp}
-                    disabled={loading || ancestors.length === 0}
-                    title={t("actions.goUp")}
-                  >
-                    <ArrowUpward />
-                  </IconButton>
-                  <IconButton
-                    color="primary"
-                    onClick={fileUpload.handleUploadClick}
-                    disabled={!nodeId || loading}
-                    title={t("actions.upload")}
-                  >
-                    <UploadFile />
-                  </IconButton>
-                  <IconButton
-                    color="primary"
-                    onClick={folderOps.handleNewFolder}
-                    disabled={!nodeId || folderOps.isCreatingFolder}
-                    title={t("actions.newFolder")}
-                  >
-                    <CreateNewFolder />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => navigate("/files")}
-                    color="primary"
-                    title={t("breadcrumbs.root")}
-                  >
-                    <Home />
-                  </IconButton>
-                </Box>
+            {t("actions.dropFiles")}
+          </Typography>
+        </Box>
+      )}
 
-                <FileBreadcrumbs breadcrumbs={breadcrumbs} />
-              </Box>
-
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mt: 0.75, display: "block" }}
+      <Box
+        width="100%"
+        onDragOver={fileUpload.handleDragOver}
+        onDragLeave={fileUpload.handleDragLeave}
+        onDrop={fileUpload.handleDrop}
+        sx={{ position: "relative" }}
+      >
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 20,
+            bgcolor: "background.default",
+            px: 3,
+            pt: 0,
+            pb: 1,
+            mb: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 1,
+              alignItems: { xs: "stretch", sm: "center" },
+            }}
+          >
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+              <IconButton
+                color="primary"
+                onClick={handleGoUp}
+                disabled={loading || ancestors.length === 0}
+                title={t("actions.goUp")}
               >
-                {t("stats.summary", {
-                  ns: "files",
-                  folders: stats.folders,
-                  files: stats.files,
-                  size: formatBytes(stats.sizeBytes),
-                })}
-              </Typography>
+                <ArrowUpward />
+              </IconButton>
+              <IconButton
+                color="primary"
+                onClick={fileUpload.handleUploadClick}
+                disabled={!nodeId || loading}
+                title={t("actions.upload")}
+              >
+                <UploadFile />
+              </IconButton>
+              <IconButton
+                color="primary"
+                onClick={folderOps.handleNewFolder}
+                disabled={!nodeId || folderOps.isCreatingFolder}
+                title={t("actions.newFolder")}
+              >
+                <CreateNewFolder />
+              </IconButton>
+              <IconButton
+                onClick={() => navigate("/files")}
+                color="primary"
+                title={t("breadcrumbs.root")}
+              >
+                <Home />
+              </IconButton>
             </Box>
 
-            {error && (
-              <Box mb={2} px={3}>
-                <Alert severity="error">{error}</Alert>
-              </Box>
-            )}
+            <FileBreadcrumbs breadcrumbs={breadcrumbs} />
+          </Box>
 
-            <Box px={3} pb={3}>
-              {tiles.length === 0 && !isCreatingInThisFolder ? (
-                <Typography color="text.secondary">{t("empty.all")}</Typography>
-              ) : (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mt: 0.75, display: "block" }}
+          >
+            {t("stats.summary", {
+              ns: "files",
+              folders: stats.folders,
+              files: stats.files,
+              size: formatBytes(stats.sizeBytes),
+            })}
+          </Typography>
+        </Box>
+
+        {error && (
+          <Box mb={2} px={3}>
+            <Alert severity="error">{error}</Alert>
+          </Box>
+        )}
+
+        <Box px={3} pb={3}>
+          {tiles.length === 0 && !isCreatingInThisFolder ? (
+            <Typography color="text.secondary">{t("empty.all")}</Typography>
+          ) : (
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.5,
+                gridTemplateColumns: {
+                  xs: "repeat(3, minmax(0, 1fr))",
+                  sm: "repeat(4, minmax(0, 1fr))",
+                  md: "repeat(6, minmax(0, 1fr))",
+                  lg: "repeat(8, minmax(0, 1fr))",
+                },
+              }}
+            >
+              {isCreatingInThisFolder && (
                 <Box
                   sx={{
-                    display: "grid",
-                    gap: 1.5,
-                    gridTemplateColumns: {
-                      xs: "repeat(3, minmax(0, 1fr))",
-                      sm: "repeat(4, minmax(0, 1fr))",
-                      md: "repeat(6, minmax(0, 1fr))",
-                      lg: "repeat(8, minmax(0, 1fr))",
-                    },
+                    border: "2px solid",
+                    borderColor: "primary.main",
+                    borderRadius: 2,
+                    p: { xs: 1, sm: 1.25, md: 1 },
+                    bgcolor: "action.hover",
                   }}
                 >
-                  {isCreatingInThisFolder && (
-                    <Box
-                      sx={{
-                        border: "2px solid",
-                        borderColor: "primary.main",
-                        borderRadius: 2,
-                        p: { xs: 1, sm: 1.25, md: 1 },
-                        bgcolor: "action.hover",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: "100%",
-                          aspectRatio: "1 / 1",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: 1.5,
-                          overflow: "hidden",
-                          mb: 0.75,
-                          "& > svg": {
-                            width: "70%",
-                            height: "70%",
-                          },
-                        }}
-                      >
-                        <Folder sx={{ color: "primary.main" }} />
-                      </Box>
-                      <TextField
-                        autoFocus
-                        fullWidth
-                        size="small"
-                        value={folderOps.newFolderName}
-                        onChange={(e) => folderOps.setNewFolderName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            void folderOps.handleConfirmNewFolder();
-                          } else if (e.key === "Escape") {
-                            folderOps.handleCancelNewFolder();
-                          }
-                        }}
-                        onBlur={folderOps.handleConfirmNewFolder}
-                        placeholder={t("actions.folderNamePlaceholder")}
-                        slotProps={{
-                          input: {
-                            sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
-                          },
-                        }}
-                      />
-                    </Box>
-                  )}
-
-                  {tiles.map((tile) => {
-                    if (tile.kind === "folder") {
-                      return (
-                        <FolderCard
-                          key={tile.node.id}
-                          folder={tile.node}
-                          isRenaming={folderOps.renamingFolderId === tile.node.id}
-                          renamingName={folderOps.renamingFolderName}
-                          onRenamingNameChange={folderOps.setRenamingFolderName}
-                          onConfirmRename={folderOps.handleConfirmRename}
-                          onCancelRename={folderOps.handleCancelRename}
-                          onStartRename={() =>
-                            folderOps.handleRenameFolder(tile.node.id, tile.node.name)
-                          }
-                          onDelete={() =>
-                            folderOps.handleDeleteFolder(tile.node.id, tile.node.name)
-                          }
-                          onClick={() => navigate(`/files/${tile.node.id}`)}
-                        />
-                      );
-                    }
-
-                    const isImage = isImageFile(tile.file.name);
-                    const preview = getFilePreview(
-                      tile.file.encryptedFilePreviewHashHex ?? null,
-                      tile.file.name,
-                    );
-                    const previewUrl = typeof preview === "string" ? preview : null;
-
-                    const iconContainerSx = previewUrl
-                      ? {
-                          mx: { xs: -1, sm: -1.25, md: -1 },
-                          mt: { xs: -1, sm: -1.25, md: -1 },
-                          width: {
-                            xs: "calc(100% + 16px)",
-                            sm: "calc(100% + 20px)",
-                            md: "calc(100% + 16px)",
-                          },
-                          borderRadius: 0,
-                        }
-                      : undefined;
-
-                    return (
-                      <RenamableItemCard
-                        key={tile.file.id}
-                        icon={(() => {
-                          if (previewUrl && isImage) {
-                            return (
-                              <ImagePreviewIcon
-                                nodeFileId={tile.file.id}
-                                fileName={tile.file.name}
-                                previewUrl={previewUrl}
-                              />
-                            );
-                          }
-                          if (previewUrl) {
-                            return (
-                              <Box
-                                component="img"
-                                src={previewUrl}
-                                alt={tile.file.name}
-                                loading="lazy"
-                                decoding="async"
-                                sx={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                }}
-                              />
-                            );
-                          }
-                          return preview;
-                        })()}
-                        title={tile.file.name}
-                        subtitle={formatBytes(tile.file.sizeBytes)}
-                        onClick={
-                          isImage && previewUrl
-                            ? undefined
-                            : () => handleDownloadFile(tile.file.id, tile.file.name)
-                        }
-                        iconContainerSx={iconContainerSx}
-                        actions={[
-                          {
-                            icon: <Edit fontSize="small" />,
-                            onClick: () => fileOps.handleRenameFile(tile.file.id, tile.file.name),
-                            tooltip: t("common:actions.rename"),
-                          },
-                          {
-                            icon: <Delete fontSize="small" />,
-                            onClick: () => fileOps.handleDeleteFile(tile.file.id, tile.file.name),
-                            tooltip: t("common:actions.delete"),
-                          },
-                        ]}
-                        isRenaming={fileOps.renamingFileId === tile.file.id}
-                        renamingValue={fileOps.renamingFileName}
-                        onRenamingValueChange={fileOps.setRenamingFileName}
-                        onConfirmRename={() => {
-                          void fileOps.handleConfirmRename();
-                        }}
-                        onCancelRename={fileOps.handleCancelRename}
-                        placeholder={t("rename.fileNamePlaceholder", { ns: "files" })}
-                      />
-                    );
-                  })}
+                  <Box
+                    sx={{
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 1.5,
+                      overflow: "hidden",
+                      mb: 0.75,
+                      "& > svg": {
+                        width: "70%",
+                        height: "70%",
+                      },
+                    }}
+                  >
+                    <Folder sx={{ color: "primary.main" }} />
+                  </Box>
+                  <TextField
+                    autoFocus
+                    fullWidth
+                    size="small"
+                    value={folderOps.newFolderName}
+                    onChange={(e) => folderOps.setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        void folderOps.handleConfirmNewFolder();
+                      } else if (e.key === "Escape") {
+                        folderOps.handleCancelNewFolder();
+                      }
+                    }}
+                    onBlur={folderOps.handleConfirmNewFolder}
+                    placeholder={t("actions.folderNamePlaceholder")}
+                    slotProps={{
+                      input: {
+                        sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
+                      },
+                    }}
+                  />
                 </Box>
               )}
+
+              {tiles.map((tile) => {
+                if (tile.kind === "folder") {
+                  return (
+                    <FolderCard
+                      key={tile.node.id}
+                      folder={tile.node}
+                      isRenaming={folderOps.renamingFolderId === tile.node.id}
+                      renamingName={folderOps.renamingFolderName}
+                      onRenamingNameChange={folderOps.setRenamingFolderName}
+                      onConfirmRename={folderOps.handleConfirmRename}
+                      onCancelRename={folderOps.handleCancelRename}
+                      onStartRename={() =>
+                        folderOps.handleRenameFolder(
+                          tile.node.id,
+                          tile.node.name,
+                        )
+                      }
+                      onDelete={() =>
+                        folderOps.handleDeleteFolder(
+                          tile.node.id,
+                          tile.node.name,
+                        )
+                      }
+                      onClick={() => navigate(`/files/${tile.node.id}`)}
+                    />
+                  );
+                }
+
+                const isImage = isImageFile(tile.file.name);
+                const preview = getFilePreview(
+                  tile.file.encryptedFilePreviewHashHex ?? null,
+                  tile.file.name,
+                );
+                const previewUrl = typeof preview === "string" ? preview : null;
+
+                const iconContainerSx = previewUrl
+                  ? {
+                      mx: { xs: -1, sm: -1.25, md: -1 },
+                      mt: { xs: -1, sm: -1.25, md: -1 },
+                      width: {
+                        xs: "calc(100% + 16px)",
+                        sm: "calc(100% + 20px)",
+                        md: "calc(100% + 16px)",
+                      },
+                      borderRadius: 0,
+                    }
+                  : undefined;
+
+                return (
+                  <RenamableItemCard
+                    key={tile.file.id}
+                    icon={(() => {
+                      if (previewUrl && isImage) {
+                        return (
+                          <ImagePreviewIcon
+                            nodeFileId={tile.file.id}
+                            fileName={tile.file.name}
+                            previewUrl={previewUrl}
+                          />
+                        );
+                      }
+                      if (previewUrl) {
+                        return (
+                          <Box
+                            component="img"
+                            src={previewUrl}
+                            alt={tile.file.name}
+                            loading="lazy"
+                            decoding="async"
+                            sx={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        );
+                      }
+                      return preview;
+                    })()}
+                    title={tile.file.name}
+                    subtitle={formatBytes(tile.file.sizeBytes)}
+                    onClick={
+                      isImage && previewUrl
+                        ? undefined
+                        : () => handleDownloadFile(tile.file.id, tile.file.name)
+                    }
+                    iconContainerSx={iconContainerSx}
+                    actions={[
+                      {
+                        icon: <Edit />,
+                        onClick: () =>
+                          fileOps.handleRenameFile(
+                            tile.file.id,
+                            tile.file.name,
+                          ),
+                        tooltip: t("common:actions.rename"),
+                      },
+                      {
+                        icon: <Delete />,
+                        onClick: () =>
+                          fileOps.handleDeleteFile(
+                            tile.file.id,
+                            tile.file.name,
+                          ),
+                        tooltip: t("common:actions.delete"),
+                      },
+                    ]}
+                    isRenaming={fileOps.renamingFileId === tile.file.id}
+                    renamingValue={fileOps.renamingFileName}
+                    onRenamingValueChange={fileOps.setRenamingFileName}
+                    onConfirmRename={() => {
+                      void fileOps.handleConfirmRename();
+                    }}
+                    onCancelRename={fileOps.handleCancelRename}
+                    placeholder={t("rename.fileNamePlaceholder", {
+                      ns: "files",
+                    })}
+                  />
+                );
+              })}
             </Box>
-          </Box>
+          )}
+        </Box>
+      </Box>
     </ImageLoaderProvider>
   );
 };

@@ -37,12 +37,12 @@ export const FolderCard = ({
       onClick={onClick}
       actions={[
         {
-          icon: <Edit fontSize="small" />,
+          icon: <Edit />,
           onClick: onStartRename,
           tooltip: t("common:actions.rename"),
         },
         {
-          icon: <Delete fontSize="small" />,
+          icon: <Delete />,
           onClick: onDelete,
           tooltip: t("common:actions.delete"),
         },
