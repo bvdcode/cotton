@@ -7,8 +7,13 @@ import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
+import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
+import Share from "yet-another-react-lightbox/plugins/share";
 import "yet-another-react-lightbox/plugins/counter.css";
 import "yet-another-react-lightbox/plugins/captions.css";
+import "yet-another-react-lightbox/plugins/thumbnails.css";
 
 import type { Slide } from "yet-another-react-lightbox";
 
@@ -49,9 +54,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [index, setIndex] = React.useState(initialIndex);
 
   // map: mediaId -> оригинальный URL (подписанный)
-  const [originalUrls, setOriginalUrls] = React.useState<Record<string, string>>(
-    {}
-  );
+  const [originalUrls, setOriginalUrls] = React.useState<
+    Record<string, string>
+  >({});
 
   // Rebuild slides when originalUrls change
   const slides = React.useMemo(() => {
@@ -68,7 +73,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     if (!open) return;
     // подстрахуемся — загрузим текущий слайд
     void ensureSlideHasOriginal(index);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, index]);
 
   async function ensureSlideHasOriginal(targetIndex: number) {
@@ -83,7 +87,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       // Просто обновляем кэш URL - slides пересоберутся автоматически через useMemo
       setOriginalUrls((prev) => ({ ...prev, [item.id]: url }));
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error("Failed to load media original URL", e);
     }
   }
@@ -92,7 +95,17 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     <Lightbox
       open={open}
       close={onClose}
-      plugins={[Video, Fullscreen, Counter, Captions, Download]}
+      plugins={[
+        Video,
+        Fullscreen,
+        Zoom,
+        Slideshow,
+        Thumbnails,
+        Download,
+        Share,
+        Counter,
+        Captions,
+      ]}
       slides={slides}
       index={index}
       on={{
@@ -100,6 +113,39 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           setIndex(currentIndex);
           void ensureSlideHasOriginal(currentIndex);
         },
+      }}
+      // Настройка Captions - переносим их вниз по центру
+      captions={{
+        descriptionTextAlign: "center",
+        descriptionMaxLines: 1,
+      }}
+      // Настройка Zoom
+      zoom={{
+        maxZoomPixelRatio: 8,
+        zoomInMultiplier: 1,
+        doubleTapDelay: 300,
+        doubleClickDelay: 300,
+        doubleClickMaxStops: 2,
+        keyboardMoveDistance: 50,
+        wheelZoomDistanceFactor: 100,
+        pinchZoomDistanceFactor: 100,
+        scrollToZoom: true,
+      }}
+      // Настройка Slideshow
+      slideshow={{
+        autoplay: false,
+        delay: 3000,
+      }}
+      // Настройка Thumbnails
+      thumbnails={{
+        position: "bottom",
+        width: 120,
+        height: 80,
+        border: 0,
+        borderRadius: 4,
+        padding: 2,
+        gap: 4,
+        showToggle: true,
       }}
       // дефолтные настройки видео
       video={{
@@ -120,7 +166,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 // вспомогательная функция, создает слайды на основе превью и уже известных оригиналов
 function buildSlidesFromItems(
   items: MediaItem[],
-  originalUrls: Record<string, string>
+  originalUrls: Record<string, string>,
 ): Slide[] {
   return items.map<Slide>((item) => {
     const maybeOriginal = originalUrls[item.id];
