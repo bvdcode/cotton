@@ -131,6 +131,7 @@ const LazyVideoContent: React.FC<{
 
   return (
     <video
+      key={fileId}
       controls
       autoPlay
       style={{

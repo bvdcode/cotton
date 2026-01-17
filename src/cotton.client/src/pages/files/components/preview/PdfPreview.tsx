@@ -7,40 +7,67 @@ interface PdfPreviewProps {
   fileName: string;
 }
 
-// Simple URL cache
-const urlCache = new Map<string, string>();
+// Blob URL cache for PDFs
+const blobUrlCache = new Map<string, string>();
 
 export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
-  const [fileUrl, setFileUrl] = useState<string | null>(() => urlCache.get(fileId) ?? null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(() => blobUrlCache.get(fileId) ?? null);
   const [loading, setLoading] = useState(true);
+  const [loadingStage, setLoadingStage] = useState<"link" | "download">("link");
   const [error, setError] = useState<string | null>(null);
 
-  // Load URL on mount
+  // Load PDF as blob on mount
   useEffect(() => {
-    if (fileUrl) {
+    if (blobUrl) {
+      setLoading(false);
       return;
     }
 
     let cancelled = false;
     
-    filesApi.getDownloadLink(fileId, 60 * 24)
-      .then((url) => {
+    const loadPdf = async () => {
+      try {
+        // Step 1: Get download link
+        setLoadingStage("link");
+        const downloadUrl = await filesApi.getDownloadLink(fileId, 60 * 24);
+        
+        if (cancelled) return;
+        
+        // Step 2: Download as blob (use fetch with full URL to avoid baseURL duplication)
+        setLoadingStage("download");
+        const fullUrl = downloadUrl.startsWith("http") 
+          ? downloadUrl 
+          : `${window.location.origin}${downloadUrl}`;
+        const response = await fetch(fullUrl);
+        
+        if (cancelled) return;
+        
+        if (!response.ok) throw new Error("Download failed");
+        
+        // Step 3: Create blob URL
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        
+        blobUrlCache.set(fileId, url);
+        setBlobUrl(url);
+        setLoading(false);
+      } catch {
         if (!cancelled) {
-          urlCache.set(fileId, url);
-          setFileUrl(url);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setError("Failed to load PDF link");
+          setError("Failed to load PDF");
           setLoading(false);
         }
-      });
+      }
+    };
+
+    loadPdf();
 
     return () => {
       cancelled = true;
     };
-  }, [fileId, fileUrl]);
+  }, [fileId, blobUrl]);
+
+  // Cleanup blob URLs when component unmounts (but keep in cache for re-opening)
+  // Note: We don't revoke cached URLs to allow reopening without re-download
 
   const handleLoad = () => {
     setLoading(false);
@@ -48,7 +75,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
 
   const handleError = () => {
     setLoading(false);
-    setError("Failed to load PDF");
+    setError("Failed to display PDF");
   };
 
   return (
@@ -76,7 +103,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
         >
           <CircularProgress />
           <Typography variant="body2" color="text.secondary">
-            {fileUrl ? "Loading PDF..." : "Getting link..."}
+            {loadingStage === "link" ? "Getting link..." : "Downloading PDF..."}
           </Typography>
         </Box>
       )}
@@ -98,10 +125,10 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
           </Typography>
         </Box>
       )}
-      {fileUrl && (
+      {blobUrl && (
         <Box
           component="iframe"
-          src={fileUrl}
+          src={blobUrl}
           title={fileName}
           onLoad={handleLoad}
           onError={handleError}
