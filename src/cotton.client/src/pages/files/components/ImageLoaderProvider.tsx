@@ -1,14 +1,13 @@
 import React, { useState, useCallback } from "react";
-import { PhotoProvider } from "react-photo-view";
 import { filesApi } from "../../../shared/api/filesApi";
 import { ImageLoaderContext } from "./ImageLoaderContext";
 
-type ImageUrlCache = Record<string, string>;
+type UrlCache = Record<string, string>;
 
 export const ImageLoaderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cache, setCache] = useState<ImageUrlCache>({});
+  const [cache, setCache] = useState<UrlCache>({});
   const [loading, setLoading] = useState<Set<string>>(new Set());
-  const [imageIds, setImageIds] = useState<string[]>([]);
+  const [mediaIds, setMediaIds] = useState<string[]>([]);
 
   const preloadImage = useCallback(async (nodeFileId: string) => {
     if (cache[nodeFileId] || loading.has(nodeFileId)) return;
@@ -19,7 +18,7 @@ export const ImageLoaderProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const url = await filesApi.getDownloadLink(nodeFileId, 60 * 24);
       setCache(prev => ({ ...prev, [nodeFileId]: url }));
     } catch (error) {
-      console.error("Failed to preload image:", error);
+      console.error("Failed to preload media:", error);
     } finally {
       setLoading(prev => {
         const next = new Set(prev);
@@ -33,8 +32,12 @@ export const ImageLoaderProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return cache[nodeFileId] ?? previewUrl;
   }, [cache]);
 
+  const getMediaUrl = useCallback((nodeFileId: string): string | null => {
+    return cache[nodeFileId] ?? null;
+  }, [cache]);
+
   const registerImage = useCallback((nodeFileId: string) => {
-    setImageIds(prev => {
+    setMediaIds(prev => {
       if (!prev.includes(nodeFileId)) {
         return [...prev, nodeFileId];
       }
@@ -42,9 +45,20 @@ export const ImageLoaderProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   }, []);
 
+  const registerMedia = useCallback((nodeFileId: string) => {
+    setMediaIds(prev => {
+      if (!prev.includes(nodeFileId)) {
+        return [...prev, nodeFileId];
+      }
+      return prev;
+    });
+    // Start preloading immediately for media files
+    void preloadImage(nodeFileId);
+  }, [preloadImage]);
+
   const handleIndexChange = useCallback((index: number) => {
-    const currentId = imageIds[index];
-    const nextId = imageIds[index + 1];
+    const currentId = mediaIds[index];
+    const nextId = mediaIds[index + 1];
     
     if (currentId) {
       void preloadImage(currentId);
@@ -52,13 +66,18 @@ export const ImageLoaderProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (nextId) {
       void preloadImage(nextId);
     }
-  }, [imageIds, preloadImage]);
+  }, [mediaIds, preloadImage]);
 
   return (
-    <ImageLoaderContext.Provider value={{ getImageUrl, preloadImage, registerImage }}>
-      <PhotoProvider onIndexChange={handleIndexChange}>
-        {children}
-      </PhotoProvider>
+    <ImageLoaderContext.Provider value={{
+      getImageUrl,
+      preloadImage,
+      registerImage,
+      registerMedia,
+      getMediaUrl,
+      handleIndexChange,
+    }}>
+      {children}
     </ImageLoaderContext.Provider>
   );
 };
