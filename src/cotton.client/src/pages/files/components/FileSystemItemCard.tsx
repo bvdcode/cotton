@@ -177,6 +177,20 @@ export const FileSystemItemCard = ({
   const clickable = typeof onClick === "function";
   const [actionsOpen, setActionsOpen] = useState(false);
   const hasActions = Boolean(actions && actions.length > 0);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!actionsOpen) return;
+
+    const handleClickOutside = (e: Event) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActionsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [actionsOpen]);
 
   const handleToggleActions = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -281,6 +295,7 @@ export const FileSystemItemCard = ({
 
           {hasActions && (
             <Box
+              ref={menuRef}
               className="card-menu-slot"
               sx={{
                 width: 0,
