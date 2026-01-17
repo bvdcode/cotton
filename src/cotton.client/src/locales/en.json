@@ -329,6 +329,7 @@
   },
   "upload": {
     "title": "Uploads",
+    "error": "Error",
     "titleWithTotal": "Uploads ({{total}})",
     "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",
     "status": {
