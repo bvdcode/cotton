@@ -12,6 +12,7 @@ namespace Cotton.Previews
         public IEnumerable<string> SupportedContentTypes =>
         [
             "text/plain",
+            "text/markdown",
             "application/xml",
         ];
 
