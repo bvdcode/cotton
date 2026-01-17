@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -505,105 +505,119 @@ const FilesPageContent: React.FC<FilesPageContentProps> = ({
                       }
                     : undefined;
 
-                  return (
-                    <PhotoView
-                      key={tile.file.id}
-                      src={isImage ? (getMediaUrl(tile.file.id) ?? undefined) : undefined}
-                      width={isVideo ? VIDEO_WIDTH : undefined}
-                      height={isVideo ? VIDEO_HEIGHT : undefined}
-                      render={
-                        isVideo
-                          ? renderVideoPreview(
-                              () => getMediaUrl(tile.file.id),
-                              tile.file.name,
-                            )
-                          : undefined
-                      }
-                    >
-                      <RenamableItemCard
-                        icon={(() => {
-                          if (previewUrl && isImage) {
-                            return (
-                              <Box
-                                component="img"
-                                src={previewUrl}
-                                alt={tile.file.name}
-                                loading="lazy"
-                                decoding="async"
-                                sx={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                  cursor: "pointer",
-                                }}
-                              />
-                            );
-                          }
-                          if (previewUrl) {
-                            return (
-                              <Box
-                                component="img"
-                                src={previewUrl}
-                                alt={tile.file.name}
-                                loading="lazy"
-                                decoding="async"
-                                sx={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                }}
-                              />
-                            );
-                          }
-                          return preview;
-                        })()}
-                        title={tile.file.name}
-                        subtitle={formatBytes(tile.file.sizeBytes)}
-                        onClick={
-                          isImage || isVideo
-                            ? undefined
-                            : () =>
-                                handleFileClick(tile.file.id, tile.file.name)
+                  // Common card component
+                  const fileCard = (
+                    <RenamableItemCard
+                      icon={(() => {
+                        if (previewUrl && (isImage || isVideo)) {
+                          return (
+                            <Box
+                              component="img"
+                              src={previewUrl}
+                              alt={tile.file.name}
+                              loading="lazy"
+                              decoding="async"
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                cursor: isImage || isVideo ? "pointer" : "default",
+                              }}
+                            />
+                          );
                         }
-                        iconContainerSx={iconContainerSx}
-                        actions={[
-                          {
-                            icon: <Download />,
-                            onClick: () =>
-                              handleDownloadFile(tile.file.id, tile.file.name),
-                            tooltip: t("common:actions.download"),
-                          },
-                          {
-                            icon: <Edit />,
-                            onClick: () =>
-                              fileOps.handleRenameFile(
-                                tile.file.id,
+                        if (previewUrl) {
+                          return (
+                            <Box
+                              component="img"
+                              src={previewUrl}
+                              alt={tile.file.name}
+                              loading="lazy"
+                              decoding="async"
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          );
+                        }
+                        return preview;
+                      })()}
+                      title={tile.file.name}
+                      subtitle={formatBytes(tile.file.sizeBytes)}
+                      onClick={
+                        isImage || isVideo
+                          ? undefined
+                          : () => handleFileClick(tile.file.id, tile.file.name)
+                      }
+                      iconContainerSx={iconContainerSx}
+                      actions={[
+                        {
+                          icon: <Download />,
+                          onClick: () =>
+                            handleDownloadFile(tile.file.id, tile.file.name),
+                          tooltip: t("common:actions.download"),
+                        },
+                        {
+                          icon: <Edit />,
+                          onClick: () =>
+                            fileOps.handleRenameFile(
+                              tile.file.id,
+                              tile.file.name,
+                            ),
+                          tooltip: t("common:actions.rename"),
+                        },
+                        {
+                          icon: <Delete />,
+                          onClick: () =>
+                            fileOps.handleDeleteFile(
+                              tile.file.id,
+                              tile.file.name,
+                            ),
+                          tooltip: t("common:actions.delete"),
+                        },
+                      ]}
+                      isRenaming={fileOps.renamingFileId === tile.file.id}
+                      renamingValue={fileOps.renamingFileName}
+                      onRenamingValueChange={fileOps.setRenamingFileName}
+                      onConfirmRename={() => {
+                        void fileOps.handleConfirmRename();
+                      }}
+                      onCancelRename={fileOps.handleCancelRename}
+                      placeholder={t("rename.fileNamePlaceholder", {
+                        ns: "files",
+                      })}
+                    />
+                  );
+
+                  // Only wrap images and videos in PhotoView
+                  if (isImage || isVideo) {
+                    return (
+                      <PhotoView
+                        key={tile.file.id}
+                        src={isImage ? (getMediaUrl(tile.file.id) ?? undefined) : undefined}
+                        width={isVideo ? VIDEO_WIDTH : undefined}
+                        height={isVideo ? VIDEO_HEIGHT : undefined}
+                        render={
+                          isVideo
+                            ? renderVideoPreview(
+                                () => getMediaUrl(tile.file.id),
                                 tile.file.name,
-                              ),
-                            tooltip: t("common:actions.rename"),
-                          },
-                          {
-                            icon: <Delete />,
-                            onClick: () =>
-                              fileOps.handleDeleteFile(
-                                tile.file.id,
-                                tile.file.name,
-                              ),
-                            tooltip: t("common:actions.delete"),
-                          },
-                        ]}
-                        isRenaming={fileOps.renamingFileId === tile.file.id}
-                        renamingValue={fileOps.renamingFileName}
-                        onRenamingValueChange={fileOps.setRenamingFileName}
-                        onConfirmRename={() => {
-                          void fileOps.handleConfirmRename();
-                        }}
-                        onCancelRename={fileOps.handleCancelRename}
-                        placeholder={t("rename.fileNamePlaceholder", {
-                          ns: "files",
-                        })}
-                      />
-                    </PhotoView>
+                              )
+                            : undefined
+                        }
+                      >
+                        {fileCard}
+                      </PhotoView>
+                    );
+                  }
+
+                  // Other files without PhotoView wrapper
+                  return (
+                    <React.Fragment key={tile.file.id}>
+                      {fileCard}
+                    </React.Fragment>
                   );
                 })}
               </Box>
