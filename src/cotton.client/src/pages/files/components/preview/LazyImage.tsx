@@ -36,8 +36,7 @@ const getOrLoadUrl = async (fileId: string): Promise<string> => {
 export const LazyImageContent: React.FC<{
   fileId: string;
   fileName: string;
-  style?: React.CSSProperties;
-}> = ({ fileId, fileName, style }) => {
+}> = ({ fileId, fileName }) => {
   const [url, setUrl] = useState<string | null>(() => urlCache.get(fileId) ?? null);
   const [loading, setLoading] = useState(!url);
   const [error, setError] = useState(false);
@@ -78,7 +77,6 @@ export const LazyImageContent: React.FC<{
           height: "100%",
           minHeight: 200,
           bgcolor: "rgba(0,0,0,0.8)",
-          ...style,
         }}
       >
         <CircularProgress sx={{ color: "white" }} />
@@ -98,7 +96,6 @@ export const LazyImageContent: React.FC<{
           minHeight: 200,
           bgcolor: "rgba(0,0,0,0.8)",
           color: "white",
-          ...style,
         }}
       >
         Failed to load {fileName}
@@ -111,10 +108,10 @@ export const LazyImageContent: React.FC<{
       src={url}
       alt={fileName}
       style={{
-        maxWidth: "100%",
+        display: "block",
+        maxWidth: "100vw",
         maxHeight: "90vh",
         objectFit: "contain",
-        ...style,
       }}
     />
   );
@@ -123,8 +120,17 @@ export const LazyImageContent: React.FC<{
 // Render function for PhotoView
 export const renderLazyImage = (fileId: string, fileName: string) => {
   return ({ attrs }: LazyImageRenderProps) => {
+    const { style, ...rest } = attrs;
     return (
-      <div {...attrs}>
+      <div
+        {...rest}
+        style={{
+          ...style,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <LazyImageContent fileId={fileId} fileName={fileName} />
       </div>
     );
