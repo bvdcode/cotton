@@ -64,7 +64,8 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpPatch($"{Routes.Files}/{{nodeFileId:guid}}/rename")]
-        public async Task<IActionResult> RenameFile([FromRoute] Guid nodeFileId,
+        public async Task<IActionResult> RenameFile(
+            [FromRoute] Guid nodeFileId,
             [FromBody] RenameFileRequest request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
@@ -199,6 +200,15 @@ namespace Cotton.Server.Controllers
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
             var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+
+            if (downloadToken.DeleteAfterUse)
+            {
+                Response.OnCompleted(async () =>
+                {
+                    _dbContext.DownloadTokens.Remove(downloadToken);
+                    await _dbContext.SaveChangesAsync();
+                });
+            }
 
             return File(
                 stream,
