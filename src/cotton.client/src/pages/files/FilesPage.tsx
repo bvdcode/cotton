@@ -349,6 +349,7 @@ export const FilesPage: React.FC = () => {
                   sm: "repeat(4, minmax(0, 1fr))",
                   md: "repeat(6, minmax(0, 1fr))",
                   lg: "repeat(8, minmax(0, 1fr))",
+                  xl: "repeat(12, minmax(0, 1fr))",
                 },
               }}
             >
