@@ -48,7 +48,9 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         >
           <Box sx={{ display: "flex", gap: 1, flexGrow: 1 }}>
             {routes.map((route) => {
-              const isActive = location.pathname === route.path;
+              const isActive = route.path === "/"
+                ? location.pathname === route.path
+                : location.pathname.startsWith(route.path);
               return (
                 <Button
                   key={route.path}
