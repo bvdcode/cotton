@@ -39,6 +39,7 @@ namespace Cotton.Server.Controllers
         ILogger<FileController> _logger,
         StorageLayoutService _layouts) : ControllerBase
     {
+        private const int DefaultSharedFileTokenLength = 8;
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
 
         [Authorize]
@@ -140,7 +141,7 @@ namespace Cotton.Server.Controllers
                 CreatedByUserId = User.GetUserId(),
                 FileManifestId = nodeFile.FileManifestId,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = StringHelpers.CreateRandomString(128),
+                Token = StringHelpers.CreateRandomString(DefaultSharedFileTokenLength),
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
             await _dbContext.SaveChangesAsync();
