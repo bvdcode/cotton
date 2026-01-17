@@ -27,6 +27,7 @@
     "react-router-dom": "^7.10.1",
     "react-window": "^2.2.5",
     "vite-plugin-pwa": "^1.2.0",
+    "yet-another-react-lightbox": "^3.28.0",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
