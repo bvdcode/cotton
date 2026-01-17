@@ -2,12 +2,11 @@ import { useEffect, useMemo } from "react";
 import {
   Alert,
   Box,
-  Breadcrumbs,
   IconButton,
-  Link as MuiLink,
   TextField,
   Typography,
 } from "@mui/material";
+import { FileBreadcrumbs } from "./components";
 import {
   ArrowUpward,
   CreateNewFolder,
@@ -17,7 +16,7 @@ import {
   Home,
   UploadFile,
 } from "@mui/icons-material";
-import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
@@ -202,119 +201,47 @@ export const FilesPage: React.FC = () => {
             >
               <Box
                 sx={{
-                  display: { xs: "flex", sm: "none" },
-                  mb: 1,
-                  overflow: "auto",
-                  "&::-webkit-scrollbar": { display: "none" },
-                  msOverflowStyle: "none",
-                  scrollbarWidth: "none",
-                }}
-                ref={(el: HTMLDivElement | null) => {
-                  if (el) el.scrollLeft = el.scrollWidth;
+                  display: "flex",
+                  flexDirection: { xs: "column", sm: "row" },
+                  gap: 1,
+                  alignItems: { xs: "stretch", sm: "center" },
                 }}
               >
-                <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")} sx={{ whiteSpace: "nowrap" }}>
-                  {breadcrumbs
-                    .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
-                    .map((crumb, idx, filtered) => {
-                      const isLast = idx === filtered.length - 1;
-                      if (isLast) {
-                        return (
-                          <Typography key={crumb.id} color="text.primary">
-                            {crumb.name}
-                          </Typography>
-                        );
-                      }
-                      return (
-                        <MuiLink
-                          key={crumb.id}
-                          component={RouterLink}
-                          underline="hover"
-                          color="inherit"
-                          to={`/files/${crumb.id}`}
-                          sx={{ fontSize: "1.1rem" }}
-                        >
-                          {crumb.name}
-                        </MuiLink>
-                      );
-                    })}
-                </Breadcrumbs>
-              </Box>
-
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <IconButton
-                  color="primary"
-                  onClick={handleGoUp}
-                  disabled={loading || ancestors.length === 0}
-                  title={t("actions.goUp")}
-                >
-                  <ArrowUpward />
-                </IconButton>
-                <IconButton
-                  color="primary"
-                  onClick={fileUpload.handleUploadClick}
-                  disabled={!nodeId || loading}
-                  title={t("actions.upload")}
-                >
-                  <UploadFile />
-                </IconButton>
-                <IconButton
-                  color="primary"
-                  onClick={folderOps.handleNewFolder}
-                  disabled={!nodeId || folderOps.isCreatingFolder}
-                  title={t("actions.newFolder")}
-                >
-                  <CreateNewFolder />
-                </IconButton>
-                <IconButton
-                  onClick={() => navigate("/files")}
-                  color="primary"
-                  title={t("breadcrumbs.root")}
-                >
-                  <Home />
-                </IconButton>
-
-                <Box
-                  sx={{
-                    display: { xs: "none", sm: "flex" },
-                    ml: 1,
-                    overflow: "auto",
-                    flex: 1,
-                    "&::-webkit-scrollbar": { display: "none" },
-                    msOverflowStyle: "none",
-                    scrollbarWidth: "none",
-                  }}
-                  ref={(el: HTMLDivElement | null) => {
-                    if (el) el.scrollLeft = el.scrollWidth;
-                  }}
-                >
-                  <Breadcrumbs aria-label={t("breadcrumbs.ariaLabel")} sx={{ whiteSpace: "nowrap" }}>
-                    {breadcrumbs
-                      .filter((crumb, idx) => idx > 0 || crumb.name !== "Default")
-                      .map((crumb, idx, filtered) => {
-                        const isLast = idx === filtered.length - 1;
-                        if (isLast) {
-                          return (
-                            <Typography key={crumb.id} color="text.primary">
-                              {crumb.name}
-                            </Typography>
-                          );
-                        }
-                        return (
-                          <MuiLink
-                            key={crumb.id}
-                            component={RouterLink}
-                            underline="hover"
-                            color="inherit"
-                            to={`/files/${crumb.id}`}
-                            sx={{ fontSize: "1.1rem" }}
-                          >
-                            {crumb.name}
-                          </MuiLink>
-                        );
-                      })}
-                  </Breadcrumbs>
+                <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                  <IconButton
+                    color="primary"
+                    onClick={handleGoUp}
+                    disabled={loading || ancestors.length === 0}
+                    title={t("actions.goUp")}
+                  >
+                    <ArrowUpward />
+                  </IconButton>
+                  <IconButton
+                    color="primary"
+                    onClick={fileUpload.handleUploadClick}
+                    disabled={!nodeId || loading}
+                    title={t("actions.upload")}
+                  >
+                    <UploadFile />
+                  </IconButton>
+                  <IconButton
+                    color="primary"
+                    onClick={folderOps.handleNewFolder}
+                    disabled={!nodeId || folderOps.isCreatingFolder}
+                    title={t("actions.newFolder")}
+                  >
+                    <CreateNewFolder />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => navigate("/files")}
+                    color="primary"
+                    title={t("breadcrumbs.root")}
+                  >
+                    <Home />
+                  </IconButton>
                 </Box>
+
+                <FileBreadcrumbs breadcrumbs={breadcrumbs} />
               </Box>
 
               <Typography
