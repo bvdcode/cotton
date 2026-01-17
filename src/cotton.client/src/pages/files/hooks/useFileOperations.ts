@@ -43,25 +43,17 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
   };
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
-    const confirmed = await Promise.resolve(
-      confirm({
-        title: t("deleteFile.confirmTitle", { ns: "files", name: fileName }),
-        description: t("deleteFile.confirmDescription", { ns: "files" }),
-        confirmationText: t("common:actions.delete"),
-        cancellationText: t("common:actions.cancel"),
-        confirmationButtonProps: { color: "error" },
-      }),
-    )
-      .then((result) => {
-        if (typeof result === "boolean") return result;
-        if (result && typeof result === "object" && "confirmed" in result) {
-          return Boolean((result as { confirmed?: unknown }).confirmed);
-        }
-        return true;
-      })
-      .catch(() => false);
+    const result = await confirm({
+      title: t("deleteFile.confirmTitle", { ns: "files", name: fileName }),
+      description: t("deleteFile.confirmDescription", { ns: "files" }),
+      confirmationText: t("common:actions.delete"),
+      cancellationText: t("common:actions.cancel"),
+      confirmationButtonProps: { color: "error" },
+    });
 
-    if (!confirmed) return;
+    if (!result.confirmed) {
+      return;
+    }
 
     await filesApi.deleteFile(fileId);
 

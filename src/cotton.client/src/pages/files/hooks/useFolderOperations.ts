@@ -10,7 +10,9 @@ export const useFolderOperations = (currentNodeId: string | null) => {
 
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
+  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(
+    null,
+  );
 
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [renamingFolderName, setRenamingFolderName] = useState("");
@@ -72,15 +74,20 @@ export const useFolderOperations = (currentNodeId: string | null) => {
 
   const handleDeleteFolder = async (folderId: string, folderName: string) => {
     try {
-      await confirm({
-        title: t("deleteFolder.confirmTitle", { ns: "files", name: folderName }),
+      const result = await confirm({
+        title: t("deleteFolder.confirmTitle", {
+          ns: "files",
+          name: folderName,
+        }),
         description: t("deleteFolder.confirmDescription", { ns: "files" }),
         confirmationText: t("common:actions.delete"),
         cancellationText: t("common:actions.cancel"),
         confirmationButtonProps: { color: "error" },
       });
 
-      await deleteFolder(folderId, currentNodeId ?? undefined);
+      if (result.confirmed) {
+        await deleteFolder(folderId, currentNodeId ?? undefined);
+      }
     } catch {
       // User cancelled
     }
