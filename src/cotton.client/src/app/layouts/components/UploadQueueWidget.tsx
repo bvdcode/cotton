@@ -118,9 +118,9 @@ export const UploadQueueWidget = () => {
                   speed: formatBytes(totalSpeed),
                 })
               : isCollapsed && allCompleted && hasErrors
-              ? t("error", { defaultValue: "Ошибка" })
+              ? t("error")
               : isCollapsed && allCompleted
-              ? t("title", { defaultValue: "Загрузки" })
+              ? t("title")
               : t("titleWithTotal", { total })}
           </Typography>
           <Box display="flex" gap={0.5}>
