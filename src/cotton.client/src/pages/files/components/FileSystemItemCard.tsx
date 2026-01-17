@@ -255,10 +255,6 @@ export const FileSystemItemCard = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            "& > svg": {
-              width: "70%",
-              height: "70%",
-            },
             ...iconContainerSx,
           }}
         >
@@ -334,6 +330,11 @@ export const FileSystemItemCard = ({
                     display: "flex",
                     flexDirection: "column",
                     gap: 0.75,
+                    bgcolor: "background.paper",
+                    boxShadow: 3,
+                    borderRadius: 1,
+                    py: 0.5,
+                    zIndex: 10,
                     animation: "slideUp 0.2s ease-out",
                     "@keyframes slideUp": {
                       from: {
@@ -356,9 +357,6 @@ export const FileSystemItemCard = ({
                         p: 0.5,
                         width: 28,
                         height: 28,
-                        "& svg": {
-                          fontSize: "1rem",
-                        },
                       }}
                     >
                       {action.icon}
