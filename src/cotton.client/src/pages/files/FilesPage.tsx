@@ -25,7 +25,8 @@ import { useNodesStore } from "../../shared/store/nodesStore";
 import type { NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { filesApi } from "../../shared/api/filesApi";
-import { FolderCard } from "./components/FolderCard";
+import { FolderCard, MediaLightbox } from "./components";
+import type { MediaItem } from "./components";
 import { RenamableItemCard } from "./components/RenamableItemCard";
 import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";
@@ -107,6 +108,38 @@ export const FilesPage: React.FC = () => {
     }
   });
   const { previewState, openPreview, closePreview } = useFilePreview();
+
+  // Media lightbox state
+  const [lightboxOpen, setLightboxOpen] = React.useState(false);
+  const [lightboxIndex, setLightboxIndex] = React.useState(0);
+
+  // Build media items for lightbox (images and videos only)
+  const mediaItems = useMemo<MediaItem[]>(() => {
+    return sortedFiles
+      .filter(file => isImageFile(file.name) || isVideoFile(file.name))
+      .map(file => {
+        const preview = getFilePreview(
+          file.encryptedFilePreviewHashHex ?? null,
+          file.name
+        );
+        const previewUrl = typeof preview === "string" ? preview : "";
+        
+        return {
+          id: file.id,
+          kind: isImageFile(file.name) ? "image" : "video",
+          name: file.name,
+          previewUrl,
+          mimeType: file.name.toLowerCase().endsWith(".mp4") ? "video/mp4" : undefined,
+          sizeBytes: file.sizeBytes,
+        } as MediaItem;
+      });
+  }, [sortedFiles]);
+
+  // Get signed media URL for original file
+  const getSignedMediaUrl = async (fileId: string): Promise<string> => {
+    // Use 24-hour expiry for download link
+    return await filesApi.getDownloadLink(fileId, 60 * 24);
+  };
 
   const stats = useMemo(() => {
     const folders = content?.nodes?.length ?? 0;
@@ -487,7 +520,16 @@ export const FilesPage: React.FC = () => {
                     subtitle={formatBytes(tile.file.sizeBytes)}
                     onClick={
                       isImage || isVideo
-                        ? undefined
+                        ? () => {
+                            // Find index in mediaItems array
+                            const mediaIndex = mediaItems.findIndex(
+                              (item) => item.id === tile.file.id
+                            );
+                            if (mediaIndex !== -1) {
+                              setLightboxIndex(mediaIndex);
+                              setLightboxOpen(true);
+                            }
+                          }
                         : () => handleFileClick(tile.file.id, tile.file.name)
                     }
                     iconContainerSx={iconContainerSx}
@@ -548,6 +590,16 @@ export const FilesPage: React.FC = () => {
             />
           )}
         </PreviewModal>
+      )}
+
+      {lightboxOpen && mediaItems.length > 0 && (
+        <MediaLightbox
+          items={mediaItems}
+          open={lightboxOpen}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+          getSignedMediaUrl={getSignedMediaUrl}
+        />
       )}
     </>
   );
