@@ -1,5 +1,6 @@
 import {
   Box,
+  Divider,
   IconButton,
   LinearProgress,
   Paper,
@@ -154,10 +155,16 @@ export const UploadQueueWidget = () => {
               },
             }}
           >
-            {tasks.map((task) => (
+            {tasks.map((task, idx) => (
               <Box key={task.id}>
-                <Box display="flex" justifyContent="space-between" gap={1}>
-                  <Typography variant="body2" noWrap title={task.fileName}>
+                {idx > 0 && <Divider sx={{ mb: 1 }} />}
+                <Box>
+                  <Typography 
+                    variant="body2" 
+                    noWrap 
+                    title={task.fileName}
+                    sx={{ fontWeight: 500 }}
+                  >
                     {task.fileName}
                   </Typography>
                   <Typography
@@ -165,6 +172,12 @@ export const UploadQueueWidget = () => {
                     color="text.secondary"
                     noWrap
                     title={task.nodeLabel}
+                    sx={{
+                      display: "block",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     {task.nodeLabel}
                   </Typography>
