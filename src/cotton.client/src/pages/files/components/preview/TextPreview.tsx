@@ -218,7 +218,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
           borderRadius: "10px 10px 0 0",
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mr: 2 }}>
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ mr: 5 }}>
           <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
             {fileName}
           </Typography>
