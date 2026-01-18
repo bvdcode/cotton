@@ -212,25 +212,10 @@ namespace Cotton.Server.Controllers
             }
 
             var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
-            if (!download)
-            {
-                Response.Headers.ContentDisposition = new ContentDisposition
-                {
-                    DispositionType = "inline",
-                    FileName = nodeFile.Name
-                }.ToString();
-
-                return File(
-                    stream,
-                    nodeFile.FileManifest.ContentType,
-                    lastModified: lastModified,
-                    entityTag: entityTag,
-                    enableRangeProcessing: true);
-            }
             return File(
                 stream,
                 nodeFile.FileManifest.ContentType,
-                nodeFile.Name,
+                fileDownloadName: download ? nodeFile.Name : null,
                 lastModified: lastModified,
                 entityTag: entityTag,
                 enableRangeProcessing: true);

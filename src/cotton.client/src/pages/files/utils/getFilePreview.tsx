@@ -1,6 +1,24 @@
-import { InsertDriveFile, Image } from "@mui/icons-material";
+import { InsertDriveFile, Image, Folder } from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
 import type { ReactNode } from "react";
+
+const ICON_FONT_SIZE = 120;
+
+/**
+ * Get folder icon with consistent sizing
+ */
+export function getFolderIcon(): ReactNode {
+  return (
+    <Folder 
+      sx={{ 
+        fontSize: ICON_FONT_SIZE,
+        color: (theme) => theme.palette.mode === 'light' 
+          ? 'rgba(0, 0, 0, 0.26)' 
+          : 'inherit'
+      }} 
+    />
+  );
+}
 
 /**
  * Get the preview image source or icon for a file
@@ -19,8 +37,6 @@ export function getFilePreview(
     )}.webp`;
   }
 
-  const iconFontSize = 120;
-
   // Fallback to icon based on file extension
   const extension = fileName.toLowerCase().split(".").pop() || "";
 
@@ -28,7 +44,7 @@ export function getFilePreview(
   const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
 
   if (imageExtensions.includes(extension)) {
-    return <Image sx={{ fontSize: iconFontSize }} />;
+    return <Image sx={{ fontSize: ICON_FONT_SIZE }} />;
   }
 
   const maxExtensionLength = 6;
@@ -40,14 +56,15 @@ export function getFilePreview(
   return (
     <Box sx={{ position: "relative", display: "inline-flex" }}>
       <InsertDriveFile
-        color="primary"
         sx={{
-          fontSize: iconFontSize,
+          fontSize: ICON_FONT_SIZE,
+          color: (theme) => theme.palette.mode === 'light' 
+            ? 'rgba(0, 0, 0, 0.26)' 
+            : 'inherit'
         }}
       />
       <Typography
         variant="caption"
-        color="textSecondary"
         sx={{
           position: "absolute",
           top: "54%",
@@ -56,6 +73,9 @@ export function getFilePreview(
           fontWeight: 700,
           fontSize: 14,
           textTransform: "uppercase",
+          color: (theme) => theme.palette.mode === 'light'
+            ? 'rgba(0, 0, 0, 0.6)'
+            : 'text.secondary',
           pointerEvents: "none",
         }}
       >
