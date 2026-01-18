@@ -56,6 +56,7 @@ namespace Cotton.Previews
             {
                 Size = new Size(size, size),
                 Mode = ResizeMode.Crop,
+                Position = AnchorPositionMode.TopLeft,
                 Sampler = KnownResamplers.Lanczos3
             }));
 
