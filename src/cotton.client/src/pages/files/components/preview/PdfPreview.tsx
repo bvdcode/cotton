@@ -36,18 +36,11 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
         const fullUrl = downloadUrl.startsWith("http") 
           ? downloadUrl 
           : `${window.location.origin}${downloadUrl}`;
-        const response = await fetch(fullUrl);
+        // Add download=false for inline preview
+        const previewUrl = fullUrl + (fullUrl.includes('?') ? '&' : '?') + 'download=false';
         
-        if (cancelled) return;
-        
-        if (!response.ok) throw new Error("Download failed");
-        
-        // Step 3: Create blob URL
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        
-        blobUrlCache.set(fileId, url);
-        setBlobUrl(url);
+        // Use URL directly for iframe - no need for blob!
+        setBlobUrl(previewUrl);
         setLoading(false);
       } catch {
         if (!cancelled) {
