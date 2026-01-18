@@ -1,6 +1,7 @@
-import { Dialog, IconButton, Box } from "@mui/material";
+import { Dialog, IconButton, Box, useMediaQuery } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import type { ReactNode } from "react";
+import { useTheme } from "@mui/material/styles";
 
 interface PreviewModalProps {
   open: boolean;
@@ -8,17 +9,26 @@ interface PreviewModalProps {
   children: ReactNode;
 }
 
-export const PreviewModal = ({ open, onClose, children }: PreviewModalProps) => {
+export const PreviewModal = ({
+  open,
+  onClose,
+  children,
+}: PreviewModalProps) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
       maxWidth="lg"
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
         sx: {
-          height: "90vh",
-          maxHeight: "90vh",
+          height: { xs: "100dvh", sm: "90dvh", md: "90vh" },
+          maxHeight: { xs: "100dvh", sm: "90dvh", md: "90vh" },
+          borderRadius: { xs: 0, sm: 2, md: 2 },
         },
       }}
     >
@@ -33,8 +43,8 @@ export const PreviewModal = ({ open, onClose, children }: PreviewModalProps) => 
         <Box
           sx={{
             position: "absolute",
-            top: 8,
-            right: 8,
+            top: "calc(env(safe-area-inset-top, 0px) + 8px)",
+            right: "calc(env(safe-area-inset-right, 0px) + 8px)",
             zIndex: 1,
           }}
         >
