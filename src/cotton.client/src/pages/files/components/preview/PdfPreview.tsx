@@ -39,7 +39,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
           : `${window.location.origin}${downloadUrl}`;
         const previewUrl =
           fullUrl + (fullUrl.includes("?") ? "&" : "?") + "download=false";
-        
+
         const response = await fetch(previewUrl);
 
         if (cancelled) return;
