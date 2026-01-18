@@ -1,0 +1,44 @@
+/**
+ * Auto-hide controls in media lightbox gallery
+ * 
+ * Architecture:
+ * - Controls fade out after 2.5s of inactivity
+ * - Smoothly reappear on any user interaction (move, click, scroll, touch)
+ * - Cursor also hides for immersive viewing experience
+ * 
+ * Implementation:
+ * - useActivityDetection hook tracks user activity
+ * - CSS classes control visibility with smooth transitions
+ * - Works with all YARL plugins (zoom, video, thumbnails, etc.)
+ */
+
+/* Base state: controls visible with smooth transitions */
+.lightbox-autohide .yarl__toolbar,
+.lightbox-autohide .yarl__navigation_prev,
+.lightbox-autohide .yarl__navigation_next,
+.lightbox-autohide .yarl__slide_title_container,
+.lightbox-autohide .yarl__slide_description_container {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Idle state: controls hidden */
+.lightbox-autohide--idle .yarl__toolbar,
+.lightbox-autohide--idle .yarl__navigation_prev,
+.lightbox-autohide--idle .yarl__navigation_next,
+.lightbox-autohide--idle .yarl__slide_title_container,
+.lightbox-autohide--idle .yarl__slide_description_container {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Keep cursor visible when active */
+.lightbox-autohide {
+  cursor: default;
+}
+
+/* Hide cursor when idle for immersive viewing */
+.lightbox-autohide--idle {
+  cursor: none;
+}
