@@ -1,6 +1,7 @@
 import React from "react";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
+import "./MediaLightbox.css";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
@@ -21,6 +22,7 @@ import {
   Slideshow as SlideshowIcon,
   ViewCarousel,
 } from "@mui/icons-material";
+import { useActivityDetection } from "../hooks/useActivityDetection";
 
 type MediaKind = "image" | "video";
 
@@ -57,6 +59,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [index, setIndex] = React.useState(initialIndex);
   const thumbnailsRef = React.useRef(null);
 
+  // Auto-hide controls after 2.5 seconds of inactivity
+  const isActive = useActivityDetection(2500);
+
   const [originalUrls, setOriginalUrls] = React.useState<
     Record<string, string>
   >({});
@@ -92,10 +97,17 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     void ensureSlideHasOriginal(index);
   }, [open, index, ensureSlideHasOriginal]);
 
+  // Build className based on activity state
+  const lightboxClassName = [
+    "lightbox-autohide",
+    isActive ? "lightbox-autohide--active" : "lightbox-autohide--idle",
+  ].join(" ");
+
   return (
     <Lightbox
       open={open}
       close={onClose}
+      className={lightboxClassName}
       plugins={[
         Video,
         Zoom,
