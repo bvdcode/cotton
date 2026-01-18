@@ -16,7 +16,11 @@ import { useTranslation } from "react-i18next";
 import type { Guid } from "../../../../shared/api/layoutsApi";
 import { filesApi } from "../../../../shared/api/filesApi";
 import { chunksApi } from "../../../../shared/api/chunksApi";
-import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "../../../../shared/upload/hash/hashing";
+import {
+  createIncrementalHasher,
+  hashBytes,
+  toWebCryptoAlgorithm,
+} from "../../../../shared/upload/hash/hashing";
 import { uploadConfig } from "../../../../shared/upload/config";
 import { useServerSettings } from "../../../../shared/store/useServerSettings";
 import { useTheme } from "../../../../app/providers/useTheme";
@@ -57,7 +61,11 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
         const response = await fetch(downloadUrl);
 
         if (!response.ok) {
-          throw new Error(t("files.preview.errors.loadFailed", { error: response.statusText }));
+          throw new Error(
+            t("files.preview.errors.loadFailed", {
+              error: response.statusText,
+            }),
+          );
         }
 
         const text = await response.text();
@@ -75,7 +83,9 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : t("files.preview.errors.loadFailed", { error: "" }),
+            err instanceof Error
+              ? err.message
+              : t("files.preview.errors.loadFailed", { error: "" }),
           );
           setLoading(false);
         }
@@ -103,7 +113,9 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
 
       // Use server settings for chunking
       const chunkSize = Math.max(1, serverSettings.maxChunkSizeBytes);
-      const algorithm = toWebCryptoAlgorithm(serverSettings.supportedHashAlgorithm);
+      const algorithm = toWebCryptoAlgorithm(
+        serverSettings.supportedHashAlgorithm,
+      );
       const sendChunkHash = uploadConfig.sendChunkHashForValidation;
 
       const chunkCount = Math.ceil(bytes.length / chunkSize);
@@ -157,7 +169,9 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       setIsEditing(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : t("files.preview.errors.saveFailed"),
+        err instanceof Error
+          ? err.message
+          : t("files.preview.errors.saveFailed"),
       );
     } finally {
       setSaving(false);
@@ -234,7 +248,9 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
                 onClick={handleSave}
                 disabled={!hasChanges || saving}
               >
-                {saving ? t("files.preview.actions.saving") : t("files.preview.actions.save")}
+                {saving
+                  ? t("files.preview.actions.saving")
+                  : t("files.preview.actions.save")}
               </Button>
             </>
           )}
