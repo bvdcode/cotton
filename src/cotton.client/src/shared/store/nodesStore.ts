@@ -51,13 +51,20 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     const state = get();
     if (state.loading && state.currentNode?.id === nodeId) return;
 
-    set({ loading: true, error: null });
+    const cachedContent = state.contentByNodeId[nodeId];
+    const hasCachedData = !!cachedContent;
+
+    if (hasCachedData) {
+      set({ loading: false, error: null });
+    } else {
+      set({ loading: true, error: null });
+    }
 
     try {
       const [node, ancestors, content] = await Promise.all([
         nodesApi.getNode(nodeId),
         nodesApi.getAncestors(nodeId),
-        nodesApi.getChildren(nodeId),
+        hasCachedData ? Promise.resolve(cachedContent) : nodesApi.getChildren(nodeId),
       ]);
 
       set((prev) => ({
@@ -74,6 +81,20 @@ export const useNodesStore = create<NodesState>((set, get) => ({
         loading: false,
         error: null,
       }));
+
+      if (hasCachedData) {
+        const freshContent = await nodesApi.getChildren(nodeId);
+        set((prev) => ({
+          contentByNodeId: {
+            ...prev.contentByNodeId,
+            [nodeId]: freshContent,
+          },
+          lastUpdatedByNodeId: {
+            ...prev.lastUpdatedByNodeId,
+            [nodeId]: Date.now(),
+          },
+        }));
+      }
     } catch (error) {
       console.error("Failed to load node view", error);
       set({ loading: false, error: "Failed to load folder contents" });

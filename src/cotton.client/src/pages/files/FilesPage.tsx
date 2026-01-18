@@ -4,6 +4,7 @@ import {
   Box,
   Divider,
   IconButton,
+  LinearProgress,
   TextField,
   Typography,
 } from "@mui/material";
@@ -249,6 +250,16 @@ export const FilesPage: React.FC = () => {
             paddingBottom: 1,
           }}
         >
+          {loading && (
+            <LinearProgress
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+              }}
+            />
+          )}
           <Box
             sx={{
               display: "flex",
