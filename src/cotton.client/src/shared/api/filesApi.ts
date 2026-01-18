@@ -8,6 +8,7 @@ export interface CreateFileFromChunksRequest {
   contentType: string;
   hash: string | null;
   originalNodeFileId?: Guid | null;
+  baseManifestId?: Guid | null;
 }
 
 export interface RenameFileRequest {
