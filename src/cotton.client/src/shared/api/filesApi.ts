@@ -15,11 +15,24 @@ export interface RenameFileRequest {
   name: string;
 }
 
+export interface UpdateFileContentRequest {
+  chunkHashes: string[];
+  hash: string;
+  baseManifestId: Guid;
+}
+
 export const filesApi = {
   createFromChunks: async (
     request: CreateFileFromChunksRequest,
   ): Promise<void> => {
     await httpClient.post("/files/from-chunks", request);
+  },
+
+  updateFileContent: async (
+    nodeFileId: Guid,
+    request: UpdateFileContentRequest,
+  ): Promise<void> => {
+    await httpClient.patch(`/files/${nodeFileId}/update-content`, request);
   },
 
   getDownloadLink: async (

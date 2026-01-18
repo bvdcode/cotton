@@ -2,7 +2,7 @@
  * File type detection utilities for preview system
  */
 
-export type FileType = 'image' | 'pdf' | 'video' | 'audio' | 'document' | 'archive' | 'other';
+export type FileType = 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'document' | 'archive' | 'other';
 
 export interface FileTypeInfo {
   type: FileType;
@@ -14,7 +14,8 @@ const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
 const PDF_EXTENSIONS = ['pdf'];
 const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
 const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'm4a'];
-const DOCUMENT_EXTENSIONS = ['doc', 'docx', 'txt', 'rtf', 'odt'];
+const TEXT_EXTENSIONS = ['txt', 'md', 'markdown', 'json', 'xml', 'csv', 'log', 'yaml', 'yml', 'ini', 'conf', 'config'];
+const DOCUMENT_EXTENSIONS = ['doc', 'docx', 'rtf', 'odt'];
 const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
 
 export const getFileExtension = (fileName: string): string => {
@@ -41,6 +42,11 @@ export const isAudioFile = (fileName: string): boolean => {
   return AUDIO_EXTENSIONS.includes(ext);
 };
 
+export const isTextFile = (fileName: string): boolean => {
+  const ext = getFileExtension(fileName);
+  return TEXT_EXTENSIONS.includes(ext);
+};
+
 export const getFileTypeInfo = (fileName: string): FileTypeInfo => {
   const ext = getFileExtension(fileName);
 
@@ -55,6 +61,9 @@ export const getFileTypeInfo = (fileName: string): FileTypeInfo => {
   }
   if (AUDIO_EXTENSIONS.includes(ext)) {
     return { type: 'audio', supportsPreview: true, supportsInlineView: true };
+  }
+  if (TEXT_EXTENSIONS.includes(ext)) {
+    return { type: 'text', supportsPreview: true, supportsInlineView: true };
   }
   if (DOCUMENT_EXTENSIONS.includes(ext)) {
     return { type: 'document', supportsPreview: false, supportsInlineView: false };
