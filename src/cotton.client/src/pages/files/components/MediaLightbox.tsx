@@ -163,7 +163,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         autoPlay: true,
       }}
       carousel={{
-        finite: false,
+        finite: true,
         preload: 2,
         imageFit: "contain",
       }}
