@@ -40,14 +40,6 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  // TODO: Backend must expose fileManifestId in NodeFileManifestDto response
-  // This is required for the update-content endpoint to validate we're editing
-  // the correct version of the file
-  const [fileManifestId, setFileManifestId] = useState<Guid>("");
-
-  const isMarkdown =
-    fileName.toLowerCase().endsWith(".md") ||
-    fileName.toLowerCase().endsWith(".markdown");
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +61,6 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
         }
 
         const text = await response.text();
-        setFileManifestId(nodeFileId);
         if (!cancelled) {
           setContent(text);
           setOriginalContent(text);
@@ -154,7 +145,6 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       await filesApi.updateFileContent(nodeFileId, {
         chunkHashes: chunkHashesByIndex,
         hash: fileHash,
-        baseManifestId: fileManifestId,
         contentType: "text/plain",
         name: fileName,
         nodeId: nodeFileId,
@@ -253,48 +243,14 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       </Paper>
 
       <Box sx={{ flexGrow: 1, overflow: "auto" }} data-color-mode={mode}>
-        {isMarkdown ? (
-          <MDEditor
-            value={content}
-            onChange={setContent}
-            preview={isEditing ? "edit" : "preview"}
-            hideToolbar={!isEditing}
-            height="100%"
-            visibleDragbar={false}
-          />
-        ) : (
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              height: "100%",
-              overflow: "auto",
-              fontFamily: "monospace",
-              fontSize: "14px",
-              whiteSpace: "pre-wrap",
-              backgroundColor: isEditing ? "background.paper" : "grey.50",
-            }}
-          >
-            {isEditing ? (
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                  outline: "none",
-                  fontFamily: "inherit",
-                  fontSize: "inherit",
-                  resize: "none",
-                  backgroundColor: "transparent",
-                }}
-              />
-            ) : (
-              content
-            )}
-          </Paper>
-        )}
+        <MDEditor
+          value={content}
+          onChange={setContent}
+          preview={isEditing ? "edit" : "preview"}
+          hideToolbar={!isEditing}
+          height="100%"
+          visibleDragbar={false}
+        />
       </Box>
     </Box>
   );
