@@ -1,5 +1,6 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../../shared/api/filesApi";
 
 interface PdfPreviewProps {
@@ -11,6 +12,7 @@ interface PdfPreviewProps {
 const blobUrlCache = new Map<string, string>();
 
 export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
+  const { t } = useTranslation();
   const cachedBlobUrl = blobUrlCache.get(fileId);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
   const [loading, setLoading] = useState(!cachedBlobUrl);
@@ -44,7 +46,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
 
         if (cancelled) return;
 
-        if (!response.ok) throw new Error("Download failed");
+        if (!response.ok) throw new Error(t("files.preview.errors.downloadFailed"));
 
         // Step 3: Create blob URL
         // Blob URLs are not intercepted by React Router and work in iframe
@@ -56,7 +58,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
         setLoading(false);
       } catch {
         if (!cancelled) {
-          setError("Failed to load PDF");
+          setError(t("files.preview.errors.pdfLoadFailed"));
           setLoading(false);
         }
       }
@@ -67,7 +69,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
     return () => {
       cancelled = true;
     };
-  }, [fileId, blobUrl]);
+  }, [fileId, blobUrl, t]);
 
   // Cleanup blob URLs when component unmounts (but keep in cache for re-opening)
   // Note: We don't revoke cached URLs to allow reopening without re-download
@@ -78,7 +80,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
 
   const handleError = () => {
     setLoading(false);
-    setError("Failed to display PDF");
+    setError(t("files.preview.errors.pdfDisplayFailed"));
   };
 
   return (

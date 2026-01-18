@@ -12,10 +12,14 @@ import MDEditor from "@uiw/react-md-editor";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
+import { useTranslation } from "react-i18next";
 import type { Guid } from "../../../../shared/api/layoutsApi";
 import { filesApi } from "../../../../shared/api/filesApi";
 import { chunksApi } from "../../../../shared/api/chunksApi";
-import { hashBytes } from "../../../../shared/upload/hash/hashing";
+import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "../../../../shared/upload/hash/hashing";
+import { uploadConfig } from "../../../../shared/upload/config";
+import { useServerSettings } from "../../../../shared/store/useServerSettings";
+import { useTheme } from "../../../../app/providers/useTheme";
 
 interface TextPreviewProps {
   nodeFileId: Guid;
@@ -23,6 +27,9 @@ interface TextPreviewProps {
 }
 
 export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
+  const { t } = useTranslation();
+  const { mode } = useTheme();
+  const { data: serverSettings } = useServerSettings();
   const [content, setContent] = useState<string | undefined>(undefined);
   const [originalContent, setOriginalContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -50,7 +57,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
         const response = await fetch(downloadUrl);
 
         if (!response.ok) {
-          throw new Error(`Failed to load file: ${response.statusText}`);
+          throw new Error(t("files.preview.errors.loadFailed", { error: response.statusText }));
         }
 
         const text = await response.text();
@@ -68,7 +75,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Failed to load file content",
+            err instanceof Error ? err.message : t("files.preview.errors.loadFailed", { error: "" }),
           );
           setLoading(false);
         }
@@ -80,10 +87,10 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
     return () => {
       cancelled = true;
     };
-  }, [nodeFileId]);
+  }, [nodeFileId, t]);
 
   const handleSave = async () => {
-    if (!content || content === originalContent) return;
+    if (!content || content === originalContent || !serverSettings) return;
 
     try {
       setSaving(true);
@@ -92,28 +99,54 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       // Convert content to blob
       const blob = new Blob([content], { type: "text/plain" });
       const arrayBuffer = await blob.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
+      const bytes = new Uint8Array(arrayBuffer);
 
-      // Hash the entire content
-      const contentHash = await hashBytes(uint8Array, "SHA-256");
+      // Use server settings for chunking
+      const chunkSize = Math.max(1, serverSettings.maxChunkSizeBytes);
+      const algorithm = toWebCryptoAlgorithm(serverSettings.supportedHashAlgorithm);
+      const sendChunkHash = uploadConfig.sendChunkHashForValidation;
 
-      // For simplicity, upload as single chunk
-      // In production, you might want to chunk large files
-      const chunkHash = contentHash;
+      const chunkCount = Math.ceil(bytes.length / chunkSize);
+      const chunkHashesByIndex: string[] = new Array(chunkCount);
 
-      // Check if chunk exists
-      const exists = await chunksApi.exists(chunkHash);
-      if (!exists) {
-        await chunksApi.uploadChunk({
-          blob,
-          fileName,
-          hash: chunkHash,
-        });
+      // Compute whole-file hash while processing chunks
+      const fileHasher = await createIncrementalHasher(algorithm);
+
+      for (let index = 0; index < chunkCount; index += 1) {
+        const start = index * chunkSize;
+        const end = Math.min(bytes.length, start + chunkSize);
+        const chunkBytes = bytes.slice(start, end);
+        const chunk = new Blob([chunkBytes], { type: "text/plain" });
+
+        // Update file hasher and compute chunk hash
+        fileHasher.update(chunkBytes);
+        const chunkHash = await hashBytes(chunkBytes, algorithm);
+        chunkHashesByIndex[index] = chunkHash;
+
+        // Upload chunk if needed
+        if (sendChunkHash) {
+          const exists = await chunksApi.exists(chunkHash);
+          if (!exists) {
+            await chunksApi.uploadChunk({
+              blob: chunk,
+              fileName,
+              hash: chunkHash,
+            });
+          }
+        } else {
+          await chunksApi.uploadChunk({
+            blob: chunk,
+            fileName,
+            hash: null,
+          });
+        }
       }
 
+      const fileHash = fileHasher.digestHex();
+
       await filesApi.updateFileContent(nodeFileId, {
-        chunkHashes: [chunkHash],
-        hash: contentHash,
+        chunkHashes: chunkHashesByIndex,
+        hash: fileHash,
         baseManifestId: fileManifestId,
         contentType: "text/plain",
         name: fileName,
@@ -124,7 +157,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       setIsEditing(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to save file content",
+        err instanceof Error ? err.message : t("files.preview.errors.saveFailed"),
       );
     } finally {
       setSaving(false);
@@ -171,7 +204,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
           borderRadius: "10px 10px 0 0",
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ mr: 2 }}>
           <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
             {fileName}
           </Typography>
@@ -181,7 +214,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
               startIcon={<EditIcon />}
               onClick={() => setIsEditing(true)}
             >
-              Edit
+              {t("files.preview.actions.edit")}
             </Button>
           )}
           {isEditing && (
@@ -192,7 +225,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
                 onClick={handleCancel}
                 disabled={saving}
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 size="small"
@@ -201,14 +234,14 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
                 onClick={handleSave}
                 disabled={!hasChanges || saving}
               >
-                {saving ? "Saving..." : "Save"}
+                {saving ? t("files.preview.actions.saving") : t("files.preview.actions.save")}
               </Button>
             </>
           )}
         </Stack>
       </Paper>
 
-      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }} data-color-mode="light">
+      <Box sx={{ flexGrow: 1, overflow: "auto" }} data-color-mode={mode}>
         {isMarkdown ? (
           <MDEditor
             value={content}

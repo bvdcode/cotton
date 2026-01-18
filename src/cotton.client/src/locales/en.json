@@ -326,6 +326,20 @@
     },
     "rename": {
       "fileNamePlaceholder": "File name"
+    },
+    "preview": {
+      "actions": {
+        "edit": "Edit",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "errors": {
+        "loadFailed": "Failed to load file{{error}}",
+        "saveFailed": "Failed to save file content",
+        "downloadFailed": "Download failed",
+        "pdfLoadFailed": "Failed to load PDF",
+        "pdfDisplayFailed": "Failed to display PDF"
+      }
     }
   },
   "upload": {

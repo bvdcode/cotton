@@ -326,6 +326,20 @@
     },
     "rename": {
       "fileNamePlaceholder": "Имя файла"
+    },
+    "preview": {
+      "actions": {
+        "edit": "Редактировать",
+        "save": "Сохранить",
+        "saving": "Сохранение..."
+      },
+      "errors": {
+        "loadFailed": "Не удалось загрузить файл{{error}}",
+        "saveFailed": "Не удалось сохранить содержимое файла",
+        "downloadFailed": "Не удалось загрузить",
+        "pdfLoadFailed": "Не удалось загрузить PDF",
+        "pdfDisplayFailed": "Не удалось отобразить PDF"
+      }
     }
   },
   "upload": {
