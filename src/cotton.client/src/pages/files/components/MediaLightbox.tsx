@@ -1,9 +1,7 @@
 import React from "react";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
-
 import Video from "yet-another-react-lightbox/plugins/video";
-import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
@@ -14,8 +12,15 @@ import Share from "yet-another-react-lightbox/plugins/share";
 import "yet-another-react-lightbox/plugins/counter.css";
 import "yet-another-react-lightbox/plugins/captions.css";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
-
 import type { Slide } from "yet-another-react-lightbox";
+import {
+  Close,
+  Share as ShareIcon,
+  Pause as PauseIcon,
+  Download as DownloadIcon,
+  Slideshow as SlideshowIcon,
+  ViewCarousel,
+} from "@mui/icons-material";
 
 type MediaKind = "image" | "video";
 
@@ -93,7 +98,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       close={onClose}
       plugins={[
         Video,
-        Fullscreen,
         Zoom,
         Slideshow,
         Thumbnails,
@@ -109,6 +113,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           setIndex(currentIndex);
           void ensureSlideHasOriginal(currentIndex);
         },
+      }}
+      render={{
+        iconZoomIn: () => null,
+        iconZoomOut: () => null,
+        iconClose: () => <Close />,
+        iconShare: () => <ShareIcon />,
+        iconDownload: () => <DownloadIcon />,
+        iconSlideshowPause: () => <PauseIcon />,
+        iconSlideshowPlay: () => <SlideshowIcon />,
+        iconThumbnailsVisible: () => <ViewCarousel />,
       }}
       captions={{
         descriptionTextAlign: "center",
