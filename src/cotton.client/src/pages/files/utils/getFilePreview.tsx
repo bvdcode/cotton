@@ -39,9 +39,15 @@ export function getFilePreview(
 
   return (
     <Box sx={{ position: "relative", display: "inline-flex" }}>
-      <InsertDriveFile sx={{ fontSize: iconFontSize }} />
+      <InsertDriveFile
+        color="primary"
+        sx={{
+          fontSize: iconFontSize,
+        }}
+      />
       <Typography
         variant="caption"
+        color="textSecondary"
         sx={{
           position: "absolute",
           top: "54%",
@@ -50,7 +56,6 @@ export function getFilePreview(
           fontWeight: 700,
           fontSize: 14,
           textTransform: "uppercase",
-          color: "text.secondary",
           pointerEvents: "none",
         }}
       >
