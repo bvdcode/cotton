@@ -25,7 +25,7 @@ import { MediaLightbox } from "./components";
 import type { MediaItem } from "./components";
 import { formatBytes } from "./utils/formatBytes";
 import { isImageFile, isVideoFile } from "./utils/fileTypes";
-import { getFilePreview } from "./utils/getFilePreview";
+import { getFileIcon } from "./utils/icons";
 import { PreviewModal, PdfPreview } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
@@ -159,7 +159,7 @@ export const FilesPage: React.FC = () => {
     return sortedFiles
       .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
       .map((file) => {
-        const preview = getFilePreview(
+        const preview = getFileIcon(
           file.encryptedFilePreviewHashHex ?? null,
           file.name,
         );
