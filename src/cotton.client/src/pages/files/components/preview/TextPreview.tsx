@@ -69,12 +69,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
         }
 
         const text = await response.text();
-
-        // TODO: Get fileManifestId from API response
-        // For now, we'll use nodeFileId as a placeholder
-        // Backend needs to add fileManifestId to NodeFileManifestDto
         setFileManifestId(nodeFileId);
-
         if (!cancelled) {
           setContent(text);
           setOriginalContent(text);
