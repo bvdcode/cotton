@@ -115,6 +115,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         },
       }}
       render={{
+        buttonZoom: () => null,
         iconZoomIn: () => null,
         iconZoomOut: () => null,
         iconClose: () => <Close />,
@@ -123,6 +124,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         iconSlideshowPause: () => <PauseIcon />,
         iconSlideshowPlay: () => <SlideshowIcon />,
         iconThumbnailsVisible: () => <ViewCarousel />,
+        iconThumbnailsHidden: () => <ViewCarousel />,
       }}
       captions={{
         descriptionTextAlign: "center",
