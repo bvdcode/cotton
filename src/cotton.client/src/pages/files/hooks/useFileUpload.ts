@@ -41,7 +41,8 @@ export const useFileUpload = (
       const list = Array.isArray(files) ? files : Array.from(files);
       if (list.length === 0) return;
 
-      const contentForCheck = content ?? (await nodesApi.getChildren(nodeId));
+      const contentForCheck =
+        content ?? (await nodesApi.getChildren(nodeId)).content;
 
       const confirmRename = async (
         newName: string,
@@ -92,8 +93,8 @@ export const useFileUpload = (
         const cached = childrenByNodeId.get(id);
         if (cached) return cached;
         const loaded = await nodesApi.getChildren(id);
-        childrenByNodeId.set(id, loaded);
-        return loaded;
+        childrenByNodeId.set(id, loaded.content);
+        return loaded.content;
       };
 
       const findAvailableFolderName = async (
@@ -203,7 +204,8 @@ export const useFileUpload = (
       }
 
       for (const [targetNodeId, bucket] of filesByTarget) {
-        const contentForCheck = await nodesApi.getChildren(targetNodeId);
+        const contentForCheck = (await nodesApi.getChildren(targetNodeId))
+          .content;
         const resolved = await resolveUploadConflicts(
           bucket.files,
           contentForCheck,
