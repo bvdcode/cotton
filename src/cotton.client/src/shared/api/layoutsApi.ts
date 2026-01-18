@@ -1,4 +1,7 @@
 import { httpClient } from "./httpClient";
+import { InterfaceLayoutType } from "./types/InterfaceLayoutType";
+
+export { InterfaceLayoutType };
 
 export type Guid = string;
 
@@ -12,6 +15,7 @@ export interface NodeDto extends BaseDto {
   layoutId: Guid;
   parentId: Guid | null;
   name: string;
+  interfaceLayoutType?: InterfaceLayoutType;
 }
 
 export interface LayoutStatsDto {
@@ -56,6 +60,26 @@ export const layoutsApi = {
   getStats: async (layoutId: Guid): Promise<LayoutStatsDto> => {
     const response = await httpClient.get<LayoutStatsDto>(
       `/layouts/${layoutId}/stats`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Updates the UI layout type for a specific node
+   * @param nodeId - The ID of the node to update
+   * @param layoutType - The new layout type (Tiles or List)
+   * @returns The updated node
+   */
+  updateNodeLayoutType: async (
+    nodeId: Guid,
+    layoutType: InterfaceLayoutType,
+  ): Promise<NodeDto> => {
+    const response = await httpClient.patch<NodeDto>(
+      `/nodes/${nodeId}/ui-layout-type`,
+      null,
+      {
+        params: { newType: layoutType },
+      },
     );
     return response.data;
   },

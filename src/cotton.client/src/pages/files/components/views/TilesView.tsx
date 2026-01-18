@@ -1,0 +1,225 @@
+import React from "react";
+import { Box, TextField } from "@mui/material";
+import { Folder } from "@mui/icons-material";
+import { FolderCard } from "../FolderCard";
+import { RenamableItemCard } from "../RenamableItemCard";
+import { getFilePreview } from "../../utils/getFilePreview";
+import { formatBytes } from "../../utils/formatBytes";
+import { isImageFile, isVideoFile } from "../../utils/fileTypes";
+import { Download, Edit, Delete } from "@mui/icons-material";
+import type { IFileListView } from "../../types/FileListViewTypes";
+
+/**
+ * TilesView Component
+ * 
+ * Displays files and folders in a responsive grid layout (tiles/cards).
+ * Follows the Dependency Inversion Principle (DIP) by depending on the IFileListView interface.
+ * Single Responsibility Principle (SRP): Responsible only for rendering the grid layout.
+ */
+export const TilesView: React.FC<IFileListView> = ({
+  tiles,
+  folderOperations,
+  fileOperations,
+  isCreatingFolder,
+  newFolderName,
+  onNewFolderNameChange,
+  onConfirmNewFolder,
+  onCancelNewFolder,
+  folderNamePlaceholder,
+  fileNamePlaceholder,
+}) => {
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gap: { xs: 1, sm: 1.5 },
+        gridTemplateColumns: {
+          xs: "repeat(3, minmax(0, 1fr))",
+          sm: "repeat(4, minmax(0, 1fr))",
+          md: "repeat(6, minmax(0, 1fr))",
+          lg: "repeat(8, minmax(0, 1fr))",
+          xl: "repeat(12, minmax(0, 1fr))",
+        },
+      }}
+    >
+      {/* New Folder Creation Card */}
+      {isCreatingFolder && (
+        <Box
+          sx={{
+            border: "2px solid",
+            borderColor: "primary.main",
+            borderRadius: 2,
+            p: { xs: 1, sm: 1.25, md: 1 },
+            bgcolor: "action.hover",
+          }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              aspectRatio: "1 / 1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 1.5,
+              overflow: "hidden",
+              mb: 0.75,
+              "& > svg": {
+                width: "70%",
+                height: "70%",
+              },
+            }}
+          >
+            <Folder sx={{ color: "primary.main" }} />
+          </Box>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            value={newFolderName}
+            onChange={(e) => onNewFolderNameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                void onConfirmNewFolder();
+              } else if (e.key === "Escape") {
+                onCancelNewFolder();
+              }
+            }}
+            onBlur={onConfirmNewFolder}
+            placeholder={folderNamePlaceholder}
+            slotProps={{
+              input: {
+                sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
+              },
+            }}
+          />
+        </Box>
+      )}
+
+      {/* Render all tiles (folders and files) */}
+      {tiles.map((tile) => {
+        if (tile.kind === "folder") {
+          return (
+            <FolderCard
+              key={tile.node.id}
+              folder={tile.node}
+              isRenaming={folderOperations.isRenaming(tile.node.id)}
+              renamingName={folderOperations.getRenamingName()}
+              onRenamingNameChange={folderOperations.onRenamingNameChange}
+              onConfirmRename={folderOperations.onConfirmRename}
+              onCancelRename={folderOperations.onCancelRename}
+              onStartRename={() =>
+                folderOperations.onStartRename(tile.node.id, tile.node.name)
+              }
+              onDelete={() =>
+                folderOperations.onDelete(tile.node.id, tile.node.name)
+              }
+              onClick={() => folderOperations.onClick(tile.node.id)}
+            />
+          );
+        }
+
+        // File tile rendering
+        const isImage = isImageFile(tile.file.name);
+        const isVideo = isVideoFile(tile.file.name);
+        const preview = getFilePreview(
+          tile.file.encryptedFilePreviewHashHex ?? null,
+          tile.file.name,
+        );
+        const previewUrl = typeof preview === "string" ? preview : null;
+
+        const iconContainerSx = previewUrl
+          ? {
+              mx: { xs: -1, sm: -1.25, md: -1 },
+              mt: { xs: -1, sm: -1.25, md: -1 },
+              width: {
+                xs: "calc(100% + 16px)",
+                sm: "calc(100% + 20px)",
+                md: "calc(100% + 16px)",
+              },
+              borderRadius: 0,
+            }
+          : undefined;
+
+        return (
+          <RenamableItemCard
+            key={tile.file.id}
+            icon={(() => {
+              if (previewUrl && (isImage || isVideo)) {
+                return (
+                  <Box
+                    component="img"
+                    src={previewUrl}
+                    alt={tile.file.name}
+                    loading="lazy"
+                    decoding="async"
+                    sx={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      cursor: isImage || isVideo ? "pointer" : "default",
+                    }}
+                  />
+                );
+              }
+              if (previewUrl) {
+                return (
+                  <Box
+                    component="img"
+                    src={previewUrl}
+                    alt={tile.file.name}
+                    loading="lazy"
+                    decoding="async"
+                    sx={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                );
+              }
+              return preview;
+            })()}
+            title={tile.file.name}
+            subtitle={formatBytes(tile.file.sizeBytes)}
+            onClick={
+              isImage || isVideo
+                ? () => {
+                    fileOperations.onMediaClick?.(tile.file.id);
+                  }
+                : () => fileOperations.onClick(tile.file.id, tile.file.name)
+            }
+            iconContainerSx={iconContainerSx}
+            actions={[
+              {
+                icon: <Download />,
+                onClick: () =>
+                  fileOperations.onDownload(tile.file.id, tile.file.name),
+                tooltip: "Download",
+              },
+              {
+                icon: <Edit />,
+                onClick: () =>
+                  fileOperations.onStartRename(tile.file.id, tile.file.name),
+                tooltip: "Rename",
+              },
+              {
+                icon: <Delete />,
+                onClick: () =>
+                  fileOperations.onDelete(tile.file.id, tile.file.name),
+                tooltip: "Delete",
+              },
+            ]}
+            isRenaming={fileOperations.isRenaming(tile.file.id)}
+            renamingValue={fileOperations.getRenamingName()}
+            onRenamingValueChange={fileOperations.onRenamingNameChange}
+            onConfirmRename={() => {
+              void fileOperations.onConfirmRename();
+            }}
+            onCancelRename={fileOperations.onCancelRename}
+            placeholder={fileNamePlaceholder}
+          />
+        );
+      })}
+    </Box>
+  );
+};
