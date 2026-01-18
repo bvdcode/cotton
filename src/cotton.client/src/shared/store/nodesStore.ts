@@ -17,7 +17,11 @@ type NodesState = {
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
   deleteFolder: (nodeId: string, parentNodeId?: string) => Promise<boolean>;
-  renameFolder: (nodeId: string, newName: string, parentNodeId?: string) => Promise<boolean>;
+  renameFolder: (
+    nodeId: string,
+    newName: string,
+    parentNodeId?: string,
+  ) => Promise<boolean>;
   reset: () => void;
 };
 
@@ -64,7 +68,9 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       const [node, ancestors, content] = await Promise.all([
         nodesApi.getNode(nodeId),
         nodesApi.getAncestors(nodeId),
-        hasCachedData ? Promise.resolve(cachedContent) : nodesApi.getChildren(nodeId),
+        hasCachedData
+          ? Promise.resolve(cachedContent)
+          : (await nodesApi.getChildren(nodeId)).content,
       ]);
 
       set((prev) => ({
@@ -87,7 +93,7 @@ export const useNodesStore = create<NodesState>((set, get) => ({
         set((prev) => ({
           contentByNodeId: {
             ...prev.contentByNodeId,
-            [nodeId]: freshContent,
+            [nodeId]: freshContent.content,
           },
           lastUpdatedByNodeId: {
             ...prev.lastUpdatedByNodeId,
@@ -107,7 +113,7 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       set((prev) => ({
         contentByNodeId: {
           ...prev.contentByNodeId,
-          [nodeId]: content,
+          [nodeId]: content.content,
         },
         lastUpdatedByNodeId: {
           ...prev.lastUpdatedByNodeId,
@@ -159,7 +165,10 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const created = await nodesApi.createNode({ parentId: parentNodeId, name: trimmed });
+      const created = await nodesApi.createNode({
+        parentId: parentNodeId,
+        name: trimmed,
+      });
 
       // Optimistic update: immediately add the new folder to local cache
       set((prev) => {
@@ -235,7 +244,9 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     if (get().loading) return false;
 
     const state = get();
-    const currentContent = parentNodeId ? state.contentByNodeId[parentNodeId] : undefined;
+    const currentContent = parentNodeId
+      ? state.contentByNodeId[parentNodeId]
+      : undefined;
 
     // Check for duplicate name (case-insensitive) in cached content
     if (currentContent) {
@@ -265,7 +276,9 @@ export const useNodesStore = create<NodesState>((set, get) => ({
               ...prev.contentByNodeId,
               [parentNodeId]: {
                 ...existing,
-                nodes: existing.nodes.map((n) => n.id === nodeId ? updated : n),
+                nodes: existing.nodes.map((n) =>
+                  n.id === nodeId ? updated : n,
+                ),
               },
             },
             loading: false,
