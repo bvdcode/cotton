@@ -25,23 +25,34 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
 
     const loadPdf = async () => {
       try {
-        // Step 1: Get download link
+        // Step 1: Get download link with download=false for inline
         setLoadingStage("link");
         const downloadUrl = await filesApi.getDownloadLink(fileId, 60 * 24);
 
         if (cancelled) return;
 
-        // Step 2: Download as blob (use fetch with full URL to avoid baseURL duplication)
+        // Step 2: Fetch as blob to avoid React Router intercepting the URL
+        // This is important for production builds where /api/* might be caught by routing
         setLoadingStage("download");
         const fullUrl = downloadUrl.startsWith("http")
           ? downloadUrl
           : `${window.location.origin}${downloadUrl}`;
-        // Add download=false for inline preview
         const previewUrl =
           fullUrl + (fullUrl.includes("?") ? "&" : "?") + "download=false";
+        
+        const response = await fetch(previewUrl);
 
-        // Use URL directly for iframe - no need for blob!
-        setBlobUrl(previewUrl);
+        if (cancelled) return;
+
+        if (!response.ok) throw new Error("Download failed");
+
+        // Step 3: Create blob URL
+        // Blob URLs are not intercepted by React Router and work in iframe
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        blobUrlCache.set(fileId, url);
+        setBlobUrl(url);
         setLoading(false);
       } catch {
         if (!cancelled) {

@@ -16,6 +16,7 @@ export const useFolderOperations = (currentNodeId: string | null) => {
 
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [renamingFolderName, setRenamingFolderName] = useState("");
+  const [originalFolderName, setOriginalFolderName] = useState("");
 
   const handleNewFolder = () => {
     setNewFolderParentId(currentNodeId);
@@ -46,30 +47,44 @@ export const useFolderOperations = (currentNodeId: string | null) => {
   const handleRenameFolder = (folderId: string, currentName: string) => {
     setRenamingFolderId(folderId);
     setRenamingFolderName(currentName);
+    setOriginalFolderName(currentName);
   };
 
   const handleConfirmRename = async () => {
     if (!renamingFolderId || renamingFolderName.trim().length === 0) {
       setRenamingFolderId(null);
       setRenamingFolderName("");
+      setOriginalFolderName("");
+      return;
+    }
+
+    const newName = renamingFolderName.trim();
+
+    // No changes - just close rename mode
+    if (newName === originalFolderName) {
+      setRenamingFolderId(null);
+      setRenamingFolderName("");
+      setOriginalFolderName("");
       return;
     }
 
     const success = await renameFolder(
       renamingFolderId,
-      renamingFolderName.trim(),
+      newName,
       currentNodeId ?? undefined,
     );
 
     if (success) {
       setRenamingFolderId(null);
       setRenamingFolderName("");
+      setOriginalFolderName("");
     }
   };
 
   const handleCancelRename = () => {
     setRenamingFolderId(null);
     setRenamingFolderName("");
+    setOriginalFolderName("");
   };
 
   const handleDeleteFolder = async (folderId: string, folderName: string) => {
