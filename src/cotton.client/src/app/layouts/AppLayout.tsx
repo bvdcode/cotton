@@ -39,7 +39,13 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         overflow: "hidden",
       }}
     >
-      <AppBar position="static" elevation={1}>
+      <AppBar
+        position="static"
+        elevation={1}
+        sx={{
+          boxShadow: "none",
+        }}
+      >
         <Toolbar
           disableGutters
           sx={{
