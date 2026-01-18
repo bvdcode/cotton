@@ -63,6 +63,10 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiUnauthorized("Invalid username or password");
             }
+            if (user.IsTotpEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
+            {
+                return this.ApiForbidden("Two-factor authentication code is required");
+            }
             string accessToken = CreateAccessToken(user);
             string refreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
             RefreshToken dbToken = new()

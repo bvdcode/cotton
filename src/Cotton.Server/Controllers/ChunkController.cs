@@ -55,6 +55,14 @@ namespace Cotton.Server.Controllers
         [RequestSizeLimit(16 * 1024 * 1024)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
+            // TODO: Add streaming upload without IFormFile
+            // write under client-provided hash and validate on-the-fly
+            // reject and delete from storage if hash does not match
+            // it gives no allocations in /tmp and is generally more efficient
+            // but now it's more complex to implement
+            // Don't forget - if hash mismatches I can't just delete the chunk from storage
+            // it may be owned by other users or it might be hacked together from other chunks
+
             if (file == null || file.Length == 0)
             {
                 return CottonResult.BadRequest("No file uploaded.");
