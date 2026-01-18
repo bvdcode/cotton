@@ -62,6 +62,7 @@ export const FilesPage: React.FC = () => {
     error,
     loadRoot,
     loadNode,
+    refreshNodeContent,
   } = useNodesStore();
 
   const routeNodeId = params.nodeId;
@@ -504,6 +505,11 @@ export const FilesPage: React.FC = () => {
             <TextPreview
               nodeFileId={previewState.fileId}
               fileName={previewState.fileName}
+              onSaved={() => {
+                if (nodeId) {
+                  void refreshNodeContent(nodeId);
+                }
+              }}
             />
           )}
         </PreviewModal>
