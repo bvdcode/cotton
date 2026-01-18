@@ -17,7 +17,8 @@
 .lightbox-autohide .yarl__navigation_prev,
 .lightbox-autohide .yarl__navigation_next,
 .lightbox-autohide .yarl__slide_title_container,
-.lightbox-autohide .yarl__slide_description_container {
+.lightbox-autohide .yarl__slide_description_container,
+.lightbox-autohide .yarl__counter {
   opacity: 1;
   pointer-events: auto;
   transition: opacity 0.3s ease-in-out;
@@ -28,7 +29,8 @@
 .lightbox-autohide--idle .yarl__navigation_prev,
 .lightbox-autohide--idle .yarl__navigation_next,
 .lightbox-autohide--idle .yarl__slide_title_container,
-.lightbox-autohide--idle .yarl__slide_description_container {
+.lightbox-autohide--idle .yarl__slide_description_container,
+.lightbox-autohide--idle .yarl__counter {
   opacity: 0;
   pointer-events: none;
 }
