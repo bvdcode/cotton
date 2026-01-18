@@ -1,7 +1,8 @@
-import { Delete, Edit, Folder } from "@mui/icons-material";
+import { Delete, Edit } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { RenamableItemCard } from "./RenamableItemCard";
+import { getFolderIcon } from "../utils/getFilePreview";
 
 interface FolderCardProps {
   folder: NodeDto;
@@ -30,8 +31,8 @@ export const FolderCard = ({
 
   return (
     <RenamableItemCard
-      icon={<Folder fontSize="large" />}
-      renamingIcon={<Folder sx={{ color: "primary.main" }} />}
+      icon={getFolderIcon()}
+      renamingIcon={getFolderIcon()}
       title={folder.name}
       subtitle={new Date(folder.createdAt).toLocaleDateString()}
       onClick={onClick}
