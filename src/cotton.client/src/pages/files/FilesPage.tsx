@@ -91,6 +91,21 @@ export const FilesPage: React.FC = () => {
     setLayoutType(initialLayoutType);
   }, [initialLayoutType]);
 
+  // Update page title based on current folder
+  useEffect(() => {
+    const folderName = currentNode?.name;
+    if (folderName) {
+      document.title = `Cotton - ${folderName}`;
+    } else {
+      document.title = "Cotton";
+    }
+
+    // Cleanup: reset to default title when component unmounts
+    return () => {
+      document.title = "Cotton";
+    };
+  }, [currentNode?.name]);
+
   const breadcrumbs = useMemo(() => {
     if (!currentNode) return [] as Array<{ id: string; name: string }>;
     const chain = [...ancestors, currentNode];
