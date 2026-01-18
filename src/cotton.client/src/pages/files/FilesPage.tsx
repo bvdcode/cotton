@@ -94,7 +94,11 @@ export const FilesPage: React.FC = () => {
   // Update page title based on current folder
   useEffect(() => {
     const folderName = currentNode?.name;
-    if (folderName) {
+    const isRoot = !routeNodeId || ancestors.length === 0;
+
+    if (isRoot) {
+      document.title = `Cotton - ${t("title", { ns: "files" })}`;
+    } else if (folderName) {
       document.title = `Cotton - ${folderName}`;
     } else {
       document.title = "Cotton";
@@ -104,7 +108,7 @@ export const FilesPage: React.FC = () => {
     return () => {
       document.title = "Cotton";
     };
-  }, [currentNode?.name]);
+  }, [currentNode?.name, routeNodeId, ancestors.length, t]);
 
   const breadcrumbs = useMemo(() => {
     if (!currentNode) return [] as Array<{ id: string; name: string }>;
