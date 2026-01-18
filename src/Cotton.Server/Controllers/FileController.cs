@@ -168,7 +168,8 @@ namespace Cotton.Server.Controllers
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] string token)
+            [FromQuery] string token,
+            [FromQuery] bool download = true)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -210,11 +211,27 @@ namespace Cotton.Server.Controllers
                 });
             }
 
+            var lastModified = new DateTimeOffset(nodeFile.CreatedAt);
+            if (!download)
+            {
+                Response.Headers.ContentDisposition = new ContentDisposition
+                {
+                    DispositionType = "inline",
+                    FileName = nodeFile.Name
+                }.ToString();
+
+                return File(
+                    stream,
+                    nodeFile.FileManifest.ContentType,
+                    lastModified: lastModified,
+                    entityTag: entityTag,
+                    enableRangeProcessing: true);
+            }
             return File(
                 stream,
                 nodeFile.FileManifest.ContentType,
                 nodeFile.Name,
-                lastModified: new(nodeFile.CreatedAt),
+                lastModified: lastModified,
                 entityTag: entityTag,
                 enableRangeProcessing: true);
         }
