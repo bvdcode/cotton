@@ -92,7 +92,7 @@ const UploadTaskRow = ({ task, t, showDivider }: UploadTaskRowProps) => {
 
       <Box display="flex" justifyContent="space-between" mt={0.5}>
         <Typography variant="caption" color="text.secondary">
-          {task.status === "uploading" && task.uploadSpeedBytesPerSec
+          {task.status === "uploading" && task.uploadSpeedBytesPerSec != null
             ? `${formatBytes(task.uploadSpeedBytesPerSec)}/s`
             : t(`status.${task.status}`)}
         </Typography>
@@ -132,22 +132,10 @@ export const UploadQueueWidget = () => {
   const hasActive = activeTasks.length > 0;
   const allCompleted = total > 0 && completed + failed === total;
   const hasErrors = failed > 0;
-  const totalSpeed = activeTasks.reduce(
-    (sum, t) => sum + (t.uploadSpeedBytesPerSec ?? 0),
-    0,
-  );
+  const totalSpeed = snapshot.overall.uploadSpeedBytesPerSec;
   const visible = snapshot.open && total > 0;
 
-  // Calculate overall progress (0-100)
-  const totalProgress = (() => {
-    if (total === 0) return 0;
-    const taskProgress = tasks.reduce((sum, task) => {
-      if (task.status === "completed") return sum + 100;
-      if (task.status === "failed") return sum + 100;
-      return sum + (task.progress01 ?? 0) * 100;
-    }, 0);
-    return taskProgress / total;
-  })();
+  const totalProgress = Math.max(0, Math.min(100, snapshot.overall.progress01 * 100));
 
   if (!visible) return null;
 
@@ -171,34 +159,41 @@ export const UploadQueueWidget = () => {
           overflow: "hidden",
         }}
       >
-        {/* Battery fill effect - moved to separate layer to not block scrolling */}
-        {hasActive && (
-          <Box
-            sx={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              bottom: 0,
-              width: `${totalProgress}%`,
-              bgcolor: "success.main",
-              opacity: 0.15,
-              transition: "width 0.3s ease-out",
-              zIndex: 0,
-              pointerEvents: "none", // Critical: allows clicking/scrolling through
-            }}
-          />
-        )}
         <Box
           display="flex"
           alignItems="center"
           justifyContent="space-between"
           mb={isCollapsed ? 0 : 1}
-          sx={{ position: "relative", zIndex: 1 }}
+          sx={{
+            position: "relative",
+            zIndex: 1,
+            borderRadius: 1,
+            overflow: "hidden",
+          }}
         >
+          {/* Battery fill effect in header only (prevents tinting the expanded list) */}
+          {hasActive && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: `${totalProgress}%`,
+                bgcolor: "success.main",
+                opacity: 0.15,
+                transition: "width 0.3s ease-out",
+                zIndex: 0,
+                pointerEvents: "none",
+              }}
+            />
+          )}
           <Typography
             variant="subtitle1"
             fontWeight={600}
             sx={{
+              position: "relative",
+              zIndex: 1,
               color:
                 isCollapsed && allCompleted && hasErrors
                   ? "error.main"
@@ -217,7 +212,7 @@ export const UploadQueueWidget = () => {
               ? t("title")
               : t("titleWithTotal", { total })}
           </Typography>
-          <Box display="flex" gap={0.5}>
+          <Box display="flex" gap={0.5} sx={{ position: "relative", zIndex: 1 }}>
             <IconButton
               size="small"
               onClick={() => setIsCollapsed(!isCollapsed)}
