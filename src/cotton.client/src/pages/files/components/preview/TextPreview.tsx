@@ -20,17 +20,20 @@ import type { Guid } from "../../../../shared/api/layoutsApi";
 import { filesApi } from "../../../../shared/api/filesApi";
 import { uploadBlobToChunks } from "../../../../shared/upload";
 import { useServerSettings } from "../../../../shared/store/useServerSettings";
-import { useTheme } from "../../../../app/providers/useTheme";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 interface TextPreviewProps {
   nodeFileId: Guid;
   fileName: string;
+  onSaved?: () => void;
 }
 
-export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
+export function TextPreview({
+  nodeFileId,
+  fileName,
+  onSaved,
+}: TextPreviewProps) {
   const { t } = useTranslation(["files", "common"]);
-  const { mode } = useTheme();
   const muiTheme = useMuiTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const { data: serverSettings } = useServerSettings();
@@ -114,6 +117,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
 
       setOriginalContent(content);
       setIsEditing(false);
+      onSaved?.();
     } catch (err) {
       setError(
         err instanceof Error
@@ -251,7 +255,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
         </Stack>
       </Paper>
 
-      <Box sx={{ flexGrow: 1, overflow: "auto" }} data-color-mode={mode}>
+      <Box sx={{ flexGrow: 1, overflow: "auto" }}>
         <MDEditor
           value={content}
           onChange={setContent}
