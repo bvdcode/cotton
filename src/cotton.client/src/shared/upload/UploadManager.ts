@@ -2,6 +2,7 @@ import type { Guid } from "../api/layoutsApi";
 import { useNodesStore } from "../store/nodesStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { uploadFileToNode } from "./uploadFileToNode";
+import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 
 export type UploadTaskStatus =
   | "queued"
@@ -34,14 +35,29 @@ type Listener = () => void;
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+interface UploadOverallStats {
+  bytesTotal: number;
+  bytesUploaded: number;
+  progress01: number;
+  uploadSpeedBytesPerSec: number;
+}
+
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
   private readonly tasks: UploadTask[] = [];
   private running = false;
   private open = false;
-  private snapshot: { open: boolean; tasks: UploadTask[] } = { open: false, tasks: [] };
+  private snapshot: { open: boolean; tasks: UploadTask[]; overall: UploadOverallStats } = {
+    open: false,
+    tasks: [],
+    overall: { bytesTotal: 0, bytesUploaded: 0, progress01: 0, uploadSpeedBytesPerSec: 0 },
+  };
   private readonly refreshNodeIds = new Set<Guid>();
   private refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  private overallBytesTotal = 0;
+  private overallBytesUploaded = 0;
+  private overallEstimator = new RollingBytesPerSecondEstimator({ windowMs: 2000, minDurationMs: 300 });
 
   private filePickerOpen: ((options: { multiple: boolean; accept?: string }) => void) | null = null;
   private pendingFilePickerContext: UploadFilePickerContext | null = null;
@@ -60,7 +76,7 @@ export class UploadManager {
     this.emit();
   }
 
-  getSnapshot(): { open: boolean; tasks: UploadTask[] } {
+  getSnapshot(): { open: boolean; tasks: UploadTask[]; overall: UploadOverallStats } {
     return this.snapshot;
   }
 
@@ -85,7 +101,16 @@ export class UploadManager {
 
   enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
     const list = Array.isArray(files) ? files : Array.from(files);
+
+    // If there are no active uploads, start a fresh overall session.
+    if (!this.hasActiveTasks()) {
+      this.overallBytesTotal = 0;
+      this.overallBytesUploaded = 0;
+      this.overallEstimator.reset();
+    }
+
     for (const file of list) {
+      this.overallBytesTotal += file.size;
       this.tasks.unshift({
         id: makeId(),
         nodeId,
@@ -110,7 +135,17 @@ export class UploadManager {
   private emit() {
     // useSyncExternalStore requires the snapshot result to be referentially stable
     // between store updates.
-    this.snapshot = { open: this.open, tasks: this.tasks.slice() };
+    const progress01 = this.overallBytesTotal > 0 ? this.overallBytesUploaded / this.overallBytesTotal : 0;
+    this.snapshot = {
+      open: this.open,
+      tasks: this.tasks.slice(),
+      overall: {
+        bytesTotal: this.overallBytesTotal,
+        bytesUploaded: this.overallBytesUploaded,
+        progress01,
+        uploadSpeedBytesPerSec: this.overallEstimator.getSnapshot().rollingBytesPerSec,
+      },
+    };
     for (const l of this.listeners) l();
   }
 
@@ -159,12 +194,10 @@ export class UploadManager {
         next.status = "uploading";
         next.error = undefined;
         next.uploadSpeedBytesPerSec = 0;
-        
-        const uploadStartTime = Date.now();
-        let lastUpdateTime = Date.now();
-        const speedSamples: number[] = [];
-        const MAX_SAMPLES = 5;
-        
+
+        const taskEstimator = new RollingBytesPerSecondEstimator({ windowMs: 1500, minDurationMs: 250 });
+        let lastEmitTime = 0;
+
         this.emit();
 
         try {
@@ -176,35 +209,26 @@ export class UploadManager {
               supportedHashAlgorithm: settings.supportedHashAlgorithm,
             },
             onProgress: (bytesUploaded) => {
+              const prevBytesUploaded = next.bytesUploaded;
               next.bytesUploaded = Math.min(next.bytesTotal, bytesUploaded);
               next.progress01 = next.bytesTotal > 0 ? next.bytesUploaded / next.bytesTotal : 1;
-              
-              // Calculate upload speed with proper averaging window
+
               const now = Date.now();
-              const timeSinceUpdate = now - lastUpdateTime;
-              
-              // Only update speed every 500ms to avoid jitter
-              if (timeSinceUpdate >= 500) {
-                const totalElapsed = now - uploadStartTime;
-                if (totalElapsed > 0 && next.bytesUploaded > 0) {
-                  // Calculate average speed over the entire upload
-                  const avgSpeed = (next.bytesUploaded / totalElapsed) * 1000;
-                  
-                  // Keep a sliding window of samples
-                  speedSamples.push(avgSpeed);
-                  if (speedSamples.length > MAX_SAMPLES) {
-                    speedSamples.shift();
-                  }
-                  
-                  // Average the samples for smooth display
-                  const smoothSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
-                  next.uploadSpeedBytesPerSec = smoothSpeed;
-                  
-                  lastUpdateTime = now;
-                }
+              const taskRate = taskEstimator.update(next.bytesUploaded, now);
+              next.uploadSpeedBytesPerSec =
+                taskRate.rollingBytesPerSec > 0 ? taskRate.rollingBytesPerSec : taskRate.averageBytesPerSec;
+
+              const delta = next.bytesUploaded - prevBytesUploaded;
+              if (delta > 0) {
+                this.overallBytesUploaded += delta;
+                this.overallEstimator.update(this.overallBytesUploaded, now);
               }
-              
-              this.emit();
+
+              // Throttle UI updates; speed estimation remains accurate.
+              if (now - lastEmitTime >= 100 || next.bytesUploaded >= next.bytesTotal) {
+                lastEmitTime = now;
+                this.emit();
+              }
             },
             onFinalizing: () => {
               next.status = "finalizing";
@@ -213,8 +237,15 @@ export class UploadManager {
           });
 
           next.status = "completed";
+          const beforeFinalize = next.bytesUploaded;
           next.bytesUploaded = next.bytesTotal;
           next.progress01 = 1;
+
+          const finalizeDelta = next.bytesUploaded - beforeFinalize;
+          if (finalizeDelta > 0) {
+            this.overallBytesUploaded += finalizeDelta;
+            this.overallEstimator.update(this.overallBytesUploaded, Date.now());
+          }
           this.emit();
 
           // Ensure the Files UI picks up the new file manifests.

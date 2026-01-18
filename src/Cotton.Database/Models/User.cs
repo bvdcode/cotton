@@ -20,5 +20,8 @@ namespace Cotton.Database.Models
 
         [Column("role")]
         public UserRole Role { get; set; }
+
+        [Column("is_totp_enabled")]
+        public bool IsTotpEnabled { get; set; }
     }
 }
