@@ -11,5 +11,6 @@ namespace Cotton.Server.Models.Requests
         public string ContentType { get; set; } = null!;
         public string Hash { get; set; } = null!;
         public Guid? OriginalNodeFileId { get; set; }
+        public Guid? BaseManifestId { get; set; }
     }
 }

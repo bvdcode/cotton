@@ -165,6 +165,41 @@ namespace Cotton.Server.Controllers
             return Ok(link);
         }
 
+        [Authorize]
+        [HttpPatch($"{Routes.Files}/{{nodeFileId:guid}}/update-content")]
+        public async Task<IActionResult> UpdateFileContent(
+            [FromRoute] Guid nodeFileId,
+            [FromBody] CreateFileRequest request)
+        {
+            Guid userId = User.GetUserId();
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.FileManifest)
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (nodeFile == null)
+            {
+                return this.ApiNotFound("Node file not found.");
+            }
+            if (nodeFile.FileManifestId != request.BaseManifestId)
+            {
+                return this.ApiConflict("The base manifest ID does not match the current file manifest ID.");
+            }
+            byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
+            if (nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
+            {
+                return Ok();
+            }
+            List<Chunk> chunks = await GetChunksAsync(request.ChunkHashes);
+            var newFile = await _dbContext.FileManifests
+                .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
+                ?? await CreateNewFileManifestAsync(chunks, request, proposedHash);
+            nodeFile.FileManifestId = newFile.Id;
+            await _dbContext.SaveChangesAsync();
+            await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
+            await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            return Ok();
+        }
+
         [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,
@@ -264,11 +299,6 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
             }
-
-            // Normalize chunk hashes to lowercase for storage access
-            string[] normalizedChunkHashes = [.. request.ChunkHashes
-                .Select(Hasher.FromHexStringHash)
-                .Select(Hasher.ToHexStringHash)];
 
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
             var newFile = await _dbContext.FileManifests
