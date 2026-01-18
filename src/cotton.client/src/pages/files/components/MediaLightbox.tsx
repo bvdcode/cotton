@@ -164,7 +164,7 @@ function buildSlidesFromItems(
     const sizeStr = item.sizeBytes ? formatFileSize(item.sizeBytes) : "";
     const description = sizeStr ? `${item.name} | ${sizeStr}` : item.name;
 
-    if (item.kind === "image" || item.kind === "video") {
+    if (item.kind === "image") {
       const src = maybeOriginal ?? item.previewUrl;
       return {
         type: "image",
@@ -175,6 +175,10 @@ function buildSlidesFromItems(
         download: maybeOriginal
           ? { url: maybeOriginal, filename: item.name }
           : undefined,
+        share: {
+          url: src,
+          title: item.name,
+        },
       };
     }
 
@@ -188,6 +192,10 @@ function buildSlidesFromItems(
         width: item.width,
         height: item.height,
         description,
+        share: {
+          url: poster,
+          title: item.name,
+        },
       } as Slide;
     }
 
@@ -198,6 +206,10 @@ function buildSlidesFromItems(
       height: item.height,
       description,
       download: { url: src, filename: item.name },
+      share: {
+        url: src,
+        title: item.name,
+      },
       sources: [
         {
           src,
