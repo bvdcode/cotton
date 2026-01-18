@@ -15,12 +15,6 @@ export interface RenameFileRequest {
   name: string;
 }
 
-export interface UpdateFileContentRequest {
-  chunkHashes: string[];
-  hash: string;
-  baseManifestId: Guid;
-}
-
 export const filesApi = {
   createFromChunks: async (
     request: CreateFileFromChunksRequest,
@@ -30,7 +24,7 @@ export const filesApi = {
 
   updateFileContent: async (
     nodeFileId: Guid,
-    request: UpdateFileContentRequest,
+    request: CreateFileFromChunksRequest,
   ): Promise<void> => {
     await httpClient.patch(`/files/${nodeFileId}/update-content`, request);
   },
