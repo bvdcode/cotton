@@ -4,9 +4,12 @@ import {
   CircularProgress,
   Alert,
   Button,
+  IconButton,
   Stack,
   Paper,
+  Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import MDEditor from "@uiw/react-md-editor";
 import EditIcon from "@mui/icons-material/Edit";
@@ -18,6 +21,7 @@ import { filesApi } from "../../../../shared/api/filesApi";
 import { uploadBlobToChunks } from "../../../../shared/upload";
 import { useServerSettings } from "../../../../shared/store/useServerSettings";
 import { useTheme } from "../../../../app/providers/useTheme";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 interface TextPreviewProps {
   nodeFileId: Guid;
@@ -27,6 +31,8 @@ interface TextPreviewProps {
 export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
   const { t } = useTranslation(["files", "common"]);
   const { mode } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const { data: serverSettings } = useServerSettings();
   const [content, setContent] = useState<string | undefined>(undefined);
   const [originalContent, setOriginalContent] = useState<string>("");
@@ -167,35 +173,80 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
             {fileName}
           </Typography>
           {!isEditing && (
-            <Button
-              size="small"
-              startIcon={<EditIcon />}
-              onClick={() => setIsEditing(true)}
-            >
-              {t("preview.actions.edit", { ns: "files" })}
-            </Button>
+            isMobile ? (
+              <Tooltip title={t("preview.actions.edit", { ns: "files" })}>
+                <span>
+                  <IconButton
+                    size="small"
+                    onClick={() => setIsEditing(true)}
+                    aria-label={t("preview.actions.edit", { ns: "files" })}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : (
+              <Button
+                size="small"
+                startIcon={<EditIcon />}
+                onClick={() => setIsEditing(true)}
+              >
+                {t("preview.actions.edit", { ns: "files" })}
+              </Button>
+            )
           )}
           {isEditing && (
             <>
-              <Button
-                size="small"
-                startIcon={<CancelIcon />}
-                onClick={handleCancel}
-                disabled={saving}
-              >
-                {t("actions.cancel", { ns: "common" })}
-              </Button>
-              <Button
-                size="small"
-                variant="contained"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                disabled={!hasChanges || saving}
-              >
-                {saving
-                  ? t("preview.actions.saving", { ns: "files" })
-                  : t("preview.actions.save", { ns: "files" })}
-              </Button>
+              {isMobile ? (
+                <>
+                  <Tooltip title={t("actions.cancel", { ns: "common" })}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={handleCancel}
+                        disabled={saving}
+                        aria-label={t("actions.cancel", { ns: "common" })}
+                      >
+                        <CancelIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title={t("preview.actions.save", { ns: "files" })}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={handleSave}
+                        disabled={!hasChanges || saving}
+                        aria-label={t("preview.actions.save", { ns: "files" })}
+                      >
+                        <SaveIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="small"
+                    startIcon={<CancelIcon />}
+                    onClick={handleCancel}
+                    disabled={saving}
+                  >
+                    {t("actions.cancel", { ns: "common" })}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<SaveIcon />}
+                    onClick={handleSave}
+                    disabled={!hasChanges || saving}
+                  >
+                    {saving
+                      ? t("preview.actions.saving", { ns: "files" })
+                      : t("preview.actions.save", { ns: "files" })}
+                  </Button>
+                </>
+              )}
             </>
           )}
         </Stack>
