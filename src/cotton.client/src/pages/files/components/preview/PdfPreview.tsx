@@ -12,7 +12,7 @@ interface PdfPreviewProps {
 const blobUrlCache = new Map<string, string>();
 
 export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["files", "common"]);
   const cachedBlobUrl = blobUrlCache.get(fileId);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
   const [loading, setLoading] = useState(!cachedBlobUrl);
@@ -46,7 +46,9 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
 
         if (cancelled) return;
 
-        if (!response.ok) throw new Error(t("files.preview.errors.downloadFailed"));
+        if (!response.ok) {
+          throw new Error(t("preview.errors.downloadFailed", { ns: "files" }));
+        }
 
         // Step 3: Create blob URL
         // Blob URLs are not intercepted by React Router and work in iframe
@@ -58,7 +60,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
         setLoading(false);
       } catch {
         if (!cancelled) {
-          setError(t("files.preview.errors.pdfLoadFailed"));
+          setError(t("preview.errors.pdfLoadFailed", { ns: "files" }));
           setLoading(false);
         }
       }
@@ -80,7 +82,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
 
   const handleError = () => {
     setLoading(false);
-    setError(t("files.preview.errors.pdfDisplayFailed"));
+    setError(t("preview.errors.pdfDisplayFailed", { ns: "files" }));
   };
 
   return (

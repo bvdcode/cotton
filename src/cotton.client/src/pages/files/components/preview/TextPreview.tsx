@@ -15,13 +15,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import { useTranslation } from "react-i18next";
 import type { Guid } from "../../../../shared/api/layoutsApi";
 import { filesApi } from "../../../../shared/api/filesApi";
-import { chunksApi } from "../../../../shared/api/chunksApi";
-import {
-  createIncrementalHasher,
-  hashBytes,
-  toWebCryptoAlgorithm,
-} from "../../../../shared/upload/hash/hashing";
-import { uploadConfig } from "../../../../shared/upload/config";
+import { uploadBlobToChunks } from "../../../../shared/upload";
 import { useServerSettings } from "../../../../shared/store/useServerSettings";
 import { useTheme } from "../../../../app/providers/useTheme";
 
@@ -31,7 +25,7 @@ interface TextPreviewProps {
 }
 
 export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["files", "common"]);
   const { mode } = useTheme();
   const { data: serverSettings } = useServerSettings();
   const [content, setContent] = useState<string | undefined>(undefined);
@@ -53,10 +47,11 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
         const response = await fetch(downloadUrl);
 
         if (!response.ok) {
+          const errorSuffix = response.statusText
+            ? `: ${response.statusText}`
+            : "";
           throw new Error(
-            t("files.preview.errors.loadFailed", {
-              error: response.statusText,
-            }),
+            t("preview.errors.loadFailed", { ns: "files", error: errorSuffix }),
           );
         }
 
@@ -71,7 +66,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
           setError(
             err instanceof Error
               ? err.message
-              : t("files.preview.errors.loadFailed", { error: "" }),
+              : t("preview.errors.loadFailed", { ns: "files", error: "" }),
           );
           setLoading(false);
         }
@@ -92,58 +87,19 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       setSaving(true);
       setError(null);
 
-      // Convert content to blob
+      // Convert content to blob and reuse shared chunk uploader.
       const blob = new Blob([content], { type: "text/plain" });
-      const arrayBuffer = await blob.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-
-      // Use server settings for chunking
-      const chunkSize = Math.max(1, serverSettings.maxChunkSizeBytes);
-      const algorithm = toWebCryptoAlgorithm(
-        serverSettings.supportedHashAlgorithm,
-      );
-      const sendChunkHash = uploadConfig.sendChunkHashForValidation;
-
-      const chunkCount = Math.ceil(bytes.length / chunkSize);
-      const chunkHashesByIndex: string[] = new Array(chunkCount);
-
-      // Compute whole-file hash while processing chunks
-      const fileHasher = await createIncrementalHasher(algorithm);
-
-      for (let index = 0; index < chunkCount; index += 1) {
-        const start = index * chunkSize;
-        const end = Math.min(bytes.length, start + chunkSize);
-        const chunkBytes = bytes.slice(start, end);
-        const chunk = new Blob([chunkBytes], { type: "text/plain" });
-
-        // Update file hasher and compute chunk hash
-        fileHasher.update(chunkBytes);
-        const chunkHash = await hashBytes(chunkBytes, algorithm);
-        chunkHashesByIndex[index] = chunkHash;
-
-        // Upload chunk if needed
-        if (sendChunkHash) {
-          const exists = await chunksApi.exists(chunkHash);
-          if (!exists) {
-            await chunksApi.uploadChunk({
-              blob: chunk,
-              fileName,
-              hash: chunkHash,
-            });
-          }
-        } else {
-          await chunksApi.uploadChunk({
-            blob: chunk,
-            fileName,
-            hash: null,
-          });
-        }
-      }
-
-      const fileHash = fileHasher.digestHex();
+      const { chunkHashes, fileHash } = await uploadBlobToChunks({
+        blob,
+        fileName,
+        server: {
+          maxChunkSizeBytes: serverSettings.maxChunkSizeBytes,
+          supportedHashAlgorithm: serverSettings.supportedHashAlgorithm,
+        },
+      });
 
       await filesApi.updateFileContent(nodeFileId, {
-        chunkHashes: chunkHashesByIndex,
+        chunkHashes,
         hash: fileHash,
         contentType: "text/plain",
         name: fileName,
@@ -156,7 +112,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
       setError(
         err instanceof Error
           ? err.message
-          : t("files.preview.errors.saveFailed"),
+          : t("preview.errors.saveFailed", { ns: "files" }),
       );
     } finally {
       setSaving(false);
@@ -199,7 +155,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
           borderBottom: 1,
           borderColor: "divider",
           px: 2,
-          py: 1,
+          py: 1.5,
           borderRadius: "10px 10px 0 0",
         }}
       >
@@ -213,7 +169,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
               startIcon={<EditIcon />}
               onClick={() => setIsEditing(true)}
             >
-              {t("files.preview.actions.edit")}
+              {t("preview.actions.edit", { ns: "files" })}
             </Button>
           )}
           {isEditing && (
@@ -224,7 +180,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
                 onClick={handleCancel}
                 disabled={saving}
               >
-                {t("common.actions.cancel")}
+                {t("actions.cancel", { ns: "common" })}
               </Button>
               <Button
                 size="small"
@@ -234,8 +190,8 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
                 disabled={!hasChanges || saving}
               >
                 {saving
-                  ? t("files.preview.actions.saving")
-                  : t("files.preview.actions.save")}
+                  ? t("preview.actions.saving", { ns: "files" })
+                  : t("preview.actions.save", { ns: "files" })}
               </Button>
             </>
           )}
