@@ -5,13 +5,19 @@ import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
 import { getFileIcon } from "../../utils/icons";
 import { formatBytes } from "../../utils/formatBytes";
-import { isImageFile, isVideoFile } from "../../utils/fileTypes";
+import {
+  isImageFile,
+  isPdfFile,
+  isTextFile,
+  isVideoFile,
+} from "../../utils/fileTypes";
 import { Download, Edit, Delete } from "@mui/icons-material";
 import type { IFileListView } from "../../types/FileListViewTypes";
+import { useTheme } from "@mui/material/styles";
 
 /**
  * TilesView Component
- * 
+ *
  * Displays files and folders in a responsive grid layout (tiles/cards).
  * Follows the Dependency Inversion Principle (DIP) by depending on the IFileListView interface.
  * Single Responsibility Principle (SRP): Responsible only for rendering the grid layout.
@@ -28,6 +34,9 @@ export const TilesView: React.FC<IFileListView> = ({
   folderNamePlaceholder,
   fileNamePlaceholder,
 }) => {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === "dark";
+
   return (
     <Box
       sx={{
@@ -121,11 +130,16 @@ export const TilesView: React.FC<IFileListView> = ({
         // File tile rendering
         const isImage = isImageFile(tile.file.name);
         const isVideo = isVideoFile(tile.file.name);
+        const shouldLightenPreviewBackdrop =
+          isDarkMode &&
+          (isPdfFile(tile.file.name) || isTextFile(tile.file.name));
         const preview = getFileIcon(
           tile.file.encryptedFilePreviewHashHex ?? null,
           tile.file.name,
         );
         const previewUrl = typeof preview === "string" ? preview : null;
+
+        const previewBackdropColor = "rgba(255, 255, 255, 0.75)";
 
         const iconContainerSx = previewUrl
           ? {
@@ -137,6 +151,9 @@ export const TilesView: React.FC<IFileListView> = ({
                 md: "calc(100% + 16px)",
               },
               borderRadius: 0,
+              ...(shouldLightenPreviewBackdrop && {
+                bgcolor: previewBackdropColor,
+              }),
             }
           : undefined;
 
@@ -173,6 +190,9 @@ export const TilesView: React.FC<IFileListView> = ({
                       width: "100%",
                       height: "100%",
                       objectFit: "cover",
+                      ...(shouldLightenPreviewBackdrop && {
+                        backgroundColor: previewBackdropColor,
+                      }),
                     }}
                   />
                 );
