@@ -2,7 +2,7 @@ import { Delete, Edit } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { RenamableItemCard } from "./RenamableItemCard";
-import { getFolderIcon } from "../utils/getFilePreview";
+import { getFolderIcon } from "../utils/icons";
 
 interface FolderCardProps {
   folder: NodeDto;
