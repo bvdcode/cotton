@@ -180,10 +180,6 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiNotFound("Node file not found.");
             }
-            if (nodeFile.FileManifestId != request.BaseManifestId)
-            {
-                return this.ApiConflict("The base manifest ID does not match the current file manifest ID.");
-            }
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
             if (nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
             {
