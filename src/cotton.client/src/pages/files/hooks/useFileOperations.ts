@@ -9,10 +9,12 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
 
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renamingFileName, setRenamingFileName] = useState("");
+  const [originalFileName, setOriginalFileName] = useState("");
 
   const handleRenameFile = (fileId: string, currentName: string) => {
     setRenamingFileId(fileId);
     setRenamingFileName(currentName);
+    setOriginalFileName(currentName);
   };
 
   const handleConfirmRename = async () => {
@@ -20,13 +22,25 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
     if (!fileId || renamingFileName.trim().length === 0) {
       setRenamingFileId(null);
       setRenamingFileName("");
+      setOriginalFileName("");
+      return;
+    }
+
+    const newName = renamingFileName.trim();
+    
+    // No changes - just close rename mode
+    if (newName === originalFileName) {
+      setRenamingFileId(null);
+      setRenamingFileName("");
+      setOriginalFileName("");
       return;
     }
 
     try {
-      await filesApi.renameFile(fileId, { name: renamingFileName.trim() });
+      await filesApi.renameFile(fileId, { name: newName });
       setRenamingFileId(null);
       setRenamingFileName("");
+      setOriginalFileName("");
 
       // Trigger parent refresh
       if (onFileDeleted) {
@@ -40,6 +54,7 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
   const handleCancelRename = () => {
     setRenamingFileId(null);
     setRenamingFileName("");
+    setOriginalFileName("");
   };
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
