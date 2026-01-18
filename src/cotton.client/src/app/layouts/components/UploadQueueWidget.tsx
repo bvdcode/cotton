@@ -9,7 +9,7 @@ import {
 import { Close, ExpandMore, ExpandLess } from "@mui/icons-material";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { List } from "react-window";
+import { Virtuoso } from "react-virtuoso";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 
 const formatBytes = (bytes: number): string => {
@@ -49,36 +49,16 @@ const sortTasksByPriority = (
 
 type UploadTask = ReturnType<typeof uploadManager.getSnapshot>["tasks"][number];
 
-// Additional props passed to row component
-interface AdditionalRowProps {
-  tasks: UploadTask[];
+interface UploadTaskRowProps {
+  task: UploadTask;
   t: (key: string) => string;
+  showDivider: boolean;
 }
 
-// Row component props for react-window
-interface RowComponentProps extends AdditionalRowProps {
-  index: number;
-  style: React.CSSProperties;
-  ariaAttributes: {
-    "aria-posinset": number;
-    "aria-setsize": number;
-    role: "listitem";
-  };
-}
-
-// Memoized row component for react-window
-const UploadTaskRow = ({ index, style, tasks, t }: RowComponentProps) => {
-  const task = tasks[index];
-  
+const UploadTaskRow = ({ task, t, showDivider }: UploadTaskRowProps) => {
   return (
-    <Box
-      style={style}
-      sx={{
-        pr: 0.5,
-        pb: 1,
-      }}
-    >
-      {index > 0 && <Divider sx={{ mb: 1 }} />}
+    <Box sx={{ pr: 0.5, pb: 1 }}>
+      {showDivider && <Divider sx={{ mb: 1 }} />}
       <Box>
         <Typography
           variant="body2"
@@ -270,16 +250,17 @@ export const UploadQueueWidget = () => {
           }}
         >
           {tasks.length > 0 && (
-            <List<AdditionalRowProps>
-              rowComponent={UploadTaskRow}
-              rowCount={tasks.length}
-              rowHeight={90}
-              rowProps={{ tasks, t } as AdditionalRowProps}
-              style={{
-                height: Math.min(tasks.length * 90, 400),
-                width: "100%",
-              }}
-              overscanCount={5} // Render 5 extra items above/below viewport for smooth scrolling
+            <Virtuoso
+              style={{ height: Math.min(tasks.length * 90, 400) }}
+              totalCount={tasks.length}
+              overscan={5}
+              itemContent={(index) => (
+                <UploadTaskRow
+                  task={tasks[index]}
+                  t={t}
+                  showDivider={index > 0}
+                />
+              )}
             />
           )}
         </Box>
