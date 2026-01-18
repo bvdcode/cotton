@@ -15,14 +15,19 @@ export interface RenameFileRequest {
 }
 
 export const filesApi = {
-  createFromChunks: async (request: CreateFileFromChunksRequest): Promise<void> => {
+  createFromChunks: async (
+    request: CreateFileFromChunksRequest,
+  ): Promise<void> => {
     await httpClient.post("/files/from-chunks", request);
   },
 
-  getDownloadLink: async (nodeFileId: Guid, expireAfterMinutes = 1440): Promise<string> => {
+  getDownloadLink: async (
+    nodeFileId: Guid,
+    expireAfterMinutes = 1440,
+  ): Promise<string> => {
     const response = await httpClient.get<string>(
       `/files/${nodeFileId}/download-link`,
-      { params: { expireAfterMinutes } }
+      { params: { expireAfterMinutes } },
     );
     return response.data;
   },
@@ -31,7 +36,10 @@ export const filesApi = {
     await httpClient.delete(`/files/${nodeFileId}`);
   },
 
-  renameFile: async (nodeFileId: Guid, request: RenameFileRequest): Promise<void> => {
+  renameFile: async (
+    nodeFileId: Guid,
+    request: RenameFileRequest,
+  ): Promise<void> => {
     await httpClient.patch(`/files/${nodeFileId}/rename`, request);
   },
 };
