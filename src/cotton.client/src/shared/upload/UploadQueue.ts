@@ -1,5 +1,5 @@
 import type { Guid } from "../api/layoutsApi";
-import type { UploadServerParams } from "./uploadFileToNode";
+import type { UploadServerParams } from "./types";
 import { uploadFileToNode } from "./uploadFileToNode";
 
 export type UploadQueueItemStatus = "queued" | "uploading" | "completed" | "failed";
