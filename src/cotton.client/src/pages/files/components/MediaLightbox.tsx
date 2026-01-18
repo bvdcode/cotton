@@ -164,7 +164,7 @@ function buildSlidesFromItems(
     const sizeStr = item.sizeBytes ? formatFileSize(item.sizeBytes) : "";
     const description = sizeStr ? `${item.name} | ${sizeStr}` : item.name;
 
-    if (item.kind === "image") {
+    if (item.kind === "image" || item.kind === "video") {
       const src = maybeOriginal ?? item.previewUrl;
       return {
         type: "image",
