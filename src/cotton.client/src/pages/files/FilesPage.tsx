@@ -26,7 +26,7 @@ import type { MediaItem } from "./components";
 import { formatBytes } from "./utils/formatBytes";
 import { isImageFile, isVideoFile } from "./utils/fileTypes";
 import { getFileIcon } from "./utils/icons";
-import { PreviewModal, PdfPreview } from "./components/preview";
+import { PreviewModal, PdfPreview, TextPreview } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
@@ -490,6 +490,12 @@ export const FilesPage: React.FC = () => {
           {previewState.fileType === "pdf" && (
             <PdfPreview
               fileId={previewState.fileId}
+              fileName={previewState.fileName}
+            />
+          )}
+          {previewState.fileType === "text" && (
+            <TextPreview
+              nodeFileId={previewState.fileId}
               fileName={previewState.fileName}
             />
           )}
