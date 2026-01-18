@@ -490,7 +490,9 @@ export const FilesPage: React.FC = () => {
           open={previewState.isOpen}
           onClose={closePreview}
           layout={previewState.fileType === "pdf" ? "header" : "overlay"}
-          title={previewState.fileType === "pdf" ? previewState.fileName : undefined}
+          title={
+            previewState.fileType === "pdf" ? previewState.fileName : undefined
+          }
         >
           {previewState.fileType === "pdf" && (
             <PdfPreview
