@@ -156,7 +156,10 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
           borderColor: "divider",
           px: 2,
           py: 1.5,
-          borderRadius: "10px 10px 0 0",
+          borderRadius: {
+            xs: "0px 0px 0 0",
+            sm: "10px 10px 0 0",
+          },
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mr: 5 }}>
