@@ -172,8 +172,8 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
           <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
             {fileName}
           </Typography>
-          {!isEditing && (
-            isMobile ? (
+          {!isEditing &&
+            (isMobile ? (
               <Tooltip title={t("preview.actions.edit", { ns: "files" })}>
                 <span>
                   <IconButton
@@ -193,8 +193,7 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
               >
                 {t("preview.actions.edit", { ns: "files" })}
               </Button>
-            )
-          )}
+            ))}
           {isEditing && (
             <>
               {isMobile ? (
