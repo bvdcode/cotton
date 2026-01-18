@@ -1,17 +1,19 @@
 import { httpClient } from "./httpClient";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
 
-export interface NodeFileManifestDto
-  extends Omit<BaseDto, "createdAt" | "updatedAt"> {
+export interface NodeFileManifestDto extends BaseDto {
   ownerId: Guid;
   name: string;
   contentType: string;
   sizeBytes: number;
-    encryptedFilePreviewHashHex?: string | null;
+  encryptedFilePreviewHashHex?: string | null;
+}
+export interface NodeResponse {
+  content: NodeContentDto;
+  totalCount: number;
 }
 
-export interface NodeContentDto
-  extends Omit<BaseDto, "createdAt" | "updatedAt"> {
+export interface NodeContentDto extends BaseDto {
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
 }
@@ -47,14 +49,18 @@ export const nodesApi = {
   getChildren: async (
     nodeId: Guid,
     options?: { nodeType?: string },
-  ): Promise<NodeContentDto> => {
+  ): Promise<NodeResponse> => {
     const response = await httpClient.get<NodeContentDto>(
       `/layouts/nodes/${nodeId}/children`,
       {
-        params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
+        params: {
+          pageSize: 1000000,
+          nodeType: options?.nodeType,
+        },
       },
     );
-    return response.data;
+    const totalCount = parseInt(response.headers["x-total-count"]);
+    return { content: response.data, totalCount };
   },
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
@@ -66,8 +72,14 @@ export const nodesApi = {
     await httpClient.delete(`/layouts/nodes/${nodeId}`);
   },
 
-  renameNode: async (nodeId: Guid, request: RenameNodeRequest): Promise<NodeDto> => {
-    const response = await httpClient.patch<NodeDto>(`/layouts/nodes/${nodeId}/rename`, request);
+  renameNode: async (
+    nodeId: Guid,
+    request: RenameNodeRequest,
+  ): Promise<NodeDto> => {
+    const response = await httpClient.patch<NodeDto>(
+      `/layouts/nodes/${nodeId}/rename`,
+      request,
+    );
     return response.data;
   },
 };

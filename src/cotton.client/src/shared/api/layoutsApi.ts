@@ -47,7 +47,9 @@ export const layoutsApi = {
     }
 
     const normalized = joinResolverPath(path);
-    const response = await httpClient.get<NodeDto>(`/layouts/resolver/${normalized}`);
+    const response = await httpClient.get<NodeDto>(
+      `/layouts/resolver/${normalized}`,
+    );
     return response.data;
   },
 
