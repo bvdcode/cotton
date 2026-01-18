@@ -3,7 +3,7 @@ import { Box, TextField } from "@mui/material";
 import { Folder } from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
-import { getFilePreview } from "../../utils/getFilePreview";
+import { getFileIcon } from "../../utils/icons";
 import { formatBytes } from "../../utils/formatBytes";
 import { isImageFile, isVideoFile } from "../../utils/fileTypes";
 import { Download, Edit, Delete } from "@mui/icons-material";
@@ -121,7 +121,7 @@ export const TilesView: React.FC<IFileListView> = ({
         // File tile rendering
         const isImage = isImageFile(tile.file.name);
         const isVideo = isVideoFile(tile.file.name);
-        const preview = getFilePreview(
+        const preview = getFileIcon(
           tile.file.encryptedFilePreviewHashHex ?? null,
           tile.file.name,
         );
