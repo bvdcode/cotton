@@ -111,15 +111,13 @@ export function TextPreview({ nodeFileId, fileName }: TextPreviewProps) {
         });
       }
 
-      // TODO: The backend needs to expose fileManifestId in NodeFileManifestDto
-      // For now, we use nodeFileId as baseManifestId - this will likely fail
-      // backend validation. The backend should either:
-      // 1. Add fileManifestId to NodeFileManifestDto, OR
-      // 2. Make baseManifestId optional and auto-fetch from nodeFileId
       await filesApi.updateFileContent(nodeFileId, {
         chunkHashes: [chunkHash],
         hash: contentHash,
         baseManifestId: fileManifestId,
+        contentType: "text/plain",
+        name: fileName,
+        nodeId: nodeFileId,
       });
 
       setOriginalContent(content);
