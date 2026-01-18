@@ -5,42 +5,50 @@ import {
   Divider,
   IconButton,
   LinearProgress,
-  TextField,
   Typography,
 } from "@mui/material";
-import { FileBreadcrumbs } from "./components";
+import { FileBreadcrumbs, FileListViewFactory } from "./components";
 import {
   ArrowUpward,
   CreateNewFolder,
-  Delete,
-  Download,
-  Edit,
-  Folder,
   Home,
   UploadFile,
+  ViewModule,
+  ViewList,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
-import type { NodeDto } from "../../shared/api/layoutsApi";
-import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { filesApi } from "../../shared/api/filesApi";
-import { FolderCard, MediaLightbox } from "./components";
+import { MediaLightbox } from "./components";
 import type { MediaItem } from "./components";
-import { RenamableItemCard } from "./components/RenamableItemCard";
-import { getFilePreview } from "./utils/getFilePreview";
 import { formatBytes } from "./utils/formatBytes";
 import { isImageFile, isVideoFile } from "./utils/fileTypes";
-import {
-  PreviewModal,
-  PdfPreview,
-} from "./components/preview";
+import { getFilePreview } from "./utils/getFilePreview";
+import { PreviewModal, PdfPreview } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
 import { useFilePreview } from "./hooks/useFilePreview";
+import type {
+  FileSystemTile,
+  FolderOperations,
+  FileOperations,
+} from "./types/FileListViewTypes";
+import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 
+/**
+ * FilesPage Component
+ *
+ * Main page for browsing and managing files and folders.
+ * Refactored to follow SOLID principles:
+ * - Single Responsibility: Manages page state and coordinates child components
+ * - Open/Closed: Can be extended with new layout types without modification
+ * - Liskov Substitution: View components are interchangeable via interface
+ * - Interface Segregation: View components depend only on needed operations
+ * - Dependency Inversion: Depends on abstractions (IFileListView) not concrete implementations
+ */
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const navigate = useNavigate();
@@ -69,6 +77,20 @@ export const FilesPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
+  // Determine layout type from current node, defaulting to Tiles
+  const initialLayoutType = useMemo(() => {
+    return currentNode?.interfaceLayoutType ?? InterfaceLayoutType.Tiles;
+  }, [currentNode?.interfaceLayoutType]);
+
+  // Layout type state - can be changed by user
+  const [layoutType, setLayoutType] =
+    React.useState<InterfaceLayoutType>(initialLayoutType);
+
+  // Sync layout type when node changes
+  useEffect(() => {
+    setLayoutType(initialLayoutType);
+  }, [initialLayoutType]);
+
   const breadcrumbs = useMemo(() => {
     if (!currentNode) return [] as Array<{ id: string; name: string }>;
     const chain = [...ancestors, currentNode];
@@ -91,12 +113,11 @@ export const FilesPage: React.FC = () => {
     return files;
   }, [content?.files]);
 
-  const tiles = useMemo(() => {
-    type FolderTile = { kind: "folder"; node: NodeDto };
-    type FileTile = { kind: "file"; file: NodeFileManifestDto };
+  // Build tiles array for view components
+  const tiles = useMemo<FileSystemTile[]>(() => {
     return [
-      ...sortedFolders.map((node) => ({ kind: "folder", node }) as FolderTile),
-      ...sortedFiles.map((file) => ({ kind: "file", file }) as FileTile),
+      ...sortedFolders.map((node) => ({ kind: "folder", node }) as const),
+      ...sortedFiles.map((file) => ({ kind: "file", file }) as const),
     ];
   }, [sortedFolders, sortedFiles]);
 
@@ -117,20 +138,22 @@ export const FilesPage: React.FC = () => {
   // Build media items for lightbox (images and videos only)
   const mediaItems = useMemo<MediaItem[]>(() => {
     return sortedFiles
-      .filter(file => isImageFile(file.name) || isVideoFile(file.name))
-      .map(file => {
+      .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
+      .map((file) => {
         const preview = getFilePreview(
           file.encryptedFilePreviewHashHex ?? null,
-          file.name
+          file.name,
         );
         const previewUrl = typeof preview === "string" ? preview : "";
-        
+
         return {
           id: file.id,
           kind: isImageFile(file.name) ? "image" : "video",
           name: file.name,
           previewUrl,
-          mimeType: file.name.toLowerCase().endsWith(".mp4") ? "video/mp4" : undefined,
+          mimeType: file.name.toLowerCase().endsWith(".mp4")
+            ? "video/mp4"
+            : undefined,
           sizeBytes: file.sizeBytes,
         } as MediaItem;
       });
@@ -138,8 +161,16 @@ export const FilesPage: React.FC = () => {
 
   // Get signed media URL for original file
   const getSignedMediaUrl = async (fileId: string): Promise<string> => {
-    // Use 24-hour expiry for download link
     return await filesApi.getDownloadLink(fileId, 60 * 24);
+  };
+
+  // Handler to open media lightbox
+  const handleMediaClick = (fileId: string) => {
+    const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
+    if (mediaIndex !== -1) {
+      setLightboxIndex(mediaIndex);
+      setLightboxOpen(true);
+    }
   };
 
   const stats = useMemo(() => {
@@ -183,6 +214,32 @@ export const FilesPage: React.FC = () => {
     if (!opened) {
       void handleDownloadFile(fileId, fileName);
     }
+  };
+
+  // Build folder operations adapter
+  const folderOperations: FolderOperations = {
+    isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
+    getRenamingName: () => folderOps.renamingFolderName,
+    onRenamingNameChange: folderOps.setRenamingFolderName,
+    onConfirmRename: folderOps.handleConfirmRename,
+    onCancelRename: folderOps.handleCancelRename,
+    onStartRename: folderOps.handleRenameFolder,
+    onDelete: folderOps.handleDeleteFolder,
+    onClick: (folderId: string) => navigate(`/files/${folderId}`),
+  };
+
+  // Build file operations adapter
+  const fileOperations: FileOperations = {
+    isRenaming: (fileId: string) => fileOps.renamingFileId === fileId,
+    getRenamingName: () => fileOps.renamingFileName,
+    onRenamingNameChange: fileOps.setRenamingFileName,
+    onConfirmRename: fileOps.handleConfirmRename,
+    onCancelRename: fileOps.handleCancelRename,
+    onStartRename: fileOps.handleRenameFile,
+    onDelete: fileOps.handleDeleteFile,
+    onDownload: handleDownloadFile,
+    onClick: handleFileClick,
+    onMediaClick: handleMediaClick,
   };
 
   const isCreatingInThisFolder =
@@ -279,7 +336,7 @@ export const FilesPage: React.FC = () => {
               <Box
                 sx={{
                   display: "flex",
-                  gap: 1,
+                  gap: 0.2,
                   alignItems: "center",
                   flexShrink: 0,
                 }}
@@ -315,6 +372,23 @@ export const FilesPage: React.FC = () => {
                 >
                   <Home />
                 </IconButton>
+                {layoutType === InterfaceLayoutType.Tiles ? (
+                  <IconButton
+                    color="primary"
+                    onClick={() => setLayoutType(InterfaceLayoutType.List)}
+                    title={t("actions.switchToListView")}
+                  >
+                    <ViewList />
+                  </IconButton>
+                ) : (
+                  <IconButton
+                    color="primary"
+                    onClick={() => setLayoutType(InterfaceLayoutType.Tiles)}
+                    title={t("actions.switchToTilesView")}
+                  >
+                    <ViewModule />
+                  </IconButton>
+                )}
               </Box>
 
               <Box
@@ -373,221 +447,21 @@ export const FilesPage: React.FC = () => {
           {tiles.length === 0 && !isCreatingInThisFolder ? (
             <Typography color="text.secondary">{t("empty.all")}</Typography>
           ) : (
-            <Box
-              sx={{
-                display: "grid",
-                gap: { xs: 1, sm: 1.5 },
-                gridTemplateColumns: {
-                  xs: "repeat(3, minmax(0, 1fr))",
-                  sm: "repeat(4, minmax(0, 1fr))",
-                  md: "repeat(6, minmax(0, 1fr))",
-                  lg: "repeat(8, minmax(0, 1fr))",
-                  xl: "repeat(12, minmax(0, 1fr))",
-                },
-              }}
-            >
-              {isCreatingInThisFolder && (
-                <Box
-                  sx={{
-                    border: "2px solid",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    p: { xs: 1, sm: 1.25, md: 1 },
-                    bgcolor: "action.hover",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 1.5,
-                      overflow: "hidden",
-                      mb: 0.75,
-                      "& > svg": {
-                        width: "70%",
-                        height: "70%",
-                      },
-                    }}
-                  >
-                    <Folder sx={{ color: "primary.main" }} />
-                  </Box>
-                  <TextField
-                    autoFocus
-                    fullWidth
-                    size="small"
-                    value={folderOps.newFolderName}
-                    onChange={(e) => folderOps.setNewFolderName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        void folderOps.handleConfirmNewFolder();
-                      } else if (e.key === "Escape") {
-                        folderOps.handleCancelNewFolder();
-                      }
-                    }}
-                    onBlur={folderOps.handleConfirmNewFolder}
-                    placeholder={t("actions.folderNamePlaceholder")}
-                    slotProps={{
-                      input: {
-                        sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
-                      },
-                    }}
-                  />
-                </Box>
-              )}
-
-              {tiles.map((tile) => {
-                if (tile.kind === "folder") {
-                  return (
-                    <FolderCard
-                      key={tile.node.id}
-                      folder={tile.node}
-                      isRenaming={folderOps.renamingFolderId === tile.node.id}
-                      renamingName={folderOps.renamingFolderName}
-                      onRenamingNameChange={folderOps.setRenamingFolderName}
-                      onConfirmRename={folderOps.handleConfirmRename}
-                      onCancelRename={folderOps.handleCancelRename}
-                      onStartRename={() =>
-                        folderOps.handleRenameFolder(
-                          tile.node.id,
-                          tile.node.name,
-                        )
-                      }
-                      onDelete={() =>
-                        folderOps.handleDeleteFolder(
-                          tile.node.id,
-                          tile.node.name,
-                        )
-                      }
-                      onClick={() => navigate(`/files/${tile.node.id}`)}
-                    />
-                  );
-                }
-
-                const isImage = isImageFile(tile.file.name);
-                const isVideo = isVideoFile(tile.file.name);
-                const preview = getFilePreview(
-                  tile.file.encryptedFilePreviewHashHex ?? null,
-                  tile.file.name,
-                );
-                const previewUrl = typeof preview === "string" ? preview : null;
-
-                const iconContainerSx = previewUrl
-                  ? {
-                      mx: { xs: -1, sm: -1.25, md: -1 },
-                      mt: { xs: -1, sm: -1.25, md: -1 },
-                      width: {
-                        xs: "calc(100% + 16px)",
-                        sm: "calc(100% + 20px)",
-                        md: "calc(100% + 16px)",
-                      },
-                      borderRadius: 0,
-                    }
-                  : undefined;
-
-                // Common card component
-                const fileCard = (
-                  <RenamableItemCard
-                    icon={(() => {
-                      if (previewUrl && (isImage || isVideo)) {
-                        return (
-                          <Box
-                            component="img"
-                            src={previewUrl}
-                            alt={tile.file.name}
-                            loading="lazy"
-                            decoding="async"
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              cursor:
-                                isImage || isVideo ? "pointer" : "default",
-                            }}
-                          />
-                        );
-                      }
-                      if (previewUrl) {
-                        return (
-                          <Box
-                            component="img"
-                            src={previewUrl}
-                            alt={tile.file.name}
-                            loading="lazy"
-                            decoding="async"
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                          />
-                        );
-                      }
-                      return preview;
-                    })()}
-                    title={tile.file.name}
-                    subtitle={formatBytes(tile.file.sizeBytes)}
-                    onClick={
-                      isImage || isVideo
-                        ? () => {
-                            // Find index in mediaItems array
-                            const mediaIndex = mediaItems.findIndex(
-                              (item) => item.id === tile.file.id
-                            );
-                            if (mediaIndex !== -1) {
-                              setLightboxIndex(mediaIndex);
-                              setLightboxOpen(true);
-                            }
-                          }
-                        : () => handleFileClick(tile.file.id, tile.file.name)
-                    }
-                    iconContainerSx={iconContainerSx}
-                    actions={[
-                      {
-                        icon: <Download />,
-                        onClick: () =>
-                          handleDownloadFile(tile.file.id, tile.file.name),
-                        tooltip: t("common:actions.download"),
-                      },
-                      {
-                        icon: <Edit />,
-                        onClick: () =>
-                          fileOps.handleRenameFile(
-                            tile.file.id,
-                            tile.file.name,
-                          ),
-                        tooltip: t("common:actions.rename"),
-                      },
-                      {
-                        icon: <Delete />,
-                        onClick: () =>
-                          fileOps.handleDeleteFile(
-                            tile.file.id,
-                            tile.file.name,
-                          ),
-                        tooltip: t("common:actions.delete"),
-                      },
-                    ]}
-                    isRenaming={fileOps.renamingFileId === tile.file.id}
-                    renamingValue={fileOps.renamingFileName}
-                    onRenamingValueChange={fileOps.setRenamingFileName}
-                    onConfirmRename={() => {
-                      void fileOps.handleConfirmRename();
-                    }}
-                    onCancelRename={fileOps.handleCancelRename}
-                    placeholder={t("rename.fileNamePlaceholder", {
-                      ns: "files",
-                    })}
-                  />
-                );
-
-                return (
-                  <React.Fragment key={tile.file.id}>{fileCard}</React.Fragment>
-                );
+            <FileListViewFactory
+              layoutType={layoutType}
+              tiles={tiles}
+              folderOperations={folderOperations}
+              fileOperations={fileOperations}
+              isCreatingFolder={isCreatingInThisFolder}
+              newFolderName={folderOps.newFolderName}
+              onNewFolderNameChange={folderOps.setNewFolderName}
+              onConfirmNewFolder={folderOps.handleConfirmNewFolder}
+              onCancelNewFolder={folderOps.handleCancelNewFolder}
+              folderNamePlaceholder={t("actions.folderNamePlaceholder")}
+              fileNamePlaceholder={t("rename.fileNamePlaceholder", {
+                ns: "files",
               })}
-            </Box>
+            />
           )}
         </Box>
       </Box>
