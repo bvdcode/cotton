@@ -61,19 +61,22 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     return buildSlidesFromItems(items, originalUrls);
   }, [items, originalUrls]);
 
-  async function ensureSlideHasOriginal(targetIndex: number) {
-    const item = items[targetIndex];
-    if (!item) return;
+  const ensureSlideHasOriginal = React.useCallback(
+    async (targetIndex: number) => {
+      const item = items[targetIndex];
+      if (!item) return;
 
-    if (originalUrls[item.id]) return;
+      if (originalUrls[item.id]) return;
 
-    try {
-      const url = await getSignedMediaUrl(item.id);
-      setOriginalUrls((prev) => ({ ...prev, [item.id]: url }));
-    } catch (e) {
-      console.error("Failed to load media original URL", e);
-    }
-  }
+      try {
+        const url = await getSignedMediaUrl(item.id);
+        setOriginalUrls((prev) => ({ ...prev, [item.id]: url }));
+      } catch (e) {
+        console.error("Failed to load media original URL", e);
+      }
+    },
+    [items, originalUrls, getSignedMediaUrl],
+  );
 
   React.useEffect(() => {
     setIndex(initialIndex);
@@ -82,7 +85,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   React.useEffect(() => {
     if (!open) return;
     void ensureSlideHasOriginal(index);
-  }, [open, index]);
+  }, [open, index, ensureSlideHasOriginal]);
 
   return (
     <Lightbox
