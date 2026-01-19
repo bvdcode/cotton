@@ -153,47 +153,48 @@ export const LoginPage = () => {
             noValidate
             autoComplete="off"
           >
-            <TextField
-              fullWidth
-              label={t("usernameLabel")}
-              margin="normal"
-              variant="outlined"
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                if (requiresTwoFactor) {
-                  setRequiresTwoFactor(false);
-                  setTwoFactorCode("");
-                }
-              }}
-              disabled={loading}
-            />
-            <TextField
-              fullWidth
-              label={t("passwordLabel")}
-              type="password"
-              margin="normal"
-              variant="outlined"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (requiresTwoFactor) {
-                  setRequiresTwoFactor(false);
-                  setTwoFactorCode("");
-                }
-              }}
-              disabled={loading}
-            />
+            {!requiresTwoFactor && (
+              <>
+                <TextField
+                  fullWidth
+                  label={t("usernameLabel")}
+                  margin="normal"
+                  variant="outlined"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={loading}
+                />
+                <TextField
+                  fullWidth
+                  label={t("passwordLabel")}
+                  type="password"
+                  margin="normal"
+                  variant="outlined"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </>
+            )}
 
             {requiresTwoFactor && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 600, mb: 1 }}
+                  align="center"
+                >
                   {t("twoFactor.title")}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 3 }}
+                  align="center"
+                >
                   {t("twoFactor.caption")}
                 </Typography>
-                <Box sx={{ mt: 1.5 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
                   <OneTimeCodeInput
                     value={twoFactorCode}
                     onChange={setTwoFactorCode}
@@ -214,7 +215,8 @@ export const LoginPage = () => {
               variant="contained"
               color="primary"
               disabled={loading}
-              sx={{ mt: 2 }}
+              fullWidth
+              sx={{ mt: 3 }}
             >
               {loading ? t("loggingIn") : t("loginButton")}
             </Button>
