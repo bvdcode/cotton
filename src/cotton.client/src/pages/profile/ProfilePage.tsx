@@ -56,13 +56,6 @@ export const ProfilePage = () => {
 
   return (
     <Box sx={{ p: 2, maxWidth: 900 }}>
-      <Typography variant="h5" fontWeight={700}>
-        {t("title")}
-      </Typography>
-      <Typography color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
-        {t("subtitle")}
-      </Typography>
-
       <Card variant="outlined" sx={{ borderRadius: 2 }}>
         <CardContent>
           <Stack direction="row" spacing={2} alignItems="center">
@@ -101,24 +94,6 @@ export const ProfilePage = () => {
           <Divider sx={{ my: 2 }} />
 
           <Stack spacing={1.25}>
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography variant="body2" color="text.secondary">
-                {t("fields.role")}
-              </Typography>
-              <Typography variant="body2" fontWeight={600}>
-                {t(getRoleTranslationKey(user.role))}
-              </Typography>
-            </Box>
-
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography variant="body2" color="text.secondary">
-                {t("fields.twoFactor")}
-              </Typography>
-              <Typography variant="body2" fontWeight={600}>
-                {totpEnabled ? t("totp.enabled") : t("totp.disabled")}
-              </Typography>
-            </Box>
-
             {totpEnabled && totpEnabledAt && (
               <Box display="flex" justifyContent="space-between" gap={2}>
                 <Typography variant="body2" color="text.secondary">
