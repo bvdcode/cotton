@@ -23,5 +23,11 @@ namespace Cotton.Database.Models
 
         [Column("is_totp_enabled")]
         public bool IsTotpEnabled { get; set; }
+
+        [Column("totp_secret_encrypted")]
+        public byte[]? TotpSecretEncrypted { get; set; }
+
+        [Column("totp_enabled_at")]
+        public DateTime? TotpEnabledAt { get; set; }
     }
 }
