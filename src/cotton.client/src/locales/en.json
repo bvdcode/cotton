@@ -48,6 +48,9 @@
     "totp": {
       "enabled": "2FA enabled",
       "disabled": "2FA disabled",
+      "sectionTitle": "Two-factor authentication",
+      "enabledMessage": "Two-factor authentication is enabled.",
+      "enabledDescription": "Your account is protected with an additional security layer.",
       "setup": {
         "title": "Enable two-factor authentication (TOTP)",
         "caption": "Use an authenticator app (Google Authenticator, Authy, etc.).",
