@@ -1,1 +1,1 @@
-export { BaseDto } from './BaseDto';
+export type { BaseDto } from './BaseDto';
