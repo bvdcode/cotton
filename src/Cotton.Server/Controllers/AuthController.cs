@@ -17,6 +17,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Extensions;
 using EasyExtensions.Helpers;
+using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -156,19 +157,14 @@ namespace Cotton.Server.Controllers
                 }
             }
             string accessToken = CreateAccessToken(user);
-            string refreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
-            RefreshToken dbToken = new()
-            {
-                UserId = user.Id,
-                Token = refreshToken,
-            };
+            ExtendedRefreshToken dbToken = CreateRefreshToken(user);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(refreshToken);
+            AddRefreshTokenToCookies(dbToken.Token);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshToken
+                RefreshToken = dbToken.Token
             });
         }
 
@@ -193,20 +189,15 @@ namespace Cotton.Server.Controllers
                 return NotFound();
             }
             var accessToken = CreateAccessToken(user);
-            string newRefreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
             dbToken.RevokedAt = DateTime.UtcNow;
-            RefreshToken newDbToken = new()
-            {
-                UserId = user.Id,
-                Token = newRefreshToken,
-            };
+            ExtendedRefreshToken newDbToken = CreateRefreshToken(user);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(newRefreshToken);
+            AddRefreshTokenToCookies(newDbToken.Token);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
-                RefreshToken = newRefreshToken
+                RefreshToken = newDbToken.Token
             });
         }
 
@@ -292,6 +283,20 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Created initial admin user: {Username}", user.Username);
             return user;
+        }
+
+        private ExtendedRefreshToken CreateRefreshToken(User user)
+        {
+            return new()
+            {
+                RevokedAt = null,
+                UserId = user.Id,
+                AuthType = AuthType.Credentials,
+                IpAddress = Request.GetRemoteIPAddress(),
+                UserAgent = Request.Headers.UserAgent.ToString(),
+                Token = StringHelpers.CreatePseudoRandomString(RefreshTokenLength),
+                Device = UserAgentHelpers.GetDevice(Request.Headers.UserAgent.ToString()),
+            };
         }
     }
 }

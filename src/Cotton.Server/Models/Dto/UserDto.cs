@@ -3,6 +3,7 @@
 
 using Cotton.Database.Models.Enums;
 using EasyExtensions.Models.Dto;
+using EasyExtensions.Models.Enums;
 
 namespace Cotton.Server.Models.Dto
 {

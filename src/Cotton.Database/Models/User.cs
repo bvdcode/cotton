@@ -3,6 +3,7 @@
 
 using Cotton.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
+using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 
