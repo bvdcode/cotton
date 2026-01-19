@@ -47,7 +47,32 @@
     },
     "totp": {
       "enabled": "2FA enabled",
-      "disabled": "2FA disabled"
+      "disabled": "2FA disabled",
+      "setup": {
+        "title": "Enable two-factor authentication (TOTP)",
+        "caption": "Use an authenticator app (Google Authenticator, Authy, etc.).",
+        "button": "Generate QR code",
+        "loading": "Generating...",
+        "qrTitle": "Scan this QR code",
+        "secretLabel": "Secret key",
+        "copySecret": "Copy secret",
+        "success": "Two-factor authentication is enabled."
+      },
+      "confirm": {
+        "title": "Confirm setup",
+        "caption": "Enter the 6-digit code from your authenticator app.",
+        "digit": "Digit",
+        "button": "Confirm",
+        "loading": "Confirming..."
+      },
+      "errors": {
+        "setupFailed": "Failed to start 2FA setup.",
+        "confirmFailed": "Failed to confirm 2FA.",
+        "codeRequired": "Please enter the 6-digit code.",
+        "invalidCode": "Invalid two-factor authentication code.",
+        "alreadyEnabled": "2FA is already enabled.",
+        "setupNotInitiated": "2FA setup has not been initiated. Generate a QR code first."
+      }
     },
     "fields": {
       "role": "Role",
