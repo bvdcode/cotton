@@ -85,9 +85,6 @@ namespace Cotton.Server.Jobs
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
-
-                    // TODO: For debugging purposes only
-                    throw;
                 }
             }
 
