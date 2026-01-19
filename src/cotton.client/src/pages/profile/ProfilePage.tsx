@@ -204,10 +204,10 @@ export const ProfilePage = () => {
           <Stack spacing={1.5}>
             <Box display="flex" justifyContent="space-between" gap={2}>
               <Typography variant="body2" color="text.secondary">
-                {t("fields.role")}
+                {t("fields.createdAt")}
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {t(getRoleTranslationKey(user.role))}
+                {formatDateTime(user.createdAt)}
               </Typography>
             </Box>
 

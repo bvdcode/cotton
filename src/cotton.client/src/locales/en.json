@@ -81,7 +81,8 @@
       "role": "Role",
       "twoFactor": "Two-factor authentication",
       "totpEnabledAt": "Enabled at",
-      "totpFailedAttempts": "2FA Failed attempts"
+      "totpFailedAttempts": "2FA Failed attempts",
+      "createdAt": "Created at"
     }
   },
   "setup": {

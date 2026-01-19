@@ -81,7 +81,8 @@
       "role": "Роль",
       "twoFactor": "Двухфакторная аутентификация",
       "totpEnabledAt": "Включена",
-      "totpFailedAttempts": "Неудачных попыток двухфакторного входа"
+      "totpFailedAttempts": "Неудачных попыток двухфакторного входа",
+      "createdAt": "Создан"
     }
   },
   "setup": {
