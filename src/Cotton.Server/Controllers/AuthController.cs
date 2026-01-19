@@ -39,6 +39,32 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpPost("/api/v1/auth/totp/confirm")]
+        public async Task<IActionResult> ConfirmTotp([FromQuery] string code)
+        {
+            var userId = User.GetUserId();
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return this.ApiUnauthorized("User not found");
+            }
+            if (user.IsTotpEnabled)
+            {
+                return this.ApiConflict("TOTP is already enabled for this user");
+            }
+            if (user.TotpSecretEncrypted == null)
+            {
+                return this.ApiBadRequest("TOTP setup has not been initiated for this user");
+            }
+            string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
+            bool isValid = TotpHelpers.VerifyCode(secret, code);
+            if (!isValid)
+            {
+                return this.ApiForbidden("Invalid two-factor authentication code");
+            }
+            user.IsTotpEnabled = true;
+            await _dbContext.SaveChangesAsync();
+            return Ok();
+        }
 
 
         [Authorize]
@@ -94,6 +120,15 @@ namespace Cotton.Server.Controllers
             if (user.IsTotpEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
             {
                 return this.ApiForbidden("Two-factor authentication code is required");
+            }
+            if (user.IsTotpEnabled && user.TotpSecretEncrypted != null)
+            {
+                string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
+                bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode!);
+                if (!isValid)
+                {
+                    return this.ApiForbidden("Invalid two-factor authentication code");
+                }
             }
             string accessToken = CreateAccessToken(user);
             string refreshToken = StringHelpers.CreatePseudoRandomString(RefreshTokenLength);
