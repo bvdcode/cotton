@@ -1,8 +1,7 @@
 import {
   Avatar,
   Box,
-  Card,
-  CardContent,
+  Paper,
   Chip,
   Button,
   Alert,
@@ -151,14 +150,27 @@ export const ProfilePage = () => {
   };
 
   return (
-    <Box sx={{ p: 2, maxWidth: 900 }}>
-      <Card variant="outlined" sx={{ borderRadius: 2 }}>
-        <CardContent>
-          <Stack direction="row" spacing={2} alignItems="center">
+    <Box sx={{ p: 2, maxWidth: 1400 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          gap: 3,
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            borderRadius: 2,
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
             <Avatar
               alt={displayName}
               src={user.pictureUrl}
-              sx={{ width: 56, height: 56, bgcolor: "primary.main" }}
+              sx={{ width: 64, height: 64, bgcolor: "primary.main" }}
             >
               {!user.pictureUrl && avatarLetter}
             </Avatar>
@@ -170,26 +182,44 @@ export const ProfilePage = () => {
               <Typography variant="body2" color="text.secondary" noWrap>
                 @{user.username}
               </Typography>
-
-              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                <Chip
-                  size="small"
-                  color={user.role === UserRole.Admin ? "warning" : "default"}
-                  label={t(getRoleTranslationKey(user.role))}
-                />
-                <Chip
-                  size="small"
-                  color={totpEnabled ? "success" : "default"}
-                  variant={totpEnabled ? "filled" : "outlined"}
-                  label={totpEnabled ? t("totp.enabled") : t("totp.disabled")}
-                />
-              </Stack>
             </Box>
           </Stack>
 
-          <Divider sx={{ my: 2 }} />
+          <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+            <Chip
+              size="small"
+              color={user.role === UserRole.Admin ? "warning" : "default"}
+              label={t(getRoleTranslationKey(user.role))}
+            />
+            <Chip
+              size="small"
+              color={totpEnabled ? "success" : "default"}
+              variant={totpEnabled ? "filled" : "outlined"}
+              label={totpEnabled ? t("totp.enabled") : t("totp.disabled")}
+            />
+          </Stack>
 
-          <Stack spacing={1.25}>
+          <Divider sx={{ mb: 2 }} />
+
+          <Stack spacing={1.5}>
+            <Box display="flex" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                {t("fields.role")}
+              </Typography>
+              <Typography variant="body2" fontWeight={600}>
+                {t(getRoleTranslationKey(user.role))}
+              </Typography>
+            </Box>
+
+            <Box display="flex" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                {t("fields.twoFactor")}
+              </Typography>
+              <Typography variant="body2" fontWeight={600}>
+                {totpEnabled ? t("totp.enabled") : t("totp.disabled")}
+              </Typography>
+            </Box>
+
             {totpEnabled && totpEnabledAt && (
               <Box display="flex" justifyContent="space-between" gap={2}>
                 <Typography variant="body2" color="text.secondary">
@@ -210,19 +240,41 @@ export const ProfilePage = () => {
               </Typography>
             </Box>
           </Stack>
+        </Paper>
 
-          {!totpEnabled && (
-            <>
-              <Divider sx={{ my: 2 }} />
+        {/* Правая колонка: Двухфакторная аутентификация */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            borderRadius: 2,
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            {t("totp.sectionTitle")}
+          </Typography>
 
-              <Typography variant="subtitle1" fontWeight={700}>
-                {t("totp.setup.title")}
+          {totpEnabled ? (
+            <Box>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {t("totp.enabledMessage")}
+              </Alert>
+              <Typography variant="body2" color="text.secondary">
+                {t("totp.enabledDescription")}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {t("totp.setup.caption")}
               </Typography>
 
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 2 }}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                sx={{ mb: 2 }}
+              >
                 <Button
                   variant="contained"
                   onClick={handleSetupTotp}
@@ -246,49 +298,61 @@ export const ProfilePage = () => {
               </Stack>
 
               {totpError && (
-                <Alert severity="error" sx={{ mt: 2 }}>
+                <Alert severity="error" sx={{ mb: 2 }}>
                   {totpError}
                 </Alert>
               )}
               {totpSuccess && (
-                <Alert severity="success" sx={{ mt: 2 }}>
+                <Alert severity="success" sx={{ mb: 2 }}>
                   {t("totp.setup.success")}
                 </Alert>
               )}
 
               {totpSetup && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                <Box>
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="body2" fontWeight={600} gutterBottom>
                     {t("totp.setup.qrTitle")}
                   </Typography>
 
                   <Box
                     sx={{
-                      mt: 1,
+                      mt: 2,
+                      mb: 2,
                       p: 2,
                       borderRadius: 2,
                       display: "inline-flex",
-                      bgcolor: "background.paper",
+                      bgcolor: "#fff",
                       border: (theme) => `1px solid ${theme.palette.divider}`,
                     }}
                   >
-                    <QRCode value={totpSetup.otpAuthUri} size={160} />
+                    <QRCode value={totpSetup.otpAuthUri} size={180} />
                   </Box>
 
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                    {t("totp.setup.secretLabel")}: {totpSetup.secretBase32}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 3, wordBreak: "break-all" }}
+                  >
+                    {t("totp.setup.secretLabel")}:{" "}
+                    <strong>{totpSetup.secretBase32}</strong>
                   </Typography>
 
-                  <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ mb: 2 }} />
 
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  <Typography variant="body2" fontWeight={600} gutterBottom>
                     {t("totp.confirm.title")}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 2 }}
+                  >
                     {t("totp.confirm.caption")}
                   </Typography>
 
-                  <Box sx={{ mt: 1.5 }}>
+                  <Box sx={{ mb: 2 }}>
                     <OneTimeCodeInput
                       value={totpCode}
                       onChange={setTotpCode}
@@ -299,7 +363,6 @@ export const ProfilePage = () => {
                   </Box>
 
                   <Button
-                    sx={{ mt: 2 }}
                     variant="contained"
                     onClick={handleConfirmTotp}
                     disabled={totpConfirmLoading}
@@ -315,12 +378,10 @@ export const ProfilePage = () => {
                   </Button>
                 </Box>
               )}
-            </>
+            </Box>
           )}
-
-          {/* Future: TOTP setup UI will be mounted here when disabled */}
-        </CardContent>
-      </Card>
+        </Paper>
+      </Box>
     </Box>
   );
 };
