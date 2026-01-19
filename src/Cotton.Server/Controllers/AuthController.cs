@@ -39,8 +39,12 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpPost("/api/v1/auth/totp/confirm")]
-        public async Task<IActionResult> ConfirmTotp([FromQuery] string code)
+        public async Task<IActionResult> ConfirmTotp([FromBody] LoginRequestDto request)
         {
+            if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
+            {
+                return this.ApiBadRequest("Two-factor authentication code is required");
+            }
             var userId = User.GetUserId();
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null)
@@ -56,12 +60,13 @@ namespace Cotton.Server.Controllers
                 return this.ApiBadRequest("TOTP setup has not been initiated for this user");
             }
             string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
-            bool isValid = TotpHelpers.VerifyCode(secret, code);
+            bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode);
             if (!isValid)
             {
                 return this.ApiForbidden("Invalid two-factor authentication code");
             }
             user.IsTotpEnabled = true;
+            user.TotpEnabledAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync();
             return Ok();
         }
@@ -81,7 +86,9 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiConflict("TOTP is already enabled for this user");
             }
-            TotpSetup setup = TotpHelpers.CreateSetup("Cotton Cloud", user.Username);
+            string host = Request.Host.Host;
+            string issuer = host.Length > 0 ? $"Cotton Cloud ({host})" : "Cotton Cloud";
+            TotpSetup setup = TotpHelpers.CreateSetup(issuer, user.Username);
             user.TotpSecretEncrypted = _crypto.Encrypt(setup.SecretBase32);
             await _dbContext.SaveChangesAsync();
             return Ok(setup);
@@ -121,13 +128,28 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiForbidden("Two-factor authentication code is required");
             }
+            if (user.IsTotpEnabled && user.TotpSecretEncrypted == null)
+            {
+                throw new InvalidOperationException("TOTP is enabled but secret is missing");
+            }
             if (user.IsTotpEnabled && user.TotpSecretEncrypted != null)
             {
+                int maxFailedAttempts = _settings.GetServerSettings().TotpMaxFailedAttempts;
+                if (user.TotpFailedAttempts >= maxFailedAttempts)
+                {
+                    return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
+                }
                 string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
                 bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode!);
                 if (!isValid)
                 {
+                    user.TotpFailedAttempts += 1;
+                    await _dbContext.SaveChangesAsync();
                     return this.ApiForbidden("Invalid two-factor authentication code");
+                }
+                else
+                {
+                    user.TotpFailedAttempts = 0;
                 }
             }
             string accessToken = CreateAccessToken(user);
