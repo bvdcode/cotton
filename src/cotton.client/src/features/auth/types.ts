@@ -7,7 +7,8 @@ export interface User {
   username: string;
   pictureUrl?: string;
   displayName?: string;
-
+  createdAt: string;
+  updatedAt: string;
   /** 2FA (TOTP) */
   isTotpEnabled?: boolean;
   /** ISO string from backend (DateTime) */
