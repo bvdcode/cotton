@@ -28,7 +28,7 @@ Cotton Cloud is a self-hosted file cloud built around its **own content-addresse
 It is **not**:
 
 - a thin web UI over a flat filesystem;
-- a Nextcloud-style "kitchen sink" with 50 random features.
+- a ****cloud-style "kitchen sink" with 50 random features.
 
 Instead, Cotton separates:
 
@@ -101,7 +101,7 @@ Separation of concerns is similar to git:
 
 - **Content ("what")**  
   `Chunk`, `FileManifest`, `FileManifestChunk`, `ChunkOwnership`  
-  — see `Sources/Cotton.Database/Models`.
+  — see `src/Cotton.Database/Models`.
 
 - **Layout ("where")**  
   `Layout`, `Node`, `NodeFile` manage user trees, mounts and projections.
@@ -132,13 +132,13 @@ Selected endpoints:
 - `POST /chunks` — upload a chunk with hex SHA-256; server verifies and stores via pipeline.
 - `POST /files/from-chunks` — create a file from an ordered list of chunk hashes at a layout node.
 
-See controllers under `Sources/Cotton.Server/Controllers`.
+See controllers under `src/Cotton.Server/Controllers`.
 
 ---
 
 ## Storage Pipeline
 
-`Sources/Cotton.Storage` implements a processor pipeline:
+`src/Cotton.Storage` implements a processor pipeline:
 
 - `FileSystemStorageProcessor` — persists chunk blobs on disk (`.ctn`).
 - `CryptoProcessor` — wraps streams with streaming AES-GCM encrypt/decrypt.
@@ -151,19 +151,19 @@ This gives a real storage engine, not just `File.WriteAllBytes`.
 
 ## Cryptography & Performance
 
-`Sources/Cotton.Crypto` contains a streaming AES-GCM engine (`AesGcmStreamCipher`) with:
+Crypto is powered by **EasyExtensions.Crypto** (NuGet) — a streaming AES-GCM engine (`AesGcmStreamCipher`) with:
 
 - Per-file wrapped keys and per-chunk authentication.
 - 12-byte nonce layout (4-byte file prefix + 8-byte chunk counter).
 - Parallel, chunked pipelines built on `System.IO.Pipelines`.
 
-Measurements (see `Sources/Cotton.Crypto.Tests` and `Cotton.Crypto.Tests.Charts`):
+Performance characteristics:
 
 - Decrypt throughput ~9–10 GB/s across large chunk sizes on typical dev hardware.
 - Encrypt scales to memory bandwidth (~14–16+ GB/s) around 1–2 threads with ~1 MiB chunks.
 - Scaling efficient up to 2–4 threads, then limited by shared resources (memory BW / caches).
 
-Hashing for addressing uses SHA-256 (`Sources/Cotton.Crypto/Hasher.cs`).
+Hashing for addressing uses SHA-256 from EasyExtensions.Crypto.
 
 ---
 
@@ -222,10 +222,38 @@ docker run -d --name cotton \
 
 On startup the app applies EF migrations automatically and serves the UI at `http://localhost:8080` (or whatever port you mapped).
 
-Upload settings are returned by the server; the frontend (`Sources/cotton.client`) uses them for chunking.
+Upload settings are returned by the server; the frontend (`src/cotton.client`) uses them for chunking.
 
 ---
+## Technical Highlights
 
+Some careful engineering decisions worth highlighting:
+
+**RangeStreamServer for FFmpeg**  
+Video preview generation wraps seekable streams in a mini HTTP server with semaphore-protected seek+read. FFmpeg/ffprobe make parallel range requests (moov atom + linear reads) — without this coordination, stream access would deadlock.
+
+**FileSystemStorageBackend atomic writes**  
+Chunks are written via temp file + atomic move, then marked read-only and excluded from Windows indexing. This ensures "safe" chunk persistence without partial writes or indexer churn.
+
+**Preview URL security**  
+Previews are stored content-addressed by hash, but URLs expose **encrypted** preview hashes (`EncryptedPreviewImageHash`). Server decrypts on request — prevents content enumeration while keeping storage deduped.
+
+**ETag + 304 + range processing**  
+Downloads and previews properly support `ETag`, `If-None-Match` (304 responses), and `Range` headers (`enableRangeProcessing`). Browsers and CDNs cache efficiently; partial downloads resume cleanly.
+
+**Download tokens with auto-cleanup**  
+Share tokens can be single-use (`DeleteAfterUse`) and expire after configurable retention. Background job sweeps expired tokens — no manual "clean up shares" UI needed.
+
+**Industrial-strength NameValidator**  
+Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
+
+**Autoconfig env scrubbing**  
+`Cotton.Autoconfig` derives keys from `COTTON_MASTER_KEY`, then **wipes the env var** from Process and User environment after startup. Secrets don't linger in memory dumps or child processes.
+
+**Client-side upload pipeline**  
+Browser uploads hash chunks in a Web Worker (one pass for both chunk-hash and rolling file-hash), parallelize uploads (default 4 in-flight), send only missing chunks on retry. UI stays responsive even with 10k+ file folders.
+
+---
 ## Roadmap (short)
 
 - Generational GC with compaction/merging of small "dust" chunks (design complete; implementation pending).
@@ -244,12 +272,13 @@ Upload settings are returned by the server; the frontend (`Sources/cotton.client
 
 ## Repo Map
 
-- `Sources/Cotton.Server` — ASP.NET Core API + UI hosting.
-- `Sources/Cotton.Database` — EF Core models and migrations.
-- `Sources/Cotton.Storage` — storage pipeline and processors.
-- `Sources/Cotton.Crypto` — streaming AES-GCM, key derivation, hashing.
-- `Sources/Cotton.Topology` — layout/topology manipulation services.
-- `Sources/cotton.client` — TypeScript/Vite frontend.
+- `src/Cotton.Server` — ASP.NET Core API + UI hosting.
+- `src/Cotton.Database` — EF Core models and migrations.
+- `src/Cotton.Storage` — storage pipeline and processors.
+- `src/Cotton.Previews` — preview generators (image, PDF via Docnet/MuPDF, video via FFmpeg, text).
+- `src/Cotton.Topology` — layout/topology manipulation services.
+- `src/cotton.client` — TypeScript/Vite frontend.
+- **EasyExtensions.Crypto** (NuGet) — streaming AES-GCM, key derivation, hashing.
 
 ---
 
