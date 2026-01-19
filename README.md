@@ -321,6 +321,7 @@ _See: `src/Cotton.Storage/Processors/CompressionProcessor.cs`_
 **Streaming AES-GCM cipher**  
 Pure C# streaming encryption with:
 
+- The library was especially designed for **Cotton Cloud** but is reusable elsewhere.
 - Header + key wrapping
 - Per-chunk authentication tags
 - 12-byte nonces (4-byte file prefix + 8-byte chunk counter)
