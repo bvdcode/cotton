@@ -142,7 +142,7 @@ See controllers under `src/Cotton.Server/Controllers`.
 
 - `FileSystemStorageProcessor` — persists chunk blobs on disk (`.ctn`).
 - `CryptoProcessor` — wraps streams with streaming AES-GCM encrypt/decrypt.
-- `CompressionProcessor` — optional Brotli (easily pluggable).
+- `CompressionProcessor` — Zstd.
 
 Write flows **forward** through processors; read flows **backwards**.  
 This gives a real storage engine, not just `File.WriteAllBytes`.
