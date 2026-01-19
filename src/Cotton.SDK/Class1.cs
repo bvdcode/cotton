@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Cotton.SDK
+﻿namespace Cotton.SDK
 {
     public class Class1
     {

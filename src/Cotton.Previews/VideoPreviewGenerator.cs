@@ -1,5 +1,4 @@
 using Cotton.Previews.Http;
-using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using Xabe.FFmpeg.Downloader;
 
