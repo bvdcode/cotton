@@ -52,7 +52,7 @@ export const OneTimeCodeInput = ({
   };
 
   return (
-    <Box sx={{ display: "flex", gap: { xs: 1, sm: 1.25 } }}>
+    <Box sx={{ display: "flex", gap: { xs: 1, sm: 1.25 }, width: "100%" }}>
       {Array.from({ length }).map((_: unknown, i: number) => (
         <TextField
           key={i}
@@ -70,7 +70,7 @@ export const OneTimeCodeInput = ({
             style: { textAlign: "center", fontWeight: 700 },
             "aria-label": inputAriaLabel ? `${inputAriaLabel} ${i + 1}` : undefined,
           }}
-          sx={{ width: 56 }}
+          sx={{ flex: 1, minWidth: 0 }}
           onChange={(e) => {
             const next = normalize(e.target.value, 1);
             if (next.length === 0) {
