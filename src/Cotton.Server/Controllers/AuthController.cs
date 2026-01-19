@@ -4,6 +4,8 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Helpers;
+using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using EasyExtensions;
@@ -12,6 +14,7 @@ using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
+using EasyExtensions.Extensions;
 using EasyExtensions.Helpers;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +27,7 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class AuthController(
+        IStreamCipher _crypto,
         ITokenProvider _tokens,
         SettingsProvider _settings,
         CottonDbContext _dbContext,
@@ -32,6 +36,30 @@ namespace Cotton.Server.Controllers
     {
         private const int RefreshTokenLength = 64;
         private const string CookieRefreshTokenKey = "refresh_token";
+
+        [Authorize]
+        [HttpPost("/api/v1/auth/totp/confirm")]
+
+
+        [Authorize]
+        [HttpPost("/api/v1/auth/totp/setup")]
+        public async Task<IActionResult> SetupTotp()
+        {
+            var userId = User.GetUserId();
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return this.ApiUnauthorized("User not found");
+            }
+            if (user.IsTotpEnabled)
+            {
+                return this.ApiConflict("TOTP is already enabled for this user");
+            }
+            TotpSetup setup = TotpHelpers.CreateSetup("Cotton Cloud", user.Username);
+            user.TotpSecretEncrypted = _crypto.Encrypt(setup.SecretBase32);
+            await _dbContext.SaveChangesAsync();
+            return Ok(setup);
+        }
 
         [Authorize]
         [HttpGet("/api/v1/auth/me")]
