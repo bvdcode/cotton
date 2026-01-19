@@ -78,38 +78,35 @@ export const LoginPage = () => {
     } catch (e) {
       if (axios.isAxiosError(e)) {
         const status = e.response?.status;
-        const serverMessage = (e.response?.data as { message?: string })
-          ?.message;
+        const data = e.response?.data as { message?: string; detail?: string };
+        const serverMessage = data?.detail ?? data?.message;
 
-        if (
-          status === 403 &&
-          typeof serverMessage === "string" &&
-          serverMessage.toLowerCase().includes("two-factor authentication code is required")
-        ) {
-          setRequiresTwoFactor(true);
-          setTwoFactorCode("");
-          setError("");
-          return;
-        }
+        console.log("Login error:", { status, serverMessage, data: e.response?.data });
 
-        if (
-          status === 403 &&
-          typeof serverMessage === "string" &&
-          serverMessage.toLowerCase().includes("invalid two-factor authentication code")
-        ) {
-          setRequiresTwoFactor(true);
-          setError(t("twoFactor.invalid"));
-          return;
-        }
+        if (status === 403 && typeof serverMessage === "string") {
+          const msgLower = serverMessage.toLowerCase();
+          
+          // Check if 2FA code is required
+          if (msgLower.includes("two-factor") && msgLower.includes("required")) {
+            setRequiresTwoFactor(true);
+            setTwoFactorCode("");
+            setError("");
+            return;
+          }
 
-        if (
-          status === 403 &&
-          typeof serverMessage === "string" &&
-          serverMessage.toLowerCase().includes("maximum number of totp verification attempts")
-        ) {
-          setRequiresTwoFactor(true);
-          setError(t("twoFactor.locked"));
-          return;
+          // Check if 2FA code is invalid
+          if (msgLower.includes("invalid") && msgLower.includes("two-factor")) {
+            setRequiresTwoFactor(true);
+            setError(t("twoFactor.invalid"));
+            return;
+          }
+
+          // Check if locked due to too many attempts
+          if (msgLower.includes("maximum") || msgLower.includes("locked") || msgLower.includes("attempts")) {
+            setRequiresTwoFactor(true);
+            setError(t("twoFactor.locked"));
+            return;
+          }
         }
       }
 
