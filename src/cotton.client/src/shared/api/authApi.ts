@@ -5,6 +5,7 @@ import {
   refreshAccessToken,
 } from "./httpClient";
 import { UserRole, type User } from "../../features/auth/types";
+import type { BaseDto } from "./types";
 
 interface LoginRequest {
   username: string;
@@ -16,14 +17,14 @@ interface LoginResponse {
   accessToken: string;
 }
 
-interface UserInfoResponse {
-  id: string;
+/**
+ * User info response matching backend UserDto : BaseDto<Guid>
+ */
+interface UserInfoResponse extends BaseDto<string> {
   username: string;
   role: UserRole;
   displayName?: string;
   pictureUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
 
   // 2FA (TOTP)
   isTotpEnabled?: boolean;
@@ -50,14 +51,20 @@ export const authApi = {
    */
   me: async (): Promise<User> => {
     const response = await httpClient.get<UserInfoResponse>("auth/me");
+    
+    // Validate critical fields from BaseDto
+    if (!response.data.createdAt || !response.data.updatedAt) {
+      console.error("Missing required BaseDto fields from /auth/me:", response.data);
+    }
+    
     return {
       id: response.data.id,
       role: response.data.role,
       username: response.data.username,
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
-      createdAt: response.data.createdAt ?? new Date().toISOString(),
-      updatedAt: response.data.updatedAt ?? new Date().toISOString(),
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt,
 
       isTotpEnabled: response.data.isTotpEnabled,
       totpEnabledAt: response.data.totpEnabledAt ?? null,
