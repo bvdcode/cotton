@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Cotton.Server.Controllers
 {
@@ -157,7 +158,7 @@ namespace Cotton.Server.Controllers
                 }
             }
             string accessToken = CreateAccessToken(user);
-            ExtendedRefreshToken dbToken = CreateRefreshToken(user);
+            ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token);
@@ -190,7 +191,7 @@ namespace Cotton.Server.Controllers
             }
             var accessToken = CreateAccessToken(user);
             dbToken.RevokedAt = DateTime.UtcNow;
-            ExtendedRefreshToken newDbToken = CreateRefreshToken(user);
+            ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(user);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(newDbToken.Token);
@@ -285,12 +286,16 @@ namespace Cotton.Server.Controllers
             return user;
         }
 
-        private ExtendedRefreshToken CreateRefreshToken(User user)
+        private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(User user)
         {
+            var lookup = await GeoIpHelpers.LookupAsync(Request.GetRemoteAddress());
             return new()
             {
                 RevokedAt = null,
                 UserId = user.Id,
+                City = lookup.City,
+                Region = lookup.Region,
+                Country = lookup.Country,
                 AuthType = AuthType.Credentials,
                 IpAddress = Request.GetRemoteIPAddress(),
                 UserAgent = Request.Headers.UserAgent.ToString(),
