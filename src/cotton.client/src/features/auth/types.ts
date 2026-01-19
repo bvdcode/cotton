@@ -7,6 +7,12 @@ export interface User {
   username: string;
   pictureUrl?: string;
   displayName?: string;
+
+  /** 2FA (TOTP) */
+  isTotpEnabled?: boolean;
+  /** ISO string from backend (DateTime) */
+  totpEnabledAt?: string | null;
+  totpFailedAttempts?: number;
 }
 
 /**

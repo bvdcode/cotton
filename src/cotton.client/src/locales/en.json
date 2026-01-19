@@ -29,6 +29,25 @@
     "message": "The page you are looking for does not exist.",
     "backButton": "Go Back to Home"
   },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account information and security status.",
+    "notAuthenticated": "You are not signed in.",
+    "roles": {
+      "user": "User",
+      "admin": "Admin"
+    },
+    "totp": {
+      "enabled": "2FA enabled",
+      "disabled": "2FA disabled"
+    },
+    "fields": {
+      "role": "Role",
+      "twoFactor": "Two-factor authentication",
+      "totpEnabledAt": "Enabled at",
+      "totpFailedAttempts": "Failed attempts"
+    }
+  },
   "setup": {
     "title": "Server setup wizard",
     "subtitle": "Complete the initial server configuration to get started. This won't take long and will personalize the app for you.",
