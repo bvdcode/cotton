@@ -22,6 +22,8 @@ interface UserInfoResponse {
   role: UserRole;
   displayName?: string;
   pictureUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 
   // 2FA (TOTP)
   isTotpEnabled?: boolean;
@@ -54,6 +56,8 @@ export const authApi = {
       username: response.data.username,
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
+      createdAt: response.data.createdAt ?? new Date().toISOString(),
+      updatedAt: response.data.updatedAt ?? new Date().toISOString(),
 
       isTotpEnabled: response.data.isTotpEnabled,
       totpEnabledAt: response.data.totpEnabledAt ?? null,
