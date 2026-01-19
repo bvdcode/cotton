@@ -9,7 +9,7 @@ namespace Cotton.Server.Helpers
         {
             var secretBytes = KeyGeneration.GenerateRandomKey(20); // 160-bit
             var secretBase32 = Base32Encoding.ToString(secretBytes);
-            var label = Uri.EscapeDataString($"{issuer}:{accountName}");
+            var label = Uri.EscapeDataString(accountName);
             var issuerEsc = Uri.EscapeDataString(issuer);
             var uri = $"otpauth://totp/{label}?secret={secretBase32}&issuer={issuerEsc}&digits=6&period=30";
             return new TotpSetup
