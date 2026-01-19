@@ -1,0 +1,1 @@
+export { BaseDto } from './BaseDto';
