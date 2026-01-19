@@ -10,5 +10,8 @@ namespace Cotton.Server.Models.Dto
     {
         public string Username { get; set; } = null!;
         public UserRole Role { get; set; }
+        public bool IsTotpEnabled { get; set; }
+        public DateTime? TotpEnabledAt { get; set; }
+        public int TotpFailedAttempts { get; set; }
     }
 }
