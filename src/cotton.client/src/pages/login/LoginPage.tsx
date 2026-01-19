@@ -81,13 +81,14 @@ export const LoginPage = () => {
         const data = e.response?.data as { message?: string; detail?: string };
         const serverMessage = data?.detail ?? data?.message;
 
-        console.log("Login error:", { status, serverMessage, data: e.response?.data });
-
         if (status === 403 && typeof serverMessage === "string") {
           const msgLower = serverMessage.toLowerCase();
-          
+
           // Check if 2FA code is required
-          if (msgLower.includes("two-factor") && msgLower.includes("required")) {
+          if (
+            msgLower.includes("two-factor") &&
+            msgLower.includes("required")
+          ) {
             setRequiresTwoFactor(true);
             setTwoFactorCode("");
             setError("");
@@ -102,7 +103,11 @@ export const LoginPage = () => {
           }
 
           // Check if locked due to too many attempts
-          if (msgLower.includes("maximum") || msgLower.includes("locked") || msgLower.includes("attempts")) {
+          if (
+            msgLower.includes("maximum") ||
+            msgLower.includes("locked") ||
+            msgLower.includes("attempts")
+          ) {
             setRequiresTwoFactor(true);
             setError(t("twoFactor.locked"));
             return;
