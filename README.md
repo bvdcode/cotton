@@ -17,7 +17,7 @@
 
 </div>
 
-**All managed .NET/C#** — no native deps, no P/Invoke, no "shell out to OpenSSL".
+**All managed .NET/C#** core — crypto and storage engine are pure managed code. Preview generators (video/PDF) are optional and use native dependencies (FFmpeg, MuPDF via Docnet).
 
 ---
 
@@ -28,11 +28,11 @@ Cotton Cloud is a self-hosted file cloud built around its **own content-addresse
 It is **not**:
 
 - a thin web UI over a flat filesystem;
-- a ****cloud-style "kitchen sink" with 50 random features.
+- a \*\*\*\*cloud-style "kitchen sink" with 50 random features.
 
 Instead, Cotton separates:
 
-- **what you store** (chunks, manifests, ownership)  
+- **what you store** (chunks, manifests, ownership)
 - **how you see it** (layouts, folders, mounts)
 
 …with clean APIs and a UI that actually uses them.
@@ -49,7 +49,7 @@ Designed to:
 
 Most self-hosted "clouds" are either:
 
-- filesystem wrappers (no real storage model, weak crypto), or  
+- filesystem wrappers (no real storage model, weak crypto), or
 - huge PHP/JS monoliths that fall apart under load / big trees.
 
 Cotton is opinionated:
@@ -225,6 +225,7 @@ On startup the app applies EF migrations automatically and serves the UI at `htt
 Upload settings are returned by the server; the frontend (`src/cotton.client`) uses them for chunking.
 
 ---
+
 ## Technical Highlights
 
 Some careful engineering decisions worth highlighting:
@@ -254,6 +255,178 @@ Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/c
 Browser uploads hash chunks in a Web Worker (one pass for both chunk-hash and rolling file-hash), parallelize uploads (default 4 in-flight), send only missing chunks on retry. UI stays responsive even with 10k+ file folders.
 
 ---
+
+## Deep Dive: Implementation Details
+
+### Backend (Cotton.Server)
+
+**Content-addressed storage**  
+Chunks are identified by SHA-256 hash (the hash **is** the identifier). Dedup is built into the model, not an "optimization".  
+_See: `src/Cotton.Server/Controllers/ChunkController.cs`, `src/Cotton.Database/Models/Chunk.cs`_
+
+**Chunk-first upload protocol**  
+Upload chunks first, then assemble the file via manifest. Re-upload is idempotent: server responds "already exists" for duplicate chunks.  
+_See: `ChunkController.cs`, `FileController.cs`_
+
+**File manifests and reuse**  
+Server creates `FileManifest` + ordered `FileManifestChunk` entries, stores `ProposedContentHash`, then async job computes `ComputedContentHash`. If a file with matching hash exists, manifest is reused.  
+_See: `src/Cotton.Database/Models/FileManifest.cs`, `FileController.UpdateFileContent`, `src/Cotton.Server/Jobs/ComputeManifestHashesJob.cs`_
+
+**Download with Range/ETag/tokens**
+
+- `Cache-Control: private, no-store` (no public cache)
+- ETag tied to content SHA-256
+- `enableRangeProcessing: true` → browser resume/seek works
+- `DeleteAfterUse` tokens: one-time links, deleted via `Response.OnCompleted` callback
+- Retention job cleans expired tokens in batches  
+  _See: `src/Cotton.Server/Controllers/FileController.cs`, `DownloadTokenRetentionJob.cs`_
+
+**Auth: JWT + refresh tokens**  
+Access tokens (JWT) + refresh tokens stored in DB with rotation. Refresh cookie uses `HttpOnly`, `Secure`, `SameSite=Strict`.  
+_See: `src/Cotton.Server/Controllers/AuthController.cs`_
+
+---
+
+### Storage Engine (Cotton.Storage)
+
+**Processor pipeline with proper directionality**  
+`FileStoragePipeline` sorts processors by `Priority`. Writes flow **forward** through processors (FS → crypto → compression), reads flow **backwards**.  
+_See: `src/Cotton.Storage/Pipelines/FileStoragePipeline.cs`_
+
+**FileSystem backend: atomic writes**  
+Writes to temp file, then atomic move. Sets read-only + excludes from Windows indexing.  
+_See: `src/Cotton.Storage/Backends/FileSystemStorageBackend.cs`_
+
+**S3 backend with segments**  
+Checks existence before write to avoid redundant uploads. Supports namespace "segments" for partitioning.  
+_See: `src/Cotton.Storage/Backends/S3StorageBackend.cs`_
+
+**ConcatenatedReadStream: seekable stream over chunks**  
+Single logical stream assembled from multiple chunk streams. Supports `Seek` via binary search over cumulative offsets, switches underlying stream on-the-fly.  
+This is **why** Range downloads/video streaming/previews work seamlessly without reassembling files on disk.  
+_See: `src/Cotton.Storage/Streams/ConcatenatedReadStream.cs`_
+
+**CachedStoragePipeline for small objects**  
+In-memory cache (~100MB default) with per-object size limits. `StoreInMemoryCache=true` forces caching (ideal for previews/icons).  
+_See: `src/Cotton.Storage/Pipelines/CachedStoragePipeline.cs`, used in `PreviewController.cs`_
+
+**Compression processor**  
+Zstd via `ZstdSharp`. Currently buffers in `MemoryStream` (controlled allocation within chunk limits).  
+_See: `src/Cotton.Storage/Processors/CompressionProcessor.cs`_
+
+---
+
+### Cryptography (EasyExtensions.Crypto)
+
+**Streaming AES-GCM cipher**  
+Pure C# streaming encryption with:
+
+- Header + key wrapping
+- Per-chunk authentication tags
+- 12-byte nonces (4-byte file prefix + 8-byte chunk counter)
+- Parallel pipelines for encrypt/decrypt with reordering
+- `ArrayPool` + bounded buffers for memory efficiency
+- Parameterized window sizes and memory limits  
+  _See: `EasyExtensions.Crypto/AesGcmStreamCipher.cs`, `.../Internals/Pipelines/EncryptionPipeline.cs`, `DecryptionPipeline.cs`_
+
+**Performance measurements**  
+Separate Charts project with benchmarks/graphs — rare for open source, strong engineering argument.  
+_See: `EasyExtensions.Crypto.Tests.Charts/README.md`_
+
+---
+
+### Previews (Cotton.Previews)
+
+**Preview controller: HTTP caching + encrypted hashes**  
+Previews stored content-addressed by hash, but URLs expose **encrypted** preview hashes. Server decrypts → fetches blob.  
+`ETag` + `Cache-Control: public, max-age=31536000, immutable` → aggressive browser/CDN caching, invalidated by hash change.  
+_See: `src/Cotton.Server/Controllers/PreviewController.cs`_
+
+**Text preview generator**  
+Reads limited chars, splits by lines, renders on canvas, downscales, saves as WebP. Embeds font from resources.  
+_See: `src/Cotton.Previews/TextPreviewGenerator.cs`_
+
+**Image preview generator**  
+Resize to preview dimensions, output as WebP.  
+_See: `src/Cotton.Previews/ImagePreviewGenerator.cs`_
+
+**PDF preview generator**  
+Docnet (MuPDF wrapper) → render first page → WebP.  
+_See: `src/Cotton.Previews/PdfPreviewGenerator.cs`_
+
+**Video preview generator**
+
+- Auto-downloads FFmpeg/ffprobe if missing (`FFMpegCore`)
+- Launches `RangeStreamServer`: mini HTTP server over seekable stream with semaphore-protected seek+read (FFmpeg makes parallel range requests)
+- Extracts frame from mid-duration
+- Timeouts + process kill, detailed logging  
+  _See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`_
+
+**Background preview job**  
+Generates previews only for supported MIME types. Stores preview as blob by hash, saves encrypted preview hash in DB.  
+_See: `src/Cotton.Server/Jobs/GeneratePreviewJob.cs`_
+
+---
+
+### Frontend (cotton.client)
+
+**Chunk upload subsystem**  
+`uploadBlobToChunks.ts`:
+
+- Splits blob into chunks by `server.maxChunkSizeBytes`
+- Parallelizes uploads via `maxConcurrency`
+- Computes hashes in-flight
+- Custom throttling via `Set + Promise.race` to control in-flight promises  
+  _See: `src/shared/upload/uploadBlobToChunks.ts`_
+
+**Hashing in Web Worker**  
+Separate worker holds incremental hash state for file and chunk. Doesn't block UI thread.  
+_See: `src/shared/upload/hash.worker.ts`_
+
+**UploadManager & queue widget**  
+Tracks tasks, progress, status, errors, speed. `UploadQueueWidget`: drawer/stack from bottom, fill-based progress bars, `pointerEvents: none` where needed to avoid scroll interference.  
+_See: `src/shared/upload/UploadManager.ts`, `src/pages/HomePage/components/UploadQueueWidget.tsx`_
+
+**Sharing UX**  
+Media lightbox uses `navigator.share`, fallback to clipboard copy. Controls auto-hide on inactivity via `useActivityDetection`. Minimal UI: only essential actions.  
+_See: `src/pages/HomePage/components/MediaLightbox.tsx`, `src/shared/hooks/useActivityDetection.ts`_
+
+**In-cloud text editing**  
+`TextPreview`: downloads via link, shows content, enables edit mode, saves via same chunk uploader (text files = chunks/manifest like any other file).  
+_See: `src/pages/HomePage/components/TextPreview.tsx`_
+
+**Polish details**
+
+- `FileSystemItemCard`: hover marquee for long names via `ResizeObserver` + delays, clean tooltips/menus
+- HTTP client: refresh queue to prevent thundering herd of refresh requests on simultaneous 401s
+- PWA configured (`vite-plugin-pwa` + manifest/screenshots)  
+  _See: `src/pages/HomePage/components/FileSystemItemCard.tsx`, `src/shared/api/httpClient.ts`, `vite.config.ts`_
+
+---
+
+### Validation & Security (Cotton.Validators, Cotton.Autoconfig)
+
+**NameValidator: industrial-grade hygiene**
+
+- Unicode normalization (NFC)
+- Grapheme cluster limits
+- Forbids zero-width/control characters
+- Blocks `.`/`..`
+- Windows reserved names (`CON`, `PRN`, `AUX`, etc.)
+- Trims trailing dots/spaces
+- Case-folded `NameKey` (diacritic-stripped + lowercase) for case-insensitive collision detection  
+  _See: `src/Cotton.Validators/NameValidator.cs`, `src/Cotton.Database/Models/Node.cs`_
+
+**Autoconfig: env scrubbing**  
+Derives `Pepper` + `MasterEncryptionKey` from `COTTON_MASTER_KEY`, then **wipes** the env var from Process and User environment after startup. Secrets don't leak to child processes or memory dumps.  
+_See: `src/Cotton.Autoconfig/Extensions/ConfigurationBuilderExtensions.cs`_
+
+**Bootstrap & setup**  
+Auto-applies EF migrations on startup. First admin creation has time-limited window (no eternal backdoor).  
+_See: `src/Cotton.Server/Program.cs`, `AuthController.cs`, `SetupController.cs`_
+
+---
+
 ## Roadmap (short)
 
 - Generational GC with compaction/merging of small "dust" chunks (design complete; implementation pending).
