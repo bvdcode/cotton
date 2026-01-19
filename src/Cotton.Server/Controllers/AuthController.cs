@@ -191,7 +191,7 @@ namespace Cotton.Server.Controllers
             }
             var accessToken = CreateAccessToken(user);
             dbToken.RevokedAt = DateTime.UtcNow;
-            ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(user);
+            ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(user, dbToken.SessionId);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(newDbToken.Token);
@@ -286,14 +286,16 @@ namespace Cotton.Server.Controllers
             return user;
         }
 
-        private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(User user)
+        private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(User user, string? sessionId = null)
         {
             var lookup = await GeoIpHelpers.LookupAsync(Request.GetRemoteAddress());
+            sessionId ??= StringHelpers.CreateRandomString(32);
             return new()
             {
                 RevokedAt = null,
                 UserId = user.Id,
                 City = lookup.City,
+                SessionId = sessionId,
                 Region = lookup.Region,
                 Country = lookup.Country,
                 AuthType = AuthType.Credentials,
