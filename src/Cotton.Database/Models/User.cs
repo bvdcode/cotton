@@ -29,5 +29,8 @@ namespace Cotton.Database.Models
 
         [Column("totp_enabled_at")]
         public DateTime? TotpEnabledAt { get; set; }
+
+        [Column("totp_failed_attempts")]
+        public int TotpFailedAttempts { get; set; }
     }
 }

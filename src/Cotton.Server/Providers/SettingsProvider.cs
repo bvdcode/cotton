@@ -18,6 +18,8 @@ namespace Cotton.Server.Providers
         CottonDbContext _dbContext)
     {
         private static CottonServerSettings? _cache;
+        private const int defaultSessionTimeoutHours = 24 * 30;
+        private const int defaultTotpMaxFailedAttempts = 64;
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
@@ -42,9 +44,10 @@ namespace Cotton.Server.Providers
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
-                SessionTimeoutHours = 24 * 30,
+                SessionTimeoutHours = defaultSessionTimeoutHours,
                 TelemetryEnabled = false,
-                Timezone = "America/Los_Angeles"
+                Timezone = "America/Los_Angeles",
+                TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
             };
             return _cache.Adapt<CottonServerSettings>();
         }
@@ -186,7 +189,7 @@ namespace Cotton.Server.Providers
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
-                SessionTimeoutHours = 24 * 30,
+                SessionTimeoutHours = defaultSessionTimeoutHours,
                 AllowCrossUserDeduplication = request.TrustedMode,
                 AllowGlobalIndexing = request.TrustedMode,
                 TelemetryEnabled = request.Telemetry,
@@ -207,7 +210,8 @@ namespace Cotton.Server.Providers
                 StorageSpaceMode = request.StorageSpace,
                 WebdavHost = request.WebdavConfig?.ServerUrl,
                 WebdavUsername = request.WebdavConfig?.Username,
-                WebdavPasswordEncrypted = TryEncrypt(request.WebdavConfig?.Password)
+                WebdavPasswordEncrypted = TryEncrypt(request.WebdavConfig?.Password),
+                TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
             };
             await _dbContext.ServerSettings.AddAsync(newSettings);
             await _dbContext.SaveChangesAsync();

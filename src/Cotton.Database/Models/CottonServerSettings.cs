@@ -96,5 +96,8 @@ namespace Cotton.Database.Models
 
         [Column("webdav_host")]
         public string? WebdavHost { get; set; }
+
+        [Column("totp_max_failed_attempts")]
+        public int TotpMaxFailedAttempts { get; set; }
     }
 }
