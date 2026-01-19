@@ -143,7 +143,7 @@ export const LoginPage = () => {
             alignItems="center"
           >
             <Typography variant="h4" component="h1" gutterBottom>
-              {t("title")}
+              {requiresTwoFactor ? t("twoFactor.title") : t("title")}
             </Typography>
             <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
           </Box>
@@ -179,13 +179,6 @@ export const LoginPage = () => {
 
             {requiresTwoFactor && (
               <Box sx={{ mt: 3 }}>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 600, mb: 1 }}
-                  align="center"
-                >
-                  {t("twoFactor.title")}
-                </Typography>
                 <Typography
                   variant="body2"
                   color="text.secondary"

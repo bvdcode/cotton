@@ -87,9 +87,11 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiConflict("TOTP is already enabled for this user");
             }
-            string host = Request.Host.Host;
-            string issuer = host.Length > 0 ? $"Cotton Cloud ({host})" : "Cotton Cloud";
-            TotpSetup setup = TotpHelpers.CreateSetup(issuer, user.Username);
+            string issuer = "Cotton Cloud";
+            string account = string.IsNullOrWhiteSpace(Request.Host.Host)
+                ? user.Username
+                : $"{user.Username}@{Request.Host.Host}";
+            TotpSetup setup = TotpHelpers.CreateSetup(issuer, account);
             user.TotpSecretEncrypted = _crypto.Encrypt(setup.SecretBase32);
             await _dbContext.SaveChangesAsync();
             return Ok(setup);
