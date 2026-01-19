@@ -3,6 +3,7 @@ import { useNodesStore } from "../store/nodesStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { uploadFileToNode } from "./uploadFileToNode";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
+import { globalHashWorkerPool } from "./hash/HashWorkerPool";
 
 export type UploadTaskStatus =
   | "queued"
@@ -259,6 +260,21 @@ export class UploadManager {
     } finally {
       this.running = false;
     }
+  }
+
+  /**
+   * Cleanup method to release hash worker pool resources.
+   * Call this when the application is being unmounted or reset.
+   */
+  destroy(): void {
+    globalHashWorkerPool.destroy();
+  }
+
+  /**
+   * Get hash worker pool statistics for debugging/monitoring
+   */
+  getHashWorkerPoolStats() {
+    return globalHashWorkerPool.getStats();
   }
 }
 

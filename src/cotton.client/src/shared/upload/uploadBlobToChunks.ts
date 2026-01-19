@@ -2,6 +2,7 @@ import { chunksApi } from "../api/chunksApi";
 import { uploadConfig } from "./config";
 import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "./hash/hashing";
 import { canUseHashWorker, HashWorkerClient } from "./hash/hashWorkerClient";
+import { globalHashWorkerPool } from "./hash/HashWorkerPool";
 import type { UploadFileToNodeOptions, UploadServerParams } from "./types";
 
 export async function uploadBlobToChunks(options: {
@@ -31,12 +32,18 @@ export async function uploadBlobToChunks(options: {
 
   // Compute whole-blob hash in a single sequential pass while we iterate chunks.
   // Uploads (exists/uploadChunk) still run concurrently via a small in-flight pool.
-  const worker = canUseHashWorker() ? new HashWorkerClient() : null;
-  const blobHasher = worker ? null : await createIncrementalHasher(algorithm);
+  
+  // Use worker pool to avoid WASM memory exhaustion
+  let worker: HashWorkerClient | null = null;
+  let blobHasher: Awaited<ReturnType<typeof createIncrementalHasher>> | null = null;
 
-  if (worker) {
-    await worker.init(algorithm);
+  if (canUseHashWorker()) {
+    worker = await globalHashWorkerPool.acquire(algorithm);
+  } else {
+    blobHasher = await createIncrementalHasher(algorithm);
   }
+
+  try {
 
   const inFlight = new Set<Promise<void>>();
   const waitForSlot = async () => {
@@ -97,7 +104,17 @@ export async function uploadBlobToChunks(options: {
 
   const fileHash = worker ? await worker.digestFile() : blobHasher!.digestHex();
 
-  worker?.terminate();
+  // Return worker to pool instead of terminating it
+  if (worker) {
+    globalHashWorkerPool.release(worker);
+  }
 
   return { chunkHashes: chunkHashesByIndex, fileHash };
+  } catch (error) {
+    // In case of error, still return worker to pool
+    if (worker) {
+      globalHashWorkerPool.release(worker);
+    }
+    throw error;
+  }
 }
