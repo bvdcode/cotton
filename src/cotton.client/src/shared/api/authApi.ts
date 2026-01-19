@@ -9,6 +9,7 @@ import { UserRole, type User } from "../../features/auth/types";
 interface LoginRequest {
   username: string;
   password: string;
+  twoFactorCode?: string;
 }
 
 interface LoginResponse {

@@ -13,6 +13,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { authApi } from "../../shared/api/authApi";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import Loader from "../../shared/ui/Loader";
+import axios from "axios";
+import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
 
 export const LoginPage = () => {
   const location = useLocation();
@@ -30,6 +32,8 @@ export const LoginPage = () => {
   } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -56,11 +60,59 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      await authApi.login({ username, password });
+      if (requiresTwoFactor && twoFactorCode.replace(/\D/g, "").length < 6) {
+        setError(t("twoFactor.required"));
+        return;
+      }
+
+      await authApi.login({
+        username,
+        password,
+        twoFactorCode: requiresTwoFactor
+          ? twoFactorCode.replace(/\D/g, "").slice(0, 6)
+          : undefined,
+      });
       const user = await authApi.me();
       setAuthenticated(true, user);
       navigate("/");
-    } catch {
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        const status = e.response?.status;
+        const serverMessage = (e.response?.data as { message?: string })
+          ?.message;
+
+        if (
+          status === 403 &&
+          typeof serverMessage === "string" &&
+          serverMessage.toLowerCase().includes("two-factor authentication code is required")
+        ) {
+          setRequiresTwoFactor(true);
+          setTwoFactorCode("");
+          setError("");
+          return;
+        }
+
+        if (
+          status === 403 &&
+          typeof serverMessage === "string" &&
+          serverMessage.toLowerCase().includes("invalid two-factor authentication code")
+        ) {
+          setRequiresTwoFactor(true);
+          setError(t("twoFactor.invalid"));
+          return;
+        }
+
+        if (
+          status === 403 &&
+          typeof serverMessage === "string" &&
+          serverMessage.toLowerCase().includes("maximum number of totp verification attempts")
+        ) {
+          setRequiresTwoFactor(true);
+          setError(t("twoFactor.locked"));
+          return;
+        }
+      }
+
       setError(t("errorMessage"));
     } finally {
       setLoading(false);
@@ -105,7 +157,13 @@ export const LoginPage = () => {
               margin="normal"
               variant="outlined"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (requiresTwoFactor) {
+                  setRequiresTwoFactor(false);
+                  setTwoFactorCode("");
+                }
+              }}
               disabled={loading}
             />
             <TextField
@@ -115,9 +173,35 @@ export const LoginPage = () => {
               margin="normal"
               variant="outlined"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (requiresTwoFactor) {
+                  setRequiresTwoFactor(false);
+                  setTwoFactorCode("");
+                }
+              }}
               disabled={loading}
             />
+
+            {requiresTwoFactor && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {t("twoFactor.title")}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t("twoFactor.caption")}
+                </Typography>
+                <Box sx={{ mt: 1.5 }}>
+                  <OneTimeCodeInput
+                    value={twoFactorCode}
+                    onChange={setTwoFactorCode}
+                    disabled={loading}
+                    autoFocus={true}
+                    inputAriaLabel={t("twoFactor.digit")}
+                  />
+                </Box>
+              </Box>
+            )}
             {error && (
               <Typography color="error" sx={{ mt: 2 }}>
                 {error}
