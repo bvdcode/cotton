@@ -27,7 +27,6 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Quartz;
-using System.Net.Mime;
 
 namespace Cotton.Server.Controllers
 {
@@ -88,7 +87,7 @@ namespace Cotton.Server.Controllers
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            
+
             // Check for duplicate files in the same folder
             bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x =>
@@ -267,7 +266,7 @@ namespace Cotton.Server.Controllers
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            
+
             // Check for duplicate files in the target folder
             bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x => x.NodeId == node.Id && x.OwnerId == userId && x.NameKey == nameKey);
