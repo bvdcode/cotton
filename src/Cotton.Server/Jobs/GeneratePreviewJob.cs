@@ -24,9 +24,6 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            // Initialize logger for VideoPreviewGenerator
-            VideoPreviewGenerator.SetLogger(_logger);
-
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             _logger.LogInformation("Starting preview generation job. Supported mime types: {MimeTypes}", string.Join(", ", allSupportedMimeTypes));
 
