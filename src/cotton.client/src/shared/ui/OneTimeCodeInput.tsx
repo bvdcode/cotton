@@ -70,7 +70,7 @@ export const OneTimeCodeInput = ({
             style: { textAlign: "center", fontWeight: 700 },
             "aria-label": inputAriaLabel ? `${inputAriaLabel} ${i + 1}` : undefined,
           }}
-          sx={{ width: 44 }}
+          sx={{ width: 56 }}
           onChange={(e) => {
             const next = normalize(e.target.value, 1);
             if (next.length === 0) {
