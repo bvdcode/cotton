@@ -21,6 +21,11 @@ interface UserInfoResponse {
   role: UserRole;
   displayName?: string;
   pictureUrl?: string;
+
+  // 2FA (TOTP)
+  isTotpEnabled?: boolean;
+  totpEnabledAt?: string | null;
+  totpFailedAttempts?: number;
 }
 
 export const authApi = {
@@ -48,6 +53,10 @@ export const authApi = {
       username: response.data.username,
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
+
+      isTotpEnabled: response.data.isTotpEnabled,
+      totpEnabledAt: response.data.totpEnabledAt ?? null,
+      totpFailedAttempts: response.data.totpFailedAttempts ?? 0,
     };
   },
 

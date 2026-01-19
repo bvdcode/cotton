@@ -1,9 +1,9 @@
 import type { RouteConfig } from "./types";
 import { RequireAuth } from "../features/auth";
 import { Routes, Route } from "react-router-dom";
-import { FilesPage, HomePage, LoginPage, NotFoundPage, OnboardingPage } from "../pages";
+import { FilesPage, HomePage, LoginPage, NotFoundPage, OnboardingPage, ProfilePage } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Folder, Home } from "@mui/icons-material";
+import { Folder, Home, Person } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
 
@@ -25,6 +25,13 @@ const appRoutes: RouteConfig[] = [
     protected: true,
     displayName: "Files",
     element: <FilesPage />,
+  },
+  {
+    path: "/profile",
+    icon: <Person />,
+    protected: true,
+    displayName: "Profile",
+    element: <ProfilePage />,
   },
 ];
 
