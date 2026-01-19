@@ -193,8 +193,8 @@ export const ProfilePage = () => {
             />
             <Chip
               size="small"
-              color={totpEnabled ? "success" : "default"}
-              variant={totpEnabled ? "filled" : "outlined"}
+              color={totpEnabled ? "success" : "warning"}
+              variant="filled"
               label={totpEnabled ? t("totp.enabled") : t("totp.disabled")}
             />
           </Stack>
@@ -208,35 +208,6 @@ export const ProfilePage = () => {
               </Typography>
               <Typography variant="body2" fontWeight={600}>
                 {formatDateTime(user.createdAt)}
-              </Typography>
-            </Box>
-
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography variant="body2" color="text.secondary">
-                {t("fields.twoFactor")}
-              </Typography>
-              <Typography variant="body2" fontWeight={600}>
-                {totpEnabled ? t("totp.enabled") : t("totp.disabled")}
-              </Typography>
-            </Box>
-
-            {totpEnabled && totpEnabledAt && (
-              <Box display="flex" justifyContent="space-between" gap={2}>
-                <Typography variant="body2" color="text.secondary">
-                  {t("fields.totpEnabledAt")}
-                </Typography>
-                <Typography variant="body2" fontWeight={600}>
-                  {formatDateTime(totpEnabledAt)}
-                </Typography>
-              </Box>
-            )}
-
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography variant="body2" color="text.secondary">
-                {t("fields.totpFailedAttempts")}
-              </Typography>
-              <Typography variant="body2" fontWeight={600}>
-                {totpFailedAttempts}
               </Typography>
             </Box>
           </Stack>
@@ -260,6 +231,24 @@ export const ProfilePage = () => {
               <Alert severity="success" sx={{ mb: 2 }}>
                 {t("totp.enabledMessage")}
               </Alert>
+              
+              {totpEnabledAt && (
+                <Box display="flex" justifyContent="space-between" gap={2} sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {t("fields.totpEnabledAt")}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {formatDateTime(totpEnabledAt)}
+                  </Typography>
+                </Box>
+              )}
+              
+              {totpFailedAttempts > 0 && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {t("fields.totpFailedAttempts")}: {totpFailedAttempts}
+                </Alert>
+              )}
+              
               <Typography variant="body2" color="text.secondary">
                 {t("totp.enabledDescription")}
               </Typography>
