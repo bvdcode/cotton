@@ -1,5 +1,5 @@
-﻿using System.Net;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+using System.Net;
 
 #nullable disable
 
