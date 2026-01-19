@@ -4,13 +4,22 @@ import {
   Card,
   CardContent,
   Chip,
+  Button,
+  Alert,
   Divider,
+  CircularProgress,
   Stack,
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
 import { UserRole } from "../../features/auth/types";
+import { useState } from "react";
+import QRCode from "react-qr-code";
+import { totpApi, type TotpSetup } from "../../shared/api/totpApi";
+import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
+import axios from "axios";
+import { authApi } from "../../shared/api/authApi";
 
 const formatDateTime = (iso: string): string => {
   const date = new Date(iso);
@@ -32,7 +41,14 @@ const getRoleTranslationKey = (role: number): "roles.user" | "roles.admin" => {
 
 export const ProfilePage = () => {
   const { t } = useTranslation("profile");
-  const { user } = useAuth();
+  const { user, setAuthenticated } = useAuth();
+
+  const [totpSetup, setTotpSetup] = useState<TotpSetup | null>(null);
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpConfirmLoading, setTotpConfirmLoading] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpError, setTotpError] = useState<string | null>(null);
+  const [totpSuccess, setTotpSuccess] = useState(false);
 
   if (!user) {
     return (
@@ -53,6 +69,86 @@ export const ProfilePage = () => {
   const totpEnabled = Boolean(user.isTotpEnabled);
   const totpEnabledAt = user.totpEnabledAt ?? null;
   const totpFailedAttempts = user.totpFailedAttempts ?? 0;
+
+  const normalizedTotpCode = totpCode.replace(/\D/g, "").slice(0, 6);
+
+  const handleSetupTotp = async () => {
+    setTotpError(null);
+    setTotpSuccess(false);
+    setTotpLoading(true);
+    try {
+      const setup = await totpApi.setup();
+      setTotpSetup(setup);
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        const status = e.response?.status;
+        const message = (e.response?.data as { message?: string })?.message;
+        if (status === 409) {
+          setTotpError(t("totp.errors.alreadyEnabled"));
+          return;
+        }
+        if (typeof message === "string" && message.length > 0) {
+          setTotpError(message);
+          return;
+        }
+      }
+      setTotpError(t("totp.errors.setupFailed"));
+    } finally {
+      setTotpLoading(false);
+    }
+  };
+
+  const handleConfirmTotp = async () => {
+    setTotpError(null);
+    setTotpSuccess(false);
+    if (normalizedTotpCode.length < 6) {
+      setTotpError(t("totp.errors.codeRequired"));
+      return;
+    }
+
+    setTotpConfirmLoading(true);
+    try {
+      await totpApi.confirm(normalizedTotpCode);
+      const refreshed = await authApi.me();
+      setAuthenticated(true, refreshed);
+      setTotpSuccess(true);
+      setTotpSetup(null);
+      setTotpCode("");
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        const status = e.response?.status;
+        const message = (e.response?.data as { message?: string })?.message;
+        if (status === 403) {
+          setTotpError(t("totp.errors.invalidCode"));
+          return;
+        }
+        if (status === 400) {
+          setTotpError(t("totp.errors.setupNotInitiated"));
+          return;
+        }
+        if (status === 409) {
+          setTotpError(t("totp.errors.alreadyEnabled"));
+          return;
+        }
+        if (typeof message === "string" && message.length > 0) {
+          setTotpError(message);
+          return;
+        }
+      }
+      setTotpError(t("totp.errors.confirmFailed"));
+    } finally {
+      setTotpConfirmLoading(false);
+    }
+  };
+
+  const handleCopySecret = async () => {
+    if (!totpSetup?.secretBase32) return;
+    try {
+      await navigator.clipboard.writeText(totpSetup.secretBase32);
+    } catch {
+      // ignore clipboard errors
+    }
+  };
 
   return (
     <Box sx={{ p: 2, maxWidth: 900 }}>
@@ -114,6 +210,113 @@ export const ProfilePage = () => {
               </Typography>
             </Box>
           </Stack>
+
+          {!totpEnabled && (
+            <>
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="subtitle1" fontWeight={700}>
+                {t("totp.setup.title")}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {t("totp.setup.caption")}
+              </Typography>
+
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleSetupTotp}
+                  disabled={totpLoading}
+                >
+                  {totpLoading ? (
+                    <>
+                      <CircularProgress size={16} sx={{ mr: 1 }} />
+                      {t("totp.setup.loading")}
+                    </>
+                  ) : (
+                    t("totp.setup.button")
+                  )}
+                </Button>
+
+                {totpSetup?.secretBase32 && (
+                  <Button variant="outlined" onClick={handleCopySecret}>
+                    {t("totp.setup.copySecret")}
+                  </Button>
+                )}
+              </Stack>
+
+              {totpError && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {totpError}
+                </Alert>
+              )}
+              {totpSuccess && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  {t("totp.setup.success")}
+                </Alert>
+              )}
+
+              {totpSetup && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {t("totp.setup.qrTitle")}
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      mt: 1,
+                      p: 2,
+                      borderRadius: 2,
+                      display: "inline-flex",
+                      bgcolor: "background.paper",
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <QRCode value={totpSetup.otpAuthUri} size={160} />
+                  </Box>
+
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+                    {t("totp.setup.secretLabel")}: {totpSetup.secretBase32}
+                  </Typography>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {t("totp.confirm.title")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t("totp.confirm.caption")}
+                  </Typography>
+
+                  <Box sx={{ mt: 1.5 }}>
+                    <OneTimeCodeInput
+                      value={totpCode}
+                      onChange={setTotpCode}
+                      disabled={totpConfirmLoading}
+                      autoFocus={false}
+                      inputAriaLabel={t("totp.confirm.digit")}
+                    />
+                  </Box>
+
+                  <Button
+                    sx={{ mt: 2 }}
+                    variant="contained"
+                    onClick={handleConfirmTotp}
+                    disabled={totpConfirmLoading}
+                  >
+                    {totpConfirmLoading ? (
+                      <>
+                        <CircularProgress size={16} sx={{ mr: 1 }} />
+                        {t("totp.confirm.loading")}
+                      </>
+                    ) : (
+                      t("totp.confirm.button")
+                    )}
+                  </Button>
+                </Box>
+              )}
+            </>
+          )}
 
           {/* Future: TOTP setup UI will be mounted here when disabled */}
         </CardContent>
