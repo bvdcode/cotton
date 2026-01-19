@@ -7,6 +7,7 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
@@ -34,12 +35,12 @@ namespace Cotton.Server.Controllers
         ILogger<AuthController> _logger,
         IPasswordHashService _hasher) : ControllerBase
     {
-        private const int RefreshTokenLength = 64;
+        private const int RefreshTokenLength = 32;
         private const string CookieRefreshTokenKey = "refresh_token";
 
         [Authorize]
         [HttpPost("/api/v1/auth/totp/confirm")]
-        public async Task<IActionResult> ConfirmTotp([FromBody] LoginRequestDto request)
+        public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
             {
