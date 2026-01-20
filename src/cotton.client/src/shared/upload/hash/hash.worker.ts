@@ -56,7 +56,14 @@ async function createHasher(algorithm: SupportedHashAlgorithm): Promise<HashWasm
 }
 
 async function ensureInitialized(algorithm: SupportedHashAlgorithm): Promise<void> {
-  if (initialized && currentAlgorithm === algorithm && fileHasher && chunkHasher) return;
+  // IMPORTANT: hash-wasm requires calling init() before update(). After digest(),
+  // the hasher is finalized and must be re-initialized for the next file.
+  // Since we reuse workers across uploads, we must reset state on every init request.
+  if (initialized && currentAlgorithm === algorithm && fileHasher && chunkHasher) {
+    fileHasher.init();
+    chunkHasher.init();
+    return;
+  }
 
   currentAlgorithm = algorithm;
   fileHasher = await createHasher(algorithm);
@@ -105,6 +112,8 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
       }
 
       const fileHash = fileHasher.digest("hex");
+      // Reset so the worker can be reused even if the next consumer forgets to call init.
+      fileHasher.init();
       const out: OutMessage = { type: "digestFileResult", requestId: msg.requestId, fileHash };
       self.postMessage(out);
       return;
