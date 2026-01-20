@@ -307,6 +307,25 @@ namespace Cotton.Server.Controllers
                 FileManifest = newFile,
             };
             newNodeFile.SetName(request.Name);
+            if (request.Validate && newFile.ComputedContentHash == null)
+            {
+                string[] hashes = newFile.FileManifestChunks.GetChunkHashes();
+                PipelineContext pipelineContext = new()
+                {
+                    FileSizeBytes = newFile.SizeBytes
+                };
+                using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
+                var computedContentHash = Hasher.HashData(stream);
+                if (!computedContentHash.SequenceEqual(proposedHash))
+                {
+                    _logger.LogWarning("File content hash mismatch for user {UserId}, file {FileName}. Expected {ExpectedHash}, computed {ComputedHash}.",
+                        userId,
+                        request.Name,
+                        request.Hash,
+                        Hasher.ToHexStringHash(computedContentHash));
+                    return this.ApiBadRequest("File content hash does not match the provided hash.");
+                }
+            }
             await _dbContext.NodeFiles.AddAsync(newNodeFile);
             if (!request.OriginalNodeFileId.HasValue)
             {
