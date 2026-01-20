@@ -12,7 +12,7 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
-        private const int BatchSize = 1000;
+        private const int BatchSize = 10000;
         private const int ChunkGcDelayDays = 7;
 
         public async Task Execute(IJobExecutionContext context)
