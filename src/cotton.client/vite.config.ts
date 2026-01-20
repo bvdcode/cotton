@@ -5,7 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiTarget = env.VITE_API_TARGET || "https://cotton.belov.us";
+  const apiTarget = env.VITE_API_TARGET || "http://localhost:5182";
 
   return {
     server: {
