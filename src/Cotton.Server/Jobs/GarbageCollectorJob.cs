@@ -87,8 +87,7 @@ namespace Cotton.Server.Jobs
                             continue;
                         }
 
-                        bool stillOrphaned = !await _dbContext.FileManifestChunks
-                              .AnyAsync(m => m.ChunkHash == chunk.Hash, ct);
+                        bool stillOrphaned = !await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunk.Hash, ct);
                         if (!stillOrphaned)
                         {
                             var tracked = await _dbContext.Chunks.FindAsync(chunk.Hash);
@@ -98,6 +97,9 @@ namespace Cotton.Server.Jobs
 
                         string uid = Hasher.ToHexStringHash(chunk.Hash);
                         bool deleted = await _storage.DeleteAsync(uid);
+                        await _dbContext.ChunkOwnerships
+                            .Where(o => o.ChunkHash == chunk.Hash)
+                            .ExecuteDeleteAsync(ct);
                         _dbContext.Chunks.Remove(chunk);
                         if (!deleted)
                         {
