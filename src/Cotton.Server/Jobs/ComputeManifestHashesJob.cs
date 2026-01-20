@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -30,9 +31,7 @@ namespace Cotton.Server.Jobs
             foreach (var manifest in unprocessedManifests)
             {
                 _logger.LogInformation("Computing hash for manifest {ManifestId}", manifest.Id);
-                string[] hashes = [.. manifest.FileManifestChunks
-                    .OrderBy(x => x.ChunkOrder)
-                    .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
+                string[] hashes = manifest.FileManifestChunks.GetChunkHashes();
                 PipelineContext pipelineContext = new()
                 {
                     FileSizeBytes = manifest.SizeBytes
