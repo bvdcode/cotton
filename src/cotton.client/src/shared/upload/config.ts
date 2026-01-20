@@ -4,6 +4,6 @@ export const uploadConfig = {
   // requires an ordered list of chunk hashes.
   sendChunkHashForValidation: true,
 
-  // Upload at most 4 chunks in parallel for better throughput.
-  chunkUploadConcurrency: 4,
+  // Upload at most 2 chunks in parallel for better throughput.
+  chunkUploadConcurrency: 1,
 } as const;
