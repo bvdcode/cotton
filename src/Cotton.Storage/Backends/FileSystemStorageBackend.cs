@@ -96,7 +96,7 @@ namespace Cotton.Storage.Backends
                 return;
             }
 
-            string tmpFilePath = Path.Combine(dirPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
+            string tmpFilePath = Path.GetTempFileName();
             var fso = new FileStreamOptions
             {
                 Share = FileShare.None,
