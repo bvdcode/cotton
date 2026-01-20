@@ -15,9 +15,9 @@ namespace Cotton.Server.Jobs
         CottonDbContext _dbContext,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
-        private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new();
         private const int BatchSize = 10000;
         private const int ChunkGcDelayDays = 7;
+        private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
         public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
 
@@ -60,8 +60,7 @@ namespace Cotton.Server.Jobs
 
             // 3. Delete chunks scheduled for deletion
             var chunksToDelete = await _dbContext.Chunks
-                .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now)
-                .Where(c => !c.FileManifestChunks.Any())
+                .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now && !c.FileManifestChunks.Any())
                 .Take(BatchSize)
                 .ToListAsync(ct);
             if (chunksToDelete.Count != 0)
@@ -73,9 +72,9 @@ namespace Cotton.Server.Jobs
                 }
 
                 _logger.LogInformation("Chunks retention will start in 1 minute. {Count} chunks scheduled for deletion.", chunksToDelete.Count);
-                await Task.Delay(60_000, ct);
                 try
                 {
+                    await Task.Delay(60_000, ct);
                     foreach (var chunk in chunksToDelete)
                     {
                         var current = await _dbContext.Chunks
