@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Quartz.Attributes;
@@ -67,7 +68,7 @@ namespace Cotton.Server.Jobs
             {
                 foreach (var chunkToDelete in chunksToDelete)
                 {
-                    string uid = Convert.ToHexString(chunkToDelete.Hash);
+                    string uid = Hasher.ToHexStringHash(chunkToDelete.Hash);
                     CurrentlyDeletingChunks.TryAdd(uid, 0);
                 }
 
