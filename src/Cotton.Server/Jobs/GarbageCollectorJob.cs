@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             DateTime now = DateTime.UtcNow;
+            CancellationToken ct = context.CancellationToken;
 
             // 1. Remove orphaned file manifests (no associated NodeFiles)
             var manifestIds = await _dbContext.FileManifests
@@ -29,17 +31,17 @@ namespace Cotton.Server.Jobs
                 .OrderBy(fm => fm.Id)
                 .Select(fm => fm.Id)
                 .Take(BatchSize)
-                .ToListAsync(context.CancellationToken);
+                .ToListAsync(ct);
 
             if (manifestIds.Count != 0)
             {
                 await _dbContext.FileManifestChunks
                     .Where(m => manifestIds.Contains(m.FileManifestId))
-                    .ExecuteDeleteAsync(context.CancellationToken);
+                    .ExecuteDeleteAsync(ct);
 
                 int deletedManifests = await _dbContext.FileManifests
                     .Where(fm => manifestIds.Contains(fm.Id))
-                    .ExecuteDeleteAsync(context.CancellationToken);
+                    .ExecuteDeleteAsync(ct);
 
                 _logger.LogInformation("Removed {Count} orphaned file manifests.", deletedManifests);
             }
@@ -49,7 +51,7 @@ namespace Cotton.Server.Jobs
             int orphanedChunks = await _dbContext.Chunks
                 .Where(c => !c.FileManifestChunks.Any() && c.GCScheduledAfter == null)
                 .Take(BatchSize)
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), context.CancellationToken);
+                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
             if (orphanedChunks != 0)
             {
                 _logger.LogInformation("Scheduled {Count} orphaned chunks for garbage collection.", orphanedChunks);
@@ -60,7 +62,7 @@ namespace Cotton.Server.Jobs
                 .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now)
                 .Where(c => !c.FileManifestChunks.Any())
                 .Take(BatchSize)
-                .ToListAsync(context.CancellationToken);
+                .ToListAsync(ct);
             if (chunksToDelete.Count != 0)
             {
                 foreach (var chunkToDelete in chunksToDelete)
@@ -70,19 +72,31 @@ namespace Cotton.Server.Jobs
                 }
 
                 _logger.LogInformation("Chunks retention will start in 1 minute. {Count} chunks scheduled for deletion.", chunksToDelete.Count);
-                await Task.Delay(60_000, context.CancellationToken);
+                await Task.Delay(60_000, ct);
                 try
                 {
                     foreach (var chunk in chunksToDelete)
                     {
-                        bool stillOrphaned = !await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunk.Hash);
-                        if (!stillOrphaned)
+                        var current = await _dbContext.Chunks
+                            .AsNoTracking()
+                            .Where(c => c.Hash == chunk.Hash)
+                            .Select(c => new { c.GCScheduledAfter })
+                            .SingleOrDefaultAsync(ct);
+                        if (current == null || current.GCScheduledAfter == null || current.GCScheduledAfter > now)
                         {
-                            chunk.GCScheduledAfter = null;
                             continue;
                         }
 
-                        string uid = Convert.ToHexString(chunk.Hash);
+                        bool stillOrphaned = !await _dbContext.FileManifestChunks
+                              .AnyAsync(m => m.ChunkHash == chunk.Hash, ct);
+                        if (!stillOrphaned)
+                        {
+                            var tracked = await _dbContext.Chunks.FindAsync(chunk.Hash);
+                            tracked?.GCScheduledAfter = null;
+                            continue;
+                        }
+
+                        string uid = Hasher.ToHexStringHash(chunk.Hash);
                         bool deleted = await _storage.DeleteAsync(uid);
                         _dbContext.Chunks.Remove(chunk);
                         if (!deleted)
@@ -90,7 +104,7 @@ namespace Cotton.Server.Jobs
                             _logger.LogWarning("Failed to delete chunk {ChunkId} from storage, possibly already deleted.", uid);
                         }
                     }
-                    await _dbContext.SaveChangesAsync(context.CancellationToken);
+                    await _dbContext.SaveChangesAsync(ct);
                 }
                 finally
                 {
