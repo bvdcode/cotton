@@ -28,7 +28,7 @@ namespace Cotton.Server.Jobs
             _logger.LogInformation("Starting preview generation job. Supported mime types: {MimeTypes}", string.Join(", ", allSupportedMimeTypes));
 
             var itemsToProcess = _dbContext.FileManifests
-                .Where(fm => fm.EncryptedFilePreviewHash == null)
+                .Where(fm => fm.EncryptedFilePreviewHash == null && fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.FileManifestChunks)
                 .ThenInclude(fmc => fmc.Chunk)
@@ -85,6 +85,7 @@ namespace Cotton.Server.Jobs
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
+                    item.PreviewGenerationError = ex.Message;
                 }
             }
 
