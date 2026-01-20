@@ -28,9 +28,10 @@ class HashWorkerPool {
     // Reuse available worker if possible
     if (this.available.length > 0) {
       const worker = this.available.pop()!;
-      this.inUse.add(worker);
-      // Re-initialize with the requested algorithm
+      // CRITICAL: Initialize BEFORE adding to inUse to prevent race condition
+      // where hashChunk() is called before init() completes
       await worker.init(algorithm);
+      this.inUse.add(worker);
       return worker;
     }
 
@@ -38,19 +39,22 @@ class HashWorkerPool {
     if (this.workers.length < this.maxWorkers) {
       const worker = new HashWorkerClient();
       this.workers.push(worker);
-      this.inUse.add(worker);
+      // CRITICAL: Initialize BEFORE adding to inUse
       await worker.init(algorithm);
+      this.inUse.add(worker);
       return worker;
     }
 
     // Wait for a worker to become available
     return new Promise<HashWorkerClient>((resolve) => {
-      const checkInterval = setInterval(() => {
+      const checkInterval = setInterval(async () => {
         if (this.available.length > 0) {
           clearInterval(checkInterval);
           const worker = this.available.pop()!;
+          // CRITICAL: Initialize BEFORE adding to inUse
+          await worker.init(algorithm);
           this.inUse.add(worker);
-          worker.init(algorithm).then(() => resolve(worker));
+          resolve(worker);
         }
       }, 50);
     });
