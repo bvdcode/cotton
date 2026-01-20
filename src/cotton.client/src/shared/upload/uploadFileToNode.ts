@@ -23,7 +23,7 @@ export async function uploadFileToNode(options: {
     client: {
       sendChunkHashForValidation:
         options.client?.sendChunkHashForValidation ?? uploadConfig.sendChunkHashForValidation,
-      concurrency: options.client?.concurrency ?? uploadConfig.chunkUploadConcurrency,
+      concurrency: options.client?.concurrency ?? uploadConfig.maxChunkUploadConcurrency,
     },
     onProgress: options.onProgress,
   });
