@@ -27,6 +27,9 @@ namespace Cotton.Database.Models
         [Column("encrypted_file_preview_hash")]
         public byte[]? EncryptedFilePreviewHash { get; set; }
 
+        [Column("preview_generation_error")]
+        public string? PreviewGenerationError { get; set; }
+
         public virtual ICollection<NodeFile> Nodes { get; set; } = [];
         public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
