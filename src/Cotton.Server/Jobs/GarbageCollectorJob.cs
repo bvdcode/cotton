@@ -63,6 +63,7 @@ namespace Cotton.Server.Jobs
                 .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now && !c.FileManifestChunks.Any())
                 .Take(BatchSize)
                 .ToListAsync(ct);
+            int deletedChunksCounter = 0;
             if (chunksToDelete.Count != 0)
             {
                 foreach (var chunkToDelete in chunksToDelete)
@@ -96,23 +97,24 @@ namespace Cotton.Server.Jobs
                         }
 
                         string uid = Hasher.ToHexStringHash(chunk.Hash);
-                        bool deleted = await _storage.DeleteAsync(uid);
                         await _dbContext.ChunkOwnerships
                             .Where(o => o.ChunkHash == chunk.Hash)
                             .ExecuteDeleteAsync(ct);
                         _dbContext.Chunks.Remove(chunk);
+                        await _dbContext.SaveChangesAsync(ct);
+                        deletedChunksCounter++;
+                        bool deleted = await _storage.DeleteAsync(uid);
                         if (!deleted)
                         {
                             _logger.LogWarning("Failed to delete chunk {ChunkId} from storage, possibly already deleted.", uid);
                         }
                     }
-                    await _dbContext.SaveChangesAsync(ct);
                 }
                 finally
                 {
                     CurrentlyDeletingChunks.Clear();
                 }
-                _logger.LogInformation("Garbage collection of chunks completed - {Count} chunks deleted.", chunksToDelete.Count);
+                _logger.LogInformation("Garbage collection of chunks completed - {deletedChunksCounter} chunks deleted.", deletedChunksCounter);
             }
         }
     }
