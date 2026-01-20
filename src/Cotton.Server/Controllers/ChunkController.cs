@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -95,6 +96,10 @@ namespace Cotton.Server.Controllers
             var foundOwnership = await _dbContext.ChunkOwnerships
                 .FirstOrDefaultAsync(co => co.ChunkHash == hashBytes && co.OwnerId == userId);
             string storageKey = Hasher.ToHexStringHash(computedHash);
+            if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
+            {
+                return CottonResult.InternalError("Chunk is being deleted. Please try uploading again later.");
+            }
             var chunk = await _layouts.FindChunkAsync(hashBytes);
             if (chunk == null)
             {

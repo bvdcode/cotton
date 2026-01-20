@@ -1,21 +1,23 @@
 ﻿using Cotton.Database;
-using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Collections.Concurrent;
 
 namespace Cotton.Server.Jobs
 {
     [JobTrigger(days: 1)]
     public class GarbageCollectorJob(
-        PerfTracker _perf,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
+        private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new();
         private const int BatchSize = 10000;
         private const int ChunkGcDelayDays = 7;
+
+        public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -53,29 +55,46 @@ namespace Cotton.Server.Jobs
                 _logger.LogInformation("Scheduled {Count} orphaned chunks for garbage collection.", orphanedChunks);
             }
 
-            if (_perf.IsUploading())
-            {
-                _logger.LogInformation("Orphaned chunk deletion skipped: upload in progress.");
-                return;
-            }
             // 3. Delete chunks scheduled for deletion
             var chunksToDelete = await _dbContext.Chunks
                 .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now)
+                .Where(c => !c.FileManifestChunks.Any())
                 .Take(BatchSize)
                 .ToListAsync(context.CancellationToken);
             if (chunksToDelete.Count != 0)
             {
-                _logger.LogInformation("Deleting {Count} chunks scheduled for garbage collection.", chunksToDelete.Count);
-                foreach (var chunk in chunksToDelete)
+                foreach (var chunkToDelete in chunksToDelete)
                 {
-                    string uid = Convert.ToHexString(chunk.Hash);
-                    bool deleted = await _storage.DeleteAsync(uid);
-                    _dbContext.Chunks.Remove(chunk);
-                    if (!deleted)
+                    string uid = Convert.ToHexString(chunkToDelete.Hash);
+                    CurrentlyDeletingChunks.TryAdd(uid, 0);
+                }
+
+                _logger.LogInformation("Chunks retention will start in 1 minute. {Count} chunks scheduled for deletion.", chunksToDelete.Count);
+                await Task.Delay(60_000, context.CancellationToken);
+                try
+                {
+                    foreach (var chunk in chunksToDelete)
                     {
-                        _logger.LogWarning("Failed to delete chunk {ChunkId} from storage, possibly already deleted.", uid);
+                        bool stillOrphaned = !await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunk.Hash);
+                        if (!stillOrphaned)
+                        {
+                            chunk.GCScheduledAfter = null;
+                            continue;
+                        }
+
+                        string uid = Convert.ToHexString(chunk.Hash);
+                        bool deleted = await _storage.DeleteAsync(uid);
+                        _dbContext.Chunks.Remove(chunk);
+                        if (!deleted)
+                        {
+                            _logger.LogWarning("Failed to delete chunk {ChunkId} from storage, possibly already deleted.", uid);
+                        }
                     }
                     await _dbContext.SaveChangesAsync(context.CancellationToken);
+                }
+                finally
+                {
+                    CurrentlyDeletingChunks.Clear();
                 }
                 _logger.LogInformation("Garbage collection of chunks completed - {Count} chunks deleted.", chunksToDelete.Count);
             }
