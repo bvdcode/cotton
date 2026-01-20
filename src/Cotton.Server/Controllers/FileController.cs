@@ -54,8 +54,8 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiBadRequest("File is already deleted from the layout.");
             }
-            var trashNode = await _layouts.GetUserTrashNodeAsync(userId);
-            nodeFile.NodeId = trashNode.Id;
+            var trashItem = await _layouts.CreateTrashItemAsync(userId);
+            nodeFile.NodeId = trashItem.Id;
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.", userId, nodeFileId);
             return NoContent();

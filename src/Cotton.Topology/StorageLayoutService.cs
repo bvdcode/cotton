@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Validators;
+using EasyExtensions.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Topology
@@ -13,7 +14,7 @@ namespace Cotton.Topology
     {
         private static readonly SemaphoreSlim _layoutSemaphore = new(1, 1);
 
-        public async Task<Node> GetUserTrashNodeAsync(Guid ownerId)
+        public async Task<Node> GetUserTrashRootAsync(Guid ownerId)
         {
             var layout = await GetOrCreateLatestUserLayoutAsync(ownerId);
             return await GetOrCreateRootNodeAsync(layout.Id, ownerId, NodeType.Trash);
@@ -85,6 +86,22 @@ namespace Cotton.Topology
         public async Task<Chunk?> FindChunkAsync(byte[] hash)
         {
             return await _dbContext.Chunks.FindAsync(hash);
+        }
+
+        public async Task<Node> CreateTrashItemAsync(Guid userId)
+        {
+            Node trashRoot = await GetUserTrashRootAsync(userId);
+            Node trashItem = new()
+            {
+                OwnerId = userId,
+                LayoutId = trashRoot.LayoutId,
+                ParentId = trashRoot.Id,
+                Type = NodeType.Trash
+            };
+            trashItem.SetName("trash-item-" + StringHelpers.CreateRandomString(32));
+            await _dbContext.Nodes.AddAsync(trashItem);
+            await _dbContext.SaveChangesAsync();
+            return trashItem;
         }
     }
 }
