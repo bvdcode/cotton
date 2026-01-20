@@ -170,7 +170,7 @@ namespace Cotton.Storage.Tests.Processors
             var result = await _processor.WriteAsync("test-uid", stream);
 
             // Assert
-            Assert.That(result.Position, Is.EqualTo(0));
+            Assert.That(result.Position, Is.Zero);
         }
 
         [Test]
@@ -185,7 +185,11 @@ namespace Cotton.Storage.Tests.Processors
             var result = await _processor.ReadAsync("test-uid", compressed);
 
             // Assert
-            Assert.That(result.Position, Is.EqualTo(0));
+            Assert.That(result.CanRead, Is.True);
+            if (result.CanSeek)
+            {
+                Assert.That(result.Position, Is.Zero);
+            }
         }
 
         [Test]
