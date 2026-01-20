@@ -14,8 +14,14 @@ namespace Cotton.Database.Models
         [Column("hash")]
         public byte[] Hash { get; set; } = null!;
 
+        /// <summary>
+        /// Plain size of the chunk in bytes before transformations like compression or encryption.
+        /// </summary>
         [Column("size_bytes")]
         public long SizeBytes { get; set; }
+
+        [Column("gc_scheduled_after")]
+        public DateTime? GCScheduledAfter { get; set; }
 
         [Column("compression_algorithm")]
         public CompressionAlgorithm CompressionAlgorithm { get; set; }
