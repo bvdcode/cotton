@@ -20,6 +20,12 @@ namespace Cotton.Storage.Tests.Streams
                 _data[uid] = data;
             }
 
+            public Task<bool> DeleteAsync(string uid)
+            {
+                bool removed = _data.Remove(uid);
+                return Task.FromResult(removed);
+            }
+
             public Task<bool> ExistsAsync(string uid)
             {
                 return Task.FromResult(_data.ContainsKey(uid));
@@ -125,11 +131,11 @@ namespace Cotton.Storage.Tests.Streams
             // Assert
             Assert.That(result.Length, Is.EqualTo(2048));
             var resultBytes = result.ToArray();
-            Assert.Multiple(() =>
+            using (Assert.EnterMultipleScope())
             {
                 Assert.That(resultBytes.Take(1024).ToArray(), Is.EqualTo(data1));
                 Assert.That(resultBytes.Skip(1024).ToArray(), Is.EqualTo(data2));
-            });
+            }
         }
 
         [Test]
@@ -469,7 +475,7 @@ namespace Cotton.Storage.Tests.Streams
             var stream = storage.GetBlobStream(["uid1", "uid2"], context);
 
             // Act & Assert
-            Assert.That(stream.Position, Is.EqualTo(0));
+            Assert.That(stream.Position, Is.Zero);
 
             var buffer = new byte[3];
             await stream.ReadExactlyAsync(buffer);

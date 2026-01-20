@@ -18,6 +18,11 @@ namespace Cotton.Storage.Pipelines
             return _innerStorage.ExistsAsync(uid);
         }
 
+        public Task<bool> DeleteAsync(string uid)
+        {
+            return _innerStorage.DeleteAsync(uid);
+        }
+
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var cached = _cache.TryGetValue(uid, out var data);

@@ -16,6 +16,11 @@ namespace Cotton.Storage.Pipelines
             return _backendProvider.GetBackend().ExistsAsync(uid);
         }
 
+        public Task<bool> DeleteAsync(string uid)
+        {
+            return _backendProvider.GetBackend().DeleteAsync(uid);
+        }
+
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var backend = _backendProvider.GetBackend();
