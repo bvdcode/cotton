@@ -15,6 +15,12 @@ public sealed class InMemoryStorage : IStoragePipeline
 {
     private readonly ConcurrentDictionary<string, byte[]> _blobs = new(StringComparer.OrdinalIgnoreCase);
 
+    public Task<bool> DeleteAsync(string uid)
+    {
+        ArgumentNullException.ThrowIfNull(uid);
+        return Task.FromResult(_blobs.TryRemove(uid, out _));
+    }
+
     public Task<bool> ExistsAsync(string uid)
     {
         ArgumentNullException.ThrowIfNull(uid);
