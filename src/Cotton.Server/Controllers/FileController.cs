@@ -325,6 +325,7 @@ namespace Cotton.Server.Controllers
                         Hasher.ToHexStringHash(computedContentHash));
                     return this.ApiBadRequest("File content hash does not match the provided hash.");
                 }
+                newFile.ComputedContentHash = computedContentHash;
             }
             await _dbContext.NodeFiles.AddAsync(newNodeFile);
             if (!request.OriginalNodeFileId.HasValue)
