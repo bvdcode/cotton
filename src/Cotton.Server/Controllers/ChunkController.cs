@@ -107,6 +107,14 @@ namespace Cotton.Server.Controllers
                 };
                 await _dbContext.Chunks.AddAsync(chunk);
             }
+            else
+            {
+                if (chunk.GCScheduledAfter.HasValue)
+                {
+                    chunk.GCScheduledAfter = null;
+                    _dbContext.Chunks.Update(chunk);
+                }
+            }
 
             if (foundOwnership == null)
             {
