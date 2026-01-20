@@ -26,6 +26,7 @@ namespace Cotton.Database.Models
         [Column("compression_algorithm")]
         public CompressionAlgorithm CompressionAlgorithm { get; set; }
 
+        public virtual ICollection<ChunkOwnership> ChunkOwnerships { get; set; } = [];
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
     }
 }
