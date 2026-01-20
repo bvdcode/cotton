@@ -167,10 +167,8 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.NotFound("Node not found.");
             }
-            // TODO: Change root node? Or change node type? Or something else?
-            var trash = await _layouts.GetUserTrashNodeAsync(userId);
-            node.ParentId = trash.Id;
-            node.Type = NodeType.Trash;
+            Node trashItem = await _layouts.CreateTrashItemAsync(userId);
+            node.ParentId = trashItem.Id;
             await _dbContext.SaveChangesAsync();
             return Ok();
         }
