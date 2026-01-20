@@ -29,6 +29,7 @@ namespace Cotton.Server.Jobs
                 .ToList();
             foreach (var manifest in unprocessedManifests)
             {
+                _logger.LogInformation("Computing hash for manifest {ManifestId}", manifest.Id);
                 string[] hashes = [.. manifest.FileManifestChunks
                     .OrderBy(x => x.ChunkOrder)
                     .Select(x => Hasher.ToHexStringHash(x.ChunkHash))];
