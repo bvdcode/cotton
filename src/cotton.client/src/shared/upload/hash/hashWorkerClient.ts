@@ -18,6 +18,7 @@ export class HashWorkerClient {
   private readonly worker: Worker;
   private readonly pending = new Map<string, PendingRequest<string>>();
   private readonly pendingVoid = new Map<string, PendingRequest<void>>();
+  private initBarrier: Promise<void> | null = null;
 
   constructor() {
     this.worker = new Worker(new URL("./hash.worker.ts", import.meta.url), { type: "module" });
@@ -66,11 +67,22 @@ export class HashWorkerClient {
       this.pendingVoid.set(requestId, { resolve, reject });
     });
 
+    // Expose init completion as a barrier so consumers can't hash before the worker is ready.
+    this.initBarrier = promise;
+
     this.worker.postMessage({ type: "init", requestId, algorithm });
     return promise;
   }
 
-  hashChunk(buffer: ArrayBuffer): Promise<string> {
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initBarrier) {
+      throw new Error("Hash worker is not initialized");
+    }
+    await this.initBarrier;
+  }
+
+  async hashChunk(buffer: ArrayBuffer): Promise<string> {
+    await this.ensureInitialized();
     const requestId = makeRequestId();
     const promise = new Promise<string>((resolve, reject) => {
       this.pending.set(requestId, { resolve, reject });
@@ -81,7 +93,8 @@ export class HashWorkerClient {
     return promise;
   }
 
-  digestFile(): Promise<string> {
+  async digestFile(): Promise<string> {
+    await this.ensureInitialized();
     const requestId = makeRequestId();
     const promise = new Promise<string>((resolve, reject) => {
       this.pending.set(requestId, { resolve, reject });
@@ -95,6 +108,7 @@ export class HashWorkerClient {
     this.worker.terminate();
     this.pending.clear();
     this.pendingVoid.clear();
+    this.initBarrier = null;
   }
 }
 
