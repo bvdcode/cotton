@@ -43,8 +43,12 @@ namespace Cotton.Database.Models
             NameKey = NameValidator.GetNameKey(normalized);
         }
 
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Layout Layout { get; set; } = null!;
+
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Node? Parent { get; set; }
+
         public virtual ICollection<Node> Children { get; set; } = [];
         public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
     }

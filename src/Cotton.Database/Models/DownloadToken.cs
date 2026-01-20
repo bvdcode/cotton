@@ -1,4 +1,5 @@
 ﻿using EasyExtensions.EntityFrameworkCore.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
@@ -21,7 +22,10 @@ namespace Cotton.Database.Models
         [Column("delete_after_use")]
         public bool DeleteAfterUse { get; set; }
 
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual User CreatedByUser { get; set; } = null!;
+
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual FileManifest FileManifest { get; set; } = null!;
     }
 }

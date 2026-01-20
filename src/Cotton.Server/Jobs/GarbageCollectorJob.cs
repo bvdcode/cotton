@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ namespace Cotton.Server.Jobs
 {
     [JobTrigger(days: 1)]
     public class GarbageCollectorJob(
+        PerfTracker _perf,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ILogger<GarbageCollectorJob> _logger) : IJob
@@ -17,6 +19,8 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            DateTime now = DateTime.UtcNow;
+
             // 1. Remove orphaned file manifests (no associated NodeFiles)
             var manifestIds = await _dbContext.FileManifests
                 .Where(fm => !fm.NodeFiles.Any())
@@ -39,7 +43,7 @@ namespace Cotton.Server.Jobs
             }
 
             // 2. Schedule orphaned chunks (no associated FileManifestChunks) for deletion
-            DateTime deleteAfter = DateTime.UtcNow.AddDays(ChunkGcDelayDays);
+            DateTime deleteAfter = now.AddDays(ChunkGcDelayDays);
             int orphanedChunks = await _dbContext.Chunks
                 .Where(c => !c.FileManifestChunks.Any() && c.GCScheduledAfter == null)
                 .Take(BatchSize)
@@ -49,9 +53,14 @@ namespace Cotton.Server.Jobs
                 _logger.LogInformation("Scheduled {Count} orphaned chunks for garbage collection.", orphanedChunks);
             }
 
+            if (_perf.IsUploading())
+            {
+                _logger.LogInformation("Orphaned chunk deletion skipped: upload in progress.");
+                return;
+            }
             // 3. Delete chunks scheduled for deletion
             var chunksToDelete = await _dbContext.Chunks
-                .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= DateTime.UtcNow)
+                .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now)
                 .Take(BatchSize)
                 .ToListAsync(context.CancellationToken);
             if (chunksToDelete.Count != 0)
@@ -66,8 +75,8 @@ namespace Cotton.Server.Jobs
                     {
                         _logger.LogWarning("Failed to delete chunk {ChunkId} from storage, possibly already deleted.", uid);
                     }
+                    await _dbContext.SaveChangesAsync(context.CancellationToken);
                 }
-                await _dbContext.SaveChangesAsync(context.CancellationToken);
                 _logger.LogInformation("Garbage collection of chunks completed - {Count} chunks deleted.", chunksToDelete.Count);
             }
         }
