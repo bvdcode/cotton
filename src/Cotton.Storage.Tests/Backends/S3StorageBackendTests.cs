@@ -258,7 +258,7 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = NewUid();
             _createdKeys.Add(uid);
-            var data = new byte[64 * 1024 * 1024]; // 5 MB
+            var data = new byte[32 * 1024 * 1024]; // 32 MB
             RandomNumberGenerator.Fill(data);
 
             // Act
