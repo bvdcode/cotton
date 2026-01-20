@@ -30,7 +30,7 @@ namespace Cotton.Database.Models
         [Column("preview_generation_error")]
         public string? PreviewGenerationError { get; set; }
 
-        public virtual ICollection<NodeFile> Nodes { get; set; } = [];
+        public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
         public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
     }
