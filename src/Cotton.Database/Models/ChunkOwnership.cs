@@ -14,6 +14,7 @@ namespace Cotton.Database.Models
         [Column("chunk_hash")]
         public byte[] ChunkHash { get; set; } = null!;
 
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Chunk Chunk { get; set; } = null!;
     }
 }

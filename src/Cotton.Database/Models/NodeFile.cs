@@ -51,7 +51,10 @@ namespace Cotton.Database.Models
             NameKey = NameValidator.GetNameKey(normalized);
         }
 
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual FileManifest FileManifest { get; set; } = null!;
+
+        [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Node Node { get; set; } = null!;
     }
 }
