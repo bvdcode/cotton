@@ -9,7 +9,7 @@ import {
 import { FileBreadcrumbs, FileListViewFactory } from "../files/components";
 import { ArrowUpward, ViewModule, ViewList, Delete } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+//mport { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { nodesApi } from "../../shared/api/nodesApi";
 import { layoutsApi, type NodeDto } from "../../shared/api/layoutsApi";
@@ -42,7 +42,7 @@ import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
  * Similar to FilesPage but uses 'trash' nodeType for API calls.
  */
 export const TrashPage: React.FC = () => {
-  const { t } = useTranslation(["files", "common"]);
+  //const { t } = useTranslation(["files", "common"]);
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
 
@@ -430,7 +430,7 @@ export const TrashPage: React.FC = () => {
               isCreatingFolder={isCreatingInThisFolder}
               newFolderName=""
               onNewFolderNameChange={() => {}}
-              onConfirmNewFolder={() => {}}
+              onConfirmNewFolder={() => Promise.resolve()}
               onCancelNewFolder={() => {}}
               folderNamePlaceholder=""
               fileNamePlaceholder="File name"
