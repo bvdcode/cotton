@@ -1,4 +1,6 @@
 ﻿using Cotton.Database;
+using Cotton.Database.Models.Enums;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Quartz.Attributes;
@@ -12,6 +14,7 @@ namespace Cotton.Server.Jobs
     public class GarbageCollectorJob(
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
+        SettingsProvider _settingsProvider,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
         private const int BatchSize = 10000;
@@ -51,7 +54,14 @@ namespace Cotton.Server.Jobs
             }
 
             // 2. Schedule orphaned chunks (no associated FileManifestChunks) for deletion
-            DateTime deleteAfter = now.AddDays(ChunkGcDelayDays);
+            StorageSpaceMode spaceMode = _settingsProvider.GetServerSettings().StorageSpaceMode;
+            DateTime deleteAfter = spaceMode switch
+            {
+                StorageSpaceMode.Limited => now.AddDays(1),
+                StorageSpaceMode.Unlimited => now.AddDays(ChunkGcDelayDays * 4),
+                StorageSpaceMode.Optimal => now.AddDays(ChunkGcDelayDays),
+                _ => now.AddDays(ChunkGcDelayDays),
+            };
             int orphanedChunks = await _dbContext.Chunks
                 .Where(c => !c.FileManifestChunks.Any() && c.GCScheduledAfter == null)
                 .Take(BatchSize)
