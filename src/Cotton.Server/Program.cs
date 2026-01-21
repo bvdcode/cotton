@@ -34,6 +34,7 @@ namespace Cotton.Server
 
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services
+                .AddMediator()
                 .AddQuartzJobs()
                 .AddSingleton<PerfTracker>()
                 .AddScoped<SettingsProvider>()
