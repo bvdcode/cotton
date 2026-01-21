@@ -3,12 +3,13 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Topology;
 using EasyExtensions.EntityFrameworkCore.Exceptions;
-using Mediator;
+using EasyExtensions.Mediator;
+using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
 {
-    public class DeleteFileQuery(Guid userId, Guid nodeFileId, bool skipTrash) : ICommand
+    public class DeleteFileQuery(Guid userId, Guid nodeFileId, bool skipTrash) : IRequest
     {
         public Guid UserId { get; } = userId;
         public Guid NodeFileId { get; } = nodeFileId;
@@ -19,23 +20,22 @@ namespace Cotton.Server.Handlers.Files
         CottonDbContext _dbContext,
         StorageLayoutService _layouts,
         ILogger<DeleteFileQueryHandler> _logger)
-            : ICommandHandler<DeleteFileQuery>
+            : IRequestHandler<DeleteFileQuery>
     {
-        public async ValueTask<Unit> Handle(DeleteFileQuery command, CancellationToken ct)
+        public async Task Handle(DeleteFileQuery request, CancellationToken ct)
         {
             NodeFile nodeFile = await _dbContext.NodeFiles
-                .FirstOrDefaultAsync(x => x.Id == command.NodeFileId
-                    && x.OwnerId == command.UserId, cancellationToken: ct)
+                .FirstOrDefaultAsync(x => x.Id == request.NodeFileId
+                    && x.OwnerId == request.UserId, cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(FileManifest));
-            if (command.SkipTrash)
+            if (request.SkipTrash)
             {
-                await DeletePermanentlyAsync(command, nodeFile, ct);
+                await DeletePermanentlyAsync(request, nodeFile, ct);
             }
             else
             {
-                await MoveToTrashAsync(command, nodeFile, ct);
+                await MoveToTrashAsync(request, nodeFile, ct);
             }
-            return default;
         }
 
         private async Task DeletePermanentlyAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
