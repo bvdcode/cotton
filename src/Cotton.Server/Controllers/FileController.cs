@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
+using Cotton.Server.Handlers.Files;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
@@ -21,6 +22,7 @@ using EasyExtensions.EntityFrameworkCore.Exceptions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Quartz.Extensions;
 using Mapster;
+using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -32,6 +34,7 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class FileController(
+        IMediator _mediator,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ISchedulerFactory _scheduler,
@@ -43,21 +46,13 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpDelete($"{Routes.Files}/{{nodeFileId:guid}}")]
-        public async Task<IActionResult> DeleteFile([FromRoute] Guid nodeFileId)
+        public async Task<IActionResult> DeleteFile(
+            [FromRoute] Guid nodeFileId,
+            [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
-            var nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.Node)
-                .FirstOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId)
-                ?? throw new EntityNotFoundException(nameof(FileManifest));
-            if (nodeFile.Node.Type == NodeType.Trash)
-            {
-                return this.ApiBadRequest("File is already deleted from the layout.");
-            }
-            var trashItem = await _layouts.CreateTrashItemAsync(userId);
-            nodeFile.NodeId = trashItem.Id;
-            await _dbContext.SaveChangesAsync();
-            _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.", userId, nodeFileId);
+            DeleteFileQuery query = new(userId, nodeFileId, skipTrash);
+            await _mediator.Send(query);
             return NoContent();
         }
 
