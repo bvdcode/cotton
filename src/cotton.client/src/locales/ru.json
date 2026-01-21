@@ -423,7 +423,8 @@
       "goUp": "Вверх",
       "trashRoot": "Корень корзины",
       "switchToList": "Переключить на список",
-      "switchToTiles": "Переключить на плитки"
+      "switchToTiles": "Переключить на плитки",
+      "emptyTrash": "Очистить корзину"
     },
     "stats": {
       "summary": "{{folders}} папок, {{files}} файлов, {{size}}"
@@ -435,6 +436,12 @@
     "deleteFile": {
       "confirmTitle": "Удалить навсегда файл \"{{name}}\"?",
       "confirmDescription": "Это действие нельзя отменить. Файл будет удалён навсегда."
+    },
+    "emptyTrash": {
+      "confirmTitle": "Очистить корзину?",
+      "confirmDescription": "Это действие нельзя отменить. Все элементы в корзине будут удалены навсегда.",
+      "inProgress": "Удаление {{current}} из {{total}} элементов...",
+      "completed": "Корзина успешно очищена"
     }
   }
 }

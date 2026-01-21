@@ -23,13 +23,12 @@ namespace Cotton.Server.Handlers.Files
     {
         public async ValueTask<Unit> Handle(DeleteFileQuery command, CancellationToken ct)
         {
+            NodeFile nodeFile = await _dbContext.NodeFiles
+                .FirstOrDefaultAsync(x => x.Id == command.NodeFileId
+                    && x.OwnerId == command.UserId, cancellationToken: ct)
+                    ?? throw new EntityNotFoundException(nameof(FileManifest));
             if (command.SkipTrash)
             {
-                NodeFile nodeFile = await _dbContext.NodeFiles
-                    .FirstOrDefaultAsync(x => x.Id == command.NodeFileId
-                        && x.OwnerId == command.UserId, cancellationToken: ct)
-                        ?? throw new EntityNotFoundException(nameof(FileManifest));
-
                 _dbContext.NodeFiles.Remove(nodeFile);
                 await _dbContext.SaveChangesAsync(ct);
                 _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",
@@ -37,11 +36,6 @@ namespace Cotton.Server.Handlers.Files
             }
             else
             {
-                var nodeFile = await _dbContext.NodeFiles
-                    .Include(x => x.Node)
-                    .FirstOrDefaultAsync(x => x.Id == command.NodeFileId
-                        && x.OwnerId == command.UserId, cancellationToken: ct)
-                        ?? throw new EntityNotFoundException(nameof(FileManifest));
                 if (nodeFile.Node.Type == NodeType.Trash)
                 {
                     throw new EntityNotFoundException(nameof(FileManifest));

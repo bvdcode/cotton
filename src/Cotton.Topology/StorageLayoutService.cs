@@ -98,7 +98,7 @@ namespace Cotton.Topology
                 ParentId = trashRoot.Id,
                 Type = NodeType.Trash
             };
-            trashItem.SetName("trash-item-" + StringHelpers.CreateRandomString(32));
+            trashItem.SetName("trash-item-" + StringHelpers.CreateRandomString(8));
             await _dbContext.Nodes.AddAsync(trashItem);
             await _dbContext.SaveChangesAsync();
             return trashItem;
