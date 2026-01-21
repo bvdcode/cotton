@@ -75,10 +75,10 @@ namespace Cotton.Server.Jobs
                     CurrentlyDeletingChunks.TryAdd(uid, 0);
                 }
 
-                _logger.LogInformation("Chunks retention will start in 1 minute. {Count} chunks scheduled for deletion.", chunksToDelete.Count);
+                _logger.LogInformation("Chunks retention will start soon. {Count} chunks scheduled for deletion.", chunksToDelete.Count);
                 try
                 {
-                    await Task.Delay(60_000, ct);
+                    await Task.Delay(5_000, ct);
                     foreach (var chunk in chunksToDelete)
                     {
                         var current = await _dbContext.Chunks
@@ -110,6 +110,10 @@ namespace Cotton.Server.Jobs
                         if (!deleted)
                         {
                             _logger.LogWarning("Failed to delete chunk {ChunkId} from storage, possibly already deleted.", uid);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Deleted chunk {ChunkId} from storage.", uid);
                         }
                     }
                 }
