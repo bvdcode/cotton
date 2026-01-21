@@ -7,7 +7,10 @@ import { useNodesStore } from "../../../shared/store/nodesStore";
  * Hook for trash folder operations - similar to useFolderOperations
  * but uses skipTrash=true when deleting
  */
-export const useTrashFolderOperations = (currentNodeId: string | null) => {
+export const useTrashFolderOperations = (
+  currentNodeId: string | null,
+  onDeleted?: () => void,
+) => {
   const { t } = useTranslation(["trash", "common"]);
   const confirm = useConfirm();
   const { deleteFolder, renameFolder } = useNodesStore();
@@ -75,6 +78,11 @@ export const useTrashFolderOperations = (currentNodeId: string | null) => {
       if (result.confirmed) {
         // Pass skipTrash=true for permanent deletion
         await deleteFolder(folderId, currentNodeId ?? undefined, true);
+        
+        // Trigger parent refresh
+        if (onDeleted) {
+          onDeleted();
+        }
       }
     } catch {
       // User cancelled

@@ -5,11 +5,15 @@ import {
   IconButton,
   LinearProgress,
   Typography,
+  Dialog,
+  DialogContent,
+  DialogTitle,
 } from "@mui/material";
 import { FileBreadcrumbs, FileListViewFactory } from "../files/components";
 import { ArrowUpward, ViewModule, ViewList, Delete } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "material-ui-confirm";
 import Loader from "../../shared/ui/Loader";
 import { nodesApi } from "../../shared/api/nodesApi";
 import { layoutsApi, type NodeDto } from "../../shared/api/layoutsApi";
@@ -45,6 +49,7 @@ export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common"]);
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
+  const confirm = useConfirm();
 
   const [currentNode, setCurrentNode] = React.useState<NodeDto | null>(null);
   const [ancestors, setAncestors] = React.useState<NodeDto[]>([]);
@@ -53,6 +58,13 @@ export const TrashPage: React.FC = () => {
   );
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Empty trash progress state
+  const [emptyingTrash, setEmptyingTrash] = React.useState(false);
+  const [emptyTrashProgress, setEmptyTrashProgress] = React.useState({
+    current: 0,
+    total: 0,
+  });
 
   const routeNodeId = params.nodeId;
 
@@ -99,6 +111,18 @@ export const TrashPage: React.FC = () => {
   }, [routeNodeId, t]);
 
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
+
+  // Refresh current folder content
+  const refreshContent = React.useCallback(async () => {
+    if (!nodeId) return;
+    
+    try {
+      const contentData = await nodesApi.getChildren(nodeId, { nodeType: "trash" });
+      setContent(contentData.content);
+    } catch (err) {
+      console.error("Failed to refresh trash content:", err);
+    }
+  }, [nodeId]);
 
   // Determine layout type from current node, defaulting to Tiles
   const initialLayoutType = useMemo(() => {
@@ -163,11 +187,8 @@ export const TrashPage: React.FC = () => {
     ];
   }, [sortedFolders, sortedFiles]);
 
-  const folderOps = useTrashFolderOperations(nodeId);
-  const fileOps = useTrashFileOperations(() => {
-    // Reload current folder after file operation
-    // Trigger re-fetch by updating routeNodeId dependency
-  });
+  const folderOps = useTrashFolderOperations(nodeId, refreshContent);
+  const fileOps = useTrashFileOperations(refreshContent);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
   // Media lightbox state
@@ -228,6 +249,58 @@ export const TrashPage: React.FC = () => {
       navigate(`/trash/${parent.id}`);
     } else {
       navigate("/trash");
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    if (!content) return;
+
+    const totalItems = (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+    if (totalItems === 0) return;
+
+    try {
+      const result = await confirm({
+        title: t("emptyTrash.confirmTitle"),
+        description: t("emptyTrash.confirmDescription"),
+        confirmationText: t("common:actions.delete"),
+        cancellationText: t("common:actions.cancel"),
+        confirmationButtonProps: { color: "error" },
+      });
+
+      if (!result.confirmed) return;
+
+      setEmptyingTrash(true);
+      setEmptyTrashProgress({ current: 0, total: totalItems });
+
+      let deleted = 0;
+
+      // Delete all folders
+      for (const folder of content.nodes ?? []) {
+        try {
+          await nodesApi.deleteNode(folder.id, true);
+          deleted++;
+          setEmptyTrashProgress({ current: deleted, total: totalItems });
+        } catch (err) {
+          console.error(`Failed to delete folder ${folder.id}:`, err);
+        }
+      }
+
+      // Delete all files
+      for (const file of content.files ?? []) {
+        try {
+          await filesApi.deleteFile(file.id, true);
+          deleted++;
+          setEmptyTrashProgress({ current: deleted, total: totalItems });
+        } catch (err) {
+          console.error(`Failed to delete file ${file.id}:`, err);
+        }
+      }
+
+      setEmptyingTrash(false);
+      await refreshContent();
+    } catch {
+      // User cancelled
+      setEmptyingTrash(false);
     }
   };
 
@@ -347,13 +420,24 @@ export const TrashPage: React.FC = () => {
                 >
                   <ArrowUpward />
                 </IconButton>
-                <IconButton
-                  onClick={() => navigate("/trash")}
-                  color="primary"
-                  title={t("actions.trashRoot")}
-                >
-                  <Delete />
-                </IconButton>
+                {ancestors.length === 0 ? (
+                  <IconButton
+                    onClick={handleEmptyTrash}
+                    color="error"
+                    disabled={loading || emptyingTrash || stats.folders + stats.files === 0}
+                    title={t("actions.emptyTrash")}
+                  >
+                    <Delete />
+                  </IconButton>
+                ) : (
+                  <IconButton
+                    onClick={() => navigate("/trash")}
+                    color="primary"
+                    title={t("actions.trashRoot")}
+                  >
+                    <Delete />
+                  </IconButton>
+                )}
                 {layoutType === InterfaceLayoutType.Tiles ? (
                   <IconButton
                     color="primary"
@@ -475,6 +559,21 @@ export const TrashPage: React.FC = () => {
           onClose={() => setLightboxOpen(false)}
           getSignedMediaUrl={getSignedMediaUrl}
         />
+      )}
+
+      {emptyingTrash && (
+        <Dialog open={emptyingTrash} disableEscapeKeyDown>
+          <DialogTitle>{t("emptyTrash.inProgress", {
+            current: emptyTrashProgress.current,
+            total: emptyTrashProgress.total,
+          })}</DialogTitle>
+          <DialogContent>
+            <LinearProgress
+              variant="determinate"
+              value={(emptyTrashProgress.current / emptyTrashProgress.total) * 100}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

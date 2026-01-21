@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
@@ -12,6 +13,7 @@ using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using Mapster;
+using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +21,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
-    public class LayoutController(CottonDbContext _dbContext, StorageLayoutService _layouts) : ControllerBase
+    public class LayoutController(
+        IMediator _mediator,
+        CottonDbContext _dbContext,
+        StorageLayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpGet($"{Routes.Layouts}/{{layoutId:guid}}/stats")]
@@ -157,19 +162,13 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpDelete($"{Routes.Nodes}/{{nodeId:guid}}")]
-        public async Task<IActionResult> DeleteLayoutNode([FromRoute] Guid nodeId)
+        public async Task<IActionResult> DeleteLayoutNode(
+            [FromRoute] Guid nodeId,
+            [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
-            var node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (node == null)
-            {
-                return CottonResult.NotFound("Node not found.");
-            }
-            Node trashItem = await _layouts.CreateTrashItemAsync(userId);
-            node.ParentId = trashItem.Id;
-            await _dbContext.SaveChangesAsync();
+            DeleteNodeQuery query = new(userId, nodeId, skipTrash);
+            await _mediator.Send(query);
             return Ok();
         }
 
