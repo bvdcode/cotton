@@ -410,5 +410,31 @@
       "completed": "Completed",
       "failed": "Failed"
     }
+  },
+  "trash": {
+    "title": "Trash",
+    "loading": {
+      "title": "Loading trash...",
+      "caption": "Please wait while we load the trash contents."
+    },
+    "error": "Failed to load trash contents",
+    "empty": "Trash is empty",
+    "actions": {
+      "goUp": "Go up",
+      "trashRoot": "Trash root",
+      "switchToList": "Switch to list view",
+      "switchToTiles": "Switch to tiles view"
+    },
+    "stats": {
+      "summary": "{{folders}} folders, {{files}} files, {{size}}"
+    },
+    "deleteFolder": {
+      "confirmTitle": "Permanently delete folder \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone. The folder and all its contents will be permanently deleted."
+    },
+    "deleteFile": {
+      "confirmTitle": "Permanently delete file \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone. The file will be permanently deleted."
+    }
   }
 }

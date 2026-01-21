@@ -68,8 +68,10 @@ export const nodesApi = {
     return response.data;
   },
 
-  deleteNode: async (nodeId: Guid): Promise<void> => {
-    await httpClient.delete(`/layouts/nodes/${nodeId}`);
+  deleteNode: async (nodeId: Guid, skipTrash = false): Promise<void> => {
+    await httpClient.delete(`/layouts/nodes/${nodeId}`, {
+      params: skipTrash ? { skipTrash: true } : undefined,
+    });
   },
 
   renameNode: async (

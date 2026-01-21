@@ -25,11 +25,11 @@ namespace Cotton.Server.Handlers.Files
         {
             if (command.SkipTrash)
             {
-                // TODO: Delete related entities like FileManifestChunks, DownloadTokens, etc.
-                var nodeFile = await _dbContext.NodeFiles
+                NodeFile nodeFile = await _dbContext.NodeFiles
                     .FirstOrDefaultAsync(x => x.Id == command.NodeFileId
                         && x.OwnerId == command.UserId, cancellationToken: ct)
                         ?? throw new EntityNotFoundException(nameof(FileManifest));
+
                 _dbContext.NodeFiles.Remove(nodeFile);
                 await _dbContext.SaveChangesAsync(ct);
                 _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",

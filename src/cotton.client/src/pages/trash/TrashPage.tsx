@@ -9,7 +9,7 @@ import {
 import { FileBreadcrumbs, FileListViewFactory } from "../files/components";
 import { ArrowUpward, ViewModule, ViewList, Delete } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
-//mport { useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { nodesApi } from "../../shared/api/nodesApi";
 import { layoutsApi, type NodeDto } from "../../shared/api/layoutsApi";
@@ -24,8 +24,8 @@ import {
   PdfPreview,
   TextPreview,
 } from "../files/components/preview";
-import { useFolderOperations } from "../files/hooks/useFolderOperations";
-import { useFileOperations } from "../files/hooks/useFileOperations";
+import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
+import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
 import { useFilePreview } from "../files/hooks/useFilePreview";
 import { filesApi } from "../../shared/api/filesApi";
 import type {
@@ -42,7 +42,7 @@ import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
  * Similar to FilesPage but uses 'trash' nodeType for API calls.
  */
 export const TrashPage: React.FC = () => {
-  //const { t } = useTranslation(["files", "common"]);
+  const { t } = useTranslation(["trash", "common"]);
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
 
@@ -89,14 +89,14 @@ export const TrashPage: React.FC = () => {
         }
       } catch (err) {
         console.error("Failed to load trash data:", err);
-        setError("Failed to load trash contents");
+        setError(t("error"));
       } finally {
         setLoading(false);
       }
     };
 
     void loadTrashData();
-  }, [routeNodeId]);
+  }, [routeNodeId, t]);
 
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
 
@@ -163,8 +163,8 @@ export const TrashPage: React.FC = () => {
     ];
   }, [sortedFolders, sortedFiles]);
 
-  const folderOps = useFolderOperations(nodeId);
-  const fileOps = useFileOperations(() => {
+  const folderOps = useTrashFolderOperations(nodeId);
+  const fileOps = useTrashFileOperations(() => {
     // Reload current folder after file operation
     // Trigger re-fetch by updating routeNodeId dependency
   });
@@ -284,12 +284,7 @@ export const TrashPage: React.FC = () => {
   const isCreatingInThisFolder = false; // No folder creation in trash
 
   if (loading && !content) {
-    return (
-      <Loader
-        title="Loading trash..."
-        caption="Please wait while we load the trash contents."
-      />
-    );
+    return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
   return (
@@ -348,14 +343,14 @@ export const TrashPage: React.FC = () => {
                   color="primary"
                   onClick={handleGoUp}
                   disabled={loading || ancestors.length === 0}
-                  title="Go up"
+                  title={t("actions.goUp")}
                 >
                   <ArrowUpward />
                 </IconButton>
                 <IconButton
                   onClick={() => navigate("/trash")}
                   color="primary"
-                  title="Trash root"
+                  title={t("actions.trashRoot")}
                 >
                   <Delete />
                 </IconButton>
@@ -363,7 +358,7 @@ export const TrashPage: React.FC = () => {
                   <IconButton
                     color="primary"
                     onClick={() => setLayoutType(InterfaceLayoutType.List)}
-                    title="Switch to list view"
+                    title={t("actions.switchToList")}
                   >
                     <ViewList />
                   </IconButton>
@@ -371,7 +366,7 @@ export const TrashPage: React.FC = () => {
                   <IconButton
                     color="primary"
                     onClick={() => setLayoutType(InterfaceLayoutType.Tiles)}
-                    title="Switch to tiles view"
+                    title={t("actions.switchToTiles")}
                   >
                     <ViewModule />
                   </IconButton>
@@ -389,8 +384,11 @@ export const TrashPage: React.FC = () => {
                   color="text.secondary"
                   sx={{ fontSize: "0.875rem" }}
                 >
-                  {stats.folders} folders, {stats.files} files,{" "}
-                  {formatBytes(stats.sizeBytes)}
+                  {t("stats.summary", {
+                    folders: stats.folders,
+                    files: stats.files,
+                    size: formatBytes(stats.sizeBytes),
+                  })}
                 </Typography>
               </Box>
             </Box>
@@ -406,8 +404,11 @@ export const TrashPage: React.FC = () => {
               }}
             >
               <Typography color="text.secondary" sx={{ fontSize: "0.875rem" }}>
-                {stats.folders} folders, {stats.files} files,{" "}
-                {formatBytes(stats.sizeBytes)}
+                {t("stats.summary", {
+                  folders: stats.folders,
+                  files: stats.files,
+                  size: formatBytes(stats.sizeBytes),
+                })}
               </Typography>
             </Box>
           </Box>
@@ -420,7 +421,7 @@ export const TrashPage: React.FC = () => {
 
         <Box pb={{ xs: 2, sm: 3 }}>
           {tiles.length === 0 && !isCreatingInThisFolder ? (
-            <Typography color="text.secondary">Trash is empty</Typography>
+            <Typography color="text.secondary">{t("empty")}</Typography>
           ) : (
             <FileListViewFactory
               layoutType={layoutType}
