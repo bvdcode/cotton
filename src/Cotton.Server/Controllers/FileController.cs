@@ -361,7 +361,10 @@ namespace Cotton.Server.Controllers
             return result;
         }
 
-        private async Task<FileManifest> CreateNewFileManifestAsync(List<Chunk> chunks, CreateFileRequest request, byte[] proposedContentHash)
+        private async Task<FileManifest> CreateNewFileManifestAsync(
+            List<Chunk> chunks,
+            CreateFileRequest request,
+            byte[] proposedContentHash)
         {
             var newFileManifest = new FileManifest()
             {

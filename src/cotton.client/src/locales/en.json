@@ -423,7 +423,8 @@
       "goUp": "Go up",
       "trashRoot": "Trash root",
       "switchToList": "Switch to list view",
-      "switchToTiles": "Switch to tiles view"
+      "switchToTiles": "Switch to tiles view",
+      "emptyTrash": "Empty trash"
     },
     "stats": {
       "summary": "{{folders}} folders, {{files}} files, {{size}}"
@@ -435,6 +436,12 @@
     "deleteFile": {
       "confirmTitle": "Permanently delete file \"{{name}}\"?",
       "confirmDescription": "This action cannot be undone. The file will be permanently deleted."
+    },
+    "emptyTrash": {
+      "confirmTitle": "Empty trash?",
+      "confirmDescription": "This action cannot be undone. All items in trash will be permanently deleted.",
+      "inProgress": "Deleting {{current}} of {{total}} items...",
+      "completed": "Trash emptied successfully"
     }
   }
 }
