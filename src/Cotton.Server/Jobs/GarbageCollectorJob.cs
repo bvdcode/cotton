@@ -64,6 +64,7 @@ namespace Cotton.Server.Jobs
             };
             int orphanedChunks = await _dbContext.Chunks
                 .Where(c => !c.FileManifestChunks.Any() && c.GCScheduledAfter == null)
+                .OrderBy(c => c.Hash)
                 .Take(BatchSize)
                 .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
             if (orphanedChunks != 0)
@@ -74,6 +75,7 @@ namespace Cotton.Server.Jobs
             // 3. Delete chunks scheduled for deletion
             var chunksToDelete = await _dbContext.Chunks
                 .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now && !c.FileManifestChunks.Any())
+                .OrderBy(c => c.Hash)
                 .Take(BatchSize)
                 .ToListAsync(ct);
             int deletedChunksCounter = 0;
