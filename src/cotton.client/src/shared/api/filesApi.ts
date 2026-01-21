@@ -39,8 +39,10 @@ export const filesApi = {
     return response.data;
   },
 
-  deleteFile: async (nodeFileId: Guid): Promise<void> => {
-    await httpClient.delete(`/files/${nodeFileId}`);
+  deleteFile: async (nodeFileId: Guid, skipTrash = false): Promise<void> => {
+    await httpClient.delete(`/files/${nodeFileId}`, {
+      params: skipTrash ? { skipTrash: true } : undefined,
+    });
   },
 
   renameFile: async (
