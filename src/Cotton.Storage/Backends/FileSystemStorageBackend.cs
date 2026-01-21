@@ -96,7 +96,9 @@ namespace Cotton.Storage.Backends
                 return;
             }
 
-            string tmpFilePath = Path.GetTempFileName();
+            string tmpDir = Path.Combine(Path.GetTempPath(), "cotton", "upload-chunks");
+            Directory.CreateDirectory(tmpDir);
+            string tmpFilePath = Path.Combine(tmpDir, $"{fileName}.{Guid.NewGuid():N}.tmp");
             var fso = new FileStreamOptions
             {
                 Share = FileShare.None,
@@ -125,7 +127,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                File.Move(tmpFilePath, filePath, overwrite: true);
+                File.Move(tmpFilePath, filePath, overwrite: false);
                 File.SetAttributes(filePath, FileAttributes.ReadOnly | FileAttributes.NotContentIndexed);
             }
             catch (Exception)
