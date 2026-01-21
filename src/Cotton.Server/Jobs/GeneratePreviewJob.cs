@@ -25,8 +25,6 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
-            _logger.LogInformation("Starting preview generation job. Supported mime types: {MimeTypes}", string.Join(", ", allSupportedMimeTypes));
-
             var itemsToProcess = _dbContext.FileManifests
                 .Where(fm => fm.EncryptedFilePreviewHash == null && fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
