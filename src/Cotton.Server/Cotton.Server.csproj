@@ -13,15 +13,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
-		<PackageReference Include="Mediator.SourceGenerator" Version="3.0.1">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
+		<Folder Include="wwwroot\" />
+		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.30" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>10.0.2</Version>
 		</PackageReference>
-		<PackageReference Include="Otp.NET" Version="1.4.1" />
 		<ProjectReference Include="..\cotton.client\cotton.client.esproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>
@@ -30,6 +26,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Mapster" Version="7.4.0" />
+		<PackageReference Include="Otp.NET" Version="1.4.1" />
 		<ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
 		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
@@ -37,12 +34,11 @@
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
 		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
-		<PackageReference Include="EasyExtensions.Quartz" Version="3.0.28" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.28" />
-		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="3.0.28" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.28" />
+		<PackageReference Include="EasyExtensions.Quartz" Version="3.0.30" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.30" />
+		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="3.0.30" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.30" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
-		<Folder Include="wwwroot\" />
 	</ItemGroup>
 
 </Project>
