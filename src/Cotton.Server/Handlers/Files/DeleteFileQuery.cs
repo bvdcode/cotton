@@ -29,24 +29,34 @@ namespace Cotton.Server.Handlers.Files
                     ?? throw new EntityNotFoundException(nameof(FileManifest));
             if (command.SkipTrash)
             {
-                _dbContext.NodeFiles.Remove(nodeFile);
-                await _dbContext.SaveChangesAsync(ct);
-                _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",
-                    command.UserId, command.NodeFileId);
+                await DeletePermanentlyAsync(command, nodeFile, ct);
             }
             else
             {
-                if (nodeFile.Node.Type == NodeType.Trash)
-                {
-                    throw new EntityNotFoundException(nameof(FileManifest));
-                }
-                var trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
-                nodeFile.NodeId = trashItem.Id;
-                await _dbContext.SaveChangesAsync(ct);
-                _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.",
-                    command.UserId, command.NodeFileId);
+                await MoveToTrashAsync(command, nodeFile, ct);
             }
             return default;
+        }
+
+        private async Task DeletePermanentlyAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
+        {
+            _dbContext.NodeFiles.Remove(nodeFile);
+            await _dbContext.SaveChangesAsync(ct);
+            _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",
+                command.UserId, command.NodeFileId);
+        }
+
+        private async Task MoveToTrashAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
+        {
+            if (nodeFile.Node.Type == NodeType.Trash)
+            {
+                throw new EntityNotFoundException(nameof(FileManifest));
+            }
+            var trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
+            nodeFile.NodeId = trashItem.Id;
+            await _dbContext.SaveChangesAsync(ct);
+            _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.",
+                command.UserId, command.NodeFileId);
         }
     }
 }
