@@ -16,7 +16,7 @@ type NodesState = {
   refreshNodeContent: (nodeId: string) => Promise<void>;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
-  deleteFolder: (nodeId: string, parentNodeId?: string) => Promise<boolean>;
+  deleteFolder: (nodeId: string, parentNodeId?: string, skipTrash?: boolean) => Promise<boolean>;
   renameFolder: (
     nodeId: string,
     newName: string,
@@ -198,13 +198,13 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     }
   },
 
-  deleteFolder: async (nodeId, parentNodeId) => {
+  deleteFolder: async (nodeId, parentNodeId, skipTrash = false) => {
     if (get().loading) return false;
 
     set({ loading: true, error: null });
 
     try {
-      await nodesApi.deleteNode(nodeId);
+      await nodesApi.deleteNode(nodeId, skipTrash);
 
       // Optimistic update: remove folder from local cache
       if (parentNodeId) {

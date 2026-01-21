@@ -21,7 +21,6 @@ namespace Cotton.Database.Models
 
         /// <summary>
         /// First ID is the first nodefile created for a version, remains the same for all subsequent updates.
-        /// TODO: Set this id after entity was created.
         /// </summary>
         [Column("original_node_file_id")]
         public Guid OriginalNodeFileId { get; set; }
