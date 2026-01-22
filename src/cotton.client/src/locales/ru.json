@@ -405,7 +405,10 @@
         "pdfLoadFailed": "Не удалось загрузить PDF",
         "pdfDisplayFailed": "Не удалось отобразить PDF"
       }
-    }
+    },
+    "actionsTitle": "Действия",
+    "size": "Размер",
+    "name": "Название"
   },
   "upload": {
     "title": "Загрузки",
