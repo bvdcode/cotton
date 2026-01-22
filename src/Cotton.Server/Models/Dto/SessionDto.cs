@@ -15,5 +15,6 @@ namespace Cotton.Server.Models.Dto
         public string SessionId { get; set; } = null!;
         public int RefreshTokenCount { get; set; }
         public TimeSpan TotalSessionDuration { get; set; }
+        public bool IsCurrentSession { get; set; }
     }
 }

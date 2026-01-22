@@ -213,8 +213,8 @@ namespace Cotton.Server.Controllers
                     user.TotpFailedAttempts = 0;
                 }
             }
-            string accessToken = CreateAccessToken(user);
             ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user);
+            string accessToken = CreateAccessToken(user, dbToken.SessionId!);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token);
@@ -245,7 +245,7 @@ namespace Cotton.Server.Controllers
             {
                 return NotFound();
             }
-            var accessToken = CreateAccessToken(user);
+            var accessToken = CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
             ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(user, dbToken.SessionId);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
@@ -278,12 +278,13 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        private string CreateAccessToken(User user)
+        private string CreateAccessToken(User user, string sessionId)
         {
             return _tokens.CreateToken(x =>
             {
                 return x.Add(JwtRegisteredClaimNames.Sub, user.Id.ToString())
                     .Add(JwtRegisteredClaimNames.Name, user.Username)
+                    .Add(JwtRegisteredClaimNames.Sid, sessionId)
                     .Add(ClaimTypes.Name, user.Username)
                     .Add(ClaimTypes.Role, user.Role.ToString());
             });

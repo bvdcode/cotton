@@ -115,9 +115,11 @@ export const TrashPage: React.FC = () => {
   // Refresh current folder content
   const refreshContent = React.useCallback(async () => {
     if (!nodeId) return;
-    
+
     try {
-      const contentData = await nodesApi.getChildren(nodeId, { nodeType: "trash" });
+      const contentData = await nodesApi.getChildren(nodeId, {
+        nodeType: "trash",
+      });
       setContent(contentData.content);
     } catch (err) {
       console.error("Failed to refresh trash content:", err);
@@ -255,7 +257,8 @@ export const TrashPage: React.FC = () => {
   const handleEmptyTrash = async () => {
     if (!content) return;
 
-    const totalItems = (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+    const totalItems =
+      (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
     if (totalItems === 0) return;
 
     try {
@@ -424,7 +427,11 @@ export const TrashPage: React.FC = () => {
                   <IconButton
                     onClick={handleEmptyTrash}
                     color="error"
-                    disabled={loading || emptyingTrash || stats.folders + stats.files === 0}
+                    disabled={
+                      loading ||
+                      emptyingTrash ||
+                      stats.folders + stats.files === 0
+                    }
                     title={t("actions.emptyTrash")}
                   >
                     <Delete />
@@ -563,14 +570,18 @@ export const TrashPage: React.FC = () => {
 
       {emptyingTrash && (
         <Dialog open={emptyingTrash} disableEscapeKeyDown>
-          <DialogTitle>{t("emptyTrash.inProgress", {
-            current: emptyTrashProgress.current,
-            total: emptyTrashProgress.total,
-          })}</DialogTitle>
+          <DialogTitle>
+            {t("emptyTrash.inProgress", {
+              current: emptyTrashProgress.current,
+              total: emptyTrashProgress.total,
+            })}
+          </DialogTitle>
           <DialogContent>
             <LinearProgress
               variant="determinate"
-              value={(emptyTrashProgress.current / emptyTrashProgress.total) * 100}
+              value={
+                (emptyTrashProgress.current / emptyTrashProgress.total) * 100
+              }
             />
           </DialogContent>
         </Dialog>
