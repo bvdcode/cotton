@@ -60,6 +60,7 @@ namespace Cotton.Server.Controllers
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
 
+            string currentSessionId = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
             List<SessionDto> response = [.. tokens
                 .GroupBy(x => x.SessionId!)
                 .Select(g =>
@@ -79,6 +80,8 @@ namespace Cotton.Server.Controllers
 
                     return new SessionDto
                     {
+                        LastSeenAt = latestAny.CreatedAt,
+                        IsCurrentSession = currentSessionId == g.Key,
                         SessionId = g.Key,
                         IpAddress = source.IpAddress.ToString(),
                         UserAgent = source.UserAgent,
