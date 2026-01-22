@@ -137,11 +137,7 @@ export const SessionsCard = () => {
                 <DevicesIcon sx={{ color: "text.secondary", fontSize: 28 }} />
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Tooltip
-                    title={session.userAgent || ""}
-                    placement="right"
-                    arrow
-                  >
+                  <Tooltip title={session.userAgent || ""} arrow>
                     <Typography
                       variant="body1"
                       fontWeight={500}
@@ -159,24 +155,36 @@ export const SessionsCard = () => {
                   </Tooltip>
 
                   <Stack
-                    direction="row"
-                    spacing={1.5}
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={{ xs: 0.25, sm: 1.5 }}
                     sx={{ mt: 0.5 }}
                     divider={
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: { xs: "none", sm: "block" } }}
+                      >
                         •
                       </Typography>
                     }
                   >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" noWrap>
                       {formatLocation(session)}
                     </Typography>
                     {session.ipAddress && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {session.ipAddress}
                       </Typography>
                     )}
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" noWrap>
                       {formatDuration(session.totalSessionDuration)}
                     </Typography>
                   </Stack>
