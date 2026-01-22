@@ -56,23 +56,14 @@ export const SessionsCard = () => {
 
   return (
     <Paper
-      elevation={0}
       sx={{
-        p: { xs: 2, sm: 3 },
-        borderRadius: 2,
-        border: (theme) => `1px solid ${theme.palette.divider}`,
+        p: 2,
       }}
     >
       <Stack spacing={2}>
         <Box>
           <Typography variant="h6" fontWeight={600} gutterBottom>
             {t("sessions.title", "Active Sessions")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t(
-              "sessions.description",
-              "Manage your active sessions across different devices",
-            )}
           </Typography>
         </Box>
 

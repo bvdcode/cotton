@@ -32,18 +32,14 @@ export const SessionItem = ({
     <Paper
       variant="outlined"
       sx={{
-        p: 2,
+        p: 1,
         display: "flex",
         alignItems: "center",
-        gap: 2,
+        gap: 1,
         transition: "background-color 0.2s",
         "&:hover": {
           bgcolor: "action.hover",
         },
-        ...(session.isCurrentSession && {
-          borderColor: "primary.main",
-          borderWidth: 2,
-        }),
       }}
     >
       {getDeviceIcon(session.device)}
