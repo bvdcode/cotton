@@ -74,11 +74,10 @@ export const SessionItem = ({
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={{ xs: 0.25, sm: 1.5 }}
+          spacing={{ xs: 0.1, sm: 1.5 }}
           divider={
             <Typography
               variant="caption"
-              color="text.secondary"
               sx={{ display: { xs: "none", sm: "block" } }}
             >
               •
