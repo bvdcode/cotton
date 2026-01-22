@@ -356,7 +356,7 @@ export const FilesPage: React.FC = () => {
               <Box
                 sx={{
                   display: "flex",
-                  gap: 0.2,
+                  gap: 0.5,
                   alignItems: "center",
                   flexShrink: 0,
                 }}
