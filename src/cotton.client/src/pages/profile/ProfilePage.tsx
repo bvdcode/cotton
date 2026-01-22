@@ -17,7 +17,7 @@ export const ProfilePage = () => {
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
       <Stack spacing={{ xs: 2, sm: 3 }}>
         <Stack
-          direction={{ xs: "column", lg: "row" }}
+          direction={{ xs: "column", md: "row" }}
           spacing={{ xs: 2, sm: 3 }}
         >
           <UserInfoCard user={user} />
