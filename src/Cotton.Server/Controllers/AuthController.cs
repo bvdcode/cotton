@@ -45,16 +45,7 @@ namespace Cotton.Server.Controllers
             var userId = User.GetUserId();
             var tokens = await _dbContext.RefreshTokens
                 .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
-                .ToListAsync();
-            if (tokens.Count == 0)
-            {
-                return NotFound();
-            }
-            foreach (var token in tokens)
-            {
-                token.RevokedAt = DateTime.UtcNow;
-            }
-            await _dbContext.SaveChangesAsync();
+                .ExecuteUpdateAsync(x => x.SetProperty(t => t.RevokedAt, t => DateTime.UtcNow));
             return Ok();
         }
 
