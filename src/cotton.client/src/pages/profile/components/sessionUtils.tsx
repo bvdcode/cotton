@@ -39,22 +39,24 @@ export const formatDuration = (duration: string): string => {
 
 export const getDeviceIcon = (device: string) => {
   const deviceLower = (device ?? "").toLowerCase();
+  const fontSize = 28;
+  const color = "text.secondary";
 
   if (!deviceLower) {
-    return <DevicesIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <DevicesIcon sx={{ color: color, fontSize: fontSize }} />;
   }
 
   if (deviceLower.includes("iphone") || deviceLower.includes("ipod")) {
-    return <PhoneIphoneIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <PhoneIphoneIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("ipad")) {
-    return <TabletIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <TabletIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("android phone")) {
-    return <PhoneAndroidIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <PhoneAndroidIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("android tablet")) {
-    return <TabletIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <TabletIcon sx={{ color: color, fontSize: fontSize }} />;
   }
 
   const looksLikeAndroidPhoneByBrand =
@@ -66,7 +68,7 @@ export const getDeviceIcon = (device: string) => {
       !deviceLower.includes("tablet"));
 
   if (looksLikeAndroidPhoneByBrand) {
-    return <PhoneAndroidIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <PhoneAndroidIcon sx={{ color: color, fontSize: fontSize }} />;
   }
 
   if (
@@ -74,29 +76,29 @@ export const getDeviceIcon = (device: string) => {
     deviceLower.includes("mac") ||
     deviceLower.includes("linux pc")
   ) {
-    return <ComputerIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <ComputerIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("chromebook")) {
-    return <LaptopIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <LaptopIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("smart tv")) {
-    return <TvIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <TvIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("game console")) {
-    return <SportsEsportsIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <SportsEsportsIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("bot")) {
-    return <SmartToyIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <SmartToyIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("script")) {
-    return <CodeIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <CodeIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("server")) {
-    return <DnsIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <DnsIcon sx={{ color: color, fontSize: fontSize }} />;
   }
   if (deviceLower.includes("mobile")) {
-    return <PhoneIphoneIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+    return <PhoneIphoneIcon sx={{ color: color, fontSize: fontSize }} />;
   }
 
-  return <DevicesIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  return <DevicesIcon sx={{ color: color, fontSize: fontSize }} />;
 };
