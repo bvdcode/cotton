@@ -10,8 +10,6 @@ import {
   Button,
   Container,
   IconButton,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import { useEffect } from "react";
 import { useAuth } from "../../features/auth";
@@ -27,8 +25,6 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const settingsLoading = useSettingsStore((s) => s.loading);
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -80,14 +76,15 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                   ? location.pathname === route.path
                   : location.pathname.startsWith(route.path);
 
-              if (isMobile) {
-                return (
+              return (
+                <>
                   <IconButton
-                    key={route.path}
+                    key={`${route.path}-icon`}
                     component={Link}
                     to={route.path}
                     color="inherit"
                     sx={{
+                      display: { xs: "inline-flex", sm: "none" },
                       bgcolor: isActive
                         ? "rgba(255, 255, 255, 0.1)"
                         : "transparent",
@@ -98,27 +95,25 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                   >
                     {route.icon}
                   </IconButton>
-                );
-              }
-
-              return (
-                <Button
-                  key={route.path}
-                  component={Link}
-                  to={route.path}
-                  startIcon={route.icon}
-                  sx={{
-                    color: "inherit",
-                    bgcolor: isActive
-                      ? "rgba(255, 255, 255, 0.1)"
-                      : "transparent",
-                    "&:hover": {
-                      bgcolor: "rgba(255, 255, 255, 0.15)",
-                    },
-                  }}
-                >
-                  {route.displayName}
-                </Button>
+                  <Button
+                    key={`${route.path}-btn`}
+                    component={Link}
+                    to={route.path}
+                    startIcon={route.icon}
+                    sx={{
+                      display: { xs: "none", sm: "inline-flex" },
+                      color: "inherit",
+                      bgcolor: isActive
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
+                      "&:hover": {
+                        bgcolor: "rgba(255, 255, 255, 0.15)",
+                      },
+                    }}
+                  >
+                    {route.displayName}
+                  </Button>
+                </>
               );
             })}
           </Box>
