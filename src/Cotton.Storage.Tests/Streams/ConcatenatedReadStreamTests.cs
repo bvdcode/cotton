@@ -559,5 +559,58 @@ namespace Cotton.Storage.Tests.Streams
                 Assert.That(Encoding.UTF8.GetString(buffer), Is.EqualTo("CDE"));
             }
         }
+
+        [Test]
+        public async Task ConcatenatedReadStream_RandomRanges_MatchReferenceFile()
+        {
+            const int chunkSize = 8 * 1024 * 1024;
+            const int rangeOps = 10_000;
+
+            var rng = new Random(12345);
+            int fileLength = chunkSize * 2 + 123_456;
+
+            var fileBytes = new byte[fileLength];
+            rng.NextBytes(fileBytes);
+
+            var storage = new FakeStoragePipeline();
+            var uids = new List<string>();
+            var chunkLengths = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            for (int offset = 0, index = 0; offset < fileBytes.Length; offset += chunkSize, index++)
+            {
+                int len = Math.Min(chunkSize, fileBytes.Length - offset);
+                var chunk = new byte[len];
+                Buffer.BlockCopy(fileBytes, offset, chunk, 0, len);
+
+                string uid = $"uid{index}";
+                uids.Add(uid);
+                chunkLengths[uid] = len;
+                storage.AddData(uid, chunk);
+            }
+
+            var context = new PipelineContext
+            {
+                FileSizeBytes = fileBytes.Length,
+                ChunkLengths = chunkLengths,
+            };
+
+            await using var stream = storage.GetBlobStream([.. uids], context);
+
+            for (int i = 0; i < rangeOps; i++)
+            {
+                int start = rng.Next(0, fileBytes.Length);
+                int remaining = fileBytes.Length - start;
+                int len = rng.Next(0, remaining + 1);
+
+                stream.Seek(start, SeekOrigin.Begin);
+                var buffer = new byte[len];
+                await stream.ReadExactlyAsync(buffer);
+
+                var expected = fileBytes.AsSpan(start, len);
+                if (!buffer.AsSpan().SequenceEqual(expected))
+                {
+                    Assert.Fail($"Mismatch at op={i}, start={start}, len={len}.");
+                }
+            }
+        }
     }
 }
