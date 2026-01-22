@@ -41,22 +41,23 @@ export const getDeviceIcon = (device: string) => {
   const deviceLower = (device ?? "").toLowerCase();
   const fontSize = 28;
   const color = "text.secondary";
+  const styles = { color: color, fontSize: fontSize };
 
   if (!deviceLower) {
     return <DevicesIcon sx={{ color: color, fontSize: fontSize }} />;
   }
 
   if (deviceLower.includes("iphone") || deviceLower.includes("ipod")) {
-    return <PhoneIphoneIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <PhoneIphoneIcon sx={styles} />;
   }
   if (deviceLower.includes("ipad")) {
-    return <TabletIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <TabletIcon sx={styles} />;
   }
   if (deviceLower.includes("android phone")) {
-    return <PhoneAndroidIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <PhoneAndroidIcon sx={styles} />;
   }
   if (deviceLower.includes("android tablet")) {
-    return <TabletIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <TabletIcon sx={styles} />;
   }
 
   const looksLikeAndroidPhoneByBrand =
@@ -68,7 +69,7 @@ export const getDeviceIcon = (device: string) => {
       !deviceLower.includes("tablet"));
 
   if (looksLikeAndroidPhoneByBrand) {
-    return <PhoneAndroidIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <PhoneAndroidIcon sx={styles} />;
   }
 
   if (
@@ -76,29 +77,29 @@ export const getDeviceIcon = (device: string) => {
     deviceLower.includes("mac") ||
     deviceLower.includes("linux pc")
   ) {
-    return <ComputerIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <ComputerIcon sx={styles} />;
   }
   if (deviceLower.includes("chromebook")) {
-    return <LaptopIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <LaptopIcon sx={styles} />;
   }
   if (deviceLower.includes("smart tv")) {
-    return <TvIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <TvIcon sx={styles} />;
   }
   if (deviceLower.includes("game console")) {
-    return <SportsEsportsIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <SportsEsportsIcon sx={styles} />;
   }
   if (deviceLower.includes("bot")) {
-    return <SmartToyIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <SmartToyIcon sx={styles} />;
   }
   if (deviceLower.includes("script")) {
-    return <CodeIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <CodeIcon sx={styles} />;
   }
   if (deviceLower.includes("server")) {
-    return <DnsIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <DnsIcon sx={styles} />;
   }
   if (deviceLower.includes("mobile")) {
-    return <PhoneIphoneIcon sx={{ color: color, fontSize: fontSize }} />;
+    return <PhoneIphoneIcon sx={styles} />;
   }
 
-  return <DevicesIcon sx={{ color: color, fontSize: fontSize }} />;
+  return <DevicesIcon sx={styles} />;
 };
