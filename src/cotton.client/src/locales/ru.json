@@ -88,7 +88,8 @@
       "title": "Активные сессии",
       "description": "Управление активными сессиями на разных устройствах",
       "noActiveSessions": "Нет активных сессий",
-      "revokeSession": "Завершить сессию"
+      "revokeSession": "Завершить сессию",
+      "elapsed": "длится {{duration}}"
     }
   },
   "setup": {
