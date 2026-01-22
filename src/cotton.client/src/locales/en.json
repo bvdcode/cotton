@@ -83,6 +83,12 @@
       "totpEnabledAt": "Enabled at",
       "totpFailedAttempts": "2FA Failed attempts",
       "createdAt": "Created at"
+    },
+    "sessions": {
+      "title": "Active Sessions",
+      "description": "Manage your active sessions across different devices",
+      "noActiveSessions": "No active sessions",
+      "revokeSession": "End session"
     }
   },
   "setup": {
