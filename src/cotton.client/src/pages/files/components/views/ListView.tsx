@@ -10,7 +10,6 @@ import {
   TextField,
   IconButton,
   Typography,
-  Paper,
 } from "@mui/material";
 import {
   Folder,
@@ -24,10 +23,11 @@ import {
 import { formatBytes } from "../../utils/formatBytes";
 import { isImageFile, isVideoFile } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
+import { useTranslation } from "react-i18next";
 
 /**
  * ListView Component
- * 
+ *
  * Displays files and folders in a table/list layout.
  * Follows the Dependency Inversion Principle (DIP) by depending on the IFileListView interface.
  * Single Responsibility Principle (SRP): Responsible only for rendering the table layout.
@@ -44,18 +44,23 @@ export const ListView: React.FC<IFileListView> = ({
   folderNamePlaceholder,
   fileNamePlaceholder,
 }) => {
+  const { t } = useTranslation("files");
+
   return (
-    <TableContainer component={Paper} variant="outlined">
+    <TableContainer component={Box}>
       <Table size="small">
         <TableHead>
           <TableRow>
             <TableCell width="40px"></TableCell>
-            <TableCell>Name</TableCell>
-            <TableCell width="120px" sx={{ display: { xs: "none", sm: "table-cell" } }}>
-              Size
+            <TableCell>{t("name")}</TableCell>
+            <TableCell
+              width="120px"
+              sx={{ display: { xs: "none", sm: "table-cell" } }}
+            >
+              {t("size")}
             </TableCell>
             <TableCell width="120px" align="right">
-              Actions
+              {t("actionsTitle")}
             </TableCell>
           </TableRow>
         </TableHead>
@@ -146,7 +151,13 @@ export const ListView: React.FC<IFileListView> = ({
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 0.5,
+                        justifyContent: "flex-end",
+                      }}
+                    >
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -164,7 +175,10 @@ export const ListView: React.FC<IFileListView> = ({
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          folderOperations.onDelete(tile.node.id, tile.node.name);
+                          folderOperations.onDelete(
+                            tile.node.id,
+                            tile.node.name,
+                          );
                         }}
                         title="Delete"
                       >
@@ -239,7 +253,13 @@ export const ListView: React.FC<IFileListView> = ({
                   </Typography>
                 </TableCell>
                 <TableCell align="right">
-                  <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 0.5,
+                      justifyContent: "flex-end",
+                    }}
+                  >
                     <IconButton
                       size="small"
                       onClick={(e) => {
@@ -254,7 +274,10 @@ export const ListView: React.FC<IFileListView> = ({
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        fileOperations.onStartRename(tile.file.id, tile.file.name);
+                        fileOperations.onStartRename(
+                          tile.file.id,
+                          tile.file.name,
+                        );
                       }}
                       title="Rename"
                     >
