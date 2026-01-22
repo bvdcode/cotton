@@ -25,11 +25,12 @@ const formatDuration = (duration: string): string => {
   const parts = duration.split(".");
   const timePart = parts.length > 1 ? parts[1] : parts[0];
   const [hours, minutes] = timePart.split(":");
-  
-  const totalHours = parts.length > 1 
-    ? parseInt(parts[0]) * 24 + parseInt(hours) 
-    : parseInt(hours);
-  
+
+  const totalHours =
+    parts.length > 1
+      ? parseInt(parts[0]) * 24 + parseInt(hours)
+      : parseInt(hours);
+
   if (totalHours < 1) {
     return `${parseInt(minutes)}m`;
   } else if (totalHours < 24) {
@@ -94,7 +95,10 @@ export const SessionsCard = () => {
             {t("sessions.title", "Active Sessions")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t("sessions.description", "Manage your active sessions across different devices")}
+            {t(
+              "sessions.description",
+              "Manage your active sessions across different devices",
+            )}
           </Typography>
         </Box>
 
@@ -109,7 +113,10 @@ export const SessionsCard = () => {
             {error}
           </Alert>
         ) : sessions.length === 0 ? (
-          <Typography color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
+          <Typography
+            color="text.secondary"
+            sx={{ py: 2, textAlign: "center" }}
+          >
             {t("sessions.noActiveSessions", "No active sessions")}
           </Typography>
         ) : (
@@ -130,23 +137,29 @@ export const SessionsCard = () => {
                 }}
               >
                 <DevicesIcon sx={{ color: "text.secondary", fontSize: 28 }} />
-                
+
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Tooltip title={session.userAgent || ""} placement="top" arrow>
+                  <Tooltip
+                    title={session.userAgent || ""}
+                    placement="right"
+                    arrow
+                  >
                     <Typography
                       variant="body1"
                       fontWeight={500}
                       sx={{
+                        cursor: "help",
+                        width: "fit-content",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        cursor: "help",
+                        maxWidth: "100%",
                       }}
                     >
                       {session.device || session.userAgent || "Unknown device"}
                     </Typography>
                   </Tooltip>
-                  
+
                   <Stack
                     direction="row"
                     spacing={1.5}
@@ -171,7 +184,10 @@ export const SessionsCard = () => {
                   </Stack>
                 </Box>
 
-                <Tooltip title={t("sessions.revokeSession", "End session")} placement="left">
+                <Tooltip
+                  title={t("sessions.revokeSession", "End session")}
+                  placement="left"
+                >
                   <span>
                     <IconButton
                       size="small"
