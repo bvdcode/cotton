@@ -83,6 +83,12 @@
       "totpEnabledAt": "Включена",
       "totpFailedAttempts": "Неудачных попыток двухфакторного входа",
       "createdAt": "Создан"
+    },
+    "sessions": {
+      "title": "Активные сессии",
+      "description": "Управление активными сессиями на разных устройствах",
+      "noActiveSessions": "Нет активных сессий",
+      "revokeSession": "Завершить сессию"
     }
   },
   "setup": {

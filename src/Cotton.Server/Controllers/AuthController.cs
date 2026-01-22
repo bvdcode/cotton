@@ -80,13 +80,13 @@ namespace Cotton.Server.Controllers
                     return new SessionDto
                     {
                         SessionId = g.Key,
-                        IpAddress = latest.IpAddress,
+                        IpAddress = latest.IpAddress.ToString(),
                         UserAgent = latest.UserAgent,
                         AuthType = latest.AuthType,
-                        Country = latest.Country ?? string.Empty,
-                        Region = latest.Region ?? string.Empty,
-                        City = latest.City ?? string.Empty,
-                        Device = latest.Device ?? string.Empty,
+                        Country = latest.Country ?? "Unknown",
+                        Region = latest.Region ?? "Unknown",
+                        City = latest.City ?? "Unknown",
+                        Device = latest.Device ?? "Unknown",
                         RefreshTokenCount = g.Count(),
                         TotalSessionDuration = latestCreatedAt - earliestCreatedAt
                     };

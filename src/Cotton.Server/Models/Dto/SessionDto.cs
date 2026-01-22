@@ -5,7 +5,7 @@ namespace Cotton.Server.Models.Dto
 {
     public class SessionDto
     {
-        public IPAddress IpAddress { get; set; } = null!;
+        public string IpAddress { get; set; } = null!;
         public string UserAgent { get; set; } = null!;
         public AuthType AuthType { get; set; }
         public string Country { get; set; } = null!;
