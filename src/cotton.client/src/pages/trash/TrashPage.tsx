@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Divider,
 } from "@mui/material";
 import { FileBreadcrumbs, FileListViewFactory } from "../files/components";
 import { ArrowUpward, ViewModule, ViewList, Delete } from "@mui/icons-material";
@@ -394,7 +395,7 @@ export const TrashPage: React.FC = () => {
           <Box
             sx={{
               display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
+              flexDirection: { xs: "row", sm: "row" },
               gap: { xs: 1, sm: 1 },
               alignItems: { xs: "stretch", sm: "center" },
             }}
@@ -463,29 +464,15 @@ export const TrashPage: React.FC = () => {
                   </IconButton>
                 )}
               </Box>
-
-              <Box
-                sx={{
-                  display: { xs: "flex", sm: "none" },
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Typography
-                  color="text.secondary"
-                  sx={{ fontSize: "0.875rem" }}
-                >
-                  {t("stats.summary", {
-                    folders: stats.folders,
-                    files: stats.files,
-                    size: formatBytes(stats.sizeBytes),
-                  })}
-                </Typography>
-              </Box>
             </Box>
 
             <FileBreadcrumbs breadcrumbs={breadcrumbs} />
 
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ mx: 1, display: { xs: "none", sm: "block" } }}
+            />
             <Box
               sx={{
                 flexShrink: 0,
