@@ -75,14 +75,6 @@ export const SessionItem = ({
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 0.1, sm: 1.5 }}
-          divider={
-            <Typography
-              variant="caption"
-              sx={{ display: { xs: "none", sm: "block" } }}
-            >
-              •
-            </Typography>
-          }
         >
           <Typography variant="caption" color="text.secondary" noWrap>
             {formatTimeAgo(session.lastSeenAt)} |{" "}
