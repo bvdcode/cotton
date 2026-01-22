@@ -38,7 +38,11 @@ export const formatDuration = (duration: string): string => {
 };
 
 export const getDeviceIcon = (device: string) => {
-  const deviceLower = device.toLowerCase();
+  const deviceLower = (device ?? "").toLowerCase();
+
+  if (!deviceLower) {
+    return <DevicesIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
 
   if (deviceLower.includes("iphone") || deviceLower.includes("ipod")) {
     return <PhoneIphoneIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
@@ -52,6 +56,19 @@ export const getDeviceIcon = (device: string) => {
   if (deviceLower.includes("android tablet")) {
     return <TabletIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
   }
+
+  const looksLikeAndroidPhoneByBrand =
+    deviceLower.includes("google pixel") ||
+    deviceLower.includes("oneplus") ||
+    deviceLower.includes("xiaomi") ||
+    (deviceLower.startsWith("samsung") &&
+      !deviceLower.includes("watch") &&
+      !deviceLower.includes("tablet"));
+
+  if (looksLikeAndroidPhoneByBrand) {
+    return <PhoneAndroidIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+
   if (
     deviceLower.includes("windows pc") ||
     deviceLower.includes("mac") ||
