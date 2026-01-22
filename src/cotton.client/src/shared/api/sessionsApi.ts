@@ -11,6 +11,8 @@ export interface SessionDto {
   device: string;
   refreshTokenCount: number;
   totalSessionDuration: string; // TimeSpan from C#
+  lastSeenAt: string; // ISO date string
+  isCurrentSession: boolean;
 }
 
 export const sessionsApi = {
