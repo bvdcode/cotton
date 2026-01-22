@@ -408,7 +408,8 @@
     },
     "actionsTitle": "Действия",
     "size": "Размер",
-    "name": "Название"
+    "name": "Название",
+    "noFilesOrFolders": "Нет файлов и папок"
   },
   "upload": {
     "title": "Загрузки",

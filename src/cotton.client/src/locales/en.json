@@ -408,7 +408,8 @@
     },
     "actionsTitle": "Actions",
     "size": "Size",
-    "name": "Name"
+    "name": "Name",
+    "noFilesOrFolders": "No files or folders"
   },
   "upload": {
     "title": "Uploads",
