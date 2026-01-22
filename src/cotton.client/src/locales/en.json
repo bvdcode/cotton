@@ -405,7 +405,10 @@
         "pdfLoadFailed": "Failed to load PDF",
         "pdfDisplayFailed": "Failed to display PDF"
       }
-    }
+    },
+    "actionsTitle": "Actions",
+    "size": "Size",
+    "name": "Name"
   },
   "upload": {
     "title": "Uploads",
