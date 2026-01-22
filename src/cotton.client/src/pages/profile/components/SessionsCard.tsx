@@ -82,11 +82,9 @@ export const SessionsCard = () => {
     <Paper
       elevation={0}
       sx={{
-        p: 3,
+        p: { xs: 2, sm: 3 },
         borderRadius: 2,
         border: (theme) => `1px solid ${theme.palette.divider}`,
-        width: "100%",
-        flex: 1,
       }}
     >
       <Stack spacing={2}>
