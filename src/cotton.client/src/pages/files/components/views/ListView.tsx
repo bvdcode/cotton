@@ -20,9 +20,15 @@ import {
   Image as ImageIcon,
   VideoFile,
   Article,
+  TextSnippet,
 } from "@mui/icons-material";
 import { formatBytes } from "../../utils/formatBytes";
-import { isImageFile, isTextFile, isVideoFile } from "../../utils/fileTypes";
+import {
+  isImageFile,
+  isPdfFile,
+  isTextFile,
+  isVideoFile,
+} from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
 import { useTranslation } from "react-i18next";
 
@@ -195,12 +201,22 @@ export const ListView: React.FC<IFileListView> = ({
             const isImage = isImageFile(tile.file.name);
             const isVideo = isVideoFile(tile.file.name);
             const isText = isTextFile(tile.file.name);
+            const isPdf = isPdfFile(tile.file.name);
             const isRenaming = fileOperations.isRenaming(tile.file.id);
 
             const getFileIcon = () => {
-              if (isText) return <Article color="action" />;
-              if (isImage) return <ImageIcon color="action" />;
-              if (isVideo) return <VideoFile color="action" />;
+              if (isText) {
+                return <Article color="action" />;
+              }
+              if (isImage) {
+                return <ImageIcon color="action" />;
+              }
+              if (isVideo) {
+                return <VideoFile color="action" />;
+              }
+              if (isPdf) {
+                return <TextSnippet color="action" />;
+              }
               return <InsertDriveFile color="action" />;
             };
 
