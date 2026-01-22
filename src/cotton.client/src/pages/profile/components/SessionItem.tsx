@@ -30,16 +30,13 @@ export const SessionItem = ({
 
   return (
     <Paper
-      variant="outlined"
       sx={{
         p: 1,
+        bgcolor: "background.default",
         display: "flex",
         alignItems: "center",
         gap: 1,
         transition: "background-color 0.2s",
-        "&:hover": {
-          bgcolor: "action.hover",
-        },
       }}
     >
       {getDeviceIcon(session.device)}
