@@ -358,7 +358,9 @@
       "newFolder": "Новая папка",
       "folderNamePlaceholder": "Название папки",
       "goUp": "Вверх",
-      "dropFiles": "Перетащите файлы для загрузки"
+      "dropFiles": "Перетащите файлы для загрузки",
+      "switchToTilesView": "Переключиться на плитки",
+      "switchToListView": "Переключиться на просмотр списка"
     },
     "breadcrumbs": {
       "ariaLabel": "Хлебные крошки",

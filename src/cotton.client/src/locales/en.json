@@ -358,7 +358,9 @@
       "newFolder": "New folder",
       "folderNamePlaceholder": "Folder name",
       "goUp": "Go up",
-      "dropFiles": "Drop files to upload"
+      "dropFiles": "Drop files to upload",
+      "switchToTilesView": "Switch to tiles",
+      "switchToListView": "Switch to list view"
     },
     "breadcrumbs": {
       "ariaLabel": "Breadcrumbs",
