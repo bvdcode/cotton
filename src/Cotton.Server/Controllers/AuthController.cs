@@ -39,6 +39,64 @@ namespace Cotton.Server.Controllers
         private const string CookieRefreshTokenKey = "refresh_token";
 
         [Authorize]
+        [HttpDelete("/api/v1/auth/sessions/{sessionId}")]
+        public async Task<IActionResult> RevokeSession([FromRoute] string sessionId)
+        {
+            var userId = User.GetUserId();
+            var tokens = await _dbContext.RefreshTokens
+                .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
+                .ToListAsync();
+            if (tokens.Count == 0)
+            {
+                return NotFound();
+            }
+            foreach (var token in tokens)
+            {
+                token.RevokedAt = DateTime.UtcNow;
+            }
+            await _dbContext.SaveChangesAsync();
+            return Ok();
+        }
+
+        [Authorize]
+        [HttpGet("/api/v1/auth/sessions")]
+        public async Task<IActionResult> GetSessions()
+        {
+            var userId = User.GetUserId();
+            var tokens = await _dbContext.RefreshTokens
+                .AsNoTracking()
+                .Where(x => x.UserId == userId && x.RevokedAt == null && x.SessionId != null)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync();
+
+            List<SessionDto> response = [.. tokens
+                .GroupBy(x => x.SessionId!)
+                .Select(g =>
+                {
+                    var latest = g.First();
+                    var earliestCreatedAt = g.Min(x => x.CreatedAt);
+                    var latestCreatedAt = g.Max(x => x.CreatedAt);
+
+                    return new SessionDto
+                    {
+                        SessionId = g.Key,
+                        IpAddress = latest.IpAddress,
+                        UserAgent = latest.UserAgent,
+                        AuthType = latest.AuthType,
+                        Country = latest.Country ?? string.Empty,
+                        Region = latest.Region ?? string.Empty,
+                        City = latest.City ?? string.Empty,
+                        Device = latest.Device ?? string.Empty,
+                        RefreshTokenCount = g.Count(),
+                        TotalSessionDuration = latestCreatedAt - earliestCreatedAt
+                    };
+                })
+                .OrderByDescending(x => x.TotalSessionDuration)];
+
+            return Ok(response);
+        }
+
+        [Authorize]
         [HttpPost("/api/v1/auth/totp/confirm")]
         public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequestDto request)
         {
