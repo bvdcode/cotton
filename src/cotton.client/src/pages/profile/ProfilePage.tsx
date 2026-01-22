@@ -25,12 +25,11 @@ export const ProfilePage = () => {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
-      <Stack spacing={3}>
+    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+      <Stack spacing={{ xs: 2, sm: 3 }}>
         <Stack
           direction={{ xs: "column", lg: "row" }}
-          spacing={3}
-          alignItems="flex-start"
+          spacing={{ xs: 2, sm: 3 }}
         >
           <UserInfoCard user={user} />
           <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
