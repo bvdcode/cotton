@@ -149,7 +149,16 @@ export const ListView: React.FC<IFileListView> = ({
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
-                      <Typography variant="body2">{tile.node.name}</Typography>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {tile.node.name}
+                      </Typography>
                     )}
                   </TableCell>
                   <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
@@ -263,7 +272,16 @@ export const ListView: React.FC<IFileListView> = ({
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <Typography variant="body2">{tile.file.name}</Typography>
+                    <Typography
+                      variant="body2"
+                      noWrap
+                      sx={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {tile.file.name}
+                    </Typography>
                   )}
                 </TableCell>
                 <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
@@ -323,7 +341,7 @@ export const ListView: React.FC<IFileListView> = ({
             <TableRow>
               <TableCell colSpan={4} align="center">
                 <Typography color="text.secondary" sx={{ py: 3 }}>
-                  No files or folders
+                  {t("noFilesOrFolders")}
                 </Typography>
               </TableCell>
             </TableRow>
