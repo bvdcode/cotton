@@ -111,12 +111,6 @@ export const SessionItem = ({
             color="error"
             onClick={() => onRevoke(session.sessionId)}
             disabled={isRevoking}
-            sx={{
-              "&:hover": {
-                bgcolor: "error.main",
-                color: "error.contrastText",
-              },
-            }}
           >
             {isRevoking ? (
               <CircularProgress size={20} color="inherit" />
