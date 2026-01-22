@@ -88,7 +88,8 @@
       "title": "Active Sessions",
       "description": "Manage your active sessions across different devices",
       "noActiveSessions": "No active sessions",
-      "revokeSession": "End session"
+      "revokeSession": "End session",
+      "elapsed": "{{duration}} elapsed"
     }
   },
   "setup": {
