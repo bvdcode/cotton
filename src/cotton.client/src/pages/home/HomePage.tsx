@@ -113,14 +113,6 @@ export const HomePage: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
-
-      {isLoading && stats && (
-        <Box mt={2}>
-          <Typography variant="caption" color="text.secondary">
-            {t("refreshing")}
-          </Typography>
-        </Box>
-      )}
     </Box>
   );
 };
