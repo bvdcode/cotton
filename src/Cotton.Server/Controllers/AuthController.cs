@@ -56,7 +56,7 @@ namespace Cotton.Server.Controllers
             var userId = User.GetUserId();
             var tokens = await _dbContext.RefreshTokens
                 .AsNoTracking()
-                .Where(x => x.UserId == userId && x.RevokedAt == null && x.SessionId != null)
+                .Where(x => x.UserId == userId && x.SessionId != null)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
 
@@ -64,20 +64,29 @@ namespace Cotton.Server.Controllers
                 .GroupBy(x => x.SessionId!)
                 .Select(g =>
                 {
-                    var latest = g.First();
+                    var latestActive = g
+                        .Where(x => x.RevokedAt == null)
+                        .OrderByDescending(x => x.CreatedAt)
+                        .FirstOrDefault();
+
+                    var latestAny = g
+                        .OrderByDescending(x => x.CreatedAt)
+                        .First();
+
+                    var source = latestActive ?? latestAny;
                     var earliestCreatedAt = g.Min(x => x.CreatedAt);
                     var latestCreatedAt = g.Max(x => x.CreatedAt);
 
                     return new SessionDto
                     {
                         SessionId = g.Key,
-                        IpAddress = latest.IpAddress.ToString(),
-                        UserAgent = latest.UserAgent,
-                        AuthType = latest.AuthType,
-                        Country = latest.Country ?? "Unknown",
-                        Region = latest.Region ?? "Unknown",
-                        City = latest.City ?? "Unknown",
-                        Device = latest.Device ?? "Unknown",
+                        IpAddress = source.IpAddress.ToString(),
+                        UserAgent = source.UserAgent,
+                        AuthType = source.AuthType,
+                        Country = source.Country ?? "Unknown",
+                        Region = source.Region ?? "Unknown",
+                        City = source.City ?? "Unknown",
+                        Device = source.Device ?? "Unknown",
                         RefreshTokenCount = g.Count(),
                         TotalSessionDuration = latestCreatedAt - earliestCreatedAt
                     };
