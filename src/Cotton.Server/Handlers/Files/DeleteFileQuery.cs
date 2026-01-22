@@ -25,6 +25,7 @@ namespace Cotton.Server.Handlers.Files
         public async Task Handle(DeleteFileQuery request, CancellationToken ct)
         {
             NodeFile nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
                 .FirstOrDefaultAsync(x => x.Id == request.NodeFileId
                     && x.OwnerId == request.UserId, cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(FileManifest));
