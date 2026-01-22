@@ -8,16 +8,75 @@ import {
   Divider,
   Alert,
   CircularProgress,
+  Chip,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DevicesIcon from "@mui/icons-material/Devices";
+import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
+import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
+import TabletIcon from "@mui/icons-material/Tablet";
+import ComputerIcon from "@mui/icons-material/Computer";
+import LaptopIcon from "@mui/icons-material/Laptop";
+import TvIcon from "@mui/icons-material/Tv";
+import SportsEsportsIcon from "@mui/icons-material/SportsEsports";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import CodeIcon from "@mui/icons-material/Code";
+import DnsIcon from "@mui/icons-material/Dns";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
+import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 
 const formatLocation = (session: SessionDto): string => {
   const parts = [session.city, session.region, session.country].filter(Boolean);
   return parts.join(", ") || "Unknown location";
+};
+
+const getDeviceIcon = (device: string) => {
+  const deviceLower = device.toLowerCase();
+
+  if (deviceLower.includes("iphone") || deviceLower.includes("ipod")) {
+    return <PhoneIphoneIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("ipad")) {
+    return <TabletIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("android phone")) {
+    return <PhoneAndroidIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("android tablet")) {
+    return <TabletIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (
+    deviceLower.includes("windows pc") ||
+    deviceLower.includes("mac") ||
+    deviceLower.includes("linux pc")
+  ) {
+    return <ComputerIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("chromebook")) {
+    return <LaptopIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("smart tv")) {
+    return <TvIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("game console")) {
+    return <SportsEsportsIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("bot")) {
+    return <SmartToyIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("script")) {
+    return <CodeIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("server")) {
+    return <DnsIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+  if (deviceLower.includes("mobile")) {
+    return <PhoneIphoneIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
+  }
+
+  return <DevicesIcon sx={{ color: "text.secondary", fontSize: 28 }} />;
 };
 
 const formatDuration = (duration: string): string => {
@@ -53,7 +112,12 @@ export const SessionsCard = () => {
       setLoading(true);
       setError(null);
       const data = await sessionsApi.getSessions();
-      setSessions(data);
+      // Sort by lastSeenAt descending (most recent first)
+      const sorted = data.sort(
+        (a, b) =>
+          new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime(),
+      );
+      setSessions(sorted);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sessions");
     } finally {
@@ -132,32 +196,52 @@ export const SessionsCard = () => {
                   "&:hover": {
                     bgcolor: "action.hover",
                   },
+                  ...(session.isCurrentSession && {
+                    borderColor: "primary.main",
+                    borderWidth: 2,
+                  }),
                 }}
               >
-                <DevicesIcon sx={{ color: "text.secondary", fontSize: 28 }} />
+                {getDeviceIcon(session.device)}
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Tooltip title={session.userAgent || ""} arrow>
-                    <Typography
-                      variant="body1"
-                      fontWeight={500}
-                      sx={{
-                        cursor: "help",
-                        width: "fit-content",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        maxWidth: "100%",
-                      }}
-                    >
-                      {session.device || session.userAgent || "Unknown device"}
-                    </Typography>
-                  </Tooltip>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={{ mb: 0.5 }}
+                  >
+                    <Tooltip title={session.userAgent || ""} arrow>
+                      <Typography
+                        variant="body1"
+                        fontWeight={500}
+                        sx={{
+                          cursor: "help",
+                          width: "fit-content",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "100%",
+                        }}
+                      >
+                        {session.device ||
+                          session.userAgent ||
+                          "Unknown device"}
+                      </Typography>
+                    </Tooltip>
+                    {session.isCurrentSession && (
+                      <Chip
+                        label="Current"
+                        size="small"
+                        color="primary"
+                        sx={{ height: 20, fontSize: "0.7rem" }}
+                      />
+                    )}
+                  </Stack>
 
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
                     spacing={{ xs: 0.25, sm: 1.5 }}
-                    sx={{ mt: 0.5 }}
                     divider={
                       <Typography
                         variant="caption"
@@ -168,6 +252,9 @@ export const SessionsCard = () => {
                       </Typography>
                     }
                   >
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {formatTimeAgo(session.lastSeenAt)}
+                    </Typography>
                     <Typography variant="caption" color="text.secondary" noWrap>
                       {formatLocation(session)}
                     </Typography>
@@ -184,9 +271,6 @@ export const SessionsCard = () => {
                         {session.ipAddress}
                       </Typography>
                     )}
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {formatDuration(session.totalSessionDuration)}
-                    </Typography>
                   </Stack>
                 </Box>
 
