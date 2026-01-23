@@ -16,24 +16,44 @@ export const formatLocation = (session: SessionDto): string => {
   return parts.join(", ") || "Unknown location";
 };
 
-export const formatDuration = (duration: string): string => {
-  // Parse C# TimeSpan format (e.g., "01:23:45" or "1.02:03:04")
-  const parts = duration.split(".");
-  const timePart = parts.length > 1 ? parts[1] : parts[0];
-  const [hours, minutes] = timePart.split(":");
+import type { TFunction } from "i18next";
 
-  const totalHours =
-    parts.length > 1
-      ? parseInt(parts[0]) * 24 + parseInt(hours)
-      : parseInt(hours);
-
-  if (totalHours < 1) {
-    return `${parseInt(minutes)}m`;
-  } else if (totalHours < 24) {
-    return `${totalHours}h`;
+export const formatDuration = (duration: string, t: TFunction): string => {
+  // Parse C# TimeSpan format: "hh:mm:ss", "d.hh:mm:ss", or "d.hh:mm:ss.fffffff"
+  // Examples: "01:23:45", "1.02:03:04", "365.00:00:00.0000000"
+  
+  let days = 0;
+  let hours = 0;
+  let minutes = 0;
+  
+  // Check if there's a day component (contains a dot before the time part)
+  const dayMatch = duration.match(/^(\d+)\.(\d{2}:\d{2}:\d{2})/);
+  
+  if (dayMatch) {
+    days = parseInt(dayMatch[1], 10);
+    const timePart = dayMatch[2];
+    const [h, m] = timePart.split(":");
+    hours = parseInt(h, 10);
+    minutes = parseInt(m, 10);
   } else {
-    const days = Math.floor(totalHours / 24);
-    return `${days}d`;
+    // No day component, just time
+    const timePart = duration.split(".")[0]; // Remove fractional seconds if present
+    const [h, m] = timePart.split(":");
+    hours = parseInt(h, 10) || 0;
+    minutes = parseInt(m, 10) || 0;
+  }
+
+  const totalHours = days * 24 + hours;
+  const totalMinutes = totalHours * 60 + minutes;
+
+  if (totalMinutes === 0) {
+    return t("common:time.lessThanMinute");
+  } else if (totalMinutes < 60) {
+    return t("common:time.durationMinutes", { count: totalMinutes });
+  } else if (totalHours < 24) {
+    return t("common:time.durationHours", { count: totalHours });
+  } else {
+    return t("common:time.durationDays", { count: days || Math.floor(totalHours / 24) });
   }
 };
 

@@ -2,6 +2,37 @@
   "common": {
     "languageName": "Русский",
     "switchToThisLanguage": "Переключить на русский",
+    "time": {
+      "justNow": "только что",
+      "secondsAgo_one": "{{count}} секунду назад",
+      "secondsAgo_few": "{{count}} секунды назад",
+      "secondsAgo_many": "{{count}} секунд назад",
+      "minutesAgo_one": "{{count}} минуту назад",
+      "minutesAgo_few": "{{count}} минуты назад",
+      "minutesAgo_many": "{{count}} минут назад",
+      "hoursAgo_one": "{{count}} час назад",
+      "hoursAgo_few": "{{count}} часа назад",
+      "hoursAgo_many": "{{count}} часов назад",
+      "daysAgo_one": "{{count}} день назад",
+      "daysAgo_few": "{{count}} дня назад",
+      "daysAgo_many": "{{count}} дней назад",
+      "monthsAgo_one": "{{count}} месяц назад",
+      "monthsAgo_few": "{{count}} месяца назад",
+      "monthsAgo_many": "{{count}} месяцев назад",
+      "yearsAgo_one": "{{count}} год назад",
+      "yearsAgo_few": "{{count}} года назад",
+      "yearsAgo_many": "{{count}} лет назад",
+      "durationMinutes_one": "{{count}} мин",
+      "durationMinutes_few": "{{count}} мин",
+      "durationMinutes_many": "{{count}} мин",
+      "durationHours_one": "{{count}} час",
+      "durationHours_few": "{{count}} часа",
+      "durationHours_many": "{{count}} часов",
+      "durationDays_one": "{{count}} день",
+      "durationDays_few": "{{count}} дня",
+      "durationDays_many": "{{count}} дней",
+      "lessThanMinute": "меньше минуты"
+    },
     "actions": {
       "confirm": "Подтвердить",
       "cancel": "Отмена",
@@ -460,5 +491,12 @@
       "inProgress": "Удаление {{current}} из {{total}} элементов...",
       "completed": "Корзина успешно очищена"
     }
+  },
+  "routes": {
+    "login": "Вход",
+    "home": "Главная",
+    "files": "Файлы",
+    "trash": "Корзина",
+    "profile": "Профиль"
   }
 }
