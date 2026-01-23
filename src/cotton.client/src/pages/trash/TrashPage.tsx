@@ -39,12 +39,21 @@ import type {
   FileOperations,
 } from "../files/types/FileListViewTypes";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { trashContentTransformer } from "./services";
 
 /**
  * TrashPage Component
  *
  * Page for browsing and managing files and folders in trash.
- * Similar to FilesPage but uses 'trash' nodeType for API calls.
+ * 
+ * Architecture:
+ * - Uses depth=1 API parameter to fetch wrapper nodes with their content
+ * - TrashContentTransformer unwraps trash-item-* nodes for display
+ * - Maintains wrapper mapping to ensure deletion targets the wrapper, not content
+ * 
+ * Following SOLID principles:
+ * - Single Responsibility: Page orchestrates UI and delegates business logic to services
+ * - Dependency Inversion: Depends on service abstractions, not implementations
  */
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common"]);
@@ -59,6 +68,11 @@ export const TrashPage: React.FC = () => {
   );
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Wrapper mapping: maps displayed item IDs to their wrapper node IDs for proper deletion
+  const [wrapperMap, setWrapperMap] = React.useState<Map<string, string>>(
+    new Map(),
+  );
 
   // Empty trash progress state
   const [emptyingTrash, setEmptyingTrash] = React.useState(false);
@@ -77,28 +91,40 @@ export const TrashPage: React.FC = () => {
 
       try {
         if (!routeNodeId) {
-          // Load trash root
+          // Load trash root with depth=1 to get wrapper contents
           const root = await layoutsApi.resolve({ nodeType: "trash" });
           const [nodeData, ancestorsData, contentData] = await Promise.all([
             nodesApi.getNode(root.id),
             nodesApi.getAncestors(root.id, { nodeType: "trash" }),
-            nodesApi.getChildren(root.id, { nodeType: "trash" }),
+            nodesApi.getChildren(root.id, { nodeType: "trash", depth: 1 }),
           ]);
+
+          // Transform content to unwrap trash-item-* nodes
+          const transformed = trashContentTransformer.transformContent(
+            contentData.content,
+          );
 
           setCurrentNode(nodeData);
           setAncestors(ancestorsData);
-          setContent(contentData.content);
+          setContent({
+            ...contentData.content,
+            nodes: transformed.nodes,
+            files: transformed.files,
+          });
+          setWrapperMap(transformed.wrapperMap);
         } else {
-          // Load specific trash node
+          // Load specific trash node (inside a folder in trash)
+          // Use regular depth=0 as we're navigating inside the trash structure
           const [nodeData, ancestorsData, contentData] = await Promise.all([
             nodesApi.getNode(routeNodeId),
             nodesApi.getAncestors(routeNodeId, { nodeType: "trash" }),
-            nodesApi.getChildren(routeNodeId, { nodeType: "trash" }),
+            nodesApi.getChildren(routeNodeId, { nodeType: "trash", depth: 0 }),
           ]);
 
           setCurrentNode(nodeData);
           setAncestors(ancestorsData);
           setContent(contentData.content);
+          setWrapperMap(new Map()); // No wrappers when navigating inside folders
         }
       } catch (err) {
         console.error("Failed to load trash data:", err);
@@ -118,14 +144,33 @@ export const TrashPage: React.FC = () => {
     if (!nodeId) return;
 
     try {
+      // Use depth=1 only for root trash (when routeNodeId is null)
+      const depth = routeNodeId ? 0 : 1;
       const contentData = await nodesApi.getChildren(nodeId, {
         nodeType: "trash",
+        depth,
       });
-      setContent(contentData.content);
+
+      if (depth === 1) {
+        // Transform content for root trash view
+        const transformed = trashContentTransformer.transformContent(
+          contentData.content,
+        );
+        setContent({
+          ...contentData.content,
+          nodes: transformed.nodes,
+          files: transformed.files,
+        });
+        setWrapperMap(transformed.wrapperMap);
+      } else {
+        // Regular content for navigation inside trash folders
+        setContent(contentData.content);
+        setWrapperMap(new Map());
+      }
     } catch (err) {
       console.error("Failed to refresh trash content:", err);
     }
-  }, [nodeId]);
+  }, [nodeId, routeNodeId]);
 
   // Determine layout type from current node, defaulting to Tiles
   const initialLayoutType = useMemo(() => {
@@ -190,8 +235,8 @@ export const TrashPage: React.FC = () => {
     ];
   }, [sortedFolders, sortedFiles]);
 
-  const folderOps = useTrashFolderOperations(nodeId, refreshContent);
-  const fileOps = useTrashFileOperations(refreshContent);
+  const folderOps = useTrashFolderOperations(nodeId, wrapperMap, refreshContent);
+  const fileOps = useTrashFileOperations(wrapperMap, refreshContent);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
   // Media lightbox state
@@ -278,10 +323,14 @@ export const TrashPage: React.FC = () => {
 
       let deleted = 0;
 
-      // Delete all folders
+      // Delete all folders - use wrapper mapping for proper deletion
       for (const folder of content.nodes ?? []) {
         try {
-          await nodesApi.deleteNode(folder.id, true);
+          const deleteTarget = trashContentTransformer.getDeleteTarget(
+            folder.id,
+            wrapperMap,
+          );
+          await nodesApi.deleteNode(deleteTarget, true);
           deleted++;
           setEmptyTrashProgress({ current: deleted, total: totalItems });
         } catch (err) {
@@ -289,10 +338,21 @@ export const TrashPage: React.FC = () => {
         }
       }
 
-      // Delete all files
+      // Delete all files - use wrapper mapping for proper deletion
       for (const file of content.files ?? []) {
         try {
-          await filesApi.deleteFile(file.id, true);
+          const deleteTarget = trashContentTransformer.getDeleteTarget(
+            file.id,
+            wrapperMap,
+          );
+
+          // If file is in a wrapper, delete the wrapper node; otherwise delete the file
+          if (wrapperMap.has(file.id)) {
+            await nodesApi.deleteNode(deleteTarget, true);
+          } else {
+            await filesApi.deleteFile(deleteTarget, true);
+          }
+
           deleted++;
           setEmptyTrashProgress({ current: deleted, total: totalItems });
         } catch (err) {

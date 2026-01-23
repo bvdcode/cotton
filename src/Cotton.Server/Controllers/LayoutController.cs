@@ -321,6 +321,7 @@ namespace Cotton.Server.Controllers
 
             int skip = (page - 1) * pageSize;
             IQueryable<NodeDto> nodesQuery;
+            IQueryable<FileManifestDto> filesQuery;
             if (depth == 0)
             {
                 nodesQuery = _dbContext.Nodes
@@ -331,6 +332,12 @@ namespace Cotton.Server.Controllers
                         && x.LayoutId == layout.Id
                         && x.Type == nodeType)
                     .ProjectToType<NodeDto>();
+
+                filesQuery = _dbContext.NodeFiles
+                    .AsNoTracking()
+                    .OrderBy(x => x.NameKey)
+                    .Where(x => x.NodeId == parentNode.Id)
+                    .ProjectToType<FileManifestDto>();
             }
             else
             {
@@ -377,18 +384,26 @@ namespace Cotton.Server.Controllers
                     }
                 }
 
+                // When listing with depth, include files from the parent folder and all descendant folders
+                // (the UI expects files to be returned as well, not only nodes).
+                var allFolderIdsForFiles = new List<Guid>(allChildNodeIds.Count + 1)
+                {
+                    parentNode.Id
+                };
+                allFolderIdsForFiles.AddRange(allChildNodeIds);
+
                 nodesQuery = _dbContext.Nodes
                     .AsNoTracking()
                     .OrderBy(x => x.NameKey)
                     .Where(x => allChildNodeIds.Contains(x.Id))
                     .ProjectToType<NodeDto>();
-            }
 
-            var filesQuery = _dbContext.NodeFiles
-                .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.NodeId == parentNode.Id)
-                .ProjectToType<FileManifestDto>();
+                filesQuery = _dbContext.NodeFiles
+                    .AsNoTracking()
+                    .OrderBy(x => x.NameKey)
+                    .Where(x => allFolderIdsForFiles.Contains(x.NodeId))
+                    .ProjectToType<FileManifestDto>();
+            }
 
             int nodesCount = await nodesQuery.CountAsync();
             int filesCount = await filesQuery.CountAsync();
