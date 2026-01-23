@@ -8,8 +8,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions" Version="3.0.33" />
-		<PackageReference Include="EasyExtensions.Crypto" Version="3.0.33" />
+		<PackageReference Include="EasyExtensions" Version="3.0.34" />
+		<PackageReference Include="EasyExtensions.Crypto" Version="3.0.34" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
