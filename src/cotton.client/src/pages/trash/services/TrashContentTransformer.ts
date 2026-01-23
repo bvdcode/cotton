@@ -51,10 +51,15 @@ export class TrashContentTransformer {
     const displayFiles: NodeFileManifestDto[] = [];
     const wrapperMap = new Map<string, string>();
 
+    console.log(
+      `[TrashTransformer] Processing content: ${content.nodes?.length ?? 0} nodes, ${content.files?.length ?? 0} files`,
+    );
+
     // First pass: identify wrapper nodes
     const wrapperNodeIds = new Set<string>();
     for (const node of content.nodes ?? []) {
       if (trashWrapperService.isWrapperNode(node)) {
+        console.log(`[TrashTransformer] Found wrapper node: ${node.id} (${node.name})`);
         wrapperNodeIds.add(node.id);
         // Map the wrapper to itself for direct deletion
         wrapperMap.set(node.id, node.id);
@@ -71,6 +76,9 @@ export class TrashContentTransformer {
       // Check if this node is inside a wrapper (parentId is a wrapper)
       if (node.parentId && wrapperNodeIds.has(node.parentId)) {
         // This node is a child of a wrapper - display it but map it for deletion
+        console.log(
+          `[TrashTransformer] Node ${node.id} (${node.name}) is child of wrapper ${node.parentId}`,
+        );
         displayNodes.push(node);
         wrapperMap.set(node.id, node.parentId);
       } else {
@@ -81,9 +89,15 @@ export class TrashContentTransformer {
 
     // Third pass: process files
     for (const file of content.files ?? []) {
+      console.log(
+        `[TrashTransformer] Processing file ${file.id} (${file.name}), ownerId: ${file.ownerId}`,
+      );
       // Check if file's owner is a wrapper node
       if (wrapperNodeIds.has(file.ownerId)) {
         // File is directly inside a wrapper
+        console.log(
+          `[TrashTransformer] File ${file.id} (${file.name}) is owned by wrapper ${file.ownerId}`,
+        );
         displayFiles.push(file);
         wrapperMap.set(file.id, file.ownerId);
       } else {
@@ -93,8 +107,9 @@ export class TrashContentTransformer {
     }
 
     console.log(
-      `Transformed trash content: ${wrapperNodeIds.size} wrappers, ${displayNodes.length} nodes, ${displayFiles.length} files`,
+      `[TrashTransformer] Result: ${wrapperNodeIds.size} wrappers, ${displayNodes.length} display nodes, ${displayFiles.length} display files, wrapperMap size: ${wrapperMap.size}`,
     );
+    console.log(`[TrashTransformer] WrapperMap entries:`, Array.from(wrapperMap.entries()));
 
     return {
       nodes: displayNodes,
