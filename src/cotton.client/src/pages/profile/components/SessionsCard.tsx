@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
 import { SessionItem } from "./SessionItem";
+import { confirm } from "material-ui-confirm";
 
 export const SessionsCard = () => {
   const { t } = useTranslation("profile");
@@ -42,16 +43,27 @@ export const SessionsCard = () => {
   }, []);
 
   const handleRevokeSession = async (sessionId: string) => {
-    try {
-      setRevoking(sessionId);
-      await sessionsApi.revokeSession(sessionId);
-      // Remove the session from the list
-      setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke session");
-    } finally {
-      setRevoking(null);
-    }
+    confirm({
+      title: t("sessions.revokeConfirmTitle"),
+      description: t("sessions.revokeConfirmDescription"),
+      confirmationText: t("sessions.revokeConfirmButton"),
+      cancellationText: t("sessions.revokeCancelButton"),
+    }).then(async (result) => {
+      if (result.confirmed) {
+        try {
+          setRevoking(sessionId);
+          await sessionsApi.revokeSession(sessionId);
+          // Remove the session from the list
+          setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "Failed to revoke session",
+          );
+        } finally {
+          setRevoking(null);
+        }
+      }
+    });
   };
 
   return (
