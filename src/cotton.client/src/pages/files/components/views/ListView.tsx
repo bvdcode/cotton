@@ -10,7 +10,6 @@ import {
   TextField,
   IconButton,
   Typography,
-  Paper,
 } from "@mui/material";
 import {
   Folder,
@@ -20,14 +19,22 @@ import {
   Delete,
   Image as ImageIcon,
   VideoFile,
+  Article,
+  TextSnippet,
 } from "@mui/icons-material";
 import { formatBytes } from "../../utils/formatBytes";
-import { isImageFile, isVideoFile } from "../../utils/fileTypes";
+import {
+  isImageFile,
+  isPdfFile,
+  isTextFile,
+  isVideoFile,
+} from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
+import { useTranslation } from "react-i18next";
 
 /**
  * ListView Component
- * 
+ *
  * Displays files and folders in a table/list layout.
  * Follows the Dependency Inversion Principle (DIP) by depending on the IFileListView interface.
  * Single Responsibility Principle (SRP): Responsible only for rendering the table layout.
@@ -44,18 +51,33 @@ export const ListView: React.FC<IFileListView> = ({
   folderNamePlaceholder,
   fileNamePlaceholder,
 }) => {
+  const { t } = useTranslation("files");
+
   return (
-    <TableContainer component={Paper} variant="outlined">
-      <Table size="small">
+    <TableContainer component={Box} sx={{ width: "100%", overflowX: "hidden" }}>
+      <Table
+        size="small"
+        sx={{
+          width: "100%",
+          tableLayout: "fixed",
+          "& .MuiTableCell-root": {
+            py: { xs: 0.5, sm: 1 },
+            px: { xs: 1, sm: 2 },
+          },
+        }}
+      >
         <TableHead>
           <TableRow>
             <TableCell width="40px"></TableCell>
-            <TableCell>Name</TableCell>
-            <TableCell width="120px" sx={{ display: { xs: "none", sm: "table-cell" } }}>
-              Size
+            <TableCell>{t("name")}</TableCell>
+            <TableCell
+              width="120px"
+              sx={{ display: { xs: "none", sm: "table-cell" } }}
+            >
+              {t("size")}
             </TableCell>
-            <TableCell width="120px" align="right">
-              Actions
+            <TableCell sx={{ width: { xs: 96, sm: 120 } }} align="right">
+              {t("actionsTitle")}
             </TableCell>
           </TableRow>
         </TableHead>
@@ -137,7 +159,16 @@ export const ListView: React.FC<IFileListView> = ({
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
-                      <Typography variant="body2">{tile.node.name}</Typography>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {tile.node.name}
+                      </Typography>
                     )}
                   </TableCell>
                   <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
@@ -145,10 +176,19 @@ export const ListView: React.FC<IFileListView> = ({
                       —
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                  <TableCell sx={{ width: { xs: 96, sm: 120 } }} align="right">
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: { xs: 0, sm: 0.5 },
+                        justifyContent: "flex-end",
+                        flexWrap: "nowrap",
+                        overflow: "hidden",
+                      }}
+                    >
                       <IconButton
                         size="small"
+                        sx={{ p: { xs: 0.5, sm: 1 } }}
                         onClick={(e) => {
                           e.stopPropagation();
                           folderOperations.onStartRename(
@@ -162,9 +202,13 @@ export const ListView: React.FC<IFileListView> = ({
                       </IconButton>
                       <IconButton
                         size="small"
+                        sx={{ p: { xs: 0.5, sm: 1 } }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          folderOperations.onDelete(tile.node.id, tile.node.name);
+                          folderOperations.onDelete(
+                            tile.node.id,
+                            tile.node.name,
+                          );
                         }}
                         title="Delete"
                       >
@@ -179,11 +223,23 @@ export const ListView: React.FC<IFileListView> = ({
             // File row rendering
             const isImage = isImageFile(tile.file.name);
             const isVideo = isVideoFile(tile.file.name);
+            const isText = isTextFile(tile.file.name);
+            const isPdf = isPdfFile(tile.file.name);
             const isRenaming = fileOperations.isRenaming(tile.file.id);
 
             const getFileIcon = () => {
-              if (isImage) return <ImageIcon color="action" />;
-              if (isVideo) return <VideoFile color="action" />;
+              if (isText) {
+                return <Article color="action" />;
+              }
+              if (isImage) {
+                return <ImageIcon color="action" />;
+              }
+              if (isVideo) {
+                return <VideoFile color="action" />;
+              }
+              if (isPdf) {
+                return <TextSnippet color="action" />;
+              }
               return <InsertDriveFile color="action" />;
             };
 
@@ -230,7 +286,16 @@ export const ListView: React.FC<IFileListView> = ({
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <Typography variant="body2">{tile.file.name}</Typography>
+                    <Typography
+                      variant="body2"
+                      noWrap
+                      sx={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {tile.file.name}
+                    </Typography>
                   )}
                 </TableCell>
                 <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
@@ -238,10 +303,19 @@ export const ListView: React.FC<IFileListView> = ({
                     {formatBytes(tile.file.sizeBytes)}
                   </Typography>
                 </TableCell>
-                <TableCell align="right">
-                  <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                <TableCell sx={{ width: { xs: 96, sm: 120 } }} align="right">
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: { xs: 0, sm: 0.5 },
+                      justifyContent: "flex-end",
+                      flexWrap: "nowrap",
+                      overflow: "hidden",
+                    }}
+                  >
                     <IconButton
                       size="small"
+                      sx={{ p: { xs: 0.5, sm: 1 } }}
                       onClick={(e) => {
                         e.stopPropagation();
                         fileOperations.onDownload(tile.file.id, tile.file.name);
@@ -252,9 +326,13 @@ export const ListView: React.FC<IFileListView> = ({
                     </IconButton>
                     <IconButton
                       size="small"
+                      sx={{ p: { xs: 0.5, sm: 1 } }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        fileOperations.onStartRename(tile.file.id, tile.file.name);
+                        fileOperations.onStartRename(
+                          tile.file.id,
+                          tile.file.name,
+                        );
                       }}
                       title="Rename"
                     >
@@ -262,6 +340,7 @@ export const ListView: React.FC<IFileListView> = ({
                     </IconButton>
                     <IconButton
                       size="small"
+                      sx={{ p: { xs: 0.5, sm: 1 } }}
                       onClick={(e) => {
                         e.stopPropagation();
                         fileOperations.onDelete(tile.file.id, tile.file.name);
@@ -281,7 +360,7 @@ export const ListView: React.FC<IFileListView> = ({
             <TableRow>
               <TableCell colSpan={4} align="center">
                 <Typography color="text.secondary" sx={{ py: 3 }}>
-                  No files or folders
+                  {t("noFilesOrFolders")}
                 </Typography>
               </TableCell>
             </TableRow>

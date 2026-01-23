@@ -189,7 +189,7 @@ namespace Cotton.Previews.Http
                 end = Math.Clamp(end, start, _length - 1);
                 long contentLength = (end - start) + 1;
 
-                _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Range request: {Start}-{End} (contentLength={ContentLength})", _serverId, reqId, start, end, contentLength);
+                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Range request: {Start}-{End} (contentLength={ContentLength})", _serverId, reqId, start, end, contentLength);
 
                 ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
                 ctx.Response.ContentLength64 = contentLength;
@@ -203,7 +203,7 @@ namespace Cotton.Previews.Http
                 }
                 else
                 {
-                    _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Range copy succeeded", _serverId, reqId);
+                    _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Range copy succeeded", _serverId, reqId);
                 }
                 ctx.Response.Close();
             }

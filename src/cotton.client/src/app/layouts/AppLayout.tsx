@@ -3,7 +3,14 @@ import { UserMenu } from "./components/UserMenu";
 import { UploadFilePicker } from "./components/UploadFilePicker";
 import { UploadQueueWidget } from "./components/UploadQueueWidget";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { AppBar, Toolbar, Box, Button, Container } from "@mui/material";
+import {
+  AppBar,
+  Toolbar,
+  Box,
+  Button,
+  Container,
+  IconButton,
+} from "@mui/material";
 import { useEffect } from "react";
 import { useAuth } from "../../features/auth";
 import { useSettingsStore } from "../../shared/store/settingsStore";
@@ -49,33 +56,64 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         <Toolbar
           disableGutters
           sx={{
-            px: { xs: 2, sm: 2 },
+            px: { xs: 1, sm: 2 },
+            gap: { xs: 0.5, sm: 1 },
           }}
         >
-          <Box sx={{ display: "flex", gap: 1, flexGrow: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: { xs: 0.5, sm: 1 },
+              flexGrow: 1,
+              overflow: "auto",
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": { display: "none" },
+            }}
+          >
             {routes.map((route) => {
               const isActive =
                 route.path === "/"
                   ? location.pathname === route.path
                   : location.pathname.startsWith(route.path);
+
               return (
-                <Button
-                  key={route.path}
-                  component={Link}
-                  to={route.path}
-                  startIcon={route.icon}
-                  sx={{
-                    color: "inherit",
-                    bgcolor: isActive
-                      ? "rgba(255, 255, 255, 0.1)"
-                      : "transparent",
-                    "&:hover": {
-                      bgcolor: "rgba(255, 255, 255, 0.15)",
-                    },
-                  }}
-                >
-                  {route.displayName}
-                </Button>
+                <>
+                  <IconButton
+                    key={`${route.path}-icon`}
+                    component={Link}
+                    to={route.path}
+                    color="inherit"
+                    sx={{
+                      display: { xs: "inline-flex", sm: "none" },
+                      bgcolor: isActive
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
+                      "&:hover": {
+                        bgcolor: "rgba(255, 255, 255, 0.15)",
+                      },
+                    }}
+                  >
+                    {route.icon}
+                  </IconButton>
+                  <Button
+                    key={`${route.path}-btn`}
+                    component={Link}
+                    to={route.path}
+                    startIcon={route.icon}
+                    sx={{
+                      display: { xs: "none", sm: "inline-flex" },
+                      color: "inherit",
+                      bgcolor: isActive
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
+                      "&:hover": {
+                        bgcolor: "rgba(255, 255, 255, 0.15)",
+                      },
+                    }}
+                  >
+                    {route.displayName}
+                  </Button>
+                </>
               );
             })}
           </Box>

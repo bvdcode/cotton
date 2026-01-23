@@ -83,6 +83,13 @@
       "totpEnabledAt": "Enabled at",
       "totpFailedAttempts": "2FA Failed attempts",
       "createdAt": "Created at"
+    },
+    "sessions": {
+      "title": "Active Sessions",
+      "description": "Manage your active sessions across different devices",
+      "noActiveSessions": "No active sessions",
+      "revokeSession": "End session",
+      "elapsed": "{{duration}} elapsed"
     }
   },
   "setup": {
@@ -352,7 +359,9 @@
       "newFolder": "New folder",
       "folderNamePlaceholder": "Folder name",
       "goUp": "Go up",
-      "dropFiles": "Drop files to upload"
+      "dropFiles": "Drop files to upload",
+      "switchToTilesView": "Switch to tiles",
+      "switchToListView": "Switch to list view"
     },
     "breadcrumbs": {
       "ariaLabel": "Breadcrumbs",
@@ -396,7 +405,11 @@
         "pdfLoadFailed": "Failed to load PDF",
         "pdfDisplayFailed": "Failed to display PDF"
       }
-    }
+    },
+    "actionsTitle": "Actions",
+    "size": "Size",
+    "name": "Name",
+    "noFilesOrFolders": "No files or folders"
   },
   "upload": {
     "title": "Uploads",

@@ -340,7 +340,7 @@ export const FilesPage: React.FC = () => {
           <Box
             sx={{
               display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
+              flexDirection: { xs: "row", sm: "row" },
               gap: { xs: 1, sm: 1 },
               alignItems: { xs: "stretch", sm: "center" },
             }}
@@ -356,7 +356,7 @@ export const FilesPage: React.FC = () => {
               <Box
                 sx={{
                   display: "flex",
-                  gap: 0.2,
+                  gap: 0.5,
                   alignItems: "center",
                   flexShrink: 0,
                 }}
@@ -409,26 +409,6 @@ export const FilesPage: React.FC = () => {
                     <ViewModule />
                   </IconButton>
                 )}
-              </Box>
-
-              <Box
-                sx={{
-                  display: { xs: "flex", sm: "none" },
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Typography
-                  color="text.secondary"
-                  sx={{ fontSize: "0.875rem" }}
-                >
-                  {t("stats.summary", {
-                    ns: "files",
-                    folders: stats.folders,
-                    files: stats.files,
-                    size: formatBytes(stats.sizeBytes),
-                  })}
-                </Typography>
               </Box>
             </Box>
 
