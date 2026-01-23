@@ -12,6 +12,7 @@ namespace Cotton.Storage.Processors
 {
     public class CompressionProcessor : IStorageProcessor
     {
+        public const int CompressionLevel = 2;
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
         public int Priority => 10000;
         private const int CompressBufferSize = 1 * 1024 * 1024;
@@ -43,7 +44,7 @@ namespace Cotton.Storage.Processors
                     await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
                     await using (var compressor = new CompressionStream(
                         writerStream,
-                        level: 2,
+                        level: CompressionLevel,
                         leaveOpen: true))
                     {
                         await stream.CopyToAsync(compressor, CompressBufferSize).ConfigureAwait(false);
@@ -62,7 +63,7 @@ namespace Cotton.Storage.Processors
                 }
                 finally
                 {
-                    stream.Dispose(); // или смотри на context/leaveOpen-логику
+                    stream.Dispose();
                 }
             });
 
