@@ -4,6 +4,8 @@
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Models.Enums;
+using System.Buffers;
+using System.IO.Pipelines;
 using ZstdSharp;
 
 namespace Cotton.Storage.Processors
@@ -19,15 +21,50 @@ namespace Cotton.Storage.Processors
             return Task.FromResult<Stream>(decompressor);
         }
 
-        public async Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
+        public Task<Stream> WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
-            var memoryStream = new MemoryStream();
-            using (var compressor = new CompressionStream(memoryStream, level: 3, leaveOpen: true))
+            ArgumentNullException.ThrowIfNull(stream);
+
+            var pipe = new Pipe(new PipeOptions(
+                pool: MemoryPool<byte>.Shared,
+                readerScheduler: null,
+                writerScheduler: null,
+                pauseWriterThreshold: 1024L * 1024L * 8L,
+                resumeWriterThreshold: 1024L * 1024L * 4L,
+                minimumSegmentSize: 4096,
+                useSynchronizationContext: false));
+
+            var readerStream = pipe.Reader.AsStream(leaveOpen: false);
+            _ = Task.Run(async () =>
             {
-                await stream.CopyToAsync(compressor);
-            }
-            memoryStream.Position = 0;
-            return memoryStream;
+                try
+                {
+                    await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
+                    await using var compressor = new CompressionStream(
+                        writerStream,
+                        level: 3,
+                        leaveOpen: true);
+
+                    await stream.CopyToAsync(compressor).ConfigureAwait(false);
+                    await compressor.FlushAsync().ConfigureAwait(false);
+
+                    await pipe.Writer.CompleteAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException oce)
+                {
+                    await pipe.Writer.CompleteAsync(oce).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    await pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
+                }
+                finally
+                {
+                    stream.Dispose(); // или смотри на context/leaveOpen-логику
+                }
+            });
+
+            return Task.FromResult<Stream>(readerStream);
         }
     }
 }
