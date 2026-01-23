@@ -61,6 +61,8 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
     <Box
       ref={containerRef}
       sx={{
+        display: "flex",
+        alignItems: "center",
         position: "relative",
         width: "100%",
         overflow: "hidden",
