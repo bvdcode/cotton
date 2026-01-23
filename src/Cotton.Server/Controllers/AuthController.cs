@@ -60,7 +60,7 @@ namespace Cotton.Server.Controllers
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
 
-            TimeSpan tokenLifetime;
+            TimeSpan tokenLifetime = _tokens.TokenLifetime;
             string currentSessionId = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
             List<SessionDto> response = [.. tokens
                 .GroupBy(x => x.SessionId!)
