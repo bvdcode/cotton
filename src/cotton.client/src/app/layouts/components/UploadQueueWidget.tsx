@@ -101,7 +101,7 @@ const UploadTaskRow = ({ task, t, showDivider }: UploadTaskRowProps) => {
           color={task.status === "failed" ? "error" : "text.secondary"}
         >
           {task.status === "failed"
-            ? task.error ?? "Failed"
+            ? (task.error ?? "Failed")
             : `${Math.round(task.progress01 * 100)}%`}
         </Typography>
       </Box>
@@ -135,7 +135,10 @@ export const UploadQueueWidget = () => {
   const totalSpeed = snapshot.overall.uploadSpeedBytesPerSec;
   const visible = snapshot.open && total > 0;
 
-  const totalProgress = Math.max(0, Math.min(100, snapshot.overall.progress01 * 100));
+  const totalProgress = Math.max(
+    0,
+    Math.min(100, snapshot.overall.progress01 * 100),
+  );
 
   if (!visible) return null;
 
@@ -153,7 +156,6 @@ export const UploadQueueWidget = () => {
       <Paper
         elevation={8}
         sx={{
-          p: 1.5,
           borderRadius: 2,
           position: "relative",
           overflow: "hidden",
@@ -167,8 +169,10 @@ export const UploadQueueWidget = () => {
           sx={{
             position: "relative",
             zIndex: 1,
-            borderRadius: 1,
+            borderRadius: isCollapsed ? 2 : 0,
             overflow: "hidden",
+            p: 1.5,
+            transition: "border-radius 0.5s ease-in-out",
           }}
         >
           {/* Battery fill effect in header only (prevents tinting the expanded list) */}
@@ -179,6 +183,7 @@ export const UploadQueueWidget = () => {
                 top: 0,
                 left: 0,
                 bottom: 0,
+                padding: 3,
                 width: `${totalProgress}%`,
                 bgcolor: "success.main",
                 opacity: 0.15,
@@ -202,17 +207,21 @@ export const UploadQueueWidget = () => {
           >
             {hasActive
               ? t("titleWithProgress", {
-                  completed,
+                  completed: Math.min(completed + 1, total),
                   total,
                   speed: formatBytes(totalSpeed),
                 })
               : isCollapsed && allCompleted && hasErrors
-              ? t("error")
-              : isCollapsed && allCompleted
-              ? t("title")
-              : t("titleWithTotal", { total })}
+                ? t("error")
+                : isCollapsed && allCompleted
+                  ? t("title")
+                  : t("titleWithTotal", { total })}
           </Typography>
-          <Box display="flex" gap={0.5} sx={{ position: "relative", zIndex: 1 }}>
+          <Box
+            display="flex"
+            gap={0.5}
+            sx={{ position: "relative", zIndex: 1 }}
+          >
             <IconButton
               size="small"
               onClick={() => setIsCollapsed(!isCollapsed)}
@@ -236,12 +245,16 @@ export const UploadQueueWidget = () => {
 
         <Box
           sx={{
-            maxHeight: isCollapsed ? 0 : `${Math.min(tasks.length * 90, 400)}px`,
+            maxHeight: isCollapsed
+              ? 0
+              : `${Math.min(tasks.length * 90, 400)}px`,
             overflow: "hidden",
             position: "relative",
             zIndex: 1,
             transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
             opacity: isCollapsed ? 0 : 1,
+            px: isCollapsed ? 0 : 1.5,
+            pb: isCollapsed ? 0 : 1.5,
           }}
         >
           {tasks.length > 0 && (

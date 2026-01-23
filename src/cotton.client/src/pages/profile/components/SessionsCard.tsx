@@ -69,7 +69,10 @@ export const SessionsCard = () => {
   return (
     <Paper
       sx={{
-        p: 2,
+        p: {
+          xs: 2,
+          sm: 3,
+        },
       }}
     >
       <Stack spacing={2}>

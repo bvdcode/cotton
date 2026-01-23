@@ -74,9 +74,9 @@ export const SessionItem = ({
           spacing={{ xs: 0.1, sm: 1.5 }}
         >
           <Typography variant="caption" color="text.secondary" noWrap>
-            {formatTimeAgo(session.lastSeenAt)} |{" "}
+            {formatTimeAgo(session.lastSeenAt, t)} |{" "}
             {t("sessions.elapsed", {
-              duration: formatDuration(session.totalSessionDuration),
+              duration: formatDuration(session.totalSessionDuration, t),
             })}
           </Typography>
           <Typography variant="caption" color="text.secondary" noWrap>

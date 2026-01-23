@@ -47,7 +47,6 @@ export const TotpSetupForm = ({
           borderRadius: 2,
           display: "inline-flex",
           bgcolor: theme.palette.mode === "dark" ? "background.paper" : "#fff",
-          border: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >
         <QRCode

@@ -2,6 +2,28 @@
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
+    "time": {
+      "justNow": "just now",
+      "secondsAgo_one": "{{count}} second ago",
+      "secondsAgo_other": "{{count}} seconds ago",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "monthsAgo_one": "{{count}} month ago",
+      "monthsAgo_other": "{{count}} months ago",
+      "yearsAgo_one": "{{count}} year ago",
+      "yearsAgo_other": "{{count}} years ago",
+      "durationMinutes_one": "{{count}} min",
+      "durationMinutes_other": "{{count}} min",
+      "durationHours_one": "{{count}} hour",
+      "durationHours_other": "{{count}} hours",
+      "durationDays_one": "{{count}} day",
+      "durationDays_other": "{{count}} days",
+      "lessThanMinute": "less than a minute"
+    },
     "actions": {
       "confirm": "Confirm",
       "cancel": "Cancel",
@@ -460,5 +482,12 @@
       "inProgress": "Deleting {{current}} of {{total}} items...",
       "completed": "Trash emptied successfully"
     }
+  },
+  "routes": {
+    "login": "Login",
+    "home": "Home",
+    "files": "Files",
+    "trash": "Trash",
+    "profile": "Profile"
   }
 }
