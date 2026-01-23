@@ -2,16 +2,14 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
-using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Pipelines
 {
     public class FileStoragePipeline(
-        ILogger<FileStoragePipeline> _logger,
         IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
-        private static readonly SemaphoreSlim _maxParallel = new(initialCount: Environment.ProcessorCount * 4);
+        private static readonly SemaphoreSlim _maxParallel = new(initialCount: Environment.ProcessorCount);
 
         public Task<bool> ExistsAsync(string uid)
         {
@@ -31,7 +29,6 @@ namespace Cotton.Storage.Pipelines
             foreach (var processor in orderedProcessors)
             {
                 currentStream = await processor.ReadAsync(uid, currentStream, context);
-                _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
                 if (currentStream == Stream.Null)
                 {
                     throw new InvalidOperationException($"Processor {processor} returned Stream.Null for UID {uid} but it should return a valid stream.");
@@ -59,7 +56,6 @@ namespace Cotton.Storage.Pipelines
                         throw new InvalidOperationException($"Processor BEFORE {processor} returned Stream.Null for UID {uid} but it should pass a valid stream to the next processor.");
                     }
                     currentStream = await processor.WriteAsync(uid, currentStream, context);
-                    _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
                 }
                 if (currentStream == Stream.Null)
                 {
