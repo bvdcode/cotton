@@ -19,7 +19,7 @@ import i18n from "../i18n";
 const publicRoutes: RouteConfig[] = [
   {
     path: "/login",
-    displayName: i18n.t("routes.login"),
+    displayName: i18n.t("login", { ns: "routes" }),
     element: <LoginPage />,
   },
 ];
@@ -29,28 +29,28 @@ const appRoutes: RouteConfig[] = [
     path: "/",
     icon: <Home />,
     protected: true,
-    displayName: i18n.t("routes.home"),
+    displayName: i18n.t("home", { ns: "routes" }),
     element: <HomePage />,
   },
   {
     path: "/files",
     icon: <Folder />,
     protected: true,
-    displayName: i18n.t("routes.files"),
+    displayName: i18n.t("files", { ns: "routes" }),
     element: <FilesPage />,
   },
   {
     path: "/trash",
     icon: <Delete />,
     protected: true,
-    displayName: i18n.t("routes.trash"),
+    displayName: i18n.t("trash", { ns: "routes" }),
     element: <TrashPage />,
   },
   {
     path: "/profile",
     icon: <Person />,
     protected: true,
-    displayName: i18n.t("routes.profile"),
+    displayName: i18n.t("profile", { ns: "routes" }),
     element: <ProfilePage />,
   },
 ];
