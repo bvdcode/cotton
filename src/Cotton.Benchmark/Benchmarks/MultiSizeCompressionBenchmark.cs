@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Benchmark.Infrastructure;
 using Cotton.Benchmark.Models;
 using System.Diagnostics;
 using ZstdSharp;
@@ -8,28 +9,27 @@ using ZstdSharp;
 namespace Cotton.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Benchmark that tests multiple data sizes for compression.
+    /// Raw ZstdSharp benchmark (independent from Cotton.Storage) that tests multiple compression levels.
     /// </summary>
     public sealed class MultiSizeCompressionBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
-        private readonly int[] _dataSizes = [1024, 64 * 1024, 1024 * 1024, 10 * 1024 * 1024]; // 1KB, 64KB, 1MB, 10MB
-        private readonly int _compressionLevel = configuration.CompressionLevel;
+        private readonly byte[] _testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
+        private readonly int[] _levels = [1, 2, 3, 4, 5];
 
         /// <inheritdoc/>
-        public override string Name => "Multi-Size Compression";
+        public override string Name => "ZstdSharp (Raw) Levels 1-5";
 
         /// <inheritdoc/>
-        public override string Description => "Tests compression with varying data sizes";
+        public override string Description => "Tests raw ZstdSharp compression at levels 1..5 (not Cotton.Storage processor)";
 
         /// <inheritdoc/>
         protected override async Task ExecuteIterationAsync(CancellationToken cancellationToken)
         {
-            foreach (var size in _dataSizes)
+            foreach (var level in _levels)
             {
-                var testData = GenerateTestData(size);
                 await using var outputStream = new MemoryStream();
-                await using var compressor = new CompressionStream(outputStream, level: _compressionLevel, leaveOpen: true);
-                await compressor.WriteAsync(testData, cancellationToken);
+                await using var compressor = new CompressionStream(outputStream, level: level, leaveOpen: true);
+                await compressor.WriteAsync(_testData, cancellationToken);
             }
         }
 
@@ -39,14 +39,13 @@ namespace Cotton.Benchmark.Benchmarks
             var stopwatch = Stopwatch.StartNew();
             long totalBytes = 0;
 
-            foreach (var size in _dataSizes)
+            foreach (var level in _levels)
             {
-                var testData = GenerateTestData(size);
-                totalBytes += testData.Length;
+                totalBytes += _testData.Length;
 
                 await using var outputStream = new MemoryStream();
-                await using var compressor = new CompressionStream(outputStream, level: _compressionLevel, leaveOpen: true);
-                await compressor.WriteAsync(testData, cancellationToken);
+                await using var compressor = new CompressionStream(outputStream, level: level, leaveOpen: true);
+                await compressor.WriteAsync(_testData, cancellationToken);
             }
 
             stopwatch.Stop();
@@ -58,8 +57,9 @@ namespace Cotton.Benchmark.Benchmarks
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
             var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["DataSizes"] = string.Join(", ", _dataSizes.Select(s => FormatBytes(s)));
-            baseMetrics["CompressionLevel"] = _compressionLevel;
+            baseMetrics["Engine"] = "ZstdSharp";
+            baseMetrics["Levels"] = string.Join(",", _levels);
+            baseMetrics["DataType"] = "Compressible Text";
             return baseMetrics;
         }
     }
