@@ -13,7 +13,7 @@ import { nodesApi } from "../../../shared/api/nodesApi";
  * - Delegates deletion logic and wrapper resolution to services
  */
 export const useTrashFileOperations = (
-  wrapperMap: Map<string, string>,
+  getWrapperMap: () => Map<string, string>,
   onFileDeleted?: () => void,
 ) => {
   const { t } = useTranslation(["trash", "common"]);
@@ -83,17 +83,25 @@ export const useTrashFileOperations = (
     }
 
     try {
+      // Get current wrapperMap (not stale closure)
+      const wrapperMap = getWrapperMap();
+      
       // Check if file is inside a wrapper node
+      console.log(
+        `[FileDelete] Deleting file ${fileId}, wrapperMap has entry: ${wrapperMap.has(fileId)}, wrapperMap size: ${wrapperMap.size}`,
+      );
+      console.log(`[FileDelete] WrapperMap entries:`, Array.from(wrapperMap.entries()));
+      
       if (wrapperMap.has(fileId)) {
         // File is inside a wrapper - delete the wrapper node instead of the file
         const wrapperNodeId = wrapperMap.get(fileId)!;
         console.log(
-          `Deleting wrapper node ${wrapperNodeId} for file ${fileId}`,
+          `[FileDelete] File ${fileId} is wrapped, deleting wrapper node ${wrapperNodeId}`,
         );
         await nodesApi.deleteNode(wrapperNodeId, true);
       } else {
         // Regular file deletion (not wrapped)
-        console.log(`Deleting file ${fileId} directly`);
+        console.log(`[FileDelete] File ${fileId} is not wrapped, deleting file directly`);
         await filesApi.deleteFile(fileId, true);
       }
 
