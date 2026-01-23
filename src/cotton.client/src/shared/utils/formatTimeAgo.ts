@@ -1,5 +1,7 @@
+import i18n from "../../i18n";
+
 /**
- * Formats a date/time as a relative time string (e.g., "2 minutes ago", "just now")
+ * Formats a date/time as a relative time string (e.g., "2 minutes ago", "Just now")
  */
 export const formatTimeAgo = (isoDate: string): string => {
   const date = new Date(isoDate);
@@ -7,33 +9,33 @@ export const formatTimeAgo = (isoDate: string): string => {
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
   if (seconds < 10) {
-    return "just now";
+    return i18n.t("common.time.justNow");
   }
 
   if (seconds < 60) {
-    return `${seconds} seconds ago`;
+    return i18n.t("common.time.secondsAgo", { count: seconds });
   }
 
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) {
-    return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
+    return i18n.t("common.time.minutesAgo", { count: minutes });
   }
 
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
-    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+    return i18n.t("common.time.hoursAgo", { count: hours });
   }
 
   const days = Math.floor(hours / 24);
   if (days < 30) {
-    return days === 1 ? "1 day ago" : `${days} days ago`;
+    return i18n.t("common.time.daysAgo", { count: days });
   }
 
   const months = Math.floor(days / 30);
   if (months < 12) {
-    return months === 1 ? "1 month ago" : `${months} months ago`;
+    return i18n.t("common.time.monthsAgo", { count: months });
   }
 
   const years = Math.floor(months / 12);
-  return years === 1 ? "1 year ago" : `${years} years ago`;
+  return i18n.t("common.time.yearsAgo", { count: years });
 };

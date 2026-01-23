@@ -14,6 +14,21 @@
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
       "logout": "Logout"
+    },
+    "time": {
+      "justNow": "Just now",
+      "secondsAgo_one": "{{count}} second ago",
+      "secondsAgo_other": "{{count}} seconds ago",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "monthsAgo_one": "{{count}} month ago",
+      "monthsAgo_other": "{{count}} months ago",
+      "yearsAgo_one": "{{count}} year ago",
+      "yearsAgo_other": "{{count}} years ago"
     }
   },
   "login": {
