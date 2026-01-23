@@ -60,6 +60,7 @@ namespace Cotton.Server.Controllers
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
 
+            TimeSpan tokenLifetime;
             string currentSessionId = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
             List<SessionDto> response = [.. tokens
                 .GroupBy(x => x.SessionId!)
@@ -91,7 +92,7 @@ namespace Cotton.Server.Controllers
                         City = source.City ?? "Unknown",
                         Device = source.Device ?? "Unknown",
                         RefreshTokenCount = g.Count(),
-                        TotalSessionDuration = latestCreatedAt - earliestCreatedAt
+                        TotalSessionDuration = g.Count() * tokenLifetime
                     };
                 })
                 .OrderByDescending(x => x.TotalSessionDuration)];
