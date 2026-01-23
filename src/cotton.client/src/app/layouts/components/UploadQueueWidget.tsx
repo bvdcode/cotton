@@ -172,6 +172,7 @@ export const UploadQueueWidget = () => {
             borderRadius: isCollapsed ? 2 : 0,
             overflow: "hidden",
             p: 1.5,
+            transition: "border-radius 0.5s ease-in-out",
           }}
         >
           {/* Battery fill effect in header only (prevents tinting the expanded list) */}
