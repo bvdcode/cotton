@@ -9,8 +9,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.33" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.33" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.34" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.34" />
 	</ItemGroup>
 
 </Project>
