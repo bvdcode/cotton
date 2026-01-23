@@ -14,6 +14,33 @@
       "darkMode": "Тёмная тема",
       "changeLanguage": "Сменить язык",
       "logout": "Выйти"
+    },
+    "time": {
+      "justNow": "Только что",
+      "secondsAgo_one": "{{count}} секунду назад",
+      "secondsAgo_few": "{{count}} секунды назад",
+      "secondsAgo_many": "{{count}} секунд назад",
+      "secondsAgo_other": "{{count}} секунд назад",
+      "minutesAgo_one": "{{count}} минуту назад",
+      "minutesAgo_few": "{{count}} минуты назад",
+      "minutesAgo_many": "{{count}} минут назад",
+      "minutesAgo_other": "{{count}} минут назад",
+      "hoursAgo_one": "{{count}} час назад",
+      "hoursAgo_few": "{{count}} часа назад",
+      "hoursAgo_many": "{{count}} часов назад",
+      "hoursAgo_other": "{{count}} часов назад",
+      "daysAgo_one": "{{count}} день назад",
+      "daysAgo_few": "{{count}} дня назад",
+      "daysAgo_many": "{{count}} дней назад",
+      "daysAgo_other": "{{count}} дней назад",
+      "monthsAgo_one": "{{count}} месяц назад",
+      "monthsAgo_few": "{{count}} месяца назад",
+      "monthsAgo_many": "{{count}} месяцев назад",
+      "monthsAgo_other": "{{count}} месяцев назад",
+      "yearsAgo_one": "{{count}} год назад",
+      "yearsAgo_few": "{{count}} года назад",
+      "yearsAgo_many": "{{count}} лет назад",
+      "yearsAgo_other": "{{count}} лет назад"
     }
   },
   "login": {
