@@ -14,7 +14,9 @@ export const ProfilePage = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+    <Box
+      sx={{ p: { xs: 2, sm: 3 }, display: "flex", justifyContent: "center" }}
+    >
       <Stack spacing={{ xs: 2, sm: 3 }}>
         <Stack
           direction={{ xs: "column", md: "row" }}

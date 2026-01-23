@@ -44,7 +44,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
       sx={{
         p: { xs: 2, sm: 3 },
         borderRadius: 2,
-        border: (theme) => `1px solid ${theme.palette.divider}`,
         flex: { xs: 1, lg: "0 0 400px" },
       }}
     >

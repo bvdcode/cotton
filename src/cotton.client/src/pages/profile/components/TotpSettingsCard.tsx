@@ -135,7 +135,6 @@ export const TotpSettingsCard = ({
       sx={{
         p: { xs: 2, sm: 3 },
         borderRadius: 2,
-        border: (theme) => `1px solid ${theme.palette.divider}`,
         flex: 1,
       }}
     >
