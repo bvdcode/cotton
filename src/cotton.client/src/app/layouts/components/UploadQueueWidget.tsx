@@ -207,7 +207,7 @@ export const UploadQueueWidget = () => {
           >
             {hasActive
               ? t("titleWithProgress", {
-                  completed,
+                  completed: Math.min(completed + 1, total),
                   total,
                   speed: formatBytes(totalSpeed),
                 })
