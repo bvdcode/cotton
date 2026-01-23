@@ -478,5 +478,12 @@
       "inProgress": "Deleting {{current}} of {{total}} items...",
       "completed": "Trash emptied successfully"
     }
+  },
+  "routes": {
+    "login": "Login",
+    "home": "Home",
+    "files": "Files",
+    "trash": "Trash",
+    "profile": "Profile"
   }
 }
