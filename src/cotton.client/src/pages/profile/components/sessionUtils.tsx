@@ -46,8 +46,10 @@ export const formatDuration = (duration: string, t: TFunction): string => {
   const totalHours = days * 24 + hours;
   const totalMinutes = totalHours * 60 + minutes;
 
-  if (totalMinutes < 60) {
-    return t("common:time.durationMinutes", { count: Math.max(1, totalMinutes) });
+  if (totalMinutes === 0) {
+    return t("common:time.lessThanMinute");
+  } else if (totalMinutes < 60) {
+    return t("common:time.durationMinutes", { count: totalMinutes });
   } else if (totalHours < 24) {
     return t("common:time.durationHours", { count: totalHours });
   } else {
