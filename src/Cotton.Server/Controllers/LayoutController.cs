@@ -316,94 +316,80 @@ namespace Cotton.Server.Controllers
 
             // depth:
             // 0 => only direct children of nodeId
-            // 1 => children + grandchildren
-            // 2 => children + grandchildren + great-grandchildren, etc.
+            // 1 => children + one more level (grandchildren)
+            // 2 => children + grandchildren + one more level, etc.
 
             int skip = (page - 1) * pageSize;
-            IQueryable<NodeDto> nodesQuery;
-            IQueryable<FileManifestDto> filesQuery;
-            if (depth == 0)
+            const int MaxDepth = 256;
+            if (depth > MaxDepth)
             {
-                nodesQuery = _dbContext.Nodes
-                    .AsNoTracking()
-                    .OrderBy(x => x.NameKey)
-                    .Where(x => x.ParentId == parentNode.Id
-                        && x.OwnerId == userId
-                        && x.LayoutId == layout.Id
-                        && x.Type == nodeType)
-                    .ProjectToType<NodeDto>();
-
-                filesQuery = _dbContext.NodeFiles
-                    .AsNoTracking()
-                    .OrderBy(x => x.NameKey)
-                    .Where(x => x.NodeId == parentNode.Id)
-                    .ProjectToType<FileManifestDto>();
+                return this.ApiConflict("Maximum node hierarchy depth exceeded.");
             }
-            else
+
+            var nodesBaseQuery = _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.OwnerId == userId
+                    && x.LayoutId == layout.Id
+                    && x.Type == nodeType);
+
+            // segmentDepth:
+            // 0 => direct children only
+            // 1 => + one more level, etc.
+            int segmentDepth = depth + 1;
+
+            var visited = new HashSet<Guid> { parentNode.Id };
+            var frontier = new List<Guid> { parentNode.Id };
+            var allChildNodeIds = new List<Guid>();
+
+            for (int currentDepth = 1; currentDepth <= segmentDepth; currentDepth++)
             {
-                const int MaxDepth = 256;
-                if (depth > MaxDepth)
+                if (frontier.Count == 0)
                 {
-                    return this.ApiConflict("Maximum node hierarchy depth exceeded.");
+                    break;
                 }
 
-                var nodesBaseQuery = _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.OwnerId == userId
-                        && x.LayoutId == layout.Id
-                        && x.Type == nodeType);
+                var currentLayerIds = frontier;
+                frontier = [];
 
-                var visited = new HashSet<Guid> { parentNode.Id };
-                var frontier = new List<Guid> { parentNode.Id };
-                var allChildNodeIds = new List<Guid>();
+                var children = await nodesBaseQuery
+                    .Where(x => x.ParentId != null && currentLayerIds.Contains(x.ParentId.Value))
+                    .Select(x => x.Id)
+                    .ToListAsync();
 
-                for (int currentDepth = 0; currentDepth <= depth; currentDepth++)
+                foreach (var childId in children)
                 {
-                    if (frontier.Count == 0)
+                    if (!visited.Add(childId))
                     {
-                        break;
+                        return this.ApiConflict("Circular reference detected in node hierarchy.");
                     }
 
-                    var currentLayerIds = frontier;
-                    frontier = [];
-
-                    var children = await nodesBaseQuery
-                        .Where(x => x.ParentId != null && currentLayerIds.Contains(x.ParentId.Value))
-                        .Select(x => new { x.Id, x.ParentId })
-                        .ToListAsync();
-
-                    foreach (var c in children)
-                    {
-                        if (!visited.Add(c.Id))
-                        {
-                            return this.ApiConflict("Circular reference detected in node hierarchy.");
-                        }
-
-                        allChildNodeIds.Add(c.Id);
-                        frontier.Add(c.Id);
-                    }
+                    allChildNodeIds.Add(childId);
+                    frontier.Add(childId);
                 }
-
-                // When listing with depth, include files from the parent folder and all descendant folders
-                // (the UI expects files to be returned as well, not only nodes).
-                var allFolderIdsForFiles = new List<Guid>(allChildNodeIds.Count + 1)
-                {
-                    parentNode.Id
-                };
-                allFolderIdsForFiles.AddRange(allChildNodeIds);
-
-                nodesQuery = _dbContext.Nodes
-                    .AsNoTracking()
-                    .OrderBy(x => x.NameKey)
-                    .Where(x => allChildNodeIds.Contains(x.Id))
-                    .ProjectToType<NodeDto>();
-
-                filesQuery = _dbContext.NodeFiles
-                    .AsNoTracking()
-                    .OrderBy(x => x.NameKey)
-                    .Where(x => allFolderIdsForFiles.Contains(x.NodeId))
-                    .ProjectToType<FileManifestDto>();
             }
+
+            // Files:
+            // depth=0 => files only in the requested folder
+            // depth>0 => include files from the requested folder and all descendant folders we discovered
+            var fileFolderIds = depth == 0
+                ? [parentNode.Id]
+                : new List<Guid>(allChildNodeIds.Count + 1) { parentNode.Id };
+            if (depth != 0)
+            {
+                fileFolderIds.AddRange(allChildNodeIds);
+            }
+
+            IQueryable<NodeDto> nodesQuery = _dbContext.Nodes
+                .AsNoTracking()
+                .OrderBy(x => x.NameKey)
+                .Where(x => allChildNodeIds.Contains(x.Id))
+                .ProjectToType<NodeDto>();
+
+            IQueryable<FileManifestDto> filesQuery = _dbContext.NodeFiles
+                .AsNoTracking()
+                .OrderBy(x => x.NameKey)
+                .Where(x => fileFolderIds.Contains(x.NodeId))
+                .ProjectToType<FileManifestDto>();
 
             int nodesCount = await nodesQuery.CountAsync();
             int filesCount = await filesQuery.CountAsync();
@@ -422,7 +408,9 @@ namespace Cotton.Server.Controllers
             {
                 Id = nodeId,
                 Nodes = nodes,
-                Files = files
+                Files = files,
+                CreatedAt = parentNode.CreatedAt,
+                UpdatedAt = parentNode.UpdatedAt
             };
             return Ok(result);
         }

@@ -14,7 +14,7 @@ import { trashContentTransformer } from "../services";
  */
 export const useTrashFolderOperations = (
   currentNodeId: string | null,
-  wrapperMap: Map<string, string>,
+  getWrapperMap: () => Map<string, string>,
   onDeleted?: () => void,
 ) => {
   const { t } = useTranslation(["trash", "common"]);
@@ -82,6 +82,9 @@ export const useTrashFolderOperations = (
       });
 
       if (result.confirmed) {
+        // Get current wrapperMap (not stale closure)
+        const wrapperMap = getWrapperMap();
+        
         // Get the actual deletion target (wrapper if exists, otherwise the folder itself)
         const deleteTarget = trashContentTransformer.getDeleteTarget(
           folderId,

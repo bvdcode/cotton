@@ -235,8 +235,8 @@ export const TrashPage: React.FC = () => {
     ];
   }, [sortedFolders, sortedFiles]);
 
-  const folderOps = useTrashFolderOperations(nodeId, wrapperMap, refreshContent);
-  const fileOps = useTrashFileOperations(wrapperMap, refreshContent);
+  const folderOps = useTrashFolderOperations(nodeId, () => wrapperMap, refreshContent);
+  const fileOps = useTrashFileOperations(() => wrapperMap, refreshContent);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
   // Media lightbox state
@@ -341,16 +341,14 @@ export const TrashPage: React.FC = () => {
       // Delete all files - use wrapper mapping for proper deletion
       for (const file of content.files ?? []) {
         try {
-          const deleteTarget = trashContentTransformer.getDeleteTarget(
-            file.id,
-            wrapperMap,
-          );
-
-          // If file is in a wrapper, delete the wrapper node; otherwise delete the file
+          // Check if file is in a wrapper
           if (wrapperMap.has(file.id)) {
-            await nodesApi.deleteNode(deleteTarget, true);
+            // File is inside a wrapper - delete the wrapper node
+            const wrapperNodeId = wrapperMap.get(file.id)!;
+            await nodesApi.deleteNode(wrapperNodeId, true);
           } else {
-            await filesApi.deleteFile(deleteTarget, true);
+            // Regular file deletion
+            await filesApi.deleteFile(file.id, true);
           }
 
           deleted++;
