@@ -14,6 +14,7 @@ namespace Cotton.Storage.Processors
     {
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
         public int Priority => 10000;
+        private const int CompressBufferSize = 1 * 1024 * 1024;
 
         public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null)
         {
@@ -42,10 +43,10 @@ namespace Cotton.Storage.Processors
                     await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
                     await using (var compressor = new CompressionStream(
                         writerStream,
-                        level: 3,
+                        level: 2,
                         leaveOpen: true))
                     {
-                        await stream.CopyToAsync(compressor).ConfigureAwait(false);
+                        await stream.CopyToAsync(compressor, CompressBufferSize).ConfigureAwait(false);
                         await compressor.FlushAsync().ConfigureAwait(false);
                     }
 
