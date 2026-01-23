@@ -40,13 +40,14 @@ namespace Cotton.Storage.Processors
                 try
                 {
                     await using var writerStream = pipe.Writer.AsStream(leaveOpen: true);
-                    await using var compressor = new CompressionStream(
+                    await using (var compressor = new CompressionStream(
                         writerStream,
                         level: 3,
-                        leaveOpen: true);
-
-                    await stream.CopyToAsync(compressor).ConfigureAwait(false);
-                    await compressor.FlushAsync().ConfigureAwait(false);
+                        leaveOpen: true))
+                    {
+                        await stream.CopyToAsync(compressor).ConfigureAwait(false);
+                        await compressor.FlushAsync().ConfigureAwait(false);
+                    }
 
                     await pipe.Writer.CompleteAsync().ConfigureAwait(false);
                 }
