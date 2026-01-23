@@ -36,31 +36,60 @@ namespace Cotton.Benchmark.Benchmarks
         /// <inheritdoc/>
         protected override async Task<PerformanceMetrics> MeasureIterationAsync(CancellationToken cancellationToken)
         {
+            // Keep the base metrics meaningful, but per-level breakdown is provided via AggregateMetrics.
             var stopwatch = Stopwatch.StartNew();
-            long totalBytes = 0;
 
-            foreach (var level in _levels)
-            {
-                totalBytes += _testData.Length;
-
-                await using var outputStream = new MemoryStream();
-                await using var compressor = new CompressionStream(outputStream, level: level, leaveOpen: true);
-                await compressor.WriteAsync(_testData, cancellationToken);
-            }
+            await using var outputStream = new MemoryStream();
+            await using var compressor = new CompressionStream(outputStream, level: _levels[0], leaveOpen: true);
+            await compressor.WriteAsync(_testData, cancellationToken);
 
             stopwatch.Stop();
-
-            return PerformanceMetrics.Create(totalBytes, stopwatch.Elapsed);
+            return PerformanceMetrics.Create(_testData.Length, stopwatch.Elapsed);
         }
 
         /// <inheritdoc/>
         protected override Dictionary<string, object> AggregateMetrics(List<PerformanceMetrics> metrics)
         {
-            var baseMetrics = base.AggregateMetrics(metrics);
-            baseMetrics["Engine"] = "ZstdSharp";
-            baseMetrics["Levels"] = string.Join(",", _levels);
-            baseMetrics["DataType"] = "Compressible Text";
-            return baseMetrics;
+            var resultsByLevel = new Dictionary<int, (double mbps, int compressedBytes)>();
+
+            foreach (var level in _levels)
+            {
+                var sw = Stopwatch.StartNew();
+                using var outputStream = new MemoryStream(capacity: _testData.Length / 4);
+                using (var compressor = new CompressionStream(outputStream, level: level, leaveOpen: true))
+                {
+                    compressor.Write(_testData);
+                    compressor.Flush();
+                }
+                sw.Stop();
+
+                var mbps = PerformanceMetrics.Create(_testData.Length, sw.Elapsed).MegabytesPerSecond;
+                resultsByLevel[level] = (mbps, (int)outputStream.Length);
+            }
+
+            var dict = new Dictionary<string, object>
+            {
+                ["Engine"] = "ZstdSharp",
+                ["DataType"] = "Compressible Text",
+                ["InputSize"] = FormatBytes(_testData.Length),
+            };
+
+            foreach (var (level, value) in resultsByLevel.OrderBy(kvp => kvp.Key))
+            {
+                dict[$"L{level}_Throughput"] = $"{value.mbps:F2} MB/s";
+                dict[$"L{level}_Compressed"] = FormatBytes(value.compressedBytes);
+                dict[$"L{level}_Ratio"] = $"{(double)_testData.Length / Math.Max(1, value.compressedBytes):F2}x";
+            }
+
+            // Provide a simple headline for table sorting (average across levels in this single run)
+            var avg = resultsByLevel.Values.Average(v => v.mbps);
+            dict["AvgThroughput"] = $"{avg:F2} MB/s";
+            dict["MinThroughput"] = $"{resultsByLevel.Values.Min(v => v.mbps):F2} MB/s";
+            dict["MaxThroughput"] = $"{resultsByLevel.Values.Max(v => v.mbps):F2} MB/s";
+            dict["Iterations"] = metrics.Count;
+            dict["DataSize"] = FormatBytes(_configuration.DataSizeBytes);
+
+            return dict;
         }
     }
 }
