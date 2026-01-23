@@ -41,14 +41,11 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
 
   return (
     <Paper
-      elevation={0}
       sx={{
-        p: 3,
-        minHeight: 230,
+        p: { xs: 2, sm: 3 },
         borderRadius: 2,
         border: (theme) => `1px solid ${theme.palette.divider}`,
-        width: { xs: "100%", lg: 400 },
-        flexShrink: 0,
+        flex: { xs: 1, lg: "0 0 400px" },
       }}
     >
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>

@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Divider,
 } from "@mui/material";
 import { FileBreadcrumbs, FileListViewFactory } from "../files/components";
 import { ArrowUpward, ViewModule, ViewList, Delete } from "@mui/icons-material";
@@ -115,9 +116,11 @@ export const TrashPage: React.FC = () => {
   // Refresh current folder content
   const refreshContent = React.useCallback(async () => {
     if (!nodeId) return;
-    
+
     try {
-      const contentData = await nodesApi.getChildren(nodeId, { nodeType: "trash" });
+      const contentData = await nodesApi.getChildren(nodeId, {
+        nodeType: "trash",
+      });
       setContent(contentData.content);
     } catch (err) {
       console.error("Failed to refresh trash content:", err);
@@ -255,7 +258,8 @@ export const TrashPage: React.FC = () => {
   const handleEmptyTrash = async () => {
     if (!content) return;
 
-    const totalItems = (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+    const totalItems =
+      (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
     if (totalItems === 0) return;
 
     try {
@@ -391,7 +395,7 @@ export const TrashPage: React.FC = () => {
           <Box
             sx={{
               display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
+              flexDirection: { xs: "row", sm: "row" },
               gap: { xs: 1, sm: 1 },
               alignItems: { xs: "stretch", sm: "center" },
             }}
@@ -407,7 +411,7 @@ export const TrashPage: React.FC = () => {
               <Box
                 sx={{
                   display: "flex",
-                  gap: 0.2,
+                  gap: 0.5,
                   alignItems: "center",
                   flexShrink: 0,
                 }}
@@ -424,7 +428,11 @@ export const TrashPage: React.FC = () => {
                   <IconButton
                     onClick={handleEmptyTrash}
                     color="error"
-                    disabled={loading || emptyingTrash || stats.folders + stats.files === 0}
+                    disabled={
+                      loading ||
+                      emptyingTrash ||
+                      stats.folders + stats.files === 0
+                    }
                     title={t("actions.emptyTrash")}
                   >
                     <Delete />
@@ -456,29 +464,15 @@ export const TrashPage: React.FC = () => {
                   </IconButton>
                 )}
               </Box>
-
-              <Box
-                sx={{
-                  display: { xs: "flex", sm: "none" },
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Typography
-                  color="text.secondary"
-                  sx={{ fontSize: "0.875rem" }}
-                >
-                  {t("stats.summary", {
-                    folders: stats.folders,
-                    files: stats.files,
-                    size: formatBytes(stats.sizeBytes),
-                  })}
-                </Typography>
-              </Box>
             </Box>
 
             <FileBreadcrumbs breadcrumbs={breadcrumbs} />
 
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ mx: 1, display: { xs: "none", sm: "block" } }}
+            />
             <Box
               sx={{
                 flexShrink: 0,
@@ -563,14 +557,18 @@ export const TrashPage: React.FC = () => {
 
       {emptyingTrash && (
         <Dialog open={emptyingTrash} disableEscapeKeyDown>
-          <DialogTitle>{t("emptyTrash.inProgress", {
-            current: emptyTrashProgress.current,
-            total: emptyTrashProgress.total,
-          })}</DialogTitle>
+          <DialogTitle>
+            {t("emptyTrash.inProgress", {
+              current: emptyTrashProgress.current,
+              total: emptyTrashProgress.total,
+            })}
+          </DialogTitle>
           <DialogContent>
             <LinearProgress
               variant="determinate"
-              value={(emptyTrashProgress.current / emptyTrashProgress.total) * 100}
+              value={
+                (emptyTrashProgress.current / emptyTrashProgress.total) * 100
+              }
             />
           </DialogContent>
         </Dialog>

@@ -293,7 +293,8 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromQuery] NodeType nodeType = NodeType.Default,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 100)
+            [FromQuery] int pageSize = 100,
+            [FromQuery] int depth = 0)
         {
             Guid userId = User.GetUserId();
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
@@ -311,16 +312,77 @@ namespace Cotton.Server.Controllers
 
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+            ArgumentOutOfRangeException.ThrowIfNegative(depth);
+
+            // depth:
+            // 0 => only direct children of nodeId
+            // 1 => children + grandchildren
+            // 2 => children + grandchildren + great-grandchildren, etc.
 
             int skip = (page - 1) * pageSize;
-            var nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.ParentId == parentNode.Id
-                    && x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == nodeType)
-                .ProjectToType<NodeDto>();
+            IQueryable<NodeDto> nodesQuery;
+            if (depth == 0)
+            {
+                nodesQuery = _dbContext.Nodes
+                    .AsNoTracking()
+                    .OrderBy(x => x.NameKey)
+                    .Where(x => x.ParentId == parentNode.Id
+                        && x.OwnerId == userId
+                        && x.LayoutId == layout.Id
+                        && x.Type == nodeType)
+                    .ProjectToType<NodeDto>();
+            }
+            else
+            {
+                const int MaxDepth = 256;
+                if (depth > MaxDepth)
+                {
+                    return this.ApiConflict("Maximum node hierarchy depth exceeded.");
+                }
+
+                var nodesBaseQuery = _dbContext.Nodes
+                    .AsNoTracking()
+                    .Where(x => x.OwnerId == userId
+                        && x.LayoutId == layout.Id
+                        && x.Type == nodeType);
+
+                var visited = new HashSet<Guid> { parentNode.Id };
+                var frontier = new List<Guid> { parentNode.Id };
+                var allChildNodeIds = new List<Guid>();
+
+                for (int currentDepth = 0; currentDepth <= depth; currentDepth++)
+                {
+                    if (frontier.Count == 0)
+                    {
+                        break;
+                    }
+
+                    var currentLayerIds = frontier;
+                    frontier = [];
+
+                    var children = await nodesBaseQuery
+                        .Where(x => x.ParentId != null && currentLayerIds.Contains(x.ParentId.Value))
+                        .Select(x => new { x.Id, x.ParentId })
+                        .ToListAsync();
+
+                    foreach (var c in children)
+                    {
+                        if (!visited.Add(c.Id))
+                        {
+                            return this.ApiConflict("Circular reference detected in node hierarchy.");
+                        }
+
+                        allChildNodeIds.Add(c.Id);
+                        frontier.Add(c.Id);
+                    }
+                }
+
+                nodesQuery = _dbContext.Nodes
+                    .AsNoTracking()
+                    .OrderBy(x => x.NameKey)
+                    .Where(x => allChildNodeIds.Contains(x.Id))
+                    .ProjectToType<NodeDto>();
+            }
 
             var filesQuery = _dbContext.NodeFiles
                 .AsNoTracking()

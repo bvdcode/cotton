@@ -43,7 +43,7 @@ namespace Cotton.Server.Jobs
             foreach (var item in itemsToProcess)
             {
                 processed++;
-                _logger.LogInformation("[Job] Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
+                _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
                     processed, itemsToProcess.Count, item.Id, item.ContentType, item.SizeBytes);
 
                 var generator = PreviewGeneratorProvider.GetGeneratorByContentType(item.ContentType);
@@ -62,16 +62,16 @@ namespace Cotton.Server.Jobs
 
                 try
                 {
-                    _logger.LogInformation("[Job] Getting blob stream for FileManifest {FileManifestId}...", item.Id);
+                    _logger.LogInformation("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
                     await using var fs = _storage.GetBlobStream(uids, pipelineContext);
 
-                    _logger.LogInformation("[Job] Calling GeneratePreviewWebPAsync for FileManifest {FileManifestId}...", item.Id);
+                    _logger.LogInformation("Calling GeneratePreviewWebPAsync for FileManifest {FileManifestId}...", item.Id);
                     var previewImage = await generator.GeneratePreviewWebPAsync(fs);
 
                     byte[] hash = Hasher.HashData(previewImage);
                     string hashStr = Hasher.ToHexStringHash(hash);
 
-                    _logger.LogInformation("[Job] Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
+                    _logger.LogInformation("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
 
@@ -88,7 +88,10 @@ namespace Cotton.Server.Jobs
             }
 
             await _dbContext.SaveChangesAsync();
-            _logger.LogInformation("[Job] Preview generation job completed successfully. Processed {Count} items", processed);
+            if (processed > 0)
+            {
+                _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
+            }
         }
     }
 }

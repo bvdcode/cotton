@@ -39,6 +39,67 @@ namespace Cotton.Server.Controllers
         private const string CookieRefreshTokenKey = "refresh_token";
 
         [Authorize]
+        [HttpDelete("/api/v1/auth/sessions/{sessionId}")]
+        public async Task<IActionResult> RevokeSession([FromRoute] string sessionId)
+        {
+            var userId = User.GetUserId();
+            var tokens = await _dbContext.RefreshTokens
+                .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
+                .ExecuteUpdateAsync(x => x.SetProperty(t => t.RevokedAt, t => DateTime.UtcNow));
+            return Ok();
+        }
+
+        [Authorize]
+        [HttpGet("/api/v1/auth/sessions")]
+        public async Task<IActionResult> GetSessions()
+        {
+            var userId = User.GetUserId();
+            var tokens = await _dbContext.RefreshTokens
+                .AsNoTracking()
+                .Where(x => x.UserId == userId && x.SessionId != null)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync();
+
+            string currentSessionId = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
+            List<SessionDto> response = [.. tokens
+                .GroupBy(x => x.SessionId!)
+                .Select(g =>
+                {
+                    var latestActive = g
+                        .Where(x => x.RevokedAt == null)
+                        .OrderByDescending(x => x.CreatedAt)
+                        .FirstOrDefault();
+
+                    var latestAny = g
+                        .OrderByDescending(x => x.CreatedAt)
+                        .First();
+
+                    var source = latestActive ?? latestAny;
+                    var earliestCreatedAt = g.Min(x => x.CreatedAt);
+                    var latestCreatedAt = g.Max(x => x.CreatedAt);
+
+                    return new SessionDto
+                    {
+                        LastSeenAt = latestAny.CreatedAt,
+                        IsCurrentSession = currentSessionId == g.Key,
+                        SessionId = g.Key,
+                        IpAddress = source.IpAddress.ToString(),
+                        UserAgent = source.UserAgent,
+                        AuthType = source.AuthType,
+                        Country = source.Country ?? "Unknown",
+                        Region = source.Region ?? "Unknown",
+                        City = source.City ?? "Unknown",
+                        Device = source.Device ?? "Unknown",
+                        RefreshTokenCount = g.Count(),
+                        TotalSessionDuration = latestCreatedAt - earliestCreatedAt
+                    };
+                })
+                .OrderByDescending(x => x.TotalSessionDuration)];
+
+            return Ok(response);
+        }
+
+        [Authorize]
         [HttpPost("/api/v1/auth/totp/confirm")]
         public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequestDto request)
         {
@@ -155,8 +216,8 @@ namespace Cotton.Server.Controllers
                     user.TotpFailedAttempts = 0;
                 }
             }
-            string accessToken = CreateAccessToken(user);
             ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user);
+            string accessToken = CreateAccessToken(user, dbToken.SessionId!);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token);
@@ -187,7 +248,7 @@ namespace Cotton.Server.Controllers
             {
                 return NotFound();
             }
-            var accessToken = CreateAccessToken(user);
+            var accessToken = CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
             ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(user, dbToken.SessionId);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
@@ -220,12 +281,13 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        private string CreateAccessToken(User user)
+        private string CreateAccessToken(User user, string sessionId)
         {
             return _tokens.CreateToken(x =>
             {
                 return x.Add(JwtRegisteredClaimNames.Sub, user.Id.ToString())
                     .Add(JwtRegisteredClaimNames.Name, user.Username)
+                    .Add(JwtRegisteredClaimNames.Sid, sessionId)
                     .Add(ClaimTypes.Name, user.Username)
                     .Add(ClaimTypes.Role, user.Role.ToString());
             });
