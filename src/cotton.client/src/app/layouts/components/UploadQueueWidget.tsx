@@ -169,7 +169,7 @@ export const UploadQueueWidget = () => {
           sx={{
             position: "relative",
             zIndex: 1,
-            borderRadius: 2,
+            borderRadius: isCollapsed ? 2 : 0,
             overflow: "hidden",
             p: 1.5,
           }}
@@ -252,8 +252,8 @@ export const UploadQueueWidget = () => {
             zIndex: 1,
             transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
             opacity: isCollapsed ? 0 : 1,
-            px: 1.5,
-            pb: 1.5,
+            px: isCollapsed ? 0 : 1.5,
+            pb: isCollapsed ? 0 : 1.5,
           }}
         >
           {tasks.length > 0 && (
