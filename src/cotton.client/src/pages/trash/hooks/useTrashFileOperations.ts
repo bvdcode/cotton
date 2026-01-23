@@ -2,12 +2,21 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { filesApi } from "../../../shared/api/filesApi";
+import { nodesApi } from "../../../shared/api/nodesApi";
+import { trashContentTransformer } from "../services";
 
 /**
  * Hook for trash file operations - similar to useFileOperations
- * but uses skipTrash=true when deleting
+ * but uses skipTrash=true when deleting and handles wrapper nodes
+ * 
+ * Following Single Responsibility Principle:
+ * - Manages file operations UI state
+ * - Delegates deletion logic and wrapper resolution to services
  */
-export const useTrashFileOperations = (onFileDeleted?: () => void) => {
+export const useTrashFileOperations = (
+  wrapperMap: Map<string, string>,
+  onFileDeleted?: () => void,
+) => {
   const { t } = useTranslation(["trash", "common"]);
   const confirm = useConfirm();
 
@@ -74,8 +83,21 @@ export const useTrashFileOperations = (onFileDeleted?: () => void) => {
       return;
     }
 
-    // Pass skipTrash=true for permanent deletion
-    await filesApi.deleteFile(fileId, true);
+    // Get the actual deletion target
+    const deleteTarget = trashContentTransformer.getDeleteTarget(
+      fileId,
+      wrapperMap,
+    );
+
+    // Check if we're deleting a wrapper node (which contains the file)
+    // or just the file itself
+    if (wrapperMap.has(fileId)) {
+      // File is inside a wrapper - delete the wrapper node instead
+      await nodesApi.deleteNode(deleteTarget, true);
+    } else {
+      // Regular file deletion
+      await filesApi.deleteFile(deleteTarget, true);
+    }
 
     // Trigger parent refresh
     if (onFileDeleted) {
