@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { filesApi } from "../../../shared/api/filesApi";
 import { nodesApi } from "../../../shared/api/nodesApi";
-import { trashContentTransformer } from "../services";
 
 /**
  * Hook for trash file operations - similar to useFileOperations
@@ -83,25 +82,28 @@ export const useTrashFileOperations = (
       return;
     }
 
-    // Get the actual deletion target
-    const deleteTarget = trashContentTransformer.getDeleteTarget(
-      fileId,
-      wrapperMap,
-    );
+    try {
+      // Check if file is inside a wrapper node
+      if (wrapperMap.has(fileId)) {
+        // File is inside a wrapper - delete the wrapper node instead of the file
+        const wrapperNodeId = wrapperMap.get(fileId)!;
+        console.log(
+          `Deleting wrapper node ${wrapperNodeId} for file ${fileId}`,
+        );
+        await nodesApi.deleteNode(wrapperNodeId, true);
+      } else {
+        // Regular file deletion (not wrapped)
+        console.log(`Deleting file ${fileId} directly`);
+        await filesApi.deleteFile(fileId, true);
+      }
 
-    // Check if we're deleting a wrapper node (which contains the file)
-    // or just the file itself
-    if (wrapperMap.has(fileId)) {
-      // File is inside a wrapper - delete the wrapper node instead
-      await nodesApi.deleteNode(deleteTarget, true);
-    } else {
-      // Regular file deletion
-      await filesApi.deleteFile(deleteTarget, true);
-    }
-
-    // Trigger parent refresh
-    if (onFileDeleted) {
-      onFileDeleted();
+      // Trigger parent refresh
+      if (onFileDeleted) {
+        onFileDeleted();
+      }
+    } catch (error) {
+      console.error("Failed to delete file:", error);
+      throw error;
     }
   };
 
