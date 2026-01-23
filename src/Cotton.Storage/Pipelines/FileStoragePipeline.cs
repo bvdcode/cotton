@@ -11,9 +11,6 @@ namespace Cotton.Storage.Pipelines
         IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
-        // TODO: Increase max parallelism based on system resources
-        private static readonly SemaphoreSlim _maxParallel = new(initialCount: 16);
-
         public Task<bool> ExistsAsync(string uid)
         {
             return _backendProvider.GetBackend().ExistsAsync(uid);
@@ -47,31 +44,23 @@ namespace Cotton.Storage.Pipelines
 
         public async Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
         {
-            await _maxParallel.WaitAsync().ConfigureAwait(false);
-            try
+            var backend = _backendProvider.GetBackend();
+            var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
+            Stream currentStream = stream;
+            foreach (var processor in orderedProcessors)
             {
-                var backend = _backendProvider.GetBackend();
-                var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
-                Stream currentStream = stream;
-                foreach (var processor in orderedProcessors)
-                {
-                    if (currentStream == Stream.Null)
-                    {
-                        throw new InvalidOperationException($"Processor BEFORE {processor} returned Stream.Null for UID {uid} but it should pass a valid stream to the next processor.");
-                    }
-                    currentStream = await processor.WriteAsync(uid, currentStream, context);
-                    _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
-                }
                 if (currentStream == Stream.Null)
                 {
-                    throw new InvalidOperationException($"No registered processor produced a valid stream to write for UID {uid}");
+                    throw new InvalidOperationException($"Processor BEFORE {processor} returned Stream.Null for UID {uid} but it should pass a valid stream to the next processor.");
                 }
-                await backend.WriteAsync(uid, currentStream);
+                currentStream = await processor.WriteAsync(uid, currentStream, context);
+                _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
             }
-            finally
+            if (currentStream == Stream.Null)
             {
-                _maxParallel.Release();
+                throw new InvalidOperationException($"No registered processor produced a valid stream to write for UID {uid}");
             }
+            await backend.WriteAsync(uid, currentStream);
         }
     }
 }
