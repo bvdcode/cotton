@@ -8,6 +8,7 @@ namespace Cotton.Server.Helpers
         private const int MaxTTLDays = 7;
         private const int CacheSizeLimit = 10240;
         private const string url = "https://geoip.splidex.com/";
+        private static readonly HttpClient _httpClient = new();
         private static readonly MemoryCache _cache = new(new MemoryCacheOptions
         {
             SizeLimit = CacheSizeLimit
@@ -19,8 +20,7 @@ namespace Cotton.Server.Helpers
             {
                 return cachedInfo;
             }
-            using var httpClient = new HttpClient();
-            var response = httpClient.GetAsync(url + ip).Result;
+            var response = await _httpClient.GetAsync(url + ip);
             if (!response.IsSuccessStatusCode)
             {
                 return new GeoIpInfo
