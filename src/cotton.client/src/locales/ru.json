@@ -30,7 +30,8 @@
       "durationHours_many": "{{count}} часов",
       "durationDays_one": "{{count}} день",
       "durationDays_few": "{{count}} дня",
-      "durationDays_many": "{{count}} дней"
+      "durationDays_many": "{{count}} дней",
+      "lessThanMinute": "меньше минуты"
     },
     "actions": {
       "confirm": "Подтвердить",

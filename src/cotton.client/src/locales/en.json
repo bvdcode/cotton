@@ -21,7 +21,8 @@
       "durationHours_one": "{{count}} hour",
       "durationHours_other": "{{count}} hours",
       "durationDays_one": "{{count}} day",
-      "durationDays_other": "{{count}} days"
+      "durationDays_other": "{{count}} days",
+      "lessThanMinute": "less than a minute"
     },
     "actions": {
       "confirm": "Confirm",
