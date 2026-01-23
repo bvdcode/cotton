@@ -2,10 +2,12 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Storage.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Pipelines
 {
     public class FileStoragePipeline(
+        ILogger<FileStoragePipeline> _logger,
         IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
@@ -47,6 +49,10 @@ namespace Cotton.Storage.Pipelines
             try
             {
                 var backend = _backendProvider.GetBackend();
+                if (!_processors.Any())
+                {
+                    _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
+                }
                 var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
                 Stream currentStream = stream;
                 foreach (var processor in orderedProcessors)

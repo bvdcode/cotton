@@ -22,7 +22,7 @@ namespace Cotton.Server.Extensions
                 byte[] keyMaterial = Convert.FromBase64String(settings.MasterEncryptionKey);
                 int keyId = settings.MasterEncryptionKeyId;
                 int? threads = settings.EncryptionThreads > 0 ? settings.EncryptionThreads : null;
-                return new AesGcmStreamCipher(keyMaterial, keyId, threads, windowCap: 16);
+                return new AesGcmStreamCipher(keyMaterial, keyId, threads);
             });
         }
     }
