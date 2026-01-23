@@ -51,41 +51,50 @@ export class TrashContentTransformer {
     const displayFiles: NodeFileManifestDto[] = [];
     const wrapperMap = new Map<string, string>();
 
-    // Process nodes
+    // First pass: identify wrapper nodes
+    const wrapperNodeIds = new Set<string>();
     for (const node of content.nodes ?? []) {
       if (trashWrapperService.isWrapperNode(node)) {
-        // This is a wrapper node - we should have gotten its children via depth=1
-        // The children should be in the content as nested items
-        // But since API returns flat structure with depth=1, 
-        // we need to identify which nodes/files belong to this wrapper
-        
-        // For now, we'll keep wrapper nodes visible but mark them
-        // The actual unwrapping will happen when we process the full nested structure
-        
-        // Skip wrapper nodes from display - their content will be shown instead
-        // Store the wrapper ID for future deletion
+        wrapperNodeIds.add(node.id);
+        // Map the wrapper to itself for direct deletion
         wrapperMap.set(node.id, node.id);
+      }
+    }
+
+    // Second pass: process nodes - skip wrappers, but include their children
+    for (const node of content.nodes ?? []) {
+      if (wrapperNodeIds.has(node.id)) {
+        // This is a wrapper node - don't display it
+        continue;
+      }
+
+      // Check if this node is inside a wrapper (parentId is a wrapper)
+      if (node.parentId && wrapperNodeIds.has(node.parentId)) {
+        // This node is a child of a wrapper - display it but map it for deletion
+        displayNodes.push(node);
+        wrapperMap.set(node.id, node.parentId);
       } else {
-        // Regular node - display as-is
+        // Regular node not in a wrapper
         displayNodes.push(node);
       }
     }
 
-    // Process files - check if they're owned by a wrapper node
+    // Third pass: process files
     for (const file of content.files ?? []) {
-      const ownerIsWrapper = trashWrapperService.isFileInWrapper(
-        file,
-        content.nodes ?? [],
-      );
-
-      if (ownerIsWrapper) {
-        // File is inside a wrapper - map it to its wrapper for deletion
+      // Check if file's owner is a wrapper node
+      if (wrapperNodeIds.has(file.ownerId)) {
+        // File is directly inside a wrapper
+        displayFiles.push(file);
         wrapperMap.set(file.id, file.ownerId);
+      } else {
+        // Regular file or file in a regular folder
+        displayFiles.push(file);
       }
-
-      // Display all files
-      displayFiles.push(file);
     }
+
+    console.log(
+      `Transformed trash content: ${wrapperNodeIds.size} wrappers, ${displayNodes.length} nodes, ${displayFiles.length} files`,
+    );
 
     return {
       nodes: displayNodes,
