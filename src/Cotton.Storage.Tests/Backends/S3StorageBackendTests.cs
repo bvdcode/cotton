@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Amazon.S3;
-using Amazon.S3.Model;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Backends;
 using Cotton.Storage.Pipelines;

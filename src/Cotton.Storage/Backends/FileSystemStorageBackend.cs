@@ -12,7 +12,6 @@ namespace Cotton.Storage.Backends
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
         private const string TempDirectoryName = "tmp";
-        private static readonly TimeSpan DefaultTempFileTtl = TimeSpan.FromDays(1);
         private readonly string _basePath = Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
 
         private string GetTempDirectory()
@@ -29,7 +28,7 @@ namespace Cotton.Storage.Backends
             return Path.Combine(tmpDir, $"{fileName}.{Guid.NewGuid():N}.tmp");
         }
 
-        private void CleanupTempFiles(TimeSpan ttl)
+        public void CleanupTempFiles(TimeSpan ttl)
         {
             try
             {
@@ -143,7 +142,6 @@ namespace Cotton.Storage.Backends
                 return;
             }
 
-            CleanupTempFiles(DefaultTempFileTtl);
             string tmpFilePath = CreateTempFilePath(fileName);
             var fso = new FileStreamOptions
             {

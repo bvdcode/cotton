@@ -213,7 +213,7 @@ namespace Cotton.Storage.Tests.Processors
 
             // Act
             var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            
+
             // Read compressed stream to measure size
             var compressedData = new MemoryStream();
             await compressed.CopyToAsync(compressedData);
