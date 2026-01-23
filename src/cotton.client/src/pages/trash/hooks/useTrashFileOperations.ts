@@ -2,20 +2,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { filesApi } from "../../../shared/api/filesApi";
-import { nodesApi } from "../../../shared/api/nodesApi";
 
 /**
  * Hook for trash file operations - similar to useFileOperations
- * but uses skipTrash=true when deleting and handles wrapper nodes
- * 
- * Following Single Responsibility Principle:
- * - Manages file operations UI state
- * - Delegates deletion logic and wrapper resolution to services
+ * but uses skipTrash=true when deleting
  */
-export const useTrashFileOperations = (
-  getWrapperMap: () => Map<string, string>,
-  onFileDeleted?: () => void,
-) => {
+export const useTrashFileOperations = (onFileDeleted?: () => void) => {
   const { t } = useTranslation(["trash", "common"]);
   const confirm = useConfirm();
 
@@ -82,36 +74,12 @@ export const useTrashFileOperations = (
       return;
     }
 
-    try {
-      // Get current wrapperMap (not stale closure)
-      const wrapperMap = getWrapperMap();
-      
-      // Check if file is inside a wrapper node
-      console.log(
-        `[FileDelete] Deleting file ${fileId}, wrapperMap has entry: ${wrapperMap.has(fileId)}, wrapperMap size: ${wrapperMap.size}`,
-      );
-      console.log(`[FileDelete] WrapperMap entries:`, Array.from(wrapperMap.entries()));
-      
-      if (wrapperMap.has(fileId)) {
-        // File is inside a wrapper - delete the wrapper node instead of the file
-        const wrapperNodeId = wrapperMap.get(fileId)!;
-        console.log(
-          `[FileDelete] File ${fileId} is wrapped, deleting wrapper node ${wrapperNodeId}`,
-        );
-        await nodesApi.deleteNode(wrapperNodeId, true);
-      } else {
-        // Regular file deletion (not wrapped)
-        console.log(`[FileDelete] File ${fileId} is not wrapped, deleting file directly`);
-        await filesApi.deleteFile(fileId, true);
-      }
+    // Pass skipTrash=true for permanent deletion
+    await filesApi.deleteFile(fileId, true);
 
-      // Trigger parent refresh
-      if (onFileDeleted) {
-        onFileDeleted();
-      }
-    } catch (error) {
-      console.error("Failed to delete file:", error);
-      throw error;
+    // Trigger parent refresh
+    if (onFileDeleted) {
+      onFileDeleted();
     }
   };
 

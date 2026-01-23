@@ -293,8 +293,7 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromQuery] NodeType nodeType = NodeType.Default,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 100,
-            [FromQuery] int depth = 0)
+            [FromQuery] int pageSize = 100)
         {
             Guid userId = User.GetUserId();
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
@@ -312,83 +311,21 @@ namespace Cotton.Server.Controllers
 
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
-            ArgumentOutOfRangeException.ThrowIfNegative(depth);
-
-            // depth:
-            // 0 => only direct children of nodeId
-            // 1 => children + one more level (grandchildren)
-            // 2 => children + grandchildren + one more level, etc.
 
             int skip = (page - 1) * pageSize;
-            const int MaxDepth = 256;
-            if (depth > MaxDepth)
-            {
-                return this.ApiConflict("Maximum node hierarchy depth exceeded.");
-            }
-
-            var nodesBaseQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == nodeType);
-
-            // segmentDepth:
-            // 0 => direct children only
-            // 1 => + one more level, etc.
-            int segmentDepth = depth + 1;
-
-            var visited = new HashSet<Guid> { parentNode.Id };
-            var frontier = new List<Guid> { parentNode.Id };
-            var allChildNodeIds = new List<Guid>();
-
-            for (int currentDepth = 1; currentDepth <= segmentDepth; currentDepth++)
-            {
-                if (frontier.Count == 0)
-                {
-                    break;
-                }
-
-                var currentLayerIds = frontier;
-                frontier = [];
-
-                var children = await nodesBaseQuery
-                    .Where(x => x.ParentId != null && currentLayerIds.Contains(x.ParentId.Value))
-                    .Select(x => x.Id)
-                    .ToListAsync();
-
-                foreach (var childId in children)
-                {
-                    if (!visited.Add(childId))
-                    {
-                        return this.ApiConflict("Circular reference detected in node hierarchy.");
-                    }
-
-                    allChildNodeIds.Add(childId);
-                    frontier.Add(childId);
-                }
-            }
-
-            // Files:
-            // depth=0 => files only in the requested folder
-            // depth>0 => include files from the requested folder and all descendant folders we discovered
-            var fileFolderIds = depth == 0
-                ? [parentNode.Id]
-                : new List<Guid>(allChildNodeIds.Count + 1) { parentNode.Id };
-            if (depth != 0)
-            {
-                fileFolderIds.AddRange(allChildNodeIds);
-            }
-
             IQueryable<NodeDto> nodesQuery = _dbContext.Nodes
                 .AsNoTracking()
                 .OrderBy(x => x.NameKey)
-                .Where(x => allChildNodeIds.Contains(x.Id))
+                .Where(x => x.ParentId == parentNode.Id
+                    && x.OwnerId == userId
+                    && x.LayoutId == layout.Id
+                    && x.Type == nodeType)
                 .ProjectToType<NodeDto>();
 
-            IQueryable<FileManifestDto> filesQuery = _dbContext.NodeFiles
+            var filesQuery = _dbContext.NodeFiles
                 .AsNoTracking()
                 .OrderBy(x => x.NameKey)
-                .Where(x => fileFolderIds.Contains(x.NodeId))
+                .Where(x => x.NodeId == parentNode.Id)
                 .ProjectToType<FileManifestDto>();
 
             int nodesCount = await nodesQuery.CountAsync();
@@ -408,9 +345,7 @@ namespace Cotton.Server.Controllers
             {
                 Id = nodeId,
                 Nodes = nodes,
-                Files = files,
-                CreatedAt = parentNode.CreatedAt,
-                UpdatedAt = parentNode.UpdatedAt
+                Files = files
             };
             return Ok(result);
         }
