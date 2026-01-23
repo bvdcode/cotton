@@ -29,8 +29,8 @@ namespace Cotton.Storage.Processors
                 pool: MemoryPool<byte>.Shared,
                 readerScheduler: null,
                 writerScheduler: null,
-                pauseWriterThreshold: 1024L * 1024L * 8L,
-                resumeWriterThreshold: 1024L * 1024L * 4L,
+                pauseWriterThreshold: 1024 * 1024 * 1,
+                resumeWriterThreshold: 512 * 1024,
                 minimumSegmentSize: 4096,
                 useSynchronizationContext: false));
 
