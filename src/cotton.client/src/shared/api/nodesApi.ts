@@ -48,7 +48,7 @@ export const nodesApi = {
 
   getChildren: async (
     nodeId: Guid,
-    options?: { nodeType?: string },
+    options?: { nodeType?: string; depth?: number },
   ): Promise<NodeResponse> => {
     const response = await httpClient.get<NodeContentDto>(
       `/layouts/nodes/${nodeId}/children`,
@@ -56,6 +56,7 @@ export const nodesApi = {
         params: {
           pageSize: 1000000,
           nodeType: options?.nodeType,
+          depth: options?.depth,
         },
       },
     );

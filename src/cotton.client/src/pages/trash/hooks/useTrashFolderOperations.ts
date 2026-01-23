@@ -2,13 +2,19 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../../shared/store/nodesStore";
+import { trashContentTransformer } from "../services";
 
 /**
  * Hook for trash folder operations - similar to useFolderOperations
- * but uses skipTrash=true when deleting
+ * but uses skipTrash=true when deleting and handles wrapper nodes
+ * 
+ * Following Single Responsibility Principle:
+ * - Manages folder operations UI state
+ * - Delegates deletion logic to store and wrapper resolution to service
  */
 export const useTrashFolderOperations = (
   currentNodeId: string | null,
+  wrapperMap: Map<string, string>,
   onDeleted?: () => void,
 ) => {
   const { t } = useTranslation(["trash", "common"]);
@@ -76,9 +82,15 @@ export const useTrashFolderOperations = (
       });
 
       if (result.confirmed) {
+        // Get the actual deletion target (wrapper if exists, otherwise the folder itself)
+        const deleteTarget = trashContentTransformer.getDeleteTarget(
+          folderId,
+          wrapperMap,
+        );
+
         // Pass skipTrash=true for permanent deletion
-        await deleteFolder(folderId, currentNodeId ?? undefined, true);
-        
+        await deleteFolder(deleteTarget, currentNodeId ?? undefined, true);
+
         // Trigger parent refresh
         if (onDeleted) {
           onDeleted();
