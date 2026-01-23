@@ -109,6 +109,11 @@ namespace Cotton.Benchmark.Benchmarks
         {
             private readonly Dictionary<string, byte[]> _storage = [];
 
+            public void CleanupTempFiles(TimeSpan ttl)
+            {
+                // No-op for in-memory backend
+            }
+
             public Task<bool> DeleteAsync(string uid)
             {
                 return Task.FromResult(_storage.Remove(uid));
