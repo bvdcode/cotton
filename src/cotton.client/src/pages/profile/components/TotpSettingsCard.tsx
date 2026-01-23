@@ -133,10 +133,11 @@ export const TotpSettingsCard = ({
   return (
     <Paper
       sx={{
+        display: "flex",
+        flexDirection: "column",
         p: { xs: 2, sm: 3 },
-        borderRadius: 2,
-        border: (theme) => `1px solid ${theme.palette.divider}`,
-        flex: 1,
+        minHeight: 250,
+        justifyContent: "space-around",
       }}
     >
       <Typography variant="h6" fontWeight={700} gutterBottom>

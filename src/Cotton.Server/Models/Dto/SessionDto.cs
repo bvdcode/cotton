@@ -1,5 +1,4 @@
 ﻿using EasyExtensions.Models.Enums;
-using System.Net;
 
 namespace Cotton.Server.Models.Dto
 {

@@ -1,14 +1,27 @@
 import type { RouteConfig } from "./types";
 import { RequireAuth } from "../features/auth";
 import { Routes, Route } from "react-router-dom";
-import { FilesPage, HomePage, LoginPage, NotFoundPage, OnboardingPage, ProfilePage, TrashPage } from "../pages";
+import {
+  FilesPage,
+  HomePage,
+  LoginPage,
+  NotFoundPage,
+  OnboardingPage,
+  ProfilePage,
+  TrashPage,
+} from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Person, Delete } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
+import i18n from "../i18n";
 
 const publicRoutes: RouteConfig[] = [
-  { path: "/login", displayName: "Login", element: <LoginPage /> },
+  {
+    path: "/login",
+    displayName: i18n.t("login", { ns: "routes" }),
+    element: <LoginPage />,
+  },
 ];
 
 const appRoutes: RouteConfig[] = [
@@ -16,28 +29,28 @@ const appRoutes: RouteConfig[] = [
     path: "/",
     icon: <Home />,
     protected: true,
-    displayName: "Home",
+    displayName: i18n.t("home", { ns: "routes" }),
     element: <HomePage />,
   },
   {
     path: "/files",
     icon: <Folder />,
     protected: true,
-    displayName: "Files",
+    displayName: i18n.t("files", { ns: "routes" }),
     element: <FilesPage />,
   },
   {
     path: "/trash",
     icon: <Delete />,
     protected: true,
-    displayName: "Trash",
+    displayName: i18n.t("trash", { ns: "routes" }),
     element: <TrashPage />,
   },
   {
     path: "/profile",
     icon: <Person />,
     protected: true,
-    displayName: "Profile",
+    displayName: i18n.t("profile", { ns: "routes" }),
     element: <ProfilePage />,
   },
 ];

@@ -14,14 +14,20 @@ export const ProfilePage = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 } }}>
-      <Stack spacing={{ xs: 2, sm: 3 }}>
+    <Box
+      sx={{ p: { xs: 2, sm: 3 }, display: "flex", justifyContent: "center" }}
+    >
+      <Stack spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%", maxWidth: 800 }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={{ xs: 2, sm: 3 }}
         >
-          <UserInfoCard user={user} />
-          <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
+          <Box sx={{ flex: 1 }}>
+            <UserInfoCard user={user} />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
+          </Box>
         </Stack>
         <SessionsCard />
       </Stack>

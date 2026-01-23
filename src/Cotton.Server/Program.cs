@@ -29,6 +29,7 @@ namespace Cotton.Server
             builder.Configuration.AddCottonOptions();
             MapsterConfig.Register();
             builder.Services
+                .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
 
@@ -54,7 +55,8 @@ namespace Cotton.Server
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
-                .UseAuthorization();
+                .UseAuthorization()
+                .UseExceptionHandler();
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();
