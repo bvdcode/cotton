@@ -296,57 +296,8 @@ namespace Cotton.Server.Controllers
             [FromQuery] int pageSize = 100)
         {
             Guid userId = User.GetUserId();
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-            var parentNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId
-                    && x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == nodeType)
-                .SingleOrDefaultAsync();
-            if (parentNode == null)
-            {
-                return CottonResult.NotFound("Parent node not found.");
-            }
-
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
-
-            int skip = (page - 1) * pageSize;
-            IQueryable<NodeDto> nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.ParentId == parentNode.Id
-                    && x.OwnerId == userId
-                    && x.LayoutId == layout.Id
-                    && x.Type == nodeType)
-                .ProjectToType<NodeDto>();
-
-            var filesQuery = _dbContext.NodeFiles
-                .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.NodeId == parentNode.Id)
-                .ProjectToType<FileManifestDto>();
-
-            int nodesCount = await nodesQuery.CountAsync();
-            int filesCount = await filesQuery.CountAsync();
-
-            var nodesToTake = Math.Max(0, Math.Min(pageSize, nodesCount - skip));
-            int filesSkip = Math.Max(0, skip - nodesCount);
-            int filesToTake = Math.Max(0, pageSize - nodesToTake);
-
-            var nodes = nodesToTake == 0 ? []
-                : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync();
-
-            var files = filesToTake == 0 ? []
-                : await filesQuery.Skip(filesSkip).Take(filesToTake).ToListAsync();
-
-            NodeContentDto result = new()
-            {
-                Id = nodeId,
-                Nodes = nodes,
-                Files = files
-            };
+            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize);
+            var result = await _mediator.Send(query);
             return Ok(result);
         }
 
