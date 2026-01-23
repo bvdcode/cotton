@@ -42,28 +42,28 @@ export function OptionCard({
           disabled
             ? alpha(theme.palette.text.disabled, 0.05)
             : active
-            ? theme.palette.mode === "dark"
-              ? `linear-gradient(145deg, ${alpha(
-                  theme.palette.primary.main,
-                  0.2,
-                )}, ${alpha(theme.palette.secondary.main, 0.15)})`
-              : `linear-gradient(145deg, ${alpha(
-                  theme.palette.primary.main,
-                  0.1,
-                )}, ${alpha(theme.palette.secondary.main, 0.1)})`
-            : alpha(theme.palette.text.primary, 0.02),
+              ? theme.palette.mode === "dark"
+                ? `linear-gradient(145deg, ${alpha(
+                    theme.palette.primary.main,
+                    0.2,
+                  )}, ${alpha(theme.palette.secondary.main, 0.15)})`
+                : `linear-gradient(145deg, ${alpha(
+                    theme.palette.primary.main,
+                    0.1,
+                  )}, ${alpha(theme.palette.secondary.main, 0.1)})`
+              : alpha(theme.palette.text.primary, 0.02),
         boxShadow: (theme) =>
           disabled
             ? "none"
             : active
-            ? `0 15px 55px ${alpha(
-                theme.palette.primary.main,
-                0.05,
-              )}, 0 8px 20px ${alpha(theme.palette.primary.main, 0.15)}`
-            : `0 6px 18px ${alpha(
-                theme.palette.common.black,
-                theme.palette.mode === "dark" ? 0.25 : 0.08,
-              )}`,
+              ? `0 15px 55px ${alpha(
+                  theme.palette.primary.main,
+                  0.05,
+                )}, 0 8px 20px ${alpha(theme.palette.primary.main, 0.15)}`
+              : `0 6px 18px ${alpha(
+                  theme.palette.common.black,
+                  theme.palette.mode === "dark" ? 0.25 : 0.08,
+                )}`,
         cursor: disabled ? "not-allowed" : "pointer",
         display: "block",
         overflow: "hidden",
@@ -112,8 +112,8 @@ export function OptionCard({
               disabled
                 ? theme.palette.text.disabled
                 : active
-                ? theme.palette.primary.main
-                : theme.palette.text.disabled,
+                  ? theme.palette.primary.main
+                  : theme.palette.text.disabled,
             transition: (theme) =>
               theme.transitions.create(["color"], {
                 duration: theme.transitions.duration.standard,
@@ -129,8 +129,8 @@ export function OptionCard({
         </Box>
       )}
       <Box>
-        <Typography 
-          variant="subtitle1" 
+        <Typography
+          variant="subtitle1"
           fontWeight={700}
           sx={{
             fontSize: { xs: "0.875rem", sm: "0.9rem", md: "1rem" },
@@ -141,8 +141,8 @@ export function OptionCard({
           {label}
         </Typography>
         {description ? (
-          <Typography 
-            variant="body2" 
+          <Typography
+            variant="body2"
             color="text.secondary"
             sx={{
               fontSize: { xs: "0.75rem", sm: "0.8rem", md: "0.875rem" },
