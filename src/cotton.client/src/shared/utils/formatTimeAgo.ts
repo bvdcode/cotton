@@ -1,39 +1,54 @@
+import type { TFunction } from "i18next";
+
+export interface TimeAgoResult {
+  key: string;
+  count: number;
+}
+
 /**
- * Formats a date/time as a relative time string (e.g., "2 minutes ago", "Just now")
+ * Calculates relative time and returns i18n key with count for proper localization
  */
-export const formatTimeAgo = (isoDate: string): string => {
+export const getTimeAgo = (isoDate: string): TimeAgoResult => {
   const date = new Date(isoDate);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
   if (seconds < 10) {
-    return "Just now";
+    return { key: "common:time.justNow", count: 0 };
   }
 
   if (seconds < 60) {
-    return `${seconds} seconds ago`;
+    return { key: "common:time.secondsAgo", count: seconds };
   }
 
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) {
-    return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
+    return { key: "common:time.minutesAgo", count: minutes };
   }
 
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
-    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+    return { key: "common:time.hoursAgo", count: hours };
   }
 
   const days = Math.floor(hours / 24);
   if (days < 30) {
-    return days === 1 ? "1 day ago" : `${days} days ago`;
+    return { key: "common:time.daysAgo", count: days };
   }
 
   const months = Math.floor(days / 30);
   if (months < 12) {
-    return months === 1 ? "1 month ago" : `${months} months ago`;
+    return { key: "common:time.monthsAgo", count: months };
   }
 
   const years = Math.floor(months / 12);
-  return years === 1 ? "1 year ago" : `${years} years ago`;
+  return { key: "common:time.yearsAgo", count: years };
+};
+
+/**
+ * Formats a date/time as a relative time string using i18n
+ */
+export const formatTimeAgo = (isoDate: string, t: TFunction): string => {
+  const { key, count } = getTimeAgo(isoDate);
+  return t(key, { count });
 };
