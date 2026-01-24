@@ -36,7 +36,9 @@
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
       "logout": "Logout"
-    }
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "Setup Wizard"
   },
   "login": {
     "title": "Sign in to your account",
@@ -400,17 +402,13 @@
       "title": "File already exists",
       "description": "A file with this name already exists in this folder. Upload as {{newName}}?"
     },
-    "delete": {
-      "confirmTitle": "Delete folder \"{{name}}\"?",
-      "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
-    },
     "deleteFolder": {
       "confirmTitle": "Delete folder \"{{name}}\"?",
-      "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
+      "confirmDescription": "The folder will be moved to Trash and can be restored later."
     },
     "deleteFile": {
       "confirmTitle": "Delete file \"{{name}}\"?",
-      "confirmDescription": "This action cannot be undone."
+      "confirmDescription": "It will be moved to Trash and can be restored later."
     },
     "stats": {
       "summary": "{{folders}} folders • {{files}} files • {{size}}"
@@ -468,13 +466,13 @@
     "stats": {
       "summary": "{{folders}} folders, {{files}} files, {{size}}"
     },
-    "deleteFolder": {
-      "confirmTitle": "Permanently delete folder \"{{name}}\"?",
-      "confirmDescription": "This action cannot be undone. The folder and all its contents will be permanently deleted."
+    "deleteFolderForever": {
+      "confirmTitle": "Delete folder \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
     },
-    "deleteFile": {
-      "confirmTitle": "Permanently delete file \"{{name}}\"?",
-      "confirmDescription": "This action cannot be undone. The file will be permanently deleted."
+    "deleteFileForever": {
+      "confirmTitle": "Delete file \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone."
     },
     "emptyTrash": {
       "confirmTitle": "Empty trash?",
