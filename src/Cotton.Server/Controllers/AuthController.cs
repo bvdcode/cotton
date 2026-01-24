@@ -60,6 +60,7 @@ namespace Cotton.Server.Controllers
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
 
+            TimeSpan tokenLifetime = _tokens.TokenLifetime;
             string currentSessionId = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
             List<SessionDto> response = [.. tokens
                 .GroupBy(x => x.SessionId!)
@@ -78,6 +79,46 @@ namespace Cotton.Server.Controllers
                     var earliestCreatedAt = g.Min(x => x.CreatedAt);
                     var latestCreatedAt = g.Max(x => x.CreatedAt);
 
+                    var intervals = g
+                        .Select(t =>
+                        {
+                            var start = t.CreatedAt;
+                            var endByTtl = t.CreatedAt + tokenLifetime;
+                            var endByRevoke = t.RevokedAt ?? endByTtl;
+                            var end = endByRevoke < endByTtl ? endByRevoke : endByTtl;
+                            return (start, end);
+                        })
+                        .Where(x => x.end > x.start)
+                        .OrderBy(x => x.start)
+                        .ToList();
+
+                    TimeSpan totalSessionDuration = TimeSpan.Zero;
+                    if (intervals.Count > 0)
+                    {
+                        var currentStart = intervals[0].start;
+                        var currentEnd = intervals[0].end;
+
+                        for (int i = 1; i < intervals.Count; i++)
+                        {
+                            var (s, e) = intervals[i];
+                            if (s <= currentEnd)
+                            {
+                                if (e > currentEnd)
+                                {
+                                    currentEnd = e;
+                                }
+                            }
+                            else
+                            {
+                                totalSessionDuration += currentEnd - currentStart;
+                                currentStart = s;
+                                currentEnd = e;
+                            }
+                        }
+
+                        totalSessionDuration += currentEnd - currentStart;
+                    }
+
                     return new SessionDto
                     {
                         LastSeenAt = latestAny.CreatedAt,
@@ -91,7 +132,7 @@ namespace Cotton.Server.Controllers
                         City = source.City ?? "Unknown",
                         Device = source.Device ?? "Unknown",
                         RefreshTokenCount = g.Count(),
-                        TotalSessionDuration = latestCreatedAt - earliestCreatedAt
+                        TotalSessionDuration = totalSessionDuration
                     };
                 })
                 .OrderByDescending(x => x.TotalSessionDuration)];

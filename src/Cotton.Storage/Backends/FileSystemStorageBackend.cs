@@ -11,7 +11,53 @@ namespace Cotton.Storage.Backends
     {
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
+        private const string TempDirectoryName = "tmp";
         private readonly string _basePath = Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
+
+        private string GetTempDirectory()
+        {
+            string dirPath = Path.Combine(_basePath, TempDirectoryName);
+            Directory.CreateDirectory(dirPath);
+            return dirPath;
+        }
+
+        private string CreateTempFilePath(string fileName)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+            string tmpDir = GetTempDirectory();
+            return Path.Combine(tmpDir, $"{fileName}.{Guid.NewGuid():N}.tmp");
+        }
+
+        public void CleanupTempFiles(TimeSpan ttl)
+        {
+            try
+            {
+                string tmpDir = GetTempDirectory();
+                var cutoff = DateTimeOffset.UtcNow - ttl;
+
+                foreach (var file in Directory.EnumerateFiles(tmpDir, "*.tmp", SearchOption.TopDirectoryOnly))
+                {
+                    try
+                    {
+                        var info = new FileInfo(file);
+                        var lastWrite = info.LastWriteTimeUtc;
+                        if (lastWrite <= cutoff.UtcDateTime)
+                        {
+                            info.Attributes = FileAttributes.Normal;
+                            info.Delete();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to cleanup temp file {Path}", file);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to cleanup temp directory");
+            }
+        }
 
         private string GetFolderByUid(string uid)
         {
@@ -96,9 +142,7 @@ namespace Cotton.Storage.Backends
                 return;
             }
 
-            string tmpDir = Path.Combine(Path.GetTempPath(), "cotton", "upload-chunks");
-            Directory.CreateDirectory(tmpDir);
-            string tmpFilePath = Path.Combine(tmpDir, $"{fileName}.{Guid.NewGuid():N}.tmp");
+            string tmpFilePath = CreateTempFilePath(fileName);
             var fso = new FileStreamOptions
             {
                 Share = FileShare.None,

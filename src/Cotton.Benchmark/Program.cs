@@ -89,6 +89,7 @@ namespace Cotton.Benchmark
                 new HashingBenchmark(configuration),
                 new CompressionBenchmark(configuration),
                 new DecompressionBenchmark(configuration),
+                new MultiSizeCompressionBenchmark(configuration),
                 new EncryptionBenchmark(configuration),
                 new DecryptionBenchmark(configuration),
                 new FileSystemBenchmark(configuration),
