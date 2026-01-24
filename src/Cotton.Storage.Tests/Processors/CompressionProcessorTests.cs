@@ -170,7 +170,15 @@ namespace Cotton.Storage.Tests.Processors
             var result = await _processor.WriteAsync("test-uid", stream);
 
             // Assert
-            Assert.That(result.Position, Is.Zero);
+            if (result.CanSeek)
+            {
+                Assert.That(result.Position, Is.Zero);
+            }
+            else
+            {
+                // PipeReaderStream doesn't support Position, but we can verify it's readable
+                Assert.That(result.CanRead, Is.True);
+            }
         }
 
         [Test]
@@ -205,7 +213,11 @@ namespace Cotton.Storage.Tests.Processors
 
             // Act
             var compressed = await _processor.WriteAsync("test-uid", originalStream);
-            var compressedLength = compressed.Length;
+
+            // Read compressed stream to measure size
+            var compressedData = new MemoryStream();
+            await compressed.CopyToAsync(compressedData);
+            var compressedLength = compressedData.Length;
 
             // Assert
             Assert.That(compressedLength, Is.LessThan(originalData.Length),

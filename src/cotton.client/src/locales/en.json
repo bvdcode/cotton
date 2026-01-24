@@ -111,7 +111,11 @@
       "description": "Manage your active sessions across different devices",
       "noActiveSessions": "No active sessions",
       "revokeSession": "End session",
-      "elapsed": "{{duration}} elapsed"
+      "elapsed": "{{duration}} elapsed",
+      "revokeConfirmTitle": "End session?",
+      "revokeConfirmDescription": "Are you sure you want to end this session? This will sign out the device.",
+      "revokeConfirmButton": "End session",
+      "revokeCancelButton": "Cancel"
     }
   },
   "setup": {

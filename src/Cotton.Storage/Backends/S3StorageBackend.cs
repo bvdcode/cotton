@@ -124,5 +124,10 @@ namespace Cotton.Storage.Backends
                 catch { }
             }
         }
+
+        public void CleanupTempFiles(TimeSpan ttl)
+        {
+            // No-op for S3 backend
+        }
     }
 }
