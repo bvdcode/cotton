@@ -12,6 +12,7 @@ using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology;
 using EasyExtensions;
+using EasyExtensions.Crypto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -53,7 +54,7 @@ namespace Cotton.Server.Controllers
 
         [Authorize]
         [HttpPost(Routes.Chunks)]
-        [RequestSizeLimit(16 * 1024 * 1024)]
+        [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize + ushort.MaxValue)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
             // TODO: Add streaming upload without IFormFile
