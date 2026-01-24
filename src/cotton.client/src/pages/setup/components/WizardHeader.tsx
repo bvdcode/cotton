@@ -51,19 +51,19 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
         }}
       >
         <Stack spacing={{ xs: 0.5, sm: 0.5 }} sx={{ flex: 1, minWidth: 0 }}>
-          <Box 
-            display="flex" 
-            gap={{ xs: 1.5, sm: 2 }} 
+          <Box
+            display="flex"
+            gap={{ xs: 1.5, sm: 2 }}
             alignItems="center"
             sx={{ flexWrap: "nowrap" }}
           >
-            <Avatar 
-              src="/assets/icons/icon.svg" 
-              alt="Cotton Logo" 
+            <Avatar
+              src="/assets/icons/icon.svg"
+              alt="Cotton Logo"
               sx={{ width: { xs: 32, sm: 40 }, height: { xs: 32, sm: 40 } }}
             />
-            <Typography 
-              variant="h4" 
+            <Typography
+              variant="h4"
               fontWeight={800}
               sx={{
                 fontSize: { xs: "1.25rem", sm: "1.5rem", md: "2rem" },
@@ -73,8 +73,8 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
               {t("title")}
             </Typography>
           </Box>
-          <Typography 
-            variant="body1" 
+          <Typography
+            variant="body1"
             color="text.secondary"
             sx={{
               fontSize: { xs: "0.875rem", sm: "1rem" },
@@ -85,7 +85,11 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
           </Typography>
         </Stack>
 
-        <Stack direction="row" spacing={{ xs: 0, sm: 0.5 }} sx={{ flexShrink: 0 }}>
+        <Stack
+          direction="row"
+          spacing={{ xs: 0, sm: 0.5 }}
+          sx={{ flexShrink: 0 }}
+        >
           <Tooltip title={nextLanguageLabel}>
             <IconButton onClick={toggleLanguage} size="small">
               <TranslateIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
@@ -99,10 +103,11 @@ export function WizardHeader({ t }: { t: (key: string) => string }) {
             }
           >
             <IconButton onClick={toggleTheme} size="small">
-              {mode === "light" ? 
-                <DarkIcon sx={{ fontSize: { xs: 20, sm: 24 } }} /> : 
+              {mode === "light" ? (
+                <DarkIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              ) : (
                 <LightIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
-              }
+              )}
             </IconButton>
           </Tooltip>
         </Stack>

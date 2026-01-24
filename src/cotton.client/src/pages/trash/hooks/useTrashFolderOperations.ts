@@ -65,11 +65,13 @@ export const useTrashFolderOperations = (
   const handleDeleteFolder = async (folderId: string, folderName: string) => {
     try {
       const result = await confirm({
-        title: t("deleteFolder.confirmTitle", {
+        title: t("deleteFolderForever.confirmTitle", {
           ns: "trash",
           name: folderName,
         }),
-        description: t("deleteFolder.confirmDescription", { ns: "trash" }),
+        description: t("deleteFolderForever.confirmDescription", {
+          ns: "trash",
+        }),
         confirmationText: t("common:actions.delete"),
         cancellationText: t("common:actions.cancel"),
         confirmationButtonProps: { color: "error" },
@@ -78,7 +80,7 @@ export const useTrashFolderOperations = (
       if (result.confirmed) {
         // Pass skipTrash=true for permanent deletion
         await deleteFolder(folderId, currentNodeId ?? undefined, true);
-        
+
         // Trigger parent refresh
         if (onDeleted) {
           onDeleted();
