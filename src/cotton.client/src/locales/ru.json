@@ -120,7 +120,11 @@
       "description": "Управление активными сессиями на разных устройствах",
       "noActiveSessions": "Нет активных сессий",
       "revokeSession": "Завершить сессию",
-      "elapsed": "длится {{duration}}"
+      "elapsed": "длится {{duration}}",
+      "revokeConfirmTitle": "Завершить сессию?",
+      "revokeConfirmDescription": "Вы уверены, что хотите завершить эту сессию? Произойдёт выход из аккаунта на устройстве.",
+      "revokeConfirmButton": "Завершить",
+      "revokeCancelButton": "Отмена"
     }
   },
   "setup": {

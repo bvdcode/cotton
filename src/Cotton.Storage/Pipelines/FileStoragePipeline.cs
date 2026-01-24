@@ -11,8 +11,7 @@ namespace Cotton.Storage.Pipelines
         IStorageBackendProvider _backendProvider,
         IEnumerable<IStorageProcessor> _processors) : IStoragePipeline
     {
-        // TODO: Increase max parallelism based on system resources
-        private static readonly SemaphoreSlim _maxParallel = new(initialCount: 16);
+        private static readonly SemaphoreSlim _maxParallel = new(initialCount: Environment.ProcessorCount);
 
         public Task<bool> ExistsAsync(string uid)
         {
@@ -32,7 +31,6 @@ namespace Cotton.Storage.Pipelines
             foreach (var processor in orderedProcessors)
             {
                 currentStream = await processor.ReadAsync(uid, currentStream, context);
-                _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
                 if (currentStream == Stream.Null)
                 {
                     throw new InvalidOperationException($"Processor {processor} returned Stream.Null for UID {uid} but it should return a valid stream.");
@@ -51,6 +49,10 @@ namespace Cotton.Storage.Pipelines
             try
             {
                 var backend = _backendProvider.GetBackend();
+                if (!_processors.Any())
+                {
+                    _logger.LogWarning("No storage processors are registered. Writing the stream directly to the backend.");
+                }
                 var orderedProcessors = _processors.OrderByDescending(p => p.Priority);
                 Stream currentStream = stream;
                 foreach (var processor in orderedProcessors)
@@ -60,7 +62,6 @@ namespace Cotton.Storage.Pipelines
                         throw new InvalidOperationException($"Processor BEFORE {processor} returned Stream.Null for UID {uid} but it should pass a valid stream to the next processor.");
                     }
                     currentStream = await processor.WriteAsync(uid, currentStream, context);
-                    _logger.LogDebug("Processor {Processor} processed stream for UID {UID}", processor, uid);
                 }
                 if (currentStream == Stream.Null)
                 {

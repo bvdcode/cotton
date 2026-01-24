@@ -38,8 +38,8 @@ export interface AuthContextValue extends AuthState {
 }
 
 export const UserRole = {
-  User: 0,
-  Admin: 1,
+  User: 2,
+  Admin: 4,
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
