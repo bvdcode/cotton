@@ -157,10 +157,10 @@ export function useSearch({
 
   // Execute search when URL parameters change
   useEffect(() => {
-    if (query && (autoSearch || results !== null)) {
+    if (query && autoSearch) {
       executeSearch(query, currentPage);
     }
-  }, [query, currentPage, executeSearch, autoSearch, results]);
+  }, [query, currentPage, executeSearch, autoSearch]);
 
   // Cleanup on unmount
   useEffect(() => {
