@@ -1,15 +1,15 @@
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 import { layoutsApi, type Guid, type LayoutSearchResultDto } from "../../../shared/api/layoutsApi";
 
 export interface UseLayoutSearchOptions {
-  layoutId: Guid;
+  layoutId?: Guid | null;
   initialQuery?: string;
   pageSize?: number;
+  debounceMs?: number;
 }
 
 export interface UseLayoutSearchState {
   query: string;
-  page: number;
   pageSize: number;
   totalCount: number;
   loading: boolean;
@@ -17,64 +17,68 @@ export interface UseLayoutSearchState {
   results: LayoutSearchResultDto | null;
 
   setQuery: (value: string) => void;
-  search: (override?: { query?: string; page?: number }) => Promise<void>;
 }
 
 export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearchState {
-  const { layoutId, initialQuery = "", pageSize = 20 } = options;
+  const {
+    layoutId,
+    initialQuery = "",
+    pageSize = 100,
+    debounceMs = 1000,
+  } = options;
 
   const [query, setQuery] = useState(initialQuery);
-  const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<LayoutSearchResultDto | null>(null);
 
-  const search = useCallback(
-    async (override?: { query?: string; page?: number }) => {
-      const effectiveQuery = override?.query ?? query;
-      const effectivePage = override?.page ?? page;
+  useEffect(() => {
+    // Don't search if no layout or empty query
+    if (!layoutId || !query.trim()) {
+      setLoading(false);
+      setError(null);
+      // Keep previous results, don't clear them
+      return;
+    }
 
-      if (!effectiveQuery.trim()) {
-        setError(null);
-        setResults(null);
-        setTotalCount(0);
-        return;
-      }
+    // Don't set loading true yet - wait for debounce
+    setError(null);
+
+    const handle = setTimeout(async () => {
+      // Now set loading true - actual fetch starts
+      setLoading(true);
 
       try {
-        setLoading(true);
-        setError(null);
-
         const response = await layoutsApi.search({
           layoutId,
-          query: effectiveQuery,
-          page: effectivePage,
+          query: query.trim(),
+          page: 1,
           pageSize,
         });
 
         setResults(response.data);
         setTotalCount(response.totalCount);
-        setPage(effectivePage);
       } catch (err) {
         console.error("Failed to search layouts", err);
-        setError("Failed to search");
+        setError("searchFailed");
       } finally {
         setLoading(false);
       }
-    },
-    [layoutId, page, pageSize, query],
-  );
+    }, debounceMs);
+
+    return () => {
+      clearTimeout(handle);
+    };
+  }, [layoutId, query, pageSize, debounceMs]);
 
   return {
     query,
-    page,
     pageSize,
     totalCount,
     loading,
     error,
     results,
     setQuery,
-    search,
   };
 }
