@@ -14,6 +14,7 @@ import { CodeEditor } from '../editors/CodeEditor';
 
 interface EditorFactoryProps extends IEditorProps {
   mode: EditorMode;
+  language?: string; // Language override for Code editor
 }
 
 /**

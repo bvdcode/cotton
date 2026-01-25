@@ -31,8 +31,10 @@ import { uploadBlobToChunks } from "../../../../shared/upload";
 import { useServerSettings } from "../../../../shared/store/useServerSettings";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 import { EditorFactory } from "./factories/EditorFactory";
-import { EditorModeSelector } from "./editors/EditorModeSelector";
+import { EditorModeSelector, LanguageSelector } from "./editors";
 import { useEditorMode } from "./hooks/useEditorMode";
+import { useLanguageSelection } from "./hooks/useLanguageSelection";
+import { EditorMode } from "./editors/types";
 
 interface TextPreviewProps {
   nodeFileId: Guid;
@@ -63,6 +65,12 @@ export function TextPreview({
     fileName,
     fileId: nodeFileId,
     fileSize,
+  });
+
+  // Use language selection hook for code editor
+  const { language, setLanguage } = useLanguageSelection({
+    fileName,
+    fileId: nodeFileId,
   });
 
   useEffect(() => {
@@ -211,6 +219,15 @@ export function TextPreview({
             disabled={saving}
           />
           
+          {/* Language Selector - only visible in Code mode */}
+          {mode === EditorMode.Code && (
+            <LanguageSelector
+              currentLanguage={language}
+              onLanguageChange={setLanguage}
+              disabled={saving}
+            />
+          )}
+          
           {/* Edit/Save/Cancel buttons */}
           {!isEditing &&
             (isMobile ? (
@@ -298,6 +315,7 @@ export function TextPreview({
           onChange={setContent}
           isEditing={isEditing}
           fileName={fileName}
+          language={mode === EditorMode.Code ? language : undefined}
         />
       </Box>
     </Box>
