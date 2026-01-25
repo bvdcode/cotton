@@ -119,7 +119,9 @@ export const FilesPage: React.FC = () => {
   );
 
   const effectiveContent =
-    layoutType === InterfaceLayoutType.List ? listContent ?? content : content;
+    layoutType === InterfaceLayoutType.List
+      ? (listContent ?? content)
+      : content;
 
   const { sortedFiles, tiles } = useContentTiles(effectiveContent ?? undefined);
 
@@ -256,7 +258,13 @@ export const FilesPage: React.FC = () => {
         onDragOver={fileUpload.handleDragOver}
         onDragLeave={fileUpload.handleDragLeave}
         onDrop={fileUpload.handleDrop}
-        sx={{ position: "relative" }}
+        sx={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
       >
         <PageHeader
           loading={loading}
@@ -280,7 +288,7 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box pb={{ xs: 2, sm: 3 }}>
+        <Box pb={1} sx={{ flex: 1, minHeight: 0 }}>
           {tiles.length === 0 && !isCreatingInThisFolder ? (
             <Typography color="text.secondary">{t("empty.all")}</Typography>
           ) : (
