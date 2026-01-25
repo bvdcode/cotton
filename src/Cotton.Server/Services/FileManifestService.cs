@@ -3,8 +3,6 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Server.Handlers.Files;
-using Cotton.Storage.Extensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;

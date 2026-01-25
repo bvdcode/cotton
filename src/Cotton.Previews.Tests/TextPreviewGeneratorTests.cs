@@ -2,9 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using System.Text;
 
 namespace Cotton.Previews.Tests
@@ -32,11 +30,14 @@ namespace Cotton.Previews.Tests
 
             // Assert
             Assert.That(webpData, Is.Not.Null);
-            Assert.That(webpData.Length, Is.GreaterThan(0));
+            Assert.That(webpData, Is.Not.Empty);
 
             using var image = Image.Load<Rgba32>(webpData);
-            Assert.That(image.Width, Is.EqualTo(256));
-            Assert.That(image.Height, Is.EqualTo(256));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(image.Width, Is.EqualTo(256));
+                Assert.That(image.Height, Is.EqualTo(256));
+            }
 
             bool hasNonWhitePixels = HasNonWhitePixels(image);
             Assert.That(hasNonWhitePixels, Is.True, "Image should contain non-white pixels (rendered text)");
@@ -53,7 +54,7 @@ namespace Cotton.Previews.Tests
 
             // Assert
             Assert.That(webpData, Is.Not.Null);
-            Assert.That(webpData.Length, Is.GreaterThan(0));
+            Assert.That(webpData, Is.Not.Empty);
 
             using var image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
@@ -76,7 +77,7 @@ namespace Cotton.Previews.Tests
 
             // Assert
             Assert.That(webpData, Is.Not.Null);
-            Assert.That(webpData.Length, Is.GreaterThan(0));
+            Assert.That(webpData, Is.Not.Empty);
 
             using var image = Image.Load<Rgba32>(webpData);
             bool hasNonWhitePixels = HasNonWhitePixels(image);
@@ -155,8 +156,11 @@ namespace Cotton.Previews.Tests
 
                 // Assert
                 using var image = Image.Load<Rgba32>(webpData);
-                Assert.That(image.Width, Is.EqualTo(size), $"Width should be {size}");
-                Assert.That(image.Height, Is.EqualTo(size), $"Height should be {size}");
+                using (Assert.EnterMultipleScope())
+                {
+                    Assert.That(image.Width, Is.EqualTo(size), $"Width should be {size}");
+                    Assert.That(image.Height, Is.EqualTo(size), $"Height should be {size}");
+                }
             }
         }
 
