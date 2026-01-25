@@ -23,6 +23,7 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { nodesApi, type NodeContentDto } from "../../shared/api/nodesApi";
 
 /**
  * FilesPage Component
@@ -64,6 +65,16 @@ export const FilesPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
+  // List view (paged) state
+  const [listPage, setListPage] = React.useState(0);
+  const [listPageSize, setListPageSize] = React.useState(25);
+  const [listTotalCount, setListTotalCount] = React.useState(0);
+  const [listLoading, setListLoading] = React.useState(false);
+  const [listError, setListError] = React.useState<string | null>(null);
+  const [listContent, setListContent] = React.useState<NodeContentDto | null>(
+    null,
+  );
+
   // Determine layout type from current node, defaulting to Tiles
   const initialLayoutType = useMemo(() => {
     return currentNode?.interfaceLayoutType ?? InterfaceLayoutType.Tiles;
@@ -77,6 +88,11 @@ export const FilesPage: React.FC = () => {
   useEffect(() => {
     setLayoutType(initialLayoutType);
   }, [initialLayoutType]);
+
+  // Reset paging when folder changes or switching to list view
+  useEffect(() => {
+    setListPage(0);
+  }, [nodeId, layoutType]);
 
   // Update page title based on current folder
   useEffect(() => {
@@ -102,13 +118,44 @@ export const FilesPage: React.FC = () => {
     [ancestors, currentNode],
   );
 
-  const { sortedFiles, tiles } = useContentTiles(content);
+  const effectiveContent =
+    layoutType === InterfaceLayoutType.List ? listContent ?? content : content;
+
+  const { sortedFiles, tiles } = useContentTiles(effectiveContent ?? undefined);
+
+  const fetchListPage = React.useCallback(async () => {
+    if (!nodeId) return;
+    setListLoading(true);
+    setListError(null);
+    try {
+      const response = await nodesApi.getChildren(nodeId, {
+        page: listPage + 1,
+        pageSize: listPageSize,
+      });
+      setListContent(response.content);
+      setListTotalCount(response.totalCount);
+    } catch (err) {
+      console.error("Failed to load paged content", err);
+      setListError(t("error"));
+    } finally {
+      setListLoading(false);
+    }
+  }, [nodeId, listPage, listPageSize, t]);
+
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) return;
+    if (!nodeId) return;
+    void fetchListPage();
+  }, [layoutType, nodeId, fetchListPage]);
 
   const folderOps = useFolderOperations(nodeId);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
   const fileOps = useFileOperations(() => {
+    if (!nodeId) return;
     // Reload current folder after file operation
-    if (nodeId) {
+    if (layoutType === InterfaceLayoutType.List) {
+      void fetchListPage();
+    } else {
       void loadNode(nodeId);
     }
   });
@@ -227,9 +274,9 @@ export const FilesPage: React.FC = () => {
           isCreatingFolder={folderOps.isCreatingFolder}
           t={t}
         />
-        {error && (
+        {(error || listError) && (
           <Box mb={1} px={1}>
-            <Alert severity="error">{error}</Alert>
+            <Alert severity="error">{error ?? listError}</Alert>
           </Box>
         )}
 
@@ -251,6 +298,23 @@ export const FilesPage: React.FC = () => {
               fileNamePlaceholder={t("rename.fileNamePlaceholder", {
                 ns: "files",
               })}
+              pagination={
+                layoutType === InterfaceLayoutType.List
+                  ? {
+                      page: listPage,
+                      pageSize: listPageSize,
+                      totalCount: listTotalCount,
+                      loading: listLoading,
+                      onPageChange: (newPage) => {
+                        setListPage(newPage);
+                      },
+                      onPageSizeChange: (newPageSize) => {
+                        setListPageSize(newPageSize);
+                        setListPage(0);
+                      },
+                    }
+                  : undefined
+              }
             />
           )}
         </Box>
