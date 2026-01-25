@@ -81,10 +81,10 @@ const calculateUploadStats = (tasks: UploadTask[]) => {
  * Get appropriate title based on upload state
  */
 const getWidgetTitle = (
-  t: (key: string, options?: any) => string,
+  t: (key: string, options?: Record<string, unknown>) => string,
   stats: ReturnType<typeof calculateUploadStats>,
   isCollapsed: boolean,
-  totalProgress: number,
+  _totalProgress: number,
   totalSpeed: number,
 ): string => {
   const { hasActive, allCompleted, hasErrors, completed, total } = stats;
@@ -112,7 +112,7 @@ interface WidgetHeaderProps {
   title: string;
   isCollapsed: boolean;
   hasActive: boolean;
-  totalProgress: number;
+  progressPercent: number;
   onToggleCollapse: () => void;
   onClose: () => void;
 }
@@ -124,7 +124,7 @@ const WidgetHeader: React.FC<WidgetHeaderProps> = ({
   title,
   isCollapsed,
   hasActive,
-  totalProgress,
+  progressPercent,
   onToggleCollapse,
   onClose,
 }) => {
@@ -152,7 +152,7 @@ const WidgetHeader: React.FC<WidgetHeaderProps> = ({
             left: 0,
             bottom: 0,
             padding: 3,
-            width: `${totalProgress}%`,
+            width: `${progressPercent}%`,
             bgcolor: "success.main",
             opacity: 0.15,
             transition: "width 0.3s ease-out",
@@ -305,7 +305,7 @@ export const UploadQueueWidget = () => {
           title={widgetTitle}
           isCollapsed={isCollapsed}
           hasActive={stats.hasActive}
-          totalProgress={totalProgress}
+          progressPercent={totalProgress}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
           onClose={() => uploadManager.setOpen(false)}
         />

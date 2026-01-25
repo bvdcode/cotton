@@ -245,7 +245,6 @@ export const FilesPage: React.FC = () => {
       >
         <PageHeader
           loading={loading}
-          ancestors={ancestors}
           breadcrumbs={breadcrumbs}
           stats={stats}
           layoutType={layoutType}
