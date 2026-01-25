@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from "react";
-import { Box, Alert, LinearProgress, Typography } from "@mui/material";
+import { Box, Alert, LinearProgress, Typography, TablePagination } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
@@ -148,11 +148,13 @@ export const SearchPage: React.FC = () => {
         </Box>
       )}
 
-      {searchState.loading && (
-        <Box width="100%" mt={2}>
-          <LinearProgress />
-        </Box>
-      )}
+      <Box position="relative" width="100%" height="4px" mt={2}>
+        {searchState.loading && (
+          <Box position="absolute" top={0} left={0} right={0}>
+            <LinearProgress />
+          </Box>
+        )}
+      </Box>
 
       {!searchState.loading &&
         layoutId &&
@@ -178,24 +180,40 @@ export const SearchPage: React.FC = () => {
           </Typography>
         )}
 
-      {tiles.length > 0 && (
-        <FileListViewFactory
-          layoutType={InterfaceLayoutType.List}
-          tiles={tiles}
-          folderOperations={folderOperations}
-          fileOperations={fileOperations}
-          isCreatingFolder={false}
-          newFolderName=""
-          onNewFolderNameChange={() => {}}
-          onConfirmNewFolder={async () => {}}
-          onCancelNewFolder={() => {}}
-          folderNamePlaceholder={t("actions.folderNamePlaceholder", {
-            ns: "files",
-          })}
-          fileNamePlaceholder={t("rename.fileNamePlaceholder", {
-            ns: "files",
-          })}
-        />
+      {searchState.query.trim() && searchState.results && tiles.length > 0 && (
+        <Box sx={{ width: "100%" }}>
+          <FileListViewFactory
+            layoutType={InterfaceLayoutType.List}
+            tiles={tiles}
+            folderOperations={folderOperations}
+            fileOperations={fileOperations}
+            isCreatingFolder={false}
+            newFolderName=""
+            onNewFolderNameChange={() => {}}
+            onConfirmNewFolder={async () => {}}
+            onCancelNewFolder={() => {}}
+            folderNamePlaceholder={t("actions.folderNamePlaceholder", {
+              ns: "files",
+            })}
+            fileNamePlaceholder={t("rename.fileNamePlaceholder", {
+              ns: "files",
+            })}
+          />
+          <TablePagination
+            component="div"
+            count={searchState.totalCount}
+            page={searchState.page - 1}
+            onPageChange={(_event, newPage) => {
+              searchState.setPage(newPage + 1);
+            }}
+            rowsPerPage={searchState.pageSize}
+            onRowsPerPageChange={(event) => {
+              searchState.setPageSize(parseInt(event.target.value, 10));
+              searchState.setPage(1);
+            }}
+            rowsPerPageOptions={[25, 50, 100]}
+          />
+        </Box>
       )}
 
       <FilePreviewModal
