@@ -36,7 +36,7 @@ namespace Cotton.Database.Models
         /// Gets the unique key associated with the name for this entity.
         /// Automatically set when using SetName method.
         /// </summary>
-        [Column("name_key")]
+        [Column("name_key", TypeName = "citext")]
         public string NameKey { get; private set; } = null!;
 
         public void SetName(string input)
