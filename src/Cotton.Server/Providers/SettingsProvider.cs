@@ -64,52 +64,108 @@ namespace Cotton.Server.Providers
 
         public async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
         {
-            bool tzExists = TimeZoneInfo.TryFindSystemTimeZoneById(request.Timezone, out var _);
-            if (!tzExists)
+            if (!IsTimezoneValid(request.Timezone))
             {
                 return "Timezone not found: " + request.Timezone;
             }
-            if (!request.Telemetry)
+
+            var telemetryError = ValidateTelemetryConstraints(request);
+            if (telemetryError is not null)
             {
-                if (request.Email == EmailMode.Cloud)
-                {
-                    return "Telemetry must be enabled to use cloud email service.";
-                }
-                if (request.ComputionMode == ComputionMode.Cloud)
-                {
-                    return "Telemetry must be enabled to use cloud AI service.";
-                }
+                return telemetryError;
             }
-            if (request.Email == EmailMode.Custom)
+
+            var emailError = ValidateEmailConstraints(request);
+            if (emailError is not null)
             {
-                if (request.EmailConfig is null)
-                {
-                    return "EmailConfig must be provided when using Custom email service.";
-                }
+                return emailError;
             }
-            if (request.Storage == StorageType.S3)
+
+            var importError = ValidateImportConstraints(request);
+            if (importError is not null)
             {
-                if (request.S3Config is null)
-                {
-                    return "S3Config must be provided when using S3 storage.";
-                }
-                try
-                {
-                    await ValidateS3Async(request.S3Config);
-                }
-                catch (Exception ex)
-                {
-                    return ex.Message;
-                }
+                return importError;
             }
-            if (request.ImportSource != ImportSource.None)
+
+            var storageError = await ValidateStorageConstraintsAsync(request);
+            if (storageError is not null)
             {
-                if (request.ImportSource == ImportSource.Webdav && request.WebdavConfig is null)
-                {
-                    return "WebdavConfig must be provided when using Webdav import source.";
-                }
+                return storageError;
             }
+
             return null;
+        }
+
+        private static bool IsTimezoneValid(string timezone)
+        {
+            return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
+        }
+
+        private static string? ValidateTelemetryConstraints(ServerSettingsRequestDto request)
+        {
+            if (request.Telemetry)
+            {
+                return null;
+            }
+
+            if (request.Email == EmailMode.Cloud)
+            {
+                return "Telemetry must be enabled to use cloud email service.";
+            }
+
+            if (request.ComputionMode == ComputionMode.Cloud)
+            {
+                return "Telemetry must be enabled to use cloud AI service.";
+            }
+
+            return null;
+        }
+
+        private static string? ValidateEmailConstraints(ServerSettingsRequestDto request)
+        {
+            if (request.Email != EmailMode.Custom)
+            {
+                return null;
+            }
+
+            return request.EmailConfig is null
+                ? "EmailConfig must be provided when using Custom email service."
+                : null;
+        }
+
+        private static string? ValidateImportConstraints(ServerSettingsRequestDto request)
+        {
+            if (request.ImportSource != ImportSource.Webdav)
+            {
+                return null;
+            }
+
+            return request.WebdavConfig is null
+                ? "WebdavConfig must be provided when using Webdav import source."
+                : null;
+        }
+
+        private static async Task<string?> ValidateStorageConstraintsAsync(ServerSettingsRequestDto request)
+        {
+            if (request.Storage != StorageType.S3)
+            {
+                return null;
+            }
+
+            if (request.S3Config is null)
+            {
+                return "S3Config must be provided when using S3 storage.";
+            }
+
+            try
+            {
+                await ValidateS3Async(request.S3Config);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
         }
 
         private static async Task ValidateS3Async(S3Config s3Config)
@@ -167,15 +223,7 @@ namespace Cotton.Server.Providers
 
         public async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
         {
-            int? smtpPort = null;
-            if (request.EmailConfig?.Port is not null)
-            {
-                bool parsed = int.TryParse(request.EmailConfig.Port, out int port);
-                if (parsed)
-                {
-                    smtpPort = port;
-                }
-            }
+            int? smtpPort = TryParseInt(request.EmailConfig?.Port);
             var lastSettings = await _dbContext.ServerSettings
                 .OrderByDescending(s => s.CreatedAt)
                 .FirstOrDefaultAsync();
@@ -216,6 +264,11 @@ namespace Cotton.Server.Providers
             await _dbContext.ServerSettings.AddAsync(newSettings);
             await _dbContext.SaveChangesAsync();
             _cache = null;
+        }
+
+        private static int? TryParseInt(string? value)
+        {
+            return int.TryParse(value, out int i) ? i : null;
         }
 
         private string? TryEncrypt(string? password)

@@ -3,15 +3,17 @@ import {
   Alert,
   Box,
   IconButton,
-  LinearProgress,
   Typography,
   Dialog,
   DialogContent,
   DialogTitle,
-  Divider,
 } from "@mui/material";
-import { FileBreadcrumbs, FileListViewFactory } from "../files/components";
-import { ArrowUpward, ViewModule, ViewList, Delete } from "@mui/icons-material";
+import {
+  FileListViewFactory,
+  PageHeader,
+  MediaLightbox,
+} from "../files/components";
+import { Delete } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
@@ -19,19 +21,13 @@ import Loader from "../../shared/ui/Loader";
 import { nodesApi } from "../../shared/api/nodesApi";
 import { layoutsApi, type NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeContentDto } from "../../shared/api/nodesApi";
-import { MediaLightbox } from "../files/components";
-import type { MediaItem } from "../files/components";
-import { formatBytes } from "../files/utils/formatBytes";
-import { isImageFile, isVideoFile } from "../files/utils/fileTypes";
-import { getFileIcon } from "../files/utils/icons";
-import {
-  PreviewModal,
-  PdfPreview,
-  TextPreview,
-} from "../files/components/preview";
+import { PreviewModal, PdfPreview, TextPreview } from "../files/components/preview";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
 import { useFilePreview } from "../files/hooks/useFilePreview";
+import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
+import { downloadFile } from "../files/utils/fileHandlers";
+import { buildBreadcrumbs, calculateFolderStats } from "../files/utils/nodeUtils";
 import { filesApi } from "../../shared/api/filesApi";
 import type {
   FileSystemTile,
@@ -160,11 +156,10 @@ export const TrashPage: React.FC = () => {
     };
   }, [currentNode?.name, routeNodeId, ancestors.length]);
 
-  const breadcrumbs = useMemo(() => {
-    if (!currentNode) return [] as Array<{ id: string; name: string }>;
-    const chain = [...ancestors, currentNode];
-    return chain.map((n) => ({ id: n.id, name: n.name }));
-  }, [ancestors, currentNode]);
+  const breadcrumbs = useMemo(
+    () => buildBreadcrumbs(ancestors, currentNode),
+    [ancestors, currentNode],
+  );
 
   const sortedFolders = useMemo(() => {
     const nodes = (content?.nodes ?? []).slice();
@@ -194,57 +189,20 @@ export const TrashPage: React.FC = () => {
   const fileOps = useTrashFileOperations(refreshContent);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
-  // Media lightbox state
-  const [lightboxOpen, setLightboxOpen] = React.useState(false);
-  const [lightboxIndex, setLightboxIndex] = React.useState(0);
+  // Media lightbox management
+  const {
+    lightboxOpen,
+    lightboxIndex,
+    mediaItems,
+    getSignedMediaUrl,
+    handleMediaClick,
+    setLightboxOpen,
+  } = useMediaLightbox(sortedFiles);
 
-  // Build media items for lightbox (images and videos only)
-  const mediaItems = useMemo<MediaItem[]>(() => {
-    return sortedFiles
-      .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
-      .map((file) => {
-        const preview = getFileIcon(
-          file.encryptedFilePreviewHashHex ?? null,
-          file.name,
-        );
-        const previewUrl = typeof preview === "string" ? preview : "";
-
-        return {
-          id: file.id,
-          kind: isImageFile(file.name) ? "image" : "video",
-          name: file.name,
-          previewUrl,
-          mimeType: file.name.toLowerCase().endsWith(".mp4")
-            ? "video/mp4"
-            : undefined,
-          sizeBytes: file.sizeBytes,
-        } as MediaItem;
-      });
-  }, [sortedFiles]);
-
-  // Get signed media URL for original file
-  const getSignedMediaUrl = async (fileId: string): Promise<string> => {
-    return await filesApi.getDownloadLink(fileId, 60 * 24);
-  };
-
-  // Handler to open media lightbox
-  const handleMediaClick = (fileId: string) => {
-    const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
-    if (mediaIndex !== -1) {
-      setLightboxIndex(mediaIndex);
-      setLightboxOpen(true);
-    }
-  };
-
-  const stats = useMemo(() => {
-    const folders = content?.nodes?.length ?? 0;
-    const files = content?.files?.length ?? 0;
-    const sizeBytes = (content?.files ?? []).reduce(
-      (sum, file) => sum + (file.sizeBytes ?? 0),
-      0,
-    );
-    return { folders, files, sizeBytes };
-  }, [content?.files, content?.nodes]);
+  const stats = useMemo(
+    () => calculateFolderStats(content?.nodes, content?.files),
+    [content?.files, content?.nodes],
+  );
 
   const handleGoUp = () => {
     if (ancestors.length > 0) {
@@ -309,20 +267,7 @@ export const TrashPage: React.FC = () => {
   };
 
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
-    try {
-      const downloadLink = await filesApi.getDownloadLink(nodeFileId);
-      const link = document.createElement("a");
-      link.href = downloadLink;
-      link.download = fileName;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Failed to download file:", error);
-    }
+    await downloadFile(nodeFileId, fileName);
   };
 
   const handleFileClick = (fileId: string, fileName: string) => {
@@ -367,130 +312,35 @@ export const TrashPage: React.FC = () => {
   return (
     <>
       <Box width="100%" sx={{ position: "relative" }}>
-        <Box
-          sx={{
-            position: "sticky",
-            top: 0,
-            zIndex: 20,
-            bgcolor: "background.default",
-            display: "flex",
-            flexDirection: "column",
-            marginBottom: 2,
-            borderBottom: 1,
-            borderColor: "divider",
-            paddingTop: 1,
-            paddingBottom: 1,
-          }}
-        >
-          {loading && (
-            <LinearProgress
-              sx={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-              }}
-            />
-          )}
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "row", sm: "row" },
-              gap: { xs: 1, sm: 1 },
-              alignItems: { xs: "stretch", sm: "center" },
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 0.5,
-                  alignItems: "center",
-                  flexShrink: 0,
-                }}
+        <PageHeader
+          loading={loading}
+          ancestors={ancestors}
+          breadcrumbs={breadcrumbs}
+          stats={stats}
+          layoutType={layoutType}
+          canGoUp={ancestors.length > 0}
+          onGoUp={handleGoUp}
+          onHomeClick={() => navigate("/trash")}
+          onLayoutToggle={setLayoutType}
+          statsNamespace="trash"
+          customActions={
+            ancestors.length === 0 ? (
+              <IconButton
+                onClick={handleEmptyTrash}
+                color="error"
+                disabled={
+                  loading ||
+                  emptyingTrash ||
+                  stats.folders + stats.files === 0
+                }
+                title={t("actions.emptyTrash")}
               >
-                <IconButton
-                  color="primary"
-                  onClick={handleGoUp}
-                  disabled={loading || ancestors.length === 0}
-                  title={t("actions.goUp")}
-                >
-                  <ArrowUpward />
-                </IconButton>
-                {ancestors.length === 0 ? (
-                  <IconButton
-                    onClick={handleEmptyTrash}
-                    color="error"
-                    disabled={
-                      loading ||
-                      emptyingTrash ||
-                      stats.folders + stats.files === 0
-                    }
-                    title={t("actions.emptyTrash")}
-                  >
-                    <Delete />
-                  </IconButton>
-                ) : (
-                  <IconButton
-                    onClick={() => navigate("/trash")}
-                    color="primary"
-                    title={t("actions.trashRoot")}
-                  >
-                    <Delete />
-                  </IconButton>
-                )}
-                {layoutType === InterfaceLayoutType.Tiles ? (
-                  <IconButton
-                    color="primary"
-                    onClick={() => setLayoutType(InterfaceLayoutType.List)}
-                    title={t("actions.switchToList")}
-                  >
-                    <ViewList />
-                  </IconButton>
-                ) : (
-                  <IconButton
-                    color="primary"
-                    onClick={() => setLayoutType(InterfaceLayoutType.Tiles)}
-                    title={t("actions.switchToTiles")}
-                  >
-                    <ViewModule />
-                  </IconButton>
-                )}
-              </Box>
-            </Box>
-
-            <FileBreadcrumbs breadcrumbs={breadcrumbs} />
-
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{ mx: 1, display: { xs: "none", sm: "block" } }}
-            />
-            <Box
-              sx={{
-                flexShrink: 0,
-                whiteSpace: "nowrap",
-                display: { xs: "none", sm: "block" },
-                ml: "auto",
-              }}
-            >
-              <Typography color="text.secondary" sx={{ fontSize: "0.875rem" }}>
-                {t("stats.summary", {
-                  folders: stats.folders,
-                  files: stats.files,
-                  size: formatBytes(stats.sizeBytes),
-                })}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+                <Delete />
+              </IconButton>
+            ) : null
+          }
+          t={t}
+        />
         {error && (
           <Box mb={1} px={1}>
             <Alert severity="error">{error}</Alert>
