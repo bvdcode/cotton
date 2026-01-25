@@ -34,7 +34,42 @@ namespace Cotton.Previews
                 stream.Seek(0, SeekOrigin.Begin);
             }
 
-            string rawText = ReadSomeText(stream, MaxCharsToRead);
+            string text;
+            using (var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true, leaveOpen: true))
+            {
+                char[] buffer = new char[Math.Min(MaxCharsToRead, 8192)];
+                int total = 0;
+                var sb = new System.Text.StringBuilder();
+
+                while (total < MaxCharsToRead)
+                {
+                    int want = Math.Min(buffer.Length, MaxCharsToRead - total);
+                    int read = await reader.ReadAsync(buffer, 0, want).ConfigureAwait(false);
+                    if (read <= 0)
+                    {
+                        break;
+                    }
+
+                    sb.Append(buffer, 0, read);
+                    total += read;
+                }
+
+                text = sb.ToString();
+            }
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                text = "(empty file)";
+            }
+
+            text = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+            const int maxChars = 4000;
+            if (text.Length > maxChars)
+            {
+                text = text[..maxChars] + "\n…";
+            }
+
             int renderSize = Math.Max(size * 4, 512);
             using var canvas = new Image<Rgba32>(renderSize, renderSize);
             float padding = renderSize * PaddingRatio;
@@ -44,17 +79,16 @@ namespace Cotton.Previews
             var textOptions = new RichTextOptions(font)
             {
                 Origin = new PointF(padding, padding),
+                WrappingLength = wrapWidth,
                 LineSpacing = fontSize * LineSpacingRatio,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top,
             };
 
-            string clipped = PrepareAndLayout(rawText, font, wrapWidth, renderSize - (padding * 2), fontSize * LineSpacingRatio);
-
             canvas.Mutate(ctx =>
             {
                 ctx.Fill(Color.White);
-                ctx.DrawText(textOptions, clipped, Color.Black);
+                ctx.DrawText(textOptions, text, Color.Black);
             });
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
