@@ -21,7 +21,10 @@ import {
   isTextFile,
   isVideoFile,
 } from "../../utils/fileTypes";
-import type { FileSystemTile, IFileListView } from "../../types/FileListViewTypes";
+import type {
+  FileSystemTile,
+  IFileListView,
+} from "../../types/FileListViewTypes";
 
 interface FileListRow {
   id: string;
@@ -81,10 +84,14 @@ export const ListView: React.FC<IFileListView> = ({
   }, [tiles, isCreatingFolder, newFolderName]);
 
   const getFileIcon = (fileName: string) => {
-    if (isTextFile(fileName)) return <Article color="action" fontSize="small" />;
-    if (isImageFile(fileName)) return <ImageIcon color="action" fontSize="small" />;
-    if (isVideoFile(fileName)) return <VideoFile color="action" fontSize="small" />;
-    if (isPdfFile(fileName)) return <TextSnippet color="action" fontSize="small" />;
+    if (isTextFile(fileName))
+      return <Article color="action" fontSize="small" />;
+    if (isImageFile(fileName))
+      return <ImageIcon color="action" fontSize="small" />;
+    if (isVideoFile(fileName))
+      return <VideoFile color="action" fontSize="small" />;
+    if (isPdfFile(fileName))
+      return <TextSnippet color="action" fontSize="small" />;
     return <InsertDriveFile color="action" fontSize="small" />;
   };
 
@@ -96,7 +103,10 @@ export const ListView: React.FC<IFileListView> = ({
         width: 44,
         sortable: false,
         renderCell: (params) => {
-          if (params.row.type === "folder" || params.row.type === "new-folder") {
+          if (
+            params.row.type === "folder" ||
+            params.row.type === "new-folder"
+          ) {
             return <Folder color="primary" fontSize="small" />;
           }
           return getFileIcon(params.row.name);
@@ -226,7 +236,9 @@ export const ListView: React.FC<IFileListView> = ({
 
           if (row.type === "folder") {
             return (
-              <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+              <Box
+                sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}
+              >
                 <IconButton
                   size="small"
                   onClick={(e) => {
@@ -324,15 +336,16 @@ export const ListView: React.FC<IFileListView> = ({
   };
 
   return (
-    <Box sx={{ width: "100%" }}>
+    <Box sx={{ width: "100%", height: "100%", minHeight: 0 }}>
       <DataGrid
-        autoHeight
         density="compact"
+        sx={{ height: "100%" }}
         rows={rows}
         columns={columns}
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
         hideFooter={!pagination}
+        autoPageSize={!!pagination}
         paginationMode={pagination ? "server" : "client"}
         pageSizeOptions={pagination ? [10, 25, 50, 100] : []}
         paginationModel={
