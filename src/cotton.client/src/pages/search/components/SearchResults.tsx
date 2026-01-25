@@ -25,6 +25,12 @@ import type { NodeFileManifestDto } from '../../../shared/api/nodesApi';
 export interface SearchResultsProps {
   /** Search results data */
   results: SearchResultDto | null;
+  /** Total count of results */
+  totalCount: number;
+  /** Current page */
+  currentPage: number;
+  /** Page size */
+  pageSize: number;
   /** Loading state */
   loading: boolean;
   /** Error state */
@@ -48,6 +54,9 @@ export interface SearchResultsProps {
  */
 export const SearchResults: React.FC<SearchResultsProps> = ({
   results,
+  totalCount,
+  currentPage,
+  pageSize,
   loading,
   error,
   query,
@@ -100,7 +109,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   }
 
   // No results found
-  if (results && results.totalCount === 0) {
+  if (results && totalCount === 0) {
     return (
       <Box
         sx={{
@@ -121,7 +130,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     return null;
   }
 
-  const totalPages = Math.ceil(results.totalCount / results.pageSize);
+  const totalPages = Math.ceil(totalCount / pageSize);
   const hasMultiplePages = totalPages > 1;
 
   return (
@@ -129,7 +138,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       {/* Results header */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="text.primary">
-          {t('search.resultsHeader', `Found ${results.totalCount} results for "${query}"`)}
+          {t('search.resultsHeader', `Found ${totalCount} results for "${query}"`)}
         </Typography>
       </Box>
 
@@ -170,7 +179,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Pagination
             count={totalPages}
-            page={results.page}
+            page={currentPage}
             onChange={(_, page) => onPageChange(page)}
             color="primary"
             size="large"
