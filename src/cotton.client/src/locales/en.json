@@ -485,31 +485,7 @@
     "login": "Login",
     "home": "Home",
     "files": "Files",
-    "search": "Search",
     "trash": "Trash",
     "profile": "Profile"
-  },
-  "search": {
-    "title": "Search",
-    "subtitle": "Find files and folders in your workspace",
-    "placeholder": "Search files and folders...",
-    "resultsHeader": "Found {{count}} results for \"{{query}}\"",
-    "resultsHeader_one": "Found 1 result for \"{{query}}\"",
-    "resultsHeader_other": "Found {{count}} results for \"{{query}}\"",
-    "resultTypes": {
-      "folder": "Folder",
-      "file": "File"
-    },
-    "emptyState": {
-      "initial": "Enter a search query to find files and folders",
-      "noResults": "No results found for \"{{query}}\""
-    },
-    "loading": {
-      "title": "Loading...",
-      "caption": "Preparing search"
-    },
-    "errors": {
-      "noLayout": "Unable to load layout"
-    }
   }
 }

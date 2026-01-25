@@ -8,8 +8,8 @@ import {
   NotFoundPage,
   OnboardingPage,
   ProfilePage,
-  SearchPage,
   TrashPage,
+  SearchPage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Person, Delete, Search } from "@mui/icons-material";
