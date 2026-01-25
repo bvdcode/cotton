@@ -14,7 +14,7 @@
 
 	<ItemGroup>
 		<Folder Include="wwwroot\" />
-		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.34" />
+		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.38" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>10.0.2</Version>
 		</PackageReference>
@@ -34,10 +34,10 @@
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
 		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
-		<PackageReference Include="EasyExtensions.Quartz" Version="3.0.34" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.34" />
-		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="3.0.34" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.34" />
+		<PackageReference Include="EasyExtensions.Quartz" Version="3.0.38" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="3.0.38" />
+		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="3.0.38" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.38" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
 	</ItemGroup>
 

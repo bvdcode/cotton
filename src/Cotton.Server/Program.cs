@@ -12,6 +12,7 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology;
+using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Extensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
@@ -39,13 +40,14 @@ namespace Cotton.Server
                 .AddQuartzJobs()
                 .AddSingleton<PerfTracker>()
                 .AddScoped<SettingsProvider>()
+                .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
-                .AddScoped<StorageLayoutService>()
+                .AddScoped<ILayoutService, StorageLayoutService>()
                 .AddPbkdf2PasswordHashService()
                 .AddControllers().Services
                 .AddStreamCipher()

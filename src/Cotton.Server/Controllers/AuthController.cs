@@ -174,7 +174,6 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-
         [Authorize]
         [HttpPost("/api/v1/auth/totp/setup")]
         public async Task<IActionResult> SetupTotp()

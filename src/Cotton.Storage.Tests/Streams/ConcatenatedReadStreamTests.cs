@@ -567,7 +567,7 @@ namespace Cotton.Storage.Tests.Streams
             const int rangeOps = 10_000;
 
             var rng = new Random(12345);
-            int fileLength = chunkSize * 2 + 123_456;
+            int fileLength = (chunkSize * 2) + 123_456;
 
             var fileBytes = new byte[fileLength];
             rng.NextBytes(fileBytes);

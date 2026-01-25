@@ -1,7 +1,7 @@
 ﻿using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Topology;
-using EasyExtensions.EntityFrameworkCore.Exceptions;
+using Cotton.Topology.Abstractions;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +17,7 @@ namespace Cotton.Server.Handlers.Nodes
 
     public class DeleteNodeQueryHandler(
         CottonDbContext _dbContext,
-        StorageLayoutService _layouts,
+        ILayoutService _layouts,
         ILogger<DeleteNodeQueryHandler> _logger)
             : IRequestHandler<DeleteNodeQuery>
     {

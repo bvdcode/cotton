@@ -2,8 +2,8 @@
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
-using Cotton.Topology;
-using EasyExtensions.EntityFrameworkCore.Exceptions;
+using Cotton.Topology.Abstractions;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
@@ -23,7 +23,7 @@ namespace Cotton.Server.Handlers.Nodes
     }
 
     public class GetChildrenQueryHandler(
-        StorageLayoutService _layouts,
+        ILayoutService _layouts,
         CottonDbContext _dbContext)
             : IRequestHandler<GetChildrenQuery, NodeContentDto>
     {
