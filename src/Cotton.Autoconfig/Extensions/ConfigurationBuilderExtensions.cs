@@ -42,7 +42,6 @@ namespace Cotton.Autoconfig.Extensions
             string pepper = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonPepper", DefaultKeyLength);
             string masterEncryptionKey = KeyDerivation.DeriveSubkeyBase64(rootMasterEncryptionKey, "CottonMasterEncryptionKey", DefaultKeyLength);
 
-
             var dict = new Dictionary<string, string?>
             {
                 ["JwtSettings:Key"] = jwtKey,
