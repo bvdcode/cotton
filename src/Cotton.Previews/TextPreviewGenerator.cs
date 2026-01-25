@@ -21,7 +21,6 @@ namespace Cotton.Previews
         private const int MaxLineChars = 512;
         private const float PaddingRatio = 0.06f;
         private const float FontSizeRatio = 0.045f;
-        private const float LineSpacingRatio = 1.25f;
 
         private static readonly FontFamily _fontFamily = LoadFontFamily();
 
