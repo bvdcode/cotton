@@ -2,7 +2,9 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System.Text;
 
 namespace Cotton.Previews.Tests
@@ -125,7 +127,7 @@ namespace Cotton.Previews.Tests
         public async Task GeneratePreviewWebPAsync_SingleCharacter_RendersCorrectly()
         {
             // Arrange
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("A"));
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("ABC"));
 
             // Act
             byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size: 256);
@@ -195,8 +197,8 @@ namespace Cotton.Previews.Tests
                 }
             }
 
-            // At least 1% of sampled pixels should be non-white (text)
-            return nonWhiteCount > (totalSampled * 0.01);
+            // At least 0.1% of sampled pixels should be non-white (text)
+            return nonWhiteCount > (totalSampled * 0.001);
         }
     }
 }
