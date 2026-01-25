@@ -34,7 +34,7 @@ namespace Cotton.Previews
                 stream.Seek(0, SeekOrigin.Begin);
             }
 
-            string text = ReadSomeText(stream, MaxCharsToRead);
+            string rawText = ReadSomeText(stream, MaxCharsToRead);
             int renderSize = Math.Max(size * 4, 512);
             using var canvas = new Image<Rgba32>(renderSize, renderSize);
             float padding = renderSize * PaddingRatio;
@@ -44,21 +44,16 @@ namespace Cotton.Previews
             var textOptions = new RichTextOptions(font)
             {
                 Origin = new PointF(padding, padding),
-                WrappingLength = wrapWidth,
                 LineSpacing = fontSize * LineSpacingRatio,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top,
             };
 
-            var content = PrepareContent(text);
-            var bodyText = BuildBodyText(content);
-
-            var clipped = LayoutTextMonospace(bodyText, font, wrapWidth, renderSize - (padding * 2), fontSize * LineSpacingRatio);
+            string clipped = PrepareAndLayout(rawText, font, wrapWidth, renderSize - (padding * 2), fontSize * LineSpacingRatio);
 
             canvas.Mutate(ctx =>
             {
                 ctx.Fill(Color.White);
-
                 ctx.DrawText(textOptions, clipped, Color.Black);
             });
 
@@ -75,13 +70,30 @@ namespace Cotton.Previews
             return ms.ToArray();
         }
 
-        private sealed record PreparedContent(string RawText, string NormalizedText, ContentKind Kind, int Lines);
-
-        private enum ContentKind
+        private static string PrepareAndLayout(
+            string rawText,
+            Font font,
+            float wrapWidth,
+            float maxHeight,
+            float lineAdvance)
         {
-            Empty,
-            Text,
-            Binary,
+            if (string.IsNullOrWhiteSpace(rawText))
+            {
+                return string.Empty;
+            }
+
+            // Detect binary BEFORE normalization/truncation so we don't lose the signal.
+            // If it's binary-like, return empty preview (caller draws blank canvas).
+            var normalizedForDetection = NormalizeText(rawText);
+            if (LooksBinary(rawText, normalizedForDetection))
+            {
+                return string.Empty;
+            }
+
+            string normalized = normalizedForDetection;
+            normalized = LimitLogicalLines(normalized, MaxLinesToRender);
+            normalized = LimitLineWidth(normalized, MaxLineChars);
+            return LayoutTextMonospace(normalized, font, wrapWidth, maxHeight, lineAdvance);
         }
 
         private static FontFamily LoadFontFamily()
@@ -116,25 +128,6 @@ namespace Cotton.Previews
             return sb.Length == 0 ? string.Empty : sb.ToString();
         }
 
-        private static PreparedContent PrepareContent(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                return new PreparedContent(raw, string.Empty, ContentKind.Empty, 0);
-            }
-
-            string normalized = NormalizeText(raw);
-            if (LooksBinary(raw, normalized))
-            {
-                return new PreparedContent(raw, string.Empty, ContentKind.Binary, 0);
-            }
-
-            normalized = LimitLogicalLines(normalized, MaxLinesToRender);
-            normalized = LimitLineWidth(normalized, MaxLineChars);
-            int lines = CountLines(normalized);
-            return new PreparedContent(raw, normalized, ContentKind.Text, lines);
-        }
-
         private static bool LooksBinary(string raw, string normalized)
         {
             if (raw.Length == 0)
@@ -146,34 +139,6 @@ namespace Cotton.Previews
             // This avoids rendering empty previews for binary blobs mislabeled as text.
             int dropped = raw.Length - normalized.Length;
             return dropped > (raw.Length / 4);
-        }
-
-        private static int CountLines(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return 0;
-            }
-
-            int lines = 1;
-            foreach (var c in text)
-            {
-                if (c == '\n')
-                {
-                    lines++;
-                }
-            }
-            return lines;
-        }
-
-        private static string BuildBodyText(PreparedContent content)
-        {
-            return content.Kind switch
-            {
-                ContentKind.Empty => string.Empty,
-                ContentKind.Binary => string.Empty,
-                _ => content.NormalizedText,
-            };
         }
 
         private static string LayoutTextMonospace(
