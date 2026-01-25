@@ -41,18 +41,18 @@ const appRoutes: RouteConfig[] = [
     element: <FilesPage />,
   },
   {
-    path: "/search",
-    icon: <Search />,
-    protected: true,
-    displayName: i18n.t("search", { ns: "routes" }),
-    element: <SearchPage />,
-  },
-  {
     path: "/trash",
     icon: <Delete />,
     protected: true,
     displayName: i18n.t("trash", { ns: "routes" }),
     element: <TrashPage />,
+  },
+  {
+    path: "/search",
+    icon: <Search />,
+    protected: true,
+    displayName: i18n.t("search", { ns: "routes" }),
+    element: <SearchPage />,
   },
   {
     path: "/profile",
