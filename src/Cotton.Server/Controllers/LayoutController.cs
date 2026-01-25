@@ -41,8 +41,6 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
-            
-
             string searchKey = NameValidator.NormalizeAndGetNameKey(query);
             var nodesQuery = _dbContext.Nodes
                 .AsNoTracking()
