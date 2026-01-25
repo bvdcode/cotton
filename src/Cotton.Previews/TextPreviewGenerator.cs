@@ -18,11 +18,10 @@ namespace Cotton.Previews
 
         private const int MaxCharsToRead = 24_000;
         private const int MaxLinesToRender = 64;
-        private const int MaxLineChars = 256;
+        private const int MaxLineChars = 512;
         private const float PaddingRatio = 0.06f;
         private const float FontSizeRatio = 0.045f;
         private const float LineSpacingRatio = 1.25f;
-        private const float HeaderFontScale = 0.85f;
 
         private static readonly FontFamily _fontFamily = LoadFontFamily();
 
@@ -42,7 +41,6 @@ namespace Cotton.Previews
             float wrapWidth = renderSize - (padding * 2);
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
-            var headerFont = _fontFamily.CreateFont(Math.Max(9f, fontSize * HeaderFontScale), FontStyle.Regular);
             var textOptions = new RichTextOptions(font)
             {
                 Origin = new PointF(padding, padding),
@@ -55,30 +53,12 @@ namespace Cotton.Previews
             var content = PrepareContent(text);
             var bodyText = BuildBodyText(content);
 
+            var clipped = LayoutTextMonospace(bodyText, font, wrapWidth, renderSize - (padding * 2), fontSize * LineSpacingRatio);
+
             canvas.Mutate(ctx =>
             {
                 ctx.Fill(Color.White);
 
-                var header = BuildHeader(content);
-                if (!string.IsNullOrWhiteSpace(header))
-                {
-                    var headerOptions = new RichTextOptions(headerFont)
-                    {
-                        Origin = new PointF(padding, padding),
-                        WrappingLength = wrapWidth,
-                        LineSpacing = headerFont.Size * 1.1f,
-                        HorizontalAlignment = HorizontalAlignment.Left,
-                        VerticalAlignment = VerticalAlignment.Top,
-                    };
-
-                    ctx.DrawText(headerOptions, header, Color.DarkSlateGray);
-
-                    var headerMetrics = TextMeasurer.MeasureSize(header, headerOptions);
-                    textOptions.Origin = new PointF(padding, padding + headerMetrics.Height + (padding * 0.2f));
-                }
-
-                var maxHeight = renderSize - textOptions.Origin.Y - padding;
-                var clipped = ClipTextToFitHeight(bodyText, textOptions, maxHeight);
                 ctx.DrawText(textOptions, clipped, Color.Black);
             });
 
@@ -186,24 +166,70 @@ namespace Cotton.Previews
             return lines;
         }
 
-        private static string BuildHeader(PreparedContent content)
-        {
-            return content.Kind switch
-            {
-                ContentKind.Empty => "Empty text file",
-                ContentKind.Binary => "Binary content (preview not available)",
-                _ => content.Lines > 0 ? $"Text preview \u00b7 {content.Lines} lines" : "Text preview",
-            };
-        }
-
         private static string BuildBodyText(PreparedContent content)
         {
             return content.Kind switch
             {
-                ContentKind.Empty => "(no content)",
-                ContentKind.Binary => "This file does not look like plain text.",
+                ContentKind.Empty => string.Empty,
+                ContentKind.Binary => string.Empty,
                 _ => content.NormalizedText,
             };
+        }
+
+        private static string LayoutTextMonospace(
+            string text,
+            Font font,
+            float wrapWidth,
+            float maxHeight,
+            float lineAdvance)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            // Use a single glyph measure as a character cell width.
+            // For a monospaced font (Consolas) this is stable and fast.
+            var m = TextMeasurer.MeasureSize("M", new RichTextOptions(font));
+            float charWidth = Math.Max(1f, m.Width);
+
+            int cols = Math.Max(1, (int)Math.Floor(wrapWidth / charWidth));
+            int rows = Math.Max(1, (int)Math.Floor(maxHeight / Math.Max(1f, lineAdvance)));
+
+            var rawLines = text
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n');
+
+            var sb = new System.Text.StringBuilder();
+            int producedRows = 0;
+            int i = 0;
+            while (i < rawLines.Length && producedRows < rows)
+            {
+                int nextNl = rawLines.IndexOf('\n', i);
+                string line = nextNl < 0 ? rawLines[i..] : rawLines[i..nextNl];
+
+                int pos = 0;
+                while (pos < line.Length && producedRows < rows)
+                {
+                    int take = Math.Min(cols, line.Length - pos);
+                    sb.Append(line.AsSpan(pos, take));
+                    pos += take;
+                    producedRows++;
+                    if (producedRows < rows)
+                    {
+                        sb.Append('\n');
+                    }
+                }
+
+                i = nextNl < 0 ? rawLines.Length : nextNl + 1;
+                if (nextNl >= 0 && producedRows < rows && (sb.Length == 0 || sb[^1] != '\n'))
+                {
+                    sb.Append('\n');
+                    producedRows++;
+                }
+            }
+
+            return sb.ToString().TrimEnd();
         }
 
         private static string NormalizeText(string text)
