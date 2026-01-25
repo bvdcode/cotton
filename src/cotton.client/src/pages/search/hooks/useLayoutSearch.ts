@@ -24,7 +24,7 @@ export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearc
     layoutId,
     initialQuery = "",
     pageSize = 100,
-    debounceMs = 1000,
+    debounceMs = 300,
   } = options;
 
   const [query, setQuery] = useState(initialQuery);
