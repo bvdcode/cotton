@@ -172,13 +172,14 @@ export const TilesView: React.FC<IFileListView> = ({
                     sx={{
                       width: "100%",
                       height: "100%",
-                      objectFit: "cover",
+                      objectFit: "contain",
                       cursor: isImage || isVideo ? "pointer" : "default",
                     }}
                   />
                 );
               }
               if (previewUrl) {
+                const isTextPreview = isTextFile(tile.file.name);
                 return (
                   <Box
                     component="img"
@@ -186,14 +187,17 @@ export const TilesView: React.FC<IFileListView> = ({
                     alt={tile.file.name}
                     loading="lazy"
                     decoding="async"
-                    sx={{
+                    sx={(theme) => ({
                       width: "100%",
                       height: "100%",
-                      objectFit: "cover",
+                      objectFit: "contain",
                       ...(shouldLightenPreviewBackdrop && {
                         backgroundColor: previewBackdropColor,
                       }),
-                    }}
+                      ...(isTextPreview && theme.palette.mode === "dark" && {
+                        filter: "invert(1)",
+                      }),
+                    })}
                   />
                 );
               }
