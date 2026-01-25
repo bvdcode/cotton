@@ -16,6 +16,35 @@ const ICON_STYLES = {
 };
 
 /**
+ * Device type matchers
+ */
+const deviceMatchers = {
+  // Apple devices
+  iPhone: (device: string) =>
+    device.includes("iphone") || device.includes("ipod"),
+  iPad: (device: string) => device.includes("ipad"),
+
+  // Android devices
+  androidPhone: (device: string) => device.includes("android phone"),
+  androidTablet: (device: string) => device.includes("android tablet"),
+
+  // Desktop/Laptop
+  desktop: (device: string) =>
+    device.includes("windows pc") ||
+    device.includes("mac") ||
+    device.includes("linux pc"),
+  chromebook: (device: string) => device.includes("chromebook"),
+
+  // Other devices
+  smartTV: (device: string) => device.includes("smart tv"),
+  gameConsole: (device: string) => device.includes("game console"),
+  bot: (device: string) => device.includes("bot"),
+  script: (device: string) => device.includes("script"),
+  server: (device: string) => device.includes("server"),
+  mobile: (device: string) => device.includes("mobile"),
+};
+
+/**
  * Check if device looks like an Android phone based on brand
  */
 const isAndroidPhoneBrand = (deviceLower: string): boolean => {
@@ -40,55 +69,34 @@ export const getDeviceIcon = (device: string) => {
   }
 
   // Apple devices
-  if (deviceLower.includes("iphone") || deviceLower.includes("ipod")) {
+  if (deviceMatchers.iPhone(deviceLower))
     return <PhoneIphoneIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("ipad")) {
-    return <TabletIcon sx={ICON_STYLES} />;
-  }
+  if (deviceMatchers.iPad(deviceLower)) return <TabletIcon sx={ICON_STYLES} />;
 
   // Android devices
-  if (deviceLower.includes("android phone")) {
+  if (deviceMatchers.androidPhone(deviceLower))
     return <PhoneAndroidIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("android tablet")) {
+  if (deviceMatchers.androidTablet(deviceLower))
     return <TabletIcon sx={ICON_STYLES} />;
-  }
-  if (isAndroidPhoneBrand(deviceLower)) {
+  if (isAndroidPhoneBrand(deviceLower))
     return <PhoneAndroidIcon sx={ICON_STYLES} />;
-  }
 
   // Desktop/laptop devices
-  if (
-    deviceLower.includes("windows pc") ||
-    deviceLower.includes("mac") ||
-    deviceLower.includes("linux pc")
-  ) {
+  if (deviceMatchers.desktop(deviceLower))
     return <ComputerIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("chromebook")) {
+  if (deviceMatchers.chromebook(deviceLower))
     return <LaptopIcon sx={ICON_STYLES} />;
-  }
 
   // Other device types
-  if (deviceLower.includes("smart tv")) {
-    return <TvIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("game console")) {
+  if (deviceMatchers.smartTV(deviceLower)) return <TvIcon sx={ICON_STYLES} />;
+  if (deviceMatchers.gameConsole(deviceLower))
     return <SportsEsportsIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("bot")) {
-    return <SmartToyIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("script")) {
+  if (deviceMatchers.bot(deviceLower)) return <SmartToyIcon sx={ICON_STYLES} />;
+  if (deviceMatchers.script(deviceLower))
     return <CodeIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("server")) {
-    return <DnsIcon sx={ICON_STYLES} />;
-  }
-  if (deviceLower.includes("mobile")) {
+  if (deviceMatchers.server(deviceLower)) return <DnsIcon sx={ICON_STYLES} />;
+  if (deviceMatchers.mobile(deviceLower))
     return <PhoneIphoneIcon sx={ICON_STYLES} />;
-  }
 
   return <DevicesIcon sx={ICON_STYLES} />;
 };

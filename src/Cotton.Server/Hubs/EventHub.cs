@@ -8,6 +8,5 @@ namespace Cotton.Server.Hubs
     [EnableCors]
     public class EventHub : Hub
     {
-
     }
 }

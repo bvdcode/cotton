@@ -177,50 +177,15 @@ namespace Cotton.Previews.Http
                 return true;
             }
 
-            if (!range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
+            if (!TryValidateRangeHeaderPrefix(range))
             {
-                _logger?.LogDebug("[RangeServer {ServerId}] Invalid range header", _serverId);
                 errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
                 return false;
             }
 
-            var value = range[6..];
-            var parts = value.Split('-', 2);
-            long start;
-            long end;
-
-            // suffix range: bytes=-N
-            if (parts.Length == 2 && parts[0].Length == 0)
+            if (!TryParseRangeValue(range[6..], out var start, out var end, out errorStatusCode))
             {
-                if (!long.TryParse(parts[1], out var suffixLen) || suffixLen <= 0)
-                {
-                    errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                    return false;
-                }
-
-                start = Math.Max(0, _length - suffixLen);
-                end = _length - 1;
-            }
-            else
-            {
-                if (!long.TryParse(parts[0], out start) || start < 0)
-                {
-                    errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                    return false;
-                }
-
-                if (parts.Length == 2 && parts[1].Length > 0)
-                {
-                    if (!long.TryParse(parts[1], out end) || end < start)
-                    {
-                        errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                        return false;
-                    }
-                }
-                else
-                {
-                    end = _length - 1;
-                }
+                return false;
             }
 
             if (start >= _length)
@@ -232,6 +197,76 @@ namespace Cotton.Previews.Http
 
             end = Math.Clamp(end, start, _length - 1);
             parsedRange = new ByteRange(start, end);
+            return true;
+        }
+
+        private bool TryValidateRangeHeaderPrefix(string range)
+        {
+            if (range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            _logger?.LogDebug("[RangeServer {ServerId}] Invalid range header", _serverId);
+            return false;
+        }
+
+        private bool TryParseRangeValue(string value, out long start, out long end, out int errorStatusCode)
+        {
+            errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+            start = 0;
+            end = 0;
+
+            var parts = value.Split('-', 2);
+            if (parts.Length != 2)
+            {
+                return false;
+            }
+
+            // suffix range: bytes=-N
+            if (parts[0].Length == 0)
+            {
+                return TryParseSuffixRange(parts[1], out start, out end);
+            }
+
+            return TryParseStartEndRange(parts[0], parts[1], out start, out end);
+        }
+
+        private bool TryParseSuffixRange(string suffixLenPart, out long start, out long end)
+        {
+            start = 0;
+            end = 0;
+
+            if (!long.TryParse(suffixLenPart, out var suffixLen) || suffixLen <= 0)
+            {
+                return false;
+            }
+
+            start = Math.Max(0, _length - suffixLen);
+            end = _length - 1;
+            return true;
+        }
+
+        private bool TryParseStartEndRange(string startPart, string endPart, out long start, out long end)
+        {
+            end = 0;
+
+            if (!long.TryParse(startPart, out start) || start < 0)
+            {
+                return false;
+            }
+
+            if (endPart.Length == 0)
+            {
+                end = _length - 1;
+                return true;
+            }
+
+            if (!long.TryParse(endPart, out end) || end < start)
+            {
+                return false;
+            }
+
             return true;
         }
 

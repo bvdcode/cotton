@@ -13,11 +13,11 @@ import { useFilePreview } from "./hooks/useFilePreview";
 import { useMediaLightbox } from "./hooks/useMediaLightbox";
 import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
-import type {
-  FileSystemTile,
-  FolderOperations,
-  FileOperations,
-} from "./types/FileListViewTypes";
+import { useContentTiles } from "../../shared/hooks/useContentTiles";
+import {
+  buildFolderOperations,
+  buildFileOperations,
+} from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 
 /**
@@ -98,29 +98,7 @@ export const FilesPage: React.FC = () => {
     [ancestors, currentNode],
   );
 
-  const sortedFolders = useMemo(() => {
-    const nodes = (content?.nodes ?? []).slice();
-    nodes.sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { numeric: true }),
-    );
-    return nodes;
-  }, [content?.nodes]);
-
-  const sortedFiles = useMemo(() => {
-    const files = (content?.files ?? []).slice();
-    files.sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { numeric: true }),
-    );
-    return files;
-  }, [content?.files]);
-
-  // Build tiles array for view components
-  const tiles = useMemo<FileSystemTile[]>(() => {
-    return [
-      ...sortedFolders.map((node) => ({ kind: "folder", node }) as const),
-      ...sortedFiles.map((file) => ({ kind: "file", file }) as const),
-    ];
-  }, [sortedFolders, sortedFiles]);
+  const { sortedFiles, tiles } = useContentTiles(content);
 
   const folderOps = useFolderOperations(nodeId);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
@@ -168,30 +146,16 @@ export const FilesPage: React.FC = () => {
   };
 
   // Build folder operations adapter
-  const folderOperations: FolderOperations = {
-    isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
-    getRenamingName: () => folderOps.renamingFolderName,
-    onRenamingNameChange: folderOps.setRenamingFolderName,
-    onConfirmRename: folderOps.handleConfirmRename,
-    onCancelRename: folderOps.handleCancelRename,
-    onStartRename: folderOps.handleRenameFolder,
-    onDelete: folderOps.handleDeleteFolder,
-    onClick: (folderId: string) => navigate(`/files/${folderId}`),
-  };
+  const folderOperations = buildFolderOperations(folderOps, (folderId) =>
+    navigate(`/files/${folderId}`),
+  );
 
   // Build file operations adapter
-  const fileOperations: FileOperations = {
-    isRenaming: (fileId: string) => fileOps.renamingFileId === fileId,
-    getRenamingName: () => fileOps.renamingFileName,
-    onRenamingNameChange: fileOps.setRenamingFileName,
-    onConfirmRename: fileOps.handleConfirmRename,
-    onCancelRename: fileOps.handleCancelRename,
-    onStartRename: fileOps.handleRenameFile,
-    onDelete: fileOps.handleDeleteFile,
+  const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
     onClick: handleFileClick,
     onMediaClick: handleMediaClick,
-  };
+  });
 
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
