@@ -72,13 +72,14 @@ namespace Cotton.Previews
             int renderSize = Math.Max(size * 4, 512);
             using var canvas = new Image<Rgba32>(renderSize, renderSize);
             float padding = renderSize * PaddingRatio;
+            float paddingTop = padding * 1.3f;
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
 
             canvas.Mutate(ctx =>
             {
                 ctx.Fill(Color.White);
-                ctx.DrawText(text, font, Color.Black, new PointF(padding, padding));
+                ctx.DrawText(text, font, Color.Black, new PointF(padding, paddingTop));
             });
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
