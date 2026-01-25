@@ -5,8 +5,8 @@
  * Following Interface Segregation: Each interface has a single, well-defined purpose
  */
 
-import type { Guid, NodeDto } from "./layoutsApi";
-import type { NodeFileManifestDto } from "./nodesApi";
+import type { Guid, NodeDto } from "../layoutsApi";
+import type { NodeFileManifestDto } from "../nodesApi";
 
 /**
  * Search result item - can be either a node (folder) or file

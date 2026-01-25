@@ -503,7 +503,33 @@
     "login": "Вход",
     "home": "Главная",
     "files": "Файлы",
+    "search": "Поиск",
     "trash": "Корзина",
     "profile": "Профиль"
+  },
+  "search": {
+    "title": "Поиск",
+    "subtitle": "Найдите файлы и папки в вашем рабочем пространстве",
+    "placeholder": "Поиск файлов и папок...",
+    "resultsHeader": "Найдено {{count}} результатов для \"{{query}}\"",
+    "resultsHeader_one": "Найден 1 результат для \"{{query}}\"",
+    "resultsHeader_few": "Найдено {{count}} результата для \"{{query}}\"",
+    "resultsHeader_many": "Найдено {{count}} результатов для \"{{query}}\"",
+    "resultsHeader_other": "Найдено {{count}} результатов для \"{{query}}\"",
+    "resultTypes": {
+      "folder": "Папка",
+      "file": "Файл"
+    },
+    "emptyState": {
+      "initial": "Введите поисковый запрос для поиска файлов и папок",
+      "noResults": "Результатов не найдено для \"{{query}}\""
+    },
+    "loading": {
+      "title": "Загрузка...",
+      "caption": "Подготовка поиска"
+    },
+    "errors": {
+      "noLayout": "Не удалось загрузить макет"
+    }
   }
 }

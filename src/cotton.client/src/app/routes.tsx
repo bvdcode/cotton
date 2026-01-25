@@ -8,10 +8,11 @@ import {
   NotFoundPage,
   OnboardingPage,
   ProfilePage,
+  SearchPage,
   TrashPage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Folder, Home, Person, Delete } from "@mui/icons-material";
+import { Folder, Home, Person, Delete, Search } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
 import i18n from "../i18n";
@@ -38,6 +39,13 @@ const appRoutes: RouteConfig[] = [
     protected: true,
     displayName: i18n.t("files", { ns: "routes" }),
     element: <FilesPage />,
+  },
+  {
+    path: "/search",
+    icon: <Search />,
+    protected: true,
+    displayName: i18n.t("search", { ns: "routes" }),
+    element: <SearchPage />,
   },
   {
     path: "/trash",
