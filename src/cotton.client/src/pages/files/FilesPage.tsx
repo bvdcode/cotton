@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo } from "react";
 import { Alert, Box, Typography } from "@mui/material";
-import { FileListViewFactory, PageHeader, MediaLightbox } from "./components";
+import {
+  FileListViewFactory,
+  PageHeader,
+  MediaLightbox,
+  FilePreviewModal,
+} from "./components";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
-import { PreviewModal, PdfPreview, TextPreview } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
@@ -252,34 +256,18 @@ export const FilesPage: React.FC = () => {
         </Box>
       </Box>
 
-      {previewState.isOpen && previewState.fileId && previewState.fileName && (
-        <PreviewModal
-          open={previewState.isOpen}
-          onClose={closePreview}
-          layout={previewState.fileType === "pdf" ? "header" : "overlay"}
-          title={
-            previewState.fileType === "pdf" ? previewState.fileName : undefined
+      <FilePreviewModal
+        isOpen={previewState.isOpen}
+        fileId={previewState.fileId}
+        fileName={previewState.fileName}
+        fileType={previewState.fileType}
+        onClose={closePreview}
+        onSaved={() => {
+          if (nodeId) {
+            void refreshNodeContent(nodeId);
           }
-        >
-          {previewState.fileType === "pdf" && (
-            <PdfPreview
-              fileId={previewState.fileId}
-              fileName={previewState.fileName}
-            />
-          )}
-          {previewState.fileType === "text" && (
-            <TextPreview
-              nodeFileId={previewState.fileId}
-              fileName={previewState.fileName}
-              onSaved={() => {
-                if (nodeId) {
-                  void refreshNodeContent(nodeId);
-                }
-              }}
-            />
-          )}
-        </PreviewModal>
-      )}
+        }}
+      />
 
       {lightboxOpen && mediaItems.length > 0 && (
         <MediaLightbox
