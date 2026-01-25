@@ -5,6 +5,11 @@ namespace Cotton.Previews.Http
 {
     internal sealed class RangeStreamServer : IAsyncDisposable
     {
+        private readonly record struct ByteRange(long Start, long EndInclusive)
+        {
+            public long ContentLength => (EndInclusive - Start) + 1;
+        }
+
         private readonly HttpListener _listener;
         private readonly Stream _stream;
         private readonly long _length;
@@ -82,130 +87,33 @@ namespace Cotton.Previews.Http
             var reqId = Guid.NewGuid().ToString("N")[..6];
             try
             {
-                if (!string.Equals(ctx.Request.Url?.AbsolutePath, Url.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+                if (!TryAuthorize(ctx, reqId))
                 {
-                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid path: {Path}", _serverId, reqId, ctx.Request.Url?.AbsolutePath);
-                    ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    ctx.Response.Close();
                     return;
                 }
 
-                var token = ctx.Request.QueryString["token"];
-                if (!string.Equals(token, _token, StringComparison.Ordinal))
-                {
-                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid token", _serverId, reqId);
-                    ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                    ctx.Response.Close();
-                    return;
-                }
+                ConfigureResponseBase(ctx);
 
-                ctx.Response.SendChunked = false;
-                ctx.Response.KeepAlive = false;
-                ctx.Response.Headers["Connection"] = "close";
-                ctx.Response.Headers["Accept-Ranges"] = "bytes";
-                ctx.Response.ContentType = "application/octet-stream";
-
-                string? range = ctx.Request.Headers["Range"];
-                if (string.IsNullOrWhiteSpace(range))
+                var rangeHeader = ctx.Request.Headers["Range"];
+                if (!TryParseRange(rangeHeader, out var range, out var statusCode, out var contentRangeHeaderValue))
                 {
-                    _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Full file request, length={Length}", _serverId, reqId, _length);
-                    ctx.Response.StatusCode = (int)HttpStatusCode.OK;
-                    ctx.Response.ContentLength64 = _length;
-                    bool ok = await CopyRangeAsync(reqId, start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
-                    if (!ok)
+                    ctx.Response.StatusCode = statusCode;
+                    if (!string.IsNullOrEmpty(contentRangeHeaderValue))
                     {
-                        _logger?.LogError("[RangeServer {ServerId} Req {ReqId}] Full file copy failed", _serverId, reqId);
-                        ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    }
-                    else
-                    {
-                        _logger?.LogInformation("[RangeServer {ServerId} Req {ReqId}] Full file copy succeeded", _serverId, reqId);
+                        ctx.Response.Headers["Content-Range"] = contentRangeHeaderValue;
                     }
                     ctx.Response.Close();
                     return;
                 }
 
-                if (!range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
+                if (range is null)
                 {
-                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid range header: {Range}", _serverId, reqId, range);
-                    ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                    ctx.Response.Close();
+                    await ServeFullAsync(ctx, reqId, ct).ConfigureAwait(false);
                     return;
                 }
 
-                var value = range[6..];
-                var parts = value.Split('-', 2);
-                long start;
-                long end;
-
-                if (parts.Length == 2 && parts[0].Length == 0)
-                {
-                    if (!long.TryParse(parts[1], out var suffixLen) || suffixLen <= 0)
-                    {
-                        _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid suffix range: {Range}", _serverId, reqId, range);
-                        ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                        ctx.Response.Close();
-                        return;
-                    }
-
-                    start = Math.Max(0, _length - suffixLen);
-                    end = _length - 1;
-                }
-                else
-                {
-                    if (!long.TryParse(parts[0], out start) || start < 0)
-                    {
-                        _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid start in range: {Range}", _serverId, reqId, range);
-                        ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                        ctx.Response.Close();
-                        return;
-                    }
-
-                    if (parts.Length == 2 && parts[1].Length > 0)
-                    {
-                        if (!long.TryParse(parts[1], out end) || end < start)
-                        {
-                            _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Invalid end in range: {Range}", _serverId, reqId, range);
-                            ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                            ctx.Response.Close();
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        end = _length - 1;
-                    }
-                }
-
-                if (start >= _length)
-                {
-                    _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Start beyond length: start={Start}, length={Length}", _serverId, reqId, start, _length);
-                    ctx.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                    ctx.Response.Headers["Content-Range"] = $"bytes */{_length}";
-                    ctx.Response.Close();
-                    return;
-                }
-
-                end = Math.Clamp(end, start, _length - 1);
-                long contentLength = (end - start) + 1;
-
-                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Range request: {Start}-{End} (contentLength={ContentLength})", _serverId, reqId, start, end, contentLength);
-
-                ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
-                ctx.Response.ContentLength64 = contentLength;
-                ctx.Response.Headers["Content-Range"] = $"bytes {start}-{end}/{_length}";
-
-                bool okRange = await CopyRangeAsync(reqId, start, end, ctx.Response.OutputStream, ct).ConfigureAwait(false);
-                if (!okRange)
-                {
-                    _logger?.LogError("[RangeServer {ServerId} Req {ReqId}] Range copy failed", _serverId, reqId);
-                    ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                }
-                else
-                {
-                    _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Range copy succeeded", _serverId, reqId);
-                }
-                ctx.Response.Close();
+                await ServeRangeAsync(ctx, reqId, range.Value, ct).ConfigureAwait(false);
+                return;
             }
             catch (HttpListenerException ex) when (ex.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase)
                                                   || ex.Message.Contains("forcibly closed", StringComparison.OrdinalIgnoreCase)
@@ -221,6 +129,138 @@ namespace Cotton.Previews.Http
                 _logger?.LogError(ex, "[RangeServer {ServerId} Req {ReqId}] HandleAsync exception", _serverId, reqId);
                 try { ctx.Response.Abort(); } catch { }
             }
+        }
+
+        private bool TryAuthorize(HttpListenerContext ctx, string reqId)
+        {
+            if (!string.Equals(ctx.Request.Url?.AbsolutePath, Url.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Invalid path", _serverId, reqId);
+                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                ctx.Response.Close();
+                return false;
+            }
+
+            var token = ctx.Request.QueryString["token"];
+            if (!string.Equals(token, _token, StringComparison.Ordinal))
+            {
+                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Invalid token", _serverId, reqId);
+                ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                ctx.Response.Close();
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void ConfigureResponseBase(HttpListenerContext ctx)
+        {
+            ctx.Response.SendChunked = false;
+            ctx.Response.KeepAlive = false;
+            ctx.Response.Headers["Connection"] = "close";
+            ctx.Response.Headers["Accept-Ranges"] = "bytes";
+            ctx.Response.ContentType = "application/octet-stream";
+        }
+
+        private bool TryParseRange(
+            string? range,
+            out ByteRange? parsedRange,
+            out int errorStatusCode,
+            out string? contentRangeHeaderValue)
+        {
+            parsedRange = null;
+            errorStatusCode = (int)HttpStatusCode.OK;
+            contentRangeHeaderValue = null;
+
+            if (string.IsNullOrWhiteSpace(range))
+            {
+                return true;
+            }
+
+            if (!range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger?.LogDebug("[RangeServer {ServerId}] Invalid range header", _serverId);
+                errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                return false;
+            }
+
+            var value = range[6..];
+            var parts = value.Split('-', 2);
+            long start;
+            long end;
+
+            // suffix range: bytes=-N
+            if (parts.Length == 2 && parts[0].Length == 0)
+            {
+                if (!long.TryParse(parts[1], out var suffixLen) || suffixLen <= 0)
+                {
+                    errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                    return false;
+                }
+
+                start = Math.Max(0, _length - suffixLen);
+                end = _length - 1;
+            }
+            else
+            {
+                if (!long.TryParse(parts[0], out start) || start < 0)
+                {
+                    errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                    return false;
+                }
+
+                if (parts.Length == 2 && parts[1].Length > 0)
+                {
+                    if (!long.TryParse(parts[1], out end) || end < start)
+                    {
+                        errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                        return false;
+                    }
+                }
+                else
+                {
+                    end = _length - 1;
+                }
+            }
+
+            if (start >= _length)
+            {
+                errorStatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                contentRangeHeaderValue = $"bytes */{_length}";
+                return false;
+            }
+
+            end = Math.Clamp(end, start, _length - 1);
+            parsedRange = new ByteRange(start, end);
+            return true;
+        }
+
+        private async Task ServeFullAsync(HttpListenerContext ctx, string reqId, CancellationToken ct)
+        {
+            ctx.Response.StatusCode = (int)HttpStatusCode.OK;
+            ctx.Response.ContentLength64 = _length;
+            var ok = await CopyRangeAsync(reqId, start: 0, endInclusive: _length - 1, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+            if (!ok)
+            {
+                _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Full copy failed", _serverId, reqId);
+                ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            }
+            ctx.Response.Close();
+        }
+
+        private async Task ServeRangeAsync(HttpListenerContext ctx, string reqId, ByteRange range, CancellationToken ct)
+        {
+            ctx.Response.StatusCode = (int)HttpStatusCode.PartialContent;
+            ctx.Response.ContentLength64 = range.ContentLength;
+            ctx.Response.Headers["Content-Range"] = $"bytes {range.Start}-{range.EndInclusive}/{_length}";
+
+            var ok = await CopyRangeAsync(reqId, range.Start, range.EndInclusive, ctx.Response.OutputStream, ct).ConfigureAwait(false);
+            if (!ok)
+            {
+                _logger?.LogWarning("[RangeServer {ServerId} Req {ReqId}] Range copy failed", _serverId, reqId);
+                ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            }
+            ctx.Response.Close();
         }
 
         private async Task<bool> CopyRangeAsync(string reqId, long start, long endInclusive, Stream destination, CancellationToken ct)

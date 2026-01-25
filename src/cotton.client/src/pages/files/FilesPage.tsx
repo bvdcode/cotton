@@ -1,36 +1,18 @@
 import React, { useEffect, useMemo } from "react";
-import {
-  Alert,
-  Box,
-  Divider,
-  IconButton,
-  LinearProgress,
-  Typography,
-} from "@mui/material";
-import { FileBreadcrumbs, FileListViewFactory } from "./components";
-import {
-  ArrowUpward,
-  CreateNewFolder,
-  Home,
-  UploadFile,
-  ViewModule,
-  ViewList,
-} from "@mui/icons-material";
+import { Alert, Box, Typography } from "@mui/material";
+import { FileListViewFactory, PageHeader, MediaLightbox } from "./components";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
-import { filesApi } from "../../shared/api/filesApi";
-import { MediaLightbox } from "./components";
-import type { MediaItem } from "./components";
-import { formatBytes } from "./utils/formatBytes";
-import { isImageFile, isVideoFile } from "./utils/fileTypes";
-import { getFileIcon } from "./utils/icons";
 import { PreviewModal, PdfPreview, TextPreview } from "./components/preview";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
 import { useFilePreview } from "./hooks/useFilePreview";
+import { useMediaLightbox } from "./hooks/useMediaLightbox";
+import { downloadFile } from "./utils/fileHandlers";
+import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import type {
   FileSystemTile,
   FolderOperations,
@@ -111,11 +93,10 @@ export const FilesPage: React.FC = () => {
     };
   }, [currentNode?.name, routeNodeId, ancestors.length, t]);
 
-  const breadcrumbs = useMemo(() => {
-    if (!currentNode) return [] as Array<{ id: string; name: string }>;
-    const chain = [...ancestors, currentNode];
-    return chain.map((n) => ({ id: n.id, name: n.name }));
-  }, [ancestors, currentNode]);
+  const breadcrumbs = useMemo(
+    () => buildBreadcrumbs(ancestors, currentNode),
+    [ancestors, currentNode],
+  );
 
   const sortedFolders = useMemo(() => {
     const nodes = (content?.nodes ?? []).slice();
@@ -151,57 +132,20 @@ export const FilesPage: React.FC = () => {
   });
   const { previewState, openPreview, closePreview } = useFilePreview();
 
-  // Media lightbox state
-  const [lightboxOpen, setLightboxOpen] = React.useState(false);
-  const [lightboxIndex, setLightboxIndex] = React.useState(0);
+  // Media lightbox management
+  const {
+    lightboxOpen,
+    lightboxIndex,
+    mediaItems,
+    getSignedMediaUrl,
+    handleMediaClick,
+    setLightboxOpen,
+  } = useMediaLightbox(sortedFiles);
 
-  // Build media items for lightbox (images and videos only)
-  const mediaItems = useMemo<MediaItem[]>(() => {
-    return sortedFiles
-      .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
-      .map((file) => {
-        const preview = getFileIcon(
-          file.encryptedFilePreviewHashHex ?? null,
-          file.name,
-        );
-        const previewUrl = typeof preview === "string" ? preview : "";
-
-        return {
-          id: file.id,
-          kind: isImageFile(file.name) ? "image" : "video",
-          name: file.name,
-          previewUrl,
-          mimeType: file.name.toLowerCase().endsWith(".mp4")
-            ? "video/mp4"
-            : undefined,
-          sizeBytes: file.sizeBytes,
-        } as MediaItem;
-      });
-  }, [sortedFiles]);
-
-  // Get signed media URL for original file
-  const getSignedMediaUrl = async (fileId: string): Promise<string> => {
-    return await filesApi.getDownloadLink(fileId, 60 * 24);
-  };
-
-  // Handler to open media lightbox
-  const handleMediaClick = (fileId: string) => {
-    const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
-    if (mediaIndex !== -1) {
-      setLightboxIndex(mediaIndex);
-      setLightboxOpen(true);
-    }
-  };
-
-  const stats = useMemo(() => {
-    const folders = content?.nodes?.length ?? 0;
-    const files = content?.files?.length ?? 0;
-    const sizeBytes = (content?.files ?? []).reduce(
-      (sum, file) => sum + (file.sizeBytes ?? 0),
-      0,
-    );
-    return { folders, files, sizeBytes };
-  }, [content?.files, content?.nodes]);
+  const stats = useMemo(
+    () => calculateFolderStats(content?.nodes, content?.files),
+    [content?.files, content?.nodes],
+  );
 
   const handleGoUp = () => {
     if (ancestors.length > 0) {
@@ -213,20 +157,7 @@ export const FilesPage: React.FC = () => {
   };
 
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
-    try {
-      const downloadLink = await filesApi.getDownloadLink(nodeFileId);
-      const link = document.createElement("a");
-      link.href = downloadLink;
-      link.download = fileName;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Failed to download file:", error);
-    }
+    await downloadFile(nodeFileId, fileName);
   };
 
   const handleFileClick = (fileId: string, fileName: string) => {
@@ -312,131 +243,23 @@ export const FilesPage: React.FC = () => {
         onDrop={fileUpload.handleDrop}
         sx={{ position: "relative" }}
       >
-        <Box
-          sx={{
-            position: "sticky",
-            top: 0,
-            zIndex: 20,
-            bgcolor: "background.default",
-            display: "flex",
-            flexDirection: "column",
-            marginBottom: 2,
-            borderBottom: 1,
-            borderColor: "divider",
-            paddingTop: 1,
-            paddingBottom: 1,
-          }}
-        >
-          {loading && (
-            <LinearProgress
-              sx={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-              }}
-            />
-          )}
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "row", sm: "row" },
-              gap: { xs: 1, sm: 1 },
-              alignItems: { xs: "stretch", sm: "center" },
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 0.5,
-                  alignItems: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <IconButton
-                  color="primary"
-                  onClick={handleGoUp}
-                  disabled={loading || ancestors.length === 0}
-                  title={t("actions.goUp")}
-                >
-                  <ArrowUpward />
-                </IconButton>
-                <IconButton
-                  color="primary"
-                  onClick={fileUpload.handleUploadClick}
-                  disabled={!nodeId || loading}
-                  title={t("actions.upload")}
-                >
-                  <UploadFile />
-                </IconButton>
-                <IconButton
-                  color="primary"
-                  onClick={folderOps.handleNewFolder}
-                  disabled={!nodeId || folderOps.isCreatingFolder}
-                  title={t("actions.newFolder")}
-                >
-                  <CreateNewFolder />
-                </IconButton>
-                <IconButton
-                  onClick={() => navigate("/files")}
-                  color="primary"
-                  title={t("breadcrumbs.root")}
-                >
-                  <Home />
-                </IconButton>
-                {layoutType === InterfaceLayoutType.Tiles ? (
-                  <IconButton
-                    color="primary"
-                    onClick={() => setLayoutType(InterfaceLayoutType.List)}
-                    title={t("actions.switchToListView")}
-                  >
-                    <ViewList />
-                  </IconButton>
-                ) : (
-                  <IconButton
-                    color="primary"
-                    onClick={() => setLayoutType(InterfaceLayoutType.Tiles)}
-                    title={t("actions.switchToTilesView")}
-                  >
-                    <ViewModule />
-                  </IconButton>
-                )}
-              </Box>
-            </Box>
-
-            <FileBreadcrumbs breadcrumbs={breadcrumbs} />
-
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{ mx: 1, display: { xs: "none", sm: "block" } }}
-            />
-            <Box
-              sx={{
-                flexShrink: 0,
-                whiteSpace: "nowrap",
-                display: { xs: "none", sm: "block" },
-              }}
-            >
-              <Typography color="text.secondary" sx={{ fontSize: "0.875rem" }}>
-                {t("stats.summary", {
-                  ns: "files",
-                  folders: stats.folders,
-                  files: stats.files,
-                  size: formatBytes(stats.sizeBytes),
-                })}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+        <PageHeader
+          loading={loading}
+          ancestors={ancestors}
+          breadcrumbs={breadcrumbs}
+          stats={stats}
+          layoutType={layoutType}
+          canGoUp={ancestors.length > 0}
+          onGoUp={handleGoUp}
+          onHomeClick={() => navigate("/files")}
+          onLayoutToggle={setLayoutType}
+          showUpload={!!nodeId}
+          showNewFolder={!!nodeId}
+          onUploadClick={fileUpload.handleUploadClick}
+          onNewFolderClick={folderOps.handleNewFolder}
+          isCreatingFolder={folderOps.isCreatingFolder}
+          t={t}
+        />
         {error && (
           <Box mb={1} px={1}>
             <Alert severity="error">{error}</Alert>

@@ -1,3 +1,4 @@
+import React, { useCallback, useState, useSyncExternalStore } from "react";
 import {
   Box,
   Divider,
@@ -7,7 +8,6 @@ import {
   Typography,
 } from "@mui/material";
 import { Close, ExpandMore, ExpandLess } from "@mui/icons-material";
-import { useCallback, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";
 import { uploadManager } from "../../../shared/upload/UploadManager";
@@ -48,6 +48,149 @@ const sortTasksByPriority = (
 };
 
 type UploadTask = ReturnType<typeof uploadManager.getSnapshot>["tasks"][number];
+
+/**
+ * Calculate upload statistics
+ */
+const calculateUploadStats = (tasks: UploadTask[]) => {
+  const total = tasks.length;
+  const completed = tasks.filter((t) => t.status === "completed").length;
+  const failed = tasks.filter((t) => t.status === "failed").length;
+  const activeTasks = tasks.filter(
+    (t) =>
+      t.status === "queued" ||
+      t.status === "uploading" ||
+      t.status === "finalizing",
+  );
+  const hasActive = activeTasks.length > 0;
+  const allCompleted = total > 0 && completed + failed === total;
+  const hasErrors = failed > 0;
+
+  return {
+    total,
+    completed,
+    failed,
+    activeTasks,
+    hasActive,
+    allCompleted,
+    hasErrors,
+  };
+};
+
+/**
+ * Get appropriate title based on upload state
+ */
+const getWidgetTitle = (
+  t: (key: string, options?: any) => string,
+  stats: ReturnType<typeof calculateUploadStats>,
+  isCollapsed: boolean,
+  totalProgress: number,
+  totalSpeed: number,
+): string => {
+  const { hasActive, allCompleted, hasErrors, completed, total } = stats;
+
+  if (hasActive) {
+    return t("titleWithProgress", {
+      completed: Math.min(completed + 1, total),
+      total,
+      speed: formatBytes(totalSpeed),
+    });
+  }
+
+  if (isCollapsed && allCompleted && hasErrors) {
+    return t("error");
+  }
+
+  if (isCollapsed && allCompleted) {
+    return t("title");
+  }
+
+  return t("titleWithTotal", { total });
+};
+
+interface WidgetHeaderProps {
+  title: string;
+  isCollapsed: boolean;
+  hasActive: boolean;
+  totalProgress: number;
+  onToggleCollapse: () => void;
+  onClose: () => void;
+}
+
+/**
+ * Header component for upload widget
+ */
+const WidgetHeader: React.FC<WidgetHeaderProps> = ({
+  title,
+  isCollapsed,
+  hasActive,
+  totalProgress,
+  onToggleCollapse,
+  onClose,
+}) => {
+  return (
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      mb={isCollapsed ? 0 : 1}
+      sx={{
+        position: "relative",
+        zIndex: 1,
+        borderRadius: isCollapsed ? 2 : 0,
+        overflow: "hidden",
+        p: 1.5,
+        transition: "border-radius 0.5s ease-in-out",
+      }}
+    >
+      {/* Battery fill effect in header only */}
+      {hasActive && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            bottom: 0,
+            padding: 3,
+            width: `${totalProgress}%`,
+            bgcolor: "success.main",
+            opacity: 0.15,
+            transition: "width 0.3s ease-out",
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      <Typography
+        variant="subtitle1"
+        fontWeight={600}
+        sx={{
+          position: "relative",
+          zIndex: 1,
+          color: "text.primary",
+        }}
+      >
+        {title}
+      </Typography>
+      <Box display="flex" gap={0.5} sx={{ position: "relative", zIndex: 1 }}>
+        <IconButton
+          size="small"
+          onClick={onToggleCollapse}
+          aria-label={isCollapsed ? "Expand" : "Collapse"}
+        >
+          {isCollapsed ? (
+            <ExpandLess fontSize="small" />
+          ) : (
+            <ExpandMore fontSize="small" />
+          )}
+        </IconButton>
+        <IconButton size="small" onClick={onClose} aria-label="Close">
+          <Close fontSize="small" />
+        </IconButton>
+      </Box>
+    </Box>
+  );
+};
 
 interface UploadTaskRowProps {
   task: UploadTask;
@@ -120,24 +263,21 @@ export const UploadQueueWidget = () => {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const tasks = sortTasksByPriority(snapshot.tasks);
-  const total = tasks.length;
-  const completed = tasks.filter((t) => t.status === "completed").length;
-  const failed = tasks.filter((t) => t.status === "failed").length;
-  const activeTasks = tasks.filter(
-    (t) =>
-      t.status === "queued" ||
-      t.status === "uploading" ||
-      t.status === "finalizing",
-  );
-  const hasActive = activeTasks.length > 0;
-  const allCompleted = total > 0 && completed + failed === total;
-  const hasErrors = failed > 0;
+  const stats = calculateUploadStats(tasks);
   const totalSpeed = snapshot.overall.uploadSpeedBytesPerSec;
-  const visible = snapshot.open && total > 0;
+  const visible = snapshot.open && stats.total > 0;
 
   const totalProgress = Math.max(
     0,
     Math.min(100, snapshot.overall.progress01 * 100),
+  );
+
+  const widgetTitle = getWidgetTitle(
+    t,
+    stats,
+    isCollapsed,
+    totalProgress,
+    totalSpeed,
   );
 
   if (!visible) return null;
@@ -161,87 +301,14 @@ export const UploadQueueWidget = () => {
           overflow: "hidden",
         }}
       >
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          mb={isCollapsed ? 0 : 1}
-          sx={{
-            position: "relative",
-            zIndex: 1,
-            borderRadius: isCollapsed ? 2 : 0,
-            overflow: "hidden",
-            p: 1.5,
-            transition: "border-radius 0.5s ease-in-out",
-          }}
-        >
-          {/* Battery fill effect in header only (prevents tinting the expanded list) */}
-          {hasActive && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                bottom: 0,
-                padding: 3,
-                width: `${totalProgress}%`,
-                bgcolor: "success.main",
-                opacity: 0.15,
-                transition: "width 0.3s ease-out",
-                zIndex: 0,
-                pointerEvents: "none",
-              }}
-            />
-          )}
-          <Typography
-            variant="subtitle1"
-            fontWeight={600}
-            sx={{
-              position: "relative",
-              zIndex: 1,
-              color:
-                isCollapsed && allCompleted && hasErrors
-                  ? "error.main"
-                  : "text.primary",
-            }}
-          >
-            {hasActive
-              ? t("titleWithProgress", {
-                  completed: Math.min(completed + 1, total),
-                  total,
-                  speed: formatBytes(totalSpeed),
-                })
-              : isCollapsed && allCompleted && hasErrors
-                ? t("error")
-                : isCollapsed && allCompleted
-                  ? t("title")
-                  : t("titleWithTotal", { total })}
-          </Typography>
-          <Box
-            display="flex"
-            gap={0.5}
-            sx={{ position: "relative", zIndex: 1 }}
-          >
-            <IconButton
-              size="small"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              aria-label={isCollapsed ? "Expand" : "Collapse"}
-            >
-              {isCollapsed ? (
-                <ExpandLess fontSize="small" />
-              ) : (
-                <ExpandMore fontSize="small" />
-              )}
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => uploadManager.setOpen(false)}
-              aria-label="Close"
-            >
-              <Close fontSize="small" />
-            </IconButton>
-          </Box>
-        </Box>
+        <WidgetHeader
+          title={widgetTitle}
+          isCollapsed={isCollapsed}
+          hasActive={stats.hasActive}
+          totalProgress={totalProgress}
+          onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+          onClose={() => uploadManager.setOpen(false)}
+        />
 
         <Box
           sx={{
