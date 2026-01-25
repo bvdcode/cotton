@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { filesApi } from "../../../shared/api/filesApi";
+import { useRenameState } from "../../../shared/hooks/useRenameState";
 
 /**
  * Hook for trash file operations - similar to useFileOperations
@@ -11,54 +11,30 @@ export const useTrashFileOperations = (onFileDeleted?: () => void) => {
   const { t } = useTranslation(["trash", "common"]);
   const confirm = useConfirm();
 
-  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
-  const [renamingFileName, setRenamingFileName] = useState("");
-  const [originalFileName, setOriginalFileName] = useState("");
+  const [renameState, renameHandlers] = useRenameState();
 
   const handleRenameFile = (fileId: string, currentName: string) => {
-    setRenamingFileId(fileId);
-    setRenamingFileName(currentName);
-    setOriginalFileName(currentName);
+    renameHandlers.startRename(fileId, currentName);
   };
 
   const handleConfirmRename = async () => {
-    const fileId = renamingFileId;
-    if (!fileId || renamingFileName.trim().length === 0) {
-      setRenamingFileId(null);
-      setRenamingFileName("");
-      setOriginalFileName("");
-      return;
-    }
+    await renameHandlers.confirmRename(async (fileId, newName) => {
+      try {
+        await filesApi.renameFile(fileId, { name: newName });
 
-    const newName = renamingFileName.trim();
-
-    // No changes - just close rename mode
-    if (newName === originalFileName) {
-      setRenamingFileId(null);
-      setRenamingFileName("");
-      setOriginalFileName("");
-      return;
-    }
-
-    try {
-      await filesApi.renameFile(fileId, { name: newName });
-      setRenamingFileId(null);
-      setRenamingFileName("");
-      setOriginalFileName("");
-
-      // Trigger parent refresh
-      if (onFileDeleted) {
-        onFileDeleted();
+        // Trigger parent refresh
+        if (onFileDeleted) {
+          onFileDeleted();
+        }
+      } catch (error) {
+        console.error("Failed to rename file:", error);
+        return false;
       }
-    } catch (error) {
-      console.error("Failed to rename file:", error);
-    }
+    });
   };
 
   const handleCancelRename = () => {
-    setRenamingFileId(null);
-    setRenamingFileName("");
-    setOriginalFileName("");
+    renameHandlers.cancelRename();
   };
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
@@ -85,9 +61,9 @@ export const useTrashFileOperations = (onFileDeleted?: () => void) => {
 
   return {
     // Rename file state
-    renamingFileId,
-    renamingFileName,
-    setRenamingFileName,
+    renamingFileId: renameState.renamingId,
+    renamingFileName: renameState.renamingName,
+    setRenamingFileName: renameHandlers.setRenamingName,
     handleRenameFile,
     handleConfirmRename,
     handleCancelRename,

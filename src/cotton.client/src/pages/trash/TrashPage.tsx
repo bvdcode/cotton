@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   IconButton,
+  LinearProgress,
   Typography,
   Dialog,
   DialogContent,
@@ -314,7 +315,6 @@ export const TrashPage: React.FC = () => {
       <Box width="100%" sx={{ position: "relative" }}>
         <PageHeader
           loading={loading}
-          ancestors={ancestors}
           breadcrumbs={breadcrumbs}
           stats={stats}
           layoutType={layoutType}

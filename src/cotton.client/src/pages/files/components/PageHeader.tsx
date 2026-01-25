@@ -1,4 +1,5 @@
-import React, { ReactNode } from "react";
+import React from "react";
+import type { ReactNode } from "react";
 import {
   Box,
   Divider,
@@ -13,7 +14,6 @@ import {
   UploadFile,
   ViewModule,
   ViewList,
-  Delete,
 } from "@mui/icons-material";
 import { FileBreadcrumbs } from "./FileBreadcrumbs";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
@@ -21,7 +21,6 @@ import { formatBytes } from "../utils/formatBytes";
 
 export interface PageHeaderProps {
   loading: boolean;
-  ancestors: Array<{ id: string; name: string }>;
   breadcrumbs: Array<{ id: string; name: string }>;
   stats: { folders: number; files: number; sizeBytes: number };
   layoutType: InterfaceLayoutType;
@@ -42,7 +41,7 @@ export interface PageHeaderProps {
   customActions?: ReactNode;
 
   // Translations
-  t: (key: string, options?: any) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 /**
@@ -50,7 +49,6 @@ export interface PageHeaderProps {
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   loading,
-  ancestors,
   breadcrumbs,
   stats,
   layoutType,
