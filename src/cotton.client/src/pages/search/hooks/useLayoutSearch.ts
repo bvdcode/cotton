@@ -10,6 +10,7 @@ export interface UseLayoutSearchOptions {
 
 export interface UseLayoutSearchState {
   query: string;
+  page: number;
   pageSize: number;
   totalCount: number;
   loading: boolean;
@@ -17,17 +18,21 @@ export interface UseLayoutSearchState {
   results: LayoutSearchResultDto | null;
 
   setQuery: (value: string) => void;
+  setPage: (page: number) => void;
+  setPageSize: (pageSize: number) => void;
 }
 
 export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearchState {
   const {
     layoutId,
     initialQuery = "",
-    pageSize = 100,
+    pageSize: initialPageSize = 100,
     debounceMs = 300,
   } = options;
 
   const [query, setQuery] = useState(initialQuery);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +57,7 @@ export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearc
         const response = await layoutsApi.search({
           layoutId,
           query: query.trim(),
-          page: 1,
+          page,
           pageSize,
         });
 
@@ -69,15 +74,18 @@ export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearc
     return () => {
       clearTimeout(handle);
     };
-  }, [layoutId, query, pageSize, debounceMs]);
+  }, [layoutId, query, page, pageSize, debounceMs]);
 
   return {
     query,
+    page,
     pageSize,
     totalCount,
     loading,
     error,
     results,
     setQuery,
+    setPage,
+    setPageSize,
   };
 }
