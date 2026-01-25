@@ -1,4 +1,10 @@
 {
+  "search": {
+    "searchPlaceholder": "Поиск файлов и папок...",
+    "error": "Поиск не удался. Попробуйте снова.",
+    "enterQueryHint": "Начните вводить для поиска...",
+    "noResults": "Файлы или папки не найдены"
+  },
   "common": {
     "languageName": "Русский",
     "switchToThisLanguage": "Переключить на русский",
