@@ -1,9 +1,8 @@
 import { httpClient } from "./httpClient";
 import { InterfaceLayoutType } from "./types/InterfaceLayoutType";
-import type { SearchResultDto, SearchResult, SearchParams } from "./types/SearchTypes";
+import type { NodeFileManifestDto } from "./nodesApi";
 
 export { InterfaceLayoutType };
-export type { SearchResultDto, SearchResult, SearchParams } from "./types/SearchTypes";
 
 export type Guid = string;
 
@@ -25,6 +24,16 @@ export interface LayoutStatsDto {
   nodeCount: number;
   fileCount: number;
   sizeBytes: number;
+}
+
+export interface LayoutSearchResultDto {
+  nodes: NodeDto[];
+  files: NodeFileManifestDto[];
+}
+
+export interface LayoutSearchResult {
+  data: LayoutSearchResultDto;
+  totalCount: number;
 }
 
 const joinResolverPath = (path: string): string => {
@@ -66,6 +75,30 @@ export const layoutsApi = {
     return response.data;
   },
 
+  search: async (options: {
+    layoutId: Guid;
+    query: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<LayoutSearchResult> => {
+    const { layoutId, query, page = 1, pageSize = 20 } = options;
+
+    const response = await httpClient.get<LayoutSearchResultDto>(
+      `/layouts/${layoutId}/search`,
+      {
+        params: { query, page, pageSize },
+      },
+    );
+
+    const headerRaw = response.headers["x-total-count"];
+    const totalCount = headerRaw ? parseInt(headerRaw, 10) : 0;
+
+    return {
+      data: response.data,
+      totalCount,
+    };
+  },
+
   /**
    * Updates the UI layout type for a specific node
    * @param nodeId - The ID of the node to update
@@ -84,38 +117,5 @@ export const layoutsApi = {
       },
     );
     return response.data;
-  },
-
-  /**
-   * Search for nodes and files within a layout
-   * @param params - Search parameters including layoutId, query, page, and pageSize
-   * @returns Search results with pagination info from X-Total-Count header
-   */
-  search: async ({
-    layoutId,
-    query,
-    page = 1,
-    pageSize = 20,
-  }: SearchParams): Promise<SearchResult> => {
-    const response = await httpClient.get<SearchResultDto>(
-      `/layouts/${layoutId}/search`,
-      {
-        params: {
-          query,
-          page,
-          pageSize,
-        },
-      },
-    );
-    
-    // Get total count from header
-    const totalCount = parseInt(response.headers['x-total-count'] || '0', 10);
-    
-    return {
-      data: response.data,
-      totalCount,
-      page,
-      pageSize,
-    };
   },
 };

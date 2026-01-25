@@ -5,4 +5,4 @@ export { HomePage } from "./home";
 export { FilesPage } from "./files";
 export { ProfilePage } from "./profile";
 export { TrashPage } from "./trash";
-export { SearchPage } from "./search";
+export { SearchPage } from "./search/SearchPage";

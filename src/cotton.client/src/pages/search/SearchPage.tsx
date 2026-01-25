@@ -1,106 +1,84 @@
-/**
- * Search Page Component
- * 
- * Single Responsibility: Orchestrates search functionality
- * Open/Closed: Can be extended with filters and advanced search
- * Dependency Inversion: Depends on useSearch hook abstraction
- * 
- * Main page for searching files and folders within the layout.
- * Features:
- * - Search bar with real-time query updates
- * - Paginated results display
- * - Mixed results (folders and files)
- * - URL-synchronized state
- */
+import React, { useEffect } from "react";
+import { Box, Alert, CircularProgress } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { useLayoutsStore } from "../../shared/store/layoutsStore";
+import { SearchBar } from "./components/SearchBar";
+import { SearchResults } from "./components/SearchResults";
+import { useLayoutSearch } from "./hooks/useLayoutSearch";
+import { downloadFile } from "../files/utils/fileHandlers";
+import { useFilePreview } from "../files/hooks/useFilePreview";
+import { FilePreviewModal } from "../files/components";
 
-import React, { useEffect } from 'react';
-import { Box, Container, Typography } from '@mui/material';
-import { useTranslation } from 'react-i18next';
-import { SearchBar, SearchResults } from './components';
-import { useSearch } from './hooks';
-import { useLayoutsStore } from '../../shared/store/layoutsStore';
-import Loader from '../../shared/ui/Loader';
-
-/**
- * SearchPage - Main search interface
- * 
- * Coordinates search bar and results display with proper state management
- */
 export const SearchPage: React.FC = () => {
-  const { t } = useTranslation(['search', 'common']);
-  const { rootNode, loadingRoot, error: layoutError, ensureHomeData } = useLayoutsStore();
+  const navigate = useNavigate();
+  const { rootNode, ensureHomeData } = useLayoutsStore();
 
-  // Ensure we have root layout data
   useEffect(() => {
     void ensureHomeData();
   }, [ensureHomeData]);
 
-  // Get layout ID from root node
   const layoutId = rootNode?.layoutId;
 
-  // Search hook with all business logic
-  const {
-    query,
-    results,
-    totalCount,
-    loading,
-    error,
-    currentPage,
-    search,
-    setPage,
-    clear,
-  } = useSearch({
-    layoutId: layoutId || '',
+  const searchState = useLayoutSearch({
+    layoutId: layoutId ?? "",
     pageSize: 20,
-    autoSearch: true,
   });
 
-  // Show loader while loading layout data
-  if (loadingRoot) {
-    return (
-      <Loader
-        title={t('search:loading.title')}
-        caption={t('search:loading.caption')}
-      />
-    );
-  }
+  const { previewState, openPreview, closePreview } = useFilePreview();
 
-  // Handle layout loading error
-  if (layoutError || !layoutId) {
-    return (
-      <Container maxWidth="lg">
-        <Box sx={{ py: 4 }}>
-          <Typography variant="h5" color="error">
-            {layoutError || t('search:errors.noLayout')}
-          </Typography>
-        </Box>
-      </Container>
-    );
-  }
+  const handleFolderClick = (nodeId: string) => {
+    navigate(`/files/${nodeId}`);
+  };
+
+  const handleFileClick = async (file: { id: string; name: string }) => {
+    const opened = openPreview(file.id, file.name);
+    if (!opened) {
+      await downloadFile(file.id, file.name);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!layoutId) return;
+    void searchState.search();
+  };
+
+  const disabled = !layoutId || searchState.loading;
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ py: 4 }}>
-        {/* Search Bar */}
-        <SearchBar
-          value={query}
-          onSearch={search}
-          onClear={clear}
-          loading={loading}
-        />
+    <Box p={3} width="100%">
+      <SearchBar
+        value={searchState.query}
+        onChange={searchState.setQuery}
+        onSubmit={handleSubmit}
+        disabled={disabled}
+      />
 
-        {/* Search Results */}
-        <SearchResults
-          results={results}
-          totalCount={totalCount}
-          currentPage={currentPage}
-          pageSize={20}
-          loading={loading}
-          error={error}
-          query={query}
-          onPageChange={setPage}
-        />
-      </Box>
-    </Container>
+      {searchState.error && (
+        <Box mb={2}>
+          <Alert severity="error">{searchState.error}</Alert>
+        </Box>
+      )}
+
+      {searchState.loading && (
+        <Box display="flex" justifyContent="center" mt={2}>
+          <CircularProgress size={24} />
+        </Box>
+      )}
+
+      <SearchResults
+        results={searchState.results}
+        totalCount={searchState.totalCount}
+        onFolderClick={handleFolderClick}
+        onFileClick={handleFileClick}
+      />
+
+      <FilePreviewModal
+        isOpen={previewState.isOpen}
+        fileId={previewState.fileId}
+        fileName={previewState.fileName}
+        fileType={previewState.fileType}
+        onClose={closePreview}
+      />
+    </Box>
   );
 };
