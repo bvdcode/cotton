@@ -73,22 +73,13 @@ namespace Cotton.Previews
             int renderSize = Math.Max(size * 4, 512);
             using var canvas = new Image<Rgba32>(renderSize, renderSize);
             float padding = renderSize * PaddingRatio;
-            float wrapWidth = renderSize - (padding * 2);
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
-            var textOptions = new RichTextOptions(font)
-            {
-                Origin = new PointF(padding, padding),
-                WrappingLength = wrapWidth,
-                LineSpacing = fontSize * LineSpacingRatio,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top,
-            };
 
             canvas.Mutate(ctx =>
             {
                 ctx.Fill(Color.White);
-                ctx.DrawText(textOptions, text, Color.Black);
+                ctx.DrawText(text, font, Color.Black, new PointF(padding, padding));
             });
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
