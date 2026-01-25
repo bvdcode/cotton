@@ -60,7 +60,11 @@ export const nodesApi = {
         },
       },
     );
-    const totalCount = parseInt(response.headers["x-total-count"]);
+    const headerValue = response.headers["x-total-count"];
+    const parsed = Number.parseInt(String(headerValue ?? ""), 10);
+    const fallbackTotalCount =
+      (response.data.nodes?.length ?? 0) + (response.data.files?.length ?? 0);
+    const totalCount = Number.isFinite(parsed) ? parsed : fallbackTotalCount;
     return { content: response.data, totalCount };
   },
 

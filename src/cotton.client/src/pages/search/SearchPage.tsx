@@ -126,7 +126,11 @@ export const SearchPage: React.FC = () => {
   );
 
   return (
-    <Box p={3} width="100%">
+    <Box
+      p={3}
+      width="100%"
+      sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
+    >
       <SearchBar
         value={searchState.query}
         onChange={searchState.setQuery}
@@ -169,7 +173,7 @@ export const SearchPage: React.FC = () => {
         )}
 
       {searchState.query.trim() && searchState.results && tiles.length > 0 && (
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", flex: 1, minHeight: 0 }}>
           <FileListViewFactory
             layoutType={InterfaceLayoutType.List}
             tiles={tiles}
