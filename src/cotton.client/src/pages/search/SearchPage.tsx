@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from "react";
-import { Box, Alert, LinearProgress, Typography, TablePagination } from "@mui/material";
+import { Box, Alert, LinearProgress, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
@@ -131,19 +131,13 @@ export const SearchPage: React.FC = () => {
         value={searchState.query}
         onChange={searchState.setQuery}
         disabled={!layoutId}
-        placeholder={t("searchPlaceholder", {
-          ns: "search",
-          defaultValue: "Search files and folders...",
-        })}
+        placeholder={t("searchPlaceholder", { ns: "search" })}
       />
 
       {searchState.error && (
         <Box mb={2}>
           <Alert severity="error">
-            {t(searchState.error, {
-              ns: "search",
-              defaultValue: "Search failed. Please try again.",
-            })}
+            {t("error", { ns: "search" })}
           </Alert>
         </Box>
       )}
@@ -161,10 +155,7 @@ export const SearchPage: React.FC = () => {
         !searchState.query.trim() &&
         !searchState.results && (
           <Typography color="text.secondary">
-            {t("enterQueryHint", {
-              ns: "search",
-              defaultValue: "Start typing to search...",
-            })}
+            {t("enterQueryHint", { ns: "search" })}
           </Typography>
         )}
 
@@ -173,10 +164,7 @@ export const SearchPage: React.FC = () => {
         searchState.results &&
         tiles.length === 0 && (
           <Typography color="text.secondary">
-            {t("noResults", {
-              ns: "search",
-              defaultValue: "No files or folders found",
-            })}
+            {t("noResults", { ns: "search" })}
           </Typography>
         )}
 
@@ -198,20 +186,19 @@ export const SearchPage: React.FC = () => {
             fileNamePlaceholder={t("rename.fileNamePlaceholder", {
               ns: "files",
             })}
-          />
-          <TablePagination
-            component="div"
-            count={searchState.totalCount}
-            page={searchState.page - 1}
-            onPageChange={(_event, newPage) => {
-              searchState.setPage(newPage + 1);
+            pagination={{
+              page: Math.max(0, searchState.page - 1),
+              pageSize: searchState.pageSize,
+              totalCount: searchState.totalCount,
+              loading: searchState.loading,
+              onPageChange: (newPage) => {
+                searchState.setPage(newPage + 1);
+              },
+              onPageSizeChange: (newPageSize) => {
+                searchState.setPageSize(newPageSize);
+                searchState.setPage(1);
+              },
             }}
-            rowsPerPage={searchState.pageSize}
-            onRowsPerPageChange={(event) => {
-              searchState.setPageSize(parseInt(event.target.value, 10));
-              searchState.setPage(1);
-            }}
-            rowsPerPageOptions={[25, 50, 100]}
           />
         </Box>
       )}

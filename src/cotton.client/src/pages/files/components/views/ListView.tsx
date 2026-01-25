@@ -1,27 +1,19 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { Box, IconButton, TextField, Typography } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
+import type { GridColDef, GridRowParams, GridRowsProp } from "@mui/x-data-grid";
 import {
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  IconButton,
-  Typography,
-} from "@mui/material";
-import {
-  Folder,
-  InsertDriveFile,
+  Article,
+  Delete,
   Download,
   Edit,
-  Delete,
+  Folder,
   Image as ImageIcon,
-  VideoFile,
-  Article,
+  InsertDriveFile,
   TextSnippet,
+  VideoFile,
 } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../utils/formatBytes";
 import {
   isImageFile,
@@ -29,16 +21,16 @@ import {
   isTextFile,
   isVideoFile,
 } from "../../utils/fileTypes";
-import type { IFileListView } from "../../types/FileListViewTypes";
-import { useTranslation } from "react-i18next";
+import type { FileSystemTile, IFileListView } from "../../types/FileListViewTypes";
 
-/**
- * ListView Component
- *
- * Displays files and folders in a table/list layout.
- * Follows the Dependency Inversion Principle (DIP) by depending on the IFileListView interface.
- * Single Responsibility Principle (SRP): Responsible only for rendering the table layout.
- */
+interface FileListRow {
+  id: string;
+  type: "folder" | "file" | "new-folder";
+  name: string;
+  sizeBytes: number | null;
+  tile?: FileSystemTile;
+}
+
 export const ListView: React.FC<IFileListView> = ({
   tiles,
   folderOperations,
@@ -50,323 +42,319 @@ export const ListView: React.FC<IFileListView> = ({
   onCancelNewFolder,
   folderNamePlaceholder,
   fileNamePlaceholder,
+  pagination,
 }) => {
   const { t } = useTranslation("files");
 
-  return (
-    <TableContainer component={Box} sx={{ width: "100%", overflowX: "hidden" }}>
-      <Table
-        size="small"
-        sx={{
-          width: "100%",
-          tableLayout: "fixed",
-          "& .MuiTableCell-root": {
-            py: { xs: 0.5, sm: 1 },
-            px: { xs: 1, sm: 2 },
-          },
-        }}
-      >
-        <TableHead>
-          <TableRow>
-            <TableCell width="40px"></TableCell>
-            <TableCell>{t("name")}</TableCell>
-            <TableCell
-              width="120px"
-              sx={{ display: { xs: "none", sm: "table-cell" } }}
-            >
-              {t("size")}
-            </TableCell>
-            <TableCell sx={{ width: { xs: 96, sm: 120 } }} align="right">
-              {t("actionsTitle")}
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {/* New Folder Creation Row */}
-          {isCreatingFolder && (
-            <TableRow
-              sx={{
-                bgcolor: "action.hover",
-                "& td": { borderColor: "primary.main" },
-              }}
-            >
-              <TableCell>
-                <Folder sx={{ color: "primary.main" }} />
-              </TableCell>
-              <TableCell colSpan={3}>
-                <TextField
-                  autoFocus
-                  fullWidth
-                  size="small"
-                  value={newFolderName}
-                  onChange={(e) => onNewFolderNameChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      void onConfirmNewFolder();
-                    } else if (e.key === "Escape") {
-                      onCancelNewFolder();
-                    }
-                  }}
-                  onBlur={onConfirmNewFolder}
-                  placeholder={folderNamePlaceholder}
-                  variant="standard"
-                />
-              </TableCell>
-            </TableRow>
-          )}
+  const rows: GridRowsProp<FileListRow> = useMemo(() => {
+    const baseRows: FileListRow[] = tiles.map((tile) => {
+      if (tile.kind === "folder") {
+        return {
+          id: tile.node.id,
+          type: "folder",
+          name: tile.node.name,
+          sizeBytes: null,
+          tile,
+        };
+      }
 
-          {/* Render all tiles (folders and files) */}
-          {tiles.map((tile) => {
-            if (tile.kind === "folder") {
-              const isRenaming = folderOperations.isRenaming(tile.node.id);
+      return {
+        id: tile.file.id,
+        type: "file",
+        name: tile.file.name,
+        sizeBytes: tile.file.sizeBytes,
+        tile,
+      };
+    });
 
-              return (
-                <TableRow
-                  key={tile.node.id}
-                  hover={!isRenaming}
-                  sx={{
-                    cursor: isRenaming ? "default" : "pointer",
-                    bgcolor: isRenaming ? "action.hover" : undefined,
-                  }}
-                  onClick={
-                    isRenaming
-                      ? undefined
-                      : () => folderOperations.onClick(tile.node.id)
-                  }
-                >
-                  <TableCell>
-                    <Folder color="primary" />
-                  </TableCell>
-                  <TableCell>
-                    {isRenaming ? (
-                      <TextField
-                        autoFocus
-                        fullWidth
-                        size="small"
-                        value={folderOperations.getRenamingName()}
-                        onChange={(e) =>
-                          folderOperations.onRenamingNameChange(e.target.value)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            folderOperations.onConfirmRename();
-                          } else if (e.key === "Escape") {
-                            folderOperations.onCancelRename();
-                          }
-                        }}
-                        onBlur={folderOperations.onConfirmRename}
-                        variant="standard"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        noWrap
-                        sx={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {tile.node.name}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                    <Typography variant="body2" color="text.secondary">
-                      —
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ width: { xs: 96, sm: 120 } }} align="right">
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: { xs: 0, sm: 0.5 },
-                        justifyContent: "flex-end",
-                        flexWrap: "nowrap",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        sx={{ p: { xs: 0.5, sm: 1 } }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          folderOperations.onStartRename(
-                            tile.node.id,
-                            tile.node.name,
-                          );
-                        }}
-                        title="Rename"
-                      >
-                        <Edit fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        sx={{ p: { xs: 0.5, sm: 1 } }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          folderOperations.onDelete(
-                            tile.node.id,
-                            tile.node.name,
-                          );
-                        }}
-                        title="Delete"
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              );
-            }
+    if (!isCreatingFolder) return baseRows;
 
-            // File row rendering
-            const isImage = isImageFile(tile.file.name);
-            const isVideo = isVideoFile(tile.file.name);
-            const isText = isTextFile(tile.file.name);
-            const isPdf = isPdfFile(tile.file.name);
-            const isRenaming = fileOperations.isRenaming(tile.file.id);
+    return [
+      {
+        id: "__new_folder__",
+        type: "new-folder",
+        name: newFolderName,
+        sizeBytes: null,
+      },
+      ...baseRows,
+    ];
+  }, [tiles, isCreatingFolder, newFolderName]);
 
-            const getFileIcon = () => {
-              if (isText) {
-                return <Article color="action" />;
-              }
-              if (isImage) {
-                return <ImageIcon color="action" />;
-              }
-              if (isVideo) {
-                return <VideoFile color="action" />;
-              }
-              if (isPdf) {
-                return <TextSnippet color="action" />;
-              }
-              return <InsertDriveFile color="action" />;
-            };
+  const getFileIcon = (fileName: string) => {
+    if (isTextFile(fileName)) return <Article color="action" fontSize="small" />;
+    if (isImageFile(fileName)) return <ImageIcon color="action" fontSize="small" />;
+    if (isVideoFile(fileName)) return <VideoFile color="action" fontSize="small" />;
+    if (isPdfFile(fileName)) return <TextSnippet color="action" fontSize="small" />;
+    return <InsertDriveFile color="action" fontSize="small" />;
+  };
 
+  const columns: GridColDef<FileListRow>[] = useMemo(
+    () => [
+      {
+        field: "icon",
+        headerName: "",
+        width: 44,
+        sortable: false,
+        renderCell: (params) => {
+          if (params.row.type === "folder" || params.row.type === "new-folder") {
+            return <Folder color="primary" fontSize="small" />;
+          }
+          return getFileIcon(params.row.name);
+        },
+      },
+      {
+        field: "name",
+        headerName: t("name"),
+        flex: 1,
+        minWidth: 220,
+        renderCell: (params) => {
+          const row = params.row;
+
+          if (row.type === "new-folder") {
             return (
-              <TableRow
-                key={tile.file.id}
-                hover={!isRenaming}
-                sx={{
-                  cursor: isRenaming ? "default" : "pointer",
-                  bgcolor: isRenaming ? "action.hover" : undefined,
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                value={newFolderName}
+                onChange={(e) => onNewFolderNameChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void onConfirmNewFolder();
+                  } else if (e.key === "Escape") {
+                    onCancelNewFolder();
+                  }
                 }}
-                onClick={
-                  isRenaming
-                    ? undefined
-                    : isImage || isVideo
-                      ? () => fileOperations.onMediaClick?.(tile.file.id)
-                      : () =>
-                          fileOperations.onClick(tile.file.id, tile.file.name)
-                }
-              >
-                <TableCell>{getFileIcon()}</TableCell>
-                <TableCell>
-                  {isRenaming ? (
-                    <TextField
-                      autoFocus
-                      fullWidth
-                      size="small"
-                      value={fileOperations.getRenamingName()}
-                      onChange={(e) =>
-                        fileOperations.onRenamingNameChange(e.target.value)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          void fileOperations.onConfirmRename();
-                        } else if (e.key === "Escape") {
-                          fileOperations.onCancelRename();
-                        }
-                      }}
-                      onBlur={() => {
-                        void fileOperations.onConfirmRename();
-                      }}
-                      placeholder={fileNamePlaceholder}
-                      variant="standard"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      noWrap
-                      sx={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {tile.file.name}
-                    </Typography>
-                  )}
-                </TableCell>
-                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {formatBytes(tile.file.sizeBytes)}
-                  </Typography>
-                </TableCell>
-                <TableCell sx={{ width: { xs: 96, sm: 120 } }} align="right">
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: { xs: 0, sm: 0.5 },
-                      justifyContent: "flex-end",
-                      flexWrap: "nowrap",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <IconButton
-                      size="small"
-                      sx={{ p: { xs: 0.5, sm: 1 } }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileOperations.onDownload(tile.file.id, tile.file.name);
-                      }}
-                      title="Download"
-                    >
-                      <Download fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      sx={{ p: { xs: 0.5, sm: 1 } }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileOperations.onStartRename(
-                          tile.file.id,
-                          tile.file.name,
-                        );
-                      }}
-                      title="Rename"
-                    >
-                      <Edit fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      sx={{ p: { xs: 0.5, sm: 1 } }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileOperations.onDelete(tile.file.id, tile.file.name);
-                      }}
-                      title="Delete"
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-              </TableRow>
+                onBlur={onConfirmNewFolder}
+                placeholder={folderNamePlaceholder}
+                variant="standard"
+              />
             );
-          })}
+          }
 
-          {/* Empty state */}
-          {tiles.length === 0 && !isCreatingFolder && (
-            <TableRow>
-              <TableCell colSpan={4} align="center">
-                <Typography color="text.secondary" sx={{ py: 3 }}>
-                  {t("noFilesOrFolders")}
-                </Typography>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          if (row.type === "folder" && folderOperations.isRenaming(row.id)) {
+            return (
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                value={folderOperations.getRenamingName()}
+                onChange={(e) =>
+                  folderOperations.onRenamingNameChange(e.target.value)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    folderOperations.onConfirmRename();
+                  } else if (e.key === "Escape") {
+                    folderOperations.onCancelRename();
+                  }
+                }}
+                onBlur={folderOperations.onConfirmRename}
+                variant="standard"
+                onClick={(e) => e.stopPropagation()}
+              />
+            );
+          }
+
+          if (row.type === "file" && fileOperations.isRenaming(row.id)) {
+            return (
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                value={fileOperations.getRenamingName()}
+                onChange={(e) =>
+                  fileOperations.onRenamingNameChange(e.target.value)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void fileOperations.onConfirmRename();
+                  } else if (e.key === "Escape") {
+                    fileOperations.onCancelRename();
+                  }
+                }}
+                onBlur={() => {
+                  void fileOperations.onConfirmRename();
+                }}
+                placeholder={fileNamePlaceholder}
+                variant="standard"
+                onClick={(e) => e.stopPropagation()}
+              />
+            );
+          }
+
+          return (
+            <Typography
+              variant="body2"
+              noWrap
+              sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+            >
+              {row.name}
+            </Typography>
+          );
+        },
+      },
+      {
+        field: "sizeBytes",
+        headerName: t("size"),
+        width: 140,
+        renderCell: (params) => {
+          if (params.row.sizeBytes == null) {
+            return (
+              <Typography variant="body2" color="text.secondary">
+                —
+              </Typography>
+            );
+          }
+          return (
+            <Typography variant="body2" color="text.secondary">
+              {formatBytes(params.row.sizeBytes)}
+            </Typography>
+          );
+        },
+      },
+      {
+        field: "actions",
+        headerName: t("actionsTitle"),
+        width: 140,
+        sortable: false,
+        align: "right",
+        headerAlign: "right",
+        renderCell: (params) => {
+          const row = params.row;
+          if (row.type === "new-folder") return null;
+
+          if (row.type === "folder") {
+            return (
+              <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    folderOperations.onStartRename(row.id, row.name);
+                  }}
+                  title="Rename"
+                >
+                  <Edit fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    folderOperations.onDelete(row.id, row.name);
+                  }}
+                  title="Delete"
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Box>
+            );
+          }
+
+          return (
+            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileOperations.onDownload(row.id, row.name);
+                }}
+                title="Download"
+              >
+                <Download fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileOperations.onStartRename(row.id, row.name);
+                }}
+                title="Rename"
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileOperations.onDelete(row.id, row.name);
+                }}
+                title="Delete"
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+            </Box>
+          );
+        },
+      },
+    ],
+    [
+      t,
+      newFolderName,
+      onNewFolderNameChange,
+      onConfirmNewFolder,
+      onCancelNewFolder,
+      folderNamePlaceholder,
+      fileNamePlaceholder,
+      folderOperations,
+      fileOperations,
+    ],
+  );
+
+  const handleRowClick = (params: GridRowParams<FileListRow>) => {
+    const row = params.row;
+    if (row.type === "new-folder") return;
+
+    if (row.type === "folder") {
+      if (!folderOperations.isRenaming(row.id)) {
+        folderOperations.onClick(row.id);
+      }
+      return;
+    }
+
+    if (!fileOperations.isRenaming(row.id)) {
+      const isImage = isImageFile(row.name);
+      const isVideo = isVideoFile(row.name);
+      if (isImage || isVideo) {
+        fileOperations.onMediaClick?.(row.id);
+      } else {
+        fileOperations.onClick(row.id, row.name);
+      }
+    }
+  };
+
+  return (
+    <Box sx={{ width: "100%" }}>
+      <DataGrid
+        autoHeight
+        density="compact"
+        rows={rows}
+        columns={columns}
+        disableRowSelectionOnClick
+        onRowClick={handleRowClick}
+        hideFooter={!pagination}
+        paginationMode={pagination ? "server" : "client"}
+        pageSizeOptions={pagination ? [25, 50, 100] : []}
+        paginationModel={
+          pagination
+            ? { page: pagination.page, pageSize: pagination.pageSize }
+            : undefined
+        }
+        onPaginationModelChange={
+          pagination
+            ? (model) => {
+                if (model.page !== pagination.page) {
+                  pagination.onPageChange(model.page);
+                }
+                if (model.pageSize !== pagination.pageSize) {
+                  pagination.onPageSizeChange(model.pageSize);
+                }
+              }
+            : undefined
+        }
+        rowCount={pagination ? pagination.totalCount : rows.length}
+        loading={pagination?.loading}
+      />
+    </Box>
   );
 };
