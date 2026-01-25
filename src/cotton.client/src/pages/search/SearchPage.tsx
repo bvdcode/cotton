@@ -9,8 +9,10 @@ import { downloadFile } from "../files/utils/fileHandlers";
 import { useFilePreview } from "../files/hooks/useFilePreview";
 import { FilePreviewModal } from "../files/components";
 import { FileListViewFactory } from "../files/components";
+import { MediaLightbox } from "../files/components";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
 import { useFileOperations } from "../files/hooks/useFileOperations";
+import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
 import { buildFolderOperations, buildFileOperations } from "../../shared/utils/operationsAdapters";
 import type { FileSystemTile } from "../files/types/FileListViewTypes";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
@@ -58,6 +60,25 @@ export const SearchPage: React.FC = () => {
     [handleDownloadFile, openPreview],
   );
 
+  const sortedFiles = useMemo(() => {
+    if (!searchState.results) return [];
+    const files = searchState.results.files ?? [];
+    const sorted = files.slice();
+    sorted.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true }),
+    );
+    return sorted;
+  }, [searchState.results]);
+
+  const {
+    lightboxOpen,
+    lightboxIndex,
+    mediaItems,
+    getSignedMediaUrl,
+    handleMediaClick,
+    setLightboxOpen,
+  } = useMediaLightbox(sortedFiles);
+
   const tiles: FileSystemTile[] = useMemo(() => {
     if (!searchState.results) return [];
 
@@ -96,14 +117,9 @@ export const SearchPage: React.FC = () => {
         onClick: (fileId, fileName) => {
           void handleFileClick(fileId, fileName);
         },
-        onMediaClick: (fileId) => {
-          const file = searchState.results?.files.find((f) => f.id === fileId);
-          if (file) {
-            void handleFileClick(file.id, file.name);
-          }
-        },
+        onMediaClick: handleMediaClick,
       }),
-    [rawFileOps, handleDownloadFile, handleFileClick, searchState.results],
+    [rawFileOps, handleDownloadFile, handleFileClick, handleMediaClick],
   );
 
   return (
@@ -135,12 +151,11 @@ export const SearchPage: React.FC = () => {
         </Typography>
       )}
 
-      {!searchState.loading && layoutId && searchState.query.trim() &&
-        tiles.length === 0 && (
-          <Typography color="text.secondary">
-            {t("noResults", { ns: "search", defaultValue: "No files or folders found" })}
-          </Typography>
-        )}
+      {!searchState.loading && !searchState.query.trim() && searchState.results && tiles.length === 0 && (
+        <Typography color="text.secondary">
+          {t("noResults", { ns: "search", defaultValue: "No files or folders found" })}
+        </Typography>
+      )}
 
       {tiles.length > 0 && (
         <FileListViewFactory
@@ -169,6 +184,16 @@ export const SearchPage: React.FC = () => {
         fileType={previewState.fileType}
         onClose={closePreview}
       />
+
+      {lightboxOpen && mediaItems.length > 0 && (
+        <MediaLightbox
+          open={lightboxOpen}
+          initialIndex={lightboxIndex}
+          items={mediaItems}
+          getSignedMediaUrl={getSignedMediaUrl}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </Box>
   );
 };
