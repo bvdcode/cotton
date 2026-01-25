@@ -33,7 +33,7 @@ export const SearchPage: React.FC = () => {
 
   const searchState = useLayoutSearch({
     layoutId,
-    pageSize: 100,
+    pageSize: 25,
     debounceMs: 500,
   });
 
