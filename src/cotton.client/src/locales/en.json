@@ -1,4 +1,10 @@
 {
+  "search": {
+    "searchPlaceholder": "Search files and folders...",
+    "error": "Search failed. Please try again.",
+    "enterQueryHint": "Start typing to search...",
+    "noResults": "No files or folders found"
+  },
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
