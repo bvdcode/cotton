@@ -1,192 +1,70 @@
-/**
- * Search Results Component
- * 
- * Single Responsibility: Displays list of search results with pagination
- * Open/Closed: Can be extended with different result renderers
- */
-
-import React from 'react';
-import {
-  Box,
-  List,
-  Typography,
-  Pagination,
-  Paper,
-  Divider,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import { useTranslation } from 'react-i18next';
-import type { SearchResultDto } from '../../../shared/api/layoutsApi';
-import { SearchResultItem } from './SearchResultItem';
-import type { NodeDto } from '../../../shared/api/layoutsApi';
-import type { NodeFileManifestDto } from '../../../shared/api/nodesApi';
+import { Box, Divider, List, ListItemButton, ListItemText, Typography } from "@mui/material";
+import type React from "react";
+import type { LayoutSearchResultDto } from "../../../shared/api/layoutsApi";
+import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 
 export interface SearchResultsProps {
-  /** Search results data */
-  results: SearchResultDto | null;
-  /** Total count of results */
+  results: LayoutSearchResultDto | null;
   totalCount: number;
-  /** Current page */
-  currentPage: number;
-  /** Page size */
-  pageSize: number;
-  /** Loading state */
-  loading: boolean;
-  /** Error state */
-  error: string | null;
-  /** Current search query */
-  query: string;
-  /** Callback when page changes */
-  onPageChange: (page: number) => void;
-  /** Callback when result item is clicked */
-  onResultClick?: (item: NodeDto | NodeFileManifestDto, type: 'node' | 'file') => void;
+  onFolderClick: (nodeId: string) => void;
+  onFileClick: (file: NodeFileManifestDto) => void;
 }
 
-/**
- * SearchResults component for displaying paginated search results
- * 
- * Features:
- * - Mixed display of folders and files
- * - Pagination support
- * - Loading and error states
- * - Empty state handling
- */
 export const SearchResults: React.FC<SearchResultsProps> = ({
   results,
   totalCount,
-  currentPage,
-  pageSize,
-  loading,
-  error,
-  query,
-  onPageChange,
-  onResultClick,
+  onFolderClick,
+  onFileClick,
 }) => {
-  const { t } = useTranslation(['search', 'common']);
-
-  // Loading state
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: 400,
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mt: 2 }}>
-        {error}
-      </Alert>
-    );
-  }
-
-  // No search performed yet
-  if (!results && !query) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: 400,
-        }}
-      >
-        <Typography variant="body1" color="text.secondary">
-          {t('search:emptyState.initial')}
-        </Typography>
-      </Box>
-    );
-  }
-
-  // No results found
-  if (results && totalCount === 0) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: 400,
-        }}
-      >
-        <Typography variant="body1" color="text.secondary">
-          {t('search:emptyState.noResults', { query })}
-        </Typography>
-      </Box>
-    );
-  }
-
   if (!results) {
     return null;
   }
 
-  const totalPages = Math.ceil(totalCount / pageSize);
-  const hasMultiplePages = totalPages > 1;
+  const { nodes, files } = results;
+
+  const hasNodes = nodes.length > 0;
+  const hasFiles = files.length > 0;
 
   return (
-    <Box sx={{ mt: 3 }}>
-      {/* Results header */}
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6" color="text.primary">
-          {t('search:resultsHeader', { count: totalCount, query })}
-        </Typography>
-      </Box>
+    <Box sx={{ mt: 1 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        Found {totalCount} items
+      </Typography>
 
-      {/* Results list */}
-      <Paper elevation={1}>
-        <List disablePadding>
-          {/* Render folders first */}
-          {results.nodes.map((node, index) => (
-            <React.Fragment key={`node-${node.id}`}>
-              {index > 0 && <Divider />}
-              <SearchResultItem
-                item={node}
-                type="node"
-                onClick={onResultClick}
-              />
-            </React.Fragment>
-          ))}
-
-          {/* Divider between nodes and files if both exist */}
-          {results.nodes.length > 0 && results.files.length > 0 && <Divider />}
-
-          {/* Render files */}
-          {results.files.map((file, index) => (
-            <React.Fragment key={`file-${file.id}`}>
-              {(index > 0 || results.nodes.length > 0) && <Divider />}
-              <SearchResultItem
-                item={file}
-                type="file"
-                onClick={onResultClick}
-              />
-            </React.Fragment>
-          ))}
-        </List>
-      </Paper>
-
-      {/* Pagination */}
-      {hasMultiplePages && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination
-            count={totalPages}
-            page={currentPage}
-            onChange={(_, page) => onPageChange(page)}
-            color="primary"
-            size="large"
-            showFirstButton
-            showLastButton
-          />
+      {hasNodes && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Folders
+          </Typography>
+          <List dense>
+            {nodes.map((node) => (
+              <ListItemButton key={node.id} onClick={() => onFolderClick(node.id)}>
+                <ListItemText primary={node.name} />
+              </ListItemButton>
+            ))}
+          </List>
         </Box>
+      )}
+
+      {hasNodes && hasFiles && <Divider sx={{ my: 1 }} />}
+
+      {hasFiles && (
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Files
+          </Typography>
+          <List dense>
+            {files.map((file) => (
+              <ListItemButton key={file.id} onClick={() => onFileClick(file)}>
+                <ListItemText primary={file.name} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
+      )}
+
+      {!hasNodes && !hasFiles && (
+        <Typography color="text.secondary">No results</Typography>
       )}
     </Box>
   );
