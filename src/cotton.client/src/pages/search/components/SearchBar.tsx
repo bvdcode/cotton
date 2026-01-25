@@ -5,7 +5,7 @@
  * Open/Closed: Can be extended with filters without modification
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   TextField,
   InputAdornment,
@@ -47,33 +47,52 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   placeholder,
 }) => {
   const { t } = useTranslation(['search', 'common']);
-  const [localValue, setLocalValue] = useState(value);
+  const [localValue, setLocalValue] = useState('');
+  const debounceTimerRef = useRef<number | null>(null);
+  const initializedRef = useRef(false);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (localValue.trim()) {
-      onSearch(localValue.trim());
+  // Initialize only once on mount
+  useEffect(() => {
+    if (!initializedRef.current) {
+      setLocalValue(value);
+      initializedRef.current = true;
     }
-  }, [localValue, onSearch]);
+  }, [value]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+
+    // Clear previous timer
+    if (debounceTimerRef.current) {
+      window.clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new timer for debounced search
+    debounceTimerRef.current = window.setTimeout(() => {
+      onSearch(newValue.trim());
+    }, 500); // 500ms debounce
+  }, [onSearch]);
 
   const handleClear = useCallback(() => {
     setLocalValue('');
+    if (debounceTimerRef.current) {
+      window.clearTimeout(debounceTimerRef.current);
+    }
     onClear?.();
   }, [onClear]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(e.target.value);
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        window.clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, []);
-
-  // Update local value when prop value changes (e.g., from URL)
-  React.useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
 
   return (
     <Paper
-      component="form"
-      onSubmit={handleSubmit}
       elevation={2}
       sx={{
         display: 'flex',
