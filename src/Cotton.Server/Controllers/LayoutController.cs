@@ -27,6 +27,69 @@ namespace Cotton.Server.Controllers
         ILayoutService _layouts) : ControllerBase
     {
         [Authorize]
+        [HttpGet(Routes.Layouts + "/{layoutId:guid}/search")]
+        public async Task<IActionResult> SearchLayouts(
+            [FromRoute] Guid layoutId,
+            [FromQuery] string query,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return CottonResult.BadRequest("Query cannot be empty.");
+            }
+            Guid userId = User.GetUserId();
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+            
+
+            string searchKey = NameValidator.NormalizeAndGetNameKey(query);
+            var nodesQuery = _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.OwnerId == userId
+                    && x.LayoutId == layoutId
+                    && x.NameKey.Contains(searchKey))
+                .OrderBy(x => x.NameKey);
+
+            var filesQuery = _dbContext.NodeFiles
+                .AsNoTracking()
+                .Where(x => x.OwnerId == userId
+                    && x.Node.LayoutId == layoutId
+                    && x.NameKey.Contains(searchKey))
+                .OrderBy(x => x.NameKey);
+
+            int nodesCount = await nodesQuery.CountAsync();
+            int filesCount = await filesQuery.CountAsync();
+            int totalCount = nodesCount + filesCount;
+
+            int skip = (page - 1) * pageSize;
+            int nodesToTake = Math.Max(0, Math.Min(pageSize, nodesCount - skip));
+            int filesSkip = Math.Max(0, skip - nodesCount);
+            int filesToTake = Math.Max(0, pageSize - nodesToTake);
+
+            var nodes = nodesToTake == 0 ? []
+                : await nodesQuery.Skip(skip).Take(nodesToTake)
+                    .ProjectToType<NodeDto>()
+                    .ToListAsync();
+
+            var files = filesToTake == 0 ? []
+                : await filesQuery.Skip(filesSkip).Take(filesToTake)
+                    .ProjectToType<FileManifestDto>()
+                    .ToListAsync();
+
+            SearchResultDto result = new()
+            {
+                Nodes = nodes,
+                Files = files,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+
+            return Ok(result);
+        }
+
+        [Authorize]
         [HttpGet($"{Routes.Layouts}/{{layoutId:guid}}/stats")]
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
         {

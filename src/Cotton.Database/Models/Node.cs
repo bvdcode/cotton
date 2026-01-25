@@ -26,7 +26,7 @@ namespace Cotton.Database.Models
         [Column("name")]
         public string Name { get; private set; } = null!;
 
-        [Column("name_key")]
+        [Column("name_key", TypeName = "citext")]
         public string NameKey { get; private set; } = null!;
 
         [Column("ui_layout_type")]
