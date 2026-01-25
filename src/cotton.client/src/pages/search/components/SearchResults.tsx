@@ -102,7 +102,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         }}
       >
         <Typography variant="body1" color="text.secondary">
-          {t('search.emptyState.initial', 'Enter a search query to find files and folders')}
+          {t('search:emptyState.initial')}
         </Typography>
       </Box>
     );
@@ -120,7 +120,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         }}
       >
         <Typography variant="body1" color="text.secondary">
-          {t('search.emptyState.noResults', `No results found for "${query}"`)}
+          {t('search:emptyState.noResults', { query })}
         </Typography>
       </Box>
     );
@@ -138,7 +138,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       {/* Results header */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" color="text.primary">
-          {t('search.resultsHeader', `Found ${totalCount} results for "${query}"`)}
+          {t('search:resultsHeader', { count: totalCount, query })}
         </Typography>
       </Box>
 

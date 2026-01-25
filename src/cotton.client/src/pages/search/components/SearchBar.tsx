@@ -86,7 +86,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           fullWidth
           value={localValue}
           onChange={handleChange}
-          placeholder={placeholder || t('search.placeholder', 'Search files and folders...')}
+          placeholder={placeholder || t('search:placeholder')}
           disabled={loading}
           InputProps={{
             startAdornment: (
@@ -100,7 +100,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                   size="small"
                   onClick={handleClear}
                   disabled={loading}
-                  aria-label={t('common:actions.clear', 'Clear')}
+                  aria-label={t('common:actions.clear')}
                 >
                   <ClearIcon fontSize="small" />
                 </IconButton>
