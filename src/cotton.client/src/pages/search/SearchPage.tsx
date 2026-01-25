@@ -79,15 +79,6 @@ export const SearchPage: React.FC = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: 4 }}>
-        {/* Page Title */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            {t('search.title', 'Search')}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {t('search.subtitle', 'Find files and folders in your workspace')}
-          </Typography>
-        </Box>
 
         {/* Search Bar */}
         <SearchBar

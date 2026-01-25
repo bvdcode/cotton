@@ -76,7 +76,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       onSubmit={handleSubmit}
       elevation={2}
       sx={{
-        p: 2,
         display: 'flex',
         alignItems: 'center',
         width: '100%',

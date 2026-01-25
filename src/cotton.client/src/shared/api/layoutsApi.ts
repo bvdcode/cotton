@@ -1,9 +1,9 @@
 import { httpClient } from "./httpClient";
 import { InterfaceLayoutType } from "./types/InterfaceLayoutType";
-import type { SearchResultDto, SearchParams } from "./types/SearchTypes";
+import type { SearchResultDto, SearchResult, SearchParams } from "./types/SearchTypes";
 
 export { InterfaceLayoutType };
-export type { SearchResultDto, SearchParams } from "./types/SearchTypes";
+export type { SearchResultDto, SearchResult, SearchParams } from "./types/SearchTypes";
 
 export type Guid = string;
 
@@ -89,14 +89,14 @@ export const layoutsApi = {
   /**
    * Search for nodes and files within a layout
    * @param params - Search parameters including layoutId, query, page, and pageSize
-   * @returns Search results with pagination info
+   * @returns Search results with pagination info from X-Total-Count header
    */
   search: async ({
     layoutId,
     query,
     page = 1,
     pageSize = 20,
-  }: SearchParams): Promise<SearchResultDto> => {
+  }: SearchParams): Promise<SearchResult> => {
     const response = await httpClient.get<SearchResultDto>(
       `/layouts/${layoutId}/search`,
       {
@@ -107,6 +107,15 @@ export const layoutsApi = {
         },
       },
     );
-    return response.data;
+    
+    // Get total count from header
+    const totalCount = parseInt(response.headers['x-total-count'] || '0', 10);
+    
+    return {
+      data: response.data,
+      totalCount,
+      page,
+      pageSize,
+    };
   },
 };
