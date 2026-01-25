@@ -75,13 +75,11 @@ namespace Cotton.Server.Controllers
                     .ProjectToType<FileManifestDto>()
                     .ToListAsync();
 
+            Response.Headers.Append("X-Total-Count", totalCount.ToString());
             SearchResultDto result = new()
             {
                 Nodes = nodes,
                 Files = files,
-                TotalCount = totalCount,
-                Page = page,
-                PageSize = pageSize
             };
 
             return Ok(result);
