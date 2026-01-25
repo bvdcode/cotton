@@ -10,17 +10,26 @@ import type { NodeFileManifestDto } from "../nodesApi";
 
 /**
  * Search result item - can be either a node (folder) or file
+ * Note: totalCount comes from X-Total-Count header
  */
 export interface SearchResultDto {
   /** Array of matching nodes (folders) */
   nodes: NodeDto[];
   /** Array of matching files */
   files: NodeFileManifestDto[];
-  /** Total number of results (for pagination) */
+}
+
+/**
+ * Extended search result with pagination metadata
+ */
+export interface SearchResult {
+  /** Search result data */
+  data: SearchResultDto;
+  /** Total number of results (from X-Total-Count header) */
   totalCount: number;
-  /** Current page number */
+  /** Current page number (client-side) */
   page: number;
-  /** Number of items per page */
+  /** Number of items per page (client-side) */
   pageSize: number;
 }
 

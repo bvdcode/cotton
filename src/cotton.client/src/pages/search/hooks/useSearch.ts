@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { layoutsApi, type SearchResultDto } from '../../../shared/api/layoutsApi';
+import { layoutsApi, type SearchResultDto, type SearchResult } from '../../../shared/api/layoutsApi';
 import type { Guid } from '../../../shared/api/layoutsApi';
 
 export interface UseSearchOptions {
@@ -31,6 +31,8 @@ export interface UseSearchResult {
   query: string;
   /** Search results data */
   results: SearchResultDto | null;
+  /** Total count of results */
+  totalCount: number;
   /** Loading state */
   loading: boolean;
   /** Error message if any */
@@ -64,6 +66,7 @@ export function useSearch({
 }: UseSearchOptions): UseSearchResult {
   const [searchParams, setSearchParams] = useSearchParams();
   const [results, setResults] = useState<SearchResultDto | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -79,6 +82,7 @@ export function useSearch({
     async (searchQuery: string, page: number) => {
       if (!searchQuery.trim()) {
         setResults(null);
+        setTotalCount(0);
         return;
       }
 
@@ -86,7 +90,7 @@ export function useSearch({
       setError(null);
 
       try {
-        const data = await layoutsApi.search({
+        const result: SearchResult = await layoutsApi.search({
           layoutId,
           query: searchQuery,
           page,
@@ -94,7 +98,8 @@ export function useSearch({
         });
 
         if (isMountedRef.current) {
-          setResults(data);
+          setResults(result.data);
+          setTotalCount(result.totalCount);
           setError(null);
         }
       } catch (err) {
@@ -105,6 +110,7 @@ export function useSearch({
               : 'An error occurred while searching';
           setError(errorMessage);
           setResults(null);
+          setTotalCount(0);
         }
       } finally {
         if (isMountedRef.current) {
@@ -145,6 +151,7 @@ export function useSearch({
   const clear = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setResults(null);
+    setTotalCount(0);
     setError(null);
   }, [setSearchParams]);
 
@@ -165,6 +172,7 @@ export function useSearch({
   return {
     query,
     results,
+    totalCount,
     loading,
     error,
     currentPage,
