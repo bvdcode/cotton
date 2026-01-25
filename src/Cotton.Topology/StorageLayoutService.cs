@@ -4,13 +4,14 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Topology
 {
-    public class StorageLayoutService(CottonDbContext _dbContext)
+    public class StorageLayoutService(CottonDbContext _dbContext) : ILayoutService
     {
         private static readonly SemaphoreSlim _layoutSemaphore = new(1, 1);
 

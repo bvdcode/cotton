@@ -8,7 +8,7 @@ using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Topology;
+using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
@@ -24,7 +24,7 @@ namespace Cotton.Server.Controllers
     public class LayoutController(
         IMediator _mediator,
         CottonDbContext _dbContext,
-        StorageLayoutService _layouts) : ControllerBase
+        ILayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpGet($"{Routes.Layouts}/{{layoutId:guid}}/stats")]
