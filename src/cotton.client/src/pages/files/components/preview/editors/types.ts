@@ -34,6 +34,8 @@ export interface IEditorProps {
   isEditing: boolean;
   /** File name for context (e.g., syntax detection) */
   fileName: string;
+  /** Optional language override (for Code editor) */
+  language?: string;
 }
 
 /**

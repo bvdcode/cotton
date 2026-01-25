@@ -119,9 +119,10 @@ export const CodeEditor: React.FC<IEditorProps> = ({
   onChange,
   isEditing,
   fileName,
+  language: languageOverride,
 }) => {
   const theme = useTheme();
-  const language = detectLanguage(fileName);
+  const language = languageOverride || detectLanguage(fileName);
   const monacoTheme = theme.palette.mode === 'dark' ? 'vs-dark' : 'vs-light';
 
   return (
