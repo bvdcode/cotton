@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from "react";
-import { Box, Alert, CircularProgress, Typography } from "@mui/material";
+import { Box, Alert, LinearProgress, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
@@ -13,7 +13,10 @@ import { MediaLightbox } from "../files/components";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
 import { useFileOperations } from "../files/hooks/useFileOperations";
 import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
-import { buildFolderOperations, buildFileOperations } from "../../shared/utils/operationsAdapters";
+import {
+  buildFolderOperations,
+  buildFileOperations,
+} from "../../shared/utils/operationsAdapters";
 import type { FileSystemTile } from "../files/types/FileListViewTypes";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 
@@ -31,7 +34,7 @@ export const SearchPage: React.FC = () => {
   const searchState = useLayoutSearch({
     layoutId,
     pageSize: 100,
-    debounceMs: 1000,
+    debounceMs: 500,
   });
 
   const { previewState, openPreview, closePreview } = useFilePreview();
@@ -128,34 +131,52 @@ export const SearchPage: React.FC = () => {
         value={searchState.query}
         onChange={searchState.setQuery}
         disabled={!layoutId}
-        placeholder={t("searchPlaceholder", { ns: "search", defaultValue: "Search files and folders..." })}
+        placeholder={t("searchPlaceholder", {
+          ns: "search",
+          defaultValue: "Search files and folders...",
+        })}
       />
 
       {searchState.error && (
         <Box mb={2}>
           <Alert severity="error">
-            {t(searchState.error, { ns: "search", defaultValue: "Search failed. Please try again." })}
+            {t(searchState.error, {
+              ns: "search",
+              defaultValue: "Search failed. Please try again.",
+            })}
           </Alert>
         </Box>
       )}
 
       {searchState.loading && (
-        <Box display="flex" justifyContent="center" mt={2}>
-          <CircularProgress size={24} />
+        <Box width="100%" mt={2}>
+          <LinearProgress />
         </Box>
       )}
 
-      {!searchState.loading && layoutId && !searchState.query.trim() && !searchState.results && (
-        <Typography color="text.secondary">
-          {t("enterQueryHint", { ns: "search", defaultValue: "Start typing to search..." })}
-        </Typography>
-      )}
+      {!searchState.loading &&
+        layoutId &&
+        !searchState.query.trim() &&
+        !searchState.results && (
+          <Typography color="text.secondary">
+            {t("enterQueryHint", {
+              ns: "search",
+              defaultValue: "Start typing to search...",
+            })}
+          </Typography>
+        )}
 
-      {!searchState.loading && !searchState.query.trim() && searchState.results && tiles.length === 0 && (
-        <Typography color="text.secondary">
-          {t("noResults", { ns: "search", defaultValue: "No files or folders found" })}
-        </Typography>
-      )}
+      {!searchState.loading &&
+        searchState.query.trim() &&
+        searchState.results &&
+        tiles.length === 0 && (
+          <Typography color="text.secondary">
+            {t("noResults", {
+              ns: "search",
+              defaultValue: "No files or folders found",
+            })}
+          </Typography>
+        )}
 
       {tiles.length > 0 && (
         <FileListViewFactory

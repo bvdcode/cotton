@@ -42,11 +42,10 @@ export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearc
       return;
     }
 
-    // Don't set loading true yet - wait for debounce
     setError(null);
 
     const handle = setTimeout(async () => {
-      // Now set loading true - actual fetch starts
+      // Set loading true when fetch starts
       setLoading(true);
 
       try {
