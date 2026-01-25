@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../../shared/store/nodesStore";
+import { useRenameState } from "../../../shared/hooks/useRenameState";
 
 /**
  * Hook for trash folder operations - similar to useFolderOperations
@@ -15,51 +15,24 @@ export const useTrashFolderOperations = (
   const confirm = useConfirm();
   const { deleteFolder, renameFolder } = useNodesStore();
 
-  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
-  const [renamingFolderName, setRenamingFolderName] = useState("");
-  const [originalFolderName, setOriginalFolderName] = useState("");
+  const [renameState, renameHandlers] = useRenameState();
 
   const handleRenameFolder = (folderId: string, currentName: string) => {
-    setRenamingFolderId(folderId);
-    setRenamingFolderName(currentName);
-    setOriginalFolderName(currentName);
+    renameHandlers.startRename(folderId, currentName);
   };
 
   const handleConfirmRename = async () => {
-    if (!renamingFolderId || renamingFolderName.trim().length === 0) {
-      setRenamingFolderId(null);
-      setRenamingFolderName("");
-      setOriginalFolderName("");
-      return;
-    }
-
-    const newName = renamingFolderName.trim();
-
-    // No changes - just close rename mode
-    if (newName === originalFolderName) {
-      setRenamingFolderId(null);
-      setRenamingFolderName("");
-      setOriginalFolderName("");
-      return;
-    }
-
-    const success = await renameFolder(
-      renamingFolderId,
-      newName,
-      currentNodeId ?? undefined,
-    );
-
-    if (success) {
-      setRenamingFolderId(null);
-      setRenamingFolderName("");
-      setOriginalFolderName("");
-    }
+    await renameHandlers.confirmRename(async (folderId, newName) => {
+      return await renameFolder(
+        folderId,
+        newName,
+        currentNodeId ?? undefined,
+      );
+    });
   };
 
   const handleCancelRename = () => {
-    setRenamingFolderId(null);
-    setRenamingFolderName("");
-    setOriginalFolderName("");
+    renameHandlers.cancelRename();
   };
 
   const handleDeleteFolder = async (folderId: string, folderName: string) => {
@@ -93,9 +66,9 @@ export const useTrashFolderOperations = (
 
   return {
     // Rename folder state
-    renamingFolderId,
-    renamingFolderName,
-    setRenamingFolderName,
+    renamingFolderId: renameState.renamingId,
+    renamingFolderName: renameState.renamingName,
+    setRenamingFolderName: renameHandlers.setRenamingName,
     handleRenameFolder,
     handleConfirmRename,
     handleCancelRename,

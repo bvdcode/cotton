@@ -160,10 +160,7 @@ namespace Cotton.Server.Jobs
             if (!stillOrphaned)
             {
                 var tracked = await _dbContext.Chunks.FindAsync([chunkHash], ct);
-                if (tracked != null)
-                {
-                    tracked.GCScheduledAfter = null;
-                }
+                tracked?.GCScheduledAfter = null;
                 return false;
             }
 

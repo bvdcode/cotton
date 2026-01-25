@@ -35,8 +35,6 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ISchedulerFactory _scheduler,
-        ILogger<FileController> _logger,
-        ILayoutService _layouts,
         FileManifestService _fileManifestService) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
