@@ -13,6 +13,7 @@ import {
   FileListViewFactory,
   PageHeader,
   MediaLightbox,
+  FilePreviewModal,
 } from "../files/components";
 import { Delete } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -22,7 +23,6 @@ import Loader from "../../shared/ui/Loader";
 import { nodesApi } from "../../shared/api/nodesApi";
 import { layoutsApi, type NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeContentDto } from "../../shared/api/nodesApi";
-import { PreviewModal, PdfPreview, TextPreview } from "../files/components/preview";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
 import { useFilePreview } from "../files/hooks/useFilePreview";
@@ -332,32 +332,13 @@ export const TrashPage: React.FC = () => {
         </Box>
       </Box>
 
-      {previewState.isOpen && previewState.fileId && previewState.fileName && (
-        <PreviewModal
-          open={previewState.isOpen}
-          onClose={closePreview}
-          layout={previewState.fileType === "pdf" ? "header" : "overlay"}
-          title={
-            previewState.fileType === "pdf" ? previewState.fileName : undefined
-          }
-        >
-          {previewState.fileType === "pdf" && (
-            <PdfPreview
-              fileId={previewState.fileId}
-              fileName={previewState.fileName}
-            />
-          )}
-          {previewState.fileType === "text" && (
-            <TextPreview
-              nodeFileId={previewState.fileId}
-              fileName={previewState.fileName}
-              onSaved={() => {
-                // Optionally refresh trash content
-              }}
-            />
-          )}
-        </PreviewModal>
-      )}
+      <FilePreviewModal
+        isOpen={previewState.isOpen}
+        fileId={previewState.fileId}
+        fileName={previewState.fileName}
+        fileType={previewState.fileType}
+        onClose={closePreview}
+      />
 
       {lightboxOpen && mediaItems.length > 0 && (
         <MediaLightbox

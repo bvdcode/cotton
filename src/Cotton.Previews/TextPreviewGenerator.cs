@@ -18,15 +18,22 @@ namespace Cotton.Previews
 
         private const int MaxCharsToRead = 24_000;
         private const int MaxLinesToRender = 64;
+        private const int MaxLineChars = 256;
         private const float PaddingRatio = 0.06f;
         private const float FontSizeRatio = 0.045f;
         private const float LineSpacingRatio = 1.25f;
+        private const float HeaderFontScale = 0.85f;
 
         private static readonly FontFamily _fontFamily = LoadFontFamily();
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+
+            if (stream.CanSeek)
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+            }
 
             string text = ReadSomeText(stream, MaxCharsToRead);
             int renderSize = Math.Max(size * 4, 512);
@@ -35,6 +42,7 @@ namespace Cotton.Previews
             float wrapWidth = renderSize - (padding * 2);
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
+            var headerFont = _fontFamily.CreateFont(Math.Max(9f, fontSize * HeaderFontScale), FontStyle.Regular);
             var textOptions = new RichTextOptions(font)
             {
                 Origin = new PointF(padding, padding),
@@ -44,12 +52,34 @@ namespace Cotton.Previews
                 VerticalAlignment = VerticalAlignment.Top,
             };
 
-            text = NormalizeText(text);
-            text = LimitLogicalLines(text, MaxLinesToRender);
-            text = ClipTextToFitHeight(text, textOptions, maxHeight: renderSize - (padding * 2));
+            var content = PrepareContent(text);
+            var bodyText = BuildBodyText(content);
+
             canvas.Mutate(ctx =>
             {
-                ctx.DrawText(textOptions, text, Color.Black);
+                ctx.Fill(Color.White);
+
+                var header = BuildHeader(content);
+                if (!string.IsNullOrWhiteSpace(header))
+                {
+                    var headerOptions = new RichTextOptions(headerFont)
+                    {
+                        Origin = new PointF(padding, padding),
+                        WrappingLength = wrapWidth,
+                        LineSpacing = headerFont.Size * 1.1f,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        VerticalAlignment = VerticalAlignment.Top,
+                    };
+
+                    ctx.DrawText(headerOptions, header, Color.DarkSlateGray);
+
+                    var headerMetrics = TextMeasurer.MeasureSize(header, headerOptions);
+                    textOptions.Origin = new PointF(padding, padding + headerMetrics.Height + (padding * 0.2f));
+                }
+
+                var maxHeight = renderSize - textOptions.Origin.Y - padding;
+                var clipped = ClipTextToFitHeight(bodyText, textOptions, maxHeight);
+                ctx.DrawText(textOptions, clipped, Color.Black);
             });
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
@@ -63,6 +93,15 @@ namespace Cotton.Previews
             using var ms = new MemoryStream();
             await output.SaveAsWebpAsync(ms).ConfigureAwait(false);
             return ms.ToArray();
+        }
+
+        private sealed record PreparedContent(string RawText, string NormalizedText, ContentKind Kind, int Lines);
+
+        private enum ContentKind
+        {
+            Empty,
+            Text,
+            Binary,
         }
 
         private static FontFamily LoadFontFamily()
@@ -97,6 +136,76 @@ namespace Cotton.Previews
             return sb.Length == 0 ? string.Empty : sb.ToString();
         }
 
+        private static PreparedContent PrepareContent(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return new PreparedContent(raw, string.Empty, ContentKind.Empty, 0);
+            }
+
+            string normalized = NormalizeText(raw);
+            if (LooksBinary(raw, normalized))
+            {
+                return new PreparedContent(raw, string.Empty, ContentKind.Binary, 0);
+            }
+
+            normalized = LimitLogicalLines(normalized, MaxLinesToRender);
+            normalized = LimitLineWidth(normalized, MaxLineChars);
+            int lines = CountLines(normalized);
+            return new PreparedContent(raw, normalized, ContentKind.Text, lines);
+        }
+
+        private static bool LooksBinary(string raw, string normalized)
+        {
+            if (raw.Length == 0)
+            {
+                return false;
+            }
+
+            // Heuristic: if we dropped a lot of characters (NUL/control), treat as binary.
+            // This avoids rendering empty previews for binary blobs mislabeled as text.
+            int dropped = raw.Length - normalized.Length;
+            return dropped > (raw.Length / 4);
+        }
+
+        private static int CountLines(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return 0;
+            }
+
+            int lines = 1;
+            foreach (var c in text)
+            {
+                if (c == '\n')
+                {
+                    lines++;
+                }
+            }
+            return lines;
+        }
+
+        private static string BuildHeader(PreparedContent content)
+        {
+            return content.Kind switch
+            {
+                ContentKind.Empty => "Empty text file",
+                ContentKind.Binary => "Binary content (preview not available)",
+                _ => content.Lines > 0 ? $"Text preview \u00b7 {content.Lines} lines" : "Text preview",
+            };
+        }
+
+        private static string BuildBodyText(PreparedContent content)
+        {
+            return content.Kind switch
+            {
+                ContentKind.Empty => "(no content)",
+                ContentKind.Binary => "This file does not look like plain text.",
+                _ => content.NormalizedText,
+            };
+        }
+
         private static string NormalizeText(string text)
         {
             Span<char> tmp = text.ToCharArray();
@@ -125,6 +234,43 @@ namespace Cotton.Previews
             }
 
             return new string(tmp[..w]);
+        }
+
+        private static string LimitLineWidth(string text, int maxCharsPerLine)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var sb = new System.Text.StringBuilder(text.Length);
+            int current = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '\n')
+                {
+                    sb.Append(c);
+                    current = 0;
+                    continue;
+                }
+
+                if (current >= maxCharsPerLine)
+                {
+                    // Avoid huge single-line payloads (minified json/xml) that make measuring unreliable
+                    if (sb.Length > 0 && sb[^1] != '\n')
+                    {
+                        sb.Append("…\n");
+                    }
+                    current = 0;
+                    continue;
+                }
+
+                sb.Append(c);
+                current++;
+            }
+
+            return sb.ToString();
         }
 
         private static string LimitLogicalLines(string text, int maxLines)
