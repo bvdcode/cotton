@@ -15,7 +15,6 @@ using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
-using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
