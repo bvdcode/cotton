@@ -3,7 +3,6 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Jobs;
@@ -14,18 +13,16 @@ using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
-using Cotton.Topology;
+using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.EntityFrameworkCore.Exceptions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Quartz;
@@ -39,10 +36,10 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         ISchedulerFactory _scheduler,
         ILogger<FileController> _logger,
-        StorageLayoutService _layouts) : ControllerBase
+        ILayoutService _layouts,
+        FileManifestService _fileManifestService) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
-        private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
 
         [Authorize]
         [HttpDelete($"{Routes.Files}/{{nodeFileId:guid}}")]
@@ -179,10 +176,10 @@ namespace Cotton.Server.Controllers
             {
                 return Ok();
             }
-            List<Chunk> chunks = await GetChunksAsync(request.ChunkHashes);
+            List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, userId);
             var newFile = await _dbContext.FileManifests
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
-                ?? await CreateNewFileManifestAsync(chunks, request, proposedHash);
+                ?? await _fileManifestService.CreateNewFileManifestAsync(chunks, request.Name, request.ContentType, proposedHash);
             nodeFile.FileManifestId = newFile.Id;
             await _dbContext.SaveChangesAsync();
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
@@ -251,153 +248,11 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
             Guid userId = User.GetUserId();
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-            var node = await _dbContext.Nodes
-                .Where(x => x.Id == request.NodeId && x.Type == NodeType.Default && x.OwnerId == userId && x.LayoutId == layout.Id)
-                .SingleOrDefaultAsync();
-            if (node == null)
-            {
-                return this.ApiNotFound("Layout node not found.");
-            }
-
-            string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-
-            // Check for duplicate files in the target folder
-            bool fileExists = await _dbContext.NodeFiles
-                .AnyAsync(x => x.NodeId == node.Id && x.OwnerId == userId && x.NameKey == nameKey);
-            if (fileExists)
-            {
-                return this.ApiConflict("A file with the same name key already exists in the target node: " + nameKey);
-            }
-
-            // Check for duplicate nodes (subfolders) in the target folder
-            bool nodeExists = await _dbContext.Nodes
-                .AnyAsync(x =>
-                    x.ParentId == node.Id &&
-                    x.OwnerId == userId &&
-                    x.NameKey == nameKey &&
-                    x.Type == NodeType.Default);
-            if (nodeExists)
-            {
-                return this.ApiConflict("A folder with the same name key already exists in the target node: " + nameKey);
-            }
-
-            List<Chunk> chunks = await GetChunksAsync(request.ChunkHashes);
-
-            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name, out string normalizedName, out string errorMessage);
-            if (!isValidName)
-            {
-                return CottonResult.BadRequest($"Invalid file name: {errorMessage}");
-            }
-
-            byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
-            var newFile = await _dbContext.FileManifests
-                .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
-                ?? await CreateNewFileManifestAsync(chunks, request, proposedHash);
-
-            NodeFile newNodeFile = new()
-            {
-                Node = node,
-                OwnerId = userId,
-                FileManifest = newFile,
-            };
-            newNodeFile.SetName(request.Name);
-            if (request.Validate && newFile.ComputedContentHash == null)
-            {
-                string[] hashes = newFile.FileManifestChunks.GetChunkHashes();
-                PipelineContext pipelineContext = new()
-                {
-                    FileSizeBytes = newFile.SizeBytes
-                };
-                using Stream stream = _storage.GetBlobStream(hashes, pipelineContext);
-                var computedContentHash = Hasher.HashData(stream);
-                if (!computedContentHash.SequenceEqual(proposedHash))
-                {
-                    _logger.LogWarning("File content hash mismatch for user {UserId}, file {FileName}. Expected {ExpectedHash}, computed {ComputedHash}.",
-                        userId,
-                        request.Name,
-                        request.Hash,
-                        Hasher.ToHexStringHash(computedContentHash));
-                    return this.ApiBadRequest("File content hash does not match the provided hash.");
-                }
-                newFile.ComputedContentHash = computedContentHash;
-            }
-            await _dbContext.NodeFiles.AddAsync(newNodeFile);
-            if (!request.OriginalNodeFileId.HasValue)
-            {
-                await _dbContext.SaveChangesAsync();
-                newNodeFile.OriginalNodeFileId = newNodeFile.Id;
-            }
-            else
-            {
-                newNodeFile.OriginalNodeFileId = request.OriginalNodeFileId.Value;
-            }
-            await _dbContext.SaveChangesAsync();
+            request.UserId = userId;
+            await _mediator.Send(request);
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             return Ok();
-        }
-
-        private async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes)
-        {
-            Guid userId = User.GetUserId();
-
-            List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
-            List<Chunk> ownedChunks = await _dbContext.Chunks
-                .Where(c => normalizedHashes.Contains(c.Hash))
-                .Where(c => _dbContext.ChunkOwnerships.Any(co => co.ChunkHash == c.Hash && co.OwnerId == userId))
-                .ToListAsync();
-
-            var chunkMap = ownedChunks.ToDictionary(c => Hasher.ToHexStringHash(c.Hash), StringComparer.OrdinalIgnoreCase);
-            List<Chunk> result = [];
-            foreach (var hash in chunkHashes)
-            {
-                if (!chunkMap.TryGetValue(hash, out var chunk))
-                {
-                    throw new EntityNotFoundException(nameof(Chunk));
-                }
-                result.Add(chunk);
-            }
-            return result;
-        }
-
-        private async Task<FileManifest> CreateNewFileManifestAsync(
-            List<Chunk> chunks,
-            CreateFileRequest request,
-            byte[] proposedContentHash)
-        {
-            var newFileManifest = new FileManifest()
-            {
-                ContentType = request.ContentType,
-                SizeBytes = chunks.Sum(x => x.SizeBytes),
-                ProposedContentHash = proposedContentHash,
-            };
-            if (newFileManifest.ContentType == "application/octet-stream")
-            {
-                string? extension = Path.GetExtension(request.Name);
-                if (!string.IsNullOrWhiteSpace(extension))
-                {
-                    bool recognized = fileExtensionContentTypeProvider.TryGetContentType(request.Name, out string? contentType);
-                    if (recognized && !string.IsNullOrWhiteSpace(contentType))
-                    {
-                        newFileManifest.ContentType = contentType;
-                    }
-                }
-            }
-
-            await _dbContext.FileManifests.AddAsync(newFileManifest);
-            for (int i = 0; i < chunks.Count; i++)
-            {
-                var fileChunk = new FileManifestChunk
-                {
-                    ChunkOrder = i,
-                    ChunkHash = chunks[i].Hash,
-                    FileManifest = newFileManifest,
-                };
-                await _dbContext.FileManifestChunks.AddAsync(fileChunk);
-            }
-            await _dbContext.SaveChangesAsync();
-            return newFileManifest;
         }
     }
 }

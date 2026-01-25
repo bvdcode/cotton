@@ -10,7 +10,7 @@ using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
-using Cotton.Topology;
+using Cotton.Topology.Abstractions;
 using EasyExtensions;
 using EasyExtensions.Crypto;
 using Microsoft.AspNetCore.Authorization;
@@ -25,7 +25,7 @@ namespace Cotton.Server.Controllers
         SettingsProvider _settings,
         IStoragePipeline _storage,
         ILogger<ChunkController> _logger,
-        StorageLayoutService _layouts) : ControllerBase
+        ILayoutService _layouts) : ControllerBase
     {
         [Authorize]
         [HttpGet(Routes.Chunks + "/{hash}/exists")]

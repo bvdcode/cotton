@@ -17,7 +17,7 @@
 
 </div>
 
-**All managed .NET/C#** core — crypto and storage engine are pure managed code. Preview generators (video/PDF) are optional and use native dependencies (FFmpeg, MuPDF via Docnet).
+**All managed .NET/C#** core — crypto and storage engine are pure managed code.
 
 ---
 
