@@ -97,7 +97,6 @@ export const FilesPage: React.FC = () => {
   // Avoid showing previous folder's list while navigating
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) return;
-    setListContent(null);
     setListTotalCount(0);
     setListError(null);
   }, [nodeId, layoutType]);
