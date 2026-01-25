@@ -59,8 +59,8 @@ export const SearchPage: React.FC = () => {
   if (loadingRoot) {
     return (
       <Loader
-        title={t('search.loading.title', 'Loading...')}
-        caption={t('search.loading.caption', 'Preparing search')}
+        title={t('search:loading.title')}
+        caption={t('search:loading.caption')}
       />
     );
   }
@@ -71,7 +71,7 @@ export const SearchPage: React.FC = () => {
       <Container maxWidth="lg">
         <Box sx={{ py: 4 }}>
           <Typography variant="h5" color="error">
-            {layoutError || t('search.errors.noLayout', 'Unable to load layout')}
+            {layoutError || t('search:errors.noLayout')}
           </Typography>
         </Box>
       </Container>
@@ -81,7 +81,6 @@ export const SearchPage: React.FC = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: 4 }}>
-
         {/* Search Bar */}
         <SearchBar
           value={query}

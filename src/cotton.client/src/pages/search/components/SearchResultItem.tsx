@@ -127,7 +127,7 @@ export const SearchResultItem: React.FC<SearchResultItemProps> = ({
 
     return (
       <Typography variant="caption" color="text.secondary">
-        {t('search.resultTypes.folder', 'Folder')}
+        {t('search:resultTypes.folder')}
       </Typography>
     );
   };
