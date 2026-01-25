@@ -62,6 +62,41 @@ export interface FileOperations {
 }
 
 /**
+ * Pagination props for list views with server-side pagination
+ */
+export interface PaginationProps {
+  /**
+   * Current page number (0-indexed)
+   */
+  page: number;
+
+  /**
+   * Number of items per page
+   */
+  pageSize: number;
+
+  /**
+   * Total number of items across all pages
+   */
+  totalCount: number;
+
+  /**
+   * Handler for page change
+   */
+  onPageChange: (newPage: number) => void;
+
+  /**
+   * Handler for page size change
+   */
+  onPageSizeChange: (newPageSize: number) => void;
+
+  /**
+   * Whether data is currently loading
+   */
+  loading?: boolean;
+}
+
+/**
  * Interface for file list view components.
  * Follows the Interface Segregation Principle (ISP) - defines minimal required contract.
  */
@@ -115,4 +150,9 @@ export interface IFileListView {
    * Placeholder text for file rename input
    */
   fileNamePlaceholder: string;
+
+  /**
+   * Optional pagination props for List view (not used in Tiles view)
+   */
+  pagination?: PaginationProps;
 }
