@@ -1,3 +1,13 @@
+/**
+ * Text Preview Component
+ * 
+ * Orchestrator component that manages text file preview and editing
+ * Following SOLID principles:
+ * - Single Responsibility: Coordinates file loading, saving, and editor rendering
+ * - Open/Closed: Extensible through editor mode system
+ * - Dependency Inversion: Depends on editor abstractions
+ */
+
 import { useState, useEffect } from "react";
 import {
   Box,
@@ -11,7 +21,6 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import MDEditor from "@uiw/react-md-editor";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -21,6 +30,9 @@ import { filesApi } from "../../../../shared/api/filesApi";
 import { uploadBlobToChunks } from "../../../../shared/upload";
 import { useServerSettings } from "../../../../shared/store/useServerSettings";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
+import { EditorFactory } from "./factories/EditorFactory";
+import { EditorModeSelector } from "./editors/EditorModeSelector";
+import { useEditorMode } from "./hooks/useEditorMode";
 
 interface TextPreviewProps {
   nodeFileId: Guid;
@@ -39,10 +51,19 @@ export function TextPreview({
   const { data: serverSettings } = useServerSettings();
   const [content, setContent] = useState<string | undefined>(undefined);
   const [originalContent, setOriginalContent] = useState<string>("");
+  const [fileSize, setFileSize] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Use editor mode hook for smart mode management
+  const { mode, setMode } = useEditorMode({
+    content: content || '',
+    fileName,
+    fileId: nodeFileId,
+    fileSize,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +83,12 @@ export function TextPreview({
           throw new Error(
             t("preview.errors.loadFailed", { ns: "files", error: errorSuffix }),
           );
+        }
+
+        // Get file size from Content-Length header
+        const contentLength = response.headers.get('Content-Length');
+        if (contentLength) {
+          setFileSize(parseInt(contentLength, 10));
         }
 
         const text = await response.text();
@@ -176,6 +203,15 @@ export function TextPreview({
           <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
             {fileName}
           </Typography>
+          
+          {/* Editor Mode Selector */}
+          <EditorModeSelector
+            currentMode={mode}
+            onModeChange={setMode}
+            disabled={saving}
+          />
+          
+          {/* Edit/Save/Cancel buttons */}
           {!isEditing &&
             (isMobile ? (
               <Tooltip title={t("preview.actions.edit", { ns: "files" })}>
@@ -256,13 +292,12 @@ export function TextPreview({
       </Paper>
 
       <Box sx={{ flexGrow: 1, overflow: "auto" }}>
-        <MDEditor
+        <EditorFactory
+          mode={mode}
           value={content}
           onChange={setContent}
-          preview={isEditing ? "edit" : "preview"}
-          hideToolbar={!isEditing}
-          height="100%"
-          visibleDragbar={false}
+          isEditing={isEditing}
+          fileName={fileName}
         />
       </Box>
     </Box>
