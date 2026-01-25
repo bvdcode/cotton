@@ -103,13 +103,15 @@ export const ListView: React.FC<IFileListView> = ({
         width: 44,
         sortable: false,
         renderCell: (params) => {
-          if (
-            params.row.type === "folder" ||
-            params.row.type === "new-folder"
-          ) {
-            return <Folder color="primary" fontSize="small" />;
-          }
-          return getFileIcon(params.row.name);
+          return (
+            <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+              {params.row.type === "folder" || params.row.type === "new-folder" ? (
+                <Folder color="primary" fontSize="small" />
+              ) : (
+                getFileIcon(params.row.name)
+              )}
+            </Box>
+          );
         },
       },
       {
@@ -122,85 +124,121 @@ export const ListView: React.FC<IFileListView> = ({
 
           if (row.type === "new-folder") {
             return (
-              <TextField
-                autoFocus
-                fullWidth
-                size="small"
-                value={newFolderName}
-                onChange={(e) => onNewFolderNameChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void onConfirmNewFolder();
-                  } else if (e.key === "Escape") {
-                    onCancelNewFolder();
-                  }
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "100%",
+                  width: "100%",
                 }}
-                onBlur={onConfirmNewFolder}
-                placeholder={folderNamePlaceholder}
-                variant="standard"
-              />
+              >
+                <TextField
+                  autoFocus
+                  fullWidth
+                  size="small"
+                  value={newFolderName}
+                  onChange={(e) => onNewFolderNameChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      void onConfirmNewFolder();
+                    } else if (e.key === "Escape") {
+                      onCancelNewFolder();
+                    }
+                  }}
+                  onBlur={onConfirmNewFolder}
+                  placeholder={folderNamePlaceholder}
+                  variant="standard"
+                />
+              </Box>
             );
           }
 
           if (row.type === "folder" && folderOperations.isRenaming(row.id)) {
             return (
-              <TextField
-                autoFocus
-                fullWidth
-                size="small"
-                value={folderOperations.getRenamingName()}
-                onChange={(e) =>
-                  folderOperations.onRenamingNameChange(e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    folderOperations.onConfirmRename();
-                  } else if (e.key === "Escape") {
-                    folderOperations.onCancelRename();
-                  }
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "100%",
+                  width: "100%",
                 }}
-                onBlur={folderOperations.onConfirmRename}
-                variant="standard"
-                onClick={(e) => e.stopPropagation()}
-              />
+              >
+                <TextField
+                  autoFocus
+                  fullWidth
+                  size="small"
+                  value={folderOperations.getRenamingName()}
+                  onChange={(e) =>
+                    folderOperations.onRenamingNameChange(e.target.value)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      folderOperations.onConfirmRename();
+                    } else if (e.key === "Escape") {
+                      folderOperations.onCancelRename();
+                    }
+                  }}
+                  onBlur={folderOperations.onConfirmRename}
+                  variant="standard"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Box>
             );
           }
 
           if (row.type === "file" && fileOperations.isRenaming(row.id)) {
             return (
-              <TextField
-                autoFocus
-                fullWidth
-                size="small"
-                value={fileOperations.getRenamingName()}
-                onChange={(e) =>
-                  fileOperations.onRenamingNameChange(e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void fileOperations.onConfirmRename();
-                  } else if (e.key === "Escape") {
-                    fileOperations.onCancelRename();
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "100%",
+                  width: "100%",
+                }}
+              >
+                <TextField
+                  autoFocus
+                  fullWidth
+                  size="small"
+                  value={fileOperations.getRenamingName()}
+                  onChange={(e) =>
+                    fileOperations.onRenamingNameChange(e.target.value)
                   }
-                }}
-                onBlur={() => {
-                  void fileOperations.onConfirmRename();
-                }}
-                placeholder={fileNamePlaceholder}
-                variant="standard"
-                onClick={(e) => e.stopPropagation()}
-              />
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      void fileOperations.onConfirmRename();
+                    } else if (e.key === "Escape") {
+                      fileOperations.onCancelRename();
+                    }
+                  }}
+                  onBlur={() => {
+                    void fileOperations.onConfirmRename();
+                  }}
+                  placeholder={fileNamePlaceholder}
+                  variant="standard"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Box>
             );
           }
 
           return (
-            <Typography
-              variant="body2"
-              noWrap
-              sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                height: "100%",
+                width: "100%",
+              }}
             >
-              {row.name}
-            </Typography>
+              <Typography
+                variant="body2"
+                noWrap
+                sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+              >
+                {row.name}
+              </Typography>
+            </Box>
           );
         },
       },
@@ -211,15 +249,19 @@ export const ListView: React.FC<IFileListView> = ({
         renderCell: (params) => {
           if (params.row.sizeBytes == null) {
             return (
-              <Typography variant="body2" color="text.secondary">
-                —
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+                <Typography variant="body2" color="text.secondary">
+                  —
+                </Typography>
+              </Box>
             );
           }
           return (
-            <Typography variant="body2" color="text.secondary">
-              {formatBytes(params.row.sizeBytes)}
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+              <Typography variant="body2" color="text.secondary">
+                {formatBytes(params.row.sizeBytes)}
+              </Typography>
+            </Box>
           );
         },
       },
@@ -237,7 +279,14 @@ export const ListView: React.FC<IFileListView> = ({
           if (row.type === "folder") {
             return (
               <Box
-                sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "100%",
+                  width: "100%",
+                  gap: 0.5,
+                  justifyContent: "flex-end",
+                }}
               >
                 <IconButton
                   size="small"
@@ -264,7 +313,16 @@ export const ListView: React.FC<IFileListView> = ({
           }
 
           return (
-            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                height: "100%",
+                width: "100%",
+                gap: 0.5,
+                justifyContent: "flex-end",
+              }}
+            >
               <IconButton
                 size="small"
                 onClick={(e) => {

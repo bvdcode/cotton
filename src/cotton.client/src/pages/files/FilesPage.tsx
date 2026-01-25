@@ -94,6 +94,14 @@ export const FilesPage: React.FC = () => {
     setListPage(0);
   }, [nodeId, layoutType]);
 
+  // Avoid showing previous folder's list while navigating
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) return;
+    setListContent(null);
+    setListTotalCount(0);
+    setListError(null);
+  }, [nodeId, layoutType]);
+
   // Update page title based on current folder
   useEffect(() => {
     const folderName = currentNode?.name;
@@ -213,7 +221,7 @@ export const FilesPage: React.FC = () => {
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
 
-  if (loading && !content) {
+  if (loading && !content && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
@@ -289,7 +297,9 @@ export const FilesPage: React.FC = () => {
         )}
 
         <Box pb={1} sx={{ flex: 1, minHeight: 0 }}>
-          {tiles.length === 0 && !isCreatingInThisFolder ? (
+          {tiles.length === 0 &&
+          !isCreatingInThisFolder &&
+          !(layoutType === InterfaceLayoutType.List && listLoading) ? (
             <Typography color="text.secondary">{t("empty.all")}</Typography>
           ) : (
             <FileListViewFactory

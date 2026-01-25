@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from "react";
-import { Box, Alert, LinearProgress, Typography } from "@mui/material";
+import { Box, Alert, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
@@ -34,7 +34,7 @@ export const SearchPage: React.FC = () => {
   const searchState = useLayoutSearch({
     layoutId,
     pageSize: 25,
-    debounceMs: 500,
+    debounceMs: 200,
   });
 
   const { previewState, openPreview, closePreview } = useFilePreview();
@@ -127,7 +127,7 @@ export const SearchPage: React.FC = () => {
 
   return (
     <Box
-      p={3}
+      pb={1}
       width="100%"
       sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
     >
@@ -140,19 +140,9 @@ export const SearchPage: React.FC = () => {
 
       {searchState.error && (
         <Box mb={2}>
-          <Alert severity="error">
-            {t("error", { ns: "search" })}
-          </Alert>
+          <Alert severity="error">{t("error", { ns: "search" })}</Alert>
         </Box>
       )}
-
-      <Box position="relative" width="100%" height="4px" mt={2}>
-        {searchState.loading && (
-          <Box position="absolute" top={0} left={0} right={0}>
-            <LinearProgress />
-          </Box>
-        )}
-      </Box>
 
       {!searchState.loading &&
         layoutId &&
