@@ -1,7 +1,9 @@
 import { httpClient } from "./httpClient";
 import { InterfaceLayoutType } from "./types/InterfaceLayoutType";
+import type { SearchResultDto, SearchParams } from "./types/SearchTypes";
 
 export { InterfaceLayoutType };
+export type { SearchResultDto, SearchParams } from "./types/SearchTypes";
 
 export type Guid = string;
 
@@ -79,6 +81,30 @@ export const layoutsApi = {
       null,
       {
         params: { newType: layoutType },
+      },
+    );
+    return response.data;
+  },
+
+  /**
+   * Search for nodes and files within a layout
+   * @param params - Search parameters including layoutId, query, page, and pageSize
+   * @returns Search results with pagination info
+   */
+  search: async ({
+    layoutId,
+    query,
+    page = 1,
+    pageSize = 20,
+  }: SearchParams): Promise<SearchResultDto> => {
+    const response = await httpClient.get<SearchResultDto>(
+      `/layouts/${layoutId}/search`,
+      {
+        params: {
+          query,
+          page,
+          pageSize,
+        },
       },
     );
     return response.data;
