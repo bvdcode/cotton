@@ -42,8 +42,10 @@ export const SearchPage: React.FC = () => {
   const {
     query,
     results,
+    totalCount,
     loading,
     error,
+    currentPage,
     search,
     setPage,
     clear,
@@ -91,6 +93,9 @@ export const SearchPage: React.FC = () => {
         {/* Search Results */}
         <SearchResults
           results={results}
+          totalCount={totalCount}
+          currentPage={currentPage}
+          pageSize={20}
           loading={loading}
           error={error}
           query={query}
