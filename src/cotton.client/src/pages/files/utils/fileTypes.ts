@@ -2,7 +2,15 @@
  * File type detection utilities for preview system
  */
 
-export type FileType = 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'document' | 'archive' | 'other';
+export type FileType =
+  | "image"
+  | "pdf"
+  | "video"
+  | "audio"
+  | "text"
+  | "document"
+  | "archive"
+  | "other";
 
 export interface FileTypeInfo {
   type: FileType;
@@ -10,16 +18,30 @@ export interface FileTypeInfo {
   supportsInlineView: boolean;
 }
 
-const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
-const PDF_EXTENSIONS = ['pdf'];
-const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
-const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'm4a'];
-const TEXT_EXTENSIONS = ['txt', 'md', 'markdown', 'json', 'xml', 'csv', 'log', 'yaml', 'yml', 'ini', 'conf', 'config'];
-const DOCUMENT_EXTENSIONS = ['doc', 'docx', 'rtf', 'odt'];
-const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z', 'tar', 'gz'];
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+const PDF_EXTENSIONS = ["pdf"];
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+const AUDIO_EXTENSIONS = ["mp3", "wav", "ogg", "flac", "m4a"];
+const TEXT_EXTENSIONS = [
+  "txt",
+  "md",
+  "markdown",
+  "json",
+  "xml",
+  "csv",
+  "log",
+  "yaml",
+  "yml",
+  "ini",
+  "conf",
+  "config",
+  "inf",
+];
+const DOCUMENT_EXTENSIONS = ["doc", "docx", "rtf", "odt"];
+const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
 
 export const getFileExtension = (fileName: string): string => {
-  return fileName.toLowerCase().split('.').pop() || '';
+  return fileName.toLowerCase().split(".").pop() || "";
 };
 
 export const isImageFile = (fileName: string): boolean => {
@@ -51,26 +73,34 @@ export const getFileTypeInfo = (fileName: string): FileTypeInfo => {
   const ext = getFileExtension(fileName);
 
   if (IMAGE_EXTENSIONS.includes(ext)) {
-    return { type: 'image', supportsPreview: true, supportsInlineView: true };
+    return { type: "image", supportsPreview: true, supportsInlineView: true };
   }
   if (PDF_EXTENSIONS.includes(ext)) {
-    return { type: 'pdf', supportsPreview: true, supportsInlineView: true };
+    return { type: "pdf", supportsPreview: true, supportsInlineView: true };
   }
   if (VIDEO_EXTENSIONS.includes(ext)) {
-    return { type: 'video', supportsPreview: true, supportsInlineView: true };
+    return { type: "video", supportsPreview: true, supportsInlineView: true };
   }
   if (AUDIO_EXTENSIONS.includes(ext)) {
-    return { type: 'audio', supportsPreview: true, supportsInlineView: true };
+    return { type: "audio", supportsPreview: true, supportsInlineView: true };
   }
   if (TEXT_EXTENSIONS.includes(ext)) {
-    return { type: 'text', supportsPreview: true, supportsInlineView: true };
+    return { type: "text", supportsPreview: true, supportsInlineView: true };
   }
   if (DOCUMENT_EXTENSIONS.includes(ext)) {
-    return { type: 'document', supportsPreview: false, supportsInlineView: false };
+    return {
+      type: "document",
+      supportsPreview: false,
+      supportsInlineView: false,
+    };
   }
   if (ARCHIVE_EXTENSIONS.includes(ext)) {
-    return { type: 'archive', supportsPreview: false, supportsInlineView: false };
+    return {
+      type: "archive",
+      supportsPreview: false,
+      supportsInlineView: false,
+    };
   }
 
-  return { type: 'other', supportsPreview: false, supportsInlineView: false };
+  return { type: "other", supportsPreview: false, supportsInlineView: false };
 };
