@@ -127,7 +127,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         maxWidth={false}
         sx={{
           pt: 0,
-          pb: 2,
+          pb: 1,
           px: { xs: 1, sm: 1 },
           flexGrow: 1,
           minHeight: 0,

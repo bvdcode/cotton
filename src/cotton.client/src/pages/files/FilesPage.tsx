@@ -98,9 +98,7 @@ export const FilesPage: React.FC = () => {
   );
 
   const effectiveContent =
-    layoutType === InterfaceLayoutType.List
-      ? listContent
-      : content;
+    layoutType === InterfaceLayoutType.List ? listContent : content;
 
   const deferredContent = useDeferredValue(effectiveContent);
 
@@ -241,7 +239,7 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box pb={1} sx={{ flex: 1, minHeight: 0 }}>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
@@ -256,10 +254,10 @@ export const FilesPage: React.FC = () => {
             loadingTitle={t("loading.title")}
             loadingCaption={t("loading.caption")}
             emptyStateText={
-                layoutType === InterfaceLayoutType.Tiles
-                  ? t("empty.all")
-                  : undefined
-              }
+              layoutType === InterfaceLayoutType.Tiles
+                ? t("empty.all")
+                : undefined
+            }
             newFolderName={folderOps.newFolderName}
             onNewFolderNameChange={folderOps.setNewFolderName}
             onConfirmNewFolder={folderOps.handleConfirmNewFolder}
