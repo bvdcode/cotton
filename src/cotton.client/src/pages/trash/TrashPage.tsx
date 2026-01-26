@@ -67,6 +67,7 @@ export const TrashPage: React.FC = () => {
   const [listLoading, setListLoading] = React.useState(false);
   const [listError, setListError] = React.useState<string | null>(null);
   const [listContent, setListContent] = React.useState<NodeContentDto | null>(null);
+  const [currentPagination, setCurrentPagination] = React.useState<{ page: number; pageSize: number } | null>(null);
 
   const [emptyingTrash, setEmptyingTrash] = React.useState(false);
   const [emptyTrashProgress, setEmptyTrashProgress] = React.useState({
@@ -107,7 +108,16 @@ export const TrashPage: React.FC = () => {
     }
   }, [nodeId, t]);
 
-  const refreshContent = React.useCallback(async () => {
+  useEffect(() => {
+    if (layoutType === InterfaceLayoutType.List && nodeId && currentPagination) {
+      void fetchListPage(currentPagination.page, currentPagination.pageSize);
+    }
+  }, [nodeId, layoutType, currentPagination, fetchListPage]);
+
+  const handlePaginationChange = React.useCallback((page: number, pageSize: number) => {
+    setCurrentPagination({ page, pageSize });
+    void fetchListPage(page, pageSize);
+  }, [fetchListPage]);  const refreshContent = React.useCallback(async () => {
     if (!nodeId) return;
     void refreshNodeContent(nodeId);
   }, [nodeId, refreshNodeContent]);
@@ -325,7 +335,7 @@ export const TrashPage: React.FC = () => {
                     totalCount: listTotalCount,
                     loading: listLoading,
                     onPaginationModelChange: (model) => {
-                      void fetchListPage(model.page, model.pageSize);
+                      handlePaginationChange(model.page, model.pageSize);
                     },
                   }
                 : undefined

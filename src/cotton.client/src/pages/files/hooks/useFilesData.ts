@@ -20,11 +20,13 @@ export const useFilesData = ({
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [listContent, setListContent] = useState<NodeContentDto | null>(null);
+  const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) return;
     setListTotalCount(0);
     setListError(null);
+    setListContent(null);
   }, [nodeId, layoutType]);
 
   const fetchListPage = useCallback(async (page: number, pageSize: number) => {
@@ -47,7 +49,16 @@ export const useFilesData = ({
     }
   }, [nodeId]);
 
+  useEffect(() => {
+    if (layoutType === InterfaceLayoutType.List && nodeId && currentPagination) {
+      void fetchListPage(currentPagination.page, currentPagination.pageSize);
+    }
+  }, [nodeId, layoutType, currentPagination, fetchListPage]);
 
+  const handlePaginationChange = useCallback((page: number, pageSize: number) => {
+    setCurrentPagination({ page, pageSize });
+    void fetchListPage(page, pageSize);
+  }, [fetchListPage]);
 
   const handleFolderChanged = useCallback(() => {
     if (!nodeId) {
@@ -68,7 +79,7 @@ export const useFilesData = ({
     listLoading,
     listError,
     listContent,
-    fetchListPage,
+    handlePaginationChange,
     handleFolderChanged,
     reloadCurrentNode,
   };
