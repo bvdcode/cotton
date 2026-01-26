@@ -40,8 +40,6 @@ export const SearchPage: React.FC = () => {
 
   const {
     query,
-    page,
-    pageSize: currentPageSize,
     totalCount,
     loading,
     error,
@@ -184,16 +182,11 @@ export const SearchPage: React.FC = () => {
               ns: "files",
             })}
             pagination={{
-              page: Math.max(0, page - 1),
-              pageSize: currentPageSize,
               totalCount,
               loading,
-              onPageChange: (newPage) => {
-                setPage(newPage + 1);
-              },
-              onPageSizeChange: (newPageSize) => {
-                setPageSize(newPageSize);
-                setPage(1);
+              onPaginationModelChange: (model) => {
+                setPage(model.page + 1);
+                setPageSize(model.pageSize);
               },
             }}
           />
