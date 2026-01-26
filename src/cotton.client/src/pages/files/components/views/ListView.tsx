@@ -124,14 +124,7 @@ export const ListView: React.FC<IFileListView> = ({
         onRowClick={handleRowClick}
         hideFooter={!pagination}
         paginationMode={pagination ? "server" : "client"}
-        autoPageSize={!autoHeight && !!pagination}
-        pageSizeOptions={
-          pagination
-            ? Array.from(
-                new Set([pagination.pageSize, 10, 25, 50, 100].filter(Boolean)),
-              ).sort((a, b) => a - b)
-            : []
-        }
+        pageSizeOptions={pagination ? [10, 25, 50, 100] : []}
         paginationModel={
           pagination
             ? { page: pagination.page, pageSize: pagination.pageSize }
