@@ -6,12 +6,25 @@ using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class ServerController(SettingsProvider _settings) : ControllerBase
     {
+        [HttpGet("/api/v1/server-info")]
+        public IActionResult GetServerInfo()
+        {
+            string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
+            return Ok(new
+            {
+                version,
+                time = DateTime.UtcNow,
+                product = "Cotton Cloud",
+            });
+        }
+
         [Authorize(Roles = "Admin")]
         [HttpPost("/api/v1/settings")]
         public async Task<IActionResult> CreateSettings(ServerSettingsRequestDto request)

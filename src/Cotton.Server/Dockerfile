@@ -20,7 +20,9 @@ RUN set -eux \
 
 FROM with-node AS build
 ARG BUILD_CONFIGURATION=Release
+ARG BUILD_VERSION=dev
 WORKDIR /src
+ENV APP_VERSION=$BUILD_VERSION
 COPY ["Cotton.Server/Cotton.Server.csproj", "Cotton.Server/"]
 COPY ["cotton.client/cotton.client.esproj", "cotton.client/"]
 COPY ["Cotton.Shared/Cotton.Shared.csproj", "Cotton.Shared/"]
@@ -36,11 +38,15 @@ RUN dotnet build "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
+ARG BUILD_VERSION=dev
+ENV APP_VERSION=$BUILD_VERSION
 RUN dotnet publish "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
+ARG BUILD_VERSION=dev
+ENV APP_VERSION=$BUILD_VERSION
 COPY --from=publish /app/publish .
 ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
 ENTRYPOINT ["dotnet", "Cotton.Server.dll"]
