@@ -5,10 +5,7 @@ import type { GridRowParams, GridRowsProp } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
 import { isImageFile, isVideoFile } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
-import {
-  createFileListColumns,
-  type FileListRow,
-} from "./fileListColumns";
+import { createFileListColumns, type FileListRow } from "./fileListColumns";
 
 export const ListView: React.FC<IFileListView> = ({
   tiles,
@@ -115,24 +112,27 @@ export const ListView: React.FC<IFileListView> = ({
   };
 
   return (
-    <Box sx={{ width: "100%", height: autoHeight ? undefined : "100%", minHeight: 0 }}>
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
       <DataGrid
-        sx={{ height: autoHeight ? undefined : "100%" }}
+        sx={{ height: "100%" }}
         rows={rows}
         columns={columns}
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
         hideFooter={!pagination}
         paginationMode={pagination ? "server" : "client"}
-        autoPageSize={!autoHeight && !!pagination}
-        pageSizeOptions={pagination ? [10, 25, 50, 100] : []}
+        autoPageSize={true}
         onPaginationModelChange={pagination?.onPaginationModelChange}
         rowCount={pagination ? pagination.totalCount : rows.length}
         loading={pagination?.loading}
         autoHeight={autoHeight}
-        getRowHeight={autoHeight ? () => 'auto' : undefined}
       />
     </Box>
   );
 };
-    
