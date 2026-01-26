@@ -5,17 +5,6 @@ import { ICON_SIZE } from "./FolderIcon";
 import { getFileTypeInfo } from "../fileTypes";
 
 /**
- * Configuration for file type detection
- * Open/Closed Principle: Easy to add new file types
- */
-const FILE_TYPE_CONFIGS = {
-  image: ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"] as const,
-  // Can be extended with video, document, etc.
-} as const;
-
-type ImageExtension = (typeof FILE_TYPE_CONFIGS.image)[number];
-
-/**
  * Maximum length for extension display on icon
  */
 const MAX_EXTENSION_LENGTH = 6;
@@ -64,14 +53,6 @@ export function getFileIcon(
  */
 function extractExtension(fileName: string): string {
   return fileName.toLowerCase().split(".").pop() || "";
-}
-
-/**
- * Check if extension is an image type
- * Open/Closed: Easy to modify image extensions list
- */
-function isImageExtension(extension: string): extension is ImageExtension {
-  return FILE_TYPE_CONFIGS.image.includes(extension as ImageExtension);
 }
 
 /**
