@@ -46,6 +46,7 @@ export const ListView: React.FC<IFileListView> = ({
   folderNamePlaceholder,
   fileNamePlaceholder,
   pagination,
+  autoHeight = false,
 }) => {
   const { t } = useTranslation("files");
   const [failedPreviews, setFailedPreviews] = React.useState<Set<string>>(new Set());
@@ -419,15 +420,15 @@ export const ListView: React.FC<IFileListView> = ({
       if (isImage || isVideo) {
         fileOperations.onMediaClick?.(row.id);
       } else {
-        fileOperations.onClick(row.id, row.name);
+        fileOperations.onClick(row.id, row.name, row.sizeBytes ?? undefined);
       }
     }
   };
 
   return (
-    <Box sx={{ width: "100%", height: "100%", minHeight: 0 }}>
+    <Box sx={{ width: "100%", height: autoHeight ? undefined : "100%", minHeight: 0 }}>
       <DataGrid
-        sx={{ height: "100%" }}
+        sx={{ height: autoHeight ? undefined : "100%" }}
         rows={rows}
         columns={columns}
         disableRowSelectionOnClick
@@ -460,6 +461,8 @@ export const ListView: React.FC<IFileListView> = ({
         }
         rowCount={pagination ? pagination.totalCount : rows.length}
         loading={pagination?.loading}
+        autoHeight={autoHeight}
+        getRowHeight={autoHeight ? () => 'auto' : undefined}
       />
     </Box>
   );

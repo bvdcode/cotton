@@ -433,7 +433,8 @@
         "saveFailed": "Failed to save file content",
         "downloadFailed": "Download failed",
         "pdfLoadFailed": "Failed to load PDF",
-        "pdfDisplayFailed": "Failed to display PDF"
+        "pdfDisplayFailed": "Failed to display PDF",
+        "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for text preview is {{maxSize}}. Please download the file to view it."
       }
     },
     "actionsTitle": "Actions",

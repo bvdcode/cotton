@@ -237,8 +237,8 @@ export const FilesPage: React.FC = () => {
     await downloadFile(nodeFileId, fileName);
   };
 
-  const handleFileClick = (fileId: string, fileName: string) => {
-    const opened = openPreview(fileId, fileName);
+  const handleFileClick = (fileId: string, fileName: string, fileSizeBytes?: number) => {
+    const opened = openPreview(fileId, fileName, fileSizeBytes);
     if (!opened) {
       void handleDownloadFile(fileId, fileName);
     }
@@ -382,6 +382,7 @@ export const FilesPage: React.FC = () => {
         fileId={previewState.fileId}
         fileName={previewState.fileName}
         fileType={previewState.fileType}
+        fileSizeBytes={previewState.fileSizeBytes}
         onClose={closePreview}
         onSaved={() => {
           if (nodeId) {

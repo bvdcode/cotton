@@ -7,6 +7,7 @@ interface FilePreviewModalProps {
   fileId: string | null;
   fileName: string | null;
   fileType: FileType | null;
+  fileSizeBytes: number | null;
   onClose: () => void;
   onSaved?: () => void;
 }
@@ -20,6 +21,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   fileId,
   fileName,
   fileType,
+  fileSizeBytes,
   onClose,
   onSaved,
 }) => {
@@ -41,6 +43,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         <TextPreview
           nodeFileId={fileId}
           fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
           onSaved={onSaved}
         />
       )}

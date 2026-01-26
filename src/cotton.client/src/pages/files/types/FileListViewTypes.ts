@@ -57,7 +57,7 @@ export interface FileOperations {
   onStartRename: (fileId: string, name: string) => void;
   onDelete: (fileId: string, name: string) => void;
   onDownload: (fileId: string, name: string) => void;
-  onClick: (fileId: string, name: string) => void;
+  onClick: (fileId: string, name: string, sizeBytes?: number) => void;
   onMediaClick?: (fileId: string) => void;
 }
 
@@ -155,4 +155,11 @@ export interface IFileListView {
    * Optional pagination props for List view (not used in Tiles view)
    */
   pagination?: PaginationProps;
+
+  /**
+   * Whether to use auto height for rows (DataGrid built-in feature)
+   * When true, rows will adjust height based on content
+   * When false (default), uses fixed height with pagination
+   */
+  autoHeight?: boolean;
 }
