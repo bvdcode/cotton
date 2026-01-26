@@ -20,8 +20,8 @@ import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import Loader from "../../shared/ui/Loader";
 import { nodesApi } from "../../shared/api/nodesApi";
-import { layoutsApi, type NodeDto } from "../../shared/api/layoutsApi";
 import type { NodeContentDto } from "../../shared/api/nodesApi";
+import { useTrashStore } from "../../shared/store/trashStore";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
 import { useFilePreview } from "../files/hooks/useFilePreview";
@@ -37,105 +37,58 @@ import { filesApi } from "../../shared/api/filesApi";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { usePreferencesStore } from "../../shared/store/preferencesStore";
 
-/**
- * TrashPage Component
- *
- * Page for browsing and managing files and folders in trash.
- * Similar to FilesPage but uses 'trash' nodeType for API calls.
- */
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common"]);
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
   const confirm = useConfirm();
 
-  const [currentNode, setCurrentNode] = React.useState<NodeDto | null>(null);
-  const [ancestors, setAncestors] = React.useState<NodeDto[]>([]);
-  const [content, setContent] = React.useState<NodeContentDto | undefined>(
-    undefined,
-  );
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const {
+    currentNode,
+    ancestors,
+    contentByNodeId,
+    loading,
+    error,
+    loadRoot,
+    loadNode,
+    refreshNodeContent,
+  } = useTrashStore();
 
-  // List view (paged) state
+  const routeNodeId = params.nodeId;
+
+  const { layoutPreferences, setTrashLayoutType } = usePreferencesStore();
+  const initialLayoutType =
+    layoutPreferences.trashLayoutType ?? InterfaceLayoutType.Tiles;
+  const [layoutType, setLayoutType] =
+    React.useState<InterfaceLayoutType>(initialLayoutType);
+
   const [listPage, setListPage] = React.useState(0);
-  const [listPageSize, setListPageSize] = React.useState(25);
+  const [listPageSize, setListPageSize] = React.useState<number | null>(null);
   const [listTotalCount, setListTotalCount] = React.useState(0);
   const [listLoading, setListLoading] = React.useState(false);
   const [listError, setListError] = React.useState<string | null>(null);
-  const [listContent, setListContent] = React.useState<NodeContentDto | null>(
-    null,
-  );
-  const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
+  const [listContent, setListContent] = React.useState<NodeContentDto | null>(null);
 
-  const { layoutPreferences, setTrashLayoutType } = usePreferencesStore();
-
-  // Empty trash progress state
   const [emptyingTrash, setEmptyingTrash] = React.useState(false);
   const [emptyTrashProgress, setEmptyTrashProgress] = React.useState({
     current: 0,
     total: 0,
   });
 
-  const routeNodeId = params.nodeId;
-  const initialLayoutType =
-    layoutPreferences.trashLayoutType ?? InterfaceLayoutType.Tiles;
-
-  const [layoutType, setLayoutType] =
-    React.useState<InterfaceLayoutType>(initialLayoutType);
-
-  // Load trash root or specific node
   useEffect(() => {
-    const loadTrashData = async () => {
-      setLoading(true);
-      setError(null);
-
-      const shouldLoadContent = layoutType !== InterfaceLayoutType.List;
-
-      try {
-        if (!routeNodeId) {
-          // Load trash root
-          const root = await layoutsApi.resolve({ nodeType: "trash" });
-          const [nodeData, ancestorsData, contentData] = await Promise.all([
-            nodesApi.getNode(root.id),
-            nodesApi.getAncestors(root.id, { nodeType: "trash" }),
-            shouldLoadContent
-              ? nodesApi.getChildren(root.id, { nodeType: "trash" })
-              : Promise.resolve(null),
-          ]);
-
-          setCurrentNode(nodeData);
-          setAncestors(ancestorsData);
-          setContent(contentData ? contentData.content : undefined);
-        } else {
-          // Load specific trash node
-          const [nodeData, ancestorsData, contentData] = await Promise.all([
-            nodesApi.getNode(routeNodeId),
-            nodesApi.getAncestors(routeNodeId, { nodeType: "trash" }),
-            shouldLoadContent
-              ? nodesApi.getChildren(routeNodeId, { nodeType: "trash" })
-              : Promise.resolve(null),
-          ]);
-
-          setCurrentNode(nodeData);
-          setAncestors(ancestorsData);
-          setContent(contentData ? contentData.content : undefined);
-        }
-      } catch (err) {
-        console.error("Failed to load trash data:", err);
-        setError(t("error"));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadTrashData();
-  }, [routeNodeId, layoutType, t]);
+    const loadChildren = layoutType !== InterfaceLayoutType.List;
+    if (!routeNodeId) {
+      void loadRoot({ force: false, loadChildren });
+    } else {
+      void loadNode(routeNodeId, { loadChildren });
+    }
+  }, [routeNodeId, layoutType, loadRoot, loadNode]);
 
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
+  const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
   const fetchListPage = React.useCallback(async () => {
-    if (!nodeId) return;
+    if (!nodeId || listPageSize === null) return;
 
     setListLoading(true);
     setListError(null);
@@ -155,26 +108,15 @@ export const TrashPage: React.FC = () => {
     }
   }, [nodeId, listPage, listPageSize, t]);
 
-  // Refresh current folder content
   const refreshContent = React.useCallback(async () => {
     if (!nodeId) return;
-
-    try {
-      if (layoutType === InterfaceLayoutType.List) {
-        await fetchListPage();
-        return;
-      }
-
-      const contentData = await nodesApi.getChildren(nodeId, {
-        nodeType: "trash",
-      });
-      setContent(contentData.content);
-    } catch (err) {
-      console.error("Failed to refresh trash content:", err);
+    if (layoutType === InterfaceLayoutType.List) {
+      void fetchListPage();
+      return;
     }
-  }, [nodeId, layoutType, fetchListPage]);
+    void refreshNodeContent(nodeId);
+  }, [nodeId, layoutType, fetchListPage, refreshNodeContent]);
 
-  // Reset paging when folder changes or switching to list view
   useEffect(() => {
     setListPage(0);
   }, [nodeId, layoutType]);
@@ -185,11 +127,10 @@ export const TrashPage: React.FC = () => {
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) return;
-    if (!nodeId) return;
+    if (!nodeId || listPageSize === null) return;
     void fetchListPage();
-  }, [layoutType, nodeId, fetchListPage]);
+  }, [layoutType, nodeId, listPageSize, fetchListPage]);
 
-  // Update page title based on current folder
   useEffect(() => {
     const folderName = currentNode?.name;
     const isRoot = !routeNodeId || ancestors.length === 0;
@@ -202,7 +143,6 @@ export const TrashPage: React.FC = () => {
       document.title = "Cotton";
     }
 
-    // Cleanup: reset to default title when component unmounts
     return () => {
       document.title = "Cotton";
     };
@@ -224,7 +164,6 @@ export const TrashPage: React.FC = () => {
   const fileOps = useTrashFileOperations(refreshContent);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
-  // Media lightbox management
   const {
     lightboxOpen,
     lightboxIndex,
@@ -271,7 +210,6 @@ export const TrashPage: React.FC = () => {
 
       let deleted = 0;
 
-      // Delete all folders
       for (const folder of content.nodes ?? []) {
         try {
           await nodesApi.deleteNode(folder.id, true);
@@ -282,7 +220,6 @@ export const TrashPage: React.FC = () => {
         }
       }
 
-      // Delete all files
       for (const file of content.files ?? []) {
         try {
           await filesApi.deleteFile(file.id, true);
@@ -296,7 +233,6 @@ export const TrashPage: React.FC = () => {
       setEmptyingTrash(false);
       await refreshContent();
     } catch {
-      // User cancelled
       setEmptyingTrash(false);
     }
   };
@@ -312,19 +248,17 @@ export const TrashPage: React.FC = () => {
     }
   };
 
-  // Build folder operations adapter
   const folderOperations = buildFolderOperations(folderOps, (folderId) =>
     navigate(`/trash/${folderId}`),
   );
 
-  // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
     onClick: handleFileClick,
     onMediaClick: handleMediaClick,
   });
 
-  const isCreatingInThisFolder = false; // No folder creation in trash
+  const isCreatingInThisFolder = false;
 
   if (loading && !content && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
@@ -376,11 +310,7 @@ export const TrashPage: React.FC = () => {
           </Box>
         )}
 
-        <Box
-          ref={listGridHostRef}
-          pb={{ xs: 2, sm: 3 }}
-          sx={{ flex: 1, minHeight: 0 }}
-        >
+        <Box pb={{ xs: 2, sm: 3 }} sx={{ flex: 1, minHeight: 0 }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
@@ -400,12 +330,10 @@ export const TrashPage: React.FC = () => {
               layoutType === InterfaceLayoutType.List
                 ? {
                     page: listPage,
-                    pageSize: listPageSize,
+                    pageSize: listPageSize ?? 25,
                     totalCount: listTotalCount,
                     loading: listLoading,
-                    onPageChange: (newPage) => {
-                      setListPage(newPage);
-                    },
+                    onPageChange: setListPage,
                     onPageSizeChange: (newPageSize) => {
                       setListPageSize(newPageSize);
                       setListPage(0);
