@@ -29,9 +29,6 @@ namespace Cotton.Database.Models
         [Column("name_key", TypeName = "citext")]
         public string NameKey { get; private set; } = null!;
 
-        [Column("ui_layout_type")]
-        public InterfaceLayoutType InterfaceLayoutType { get; set; }
-
         public void SetName(string input)
         {
             bool isValid = NameValidator.TryNormalizeAndValidate(input, out string normalized, out string error);

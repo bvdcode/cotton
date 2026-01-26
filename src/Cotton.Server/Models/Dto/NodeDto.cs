@@ -11,6 +11,5 @@ namespace Cotton.Server.Models.Dto
         public Guid LayoutId { get; set; }
         public Guid? ParentId { get; set; }
         public string Name { get; set; } = null!;
-        public InterfaceLayoutType InterfaceLayoutType { get; set; }
     }
 }

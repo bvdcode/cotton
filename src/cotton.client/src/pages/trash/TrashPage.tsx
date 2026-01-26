@@ -36,6 +36,7 @@ import {
 } from "../../shared/utils/operationsAdapters";
 import { filesApi } from "../../shared/api/filesApi";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { usePreferencesStore } from "../../shared/store/preferencesStore";
 
 /**
  * TrashPage Component
@@ -67,6 +68,8 @@ export const TrashPage: React.FC = () => {
     null,
   );
   const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
+
+  const { layoutPreferences, setTrashLayoutType } = usePreferencesStore();
 
   // Empty trash progress state
   const [emptyingTrash, setEmptyingTrash] = React.useState(false);
@@ -141,19 +144,11 @@ export const TrashPage: React.FC = () => {
     }
   }, [nodeId, listPage, listPageSize, t]);
 
-  // Determine layout type from current node, defaulting to Tiles
-  const initialLayoutType = useMemo(() => {
-    return currentNode?.interfaceLayoutType ?? InterfaceLayoutType.Tiles;
-  }, [currentNode?.interfaceLayoutType]);
+  const initialLayoutType =
+    layoutPreferences.trashLayoutType ?? InterfaceLayoutType.Tiles;
 
-  // Layout type state - can be changed by user
   const [layoutType, setLayoutType] =
     React.useState<InterfaceLayoutType>(initialLayoutType);
-
-  // Sync layout type when node changes
-  useEffect(() => {
-    setLayoutType(initialLayoutType);
-  }, [initialLayoutType]);
 
   // Refresh current folder content
   const refreshContent = React.useCallback(async () => {
@@ -178,6 +173,10 @@ export const TrashPage: React.FC = () => {
   useEffect(() => {
     setListPage(0);
   }, [nodeId, layoutType]);
+
+  useEffect(() => {
+    setTrashLayoutType(layoutType);
+  }, [layoutType, setTrashLayoutType]);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) return;
