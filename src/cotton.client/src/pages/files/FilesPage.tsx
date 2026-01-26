@@ -15,6 +15,8 @@ import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
 import { useFilePreview } from "./hooks/useFilePreview";
 import { useMediaLightbox } from "./hooks/useMediaLightbox";
+import { useFilesLayout } from "./hooks/useFilesLayout";
+import { useFilesData } from "./hooks/useFilesData";
 import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
@@ -23,8 +25,6 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
-import { nodesApi, type NodeContentDto } from "../../shared/api/nodesApi";
-import { usePreferencesStore } from "../../shared/store/preferencesStore";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -44,13 +44,7 @@ export const FilesPage: React.FC = () => {
 
   const routeNodeId = params.nodeId;
 
-  const { layoutPreferences, setFilesLayoutType } = usePreferencesStore();
-
-  const initialLayoutType =
-    layoutPreferences.filesLayoutType ?? InterfaceLayoutType.Tiles;
-
-  const [layoutType, setLayoutType] =
-    React.useState<InterfaceLayoutType>(initialLayoutType);
+  const { layoutType, setLayoutType } = useFilesLayout();
 
   useEffect(() => {
     const loadChildren = layoutType !== InterfaceLayoutType.List;
@@ -65,28 +59,24 @@ export const FilesPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
-  const [listPage, setListPage] = React.useState(0);
-  const [listPageSize, setListPageSize] = React.useState<number | null>(null);
-  const [listTotalCount, setListTotalCount] = React.useState(0);
-  const [listLoading, setListLoading] = React.useState(false);
-  const [listError, setListError] = React.useState<string | null>(null);
-  const [listContent, setListContent] = React.useState<NodeContentDto | null>(
-    null,
-  );
-
-  useEffect(() => {
-    setFilesLayoutType(layoutType);
-  }, [layoutType, setFilesLayoutType]);
-
-  useEffect(() => {
-    setListPage(0);
-  }, [nodeId, layoutType]);
-
-  useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) return;
-    setListTotalCount(0);
-    setListError(null);
-  }, [nodeId, layoutType]);
+  const {
+    listPage,
+    listPageSize,
+    listTotalCount,
+    listLoading,
+    listError,
+    listContent,
+    setListPage,
+    setListPageSize,
+    handleFolderChanged,
+    reloadCurrentNode,
+  } = useFilesData({
+    nodeId,
+    layoutType,
+    loadRoot,
+    loadNode,
+    refreshNodeContent,
+  });
 
   useEffect(() => {
     const folderName = currentNode?.name;
@@ -117,63 +107,11 @@ export const FilesPage: React.FC = () => {
 
   const { sortedFiles, tiles } = useContentTiles(effectiveContent ?? undefined);
 
-  const fetchListPage = React.useCallback(async () => {
-    if (!nodeId || listPageSize === null) {
-      return;
-    }
-
-    setListLoading(true);
-    try {
-      const response = await nodesApi.getChildren(nodeId, {
-        page: listPage + 1,
-        pageSize: listPageSize,
-      });
-      setListContent(response.content);
-      setListTotalCount(response.totalCount);
-    } catch (err) {
-      console.error("Failed to load paged content", err);
-    } finally {
-      setListLoading(false);
-    }
-  }, [nodeId, listPage, listPageSize]);
-
-  useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) {
-      return;
-    }
-    if (!nodeId || listPageSize === null) {
-      return;
-    }
-    void fetchListPage();
-  }, [layoutType, nodeId, listPageSize, fetchListPage]);
-
-  const handleFolderChanged = React.useCallback(() => {
-    if (!nodeId) {
-      return;
-    }
-    if (layoutType === InterfaceLayoutType.List) {
-      void fetchListPage();
-      return;
-    }
-    void refreshNodeContent(nodeId);
-  }, [nodeId, layoutType, fetchListPage, refreshNodeContent]);
-
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
-  const fileOps = useFileOperations(() => {
-    if (!nodeId) {
-      return;
-    }
-    // Reload current folder after file operation
-    if (layoutType === InterfaceLayoutType.List) {
-      void fetchListPage();
-    } else {
-      void loadNode(nodeId);
-    }
-  });
+  const fileOps = useFileOperations(reloadCurrentNode);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
-  // Media lightbox management
   const {
     lightboxOpen,
     lightboxIndex,
