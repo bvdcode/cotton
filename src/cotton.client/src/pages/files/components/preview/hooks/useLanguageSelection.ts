@@ -5,8 +5,7 @@
  * Encapsulates language detection and override logic
  */
 
-import { useCallback, useMemo } from 'react';
-import { useEditorPreferencesStore } from '../../../../../shared/store/editorPreferencesStore';
+import { useState, useCallback } from 'react';
 
 /**
  * Detect programming language from file extension
@@ -107,31 +106,33 @@ export function useLanguageSelection({
   fileName,
   fileId,
 }: UseLanguageSelectionOptions): UseLanguageSelectionResult {
-  const storedOverride = useEditorPreferencesStore(
-    (state) => state.languageOverrideByFileId[fileId],
-  );
-  const setLanguageOverride = useEditorPreferencesStore(
-    (state) => state.setLanguageOverride,
-  );
-  const clearLanguageOverride = useEditorPreferencesStore(
-    (state) => state.clearLanguageOverride,
-  );
+  const [language, setLanguageState] = useState<string>(() => {
+    // Try to restore from localStorage
+    const storageKey = `language-override-${fileId}`;
+    const stored = localStorage.getItem(storageKey);
+    
+    if (stored) {
+      return stored;
+    }
+    
+    // Otherwise detect from filename
+    return detectLanguageFromFileName(fileName);
+  });
 
-  const detectedLanguage = useMemo(
-    () => detectLanguageFromFileName(fileName),
-    [fileName],
-  );
-
-  const language = storedOverride ?? detectedLanguage;
-
+  // Set language and persist to localStorage
   const setLanguage = useCallback((newLanguage: string) => {
-    setLanguageOverride(fileId, newLanguage);
-  }, [fileId, setLanguageOverride]);
+    setLanguageState(newLanguage);
+    const storageKey = `language-override-${fileId}`;
+    localStorage.setItem(storageKey, newLanguage);
+  }, [fileId]);
 
   // Reset to auto-detected language
   const resetLanguage = useCallback(() => {
-    clearLanguageOverride(fileId);
-  }, [fileId, clearLanguageOverride]);
+    const detected = detectLanguageFromFileName(fileName);
+    setLanguageState(detected);
+    const storageKey = `language-override-${fileId}`;
+    localStorage.removeItem(storageKey);
+  }, [fileName, fileId]);
 
   return { language, setLanguage, resetLanguage };
 }
