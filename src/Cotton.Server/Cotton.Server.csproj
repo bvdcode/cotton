@@ -28,7 +28,6 @@
 		<PackageReference Include="Mapster" Version="7.4.0" />
 		<PackageReference Include="Otp.NET" Version="1.4.1" />
 		<ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
-		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
 		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
 		<ProjectReference Include="..\Cotton.Topology\Cotton.Topology.csproj" />
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
@@ -40,5 +39,7 @@
 		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="3.0.39" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
 	</ItemGroup>
+
+	<Import Project="..\Cotton.Shared\Cotton.Shared.projitems" Label="Shared" />
 
 </Project>
