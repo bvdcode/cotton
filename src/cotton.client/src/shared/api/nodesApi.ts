@@ -83,7 +83,7 @@ export const nodesApi = {
   },
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
-    const response = await httpClient.put<NodeDto>("/layouts/nodes", request);
+    const response = await httpClient.put<NodeDto>("layouts/nodes", request);
     return response.data;
   },
 

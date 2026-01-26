@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import type { Guid } from "../../../../../shared/api/layoutsApi";
 import { filesApi } from "../../../../../shared/api/filesApi";
 import { useTranslation } from "react-i18next";
-
-const MAX_PREVIEW_SIZE_BYTES = 512 * 1024;
+import { previewConfig } from "../../../../../shared/config/previewConfig";
 
 export const useTextFileContent = (
   nodeFileId: Guid,
@@ -23,10 +22,10 @@ export const useTextFileContent = (
         setLoading(true);
         setError(null);
 
-        if (fileSizeBytes && fileSizeBytes > MAX_PREVIEW_SIZE_BYTES) {
+        if (fileSizeBytes && fileSizeBytes > previewConfig.MAX_PREVIEW_SIZE_BYTES) {
           if (!cancelled) {
             const sizeMB = fileSizeBytes / 1024 / 1024;
-            const maxMB = MAX_PREVIEW_SIZE_BYTES / 1024;
+            const maxMB = previewConfig.MAX_PREVIEW_SIZE_BYTES / 1024;
             setError(
               t("preview.errors.fileTooLarge", {
                 ns: "files",
@@ -87,6 +86,6 @@ export const useTextFileContent = (
     loading,
     error,
     setError,
-    isFileTooLarge: !!(fileSizeBytes && fileSizeBytes > MAX_PREVIEW_SIZE_BYTES),
+    isFileTooLarge: !!(fileSizeBytes && fileSizeBytes > previewConfig.MAX_PREVIEW_SIZE_BYTES),
   };
 };
