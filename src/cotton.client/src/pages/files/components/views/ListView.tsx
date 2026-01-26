@@ -48,6 +48,7 @@ export const ListView: React.FC<IFileListView> = ({
   pagination,
 }) => {
   const { t } = useTranslation("files");
+  const [failedPreviews, setFailedPreviews] = React.useState<Set<string>>(new Set());
 
   const rows: GridRowsProp<FileListRow> = useMemo(() => {
     const baseRows: FileListRow[] = tiles.map((tile) => {
@@ -84,15 +85,16 @@ export const ListView: React.FC<IFileListView> = ({
   }, [tiles, isCreatingFolder, newFolderName]);
 
   const getSmallFileIcon = useCallback((fileName: string) => {
+    const iconSx = { fontSize: 32 };
     if (isTextFile(fileName))
-      return <Article color="action" fontSize="small" />;
+      return <Article color="action" sx={iconSx} />;
     if (isImageFile(fileName))
-      return <ImageIcon color="action" fontSize="small" />;
+      return <ImageIcon color="action" sx={iconSx} />;
     if (isVideoFile(fileName))
-      return <VideoFile color="action" fontSize="small" />;
+      return <VideoFile color="action" sx={iconSx} />;
     if (isPdfFile(fileName))
-      return <TextSnippet color="action" fontSize="small" />;
-    return <InsertDriveFile color="action" fontSize="small" />;
+      return <TextSnippet color="action" sx={iconSx} />;
+    return <InsertDriveFile color="action" sx={iconSx} />;
   }, []);
 
   const columns: GridColDef<FileListRow>[] = useMemo(
@@ -112,44 +114,30 @@ export const ListView: React.FC<IFileListView> = ({
                 : null
               : null;
 
+          const showPreview = previewUrl && !failedPreviews.has(params.row.id);
+
           return (
             <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
               {params.row.type === "folder" || params.row.type === "new-folder" ? (
-                <Folder color="primary" fontSize="small" />
-              ) : (
+                <Folder color="primary" sx={{ fontSize: 32 }} />
+              ) : showPreview ? (
                 <Box
+                  component="img"
+                  src={previewUrl}
+                  alt=""
+                  loading="lazy"
+                  onError={() => {
+                    setFailedPreviews((prev) => new Set(prev).add(params.row.id));
+                  }}
                   sx={{
                     width: 32,
                     height: 32,
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
+                    objectFit: "contain",
                     borderRadius: 0.5,
                   }}
-                >
-                  {getSmallFileIcon(params.row.name)}
-                  {previewUrl && (
-                    <Box
-                      component="img"
-                      src={previewUrl}
-                      alt=""
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                      sx={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        display: "block",
-                      }}
-                    />
-                  )}
-                </Box>
+                />
+              ) : (
+                getSmallFileIcon(params.row.name)
               )}
             </Box>
           );
@@ -410,6 +398,7 @@ export const ListView: React.FC<IFileListView> = ({
       folderOperations,
       fileOperations,
       getSmallFileIcon,
+      failedPreviews,
     ],
   );
 
