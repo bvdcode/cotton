@@ -468,7 +468,12 @@
       "trashRoot": "Trash root",
       "switchToList": "Switch to list view",
       "switchToTiles": "Switch to tiles view",
+      "switchToListView": "Switch to list view",
+      "switchToTilesView": "Switch to tiles view",
       "emptyTrash": "Empty trash"
+    },
+    "breadcrumbs": {
+      "root": "Trash"
     },
     "stats": {
       "summary": "{{folders}} folders, {{files}} files, {{size}}"

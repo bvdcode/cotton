@@ -8,7 +8,6 @@ import {
 } from "./components";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import Loader from "../../shared/ui/Loader";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
@@ -169,10 +168,6 @@ export const FilesPage: React.FC = () => {
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
 
-  if (loading && !content && layoutType !== InterfaceLayoutType.List) {
-    return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
-  }
-
   return (
     <>
       {fileUpload.isDragging && (
@@ -251,7 +246,8 @@ export const FilesPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
-              emptyStateText={
+            loading={loading && !content}
+            emptyStateText={
                 layoutType === InterfaceLayoutType.Tiles
                   ? t("empty.all")
                   : undefined

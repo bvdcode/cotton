@@ -486,7 +486,12 @@
       "trashRoot": "Корень корзины",
       "switchToList": "Переключить на список",
       "switchToTiles": "Переключить на плитки",
+      "switchToListView": "Переключить на список",
+      "switchToTilesView": "Переключить на плитки",
       "emptyTrash": "Очистить корзину"
+    },
+    "breadcrumbs": {
+      "root": "Корзина"
     },
     "stats": {
       "summary": "{{folders}} папок, {{files}} файлов, {{size}}"
