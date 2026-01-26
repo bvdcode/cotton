@@ -29,6 +29,7 @@ import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
 import { downloadFile } from "../files/utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "../files/utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
+import { useTrashFileList } from "../../shared/hooks/useFileListSource";
 import {
   buildFolderOperations,
   buildFileOperations,
@@ -157,6 +158,12 @@ export const TrashPage: React.FC = () => {
     layoutType === InterfaceLayoutType.List
       ? (listContent ?? content)
       : content;
+
+  useTrashFileList({
+    nodeId,
+    layoutType,
+    listContent,
+  });
 
   const { sortedFiles, tiles } = useContentTiles(effectiveContent);
 

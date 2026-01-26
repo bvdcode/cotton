@@ -13,11 +13,11 @@ import { MediaLightbox } from "../files/components";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
 import { useFileOperations } from "../files/hooks/useFileOperations";
 import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
+import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
-import type { FileSystemTile } from "../files/types/FileListViewTypes";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 
 export const SearchPage: React.FC = () => {
@@ -93,6 +93,14 @@ export const SearchPage: React.FC = () => {
     return sorted;
   }, [results]);
 
+  const fileListSource = useSearchFileList({
+    results,
+    loading,
+    error: error ?? null,
+    totalCount,
+    hasQuery: !!query.trim(),
+  });
+
   const {
     lightboxOpen,
     lightboxIndex,
@@ -102,25 +110,7 @@ export const SearchPage: React.FC = () => {
     setLightboxOpen,
   } = useMediaLightbox(sortedFiles);
 
-  const tiles: FileSystemTile[] = useMemo(() => {
-    if (!results) return [];
-
-    const sortByName = <T extends { name: string }>(items: T[]): T[] => {
-      const sorted = items.slice();
-      sorted.sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { numeric: true }),
-      );
-      return sorted;
-    };
-
-    const sortedFolders = sortByName(results.nodes ?? []);
-    const sortedFiles = sortByName(results.files ?? []);
-
-    return [
-      ...sortedFolders.map((node) => ({ kind: "folder", node }) as const),
-      ...sortedFiles.map((file) => ({ kind: "file", file }) as const),
-    ];
-  }, [results]);
+  const tiles = fileListSource.tiles;
 
   const rawFolderOps = useFolderOperations(null);
   const rawFileOps = useFileOperations();
@@ -173,7 +163,7 @@ export const SearchPage: React.FC = () => {
           </Typography>
         )}
 
-      {query.trim() && (loading || results) && (
+      {(loading || results) && (
         <Box
           ref={gridHostRef}
           sx={{ width: "100%", flex: 1, minHeight: 0 }}
