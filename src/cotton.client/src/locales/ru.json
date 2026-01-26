@@ -446,6 +446,27 @@
         "save": "Сохранить",
         "saving": "Сохранение..."
       },
+      "editorModes": {
+        "text": {
+          "label": "Текст",
+          "description": "Обычный текст с сохранением форматирования"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Markdown с предпросмотром"
+        },
+        "code": {
+          "label": "Код",
+          "description": "Редактор кода с подсветкой синтаксиса"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "Получение ссылки...",
+          "download": "Загрузка PDF...",
+          "render": "Рендер PDF..."
+        }
+      },
       "errors": {
         "loadFailed": "Не удалось загрузить файл{{error}}",
         "saveFailed": "Не удалось сохранить содержимое файла",

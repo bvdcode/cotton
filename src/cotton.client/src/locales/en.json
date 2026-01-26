@@ -428,6 +428,27 @@
         "save": "Save",
         "saving": "Saving..."
       },
+      "editorModes": {
+        "text": {
+          "label": "Text",
+          "description": "Plain text with preserved formatting"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Markdown with preview"
+        },
+        "code": {
+          "label": "Code",
+          "description": "Code editor with syntax highlighting"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "Getting link...",
+          "download": "Downloading PDF...",
+          "render": "Rendering PDF..."
+        }
+      },
       "errors": {
         "loadFailed": "Failed to load file{{error}}",
         "saveFailed": "Failed to save file content",
