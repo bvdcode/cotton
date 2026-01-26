@@ -11,6 +11,7 @@ import { getFileIcon } from "./icons";
 export function getFilePreview(
   encryptedFilePreviewHashHex: string | null,
   fileName: string,
+  contentType?: string | null,
 ): string | ReactNode {
-  return getFileIcon(encryptedFilePreviewHashHex, fileName);
+  return getFileIcon(encryptedFilePreviewHashHex, fileName, contentType);
 }

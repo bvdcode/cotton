@@ -23,6 +23,7 @@ export const useMediaLightbox = (
     name: string;
     sizeBytes?: number;
     encryptedFilePreviewHashHex?: string | null;
+    contentType?: string | null;
   }>,
 ): MediaHandlers => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -36,6 +37,7 @@ export const useMediaLightbox = (
         const preview = getFileIcon(
           file.encryptedFilePreviewHashHex ?? null,
           file.name,
+          file.contentType,
         );
         const previewUrl = typeof preview === "string" ? preview : "";
 
