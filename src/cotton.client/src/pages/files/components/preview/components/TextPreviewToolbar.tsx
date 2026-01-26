@@ -1,8 +1,8 @@
 import React from "react";
 import {
+  Box,
   Button,
   IconButton,
-  Stack,
   Paper,
   Tooltip,
   Typography,
@@ -61,102 +61,128 @@ export const TextPreviewToolbar: React.FC<TextPreviewToolbarProps> = ({
         },
       }}
     >
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mr: 5 }}>
-        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 1,
+        }}
+      >
+        <Typography
+          variant="subtitle2"
+          sx={{
+            minWidth: 0,
+          }}
+          noWrap
+        >
           {fileName}
         </Typography>
 
-        <EditorModeSelector
-          currentMode={mode}
-          onModeChange={setMode}
-          disabled={saving}
-        />
-
-        {mode === EditorMode.Code && (
-          <LanguageSelector
-            currentLanguage={language}
-            onLanguageChange={setLanguage}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+          }}
+        >
+          <EditorModeSelector
+            currentMode={mode}
+            onModeChange={setMode}
             disabled={saving}
           />
-        )}
 
-        {!isEditing &&
-          (isMobile ? (
-            <Tooltip title={t("preview.actions.edit", { ns: "files" })}>
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={() => setIsEditing(true)}
-                  aria-label={t("preview.actions.edit", { ns: "files" })}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          ) : (
-            <Button
-              size="small"
-              startIcon={<EditIcon />}
-              onClick={() => setIsEditing(true)}
-            >
-              {t("preview.actions.edit", { ns: "files" })}
-            </Button>
-          ))}
-        {isEditing && (
-          <>
-            {isMobile ? (
-              <>
-                <Tooltip title={t("actions.cancel", { ns: "common" })}>
+          <Box display="flex" gap={1}>
+            {mode === EditorMode.Code && (
+              <LanguageSelector
+                currentLanguage={language}
+                onLanguageChange={setLanguage}
+                disabled={saving}
+              />
+            )}
+
+            {!isEditing &&
+              (isMobile ? (
+                <Tooltip title={t("preview.actions.edit", { ns: "files" })}>
                   <span>
                     <IconButton
                       size="small"
+                      onClick={() => setIsEditing(true)}
+                      aria-label={t("preview.actions.edit", { ns: "files" })}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button
+                  size="small"
+                  startIcon={<EditIcon />}
+                  onClick={() => setIsEditing(true)}
+                >
+                  {t("preview.actions.edit", { ns: "files" })}
+                </Button>
+              ))}
+            {isEditing && (
+              <>
+                {isMobile ? (
+                  <>
+                    <Tooltip title={t("actions.cancel", { ns: "common" })}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={onCancel}
+                          disabled={saving}
+                          aria-label={t("actions.cancel", { ns: "common" })}
+                        >
+                          <CancelIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={t("preview.actions.save", { ns: "files" })}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={onSave}
+                          disabled={!hasChanges || saving}
+                          aria-label={t("preview.actions.save", {
+                            ns: "files",
+                          })}
+                        >
+                          <SaveIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="small"
+                      startIcon={<CancelIcon />}
                       onClick={onCancel}
                       disabled={saving}
-                      aria-label={t("actions.cancel", { ns: "common" })}
                     >
-                      <CancelIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title={t("preview.actions.save", { ns: "files" })}>
-                  <span>
-                    <IconButton
+                      {t("actions.cancel", { ns: "common" })}
+                    </Button>
+                    <Button
                       size="small"
+                      variant="contained"
+                      startIcon={<SaveIcon />}
                       onClick={onSave}
                       disabled={!hasChanges || saving}
-                      aria-label={t("preview.actions.save", { ns: "files" })}
                     >
-                      <SaveIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                <Button
-                  size="small"
-                  startIcon={<CancelIcon />}
-                  onClick={onCancel}
-                  disabled={saving}
-                >
-                  {t("actions.cancel", { ns: "common" })}
-                </Button>
-                <Button
-                  size="small"
-                  variant="contained"
-                  startIcon={<SaveIcon />}
-                  onClick={onSave}
-                  disabled={!hasChanges || saving}
-                >
-                  {saving
-                    ? t("preview.actions.saving", { ns: "files" })
-                    : t("preview.actions.save", { ns: "files" })}
-                </Button>
+                      {saving
+                        ? t("preview.actions.saving", { ns: "files" })
+                        : t("preview.actions.save", { ns: "files" })}
+                    </Button>
+                  </>
+                )}
               </>
             )}
-          </>
-        )}
-      </Stack>
+          </Box>
+        </Box>
+      </Box>
     </Paper>
   );
 };

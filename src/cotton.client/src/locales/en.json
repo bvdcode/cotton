@@ -449,6 +449,9 @@
           "render": "Rendering PDF..."
         }
       },
+      "language": {
+        "label": "Language"
+      },
       "errors": {
         "loadFailed": "Failed to load file{{error}}",
         "saveFailed": "Failed to save file content",

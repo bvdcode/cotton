@@ -11,7 +11,7 @@ import {
   Container,
   IconButton,
 } from "@mui/material";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useAuth } from "../../features/auth";
 import { useSettingsStore } from "../../shared/store/settingsStore";
 
@@ -77,7 +77,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                   : location.pathname.startsWith(route.path);
 
               return (
-                <>
+                <React.Fragment key={route.path}>
                   <IconButton
                     key={`${route.path}-icon`}
                     component={Link}
@@ -113,7 +113,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                   >
                     {route.displayName}
                   </Button>
-                </>
+                </React.Fragment>
               );
             })}
           </Box>
