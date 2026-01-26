@@ -11,8 +11,8 @@ type NodesState = {
   error: string | null;
   lastUpdatedByNodeId: Record<string, number | undefined>;
 
-  loadRoot: (options?: { force?: boolean }) => Promise<NodeDto | null>;
-  loadNode: (nodeId: string) => Promise<void>;
+  loadRoot: (options?: { force?: boolean; loadChildren?: boolean }) => Promise<NodeDto | null>;
+  loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<void>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
@@ -35,14 +35,17 @@ export const useNodesStore = create<NodesState>((set, get) => ({
 
   loadRoot: async (options) => {
     const force = options?.force ?? false;
+    const loadChildren = options?.loadChildren ?? true;
     const state = get();
 
     if (!force && state.currentNode && state.currentNode.parentId == null) {
-      return state.currentNode;
+      if (!loadChildren || state.contentByNodeId[state.currentNode.id]) {
+        return state.currentNode;
+      }
     }
     try {
       const root = await layoutsApi.resolve();
-      await get().loadNode(root.id);
+      await get().loadNode(root.id, { loadChildren });
       return root;
     } catch (error) {
       console.error("Failed to resolve root node", error);
@@ -51,9 +54,37 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     }
   },
 
-  loadNode: async (nodeId) => {
+  loadNode: async (nodeId, options) => {
     const state = get();
+    const loadChildren = options?.loadChildren ?? true;
     if (state.loading && state.currentNode?.id === nodeId) return;
+
+    if (!loadChildren) {
+      set({ loading: true, error: null });
+
+      try {
+        const [node, ancestors] = await Promise.all([
+          nodesApi.getNode(nodeId),
+          nodesApi.getAncestors(nodeId),
+        ]);
+
+        set((prev) => ({
+          currentNode: node,
+          ancestors,
+          lastUpdatedByNodeId: {
+            ...prev.lastUpdatedByNodeId,
+            [nodeId]: Date.now(),
+          },
+          loading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error("Failed to load node view", error);
+        set({ loading: false, error: "Failed to load folder contents" });
+      }
+
+      return;
+    }
 
     const cachedContent = state.contentByNodeId[nodeId];
     const hasCachedData = !!cachedContent;

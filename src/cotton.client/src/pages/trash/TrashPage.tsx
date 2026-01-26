@@ -4,7 +4,6 @@ import {
   Box,
   IconButton,
   LinearProgress,
-  Typography,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -79,12 +78,19 @@ export const TrashPage: React.FC = () => {
   });
 
   const routeNodeId = params.nodeId;
+  const initialLayoutType =
+    layoutPreferences.trashLayoutType ?? InterfaceLayoutType.Tiles;
+
+  const [layoutType, setLayoutType] =
+    React.useState<InterfaceLayoutType>(initialLayoutType);
 
   // Load trash root or specific node
   useEffect(() => {
     const loadTrashData = async () => {
       setLoading(true);
       setError(null);
+
+      const shouldLoadContent = layoutType !== InterfaceLayoutType.List;
 
       try {
         if (!routeNodeId) {
@@ -93,23 +99,27 @@ export const TrashPage: React.FC = () => {
           const [nodeData, ancestorsData, contentData] = await Promise.all([
             nodesApi.getNode(root.id),
             nodesApi.getAncestors(root.id, { nodeType: "trash" }),
-            nodesApi.getChildren(root.id, { nodeType: "trash" }),
+            shouldLoadContent
+              ? nodesApi.getChildren(root.id, { nodeType: "trash" })
+              : Promise.resolve(null),
           ]);
 
           setCurrentNode(nodeData);
           setAncestors(ancestorsData);
-          setContent(contentData.content);
+          setContent(contentData ? contentData.content : undefined);
         } else {
           // Load specific trash node
           const [nodeData, ancestorsData, contentData] = await Promise.all([
             nodesApi.getNode(routeNodeId),
             nodesApi.getAncestors(routeNodeId, { nodeType: "trash" }),
-            nodesApi.getChildren(routeNodeId, { nodeType: "trash" }),
+            shouldLoadContent
+              ? nodesApi.getChildren(routeNodeId, { nodeType: "trash" })
+              : Promise.resolve(null),
           ]);
 
           setCurrentNode(nodeData);
           setAncestors(ancestorsData);
-          setContent(contentData.content);
+          setContent(contentData ? contentData.content : undefined);
         }
       } catch (err) {
         console.error("Failed to load trash data:", err);
@@ -120,12 +130,13 @@ export const TrashPage: React.FC = () => {
     };
 
     void loadTrashData();
-  }, [routeNodeId, t]);
+  }, [routeNodeId, layoutType, t]);
 
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
 
   const fetchListPage = React.useCallback(async () => {
     if (!nodeId) return;
+
     setListLoading(true);
     setListError(null);
     try {
@@ -143,12 +154,6 @@ export const TrashPage: React.FC = () => {
       setListLoading(false);
     }
   }, [nodeId, listPage, listPageSize, t]);
-
-  const initialLayoutType =
-    layoutPreferences.trashLayoutType ?? InterfaceLayoutType.Tiles;
-
-  const [layoutType, setLayoutType] =
-    React.useState<InterfaceLayoutType>(initialLayoutType);
 
   // Refresh current folder content
   const refreshContent = React.useCallback(async () => {
@@ -338,7 +343,7 @@ export const TrashPage: React.FC = () => {
         }}
       >
         <PageHeader
-          loading={loading}
+          loading={layoutType !== InterfaceLayoutType.List && loading}
           breadcrumbs={breadcrumbs}
           stats={stats}
           layoutType={layoutType}
@@ -376,42 +381,36 @@ export const TrashPage: React.FC = () => {
           pb={{ xs: 2, sm: 3 }}
           sx={{ flex: 1, minHeight: 0 }}
         >
-          {tiles.length === 0 &&
-          !isCreatingInThisFolder &&
-          !(layoutType === InterfaceLayoutType.List && listLoading) ? (
-            <Typography color="text.secondary">{t("empty")}</Typography>
-          ) : (
-            <FileListViewFactory
-              layoutType={layoutType}
-              tiles={tiles}
-              folderOperations={folderOperations}
-              fileOperations={fileOperations}
-              isCreatingFolder={isCreatingInThisFolder}
-              newFolderName=""
-              onNewFolderNameChange={() => {}}
-              onConfirmNewFolder={() => Promise.resolve()}
-              onCancelNewFolder={() => {}}
-              folderNamePlaceholder=""
-              fileNamePlaceholder="File name"
-              pagination={
-                layoutType === InterfaceLayoutType.List
-                  ? {
-                      page: listPage,
-                      pageSize: listPageSize,
-                      totalCount: listTotalCount,
-                      loading: listLoading,
-                      onPageChange: (newPage) => {
-                        setListPage(newPage);
-                      },
-                      onPageSizeChange: (newPageSize) => {
-                        setListPageSize(newPageSize);
-                        setListPage(0);
-                      },
-                    }
-                  : undefined
-              }
-            />
-          )}
+          <FileListViewFactory
+            layoutType={layoutType}
+            tiles={tiles}
+            folderOperations={folderOperations}
+            fileOperations={fileOperations}
+            isCreatingFolder={isCreatingInThisFolder}
+            newFolderName=""
+            onNewFolderNameChange={() => {}}
+            onConfirmNewFolder={() => Promise.resolve()}
+            onCancelNewFolder={() => {}}
+            folderNamePlaceholder=""
+            fileNamePlaceholder="File name"
+            pagination={
+              layoutType === InterfaceLayoutType.List
+                ? {
+                    page: listPage,
+                    pageSize: listPageSize,
+                    totalCount: listTotalCount,
+                    loading: listLoading,
+                    onPageChange: (newPage) => {
+                      setListPage(newPage);
+                    },
+                    onPageSizeChange: (newPageSize) => {
+                      setListPageSize(newPageSize);
+                      setListPage(0);
+                    },
+                  }
+                : undefined
+            }
+          />
         </Box>
       </Box>
 

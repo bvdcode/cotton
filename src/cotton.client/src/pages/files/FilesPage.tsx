@@ -55,13 +55,23 @@ export const FilesPage: React.FC = () => {
 
   const routeNodeId = params.nodeId;
 
+  const { layoutPreferences, setFilesLayoutType } = usePreferencesStore();
+
+  const initialLayoutType =
+    layoutPreferences.filesLayoutType ?? InterfaceLayoutType.Tiles;
+
+  const [layoutType, setLayoutType] =
+    React.useState<InterfaceLayoutType>(initialLayoutType);
+
   useEffect(() => {
+    const loadChildren = layoutType !== InterfaceLayoutType.List;
+
     if (!routeNodeId) {
-      void loadRoot({ force: false });
+      void loadRoot({ force: false, loadChildren });
       return;
     }
-    void loadNode(routeNodeId);
-  }, [routeNodeId, loadRoot, loadNode]);
+    void loadNode(routeNodeId, { loadChildren });
+  }, [routeNodeId, layoutType, loadRoot, loadNode]);
 
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
@@ -76,14 +86,6 @@ export const FilesPage: React.FC = () => {
     null,
   );
   const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
-
-  const { layoutPreferences, setFilesLayoutType } = usePreferencesStore();
-
-  const initialLayoutType =
-    layoutPreferences.filesLayoutType ?? InterfaceLayoutType.Tiles;
-
-  const [layoutType, setLayoutType] =
-    React.useState<InterfaceLayoutType>(initialLayoutType);
 
   useEffect(() => {
     setFilesLayoutType(layoutType);
@@ -133,9 +135,11 @@ export const FilesPage: React.FC = () => {
   const { sortedFiles, tiles } = useContentTiles(effectiveContent ?? undefined);
 
   const fetchListPage = React.useCallback(async () => {
-    if (!nodeId) return;
+    if (!nodeId) {
+      return;
+    }
+
     setListLoading(true);
-    setListError(null);
     try {
       const response = await nodesApi.getChildren(nodeId, {
         page: listPage + 1,
@@ -145,22 +149,38 @@ export const FilesPage: React.FC = () => {
       setListTotalCount(response.totalCount);
     } catch (err) {
       console.error("Failed to load paged content", err);
-      setListError(t("error"));
     } finally {
       setListLoading(false);
     }
-  }, [nodeId, listPage, listPageSize, t]);
+  }, [nodeId, listPage, listPageSize]);
 
   useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) return;
-    if (!nodeId) return;
+    if (layoutType !== InterfaceLayoutType.List) {
+      return;
+    }
+    if (!nodeId) {
+      return;
+    }
     void fetchListPage();
   }, [layoutType, nodeId, fetchListPage]);
 
-  const folderOps = useFolderOperations(nodeId);
+  const handleFolderCreated = React.useCallback(() => {
+    if (!nodeId) {
+      return;
+    }
+    if (layoutType === InterfaceLayoutType.List) {
+      void fetchListPage();
+      return;
+    }
+    void refreshNodeContent(nodeId);
+  }, [nodeId, layoutType, fetchListPage, refreshNodeContent]);
+
+  const folderOps = useFolderOperations(nodeId, handleFolderCreated);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
   const fileOps = useFileOperations(() => {
-    if (!nodeId) return;
+    if (!nodeId) {
+      return;
+    }
     // Reload current folder after file operation
     if (layoutType === InterfaceLayoutType.List) {
       void fetchListPage();
@@ -198,7 +218,11 @@ export const FilesPage: React.FC = () => {
     await downloadFile(nodeFileId, fileName);
   };
 
-  const handleFileClick = (fileId: string, fileName: string, fileSizeBytes?: number) => {
+  const handleFileClick = (
+    fileId: string,
+    fileName: string,
+    fileSizeBytes?: number,
+  ) => {
     const opened = openPreview(fileId, fileName, fileSizeBytes);
     if (!opened) {
       void handleDownloadFile(fileId, fileName);
@@ -296,44 +320,38 @@ export const FilesPage: React.FC = () => {
         )}
 
         <Box ref={listGridHostRef} pb={1} sx={{ flex: 1, minHeight: 0 }}>
-          {tiles.length === 0 &&
-          !isCreatingInThisFolder &&
-          !(layoutType === InterfaceLayoutType.List && listLoading) ? (
-            <Typography color="text.secondary">{t("empty.all")}</Typography>
-          ) : (
-            <FileListViewFactory
-              layoutType={layoutType}
-              tiles={tiles}
-              folderOperations={folderOperations}
-              fileOperations={fileOperations}
-              isCreatingFolder={isCreatingInThisFolder}
-              newFolderName={folderOps.newFolderName}
-              onNewFolderNameChange={folderOps.setNewFolderName}
-              onConfirmNewFolder={folderOps.handleConfirmNewFolder}
-              onCancelNewFolder={folderOps.handleCancelNewFolder}
-              folderNamePlaceholder={t("actions.folderNamePlaceholder")}
-              fileNamePlaceholder={t("rename.fileNamePlaceholder", {
-                ns: "files",
-              })}
-              pagination={
-                layoutType === InterfaceLayoutType.List
-                  ? {
-                      page: listPage,
-                      pageSize: listPageSize,
-                      totalCount: listTotalCount,
-                      loading: listLoading,
-                      onPageChange: (newPage) => {
-                        setListPage(newPage);
-                      },
-                      onPageSizeChange: (newPageSize) => {
-                        setListPageSize(newPageSize);
-                        setListPage(0);
-                      },
-                    }
-                  : undefined
-              }
-            />
-          )}
+          <FileListViewFactory
+            layoutType={layoutType}
+            tiles={tiles}
+            folderOperations={folderOperations}
+            fileOperations={fileOperations}
+            isCreatingFolder={isCreatingInThisFolder}
+            newFolderName={folderOps.newFolderName}
+            onNewFolderNameChange={folderOps.setNewFolderName}
+            onConfirmNewFolder={folderOps.handleConfirmNewFolder}
+            onCancelNewFolder={folderOps.handleCancelNewFolder}
+            folderNamePlaceholder={t("actions.folderNamePlaceholder")}
+            fileNamePlaceholder={t("rename.fileNamePlaceholder", {
+              ns: "files",
+            })}
+            pagination={
+              layoutType === InterfaceLayoutType.List
+                ? {
+                    page: listPage,
+                    pageSize: listPageSize,
+                    totalCount: listTotalCount,
+                    loading: listLoading,
+                    onPageChange: (newPage) => {
+                      setListPage(newPage);
+                    },
+                    onPageSizeChange: (newPageSize) => {
+                      setListPageSize(newPageSize);
+                      setListPage(0);
+                    },
+                  }
+                : undefined
+            }
+          />
         </Box>
       </Box>
 
