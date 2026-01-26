@@ -63,8 +63,6 @@ export const TrashPage: React.FC = () => {
   const [layoutType, setLayoutType] =
     React.useState<InterfaceLayoutType>(initialLayoutType);
 
-  const [listPage, setListPage] = React.useState(0);
-  const [listPageSize, setListPageSize] = React.useState<number | null>(null);
   const [listTotalCount, setListTotalCount] = React.useState(0);
   const [listLoading, setListLoading] = React.useState(false);
   const [listError, setListError] = React.useState<string | null>(null);
@@ -88,16 +86,16 @@ export const TrashPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
-  const fetchListPage = React.useCallback(async () => {
-    if (!nodeId || listPageSize === null) return;
+  const fetchListPage = React.useCallback(async (page: number, pageSize: number) => {
+    if (!nodeId) return;
 
     setListLoading(true);
     setListError(null);
     try {
       const response = await nodesApi.getChildren(nodeId, {
         nodeType: "trash",
-        page: listPage + 1,
-        pageSize: listPageSize,
+        page: page + 1,
+        pageSize,
       });
       setListContent(response.content);
       setListTotalCount(response.totalCount);
@@ -107,30 +105,18 @@ export const TrashPage: React.FC = () => {
     } finally {
       setListLoading(false);
     }
-  }, [nodeId, listPage, listPageSize, t]);
+  }, [nodeId, t]);
 
   const refreshContent = React.useCallback(async () => {
     if (!nodeId) return;
-    if (layoutType === InterfaceLayoutType.List) {
-      void fetchListPage();
-      return;
-    }
     void refreshNodeContent(nodeId);
-  }, [nodeId, layoutType, fetchListPage, refreshNodeContent]);
-
-  useEffect(() => {
-    setListPage(0);
-  }, [nodeId, layoutType]);
+  }, [nodeId, refreshNodeContent]);
 
   useEffect(() => {
     setTrashLayoutType(layoutType);
   }, [layoutType, setTrashLayoutType]);
 
-  useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) return;
-    if (!nodeId || listPageSize === null) return;
-    void fetchListPage();
-  }, [layoutType, nodeId, listPageSize, fetchListPage]);
+
 
   useEffect(() => {
     const folderName = currentNode?.name;
@@ -336,14 +322,10 @@ export const TrashPage: React.FC = () => {
             pagination={
               layoutType === InterfaceLayoutType.List
                 ? {
-                    page: listPage,
-                    pageSize: listPageSize ?? 25,
                     totalCount: listTotalCount,
                     loading: listLoading,
-                    onPageChange: setListPage,
-                    onPageSizeChange: (newPageSize) => {
-                      setListPageSize(newPageSize);
-                      setListPage(0);
+                    onPaginationModelChange: (model) => {
+                      void fetchListPage(model.page, model.pageSize);
                     },
                   }
                 : undefined

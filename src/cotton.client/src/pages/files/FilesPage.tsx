@@ -61,14 +61,11 @@ export const FilesPage: React.FC = () => {
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
   const {
-    listPage,
-    listPageSize,
     listTotalCount,
     listLoading,
     listError,
     listContent,
-    setListPage,
-    setListPageSize,
+    fetchListPage,
     handleFolderChanged,
     reloadCurrentNode,
   } = useFilesData({
@@ -270,14 +267,10 @@ export const FilesPage: React.FC = () => {
             pagination={
               layoutType === InterfaceLayoutType.List
                 ? {
-                    page: listPage,
-                    pageSize: listPageSize,
                     totalCount: listTotalCount,
                     loading: listLoading,
-                    onPageChange: setListPage,
-                    onPageSizeChange: (newPageSize) => {
-                      setListPageSize(newPageSize);
-                      setListPage(0);
+                    onPaginationModelChange: (model) => {
+                      void fetchListPage(model.page, model.pageSize);
                     },
                   }
                 : undefined
