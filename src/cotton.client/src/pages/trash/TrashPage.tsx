@@ -57,6 +57,18 @@ export const TrashPage: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  // List view (paged) state
+  const [listPage, setListPage] = React.useState(0);
+  const [listPageSize, setListPageSize] = React.useState(25);
+  const [listTotalCount, setListTotalCount] = React.useState(0);
+  const [listLoading, setListLoading] = React.useState(false);
+  const [listError, setListError] = React.useState<string | null>(null);
+  const [listContent, setListContent] = React.useState<NodeContentDto | null>(
+    null,
+  );
+  const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
+  const [isListPageSizeAuto, setIsListPageSizeAuto] = React.useState(true);
+
   // Empty trash progress state
   const [emptyingTrash, setEmptyingTrash] = React.useState(false);
   const [emptyTrashProgress, setEmptyTrashProgress] = React.useState({
@@ -110,19 +122,25 @@ export const TrashPage: React.FC = () => {
 
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
 
-  // Refresh current folder content
-  const refreshContent = React.useCallback(async () => {
+  const fetchListPage = React.useCallback(async () => {
     if (!nodeId) return;
-
+    setListLoading(true);
+    setListError(null);
     try {
-      const contentData = await nodesApi.getChildren(nodeId, {
+      const response = await nodesApi.getChildren(nodeId, {
         nodeType: "trash",
+        page: listPage + 1,
+        pageSize: listPageSize,
       });
-      setContent(contentData.content);
+      setListContent(response.content);
+      setListTotalCount(response.totalCount);
     } catch (err) {
-      console.error("Failed to refresh trash content:", err);
+      console.error("Failed to load paged trash content", err);
+      setListError(t("error"));
+    } finally {
+      setListLoading(false);
     }
-  }, [nodeId]);
+  }, [nodeId, listPage, listPageSize, t]);
 
   // Determine layout type from current node, defaulting to Tiles
   const initialLayoutType = useMemo(() => {
@@ -137,6 +155,73 @@ export const TrashPage: React.FC = () => {
   useEffect(() => {
     setLayoutType(initialLayoutType);
   }, [initialLayoutType]);
+
+  // Refresh current folder content
+  const refreshContent = React.useCallback(async () => {
+    if (!nodeId) return;
+
+    try {
+      if (layoutType === InterfaceLayoutType.List) {
+        await fetchListPage();
+        return;
+      }
+
+      const contentData = await nodesApi.getChildren(nodeId, {
+        nodeType: "trash",
+      });
+      setContent(contentData.content);
+    } catch (err) {
+      console.error("Failed to refresh trash content:", err);
+    }
+  }, [nodeId, layoutType, fetchListPage]);
+
+  // Reset paging when folder changes or switching to list view
+  useEffect(() => {
+    setListPage(0);
+  }, [nodeId, layoutType]);
+
+  // Auto-fit page size to available height (until user manually changes it)
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) return;
+    if (!isListPageSizeAuto) return;
+    if (!listGridHostRef.current) return;
+
+    const target = listGridHostRef.current;
+    const rowHeight = 36;
+    const headerHeight = 56;
+    const footerHeight = 56;
+    const padding = 8;
+
+    const update = () => {
+      const height = target.clientHeight;
+      const available = Math.max(0, height - headerHeight - footerHeight - padding);
+      const fit = Math.floor(available / rowHeight);
+      const pageSize = Math.max(10, Math.min(100, fit));
+
+      if (pageSize > 0 && pageSize !== listPageSize) {
+        setListPageSize(pageSize);
+        setListPage(0);
+      }
+    };
+
+    update();
+
+    if (typeof ResizeObserver === "undefined") {
+      const onResize = () => update();
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
+    }
+
+    const observer = new ResizeObserver(() => update());
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [layoutType, isListPageSizeAuto, listPageSize]);
+
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) return;
+    if (!nodeId) return;
+    void fetchListPage();
+  }, [layoutType, nodeId, fetchListPage]);
 
   // Update page title based on current folder
   useEffect(() => {
@@ -162,7 +247,12 @@ export const TrashPage: React.FC = () => {
     [ancestors, currentNode],
   );
 
-  const { sortedFiles, tiles } = useContentTiles(content);
+  const effectiveContent =
+    layoutType === InterfaceLayoutType.List
+      ? (listContent ?? content)
+      : content;
+
+  const { sortedFiles, tiles } = useContentTiles(effectiveContent);
 
   const folderOps = useTrashFolderOperations(nodeId, refreshContent);
   const fileOps = useTrashFileOperations(refreshContent);
@@ -270,13 +360,22 @@ export const TrashPage: React.FC = () => {
 
   const isCreatingInThisFolder = false; // No folder creation in trash
 
-  if (loading && !content) {
+  if (loading && !content && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
   return (
     <>
-      <Box width="100%" sx={{ position: "relative" }}>
+      <Box
+        width="100%"
+        sx={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
         <PageHeader
           loading={loading}
           breadcrumbs={breadcrumbs}
@@ -305,14 +404,20 @@ export const TrashPage: React.FC = () => {
           }
           t={t}
         />
-        {error && (
+        {(error || listError) && (
           <Box mb={1} px={1}>
-            <Alert severity="error">{error}</Alert>
+            <Alert severity="error">{error ?? listError}</Alert>
           </Box>
         )}
 
-        <Box pb={{ xs: 2, sm: 3 }}>
-          {tiles.length === 0 && !isCreatingInThisFolder ? (
+        <Box
+          ref={listGridHostRef}
+          pb={{ xs: 2, sm: 3 }}
+          sx={{ flex: 1, minHeight: 0 }}
+        >
+          {tiles.length === 0 &&
+          !isCreatingInThisFolder &&
+          !(layoutType === InterfaceLayoutType.List && listLoading) ? (
             <Typography color="text.secondary">{t("empty")}</Typography>
           ) : (
             <FileListViewFactory
@@ -327,6 +432,24 @@ export const TrashPage: React.FC = () => {
               onCancelNewFolder={() => {}}
               folderNamePlaceholder=""
               fileNamePlaceholder="File name"
+              pagination={
+                layoutType === InterfaceLayoutType.List
+                  ? {
+                      page: listPage,
+                      pageSize: listPageSize,
+                      totalCount: listTotalCount,
+                      loading: listLoading,
+                      onPageChange: (newPage) => {
+                        setListPage(newPage);
+                      },
+                      onPageSizeChange: (newPageSize) => {
+                        setIsListPageSizeAuto(false);
+                        setListPageSize(newPageSize);
+                        setListPage(0);
+                      },
+                    }
+                  : undefined
+              }
             />
           )}
         </Box>

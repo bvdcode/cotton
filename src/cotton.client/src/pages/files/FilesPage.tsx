@@ -74,6 +74,8 @@ export const FilesPage: React.FC = () => {
   const [listContent, setListContent] = React.useState<NodeContentDto | null>(
     null,
   );
+  const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
+  const [isListPageSizeAuto, setIsListPageSizeAuto] = React.useState(true);
 
   // Determine layout type from current node, defaulting to Tiles
   const initialLayoutType = useMemo(() => {
@@ -93,6 +95,43 @@ export const FilesPage: React.FC = () => {
   useEffect(() => {
     setListPage(0);
   }, [nodeId, layoutType]);
+
+  // Auto-fit page size to available height (until user manually changes it)
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) return;
+    if (!isListPageSizeAuto) return;
+    if (!listGridHostRef.current) return;
+
+    const target = listGridHostRef.current;
+    const rowHeight = 36; // DataGrid compact density
+    const headerHeight = 56;
+    const footerHeight = 56;
+    const padding = 8;
+
+    const update = () => {
+      const height = target.clientHeight;
+      const available = Math.max(0, height - headerHeight - footerHeight - padding);
+      const fit = Math.floor(available / rowHeight);
+      const pageSize = Math.max(10, Math.min(100, fit));
+
+      if (pageSize > 0 && pageSize !== listPageSize) {
+        setListPageSize(pageSize);
+        setListPage(0);
+      }
+    };
+
+    update();
+
+    if (typeof ResizeObserver === "undefined") {
+      const onResize = () => update();
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
+    }
+
+    const observer = new ResizeObserver(() => update());
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [layoutType, isListPageSizeAuto, listPageSize]);
 
   // Avoid showing previous folder's list while navigating
   useEffect(() => {
@@ -295,7 +334,7 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box pb={1} sx={{ flex: 1, minHeight: 0 }}>
+        <Box ref={listGridHostRef} pb={1} sx={{ flex: 1, minHeight: 0 }}>
           {tiles.length === 0 &&
           !isCreatingInThisFolder &&
           !(layoutType === InterfaceLayoutType.List && listLoading) ? (
@@ -326,6 +365,7 @@ export const FilesPage: React.FC = () => {
                         setListPage(newPage);
                       },
                       onPageSizeChange: (newPageSize) => {
+                        setIsListPageSizeAuto(false);
                         setListPageSize(newPageSize);
                         setListPage(0);
                       },
