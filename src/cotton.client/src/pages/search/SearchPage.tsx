@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Alert, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,9 @@ export const SearchPage: React.FC = () => {
   const navigate = useNavigate();
   const { rootNode, ensureHomeData } = useLayoutsStore();
 
+  const gridHostRef = useRef<HTMLDivElement | null>(null);
+  const [isAutoPageSize, setIsAutoPageSize] = useState(true);
+
   useEffect(() => {
     void ensureHomeData();
   }, [ensureHomeData]);
@@ -36,6 +39,65 @@ export const SearchPage: React.FC = () => {
     pageSize: 25,
     debounceMs: 200,
   });
+
+  const {
+    query,
+    page,
+    pageSize: currentPageSize,
+    totalCount,
+    loading,
+    error,
+    results,
+    setQuery,
+    setPage,
+    setPageSize,
+  } = searchState;
+
+  // Reset to the first page when query changes.
+  useEffect(() => {
+    setPage(1);
+  }, [query, setPage]);
+
+  // Auto-fit page size to available height (until user manually changes it).
+  useEffect(() => {
+    if (!isAutoPageSize) return;
+    if (!gridHostRef.current) return;
+
+    const target = gridHostRef.current;
+    const rowHeight = 36; // DataGrid compact density
+    const headerHeight = 56;
+    const footerHeight = 56;
+    const padding = 8;
+
+    const update = () => {
+      const height = target.clientHeight;
+      const available = Math.max(0, height - headerHeight - footerHeight - padding);
+      const fit = Math.floor(available / rowHeight);
+      const fitPageSize = Math.max(10, Math.min(100, fit));
+
+      if (fitPageSize > 0 && fitPageSize !== currentPageSize) {
+        setPageSize(fitPageSize);
+        setPage(1);
+      }
+    };
+
+    update();
+
+    if (typeof ResizeObserver === "undefined") {
+      const onResize = () => update();
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
+    }
+
+    const observer = new ResizeObserver(() => update());
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [
+    isAutoPageSize,
+    currentPageSize,
+    setPage,
+    setPageSize,
+  ]);
 
   const { previewState, openPreview, closePreview } = useFilePreview();
 
@@ -64,14 +126,14 @@ export const SearchPage: React.FC = () => {
   );
 
   const sortedFiles = useMemo(() => {
-    if (!searchState.results) return [];
-    const files = searchState.results.files ?? [];
+    if (!results) return [];
+    const files = results.files ?? [];
     const sorted = files.slice();
     sorted.sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true }),
     );
     return sorted;
-  }, [searchState.results]);
+  }, [results]);
 
   const {
     lightboxOpen,
@@ -83,7 +145,7 @@ export const SearchPage: React.FC = () => {
   } = useMediaLightbox(sortedFiles);
 
   const tiles: FileSystemTile[] = useMemo(() => {
-    if (!searchState.results) return [];
+    if (!results) return [];
 
     const sortByName = <T extends { name: string }>(items: T[]): T[] => {
       const sorted = items.slice();
@@ -93,14 +155,14 @@ export const SearchPage: React.FC = () => {
       return sorted;
     };
 
-    const sortedFolders = sortByName(searchState.results.nodes ?? []);
-    const sortedFiles = sortByName(searchState.results.files ?? []);
+    const sortedFolders = sortByName(results.nodes ?? []);
+    const sortedFiles = sortByName(results.files ?? []);
 
     return [
       ...sortedFolders.map((node) => ({ kind: "folder", node }) as const),
       ...sortedFiles.map((file) => ({ kind: "file", file }) as const),
     ];
-  }, [searchState.results]);
+  }, [results]);
 
   const rawFolderOps = useFolderOperations(null);
   const rawFileOps = useFileOperations();
@@ -132,41 +194,38 @@ export const SearchPage: React.FC = () => {
       sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
     >
       <SearchBar
-        value={searchState.query}
-        onChange={searchState.setQuery}
+        value={query}
+        onChange={(value) => {
+          setIsAutoPageSize(true);
+          setQuery(value);
+        }}
         disabled={!layoutId}
         placeholder={t("searchPlaceholder", { ns: "search" })}
       />
 
-      {searchState.error && (
+      {error && (
         <Box mb={2}>
           <Alert severity="error">{t("error", { ns: "search" })}</Alert>
         </Box>
       )}
 
-      {!searchState.loading &&
+      {!loading &&
         layoutId &&
-        !searchState.query.trim() &&
-        !searchState.results && (
+        !query.trim() &&
+        !results && (
           <Typography color="text.secondary">
             {t("enterQueryHint", { ns: "search" })}
           </Typography>
         )}
 
-      {!searchState.loading &&
-        searchState.query.trim() &&
-        searchState.results &&
-        tiles.length === 0 && (
-          <Typography color="text.secondary">
-            {t("noResults", { ns: "search" })}
-          </Typography>
-        )}
-
-      {searchState.query.trim() && searchState.results && tiles.length > 0 && (
-        <Box sx={{ width: "100%", flex: 1, minHeight: 0 }}>
+      {query.trim() && (loading || results) && (
+        <Box
+          ref={gridHostRef}
+          sx={{ width: "100%", flex: 1, minHeight: 0 }}
+        >
           <FileListViewFactory
             layoutType={InterfaceLayoutType.List}
-            tiles={tiles}
+            tiles={results ? tiles : []}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={false}
@@ -181,16 +240,17 @@ export const SearchPage: React.FC = () => {
               ns: "files",
             })}
             pagination={{
-              page: Math.max(0, searchState.page - 1),
-              pageSize: searchState.pageSize,
-              totalCount: searchState.totalCount,
-              loading: searchState.loading,
+              page: Math.max(0, page - 1),
+              pageSize: currentPageSize,
+              totalCount,
+              loading,
               onPageChange: (newPage) => {
-                searchState.setPage(newPage + 1);
+                setPage(newPage + 1);
               },
               onPageSizeChange: (newPageSize) => {
-                searchState.setPageSize(newPageSize);
-                searchState.setPage(1);
+                setIsAutoPageSize(false);
+                setPageSize(newPageSize);
+                setPage(1);
               },
             }}
           />

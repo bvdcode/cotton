@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Box, IconButton, TextField, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import type { GridColDef, GridRowParams, GridRowsProp } from "@mui/x-data-grid";
@@ -83,7 +83,7 @@ export const ListView: React.FC<IFileListView> = ({
     ];
   }, [tiles, isCreatingFolder, newFolderName]);
 
-  const getFileIcon = (fileName: string) => {
+  const getSmallFileIcon = useCallback((fileName: string) => {
     if (isTextFile(fileName))
       return <Article color="action" fontSize="small" />;
     if (isImageFile(fileName))
@@ -93,7 +93,7 @@ export const ListView: React.FC<IFileListView> = ({
     if (isPdfFile(fileName))
       return <TextSnippet color="action" fontSize="small" />;
     return <InsertDriveFile color="action" fontSize="small" />;
-  };
+  }, []);
 
   const columns: GridColDef<FileListRow>[] = useMemo(
     () => [
@@ -103,12 +103,54 @@ export const ListView: React.FC<IFileListView> = ({
         width: 44,
         sortable: false,
         renderCell: (params) => {
+          const previewUrl =
+            params.row.type === "file" && params.row.tile?.kind === "file"
+              ? params.row.tile.file.encryptedFilePreviewHashHex
+                ? `/api/v1/preview/${encodeURIComponent(
+                    params.row.tile.file.encryptedFilePreviewHashHex,
+                  )}.webp`
+                : null
+              : null;
+
           return (
             <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
               {params.row.type === "folder" || params.row.type === "new-folder" ? (
                 <Folder color="primary" fontSize="small" />
               ) : (
-                getFileIcon(params.row.name)
+                <Box
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    borderRadius: 0.5,
+                  }}
+                >
+                  {getSmallFileIcon(params.row.name)}
+                  {previewUrl && (
+                    <Box
+                      component="img"
+                      src={previewUrl}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => {
+                        // Hide broken previews and keep the fallback icon.
+                        e.currentTarget.style.display = "none";
+                      }}
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  )}
+                </Box>
               )}
             </Box>
           );
@@ -368,6 +410,7 @@ export const ListView: React.FC<IFileListView> = ({
       fileNamePlaceholder,
       folderOperations,
       fileOperations,
+      getSmallFileIcon,
     ],
   );
 
@@ -403,7 +446,6 @@ export const ListView: React.FC<IFileListView> = ({
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
         hideFooter={!pagination}
-        autoPageSize={!!pagination}
         paginationMode={pagination ? "server" : "client"}
         pageSizeOptions={pagination ? [10, 25, 50, 100] : []}
         paginationModel={
