@@ -1,12 +1,6 @@
 import React from "react";
 import type { ReactNode } from "react";
-import {
-  Box,
-  Divider,
-  IconButton,
-  LinearProgress,
-  Typography,
-} from "@mui/material";
+import { Box, Divider, IconButton, Typography } from "@mui/material";
 import {
   ArrowUpward,
   CreateNewFolder,
@@ -81,16 +75,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         paddingBottom: 1,
       }}
     >
-      {loading && (
-        <LinearProgress
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-          }}
-        />
-      )}
       <Box
         sx={{
           display: "flex",

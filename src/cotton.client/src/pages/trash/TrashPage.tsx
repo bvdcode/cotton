@@ -27,7 +27,10 @@ import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
 import { useFilePreview } from "../files/hooks/useFilePreview";
 import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
 import { downloadFile } from "../files/utils/fileHandlers";
-import { buildBreadcrumbs, calculateFolderStats } from "../files/utils/nodeUtils";
+import {
+  buildBreadcrumbs,
+  calculateFolderStats,
+} from "../files/utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
 import {
@@ -66,8 +69,13 @@ export const TrashPage: React.FC = () => {
   const [listTotalCount, setListTotalCount] = React.useState(0);
   const [listLoading, setListLoading] = React.useState(false);
   const [listError, setListError] = React.useState<string | null>(null);
-  const [listContent, setListContent] = React.useState<NodeContentDto | null>(null);
-  const [currentPagination, setCurrentPagination] = React.useState<{ page: number; pageSize: number } | null>(null);
+  const [listContent, setListContent] = React.useState<NodeContentDto | null>(
+    null,
+  );
+  const [currentPagination, setCurrentPagination] = React.useState<{
+    page: number;
+    pageSize: number;
+  } | null>(null);
 
   const [emptyingTrash, setEmptyingTrash] = React.useState(false);
   const [emptyTrashProgress, setEmptyTrashProgress] = React.useState({
@@ -87,37 +95,48 @@ export const TrashPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
-  const fetchListPage = React.useCallback(async (page: number, pageSize: number) => {
-    if (!nodeId) return;
+  const fetchListPage = React.useCallback(
+    async (page: number, pageSize: number) => {
+      if (!nodeId) return;
 
-    setListLoading(true);
-    setListError(null);
-    try {
-      const response = await nodesApi.getChildren(nodeId, {
-        nodeType: "trash",
-        page: page + 1,
-        pageSize,
-      });
-      setListContent(response.content);
-      setListTotalCount(response.totalCount);
-    } catch (err) {
-      console.error("Failed to load paged trash content", err);
-      setListError(t("error"));
-    } finally {
-      setListLoading(false);
-    }
-  }, [nodeId, t]);
+      setListLoading(true);
+      setListError(null);
+      try {
+        const response = await nodesApi.getChildren(nodeId, {
+          nodeType: "trash",
+          page: page + 1,
+          pageSize,
+        });
+        setListContent(response.content);
+        setListTotalCount(response.totalCount);
+      } catch (err) {
+        console.error("Failed to load paged trash content", err);
+        setListError(t("error"));
+      } finally {
+        setListLoading(false);
+      }
+    },
+    [nodeId, t],
+  );
 
   useEffect(() => {
-    if (layoutType === InterfaceLayoutType.List && nodeId && currentPagination) {
+    if (
+      layoutType === InterfaceLayoutType.List &&
+      nodeId &&
+      currentPagination
+    ) {
       void fetchListPage(currentPagination.page, currentPagination.pageSize);
     }
   }, [nodeId, layoutType, currentPagination, fetchListPage]);
 
-  const handlePaginationChange = React.useCallback((page: number, pageSize: number) => {
-    setCurrentPagination({ page, pageSize });
-    void fetchListPage(page, pageSize);
-  }, [fetchListPage]);  const refreshContent = React.useCallback(async () => {
+  const handlePaginationChange = React.useCallback(
+    (page: number, pageSize: number) => {
+      setCurrentPagination({ page, pageSize });
+      void fetchListPage(page, pageSize);
+    },
+    [fetchListPage],
+  );
+  const refreshContent = React.useCallback(async () => {
     if (!nodeId) return;
     void refreshNodeContent(nodeId);
   }, [nodeId, refreshNodeContent]);
@@ -125,8 +144,6 @@ export const TrashPage: React.FC = () => {
   useEffect(() => {
     setTrashLayoutType(layoutType);
   }, [layoutType, setTrashLayoutType]);
-
-
 
   useEffect(() => {
     const folderName = currentNode?.name;
@@ -244,7 +261,11 @@ export const TrashPage: React.FC = () => {
     await downloadFile(nodeFileId, fileName);
   };
 
-  const handleFileClick = (fileId: string, fileName: string, fileSizeBytes?: number) => {
+  const handleFileClick = (
+    fileId: string,
+    fileName: string,
+    fileSizeBytes?: number,
+  ) => {
     const opened = openPreview(fileId, fileName, fileSizeBytes);
     if (!opened) {
       void handleDownloadFile(fileId, fileName);
@@ -295,9 +316,7 @@ export const TrashPage: React.FC = () => {
                 onClick={handleEmptyTrash}
                 color="error"
                 disabled={
-                  loading ||
-                  emptyingTrash ||
-                  stats.folders + stats.files === 0
+                  loading || emptyingTrash || stats.folders + stats.files === 0
                 }
                 title={t("actions.emptyTrash")}
               >
