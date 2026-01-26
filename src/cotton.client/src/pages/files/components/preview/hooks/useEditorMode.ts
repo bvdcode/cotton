@@ -5,9 +5,8 @@
  * Encapsulates mode detection and storage logic
  */
 
-import { useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { EditorMode } from '../editors/types';
-import { useEditorPreferencesStore } from '../../../../../shared/store/editorPreferencesStore';
 
 /**
  * Maximum file size for code editor (5 MB)
@@ -197,21 +196,25 @@ export function useEditorMode({
   fileId,
   fileSize,
 }: UseEditorModeOptions): UseEditorModeResult {
-  const storedMode = useEditorPreferencesStore(
-    (state) => state.editorModeByFileId[fileId],
-  );
-  const setEditorMode = useEditorPreferencesStore((state) => state.setEditorMode);
+  const [mode, setModeState] = useState<EditorMode>(() => {
+    // Try to restore from localStorage
+    const storageKey = `editor-mode-${fileId}`;
+    const stored = localStorage.getItem(storageKey);
+    
+    if (stored && Object.values(EditorMode).includes(stored as EditorMode)) {
+      return stored as EditorMode;
+    }
+    
+    // Otherwise detect from content and file metadata
+    return detectInitialMode(content, fileName, fileSize);
+  });
 
-  const detectedMode = useMemo(
-    () => detectInitialMode(content, fileName, fileSize),
-    [content, fileName, fileSize],
-  );
-
-  const mode = storedMode ?? detectedMode;
-
+  // Persist mode changes to localStorage
   const setMode = useCallback((newMode: EditorMode) => {
-    setEditorMode(fileId, newMode);
-  }, [fileId, setEditorMode]);
+    setModeState(newMode);
+    const storageKey = `editor-mode-${fileId}`;
+    localStorage.setItem(storageKey, newMode);
+  }, [fileId]);
 
   return { mode, setMode };
 }
