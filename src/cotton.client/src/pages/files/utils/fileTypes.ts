@@ -69,8 +69,65 @@ export const isTextFile = (fileName: string): boolean => {
   return TEXT_EXTENSIONS.includes(ext);
 };
 
-export const getFileTypeInfo = (fileName: string): FileTypeInfo => {
+const getFileTypeFromContentType = (contentType?: string): FileType | null => {
+  if (!contentType) return null;
+  const normalized = contentType.toLowerCase();
+
+  if (normalized.startsWith("image/")) return "image";
+  if (normalized.startsWith("video/")) return "video";
+  if (normalized.startsWith("audio/")) return "audio";
+  if (normalized.startsWith("text/")) return "text";
+  if (normalized === "application/pdf") return "pdf";
+
+  if (
+    normalized.includes("zip") ||
+    normalized.includes("rar") ||
+    normalized.includes("7z") ||
+    normalized.includes("tar") ||
+    normalized.includes("gzip")
+  ) {
+    return "archive";
+  }
+
+  if (
+    normalized.includes("msword") ||
+    normalized.includes("officedocument") ||
+    normalized.includes("opendocument") ||
+    normalized.includes("rtf")
+  ) {
+    return "document";
+  }
+
+  return null;
+};
+
+export const getFileTypeInfo = (
+  fileName: string,
+  contentType?: string | null,
+): FileTypeInfo => {
   const ext = getFileExtension(fileName);
+  const contentTypeMatch = getFileTypeFromContentType(contentType ?? undefined);
+
+  if (contentTypeMatch) {
+    switch (contentTypeMatch) {
+      case "image":
+        return { type: "image", supportsPreview: true, supportsInlineView: true };
+      case "pdf":
+        return { type: "pdf", supportsPreview: true, supportsInlineView: true };
+      case "video":
+        return { type: "video", supportsPreview: true, supportsInlineView: true };
+      case "audio":
+        return { type: "audio", supportsPreview: true, supportsInlineView: true };
+      case "text":
+        return { type: "text", supportsPreview: true, supportsInlineView: true };
+      case "document":
+        return { type: "document", supportsPreview: false, supportsInlineView: false };
+      case "archive":
+        return { type: "archive", supportsPreview: false, supportsInlineView: false };
+      default:
+        return { type: "other", supportsPreview: false, supportsInlineView: false };
+    }
+  }
 
   if (IMAGE_EXTENSIONS.includes(ext)) {
     return { type: "image", supportsPreview: true, supportsInlineView: true };

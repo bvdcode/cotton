@@ -176,6 +176,7 @@ export const TilesView: React.FC<IFileListView> = ({
         const preview = getFileIcon(
           tile.file.encryptedFilePreviewHashHex ?? null,
           tile.file.name,
+          tile.file.contentType,
         );
         const previewUrl = typeof preview === "string" ? preview : null;
 

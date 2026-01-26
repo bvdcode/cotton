@@ -1,7 +1,8 @@
-import { InsertDriveFile, Image } from "@mui/icons-material";
+import { Article, Image, InsertDriveFile, Inventory } from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
 import type { IconResult } from "./types";
 import { ICON_SIZE } from "./FolderIcon";
+import { getFileTypeInfo } from "../fileTypes";
 
 /**
  * Configuration for file type detection
@@ -31,6 +32,7 @@ const MAX_EXTENSION_LENGTH = 6;
 export function getFileIcon(
   previewHash: string | null,
   fileName: string,
+  contentType?: string | null,
 ): IconResult {
   // Strategy 1: Use server-generated preview if available
   if (previewHash) {
@@ -38,13 +40,21 @@ export function getFileIcon(
   }
 
   const extension = extractExtension(fileName);
+  const fileType = getFileTypeInfo(fileName, contentType ?? undefined).type;
 
-  // Strategy 2: Use specialized icon for known file types
-  if (isImageExtension(extension)) {
+  if (fileType === "image") {
     return getImageFileIcon();
   }
 
-  // Strategy 3: Generic file icon with extension label
+  if (fileType === "archive") {
+    return <Inventory sx={{ fontSize: ICON_SIZE }} />;
+  }
+
+  if (fileType === "document" || fileType === "text") {
+    return <Article sx={{ fontSize: ICON_SIZE }} />;
+  }
+
+  // Fallback: Generic file icon with extension label
   return getGenericFileIcon(extension);
 }
 
