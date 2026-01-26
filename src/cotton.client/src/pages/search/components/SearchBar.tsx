@@ -19,13 +19,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       sx={{
         display: "flex",
         gap: 1,
-        mb: 2,
+        my: 3,
         alignItems: "center",
       }}
     >
       <TextField
         fullWidth
-        size="small"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
