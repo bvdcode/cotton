@@ -326,6 +326,11 @@ export const FilesPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
+              emptyStateText={
+                layoutType === InterfaceLayoutType.Tiles
+                  ? t("empty.all")
+                  : undefined
+              }
             newFolderName={folderOps.newFolderName}
             onNewFolderNameChange={folderOps.setNewFolderName}
             onConfirmNewFolder={folderOps.handleConfirmNewFolder}
