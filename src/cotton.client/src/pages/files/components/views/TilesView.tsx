@@ -14,6 +14,7 @@ import {
 import { Download, Edit, Delete } from "@mui/icons-material";
 import type { IFileListView } from "../../types/FileListViewTypes";
 import { useTheme } from "@mui/material/styles";
+import Loader from "../../../../shared/ui/Loader";
 
 /**
  * TilesView Component
@@ -34,11 +35,12 @@ export const TilesView: React.FC<IFileListView> = ({
   folderNamePlaceholder,
   fileNamePlaceholder,
   emptyStateText,
+  loading = false,
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
 
-  if (!isCreatingFolder && tiles.length === 0 && emptyStateText) {
+  if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
       <Box
         sx={{
@@ -54,19 +56,39 @@ export const TilesView: React.FC<IFileListView> = ({
   }
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gap: { xs: 1, sm: 1.5 },
-        gridTemplateColumns: {
-          xs: "repeat(3, minmax(0, 1fr))",
-          sm: "repeat(4, minmax(0, 1fr))",
-          md: "repeat(6, minmax(0, 1fr))",
-          lg: "repeat(8, minmax(0, 1fr))",
-          xl: "repeat(12, minmax(0, 1fr))",
-        },
-      }}
-    >
+    <Box sx={{ position: "relative" }}>
+      {loading && tiles.length === 0 && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 200,
+            bgcolor: "background.default",
+            zIndex: 10,
+          }}
+        >
+          <Loader />
+        </Box>
+      )}
+      <Box
+        sx={{
+          display: "grid",
+          gap: { xs: 1, sm: 1.5 },
+          gridTemplateColumns: {
+            xs: "repeat(3, minmax(0, 1fr))",
+            sm: "repeat(4, minmax(0, 1fr))",
+            md: "repeat(6, minmax(0, 1fr))",
+            lg: "repeat(8, minmax(0, 1fr))",
+            xl: "repeat(12, minmax(0, 1fr))",
+          },
+        }}
+      >
       {/* New Folder Creation Card */}
       {isCreatingFolder && (
         <Box
@@ -260,6 +282,7 @@ export const TilesView: React.FC<IFileListView> = ({
           />
         );
       })}
+      </Box>
     </Box>
   );
 };
