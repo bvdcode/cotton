@@ -72,21 +72,30 @@ export const useNodesStore = create<NodesState>((set, get) => ({
 
       try {
         let node: NodeDto | null = null;
-        if (state.currentNode) {
-          const parentContent = state.contentByNodeId[state.currentNode.id];
-          node = parentContent?.nodes.find(n => n.id === nodeId) ?? null;
+        let ancestors = state.ancestorsByNodeId[nodeId];
+
+        const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
+        if (ancestorIndex >= 0) {
+          node = state.ancestors[ancestorIndex];
+          if (!ancestors) {
+            ancestors = state.ancestors.slice(0, ancestorIndex);
+          }
         }
+
+        if (!node && state.currentNode) {
+          const parentContent = state.contentByNodeId[state.currentNode.id];
+          node = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
+          if (!ancestors && node && node.parentId === state.currentNode.id) {
+            ancestors = [...state.ancestors, state.currentNode];
+          }
+        }
+
         if (!node) {
           node = await nodesApi.getNode(nodeId);
         }
-        
-        let ancestors = state.ancestorsByNodeId[nodeId];
+
         if (!ancestors) {
-          if (state.currentNode && node.parentId === state.currentNode.id) {
-            ancestors = [...state.ancestors, state.currentNode];
-          } else {
-            ancestors = await nodesApi.getAncestors(nodeId);
-          }
+          ancestors = await nodesApi.getAncestors(nodeId);
         }
 
         set((prev) => ({
@@ -115,23 +124,32 @@ export const useNodesStore = create<NodesState>((set, get) => ({
 
     try {
       let node: NodeDto | null = null;
-      if (state.currentNode) {
-        const parentContent = state.contentByNodeId[state.currentNode.id];
-        node = parentContent?.nodes.find(n => n.id === nodeId) ?? null;
+      let ancestors = state.ancestorsByNodeId[nodeId];
+
+      const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
+      if (ancestorIndex >= 0) {
+        node = state.ancestors[ancestorIndex];
+        if (!ancestors) {
+          ancestors = state.ancestors.slice(0, ancestorIndex);
+        }
       }
+
+      if (!node && state.currentNode) {
+        const parentContent = state.contentByNodeId[state.currentNode.id];
+        node = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
+        if (!ancestors && node && node.parentId === state.currentNode.id) {
+          ancestors = [...state.ancestors, state.currentNode];
+        }
+      }
+
       if (!node) {
         node = await nodesApi.getNode(nodeId);
       }
-      
-      let ancestors = state.ancestorsByNodeId[nodeId];
+
       if (!ancestors) {
-        if (state.currentNode && node.parentId === state.currentNode.id) {
-          ancestors = [...state.ancestors, state.currentNode];
-        } else {
-          ancestors = await nodesApi.getAncestors(nodeId);
-        }
+        ancestors = await nodesApi.getAncestors(nodeId);
       }
-      
+
       const content = (await nodesApi.getChildren(nodeId)).content;
 
       set((prev) => ({
