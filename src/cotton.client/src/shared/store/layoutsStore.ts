@@ -1,5 +1,7 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { layoutsApi, type LayoutStatsDto, type NodeDto } from "../api/layoutsApi";
+import { LAYOUTS_STORAGE_KEY } from "../config/storageKeys";
 
 type LayoutsState = {
   rootNode: NodeDto | null;
@@ -27,97 +29,108 @@ type LayoutsState = {
 };
 
 export const useLayoutsStore = create<LayoutsState>()(
-  (set, get) => ({
-    rootNode: null,
-    statsByLayoutId: {},
-    loadingRoot: false,
-    loadingStats: false,
-    error: null,
-    lastUpdatedRoot: null,
-    lastUpdatedStatsByLayoutId: {},
+  persist(
+    (set, get) => ({
+      rootNode: null,
+      statsByLayoutId: {},
+      loadingRoot: false,
+      loadingStats: false,
+      error: null,
+      lastUpdatedRoot: null,
+      lastUpdatedStatsByLayoutId: {},
 
-    resolveRootNode: async (options) => {
-      const force = options?.force ?? false;
-      const state = get();
+      resolveRootNode: async (options) => {
+        const force = options?.force ?? false;
+        const state = get();
 
-      if (state.loadingRoot) return state.rootNode;
-      if (state.rootNode && !force) return state.rootNode;
+        if (state.loadingRoot) return state.rootNode;
+        if (state.rootNode && !force) return state.rootNode;
 
-      set({ loadingRoot: true, error: null });
+        set({ loadingRoot: true, error: null });
 
-      try {
-        const rootNode = await layoutsApi.resolve();
+        try {
+          const rootNode = await layoutsApi.resolve();
+          set({
+            rootNode,
+            loadingRoot: false,
+            error: null,
+            lastUpdatedRoot: Date.now(),
+          });
+          return rootNode;
+        } catch (error) {
+          console.error("Failed to resolve root layout", error);
+          set({ loadingRoot: false, error: "Failed to resolve root layout" });
+          return null;
+        }
+      },
+
+      fetchLayoutStats: async (layoutId, options) => {
+        const force = options?.force ?? false;
+        const state = get();
+
+        if (state.loadingStats) return state.statsByLayoutId[layoutId] ?? null;
+        if (state.statsByLayoutId[layoutId] && !force) {
+          return state.statsByLayoutId[layoutId] ?? null;
+        }
+
+        set({ loadingStats: true, error: null });
+
+        try {
+          const stats = await layoutsApi.getStats(layoutId);
+          set((prev) => ({
+            statsByLayoutId: {
+              ...prev.statsByLayoutId,
+              [layoutId]: stats,
+            },
+            loadingStats: false,
+            error: null,
+            lastUpdatedStatsByLayoutId: {
+              ...prev.lastUpdatedStatsByLayoutId,
+              [layoutId]: Date.now(),
+            },
+          }));
+          return stats;
+        } catch (error) {
+          console.error("Failed to load layout stats", error);
+          set({ loadingStats: false, error: "Failed to load layout stats" });
+          return null;
+        }
+      },
+
+      ensureHomeData: async () => {
+        // Show cached data if present, but always refetch to avoid stale state after reload.
+        const root = await get().resolveRootNode({ force: false });
+
+        // Refetch root even if cached.
+        const refreshedRoot = await get().resolveRootNode({ force: true });
+        const layoutId = (refreshedRoot ?? root)?.layoutId;
+        if (!layoutId) return;
+
+        // Same policy for stats: use cached then refetch.
+        await get().fetchLayoutStats(layoutId, { force: false });
+        await get().fetchLayoutStats(layoutId, { force: true });
+      },
+
+      reset: () => {
         set({
-          rootNode,
+          rootNode: null,
+          statsByLayoutId: {},
           loadingRoot: false,
-          error: null,
-          lastUpdatedRoot: Date.now(),
-        });
-        return rootNode;
-      } catch (error) {
-        console.error("Failed to resolve root layout", error);
-        set({ loadingRoot: false, error: "Failed to resolve root layout" });
-        return null;
-      }
-    },
-
-    fetchLayoutStats: async (layoutId, options) => {
-      const force = options?.force ?? false;
-      const state = get();
-
-      if (state.loadingStats) return state.statsByLayoutId[layoutId] ?? null;
-      if (state.statsByLayoutId[layoutId] && !force) {
-        return state.statsByLayoutId[layoutId] ?? null;
-      }
-
-      set({ loadingStats: true, error: null });
-
-      try {
-        const stats = await layoutsApi.getStats(layoutId);
-        set((prev) => ({
-          statsByLayoutId: {
-            ...prev.statsByLayoutId,
-            [layoutId]: stats,
-          },
           loadingStats: false,
           error: null,
-          lastUpdatedStatsByLayoutId: {
-            ...prev.lastUpdatedStatsByLayoutId,
-            [layoutId]: Date.now(),
-          },
-        }));
-        return stats;
-      } catch (error) {
-        console.error("Failed to load layout stats", error);
-        set({ loadingStats: false, error: "Failed to load layout stats" });
-        return null;
-      }
+          lastUpdatedRoot: null,
+          lastUpdatedStatsByLayoutId: {},
+        });
+      },
+    }),
+    {
+      name: LAYOUTS_STORAGE_KEY,
+      partialize: (state) => ({
+        rootNode: state.rootNode,
+        statsByLayoutId: state.statsByLayoutId,
+        lastUpdatedRoot: state.lastUpdatedRoot,
+        lastUpdatedStatsByLayoutId: state.lastUpdatedStatsByLayoutId,
+      }),
     },
-
-    ensureHomeData: async () => {
-      // Show cached data if present, but always refetch to avoid stale state after reload.
-      const root = await get().resolveRootNode({ force: false });
-
-      // Refetch root even if cached.
-      const refreshedRoot = await get().resolveRootNode({ force: true });
-      const layoutId = (refreshedRoot ?? root)?.layoutId;
-      if (!layoutId) return;
-
-      // Same policy for stats: use cached then refetch.
-      await get().fetchLayoutStats(layoutId, { force: false });
-      await get().fetchLayoutStats(layoutId, { force: true });
-    },
-
-    reset: () => {
-      set({
-        rootNode: null,
-        statsByLayoutId: {},
-        loadingRoot: false,
-        loadingStats: false,
-        error: null,
-        lastUpdatedRoot: null,
-        lastUpdatedStatsByLayoutId: {},
-      });
-    },
-  }),
+  ),
 );
