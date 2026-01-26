@@ -339,7 +339,11 @@ export const TrashPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
-            loading={loading && !content}
+            loading={
+              layoutType === InterfaceLayoutType.List
+                ? listLoading && !listContent
+                : loading && !content
+            }
             loadingTitle={t("loading.title")}
             loadingCaption={t("loading.caption")}
             emptyStateText={
@@ -355,7 +359,7 @@ export const TrashPage: React.FC = () => {
               layoutType === InterfaceLayoutType.List
                 ? {
                     totalCount: listTotalCount,
-                    loading: listLoading,
+                    loading: listLoading && !listContent,
                     onPaginationModelChange: (model) => {
                       handlePaginationChange(model.page, model.pageSize);
                     },
