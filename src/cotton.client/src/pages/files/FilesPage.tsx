@@ -99,7 +99,7 @@ export const FilesPage: React.FC = () => {
 
   const effectiveContent =
     layoutType === InterfaceLayoutType.List
-      ? (listContent ?? content)
+      ? listContent
       : content;
 
   useFolderFileList({
@@ -246,7 +246,11 @@ export const FilesPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
-            loading={loading && !content}
+            loading={
+              layoutType === InterfaceLayoutType.List
+                ? listLoading && !listContent
+                : loading && !content
+            }
             loadingTitle={t("loading.title")}
             loadingCaption={t("loading.caption")}
             emptyStateText={
