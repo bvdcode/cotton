@@ -5,7 +5,8 @@
  * Encapsulates language detection and override logic
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useEditorPreferencesStore } from '../../../../../shared/store/editorPreferencesStore';
 
 /**
  * Detect programming language from file extension
@@ -106,33 +107,31 @@ export function useLanguageSelection({
   fileName,
   fileId,
 }: UseLanguageSelectionOptions): UseLanguageSelectionResult {
-  const [language, setLanguageState] = useState<string>(() => {
-    // Try to restore from localStorage
-    const storageKey = `language-override-${fileId}`;
-    const stored = localStorage.getItem(storageKey);
-    
-    if (stored) {
-      return stored;
-    }
-    
-    // Otherwise detect from filename
-    return detectLanguageFromFileName(fileName);
-  });
+  const storedOverride = useEditorPreferencesStore(
+    (state) => state.languageOverrideByFileId[fileId],
+  );
+  const setLanguageOverride = useEditorPreferencesStore(
+    (state) => state.setLanguageOverride,
+  );
+  const clearLanguageOverride = useEditorPreferencesStore(
+    (state) => state.clearLanguageOverride,
+  );
 
-  // Set language and persist to localStorage
+  const detectedLanguage = useMemo(
+    () => detectLanguageFromFileName(fileName),
+    [fileName],
+  );
+
+  const language = storedOverride ?? detectedLanguage;
+
   const setLanguage = useCallback((newLanguage: string) => {
-    setLanguageState(newLanguage);
-    const storageKey = `language-override-${fileId}`;
-    localStorage.setItem(storageKey, newLanguage);
-  }, [fileId]);
+    setLanguageOverride(fileId, newLanguage);
+  }, [fileId, setLanguageOverride]);
 
   // Reset to auto-detected language
   const resetLanguage = useCallback(() => {
-    const detected = detectLanguageFromFileName(fileName);
-    setLanguageState(detected);
-    const storageKey = `language-override-${fileId}`;
-    localStorage.removeItem(storageKey);
-  }, [fileName, fileId]);
+    clearLanguageOverride(fileId);
+  }, [fileId, clearLanguageOverride]);
 
   return { language, setLanguage, resetLanguage };
 }
