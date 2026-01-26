@@ -247,6 +247,8 @@ export const FilesPage: React.FC = () => {
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
             loading={loading && !content}
+            loadingTitle={t("loading.title")}
+            loadingCaption={t("loading.caption")}
             emptyStateText={
                 layoutType === InterfaceLayoutType.Tiles
                   ? t("empty.all")

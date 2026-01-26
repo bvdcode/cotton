@@ -36,6 +36,8 @@ export const TilesView: React.FC<IFileListView> = ({
   fileNamePlaceholder,
   emptyStateText,
   loading = false,
+  loadingTitle,
+  loadingCaption,
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
@@ -73,7 +75,7 @@ export const TilesView: React.FC<IFileListView> = ({
             zIndex: 10,
           }}
         >
-          <Loader />
+          <Loader title={loadingTitle} caption={loadingCaption} />
         </Box>
       )}
       <Box
