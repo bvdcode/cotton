@@ -145,7 +145,7 @@ export const ListView: React.FC<IFileListView> = ({
         position: "relative",
       }}
     >
-      {loading && tiles.length === 0 && (
+      {loading && (
         <Box
           sx={{
             position: "absolute",

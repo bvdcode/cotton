@@ -23,10 +23,19 @@ export const useFilesData = ({
   const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
 
   useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) return;
-    setListTotalCount(0);
-    setListError(null);
-    setListContent(null);
+    if (layoutType !== InterfaceLayoutType.List) {
+      setListTotalCount(0);
+      setListError(null);
+      setListContent(null);
+      setCurrentPagination(null);
+      return;
+    }
+    
+    // Инициализируем пагинацию сразу
+    if (!currentPagination && nodeId) {
+      setCurrentPagination({ page: 0, pageSize: 10 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodeId, layoutType]);
 
   const fetchListPage = useCallback(async (page: number, pageSize: number) => {
@@ -57,8 +66,7 @@ export const useFilesData = ({
 
   const handlePaginationChange = useCallback((page: number, pageSize: number) => {
     setCurrentPagination({ page, pageSize });
-    void fetchListPage(page, pageSize);
-  }, [fetchListPage]);
+  }, []);
 
   const handleFolderChanged = useCallback(() => {
     if (!nodeId) {
