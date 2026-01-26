@@ -271,7 +271,7 @@ export const FilesPage: React.FC = () => {
               layoutType === InterfaceLayoutType.List
                 ? {
                     page: listPage,
-                    pageSize: listPageSize ?? 25,
+                    pageSize: listPageSize,
                     totalCount: listTotalCount,
                     loading: listLoading,
                     onPageChange: setListPage,
