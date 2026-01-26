@@ -357,6 +357,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize);
             var result = await _mediator.Send(query);
+            Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result);
         }
 

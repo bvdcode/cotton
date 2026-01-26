@@ -108,6 +108,14 @@ function detectInitialMode(content: string, fileName: string, fileSize?: number)
   if (fileSize && fileSize > MAX_CODE_FILE_SIZE) {
     return EditorMode.Text;
   }
+
+  // Check for markdown (can be edited in either Markdown or Code mode).
+  // Important: do this before generic code-extension detection, since `.md`
+  // is included in code extensions for syntax highlighting.
+  const lowerName = fileName.toLowerCase();
+  if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) {
+    return EditorMode.Markdown;
+  }
   
   // Check for Dockerfile (special case)
   if (isDockerfile(fileName)) {
@@ -144,13 +152,6 @@ function detectInitialMode(content: string, fileName: string, fileSize?: number)
     }
     
     return EditorMode.Code;
-  }
-  
-  // Check for markdown (can be edited in either Markdown or Code mode)
-  // Default to Markdown mode for better preview experience
-  const ext = fileName.toLowerCase();
-  if (ext.endsWith('.md') || ext.endsWith('.markdown')) {
-    return EditorMode.Markdown;
   }
   
   // Check content for markdown patterns
