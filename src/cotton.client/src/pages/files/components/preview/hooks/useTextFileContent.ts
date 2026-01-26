@@ -86,6 +86,6 @@ export const useTextFileContent = (
     loading,
     error,
     setError,
-    isFileTooLarge: !!(fileSizeBytes && fileSizeBytes > previewConfig.MAX_PREVIEW_SIZE_BYTES),
+    isFileTooLarge: false,
   };
 };

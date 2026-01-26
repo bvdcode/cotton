@@ -65,7 +65,7 @@ export const FilesPage: React.FC = () => {
     listLoading,
     listError,
     listContent,
-    fetchListPage,
+    handlePaginationChange,
     handleFolderChanged,
     reloadCurrentNode,
   } = useFilesData({
@@ -270,7 +270,7 @@ export const FilesPage: React.FC = () => {
                     totalCount: listTotalCount,
                     loading: listLoading,
                     onPaginationModelChange: (model) => {
-                      void fetchListPage(model.page, model.pageSize);
+                      handlePaginationChange(model.page, model.pageSize);
                     },
                   }
                 : undefined
