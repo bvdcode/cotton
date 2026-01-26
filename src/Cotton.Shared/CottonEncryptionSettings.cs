@@ -3,7 +3,7 @@
 
 namespace Cotton.Shared
 {
-    public record CottonEncryptionSettings
+    public class CottonEncryptionSettings
     {
         public string Pepper { get; set; } = string.Empty;
         public string MasterEncryptionKey { get; set; } = string.Empty;

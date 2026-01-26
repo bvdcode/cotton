@@ -36,7 +36,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.SDK", "Cotton.SDK\Co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Previews.Tests", "Cotton.Previews.Tests\Cotton.Previews.Tests.csproj", "{12234099-ECCD-4A7B-A8E4-A56C71562023}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Cotton.Shared", "Cotton.Shared\Cotton.Shared.shproj", "{BD70DCEA-3F4C-4387-A332-EF55712D1873}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cotton.Shared", "Cotton.Shared\Cotton.Shared.csproj", "{6A33A06B-7722-4D0B-A5B0-CF7D6BD83767}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -102,6 +102,10 @@ Global
 		{12234099-ECCD-4A7B-A8E4-A56C71562023}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12234099-ECCD-4A7B-A8E4-A56C71562023}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12234099-ECCD-4A7B-A8E4-A56C71562023}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A33A06B-7722-4D0B-A5B0-CF7D6BD83767}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A33A06B-7722-4D0B-A5B0-CF7D6BD83767}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A33A06B-7722-4D0B-A5B0-CF7D6BD83767}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A33A06B-7722-4D0B-A5B0-CF7D6BD83767}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -110,9 +114,6 @@ Global
 		SolutionGuid = {5D7A6BC8-22E3-4AAF-8C63-A0DE90A6BCF0}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		Cotton.Shared\Cotton.Shared.projitems*{ae422e49-2d6b-46a2-a8e6-b3857515e4dd}*SharedItemsImports = 5
-		Cotton.Shared\Cotton.Shared.projitems*{bd70dcea-3f4c-4387-a332-ef55712d1873}*SharedItemsImports = 13
 		Cotton.Shared\Cotton.Shared.projitems*{c580b62c-6c38-4373-b39a-42c2330e9511}*SharedItemsImports = 5
-		Cotton.Shared\Cotton.Shared.projitems*{eb6dba1c-89df-4b1b-8f3b-b36f0ec7acc2}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal
