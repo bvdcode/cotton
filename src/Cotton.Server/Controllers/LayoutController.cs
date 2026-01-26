@@ -8,6 +8,7 @@ using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
+using Cotton.Shared;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
@@ -21,13 +22,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
+    [Route(Routes.V1.Layouts)]
     public class LayoutController(
         IMediator _mediator,
         CottonDbContext _dbContext,
         ILayoutService _layouts) : ControllerBase
     {
         [Authorize]
-        [HttpGet(Routes.Layouts + "/{layoutId:guid}/search")]
+        [HttpGet("/{layoutId:guid}/search")]
         public async Task<IActionResult> SearchLayouts(
             [FromRoute] Guid layoutId,
             [FromQuery] string query,
@@ -86,7 +88,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Layouts}/{{layoutId:guid}}/stats")]
+        [HttpGet("/{layoutId:guid}/stats")]
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
         {
             Guid userId = User.GetUserId();

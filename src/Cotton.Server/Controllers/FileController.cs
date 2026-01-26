@@ -10,6 +10,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
+using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
@@ -39,7 +40,7 @@ namespace Cotton.Server.Controllers
         private const int DefaultSharedFileTokenLength = 16;
 
         [Authorize]
-        [HttpDelete($"{Routes.Files}/{{nodeFileId:guid}}")]
+        [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}")]
         public async Task<IActionResult> DeleteFile(
             [FromRoute] Guid nodeFileId,
             [FromQuery] bool skipTrash = false)
@@ -51,7 +52,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPatch($"{Routes.Files}/{{nodeFileId:guid}}/rename")]
+        [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/rename")]
         public async Task<IActionResult> RenameFile(
             [FromRoute] Guid nodeFileId,
             [FromBody] RenameFileRequest request)
@@ -109,7 +110,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download-link")]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
             [FromRoute] Guid nodeFileId,
             [FromQuery] int expireAfterMinutes = 1440,
@@ -149,12 +150,12 @@ namespace Cotton.Server.Controllers
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
             await _dbContext.SaveChangesAsync();
-            string link = Routes.Files + $"/{nodeFileId}/download?token={newToken.Token}";
+            string link = Routes.V1.Files + $"/{nodeFileId}/download?token={newToken.Token}";
             return Ok(link);
         }
 
         [Authorize]
-        [HttpPatch($"{Routes.Files}/{{nodeFileId:guid}}/update-content")]
+        [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/update-content")]
         public async Task<IActionResult> UpdateFileContent(
             [FromRoute] Guid nodeFileId,
             [FromBody] CreateFileRequest request)
@@ -184,7 +185,7 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
-        [HttpGet($"{Routes.Files}/{{nodeFileId:guid}}/download")]
+        [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,
             [FromQuery] string token,
@@ -241,7 +242,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPost(Routes.Files + "/from-chunks")]
+        [HttpPost(Routes.V1.Files + "/from-chunks")]
         public async Task<IActionResult> CreateFileFromChunks([FromBody] CreateFileRequest request)
         {
             Guid userId = User.GetUserId();

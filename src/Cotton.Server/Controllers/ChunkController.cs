@@ -7,6 +7,7 @@ using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
@@ -28,7 +29,7 @@ namespace Cotton.Server.Controllers
         ILayoutService _layouts) : ControllerBase
     {
         [Authorize]
-        [HttpGet(Routes.Chunks + "/{hash}/exists")]
+        [HttpGet(Routes.V1.Chunks + "/{hash}/exists")]
         public async Task<IActionResult> CheckChunkExists([FromRoute] string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))
@@ -53,7 +54,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPost(Routes.Chunks)]
+        [HttpPost(Routes.V1.Chunks)]
         [RequestSizeLimit(AesGcmStreamCipher.MaxChunkSize + ushort.MaxValue)]
         public async Task<IActionResult> UploadChunk([FromForm] IFormFile file, [FromForm] string hash)
         {
