@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { usePreferencesStore } from '../../../../../shared/store/preferencesStore';
 
 /**
  * Detect programming language from file extension
@@ -106,33 +107,28 @@ export function useLanguageSelection({
   fileName,
   fileId,
 }: UseLanguageSelectionOptions): UseLanguageSelectionResult {
+  const { editorPreferences, setLanguageOverride: persistLanguage, removeLanguageOverride } = usePreferencesStore();
+
   const [language, setLanguageState] = useState<string>(() => {
-    // Try to restore from localStorage
-    const storageKey = `language-override-${fileId}`;
-    const stored = localStorage.getItem(storageKey);
+    const stored = editorPreferences.languageOverrides[fileId];
     
     if (stored) {
       return stored;
     }
     
-    // Otherwise detect from filename
     return detectLanguageFromFileName(fileName);
   });
 
-  // Set language and persist to localStorage
   const setLanguage = useCallback((newLanguage: string) => {
     setLanguageState(newLanguage);
-    const storageKey = `language-override-${fileId}`;
-    localStorage.setItem(storageKey, newLanguage);
-  }, [fileId]);
+    persistLanguage(fileId, newLanguage);
+  }, [fileId, persistLanguage]);
 
-  // Reset to auto-detected language
   const resetLanguage = useCallback(() => {
     const detected = detectLanguageFromFileName(fileName);
     setLanguageState(detected);
-    const storageKey = `language-override-${fileId}`;
-    localStorage.removeItem(storageKey);
-  }, [fileName, fileId]);
+    removeLanguageOverride(fileId);
+  }, [fileName, fileId, removeLanguageOverride]);
 
   return { language, setLanguage, resetLanguage };
 }

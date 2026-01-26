@@ -73,12 +73,12 @@ export const nodesApi = {
       headersAny?.get?.("x-total-count") ??
       headersAny?.get?.("X-Total-Count");
 
-    const parsed = Number.parseInt(String(headerValue ?? ""), 10);
+    const totalCount = Number.parseInt(String(headerValue ?? ""), 10);
 
-    const fallbackTotalCount =
-      (response.data.nodes?.length ?? 0) + (response.data.files?.length ?? 0);
+    if (!Number.isFinite(totalCount)) {
+      throw new Error("x-total-count header is missing or invalid");
+    }
 
-    const totalCount = Number.isFinite(parsed) ? parsed : fallbackTotalCount;
     return { content: response.data, totalCount };
   },
 
