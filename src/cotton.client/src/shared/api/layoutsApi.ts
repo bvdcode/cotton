@@ -54,7 +54,7 @@ export const layoutsApi = {
     const nodeType = options?.nodeType;
 
     if (path == null || path.trim().length === 0) {
-      const response = await httpClient.get<NodeDto>("/layouts/resolver", {
+      const response = await httpClient.get<NodeDto>("layouts/resolver", {
         params: nodeType ? { nodeType } : undefined,
       });
       return response.data;

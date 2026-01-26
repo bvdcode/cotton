@@ -38,7 +38,7 @@ export const authApi = {
    */
   login: async (credentials: LoginRequest): Promise<string> => {
     const response = await httpClient.post<LoginResponse>(
-      "/auth/login",
+      "auth/login",
       credentials,
     );
     const token = response.data.accessToken;
