@@ -116,6 +116,8 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
         container.innerHTML = "";
         const containerWidth = container.clientWidth || window.innerWidth;
 
+        const outputScale = window.devicePixelRatio || 1;
+
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           const page = await pdf.getPage(pageNumber);
           if (cancelled) return;
@@ -123,6 +125,9 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
           const viewport = page.getViewport({ scale: 1 });
           const scale = containerWidth / viewport.width;
           const scaledViewport = page.getViewport({ scale });
+          const renderViewport = page.getViewport({
+            scale: scale * outputScale,
+          });
 
           const canvas = document.createElement("canvas");
           canvas.className = "pdf-page-canvas";
@@ -133,12 +138,14 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
             );
           }
 
-          canvas.width = scaledViewport.width;
-          canvas.height = scaledViewport.height;
+          canvas.width = Math.floor(renderViewport.width);
+          canvas.height = Math.floor(renderViewport.height);
+          canvas.style.width = `${scaledViewport.width}px`;
+          canvas.style.height = `${scaledViewport.height}px`;
 
           const renderTask = page.render({
             canvasContext: context,
-            viewport: scaledViewport,
+            viewport: renderViewport,
           });
           await renderTask.promise;
 
