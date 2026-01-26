@@ -76,7 +76,8 @@ namespace Cotton.Server.Handlers.Nodes
                 Files = files,
                 Id = request.NodeId,
                 CreatedAt = parentNode.CreatedAt,
-                UpdatedAt = parentNode.UpdatedAt
+                UpdatedAt = parentNode.UpdatedAt,
+                TotalCount = nodesCount + filesCount,
             };
         }
     }
