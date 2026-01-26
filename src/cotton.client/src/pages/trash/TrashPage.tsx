@@ -387,6 +387,9 @@ export const TrashPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
+            emptyStateText={
+              layoutType === InterfaceLayoutType.Tiles ? t("empty") : undefined
+            }
             newFolderName=""
             onNewFolderNameChange={() => {}}
             onConfirmNewFolder={() => Promise.resolve()}

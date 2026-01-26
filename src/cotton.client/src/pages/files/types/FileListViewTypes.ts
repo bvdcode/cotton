@@ -152,6 +152,11 @@ export interface IFileListView {
   fileNamePlaceholder: string;
 
   /**
+   * Optional empty-state text for Tiles view
+   */
+  emptyStateText?: string;
+
+  /**
    * Optional pagination props for List view (not used in Tiles view)
    */
   pagination?: PaginationProps;
