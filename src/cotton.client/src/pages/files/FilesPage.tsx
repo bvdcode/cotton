@@ -26,17 +26,6 @@ import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { nodesApi, type NodeContentDto } from "../../shared/api/nodesApi";
 import { usePreferencesStore } from "../../shared/store/preferencesStore";
 
-/**
- * FilesPage Component
- *
- * Main page for browsing and managing files and folders.
- * Refactored to follow SOLID principles:
- * - Single Responsibility: Manages page state and coordinates child components
- * - Open/Closed: Can be extended with new layout types without modification
- * - Liskov Substitution: View components are interchangeable via interface
- * - Interface Segregation: View components depend only on needed operations
- * - Dependency Inversion: Depends on abstractions (IFileListView) not concrete implementations
- */
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const navigate = useNavigate();
@@ -76,34 +65,29 @@ export const FilesPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
-  // List view (paged) state
   const [listPage, setListPage] = React.useState(0);
-  const [listPageSize, setListPageSize] = React.useState(25);
+  const [listPageSize, setListPageSize] = React.useState<number | null>(null);
   const [listTotalCount, setListTotalCount] = React.useState(0);
   const [listLoading, setListLoading] = React.useState(false);
   const [listError, setListError] = React.useState<string | null>(null);
   const [listContent, setListContent] = React.useState<NodeContentDto | null>(
     null,
   );
-  const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setFilesLayoutType(layoutType);
   }, [layoutType, setFilesLayoutType]);
 
-  // Reset paging when folder changes or switching to list view
   useEffect(() => {
     setListPage(0);
   }, [nodeId, layoutType]);
 
-  // Avoid showing previous folder's list while navigating
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) return;
     setListTotalCount(0);
     setListError(null);
   }, [nodeId, layoutType]);
 
-  // Update page title based on current folder
   useEffect(() => {
     const folderName = currentNode?.name;
     const isRoot = !routeNodeId || ancestors.length === 0;
@@ -116,7 +100,6 @@ export const FilesPage: React.FC = () => {
       document.title = "Cotton";
     }
 
-    // Cleanup: reset to default title when component unmounts
     return () => {
       document.title = "Cotton";
     };
@@ -135,7 +118,7 @@ export const FilesPage: React.FC = () => {
   const { sortedFiles, tiles } = useContentTiles(effectiveContent ?? undefined);
 
   const fetchListPage = React.useCallback(async () => {
-    if (!nodeId) {
+    if (!nodeId || listPageSize === null) {
       return;
     }
 
@@ -158,11 +141,11 @@ export const FilesPage: React.FC = () => {
     if (layoutType !== InterfaceLayoutType.List) {
       return;
     }
-    if (!nodeId) {
+    if (!nodeId || listPageSize === null) {
       return;
     }
     void fetchListPage();
-  }, [layoutType, nodeId, fetchListPage]);
+  }, [layoutType, nodeId, listPageSize, fetchListPage]);
 
   const handleFolderChanged = React.useCallback(() => {
     if (!nodeId) {
@@ -319,7 +302,7 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box ref={listGridHostRef} pb={1} sx={{ flex: 1, minHeight: 0 }}>
+        <Box pb={1} sx={{ flex: 1, minHeight: 0 }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
@@ -343,12 +326,10 @@ export const FilesPage: React.FC = () => {
               layoutType === InterfaceLayoutType.List
                 ? {
                     page: listPage,
-                    pageSize: listPageSize,
+                    pageSize: listPageSize ?? 25,
                     totalCount: listTotalCount,
                     loading: listLoading,
-                    onPageChange: (newPage) => {
-                      setListPage(newPage);
-                    },
+                    onPageChange: setListPage,
                     onPageSizeChange: (newPageSize) => {
                       setListPageSize(newPageSize);
                       setListPage(0);
