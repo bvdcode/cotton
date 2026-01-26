@@ -7,6 +7,7 @@ interface PreviewState {
   fileId: string | null;
   fileName: string | null;
   fileType: FileType | null;
+  fileSizeBytes: number | null;
 }
 
 export const useFilePreview = () => {
@@ -15,9 +16,10 @@ export const useFilePreview = () => {
     fileId: null,
     fileName: null,
     fileType: null,
+    fileSizeBytes: null,
   });
 
-  const openPreview = useCallback((fileId: string, fileName: string) => {
+  const openPreview = useCallback((fileId: string, fileName: string, fileSizeBytes?: number) => {
     const typeInfo = getFileTypeInfo(fileName);
     if (typeInfo.supportsInlineView) {
       setPreviewState({
@@ -25,6 +27,7 @@ export const useFilePreview = () => {
         fileId,
         fileName,
         fileType: typeInfo.type,
+        fileSizeBytes: fileSizeBytes ?? null,
       });
       return true;
     }
@@ -37,6 +40,7 @@ export const useFilePreview = () => {
       fileId: null,
       fileName: null,
       fileType: null,
+      fileSizeBytes: null,
     });
   }, []);
 

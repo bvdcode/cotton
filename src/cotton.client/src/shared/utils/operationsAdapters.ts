@@ -45,7 +45,7 @@ export const buildFileOperations = (
   },
   handlers: {
     onDownload: (fileId: string, fileName: string) => Promise<void>;
-    onClick: (fileId: string, fileName: string) => void;
+    onClick: (fileId: string, fileName: string, fileSizeBytes?: number) => void;
     onMediaClick: (fileId: string) => void;
   },
 ): FileOperations => {
