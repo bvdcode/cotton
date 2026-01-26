@@ -26,6 +26,13 @@ export const SearchPage: React.FC = () => {
   const { rootNode, ensureHomeData } = useLayoutsStore();
 
   const gridHostRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    document.title = "Cotton - Search";
+
+    return () => {
+      document.title = "Cotton";
+    };
+  }, []);
 
   useEffect(() => {
     void ensureHomeData();
@@ -151,20 +158,14 @@ export const SearchPage: React.FC = () => {
         </Box>
       )}
 
-      {!loading &&
-        layoutId &&
-        !query.trim() &&
-        !results && (
-          <Typography color="text.secondary">
-            {t("enterQueryHint", { ns: "search" })}
-          </Typography>
-        )}
+      {!loading && layoutId && !query.trim() && !results && (
+        <Typography color="text.secondary">
+          {t("enterQueryHint", { ns: "search" })}
+        </Typography>
+      )}
 
       {(loading || results) && (
-        <Box
-          ref={gridHostRef}
-          sx={{ width: "100%", flex: 1, minHeight: 0 }}
-        >
+        <Box ref={gridHostRef} sx={{ width: "100%", flex: 1, minHeight: 0 }}>
           <FileListViewFactory
             layoutType={InterfaceLayoutType.List}
             tiles={results ? tiles : []}

@@ -1,9 +1,18 @@
 import { Box, Stack } from "@mui/material";
 import { useAuth } from "../../features/auth";
 import { UserInfoCard, TotpSettingsCard, SessionsCard } from "./components";
+import { useEffect } from "react";
 
 export const ProfilePage = () => {
   const { user, setAuthenticated } = useAuth();
+
+  useEffect(() => {
+    document.title = "Cotton - Profile";
+
+    return () => {
+      document.title = "Cotton";
+    };
+  }, []);
 
   if (!user) {
     return null;
