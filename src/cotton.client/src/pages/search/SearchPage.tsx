@@ -116,10 +116,10 @@ export const SearchPage: React.FC = () => {
   );
 
   const handleFileClick = useCallback(
-    async (fileId: string, fileName: string) => {
+    (fileId: string, fileName: string) => {
       const opened = openPreview(fileId, fileName);
       if (!opened) {
-        await handleDownloadFile(fileId, fileName);
+        void handleDownloadFile(fileId, fileName);
       }
     },
     [handleDownloadFile, openPreview],
