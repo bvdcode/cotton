@@ -152,4 +152,9 @@ export interface IFileListView {
    * When false (default), uses fixed height with pagination
    */
   autoHeight?: boolean;
+
+  /**
+   * Whether the data is currently loading
+   */
+  loading?: boolean;
 }

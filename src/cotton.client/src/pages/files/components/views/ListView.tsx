@@ -1,11 +1,13 @@
 import React, { useMemo } from "react";
 import { Box } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import type { GridRowParams, GridRowsProp } from "@mui/x-data-grid";
+import type { GridRowParams, GridRowsProp, GridColumnResizeParams } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
 import { isImageFile, isVideoFile } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
 import { createFileListColumns, type FileListRow } from "./fileListColumns";
+import { usePreferencesStore } from "../../../../shared/store/preferencesStore";
+import Loader from "../../../../shared/ui/Loader";
 
 export const ListView: React.FC<IFileListView> = ({
   tiles,
@@ -20,11 +22,13 @@ export const ListView: React.FC<IFileListView> = ({
   fileNamePlaceholder,
   pagination,
   autoHeight = false,
+  loading = false,
 }) => {
   const { t } = useTranslation("files");
   const [failedPreviews, setFailedPreviews] = React.useState<Set<string>>(
     new Set(),
   );
+  const { layoutPreferences, setFileListColumnWidth } = usePreferencesStore();
 
   const rows: GridRowsProp<FileListRow> = useMemo(() => {
     const baseRows: FileListRow[] = tiles.map((tile) => {
@@ -61,8 +65,8 @@ export const ListView: React.FC<IFileListView> = ({
   }, [tiles, isCreatingFolder, newFolderName]);
 
   const columns = useMemo(
-    () =>
-      createFileListColumns({
+    () => {
+      const cols = createFileListColumns({
         t,
         newFolderName,
         onNewFolderNameChange,
@@ -74,7 +78,21 @@ export const ListView: React.FC<IFileListView> = ({
         fileOperations,
         failedPreviews,
         setFailedPreviews,
-      }),
+      });
+
+      // Apply saved column widths
+      const savedWidths = layoutPreferences.fileListColumnWidths;
+      if (savedWidths) {
+        return cols.map((col) => {
+          if (col.field && savedWidths[col.field]) {
+            return { ...col, width: savedWidths[col.field] };
+          }
+          return col;
+        });
+      }
+
+      return cols;
+    },
     [
       t,
       newFolderName,
@@ -86,6 +104,7 @@ export const ListView: React.FC<IFileListView> = ({
       folderOperations,
       fileOperations,
       failedPreviews,
+      layoutPreferences.fileListColumnWidths,
     ],
   );
 
@@ -111,20 +130,46 @@ export const ListView: React.FC<IFileListView> = ({
     }
   };
 
+  const handleColumnResize = (params: GridColumnResizeParams) => {
+    if (params.colDef.field) {
+      setFileListColumnWidth(params.colDef.field, params.width);
+    }
+  };
+
   return (
     <Box
       sx={{
         width: "100%",
         height: "100%",
         minHeight: 0,
+        position: "relative",
       }}
     >
+      {loading && tiles.length === 0 && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "background.default",
+            zIndex: 10,
+          }}
+        >
+          <Loader />
+        </Box>
+      )}
       <DataGrid
         sx={{ height: "100%" }}
         rows={rows}
         columns={columns}
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
+        onColumnResize={handleColumnResize}
         hideFooter={!pagination}
         paginationMode={pagination ? "server" : "client"}
         autoPageSize={true}
