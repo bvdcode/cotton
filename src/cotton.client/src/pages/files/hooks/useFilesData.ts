@@ -16,16 +16,10 @@ export const useFilesData = ({
   loadNode,
   refreshNodeContent,
 }: UseFilesDataParams) => {
-  const [listPage, setListPage] = useState(0);
-  const [listPageSize, setListPageSize] = useState<number>(50);
   const [listTotalCount, setListTotalCount] = useState(0);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [listContent, setListContent] = useState<NodeContentDto | null>(null);
-
-  useEffect(() => {
-    setListPage(0);
-  }, [nodeId, layoutType]);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) return;
@@ -33,7 +27,7 @@ export const useFilesData = ({
     setListError(null);
   }, [nodeId, layoutType]);
 
-  const fetchListPage = useCallback(async () => {
+  const fetchListPage = useCallback(async (page: number, pageSize: number) => {
     if (!nodeId) {
       return;
     }
@@ -41,8 +35,8 @@ export const useFilesData = ({
     setListLoading(true);
     try {
       const response = await nodesApi.getChildren(nodeId, {
-        page: listPage + 1,
-        pageSize: listPageSize,
+        page: page + 1,
+        pageSize,
       });
       setListContent(response.content);
       setListTotalCount(response.totalCount);
@@ -51,49 +45,30 @@ export const useFilesData = ({
     } finally {
       setListLoading(false);
     }
-  }, [nodeId, listPage, listPageSize]);
+  }, [nodeId]);
 
-  useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) {
-      return;
-    }
-    if (!nodeId) {
-      return;
-    }
-    void fetchListPage();
-  }, [layoutType, nodeId, listPageSize, fetchListPage]);
+
 
   const handleFolderChanged = useCallback(() => {
     if (!nodeId) {
       return;
     }
-    if (layoutType === InterfaceLayoutType.List) {
-      void fetchListPage();
-      return;
-    }
     void refreshNodeContent(nodeId);
-  }, [nodeId, layoutType, fetchListPage, refreshNodeContent]);
+  }, [nodeId, refreshNodeContent]);
 
   const reloadCurrentNode = useCallback(() => {
     if (!nodeId) {
       return;
     }
-    if (layoutType === InterfaceLayoutType.List) {
-      void fetchListPage();
-    } else {
-      void loadNode(nodeId);
-    }
-  }, [nodeId, layoutType, fetchListPage, loadNode]);
+    void loadNode(nodeId);
+  }, [nodeId, loadNode]);
 
   return {
-    listPage,
-    listPageSize,
     listTotalCount,
     listLoading,
     listError,
     listContent,
-    setListPage,
-    setListPageSize,
+    fetchListPage,
     handleFolderChanged,
     reloadCurrentNode,
   };

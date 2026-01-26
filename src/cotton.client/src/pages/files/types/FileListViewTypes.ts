@@ -66,29 +66,14 @@ export interface FileOperations {
  */
 export interface PaginationProps {
   /**
-   * Current page number (0-indexed)
-   */
-  page: number;
-
-  /**
-   * Number of items per page
-   */
-  pageSize: number;
-
-  /**
    * Total number of items across all pages
    */
   totalCount: number;
 
   /**
-   * Handler for page change
+   * Handler for pagination model change (page and pageSize)
    */
-  onPageChange: (newPage: number) => void;
-
-  /**
-   * Handler for page size change
-   */
-  onPageSizeChange: (newPageSize: number) => void;
+  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
 
   /**
    * Whether data is currently loading
