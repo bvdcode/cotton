@@ -24,8 +24,17 @@ const formatDateTime = (iso: string): string => {
   }).format(date);
 };
 
-const getRoleTranslationKey = (role: number): "roles.user" | "roles.admin" => {
-  return role === UserRole.Admin ? "roles.admin" : "roles.user";
+const getRoleTranslationKey = (
+  role: number,
+): "roles.user" | "roles.admin" | "roles.unknown" => {
+  switch (role) {
+    case UserRole.Admin:
+      return "roles.admin";
+    case UserRole.User:
+      return "roles.user";
+    default:
+      return "roles.unknown";
+  }
 };
 
 interface UserInfoCardProps {
