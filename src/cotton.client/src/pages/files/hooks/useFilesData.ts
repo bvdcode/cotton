@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 
@@ -21,6 +21,7 @@ export const useFilesData = ({
   const [listError, setListError] = useState<string | null>(null);
   const [listContent, setListContent] = useState<NodeContentDto | null>(null);
   const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
+  const lastNodeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) {
@@ -28,14 +29,14 @@ export const useFilesData = ({
       setListError(null);
       setListContent(null);
       setCurrentPagination(null);
+      lastNodeIdRef.current = null;
       return;
     }
-    
-    // Инициализируем пагинацию сразу
-    if (!currentPagination && nodeId) {
-      setCurrentPagination({ page: 0, pageSize: 10 });
+
+    if (nodeId && lastNodeIdRef.current && lastNodeIdRef.current !== nodeId) {
+      setCurrentPagination((prev) => (prev ? { ...prev, page: 0 } : prev));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    lastNodeIdRef.current = nodeId ?? null;
   }, [nodeId, layoutType]);
 
   const fetchListPage = useCallback(async (page: number, pageSize: number) => {
