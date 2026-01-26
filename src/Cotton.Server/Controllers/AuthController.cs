@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Handlers.Auth;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
@@ -16,6 +17,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Extensions;
 using EasyExtensions.Helpers;
+using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +30,7 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     public class AuthController(
+        IMediator _mediator,
         IStreamCipher _crypto,
         ITokenProvider _tokens,
         SettingsProvider _settings,
@@ -54,90 +57,10 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetSessions()
         {
             var userId = User.GetUserId();
-            var tokens = await _dbContext.RefreshTokens
-                .AsNoTracking()
-                .Where(x => x.UserId == userId && x.SessionId != null)
-                .OrderByDescending(x => x.CreatedAt)
-                .ToListAsync();
-
-            TimeSpan tokenLifetime = _tokens.TokenLifetime;
             string currentSessionId = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
-            List<SessionDto> response = [.. tokens
-                .GroupBy(x => x.SessionId!)
-                .Select(g =>
-                {
-                    var latestActive = g
-                        .Where(x => x.RevokedAt == null)
-                        .OrderByDescending(x => x.CreatedAt)
-                        .FirstOrDefault();
-
-                    var latestAny = g
-                        .OrderByDescending(x => x.CreatedAt)
-                        .First();
-
-                    var source = latestActive ?? latestAny;
-                    var earliestCreatedAt = g.Min(x => x.CreatedAt);
-                    var latestCreatedAt = g.Max(x => x.CreatedAt);
-
-                    var intervals = g
-                        .Select(t =>
-                        {
-                            var start = t.CreatedAt;
-                            var endByTtl = t.CreatedAt + tokenLifetime;
-                            var endByRevoke = t.RevokedAt ?? endByTtl;
-                            var end = endByRevoke < endByTtl ? endByRevoke : endByTtl;
-                            return (start, end);
-                        })
-                        .Where(x => x.end > x.start)
-                        .OrderBy(x => x.start)
-                        .ToList();
-
-                    TimeSpan totalSessionDuration = TimeSpan.Zero;
-                    if (intervals.Count > 0)
-                    {
-                        var currentStart = intervals[0].start;
-                        var currentEnd = intervals[0].end;
-
-                        for (int i = 1; i < intervals.Count; i++)
-                        {
-                            var (s, e) = intervals[i];
-                            if (s <= currentEnd)
-                            {
-                                if (e > currentEnd)
-                                {
-                                    currentEnd = e;
-                                }
-                            }
-                            else
-                            {
-                                totalSessionDuration += currentEnd - currentStart;
-                                currentStart = s;
-                                currentEnd = e;
-                            }
-                        }
-
-                        totalSessionDuration += currentEnd - currentStart;
-                    }
-
-                    return new SessionDto
-                    {
-                        LastSeenAt = latestAny.CreatedAt,
-                        IsCurrentSession = currentSessionId == g.Key,
-                        SessionId = g.Key,
-                        IpAddress = source.IpAddress.ToString(),
-                        UserAgent = source.UserAgent,
-                        AuthType = source.AuthType,
-                        Country = source.Country ?? "Unknown",
-                        Region = source.Region ?? "Unknown",
-                        City = source.City ?? "Unknown",
-                        Device = source.Device ?? "Unknown",
-                        RefreshTokenCount = g.Count(),
-                        TotalSessionDuration = totalSessionDuration
-                    };
-                })
-                .OrderByDescending(x => x.TotalSessionDuration)];
-
-            return Ok(response);
+            GetSessionsQuery query = new(userId, currentSessionId);
+            var sessions = await _mediator.Send(query);
+            return Ok(sessions);
         }
 
         [Authorize]
