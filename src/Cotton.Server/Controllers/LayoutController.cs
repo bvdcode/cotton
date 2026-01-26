@@ -29,7 +29,7 @@ namespace Cotton.Server.Controllers
         ILayoutService _layouts) : ControllerBase
     {
         [Authorize]
-        [HttpGet("/{layoutId:guid}/search")]
+        [HttpGet("{layoutId:guid}/search")]
         public async Task<IActionResult> SearchLayouts(
             [FromRoute] Guid layoutId,
             [FromQuery] string query,
@@ -88,7 +88,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet("/{layoutId:guid}/stats")]
+        [HttpGet("{layoutId:guid}/stats")]
         public async Task<IActionResult> GetLayoutStats([FromRoute] Guid layoutId)
         {
             Guid userId = User.GetUserId();
@@ -124,8 +124,9 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPatch($"{Routes.Nodes}/{{nodeId:guid}}/rename")]
-        public async Task<IActionResult> RenameLayoutNode([FromRoute] Guid nodeId,
+        [HttpPatch("nodes/{nodeId:guid}/rename")]
+        public async Task<IActionResult> RenameLayoutNode(
+            [FromRoute] Guid nodeId,
             [FromBody] RenameNodeRequest request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
@@ -185,7 +186,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}")]
+        [HttpGet("nodes/{nodeId:guid}")]
         public async Task<IActionResult> GetLayoutNode([FromRoute] Guid nodeId)
         {
             Guid userId = User.GetUserId();
@@ -202,7 +203,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpDelete($"{Routes.Nodes}/{{nodeId:guid}}")]
+        [HttpDelete("nodes/{nodeId:guid}")]
         public async Task<IActionResult> DeleteLayoutNode(
             [FromRoute] Guid nodeId,
             [FromQuery] bool skipTrash = false)
@@ -214,7 +215,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPut(Routes.Nodes)]
+        [HttpPut("nodes")]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequest request)
         {
             bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
@@ -278,7 +279,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}/ancestors")]
+        [HttpGet("nodes/{nodeId:guid}/ancestors")]
         public async Task<IActionResult> GetAncestorNodes(
             [FromRoute] Guid nodeId,
             [FromQuery] NodeType nodeType = NodeType.Default)
@@ -329,7 +330,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Nodes}/{{nodeId:guid}}/children")]
+        [HttpGet("nodes/{nodeId:guid}/children")]
         public async Task<IActionResult> GetChildNodes(
             [FromRoute] Guid nodeId,
             [FromQuery] NodeType nodeType = NodeType.Default,
@@ -344,8 +345,8 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet($"{Routes.Layouts}/resolver")]
-        [HttpGet($"{Routes.Layouts}/resolver/{{*path}}")]
+        [HttpGet("resolver")]
+        [HttpGet("resolver/{*path}")]
         public async Task<IActionResult> ResolveLayout([FromRoute] string? path,
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
