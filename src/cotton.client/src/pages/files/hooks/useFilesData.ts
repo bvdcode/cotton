@@ -17,7 +17,7 @@ export const useFilesData = ({
   refreshNodeContent,
 }: UseFilesDataParams) => {
   const [listPage, setListPage] = useState(0);
-  const [listPageSize, setListPageSize] = useState<number | null>(null);
+  const [listPageSize, setListPageSize] = useState<number>(50);
   const [listTotalCount, setListTotalCount] = useState(0);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export const useFilesData = ({
   }, [nodeId, layoutType]);
 
   const fetchListPage = useCallback(async () => {
-    if (!nodeId || listPageSize === null) {
+    if (!nodeId) {
       return;
     }
 
@@ -57,7 +57,7 @@ export const useFilesData = ({
     if (layoutType !== InterfaceLayoutType.List) {
       return;
     }
-    if (!nodeId || listPageSize === null) {
+    if (!nodeId) {
       return;
     }
     void fetchListPage();
