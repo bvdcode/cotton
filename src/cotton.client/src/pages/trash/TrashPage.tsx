@@ -339,6 +339,9 @@ export const TrashPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
+            loading={loading && !content}
+            loadingTitle={t("loading.title")}
+            loadingCaption={t("loading.caption")}
             emptyStateText={
               layoutType === InterfaceLayoutType.Tiles ? t("empty") : undefined
             }
