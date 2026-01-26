@@ -36,7 +36,7 @@ import { useEditorMode } from "./hooks/useEditorMode";
 import { useLanguageSelection } from "./hooks/useLanguageSelection";
 import { EditorMode } from "./editors/types";
 
-const MAX_PREVIEW_SIZE_BYTES = 1 * 1024 * 1024; // 10 MB
+const MAX_PREVIEW_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 interface TextPreviewProps {
   nodeFileId: Guid;
