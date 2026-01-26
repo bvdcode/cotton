@@ -1,6 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { AUTH_STORAGE_KEY } from "../config/storageKeys";
 import type { User } from "../../features/auth/types";
 
 type AuthStoreState = {
@@ -19,50 +17,41 @@ type AuthStoreState = {
 };
 
 export const useAuthStore = create<AuthStoreState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      isInitializing: false,
-      refreshEnabled: true,
-      hydrated: false,
-      hasChecked: false,
+  (set) => ({
+    user: null,
+    isAuthenticated: false,
+    isInitializing: false,
+    refreshEnabled: true,
+    hydrated: true,
+    hasChecked: false,
 
-      setInitializing: (value) => set({ isInitializing: value }),
-      setHydrated: (value) => set({ hydrated: value }),
-      setHasChecked: (value) => set({ hasChecked: value }),
+    setInitializing: (value) => set({ isInitializing: value }),
+    setHydrated: (value) => set({ hydrated: value }),
+    setHasChecked: (value) => set({ hasChecked: value }),
 
-      setAuthenticated: (user) =>
-        set({
-          user,
-          isAuthenticated: true,
-          refreshEnabled: true,
-          hasChecked: true,
-        }),
+    setAuthenticated: (user) =>
+      set({
+        user,
+        isAuthenticated: true,
+        refreshEnabled: true,
+        hasChecked: true,
+      }),
 
-      setUnauthenticated: () =>
-        set({
-          user: null,
-          isAuthenticated: false,
-          hasChecked: true,
-        }),
+    setUnauthenticated: () =>
+      set({
+        user: null,
+        isAuthenticated: false,
+        hasChecked: true,
+      }),
 
-      logoutLocal: () =>
-        set({
-          user: null,
-          isAuthenticated: false,
-          refreshEnabled: false,
-          hasChecked: true,
-        }),
-    }),
-    {
-      name: AUTH_STORAGE_KEY,
-      partialize: (state) => ({ refreshEnabled: state.refreshEnabled }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
-      },
-    },
-  ),
+    logoutLocal: () =>
+      set({
+        user: null,
+        isAuthenticated: false,
+        refreshEnabled: false,
+        hasChecked: true,
+      }),
+  }),
 );
 
 export const getRefreshEnabled = () => {

@@ -119,8 +119,8 @@ export const ListView: React.FC<IFileListView> = ({
               ) : (
                 <Box
                   sx={{
-                    width: 28,
-                    height: 28,
+                    width: 32,
+                    height: 32,
                     position: "relative",
                     display: "flex",
                     alignItems: "center",
@@ -439,7 +439,6 @@ export const ListView: React.FC<IFileListView> = ({
   return (
     <Box sx={{ width: "100%", height: "100%", minHeight: 0 }}>
       <DataGrid
-        density="compact"
         sx={{ height: "100%" }}
         rows={rows}
         columns={columns}
