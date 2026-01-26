@@ -7,7 +7,6 @@
             public const string Base = "/api/v1";
             public const string Files = Base + "/files";
             public const string Chunks = Base + "/chunks";
-            public const string Nodes = Layouts + "/nodes";
             public const string Layouts = Base + "/layouts";
         }
     }
