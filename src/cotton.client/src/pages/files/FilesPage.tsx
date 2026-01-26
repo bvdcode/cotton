@@ -126,8 +126,8 @@ export const FilesPage: React.FC = () => {
   } = useMediaLightbox(sortedFiles);
 
   const stats = useMemo(
-    () => calculateFolderStats(content?.nodes, content?.files),
-    [content?.files, content?.nodes],
+    () => calculateFolderStats(effectiveContent?.nodes, effectiveContent?.files),
+    [effectiveContent?.files, effectiveContent?.nodes],
   );
 
   const handleGoUp = () => {
