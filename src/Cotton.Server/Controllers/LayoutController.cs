@@ -122,26 +122,6 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPatch($"{Routes.Nodes}/{{nodeId:guid}}/ui-layout-type")]
-        public async Task<IActionResult> UpdateLayoutNodeUiType(
-            [FromRoute] Guid nodeId,
-            [FromQuery] InterfaceLayoutType newType)
-        {
-            Guid userId = User.GetUserId();
-            var node = await _dbContext.Nodes
-                .Where(x => x.Id == nodeId && x.OwnerId == userId)
-                .SingleOrDefaultAsync();
-            if (node == null)
-            {
-                return CottonResult.NotFound("Node not found.");
-            }
-            node.InterfaceLayoutType = newType;
-            await _dbContext.SaveChangesAsync();
-            var mapped = node.Adapt<NodeDto>();
-            return Ok(mapped);
-        }
-
-        [Authorize]
         [HttpPatch($"{Routes.Nodes}/{{nodeId:guid}}/rename")]
         public async Task<IActionResult> RenameLayoutNode([FromRoute] Guid nodeId,
             [FromBody] RenameNodeRequest request)

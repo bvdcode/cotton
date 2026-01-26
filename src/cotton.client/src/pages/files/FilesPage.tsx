@@ -24,6 +24,7 @@ import {
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { nodesApi, type NodeContentDto } from "../../shared/api/nodesApi";
+import { usePreferencesStore } from "../../shared/store/preferencesStore";
 
 /**
  * FilesPage Component
@@ -76,19 +77,17 @@ export const FilesPage: React.FC = () => {
   );
   const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Determine layout type from current node, defaulting to Tiles
-  const initialLayoutType = useMemo(() => {
-    return currentNode?.interfaceLayoutType ?? InterfaceLayoutType.Tiles;
-  }, [currentNode?.interfaceLayoutType]);
+  const { layoutPreferences, setFilesLayoutType } = usePreferencesStore();
 
-  // Layout type state - can be changed by user
+  const initialLayoutType =
+    layoutPreferences.filesLayoutType ?? InterfaceLayoutType.Tiles;
+
   const [layoutType, setLayoutType] =
     React.useState<InterfaceLayoutType>(initialLayoutType);
 
-  // Sync layout type when node changes
   useEffect(() => {
-    setLayoutType(initialLayoutType);
-  }, [initialLayoutType]);
+    setFilesLayoutType(layoutType);
+  }, [layoutType, setFilesLayoutType]);
 
   // Reset paging when folder changes or switching to list view
   useEffect(() => {
