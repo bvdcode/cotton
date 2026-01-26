@@ -101,6 +101,8 @@ export const FilesPage: React.FC = () => {
     layoutType === InterfaceLayoutType.List ? listContent : content;
 
   const deferredContent = useDeferredValue(effectiveContent);
+  const isContentTransitioning =
+    !!effectiveContent && deferredContent !== effectiveContent;
 
   useFolderFileList({
     nodeId,
@@ -249,7 +251,7 @@ export const FilesPage: React.FC = () => {
             loading={
               layoutType === InterfaceLayoutType.List
                 ? listLoading && !listContent
-                : loading && !content
+                : (loading && !content) || isContentTransitioning
             }
             loadingTitle={t("loading.title")}
             loadingCaption={t("loading.caption")}
