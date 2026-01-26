@@ -4,7 +4,10 @@ import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { useRenameState } from "../../../shared/hooks/useRenameState";
 
-export const useFolderOperations = (currentNodeId: string | null) => {
+export const useFolderOperations = (
+  currentNodeId: string | null,
+  onFolderCreated?: () => void,
+) => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
   const { createFolder, deleteFolder, renameFolder } = useNodesStore();
@@ -32,6 +35,7 @@ export const useFolderOperations = (currentNodeId: string | null) => {
       return;
     }
     await createFolder(parentId, newFolderName.trim());
+    onFolderCreated?.();
     setIsCreatingFolder(false);
     setNewFolderName("");
     setNewFolderParentId(null);
