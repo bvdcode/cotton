@@ -157,4 +157,14 @@ export interface IFileListView {
    * Whether the data is currently loading
    */
   loading?: boolean;
+
+  /**
+   * Loading title text
+   */
+  loadingTitle?: string;
+
+  /**
+   * Loading caption text
+   */
+  loadingCaption?: string;
 }
