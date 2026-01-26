@@ -20,7 +20,7 @@ export const sessionsApi = {
    * Get all active sessions for the current user
    */
   getSessions: async (): Promise<SessionDto[]> => {
-    const response = await httpClient.get<SessionDto[]>("/auth/sessions");
+    const response = await httpClient.get<SessionDto[]>("auth/sessions");
     return response.data;
   },
 

@@ -18,14 +18,14 @@ export const filesApi = {
   createFromChunks: async (
     request: CreateFileFromChunksRequest,
   ): Promise<void> => {
-    await httpClient.post("/files/from-chunks", request);
+    await httpClient.post("files/from-chunks", request);
   },
 
   updateFileContent: async (
     nodeFileId: Guid,
     request: CreateFileFromChunksRequest,
   ): Promise<void> => {
-    await httpClient.patch(`/files/${nodeFileId}/update-content`, request);
+    await httpClient.patch(`files/${nodeFileId}/update-content`, request);
   },
 
   getDownloadLink: async (
@@ -33,14 +33,14 @@ export const filesApi = {
     expireAfterMinutes = 1440,
   ): Promise<string> => {
     const response = await httpClient.get<string>(
-      `/files/${nodeFileId}/download-link`,
+      `files/${nodeFileId}/download-link`,
       { params: { expireAfterMinutes } },
     );
     return response.data;
   },
 
   deleteFile: async (nodeFileId: Guid, skipTrash = false): Promise<void> => {
-    await httpClient.delete(`/files/${nodeFileId}`, {
+    await httpClient.delete(`files/${nodeFileId}`, {
       params: skipTrash ? { skipTrash: true } : undefined,
     });
   },

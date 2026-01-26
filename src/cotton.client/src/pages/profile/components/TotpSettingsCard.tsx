@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import axios from "axios";
+import { isAxiosError } from "../../../shared/api/httpClient";
 import { totpApi, type TotpSetup } from "../../../shared/api/totpApi";
 import { authApi } from "../../../shared/api/authApi";
 import type { User } from "../../../features/auth/types";
@@ -60,7 +60,7 @@ export const TotpSettingsCard = ({
       const setup = await totpApi.setup();
       setTotpSetup(setup);
     } catch (e) {
-      if (axios.isAxiosError(e)) {
+      if (isAxiosError(e)) {
         const status = e.response?.status;
         const message = (e.response?.data as { message?: string })?.message;
         if (status === 409) {
@@ -95,7 +95,7 @@ export const TotpSettingsCard = ({
       setTotpSetup(null);
       setTotpCode("");
     } catch (e) {
-      if (axios.isAxiosError(e)) {
+      if (isAxiosError(e)) {
         const status = e.response?.status;
         const message = (e.response?.data as { message?: string })?.message;
         if (status === 403) {

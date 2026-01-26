@@ -8,12 +8,7 @@
 import { useState, useCallback } from 'react';
 import { EditorMode } from '../editors/types';
 import { usePreferencesStore } from '../../../../../shared/store/preferencesStore';
-
-/**
- * Maximum file size for code editor (5 MB)
- * Files larger than this will use plain text mode for performance
- */
-const MAX_CODE_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+import { previewConfig } from '../../../../../shared/config/previewConfig';
 
 /**
  * File extensions supported by Monaco Editor
@@ -105,8 +100,7 @@ function isDockerfile(fileName: string): boolean {
  * @param fileSize - File size in bytes (optional, for size-based detection)
  */
 function detectInitialMode(content: string, fileName: string, fileSize?: number): EditorMode {
-  // Size check: files larger than limit should use plain text mode
-  if (fileSize && fileSize > MAX_CODE_FILE_SIZE) {
+  if (fileSize && fileSize > previewConfig.MAX_CODE_FILE_SIZE) {
     return EditorMode.Text;
   }
 

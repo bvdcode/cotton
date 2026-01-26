@@ -3,7 +3,7 @@ import { httpClient } from "./httpClient";
 export const chunksApi = {
   exists: async (hash: string): Promise<boolean> => {
     const response = await httpClient.get<boolean>(
-      `/chunks/${encodeURIComponent(hash)}/exists`,
+      `chunks/${encodeURIComponent(hash)}/exists`,
       {
         validateStatus: (status) => status === 200 || status === 404,
       },
@@ -29,7 +29,7 @@ export const chunksApi = {
       form.append("hash", options.hash);
     }
 
-    await httpClient.post("/chunks", form, {
+    await httpClient.post("chunks", form, {
       headers: {
         "Content-Type": "multipart/form-data",
       },

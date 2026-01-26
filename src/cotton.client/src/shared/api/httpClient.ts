@@ -1,6 +1,8 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { getRefreshEnabled } from "../store";
 
+export { isAxiosError } from "axios";
+
 let accessToken: string | null = null;
 export const getAccessToken = () => accessToken;
 export const setAccessToken = (token: string | null) => {
