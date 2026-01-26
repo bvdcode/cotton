@@ -36,15 +36,19 @@ import { useEditorMode } from "./hooks/useEditorMode";
 import { useLanguageSelection } from "./hooks/useLanguageSelection";
 import { EditorMode } from "./editors/types";
 
+const MAX_PREVIEW_SIZE_BYTES = 1 * 1024 * 1024; // 10 MB
+
 interface TextPreviewProps {
   nodeFileId: Guid;
   fileName: string;
+  fileSizeBytes: number | null;
   onSaved?: () => void;
 }
 
 export function TextPreview({
   nodeFileId,
   fileName,
+  fileSizeBytes,
   onSaved,
 }: TextPreviewProps) {
   const { t } = useTranslation(["files", "common"]);
@@ -53,7 +57,6 @@ export function TextPreview({
   const { data: serverSettings } = useServerSettings();
   const [content, setContent] = useState<string | undefined>(undefined);
   const [originalContent, setOriginalContent] = useState<string>("");
-  const [fileSize, setFileSize] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -64,7 +67,7 @@ export function TextPreview({
     content: content || '',
     fileName,
     fileId: nodeFileId,
-    fileSize,
+    fileSize: fileSizeBytes ?? undefined,
   });
 
   // Use language selection hook for code editor
@@ -81,22 +84,29 @@ export function TextPreview({
         setLoading(true);
         setError(null);
 
+        // Check file size before loading
+        if (fileSizeBytes && fileSizeBytes > MAX_PREVIEW_SIZE_BYTES) {
+          if (!cancelled) {
+            setError(
+              t("preview.errors.fileTooLarge", {
+                ns: "files",
+                size: `${Math.round(fileSizeBytes / 1024 / 1024)} MB`,
+                maxSize: `${MAX_PREVIEW_SIZE_BYTES / 1024 / 1024} MB`,
+              })
+            );
+            setLoading(false);
+          }
+          return;
+        }
+
         const downloadUrl = await filesApi.getDownloadLink(nodeFileId);
         const response = await fetch(downloadUrl);
 
         if (!response.ok) {
-          const errorSuffix = response.statusText
-            ? `: ${response.statusText}`
-            : "";
+          const errorSuffix = response.statusText ? `: ${response.statusText}` : "";
           throw new Error(
             t("preview.errors.loadFailed", { ns: "files", error: errorSuffix }),
           );
-        }
-
-        // Get file size from Content-Length header
-        const contentLength = response.headers.get('Content-Length');
-        if (contentLength) {
-          setFileSize(parseInt(contentLength, 10));
         }
 
         const text = await response.text();
@@ -122,7 +132,7 @@ export function TextPreview({
     return () => {
       cancelled = true;
     };
-  }, [nodeFileId, t]);
+  }, [nodeFileId, fileSizeBytes, t]);
 
   const handleSave = async () => {
     if (!content || content === originalContent || !serverSettings) return;
@@ -183,9 +193,32 @@ export function TextPreview({
   }
 
   if (error) {
+    const isFileTooLarge = fileSizeBytes && fileSizeBytes > MAX_PREVIEW_SIZE_BYTES;
     return (
       <Box p={3}>
-        <Alert severity="error">{error}</Alert>
+        <Alert 
+          severity="error"
+          action={
+            isFileTooLarge ? (
+              <Button 
+                color="inherit" 
+                size="small"
+                onClick={() => {
+                  void filesApi.getDownloadLink(nodeFileId).then(url => {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    link.click();
+                  });
+                }}
+              >
+                {t('common:actions.download')}
+              </Button>
+            ) : undefined
+          }
+        >
+          {error}
+        </Alert>
       </Box>
     );
   }

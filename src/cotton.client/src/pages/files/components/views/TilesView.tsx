@@ -210,7 +210,7 @@ export const TilesView: React.FC<IFileListView> = ({
                 ? () => {
                     fileOperations.onMediaClick?.(tile.file.id);
                   }
-                : () => fileOperations.onClick(tile.file.id, tile.file.name)
+                : () => fileOperations.onClick(tile.file.id, tile.file.name, tile.file.sizeBytes)
             }
             iconContainerSx={iconContainerSx}
             actions={[
