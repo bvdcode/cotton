@@ -137,7 +137,6 @@ export const ListView: React.FC<IFileListView> = ({
                       alt=""
                       loading="lazy"
                       onError={(e) => {
-                        // Hide broken previews and keep the fallback icon.
                         e.currentTarget.style.display = "none";
                       }}
                       sx={{
@@ -145,7 +144,7 @@ export const ListView: React.FC<IFileListView> = ({
                         inset: 0,
                         width: "100%",
                         height: "100%",
-                        objectFit: "cover",
+                        objectFit: "contain",
                         display: "block",
                       }}
                     />
