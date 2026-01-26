@@ -142,7 +142,7 @@ export const createNameColumn = (
   field: "name",
   headerName: options.t("name"),
   flex: 1,
-  minWidth: 220,
+  minWidth: 120,
   renderCell: (params) => {
     const row = params.row;
 
@@ -177,10 +177,7 @@ export const createNameColumn = (
       );
     }
 
-    if (
-      row.type === "folder" &&
-      options.folderOperations.isRenaming(row.id)
-    ) {
+    if (row.type === "folder" && options.folderOperations.isRenaming(row.id)) {
       return (
         <Box
           sx={{
@@ -275,7 +272,7 @@ export const createSizeColumn = (
 ): GridColDef<FileListRow> => ({
   field: "sizeBytes",
   headerName: options.t("size"),
-  width: 140,
+  width: 80,
   renderCell: (params) => {
     if (params.row.sizeBytes == null) {
       return (
@@ -297,14 +294,11 @@ export const createSizeColumn = (
 });
 
 export const createActionsColumn = (
-  options: Pick<
-    ColumnOptions,
-    "t" | "folderOperations" | "fileOperations"
-  >,
+  options: Pick<ColumnOptions, "t" | "folderOperations" | "fileOperations">,
 ): GridColDef<FileListRow> => ({
   field: "actions",
   headerName: options.t("actionsTitle"),
-  width: 140,
+  minWidth: 110,
   sortable: false,
   align: "right",
   headerAlign: "right",
