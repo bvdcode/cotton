@@ -67,7 +67,6 @@ export const TrashPage: React.FC = () => {
     null,
   );
   const listGridHostRef = React.useRef<HTMLDivElement | null>(null);
-  const [isListPageSizeAuto, setIsListPageSizeAuto] = React.useState(true);
 
   // Empty trash progress state
   const [emptyingTrash, setEmptyingTrash] = React.useState(false);
@@ -179,43 +178,6 @@ export const TrashPage: React.FC = () => {
   useEffect(() => {
     setListPage(0);
   }, [nodeId, layoutType]);
-
-  // Auto-fit page size to available height (until user manually changes it)
-  useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) return;
-    if (!isListPageSizeAuto) return;
-    if (!listGridHostRef.current) return;
-
-    const target = listGridHostRef.current;
-    const rowHeight = 36;
-    const headerHeight = 56;
-    const footerHeight = 56;
-    const padding = 8;
-
-    const update = () => {
-      const height = target.clientHeight;
-      const available = Math.max(0, height - headerHeight - footerHeight - padding);
-      const fit = Math.floor(available / rowHeight);
-      const pageSize = Math.max(10, Math.min(100, fit));
-
-      if (pageSize > 0 && pageSize !== listPageSize) {
-        setListPageSize(pageSize);
-        setListPage(0);
-      }
-    };
-
-    update();
-
-    if (typeof ResizeObserver === "undefined") {
-      const onResize = () => update();
-      window.addEventListener("resize", onResize);
-      return () => window.removeEventListener("resize", onResize);
-    }
-
-    const observer = new ResizeObserver(() => update());
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [layoutType, isListPageSizeAuto, listPageSize]);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) return;
@@ -443,7 +405,6 @@ export const TrashPage: React.FC = () => {
                         setListPage(newPage);
                       },
                       onPageSizeChange: (newPageSize) => {
-                        setIsListPageSizeAuto(false);
                         setListPageSize(newPageSize);
                         setListPage(0);
                       },

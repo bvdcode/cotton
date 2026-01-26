@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Box, Alert, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -26,7 +26,6 @@ export const SearchPage: React.FC = () => {
   const { rootNode, ensureHomeData } = useLayoutsStore();
 
   const gridHostRef = useRef<HTMLDivElement | null>(null);
-  const [isAutoPageSize, setIsAutoPageSize] = useState(true);
 
   useEffect(() => {
     void ensureHomeData();
@@ -57,47 +56,6 @@ export const SearchPage: React.FC = () => {
   useEffect(() => {
     setPage(1);
   }, [query, setPage]);
-
-  // Auto-fit page size to available height (until user manually changes it).
-  useEffect(() => {
-    if (!isAutoPageSize) return;
-    if (!gridHostRef.current) return;
-
-    const target = gridHostRef.current;
-    const rowHeight = 36; // DataGrid compact density
-    const headerHeight = 56;
-    const footerHeight = 56;
-    const padding = 8;
-
-    const update = () => {
-      const height = target.clientHeight;
-      const available = Math.max(0, height - headerHeight - footerHeight - padding);
-      const fit = Math.floor(available / rowHeight);
-      const fitPageSize = Math.max(10, Math.min(100, fit));
-
-      if (fitPageSize > 0 && fitPageSize !== currentPageSize) {
-        setPageSize(fitPageSize);
-        setPage(1);
-      }
-    };
-
-    update();
-
-    if (typeof ResizeObserver === "undefined") {
-      const onResize = () => update();
-      window.addEventListener("resize", onResize);
-      return () => window.removeEventListener("resize", onResize);
-    }
-
-    const observer = new ResizeObserver(() => update());
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [
-    isAutoPageSize,
-    currentPageSize,
-    setPage,
-    setPageSize,
-  ]);
 
   const { previewState, openPreview, closePreview } = useFilePreview();
 
@@ -195,10 +153,7 @@ export const SearchPage: React.FC = () => {
     >
       <SearchBar
         value={query}
-        onChange={(value) => {
-          setIsAutoPageSize(true);
-          setQuery(value);
-        }}
+        onChange={setQuery}
         disabled={!layoutId}
         placeholder={t("searchPlaceholder", { ns: "search" })}
       />
@@ -248,7 +203,6 @@ export const SearchPage: React.FC = () => {
                 setPage(newPage + 1);
               },
               onPageSizeChange: (newPageSize) => {
-                setIsAutoPageSize(false);
                 setPageSize(newPageSize);
                 setPage(1);
               },
