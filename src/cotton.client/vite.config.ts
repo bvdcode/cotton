@@ -4,7 +4,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, process.cwd(), "");
   const apiTarget = env.VITE_API_TARGET || "http://localhost:5182";
 
   return {
@@ -23,10 +23,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: "prompt",
         injectRegister: "auto",
-        includeAssets: [
-          "/favicon.ico",
-          "/assets/icons/icon.svg",
-        ],
+        includeAssets: ["/favicon.ico", "/assets/icons/icon.svg"],
         workbox: {
           skipWaiting: true,
           clientsClaim: true,
@@ -40,12 +37,12 @@ export default defineConfig(({ mode }) => {
           name: "Cotton Cloud",
           short_name: "Cotton Cloud",
           description: "Fast and reliable cloud service for your needs.",
-          categories: ["account", "management", "server"],
+          categories: ["cloud", "storage", "productivity"],
           lang: "en-US",
           scope: "/",
           start_url: "/",
           display: "fullscreen",
-          background_color: "#1f2022",
+          background_color: "#2c2d2e",
           theme_color: "#c6ff00",
           screenshots: [
             {
