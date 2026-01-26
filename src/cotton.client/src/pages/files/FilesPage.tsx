@@ -164,7 +164,7 @@ export const FilesPage: React.FC = () => {
     void fetchListPage();
   }, [layoutType, nodeId, fetchListPage]);
 
-  const handleFolderCreated = React.useCallback(() => {
+  const handleFolderChanged = React.useCallback(() => {
     if (!nodeId) {
       return;
     }
@@ -175,7 +175,7 @@ export const FilesPage: React.FC = () => {
     void refreshNodeContent(nodeId);
   }, [nodeId, layoutType, fetchListPage, refreshNodeContent]);
 
-  const folderOps = useFolderOperations(nodeId, handleFolderCreated);
+  const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
   const fileOps = useFileOperations(() => {
     if (!nodeId) {

@@ -6,7 +6,7 @@ import { useRenameState } from "../../../shared/hooks/useRenameState";
 
 export const useFolderOperations = (
   currentNodeId: string | null,
-  onFolderCreated?: () => void,
+  onFolderChanged?: () => void,
 ) => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
@@ -35,7 +35,7 @@ export const useFolderOperations = (
       return;
     }
     await createFolder(parentId, newFolderName.trim());
-    onFolderCreated?.();
+    onFolderChanged?.();
     setIsCreatingFolder(false);
     setNewFolderName("");
     setNewFolderParentId(null);
@@ -80,6 +80,7 @@ export const useFolderOperations = (
 
       if (result.confirmed) {
         await deleteFolder(folderId, currentNodeId ?? undefined);
+        onFolderChanged?.();
       }
     } catch {
       // User cancelled
