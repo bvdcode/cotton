@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useDeferredValue, useEffect, useMemo } from "react";
 import { Alert, Box, Typography } from "@mui/material";
 import {
   FileListViewFactory,
@@ -102,13 +102,15 @@ export const FilesPage: React.FC = () => {
       ? listContent
       : content;
 
+  const deferredContent = useDeferredValue(effectiveContent);
+
   useFolderFileList({
     nodeId,
     layoutType,
     listContent,
   });
 
-  const { sortedFiles, tiles } = useContentTiles(effectiveContent ?? undefined);
+  const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
@@ -125,8 +127,8 @@ export const FilesPage: React.FC = () => {
   } = useMediaLightbox(sortedFiles);
 
   const stats = useMemo(
-    () => calculateFolderStats(effectiveContent?.nodes, effectiveContent?.files),
-    [effectiveContent?.files, effectiveContent?.nodes],
+    () => calculateFolderStats(deferredContent?.nodes, deferredContent?.files),
+    [deferredContent?.files, deferredContent?.nodes],
   );
 
   const handleGoUp = () => {
