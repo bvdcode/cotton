@@ -179,8 +179,8 @@ export const SearchPage: React.FC = () => {
     () =>
       buildFileOperations(rawFileOps, {
         onDownload: handleDownloadFile,
-        onClick: (fileId, fileName) => {
-          void handleFileClick(fileId, fileName);
+        onClick: (fileId, fileName, fileSizeBytes) => {
+          void handleFileClick(fileId, fileName, fileSizeBytes);
         },
         onMediaClick: handleMediaClick,
       }),
