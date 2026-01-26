@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, TextField } from "@mui/material";
+import { Box, TextField, Typography } from "@mui/material";
 import { Folder } from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
@@ -33,9 +33,25 @@ export const TilesView: React.FC<IFileListView> = ({
   onCancelNewFolder,
   folderNamePlaceholder,
   fileNamePlaceholder,
+  emptyStateText,
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
+
+  if (!isCreatingFolder && tiles.length === 0 && emptyStateText) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 160,
+        }}
+      >
+        <Typography color="text.secondary">{emptyStateText}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box
