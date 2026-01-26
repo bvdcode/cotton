@@ -10,10 +10,9 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 const languageDetectorOptions = {
-  order: ["localStorage", "navigator", "querystring", "cookie", "htmlTag"],
-  lookupLocalStorage: "ctn-i18nextLng",
+  order: ["querystring", "cookie", "navigator", "htmlTag"],
   lookupFromNavigatorLanguage: true,
-  caches: ["localStorage"],
+  caches: [],
 };
 
 i18n
