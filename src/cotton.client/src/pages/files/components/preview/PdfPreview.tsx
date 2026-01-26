@@ -2,12 +2,10 @@ import {
   Box,
   CircularProgress,
   Typography,
-  useMediaQuery,
 } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../../shared/api/filesApi";
-import { useTheme as useMuiTheme } from "@mui/material/styles";
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -24,8 +22,6 @@ const blobUrlCache = new Map<string, string>();
 
 export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
   const { t } = useTranslation(["files", "common"]);
-  const muiTheme = useMuiTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const cachedBlobUrl = blobUrlCache.get(fileId);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
   const [loading, setLoading] = useState(!cachedBlobUrl);
@@ -36,10 +32,12 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [rendering, setRendering] = useState(false);
   const renderContainerRef = useRef<HTMLDivElement | null>(null);
+  const [forcePdfJs, setForcePdfJs] = useState(false);
+  const shouldUsePdfJs = forcePdfJs;
 
   // Load PDF as blob on mount
   useEffect(() => {
-    if (blobUrl && !isMobile) return;
+    if (blobUrl && !shouldUsePdfJs) return;
     if (pdfBlob) return;
 
     let cancelled = false;
@@ -91,13 +89,13 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
     return () => {
       cancelled = true;
     };
-  }, [fileId, blobUrl, isMobile, pdfBlob, t]);
+  }, [fileId, blobUrl, pdfBlob, shouldUsePdfJs, t]);
 
   // Cleanup blob URLs when component unmounts (but keep in cache for re-opening)
   // Note: We don't revoke cached URLs to allow reopening without re-download
 
   useEffect(() => {
-    if (!isMobile || !pdfBlob) return;
+    if (!shouldUsePdfJs || !pdfBlob) return;
 
     let cancelled = false;
 
@@ -164,7 +162,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
     return () => {
       cancelled = true;
     };
-  }, [isMobile, pdfBlob, t]);
+  }, [pdfBlob, shouldUsePdfJs, t]);
 
   const handleLoad = () => {
     setLoading(false);
@@ -173,6 +171,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
   const handleError = () => {
     setLoading(false);
     setError(t("preview.errors.pdfDisplayFailed", { ns: "files" }));
+    setForcePdfJs(true);
   };
 
   return (
@@ -227,7 +226,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
           </Typography>
         </Box>
       )}
-      {!isMobile && blobUrl && (
+      {!shouldUsePdfJs && blobUrl && (
         <Box
           component="iframe"
           src={blobUrl}
@@ -242,7 +241,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
           }}
         />
       )}
-      {isMobile && !error && (
+      {shouldUsePdfJs && !error && (
         <Box
           ref={renderContainerRef}
           sx={{
