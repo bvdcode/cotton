@@ -20,6 +20,7 @@ import { useFilesData } from "./hooks/useFilesData";
 import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
+import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import {
   buildFolderOperations,
   buildFileOperations,
@@ -104,6 +105,12 @@ export const FilesPage: React.FC = () => {
     layoutType === InterfaceLayoutType.List
       ? (listContent ?? content)
       : content;
+
+  useFolderFileList({
+    nodeId,
+    layoutType,
+    listContent,
+  });
 
   const { sortedFiles, tiles } = useContentTiles(effectiveContent ?? undefined);
 
