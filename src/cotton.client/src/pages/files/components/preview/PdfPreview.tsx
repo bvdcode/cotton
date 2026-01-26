@@ -1,4 +1,8 @@
-import { Box, CircularProgress, Typography } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Typography,
+} from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../../shared/api/filesApi";
@@ -18,9 +22,6 @@ const blobUrlCache = new Map<string, string>();
 
 export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
   const { t } = useTranslation(["files", "common"]);
-  const isMobile =
-    typeof navigator !== "undefined" &&
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const cachedBlobUrl = blobUrlCache.get(fileId);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
   const [loading, setLoading] = useState(!cachedBlobUrl);
@@ -31,7 +32,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [rendering, setRendering] = useState(false);
   const renderContainerRef = useRef<HTMLDivElement | null>(null);
-  const [forcePdfJs, setForcePdfJs] = useState(isMobile);
+  const [forcePdfJs, setForcePdfJs] = useState(false);
   const shouldUsePdfJs = forcePdfJs;
 
   // Load PDF as blob on mount
@@ -169,7 +170,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
 
   const handleError = () => {
     setLoading(false);
-    setError(null);
+    setError(t("preview.errors.pdfDisplayFailed", { ns: "files" }));
     setForcePdfJs(true);
   };
 
@@ -181,7 +182,7 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        pt: 1,
+        py: 1,
       }}
     >
       {(loading || rendering) && (
@@ -248,13 +249,14 @@ export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
             height: "100%",
             overflow: "auto",
             px: 1,
+            pb: 2,
             display: loading || rendering ? "none" : "block",
             "& .pdf-page-canvas": {
               width: "100%",
               height: "auto",
               display: "block",
               borderRadius: 1,
-              mb: 1.5,
+              mb: 2,
             },
           }}
         />
