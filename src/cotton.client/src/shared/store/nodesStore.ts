@@ -6,6 +6,8 @@ type NodesState = {
   currentNode: NodeDto | null;
   ancestors: NodeDto[];
   contentByNodeId: Record<string, NodeContentDto | undefined>;
+  ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
+  rootNodeId: string | null;
 
   loading: boolean;
   error: string | null;
@@ -29,6 +31,8 @@ export const useNodesStore = create<NodesState>((set, get) => ({
   currentNode: null,
   ancestors: [],
   contentByNodeId: {},
+  ancestorsByNodeId: {},
+  rootNodeId: null,
   loading: false,
   error: null,
   lastUpdatedByNodeId: {},
@@ -38,13 +42,17 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     const loadChildren = options?.loadChildren ?? true;
     const state = get();
 
-    if (!force && state.currentNode && state.currentNode.parentId == null) {
-      if (!loadChildren || state.contentByNodeId[state.currentNode.id]) {
+    if (!force && state.rootNodeId) {
+      const hasCachedContent = state.contentByNodeId[state.rootNodeId];
+      if (!loadChildren || hasCachedContent) {
+        await get().loadNode(state.rootNodeId, { loadChildren });
         return state.currentNode;
       }
     }
+
     try {
       const root = await layoutsApi.resolve();
+      set({ rootNodeId: root.id });
       await get().loadNode(root.id, { loadChildren });
       return root;
     } catch (error) {
@@ -63,14 +71,31 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       set({ loading: true, error: null });
 
       try {
-        const [node, ancestors] = await Promise.all([
-          nodesApi.getNode(nodeId),
-          nodesApi.getAncestors(nodeId),
-        ]);
+        let node: NodeDto | null = null;
+        if (state.currentNode) {
+          const parentContent = state.contentByNodeId[state.currentNode.id];
+          node = parentContent?.nodes.find(n => n.id === nodeId) ?? null;
+        }
+        if (!node) {
+          node = await nodesApi.getNode(nodeId);
+        }
+        
+        let ancestors = state.ancestorsByNodeId[nodeId];
+        if (!ancestors) {
+          if (state.currentNode && node.parentId === state.currentNode.id) {
+            ancestors = [...state.ancestors, state.currentNode];
+          } else {
+            ancestors = await nodesApi.getAncestors(nodeId);
+          }
+        }
 
         set((prev) => ({
-          currentNode: node,
+          currentNode: node!,
           ancestors,
+          ancestorsByNodeId: {
+            ...prev.ancestorsByNodeId,
+            [nodeId]: ancestors,
+          },
           lastUpdatedByNodeId: {
             ...prev.lastUpdatedByNodeId,
             [nodeId]: Date.now(),
@@ -89,15 +114,33 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const [node, ancestors, content] = await Promise.all([
-        nodesApi.getNode(nodeId),
-        nodesApi.getAncestors(nodeId),
-        (await nodesApi.getChildren(nodeId)).content,
-      ]);
+      let node: NodeDto | null = null;
+      if (state.currentNode) {
+        const parentContent = state.contentByNodeId[state.currentNode.id];
+        node = parentContent?.nodes.find(n => n.id === nodeId) ?? null;
+      }
+      if (!node) {
+        node = await nodesApi.getNode(nodeId);
+      }
+      
+      let ancestors = state.ancestorsByNodeId[nodeId];
+      if (!ancestors) {
+        if (state.currentNode && node.parentId === state.currentNode.id) {
+          ancestors = [...state.ancestors, state.currentNode];
+        } else {
+          ancestors = await nodesApi.getAncestors(nodeId);
+        }
+      }
+      
+      const content = (await nodesApi.getChildren(nodeId)).content;
 
       set((prev) => ({
-        currentNode: node,
+        currentNode: node!,
         ancestors,
+        ancestorsByNodeId: {
+          ...prev.ancestorsByNodeId,
+          [nodeId]: ancestors,
+        },
         contentByNodeId: {
           ...prev.contentByNodeId,
           [nodeId]: content,
@@ -312,6 +355,8 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       currentNode: null,
       ancestors: [],
       contentByNodeId: {},
+      ancestorsByNodeId: {},
+      rootNodeId: null,
       loading: false,
       error: null,
       lastUpdatedByNodeId: {},
