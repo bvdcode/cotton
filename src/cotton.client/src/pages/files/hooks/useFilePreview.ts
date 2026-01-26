@@ -2,6 +2,8 @@ import { useState, useCallback } from "react";
 import { getFileTypeInfo } from "../utils/fileTypes";
 import type { FileType } from "../utils/fileTypes";
 
+const MAX_TEXT_PREVIEW_SIZE_BYTES = 512 * 1024; // 512 KB - Monaco/MDEditor freeze on larger files
+
 interface PreviewState {
   isOpen: boolean;
   fileId: string | null;
@@ -22,6 +24,11 @@ export const useFilePreview = () => {
   const openPreview = useCallback((fileId: string, fileName: string, fileSizeBytes?: number) => {
     const typeInfo = getFileTypeInfo(fileName);
     if (typeInfo.supportsInlineView) {
+      // Don't open preview for large text files - editors will freeze
+      if (typeInfo.type === 'text' && fileSizeBytes && fileSizeBytes > MAX_TEXT_PREVIEW_SIZE_BYTES) {
+        return false;
+      }
+      
       setPreviewState({
         isOpen: true,
         fileId,

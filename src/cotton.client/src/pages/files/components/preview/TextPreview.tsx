@@ -36,7 +36,7 @@ import { useEditorMode } from "./hooks/useEditorMode";
 import { useLanguageSelection } from "./hooks/useLanguageSelection";
 import { EditorMode } from "./editors/types";
 
-const MAX_PREVIEW_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_PREVIEW_SIZE_BYTES = 512 * 1024; // 512 KB - Monaco/MDEditor freeze on larger files
 
 interface TextPreviewProps {
   nodeFileId: Guid;
@@ -87,11 +87,13 @@ export function TextPreview({
         // Check file size before loading
         if (fileSizeBytes && fileSizeBytes > MAX_PREVIEW_SIZE_BYTES) {
           if (!cancelled) {
+            const sizeMB = fileSizeBytes / 1024 / 1024;
+            const maxMB = MAX_PREVIEW_SIZE_BYTES / 1024;
             setError(
               t("preview.errors.fileTooLarge", {
                 ns: "files",
-                size: `${Math.round(fileSizeBytes / 1024 / 1024)} MB`,
-                maxSize: `${MAX_PREVIEW_SIZE_BYTES / 1024 / 1024} MB`,
+                size: sizeMB >= 1 ? `${Math.round(sizeMB)} MB` : `${Math.round(fileSizeBytes / 1024)} KB`,
+                maxSize: `${maxMB} KB`,
               })
             );
             setLoading(false);
