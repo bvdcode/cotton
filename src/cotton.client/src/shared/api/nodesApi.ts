@@ -50,22 +50,45 @@ export const nodesApi = {
     nodeId: Guid,
     options?: { nodeType?: string; page?: number; pageSize?: number },
   ): Promise<NodeResponse> => {
+    const requestedPage = options?.page ?? 1;
+    const requestedPageSize = options?.pageSize ?? 1000000;
     const response = await httpClient.get<NodeContentDto>(
       `/layouts/nodes/${nodeId}/children`,
       {
         params: {
-          page: options?.page ?? 1,
-          pageSize: options?.pageSize ?? 1000000,
+          page: requestedPage,
+          pageSize: requestedPageSize,
           nodeType: options?.nodeType,
         },
       },
     );
     const headerValue = response.headers["x-total-count"];
     const parsed = Number.parseInt(String(headerValue ?? ""), 10);
-    const fallbackTotalCount =
+
+    const pageItemCount =
       (response.data.nodes?.length ?? 0) + (response.data.files?.length ?? 0);
-    const totalCount = Number.isFinite(parsed) ? parsed : fallbackTotalCount;
-    return { content: response.data, totalCount };
+
+    // If backend provides the total count header, trust it.
+    if (Number.isFinite(parsed)) {
+      return { content: response.data, totalCount: parsed };
+    }
+
+    // Backend didn't provide total count. For large (effectively unpaged) requests,
+    // fall back to the returned item count.
+    if (requestedPageSize >= 1000000) {
+      return { content: response.data, totalCount: pageItemCount };
+    }
+
+    // For paged requests without a total header, return an estimate that still
+    // enables DataGrid paging.
+    // - If the page is full, assume there may be at least one more item.
+    // - If not full, we reached the end: compute exact total up to this page.
+    const estimatedTotalCount =
+      pageItemCount >= requestedPageSize
+        ? requestedPage * requestedPageSize + 1
+        : (requestedPage - 1) * requestedPageSize + pageItemCount;
+
+    return { content: response.data, totalCount: estimatedTotalCount };
   },
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
