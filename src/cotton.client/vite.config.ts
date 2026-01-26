@@ -41,12 +41,24 @@ export default defineConfig(({ mode }) => {
           lang: "en-US",
           scope: "/",
           start_url: "/",
-          display: "fullscreen",
+          display: "standalone",
           background_color: "#2c2d2e",
           theme_color: "#c6ff00",
           screenshots: [
             {
               src: "/assets/images/screenshot1.jpg",
+              sizes: "720x1280",
+              type: "image/jpeg",
+              form_factor: "narrow",
+            },
+            {
+              src: "/assets/images/screenshot3.jpg",
+              sizes: "720x1280",
+              type: "image/jpeg",
+              form_factor: "narrow",
+            },
+            {
+              src: "/assets/images/screenshot5.jpg",
               sizes: "720x1280",
               type: "image/jpeg",
               form_factor: "narrow",
