@@ -37,3 +37,4 @@ msbuild.wrn
 *.sqlite-wal
 *.key
 data
+src/cotton.client/.github/instructions/main.instructions.md
