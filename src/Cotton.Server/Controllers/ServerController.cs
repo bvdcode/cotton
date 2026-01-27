@@ -16,6 +16,14 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Server)]
     public class ServerController(SettingsProvider _settings) : ControllerBase
     {
+        [Authorize(Roles = "Admin")]
+        [HttpPost("emergency-shutdown")]
+        public IActionResult EmergencyShutdown()
+        {
+            Environment.Exit(1);
+            return Ok();
+        }
+
         [HttpGet("info")]
         public IActionResult GetServerInfo()
         {
