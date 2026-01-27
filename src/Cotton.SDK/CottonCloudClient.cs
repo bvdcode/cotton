@@ -1,5 +1,9 @@
-﻿using System;
+﻿using Cotton.Shared;
+using Cotton.Shared.Models;
+using System;
 using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
 
 namespace Cotton.SDK
 {
@@ -18,6 +22,12 @@ namespace Cotton.SDK
         public void Dispose()
         {
             _http.Dispose();
+        }
+
+        public async Task<PublicServerInfo> GetServerInfoAsync()
+        {
+            return await _http.GetFromJsonAsync<PublicServerInfo>(Routes.V1.Server + "/info")
+                ?? throw new InvalidOperationException("Failed to retrieve server info.");
         }
     }
 }
