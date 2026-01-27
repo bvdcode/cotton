@@ -17,7 +17,7 @@ interface ServerSettingsRaw {
 
 export const settingsApi = {
   get: async (): Promise<ServerSettings> => {
-    const response = await httpClient.get<ServerSettingsRaw>("settings");
+    const response = await httpClient.get<ServerSettingsRaw>("server/settings");
 
     const supportedHashAlgorithm =
       response.data.supportedHashAlgorithm ??
@@ -33,6 +33,6 @@ export const settingsApi = {
   },
 
   saveSetupAnswers: async (answers: Record<string, unknown>): Promise<void> => {
-    await httpClient.post("settings", answers);
+    await httpClient.post("server/settings", answers);
   },
 };
