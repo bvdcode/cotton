@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
+using Cotton.Shared;
 using EasyExtensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
@@ -11,10 +12,11 @@ using Microsoft.AspNetCore.Mvc;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
+    [Route(Routes.V1.Users)]
     public class UserController(CottonDbContext _dbContext) : ControllerBase
     {
         [Authorize]
-        [HttpGet("/api/v1/users/me")]
+        [HttpGet("me")]
         public IActionResult GetCurrentUser()
         {
             var userId = User.GetUserId();
