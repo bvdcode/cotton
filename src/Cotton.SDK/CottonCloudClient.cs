@@ -9,13 +9,18 @@ namespace Cotton.SDK
 {
     public class CottonCloudClient : ICottonClient, IDisposable
     {
+        public const string Version = "1.0.0";
         private readonly HttpClient _http;
 
         public CottonCloudClient(string serverUrl)
         {
             _http = new HttpClient
             {
-                BaseAddress = new Uri(serverUrl)
+                BaseAddress = new Uri(serverUrl),
+                DefaultRequestHeaders =
+                {
+                    { "User-Agent", $"CottonSDK/{Version}" }
+                }
             };
         }
 

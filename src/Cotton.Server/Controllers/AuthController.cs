@@ -49,6 +49,7 @@ namespace Cotton.Server.Controllers
             var tokens = await _dbContext.RefreshTokens
                 .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
                 .ExecuteUpdateAsync(x => x.SetProperty(t => t.RevokedAt, t => DateTime.UtcNow));
+            // TODO: Refuse all access tokens for this sessionId
             return Ok();
         }
 
