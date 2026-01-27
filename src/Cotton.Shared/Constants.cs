@@ -1,6 +1,7 @@
-﻿using System;
-
-namespace Cotton.Shared
+﻿namespace Cotton.Shared
 {
-    public static class Constants { }
+    public static class Constants
+    {
+        public const string ProductName = "Cotton Cloud";
+    }
 }
