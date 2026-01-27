@@ -3,6 +3,7 @@
 
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Helpers;
+using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

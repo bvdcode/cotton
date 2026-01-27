@@ -3,6 +3,7 @@
 
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore.Infrastructure;

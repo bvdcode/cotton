@@ -5,6 +5,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Shared;
+using Cotton.Shared.Models;
 using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,12 +21,12 @@ namespace Cotton.Server.Controllers
         {
             string instanceIdHash = _settings.GetServerSettings().InstanceId.ToString().Sha256();
             string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
-            return Ok(new
+            return Ok(new PublicServerInfo()
             {
-                version,
-                instanceIdHash,
-                time = DateTime.UtcNow,
-                product = "Cotton Cloud",
+                Version = version,
+                CurrentTime = DateTime.UtcNow,
+                Product = Constants.ProductName,
+                InstanceIdHash = instanceIdHash,
             });
         }
 
