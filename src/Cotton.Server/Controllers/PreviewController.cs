@@ -1,4 +1,5 @@
 ﻿using Cotton.Server.Services;
+using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;
@@ -11,12 +12,13 @@ using Microsoft.Net.Http.Headers;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
+    [Route(Routes.V1.Previews)]
     public class PreviewController(
         IStreamCipher _crypto,
         IStoragePipeline _storage) : ControllerBase
     {
-        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashHex}")]
-        [HttpGet("/api/v1/preview/{encryptedFilePreviewHashHex}.webp")]
+        [HttpGet("{encryptedFilePreviewHashHex}")]
+        [HttpGet("{encryptedFilePreviewHashHex}.webp")]
         public async Task<IActionResult> GetFilePreview([FromRoute] string encryptedFilePreviewHashHex)
         {
             string? decryptedPreviewHash;

@@ -4,29 +4,33 @@
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Shared;
+using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Reflection;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
+    [Route(Routes.V1.Server)]
     public class ServerController(SettingsProvider _settings) : ControllerBase
     {
-        [HttpGet("/api/v1/server-info")]
+        [HttpGet("info")]
         public IActionResult GetServerInfo()
         {
+            string instanceIdHash = _settings.GetServerSettings().InstanceId.ToString().Sha256();
             string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
             return Ok(new
             {
                 version,
+                instanceIdHash,
                 time = DateTime.UtcNow,
                 product = "Cotton Cloud",
             });
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPost("/api/v1/settings")]
+        [HttpPost("settings")]
         public async Task<IActionResult> CreateSettings(ServerSettingsRequestDto request)
         {
             string? error = await _settings.ValidateServerSettingsAsync(request);
@@ -39,7 +43,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet("/api/v1/settings")]
+        [HttpGet("settings")]
         public async Task<IActionResult> GetSettings()
         {
             bool serverHasUsers = await _settings.ServerHasUsersAsync();
