@@ -14,6 +14,10 @@ namespace Cotton.SDK
 
         public CottonCloudClient(string serverUrl)
         {
+            if (!serverUrl.Trim().EndsWith('/'))
+            {
+                serverUrl += '/';
+            }
             _http = new HttpClient
             {
                 BaseAddress = new Uri(serverUrl),
