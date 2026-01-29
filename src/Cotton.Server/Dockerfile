@@ -24,7 +24,6 @@ ARG BUILD_VERSION=dev
 WORKDIR /src
 ENV APP_VERSION=$BUILD_VERSION
 COPY ["Cotton.Server/Cotton.Server.csproj", "Cotton.Server/"]
-COPY ["Cotton.Server/Cotton.WebDav.csproj", "Cotton.WebDav/"]
 COPY ["cotton.client/cotton.client.esproj", "cotton.client/"]
 COPY ["Cotton.Shared/Cotton.Shared.csproj", "Cotton.Shared/"]
 COPY ["Cotton.Storage/Cotton.Storage.csproj", "Cotton.Storage/"]

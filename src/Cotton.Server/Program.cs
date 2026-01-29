@@ -50,8 +50,7 @@ namespace Cotton.Server
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<ILayoutService, StorageLayoutService>()
                 .AddPbkdf2PasswordHashService()
-                .AddControllers()
-                .AddApplicationPart(typeof(WebDavController).Assembly).Services
+                .AddControllers().Services
                 .AddStreamCipher()
                 .AddJwt();
 
