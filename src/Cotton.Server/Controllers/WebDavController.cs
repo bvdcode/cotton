@@ -29,45 +29,44 @@ namespace Cotton.Server.Controllers
         }
 
         [AcceptVerbs("PROPFIND")]
-        public Task<IActionResult> HandlePropFindAsync(string? path)
+        public async Task HandlePropFindAsync(string? path)
         {
             _logger.LogInformation("Handled PROPFIND request for WebDAV, path: {path}, ip: {ip}",
                 path ?? string.Empty,
                 Request.GetRemoteAddress());
+
             // Нормализуем путь
             var cleanPath = (path ?? string.Empty).Trim('/');
 
-            // Depth пока игнорим, просто возвращаем базовый набор
+            // Базовый href. Для простоты оставим относительным как сейчас.
             var hrefBase = Url.Content("~/api/v1/webdav/") ?? "/api/v1/webdav/";
 
             string xml;
 
             if (string.IsNullOrEmpty(cleanPath))
             {
-                // PROPFIND на корень: показываем корень + один файл hello.txt
                 xml = BuildRootWithHelloResponse(hrefBase);
             }
             else if (string.Equals(cleanPath, "hello.txt", StringComparison.OrdinalIgnoreCase))
             {
-                // PROPFIND на сам файл
                 var href = hrefBase + "hello.txt";
                 xml = BuildSingleFileResponse(href, "hello.txt");
             }
             else
             {
-                // Ничего больше не знаем — 404
-                return Task.FromResult<IActionResult>(NotFound());
+                Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
             }
 
-            var result = new ContentResult
-            {
-                StatusCode = 207,
-                ContentType = "application/xml; charset=\"utf-8\"",
-                Content = xml
-            };
+            // *** Ключевой момент: руками пишем тело и Content-Length ***
+            var bytes = Encoding.UTF8.GetBytes(xml);
 
+            Response.StatusCode = 207; // Multi-Status
+            Response.ContentType = "application/xml; charset=\"utf-8\"";
+            Response.ContentLength = bytes.Length;
             AddDavHeaders();
-            return Task.FromResult<IActionResult>(result);
+
+            await Response.Body.WriteAsync(bytes);
         }
 
         [HttpGet]
