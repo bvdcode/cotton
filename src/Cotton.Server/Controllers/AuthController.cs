@@ -9,6 +9,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
+using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
@@ -29,6 +30,7 @@ using System.Security.Claims;
 namespace Cotton.Server.Controllers
 {
     [ApiController]
+    [Route(Routes.V1.Auth)]
     public class AuthController(
         IMediator _mediator,
         IStreamCipher _crypto,
@@ -42,7 +44,7 @@ namespace Cotton.Server.Controllers
         private const string CookieRefreshTokenKey = "refresh_token";
 
         [Authorize]
-        [HttpDelete("/api/v1/auth/sessions/{sessionId}")]
+        [HttpDelete("sessions/{sessionId}")]
         public async Task<IActionResult> RevokeSession([FromRoute] string sessionId)
         {
             var userId = User.GetUserId();
@@ -54,7 +56,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet("/api/v1/auth/sessions")]
+        [HttpGet("sessions")]
         public async Task<IActionResult> GetSessions()
         {
             var userId = User.GetUserId();
@@ -65,7 +67,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPost("/api/v1/auth/totp/confirm")]
+        [HttpPost("totp/confirm")]
         public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
@@ -99,7 +101,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPost("/api/v1/auth/totp/setup")]
+        [HttpPost("totp/setup")]
         public async Task<IActionResult> SetupTotp()
         {
             var userId = User.GetUserId();
@@ -123,7 +125,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet("/api/v1/auth/me")]
+        [HttpGet("me")]
         public async Task<IActionResult> Me()
         {
             var userId = User.GetUserId();
@@ -136,7 +138,7 @@ namespace Cotton.Server.Controllers
         }
 
         //[EnableRateLimiting("auth")]
-        [HttpPost("/api/v1/auth/login")]
+        [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequestDto request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
@@ -192,7 +194,7 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        [HttpPost("/api/v1/auth/refresh")]
+        [HttpPost("refresh")]
         public async Task<IActionResult> GetRefreshToken([FromQuery] string? refreshToken = null)
         {
             if (string.IsNullOrEmpty(refreshToken))
@@ -225,7 +227,7 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        [HttpPost("/api/v1/auth/logout")]
+        [HttpPost("logout")]
         public async Task<IActionResult> Logout([FromQuery] string? refreshToken = null)
         {
             if (string.IsNullOrEmpty(refreshToken))
