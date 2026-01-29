@@ -4,7 +4,7 @@
     {
         public static class V1
         {
-            public const string Base = "api/v1";
+            public const string Base = "/api/v1";
             public const string Auth = Base + "/auth";
             public const string Users = Base + "/users";
             public const string Files = Base + "/files";
