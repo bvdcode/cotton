@@ -29,44 +29,45 @@ namespace Cotton.Server.Controllers
         }
 
         [AcceptVerbs("PROPFIND")]
-        public async Task HandlePropFindAsync(string? path)
+        public Task<IActionResult> HandlePropFindAsync(string? path)
         {
             _logger.LogInformation("Handled PROPFIND request for WebDAV, path: {path}, ip: {ip}",
                 path ?? string.Empty,
                 Request.GetRemoteAddress());
-
             // Нормализуем путь
             var cleanPath = (path ?? string.Empty).Trim('/');
 
-            // Базовый href. Для простоты оставим относительным как сейчас.
+            // Depth пока игнорим, просто возвращаем базовый набор
             var hrefBase = Url.Content("~/api/v1/webdav/") ?? "/api/v1/webdav/";
 
             string xml;
 
             if (string.IsNullOrEmpty(cleanPath))
             {
+                // PROPFIND на корень: показываем корень + один файл hello.txt
                 xml = BuildRootWithHelloResponse(hrefBase);
             }
             else if (string.Equals(cleanPath, "hello.txt", StringComparison.OrdinalIgnoreCase))
             {
+                // PROPFIND на сам файл
                 var href = hrefBase + "hello.txt";
                 xml = BuildSingleFileResponse(href, "hello.txt");
             }
             else
             {
-                Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
+                // Ничего больше не знаем — 404
+                return Task.FromResult<IActionResult>(NotFound());
             }
 
-            // *** Ключевой момент: руками пишем тело и Content-Length ***
-            var bytes = Encoding.UTF8.GetBytes(xml);
+            var result = new ContentResult
+            {
+                StatusCode = 207,
+                ContentType = "application/xml; charset=\"utf-8\"",
+                Content = xml
+            };
 
-            Response.StatusCode = 207; // Multi-Status
-            Response.ContentType = "application/xml; charset=\"utf-8\"";
-            Response.ContentLength = bytes.Length;
             AddDavHeaders();
-
-            await Response.Body.WriteAsync(bytes);
+            return Task.FromResult<IActionResult>(result);
         }
 
         [HttpGet]
@@ -105,8 +106,6 @@ namespace Cotton.Server.Controllers
             AddDavHeaders();
             return Task.FromResult<IActionResult>(Ok());
         }
-
-
         private static string BuildRootWithHelloResponse(string hrefBase)
         {
             var now = DateTimeOffset.UtcNow;
@@ -119,32 +118,34 @@ namespace Cotton.Server.Controllers
                 Encoding = Encoding.UTF8
             };
 
-            using var writer = XmlWriter.Create(sb, settings);
+            using var stringWriter = new StringWriter(sb);
+            using (var writer = XmlWriter.Create(stringWriter, settings))
+            {
+                writer.WriteStartDocument();
+                writer.WriteStartElement("d", "multistatus", "DAV:");
 
-            writer.WriteStartDocument();
-            writer.WriteStartElement("d", "multistatus", "DAV:");
+                // root
+                WriteCollectionResponse(
+                    writer,
+                    href: EnsureTrailingSlash(hrefBase),
+                    displayName: "root",
+                    lastModified: now,
+                    etag: "\"root-etag\""
+                );
 
-            // 1) Корневая коллекция
-            WriteCollectionResponse(
-                writer,
-                href: EnsureTrailingSlash(hrefBase),
-                displayName: "root",
-                lastModified: now,
-                etag: "\"root-etag\""
-            );
+                // hello.txt
+                WriteFileResponse(
+                    writer,
+                    href: hrefBase + "hello.txt",
+                    displayName: "hello.txt",
+                    contentLength: "26",
+                    lastModified: now,
+                    etag: "\"hello-etag\""
+                );
 
-            // 2) Файл hello.txt
-            WriteFileResponse(
-                writer,
-                href: hrefBase + "hello.txt",
-                displayName: "hello.txt",
-                contentLength: "26", // длина строки "Hello from Cotton WebDAV!\n"
-                lastModified: now,
-                etag: "\"hello-etag\""
-            );
-
-            writer.WriteEndElement(); // multistatus
-            writer.WriteEndDocument();
+                writer.WriteEndElement(); // multistatus
+                writer.WriteEndDocument();
+            }
 
             return sb.ToString();
         }
