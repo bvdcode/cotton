@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using EasyExtensions.AspNetCore.Extensions;
+using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Xml;
 
-namespace Cotton.WebDav
+namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route("api/v1/webdav/{**path}")]
-    public class WebDavController : ControllerBase
+    public class WebDavController(ILogger<WebDavController> _logger) : ControllerBase
     {
         // потом сюда воткнём резолвер путей/хранилище через DI
         // private readonly IWebDavPathResolver _resolver;
@@ -22,15 +23,17 @@ namespace Cotton.WebDav
         [HttpOptions]
         public IActionResult HandleOptions()
         {
-            Response.Headers["DAV"] = "1,2";
-            Response.Headers["MS-Author-Via"] = "DAV";
-            Response.Headers["Allow"] = "OPTIONS, PROPFIND, GET, HEAD";
+            AddDavHeaders();
+            _logger.LogInformation("Handled OPTIONS request for WebDAV, ip: {ip}", Request.GetRemoteAddress());
             return Ok();
         }
 
         [AcceptVerbs("PROPFIND")]
         public Task<IActionResult> HandlePropFindAsync(string? path)
         {
+            _logger.LogInformation("Handled PROPFIND request for WebDAV, path: {path}, ip: {ip}",
+                path ?? string.Empty,
+                Request.GetRemoteAddress());
             // Нормализуем путь
             var cleanPath = (path ?? string.Empty).Trim('/');
 
@@ -63,18 +66,23 @@ namespace Cotton.WebDav
                 Content = xml
             };
 
+            AddDavHeaders();
             return Task.FromResult<IActionResult>(result);
         }
 
         [HttpGet]
         public Task<IActionResult> HandleGetAsync(string? path)
         {
+            _logger.LogInformation("Handled GET request for WebDAV, path: {path}, ip: {ip}",
+                path ?? string.Empty,
+                Request.GetRemoteAddress());
             var cleanPath = (path ?? string.Empty).Trim('/');
             if (!string.Equals(cleanPath, "hello.txt", StringComparison.OrdinalIgnoreCase))
             {
                 return Task.FromResult<IActionResult>(NotFound());
             }
             const string content = "Hello from Cotton WebDAV!\n";
+            AddDavHeaders();
             return Task.FromResult<IActionResult>(
                 Content(content, "text/plain", Encoding.UTF8)
             );
@@ -83,6 +91,9 @@ namespace Cotton.WebDav
         [HttpHead]
         public Task<IActionResult> HandleHeadAsync(string? path)
         {
+            _logger.LogInformation("Handled HEAD request for WebDAV, path: {path}, ip: {ip}",
+                path ?? string.Empty,
+                Request.GetRemoteAddress());
             var cleanPath = (path ?? string.Empty).Trim('/');
             if (!string.Equals(cleanPath, "hello.txt", StringComparison.OrdinalIgnoreCase))
             {
@@ -92,6 +103,7 @@ namespace Cotton.WebDav
             var bytes = Encoding.UTF8.GetByteCount(content);
             Response.ContentType = "text/plain; charset=utf-8";
             Response.ContentLength = bytes;
+            AddDavHeaders();
             return Task.FromResult<IActionResult>(Ok());
         }
 
@@ -230,6 +242,14 @@ namespace Cotton.WebDav
 
             writer.WriteEndElement(); // response
         }
+
+        private void AddDavHeaders()
+        {
+            Response.Headers["DAV"] = "1,2";
+            Response.Headers["MS-Author-Via"] = "DAV";
+            Response.Headers.Allow = "OPTIONS, PROPFIND, GET, HEAD";
+        }
+
 
         private static string EnsureTrailingSlash(string href) =>
             href.EndsWith('/') ? href : href + "/";
