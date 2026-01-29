@@ -27,9 +27,10 @@
 		</PackageReference>
 		<PackageReference Include="Mapster" Version="7.4.0" />
 		<PackageReference Include="Otp.NET" Version="1.4.1" />
-		<ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
+		<ProjectReference Include="..\Cotton.WebDav\Cotton.WebDav.csproj" />
 		<ProjectReference Include="..\Cotton.Storage\Cotton.Storage.csproj" />
 		<ProjectReference Include="..\Cotton.Topology\Cotton.Topology.csproj" />
+		<ProjectReference Include="..\Cotton.Previews\Cotton.Previews.csproj" />
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
 		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
