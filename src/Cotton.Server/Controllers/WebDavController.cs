@@ -162,22 +162,24 @@ namespace Cotton.Server.Controllers
                 Encoding = Encoding.UTF8
             };
 
-            using var writer = XmlWriter.Create(sb, settings);
+            using var stringWriter = new StringWriter(sb);
+            using (var writer = XmlWriter.Create(stringWriter, settings))
+            {
+                writer.WriteStartDocument();
+                writer.WriteStartElement("d", "multistatus", "DAV:");
 
-            writer.WriteStartDocument();
-            writer.WriteStartElement("d", "multistatus", "DAV:");
+                WriteFileResponse(
+                    writer,
+                    href: href,
+                    displayName: displayName,
+                    contentLength: "26",
+                    lastModified: now,
+                    etag: "\"hello-etag\""
+                );
 
-            WriteFileResponse(
-                writer,
-                href: href,
-                displayName: displayName,
-                contentLength: "26",
-                lastModified: now,
-                etag: "\"hello-etag\""
-            );
-
-            writer.WriteEndElement(); // multistatus
-            writer.WriteEndDocument();
+                writer.WriteEndElement(); // multistatus
+                writer.WriteEndDocument();
+            }
 
             return sb.ToString();
         }
