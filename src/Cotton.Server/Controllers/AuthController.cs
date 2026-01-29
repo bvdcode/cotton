@@ -280,7 +280,8 @@ namespace Cotton.Server.Controllers
                 {
                     Role = UserRole.User,
                     Username = request.Username.Trim(),
-                    PasswordPhc = _hasher.Hash(request.Password)
+                    PasswordPhc = _hasher.Hash(request.Password),
+                    WebDavTokenPhc = _hasher.Hash(request.Password),
                 };
                 await _dbContext.Users.AddAsync(guest);
                 await _dbContext.SaveChangesAsync();
@@ -304,7 +305,8 @@ namespace Cotton.Server.Controllers
             {
                 Role = UserRole.Admin,
                 Username = request.Username.Trim(),
-                PasswordPhc = _hasher.Hash(request.Password)
+                PasswordPhc = _hasher.Hash(request.Password),
+                WebDavTokenPhc = _hasher.Hash(request.Password),
             };
             await _dbContext.Users.AddAsync(user);
             await _dbContext.SaveChangesAsync();
