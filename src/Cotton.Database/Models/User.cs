@@ -16,7 +16,10 @@ namespace Cotton.Database.Models
         public string Username { get; set; } = null!;
 
         [Column("password_phc")]
-        public string? PasswordPhc { get; set; }
+        public string PasswordPhc { get; set; } = null!;
+
+        [Column("webdav_token_phc")]
+        public string WebDavTokenPhc { get; set; } = null!;
 
         [Column("role")]
         public UserRole Role { get; set; }
