@@ -13,6 +13,7 @@ using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology;
 using Cotton.Topology.Abstractions;
+using Cotton.WebDav;
 using EasyExtensions.AspNetCore.Authorization.Extensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
@@ -49,7 +50,8 @@ namespace Cotton.Server
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<ILayoutService, StorageLayoutService>()
                 .AddPbkdf2PasswordHashService()
-                .AddControllers().Services
+                .AddControllers()
+                .AddApplicationPart(typeof(WebDavController).Assembly).Services
                 .AddStreamCipher()
                 .AddJwt();
 
