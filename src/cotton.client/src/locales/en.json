@@ -124,6 +124,21 @@
       "revokeConfirmDescription": "Are you sure you want to end this session? This will sign out the device.",
       "revokeConfirmButton": "End session",
       "revokeCancelButton": "Cancel"
+    },
+    "webdav": {
+      "title": "WebDAV Access",
+      "description": "Generate a one-time token for WebDAV access. This token can only be viewed once and will be replaced if you generate a new one.",
+      "confirmTitle": "Generate WebDAV token?",
+      "confirmDescription": "This will generate a new token and invalidate any previous one. The token will only be shown once.",
+      "confirmButton": "Generate",
+      "cancelButton": "Cancel",
+      "generateButton": "Generate token",
+      "generating": "Generating...",
+      "tokenWarning": "Copy this token now. It will not be shown again.",
+      "copyToken": "Copy token",
+      "errors": {
+        "failed": "Failed to generate WebDAV token."
+      }
     }
   },
   "setup": {
