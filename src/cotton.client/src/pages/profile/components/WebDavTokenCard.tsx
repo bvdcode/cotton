@@ -11,9 +11,14 @@ import {
   DialogActions,
   IconButton,
   Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Divider,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { Key } from "@mui/icons-material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { confirm } from "material-ui-confirm";
@@ -60,10 +65,29 @@ export const WebDavTokenCard = () => {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const webDavUrl = `${window.location.origin}/api/v1/webdav/`;
+  const endsWithSlash = window.location.origin.endsWith("/");
+  const webDavUrl = `${window.location.origin}${endsWithSlash ? "" : "/"}api/v1/webdav/`;
   const username = user?.username ?? "";
-  // Example commands (use generated token as password when available)
-  const windowsCommand = `net use Z: "${webDavUrl}/" /user:${username} ${token ?? t("webdav.placeholderPassword")} /persistent:yes`;
+  const tokenOrPlaceholder = token ?? t("webdav.placeholderPassword");
+
+  const examples = [
+    {
+      id: "windows",
+      command: `net use Z: "${webDavUrl}" /user:${username} ${tokenOrPlaceholder} /persistent:yes`,
+    },
+    {
+      id: "powershell",
+      command: `cmd /c net use Z: "${webDavUrl}" /user:${username} "${tokenOrPlaceholder}" /persistent:yes`,
+    },
+    {
+      id: "mac",
+      command: `mount_webdav "${webDavUrl}" /Volumes/Cotton -i`,
+    },
+    {
+      id: "linux",
+      command: `mkdir -p /mnt/cotton && mount -t davfs "${webDavUrl}" /mnt/cotton`,
+    },
+  ];
   const handleGenerateToken = () => {
     confirm({
       title: t("webdav.confirmTitle"),
@@ -109,7 +133,6 @@ export const WebDavTokenCard = () => {
             {t("webdav.description")}
           </Typography>
 
-          {/* Visible connection info — available without generating a token */}
           <Stack spacing={1} sx={{ mt: 1 }}>
             <Box display="flex" justifyContent="space-between">
               <ReadonlyField
@@ -127,10 +150,7 @@ export const WebDavTokenCard = () => {
               />
             </Box>
             <Typography variant="caption" color="text.secondary">
-              {t(
-                "webdav.cardHelp",
-                "Use these credentials to connect via a WebDAV client; generate a token to get a password shown once.",
-              )}
+              {t("webdav.cardHelp")}
             </Typography>
           </Stack>
 
@@ -143,26 +163,12 @@ export const WebDavTokenCard = () => {
           {token ? (
             <Stack spacing={1}>
               <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
-              <Box
-                sx={{
-                  p: 2,
-                  bgcolor: "action.hover",
-                  borderRadius: 1,
-                  fontFamily: "monospace",
-                  fontSize: "0.875rem",
-                  wordBreak: "break-all",
-                  userSelect: "all",
-                }}
-              >
-                {token}
-              </Box>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => handleCopy(token)}
-              >
-                {t("webdav.copyToken")}
-              </Button>
+              <ReadonlyField
+                label={t("webdav.tokenLabel")}
+                value={token}
+                tooltip={t("webdav.copyToken")}
+                onCopy={handleCopy}
+              />
             </Stack>
           ) : (
             <Button
@@ -174,6 +180,76 @@ export const WebDavTokenCard = () => {
               {loading ? t("webdav.generating") : t("webdav.generateButton")}
             </Button>
           )}
+
+          <Accordion
+            disableGutters
+            sx={{
+              borderRadius: 1,
+              overflow: "hidden",
+              bgcolor: "background.default",
+            }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{
+                px: 2,
+                py: 1,
+                minHeight: 48,
+                "& .MuiAccordionSummary-content": {
+                  margin: 0,
+                },
+              }}
+            >
+              <Typography variant="body2" fontWeight={500}>
+                {t("webdav.examples.title")}
+              </Typography>
+            </AccordionSummary>
+
+            <AccordionDetails sx={{ px: 2, pb: 2 }}>
+              <Stack spacing={0} divider={<Divider />}>
+                {examples.map((example) => (
+                  <Stack key={example.id} spacing={0.5} sx={{ py: 1.5 }}>
+                    <Typography variant="body2" fontWeight={600}>
+                      {t(`webdav.examples.${example.id}.title`)}
+                    </Typography>
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        bgcolor: "action.hover",
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          flex: 1,
+                          fontFamily: "monospace",
+                          fontSize: "0.8rem",
+                          wordBreak: "break-all",
+                        }}
+                      >
+                        {example.command}
+                      </Box>
+                      <Tooltip title={t("webdav.examples.copy")}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleCopy(example.command)}
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {t(`webdav.examples.${example.id}.caption`)}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
         </Stack>
       </Paper>
 
@@ -189,200 +265,28 @@ export const WebDavTokenCard = () => {
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Stack>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 0.5 }}
-              >
-                {t("webdav.usernameLabel")}
-              </Typography>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Box sx={{ fontFamily: "monospace" }}>{username}</Box>
-                <Tooltip title={t("webdav.copyUsername") as string}>
-                  <IconButton size="small" onClick={() => handleCopy(username)}>
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            </Stack>
+            <ReadonlyField
+              label={t("webdav.usernameLabel")}
+              value={username}
+              tooltip={t("webdav.copyUsername")}
+              onCopy={handleCopy}
+            />
 
-            <Stack>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 0.5 }}
-              >
-                {t("webdav.connectUrlLabel")}
-              </Typography>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
-                  {webDavUrl}
-                </Box>
-                <Tooltip title={t("webdav.copyUrl") as string}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopy(webDavUrl)}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            </Stack>
+            <ReadonlyField
+              label={t("webdav.connectUrlLabel")}
+              value={webDavUrl}
+              tooltip={t("webdav.copyUrl")}
+              onCopy={handleCopy}
+            />
 
-            <Stack spacing={1}>
-              <Stack>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 0.5 }}
-                >
-                  {t("webdav.tokenLabel")}
-                </Typography>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
-                    {token}
-                  </Box>
-                  <Tooltip title={t("webdav.copyToken") as string}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleCopy(token ?? "")}
-                    >
-                      <ContentCopyIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </Stack>
+            <ReadonlyField
+              label={t("webdav.tokenLabel")}
+              value={token ?? ""}
+              tooltip={t("webdav.copyToken")}
+              onCopy={handleCopy}
+            />
 
-              {/* Examples: Windows / PowerShell / macOS / Linux */}
-              <Box>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  {t("webdav.examples.title")}
-                </Typography>
-
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                    gap: 2,
-                  }}
-                >
-                  {/* Windows (cmd) */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1,
-                      bgcolor: "background.default",
-                      p: 1,
-                      borderRadius: 1,
-                      border: (theme) => `1px solid ${theme.palette.divider}`,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {t("webdav.examples.windows.title")}
-                    </Typography>
-                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-windows-cmd">
-                      {windowsCommand}
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                      <Button size="small" variant="outlined" onClick={() => handleCopy(windowsCommand)} startIcon={<ContentCopyIcon fontSize="small" />}>
-                        {t("webdav.examples.windows.copy")}
-                      </Button>
-                      <Typography variant="caption" color="text.secondary">
-                        {t("webdav.examples.windows.caption")}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* PowerShell (escaped) */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1,
-                      bgcolor: "background.default",
-                      p: 1,
-                      borderRadius: 1,
-                      border: (theme) => `1px solid ${theme.palette.divider}`,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {t("webdav.examples.powershell.title")}
-                    </Typography>
-                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-powershell-cmd">
-                      {`cmd /c net use Z: "${webDavUrl}/" /user:${username} "${token ?? t('webdav.placeholderPassword')}" /persistent:yes`}
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                      <Button size="small" variant="outlined" onClick={() => handleCopy(`cmd /c net use Z: "${webDavUrl}/" /user:${username} "${token ?? t('webdav.placeholderPassword')}" /persistent:yes`)} startIcon={<ContentCopyIcon fontSize="small" />}>
-                        {t("webdav.examples.powershell.copy")}
-                      </Button>
-                      <Typography variant="caption" color="text.secondary">
-                        {t("webdav.examples.powershell.caption")}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* macOS */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1,
-                      bgcolor: "background.default",
-                      p: 1,
-                      borderRadius: 1,
-                      border: (theme) => `1px solid ${theme.palette.divider}`,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {t("webdav.examples.mac.title")}
-                    </Typography>
-                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-mac-cmd">
-                      {`mount_webdav "${webDavUrl}/" /Volumes/Cotton -i`}
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                      <Button size="small" variant="outlined" onClick={() => handleCopy(`mount_webdav "${webDavUrl}/" /Volumes/Cotton -i`)} startIcon={<ContentCopyIcon fontSize="small" />}>
-                        {t("webdav.examples.mac.copy")}
-                      </Button>
-                      <Typography variant="caption" color="text.secondary">
-                        {t("webdav.examples.mac.caption")}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* Linux (davfs2 / cadaver) */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1,
-                      bgcolor: "background.default",
-                      p: 1,
-                      borderRadius: 1,
-                      border: (theme) => `1px solid ${theme.palette.divider}`,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {t("webdav.examples.linux.title")}
-                    </Typography>
-                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-linux-cmd">
-                      {`# davfs2\nmkdir -p /mnt/cotton && sudo mount -t davfs "${webDavUrl}/" /mnt/cotton`}
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                      <Button size="small" variant="outlined" onClick={() => handleCopy(`mkdir -p /mnt/cotton && sudo mount -t davfs "${webDavUrl}/" /mnt/cotton`)} startIcon={<ContentCopyIcon fontSize="small" />}>
-                        {t("webdav.examples.linux.copy")}
-                      </Button>
-                      <Typography variant="caption" color="text.secondary">
-                        {t("webdav.examples.linux.caption")}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-
-              <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
-            </Stack>
+            <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
