@@ -5,10 +5,6 @@ import {
   Stack,
   Typography,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   IconButton,
   Tooltip,
   Accordion,
@@ -63,7 +59,6 @@ export const WebDavTokenCard = () => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const endsWithSlash = window.location.origin.endsWith("/");
   const webDavUrl = `${window.location.origin}${endsWithSlash ? "" : "/"}api/v1/webdav/`;
@@ -101,7 +96,6 @@ export const WebDavTokenCard = () => {
           setError(null);
           const newToken = await authApi.getWebDavToken();
           setToken(newToken);
-          setDialogOpen(true);
         } catch (err) {
           setError(
             err instanceof Error ? err.message : t("webdav.errors.failed"),
@@ -149,6 +143,14 @@ export const WebDavTokenCard = () => {
                 onCopy={handleCopy}
               />
             </Box>
+            {token && (
+              <ReadonlyField
+                label={t("webdav.tokenLabel")}
+                value={token}
+                tooltip={t("webdav.copyToken")}
+                onCopy={handleCopy}
+              />
+            )}
             <Typography variant="caption" color="text.secondary">
               {t("webdav.cardHelp")}
             </Typography>
@@ -163,12 +165,6 @@ export const WebDavTokenCard = () => {
           {token ? (
             <Stack spacing={1}>
               <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
-              <ReadonlyField
-                label={t("webdav.tokenLabel")}
-                value={token}
-                tooltip={t("webdav.copyToken")}
-                onCopy={handleCopy}
-              />
             </Stack>
           ) : (
             <Button
@@ -252,49 +248,6 @@ export const WebDavTokenCard = () => {
           </Accordion>
         </Stack>
       </Paper>
-
-      <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        fullWidth
-        maxWidth="sm"
-        aria-labelledby="webdav-token-dialog"
-      >
-        <DialogTitle id="webdav-token-dialog">
-          {t("webdav.modalTitle")}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <ReadonlyField
-              label={t("webdav.usernameLabel")}
-              value={username}
-              tooltip={t("webdav.copyUsername")}
-              onCopy={handleCopy}
-            />
-
-            <ReadonlyField
-              label={t("webdav.connectUrlLabel")}
-              value={webDavUrl}
-              tooltip={t("webdav.copyUrl")}
-              onCopy={handleCopy}
-            />
-
-            <ReadonlyField
-              label={t("webdav.tokenLabel")}
-              value={token ?? ""}
-              tooltip={t("webdav.copyToken")}
-              onCopy={handleCopy}
-            />
-
-            <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>
-            {t("webdav.closeButton")}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };
