@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
 import { SessionItem } from "./SessionItem";
 import { confirm } from "material-ui-confirm";
+import { Key } from "@mui/icons-material";
 
 export const SessionsCard = () => {
   const { t } = useTranslation("profile");
@@ -99,6 +100,7 @@ export const SessionsCard = () => {
           sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2 }}
         >
           <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Key color="primary" />
             <Typography variant="h6" fontWeight={600} noWrap>
               {t("sessions.title")}
             </Typography>
