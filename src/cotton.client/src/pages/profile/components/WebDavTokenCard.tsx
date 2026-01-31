@@ -13,7 +13,7 @@ import {
   Divider,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { Key } from "@mui/icons-material";
+import { Folder, Key } from "@mui/icons-material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -117,7 +117,7 @@ export const WebDavTokenCard = () => {
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack spacing={2}>
           <Stack direction="row" spacing={1} alignItems="center">
-            <Key color="primary" />
+            <Folder color="primary" />
             <Typography variant="h6" fontWeight={600}>
               {t("webdav.title")}
             </Typography>
@@ -185,17 +185,7 @@ export const WebDavTokenCard = () => {
               bgcolor: "background.default",
             }}
           >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              sx={{
-                px: 2,
-                py: 1,
-                minHeight: 48,
-                "& .MuiAccordionSummary-content": {
-                  margin: 0,
-                },
-              }}
-            >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="body2" fontWeight={500}>
                 {t("webdav.examples.title")}
               </Typography>
