@@ -72,13 +72,10 @@ export const SessionsCard = () => {
   return (
     <Accordion
       disableGutters
-      sx={(theme) => ({
-        bgcolor: "background.paper",
-        borderRadius: 2,
-        boxShadow: theme.shadows[1],
-        border: `1px solid ${theme.palette.divider}`,
+      sx={{
+        borderRadius: 1,
         overflow: "hidden",
-      })}
+      }}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
