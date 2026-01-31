@@ -144,6 +144,30 @@
       "copyUsername": "Copy username",
       "tokenWarning": "Copy this token now. It will not be shown again.",
       "cardHelp": "Use these values to connect with a WebDAV client. Generate a token to obtain a one-time password.",
+      "examples": {
+        "title": "Examples",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Copy command",
+          "caption": "Run in an elevated Command Prompt or use mapped drive in Explorer."
+        },
+        "powershell": {
+          "title": "Windows (PowerShell escape)",
+          "copy": "Copy command",
+          "caption": "Use when running from PowerShell; the command is escaped for convenience."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Copy command",
+          "caption": "Mount via Finder & Terminal (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Copy command",
+          "caption": "Use davfs2 or cadaver to mount the WebDAV endpoint."
+        }
+      },
+      "placeholderPassword": "<password>",
       "errors": {
         "failed": "Failed to generate WebDAV token."
       }

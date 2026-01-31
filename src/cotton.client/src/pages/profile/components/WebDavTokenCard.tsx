@@ -62,7 +62,8 @@ export const WebDavTokenCard = () => {
 
   const webDavUrl = `${window.location.origin}/api/v1/webdav/`;
   const username = user?.username ?? "";
-
+  // Example commands (use generated token as password when available)
+  const windowsCommand = `net use Z: "${webDavUrl}/" /user:${username} ${token ?? t("webdav.placeholderPassword")} /persistent:yes`;
   const handleGenerateToken = () => {
     confirm({
       title: t("webdav.confirmTitle"),
@@ -229,30 +230,159 @@ export const WebDavTokenCard = () => {
               </Stack>
             </Stack>
 
-            <Stack>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 0.5 }}
-              >
-                {t("webdav.tokenLabel")}
-              </Typography>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
-                  {token}
-                </Box>
-                <Tooltip title={t("webdav.copyToken") as string}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopy(token ?? "")}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+            <Stack spacing={1}>
+              <Stack>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 0.5 }}
+                >
+                  {t("webdav.tokenLabel")}
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                    {token}
+                  </Box>
+                  <Tooltip title={t("webdav.copyToken") as string}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleCopy(token ?? "")}
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
               </Stack>
-            </Stack>
 
-            <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
+              {/* Examples: Windows / PowerShell / macOS / Linux */}
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  {t("webdav.examples.title")}
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                    gap: 2,
+                  }}
+                >
+                  {/* Windows (cmd) */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                      bgcolor: "background.default",
+                      p: 1,
+                      borderRadius: 1,
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {t("webdav.examples.windows.title")}
+                    </Typography>
+                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-windows-cmd">
+                      {windowsCommand}
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                      <Button size="small" variant="outlined" onClick={() => handleCopy(windowsCommand)} startIcon={<ContentCopyIcon fontSize="small" />}>
+                        {t("webdav.examples.windows.copy")}
+                      </Button>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("webdav.examples.windows.caption")}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* PowerShell (escaped) */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                      bgcolor: "background.default",
+                      p: 1,
+                      borderRadius: 1,
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {t("webdav.examples.powershell.title")}
+                    </Typography>
+                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-powershell-cmd">
+                      {`cmd /c net use Z: "${webDavUrl}/" /user:${username} "${token ?? t('webdav.placeholderPassword')}" /persistent:yes`}
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                      <Button size="small" variant="outlined" onClick={() => handleCopy(`cmd /c net use Z: "${webDavUrl}/" /user:${username} "${token ?? t('webdav.placeholderPassword')}" /persistent:yes`)} startIcon={<ContentCopyIcon fontSize="small" />}>
+                        {t("webdav.examples.powershell.copy")}
+                      </Button>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("webdav.examples.powershell.caption")}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* macOS */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                      bgcolor: "background.default",
+                      p: 1,
+                      borderRadius: 1,
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {t("webdav.examples.mac.title")}
+                    </Typography>
+                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-mac-cmd">
+                      {`mount_webdav "${webDavUrl}/" /Volumes/Cotton -i`}
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                      <Button size="small" variant="outlined" onClick={() => handleCopy(`mount_webdav "${webDavUrl}/" /Volumes/Cotton -i`)} startIcon={<ContentCopyIcon fontSize="small" />}>
+                        {t("webdav.examples.mac.copy")}
+                      </Button>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("webdav.examples.mac.caption")}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Linux (davfs2 / cadaver) */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                      bgcolor: "background.default",
+                      p: 1,
+                      borderRadius: 1,
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {t("webdav.examples.linux.title")}
+                    </Typography>
+                    <Box sx={{ fontFamily: "monospace", wordBreak: "break-all", p: 1 }} data-testid="webdav-linux-cmd">
+                      {`# davfs2\nmkdir -p /mnt/cotton && sudo mount -t davfs "${webDavUrl}/" /mnt/cotton`}
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                      <Button size="small" variant="outlined" onClick={() => handleCopy(`mkdir -p /mnt/cotton && sudo mount -t davfs "${webDavUrl}/" /mnt/cotton`)} startIcon={<ContentCopyIcon fontSize="small" />}>
+                        {t("webdav.examples.linux.copy")}
+                      </Button>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("webdav.examples.linux.caption")}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
+            </Stack>
           </Stack>
         </DialogContent>
         <DialogActions>

@@ -162,6 +162,30 @@
       "copyUsername": "Скопировать имя",
       "tokenWarning": "Скопируйте этот токен сейчас. Он больше не будет показан.",
       "cardHelp": "Используйте эти данные для подключения через WebDAV‑клиент. Сгенерируйте токен, чтобы получить одноразовый пароль.",
+      "examples": {
+        "title": "Примеры",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Копировать команду",
+          "caption": "Запустите в командной строке с правами администратора или подключите сетевой диск через Проводник."
+        },
+        "powershell": {
+          "title": "Windows (PowerShell escape)",
+          "copy": "Копировать команду",
+          "caption": "Используйте в PowerShell — команда экранирована для удобства."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Копировать команду",
+          "caption": "Подключение через Finder или Terminal (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Копировать команду",
+          "caption": "Используйте davfs2 или cadaver для монтирования WebDAV."
+        }
+      },
+      "placeholderPassword": "<пароль>",
       "errors": {
         "failed": "Не удалось сгенерировать токен WebDAV."
       }
