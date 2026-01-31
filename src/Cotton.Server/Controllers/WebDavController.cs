@@ -1,257 +1,352 @@
-﻿using Cotton.Server.Auth;
-using Cotton.Topology.Abstractions;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov <https://belov.us>
+
+using Cotton.Server.Auth;
+using Cotton.Server.Handlers.WebDav;
+using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Text;
-using System.Xml;
+using Microsoft.Net.Http.Headers;
 
-namespace Cotton.Server.Controllers
+namespace Cotton.Server.Controllers;
+
+/// <summary>
+/// WebDAV controller for file management via WebDAV protocol.
+/// Supports: OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY
+/// </summary>
+[ApiController]
+[Route("api/v1/webdav/{**path}")]
+public class WebDavController(
+    IMediator _mediator,
+    ILogger<WebDavController> _logger) : ControllerBase
 {
-    [ApiController]
-    [Route("api/v1/webdav/{**path}")]
-    public class WebDavController(
-        ILayoutService _layouts,
-        ILogger<WebDavController> _logger) : ControllerBase
+    private const string WebDavRoute = "/api/v1/webdav/";
+
+    [HttpOptions]
+    [AllowAnonymous]
+    public IActionResult HandleOptions()
     {
-        [HttpOptions]
-        [AllowAnonymous]
-        public IActionResult HandleOptions()
+        AddDavHeaders();
+        _logger.LogDebug("WebDAV OPTIONS, ip: {Ip}", Request.GetRemoteAddress());
+        return Ok();
+    }
+
+    [AcceptVerbs("PROPFIND")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandlePropFindAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        var depth = GetDepthHeader();
+        var hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
+
+        _logger.LogDebug("WebDAV PROPFIND: {Path}, depth: {Depth}, user: {UserId}, ip: {Ip}",
+            path ?? "/", depth, userId, Request.GetRemoteAddress());
+
+        var query = new WebDavPropFindQuery(userId, path ?? string.Empty, hrefBase, depth);
+        var result = await _mediator.Send(query);
+
+        if (!result.Found)
         {
+            return NotFound();
+        }
+
+        AddDavHeaders();
+        return new ContentResult
+        {
+            StatusCode = 207,
+            ContentType = "application/xml; charset=\"utf-8\"",
+            Content = result.XmlResponse
+        };
+    }
+
+    [HttpGet]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleGetAsync(string? path)
+    {
+        var userId = User.GetUserId();
+
+        _logger.LogDebug("WebDAV GET: {Path}, user: {UserId}, ip: {Ip}",
+            path ?? "/", userId, Request.GetRemoteAddress());
+
+        var query = new WebDavGetFileQuery(userId, path ?? string.Empty);
+        var result = await _mediator.Send(query);
+
+        if (!result.Found)
+        {
+            return NotFound();
+        }
+
+        if (result.IsCollection)
+        {
+            // Return 200 OK for collections (some clients expect this)
             AddDavHeaders();
-            _logger.LogInformation("Handled OPTIONS request for WebDAV, ip: {ip}", Request.GetRemoteAddress());
             return Ok();
         }
 
-        [AcceptVerbs("PROPFIND")]
-        [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
-        public Task<IActionResult> HandlePropFindAsync(string? path)
+        AddDavHeaders();
+        Response.Headers.ContentEncoding = "identity";
+        Response.Headers.CacheControl = "private, no-store, no-transform";
+
+        var entityTag = result.ETag is not null
+            ? EntityTagHeaderValue.Parse(result.ETag)
+            : EntityTagHeaderValue.Any;
+
+        return File(
+            result.Content!,
+            result.ContentType ?? "application/octet-stream",
+            result.FileName,
+            result.LastModified,
+            entityTag,
+            enableRangeProcessing: true);
+    }
+
+    [HttpHead]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleHeadAsync(string? path)
+    {
+        var userId = User.GetUserId();
+
+        _logger.LogDebug("WebDAV HEAD: {Path}, user: {UserId}, ip: {Ip}",
+            path ?? "/", userId, Request.GetRemoteAddress());
+
+        var query = new WebDavHeadQuery(userId, path ?? string.Empty);
+        var result = await _mediator.Send(query);
+
+        if (!result.Found)
         {
-            _logger.LogInformation("Handled PROPFIND request for WebDAV, path: {path}, ip: {ip}",
-                path ?? string.Empty,
-                Request.GetRemoteAddress());
-            // Нормализуем путь
-            var cleanPath = (path ?? string.Empty).Trim('/');
+            return NotFound();
+        }
 
-            // Depth пока игнорим, просто возвращаем базовый набор
-            var hrefBase = Url.Content("~/api/v1/webdav/") ?? "/api/v1/webdav/";
+        AddDavHeaders();
+        Response.ContentType = result.ContentType ?? "application/octet-stream";
+        Response.ContentLength = result.ContentLength;
 
-            string xml;
+        if (result.LastModified.HasValue)
+        {
+            Response.Headers.LastModified = result.LastModified.Value.ToString("R");
+        }
 
-            if (string.IsNullOrEmpty(cleanPath))
-            {
-                // PROPFIND на корень: показываем корень + один файл hello.txt
-                xml = BuildRootWithHelloResponse(hrefBase);
-            }
-            else if (string.Equals(cleanPath, "hello.txt", StringComparison.OrdinalIgnoreCase))
-            {
-                // PROPFIND на сам файл
-                var href = hrefBase + "hello.txt";
-                xml = BuildSingleFileResponse(href, "hello.txt");
-            }
-            else
-            {
-                // Ничего больше не знаем — 404
-                return Task.FromResult<IActionResult>(NotFound());
-            }
+        if (result.ETag is not null)
+        {
+            Response.Headers.ETag = result.ETag;
+        }
 
-            var result = new ContentResult
+        return Ok();
+    }
+
+    [HttpPut]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    [DisableRequestSizeLimit]
+    public async Task<IActionResult> HandlePutAsync(string? path)
+    {
+        var userId = User.GetUserId();
+
+        _logger.LogDebug("WebDAV PUT: {Path}, user: {UserId}, ip: {Ip}",
+            path ?? "/", userId, Request.GetRemoteAddress());
+
+        var contentType = Request.ContentType;
+        var command = new WebDavPutFileCommand(
+            userId,
+            path ?? string.Empty,
+            Request.Body,
+            contentType);
+
+        var result = await _mediator.Send(command);
+
+        AddDavHeaders();
+
+        if (!result.Success)
+        {
+            return result.Error switch
             {
-                StatusCode = 207,
-                ContentType = "application/xml; charset=\"utf-8\"",
-                Content = xml
+                WebDavPutFileError.ParentNotFound => Conflict("Parent collection not found"),
+                WebDavPutFileError.IsCollection => Conflict("Cannot PUT to a collection"),
+                WebDavPutFileError.InvalidName => BadRequest("Invalid resource name"),
+                WebDavPutFileError.Conflict => Conflict("Conflict with existing resource"),
+                _ => StatusCode(500)
             };
-
-            AddDavHeaders();
-            return Task.FromResult<IActionResult>(result);
         }
 
-        [HttpGet]
-        [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
-        public Task<IActionResult> HandleGetAsync(string? path)
+        return result.Created ? Created() : NoContent();
+    }
+
+    [HttpDelete]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleDeleteAsync(string? path)
+    {
+        var userId = User.GetUserId();
+
+        _logger.LogDebug("WebDAV DELETE: {Path}, user: {UserId}, ip: {Ip}",
+            path ?? "/", userId, Request.GetRemoteAddress());
+
+        var command = new WebDavDeleteCommand(userId, path ?? string.Empty);
+        var result = await _mediator.Send(command);
+
+        AddDavHeaders();
+
+        if (result.NotFound)
         {
-            _logger.LogInformation("Handled GET request for WebDAV, path: {path}, ip: {ip}",
-                path ?? string.Empty,
-                Request.GetRemoteAddress());
-            var cleanPath = (path ?? string.Empty).Trim('/');
-            if (!string.Equals(cleanPath, "hello.txt", StringComparison.OrdinalIgnoreCase))
-            {
-                return Task.FromResult<IActionResult>(NotFound());
-            }
-            const string content = "Hello from Cotton WebDAV!\n";
-            AddDavHeaders();
-            return Task.FromResult<IActionResult>(
-                Content(content, "text/plain", Encoding.UTF8)
-            );
+            return NotFound();
         }
 
-        [HttpHead]
-        [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
-        public Task<IActionResult> HandleHeadAsync(string? path)
+        if (!result.Success)
         {
-            _logger.LogInformation("Handled HEAD request for WebDAV, path: {path}, ip: {ip}",
-                path ?? string.Empty,
-                Request.GetRemoteAddress());
-            var cleanPath = (path ?? string.Empty).Trim('/');
-            if (!string.Equals(cleanPath, "hello.txt", StringComparison.OrdinalIgnoreCase))
-            {
-                return Task.FromResult<IActionResult>(NotFound());
-            }
-            const string content = "Hello from Cotton WebDAV!\n";
-            var bytes = Encoding.UTF8.GetByteCount(content);
-            Response.ContentType = "text/plain; charset=utf-8";
-            Response.ContentLength = bytes;
-            AddDavHeaders();
-            return Task.FromResult<IActionResult>(Ok());
+            return Forbid();
         }
-        private static string BuildRootWithHelloResponse(string hrefBase)
-        {
-            var now = DateTimeOffset.UtcNow;
 
-            var sb = new StringBuilder();
-            var settings = new XmlWriterSettings
+        return NoContent();
+    }
+
+    [AcceptVerbs("MKCOL")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleMkColAsync(string? path)
+    {
+        var userId = User.GetUserId();
+
+        _logger.LogDebug("WebDAV MKCOL: {Path}, user: {UserId}, ip: {Ip}",
+            path ?? "/", userId, Request.GetRemoteAddress());
+
+        var command = new WebDavMkColCommand(userId, path ?? string.Empty);
+        var result = await _mediator.Send(command);
+
+        AddDavHeaders();
+
+        if (!result.Success)
+        {
+            return result.Error switch
             {
-                OmitXmlDeclaration = false,
-                Indent = true,
-                Encoding = Encoding.UTF8
+                WebDavMkColError.ParentNotFound => Conflict("Parent collection not found"),
+                WebDavMkColError.AlreadyExists => StatusCode(405, "Collection already exists"),
+                WebDavMkColError.InvalidName => BadRequest("Invalid collection name"),
+                WebDavMkColError.Conflict => Conflict("Conflict with existing resource"),
+                _ => StatusCode(500)
             };
-
-            using var stringWriter = new StringWriter(sb);
-            using (var writer = XmlWriter.Create(stringWriter, settings))
-            {
-                writer.WriteStartDocument();
-                writer.WriteStartElement("d", "multistatus", "DAV:");
-
-                // root
-                WriteCollectionResponse(
-                    writer,
-                    href: EnsureTrailingSlash(hrefBase),
-                    displayName: "root",
-                    lastModified: now,
-                    etag: "\"root-etag\""
-                );
-
-                // hello.txt
-                WriteFileResponse(
-                    writer,
-                    href: hrefBase + "hello.txt",
-                    displayName: "hello.txt",
-                    contentLength: "26",
-                    lastModified: now,
-                    etag: "\"hello-etag\""
-                );
-
-                writer.WriteEndElement(); // multistatus
-                writer.WriteEndDocument();
-            }
-
-            return sb.ToString();
         }
 
-        private static string BuildSingleFileResponse(string href, string displayName)
-        {
-            var now = DateTimeOffset.UtcNow;
+        return Created();
+    }
 
-            var sb = new StringBuilder();
-            var settings = new XmlWriterSettings
+    [AcceptVerbs("MOVE")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleMoveAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        var destination = GetDestinationPath();
+        var overwrite = GetOverwriteHeader();
+
+        if (string.IsNullOrEmpty(destination))
+        {
+            return BadRequest("Destination header is required");
+        }
+
+        _logger.LogDebug("WebDAV MOVE: {Source} -> {Dest}, overwrite: {Overwrite}, user: {UserId}, ip: {Ip}",
+            path ?? "/", destination, overwrite, userId, Request.GetRemoteAddress());
+
+        var command = new WebDavMoveCommand(userId, path ?? string.Empty, destination, overwrite);
+        var result = await _mediator.Send(command);
+
+        AddDavHeaders();
+
+        if (!result.Success)
+        {
+            return result.Error switch
             {
-                OmitXmlDeclaration = false,
-                Indent = true,
-                Encoding = Encoding.UTF8
+                WebDavMoveError.SourceNotFound => NotFound(),
+                WebDavMoveError.DestinationParentNotFound => Conflict("Destination parent not found"),
+                WebDavMoveError.DestinationExists => StatusCode(412, "Destination exists and Overwrite is false"),
+                WebDavMoveError.InvalidName => BadRequest("Invalid resource name"),
+                WebDavMoveError.CannotMoveRoot => Forbid(),
+                _ => StatusCode(500)
             };
+        }
 
-            using var stringWriter = new StringWriter(sb);
-            using (var writer = XmlWriter.Create(stringWriter, settings))
+        return result.Created ? Created() : NoContent();
+    }
+
+    [AcceptVerbs("COPY")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleCopyAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        var destination = GetDestinationPath();
+        var overwrite = GetOverwriteHeader();
+
+        if (string.IsNullOrEmpty(destination))
+        {
+            return BadRequest("Destination header is required");
+        }
+
+        _logger.LogDebug("WebDAV COPY: {Source} -> {Dest}, overwrite: {Overwrite}, user: {UserId}, ip: {Ip}",
+            path ?? "/", destination, overwrite, userId, Request.GetRemoteAddress());
+
+        var command = new WebDavCopyCommand(userId, path ?? string.Empty, destination, overwrite);
+        var result = await _mediator.Send(command);
+
+        AddDavHeaders();
+
+        if (!result.Success)
+        {
+            return result.Error switch
             {
-                writer.WriteStartDocument();
-                writer.WriteStartElement("d", "multistatus", "DAV:");
-
-                WriteFileResponse(
-                    writer,
-                    href: href,
-                    displayName: displayName,
-                    contentLength: "26",
-                    lastModified: now,
-                    etag: "\"hello-etag\""
-                );
-
-                writer.WriteEndElement(); // multistatus
-                writer.WriteEndDocument();
-            }
-
-            return sb.ToString();
+                WebDavCopyError.SourceNotFound => NotFound(),
+                WebDavCopyError.DestinationParentNotFound => Conflict("Destination parent not found"),
+                WebDavCopyError.DestinationExists => StatusCode(412, "Destination exists and Overwrite is false"),
+                WebDavCopyError.InvalidName => BadRequest("Invalid resource name"),
+                WebDavCopyError.CannotCopyRoot => Forbid(),
+                _ => StatusCode(500)
+            };
         }
 
-        private static void WriteCollectionResponse(
-            XmlWriter writer,
-            string href,
-            string displayName,
-            DateTimeOffset lastModified,
-            string etag)
+        return result.Created ? Created() : NoContent();
+    }
+
+    private void AddDavHeaders()
+    {
+        Response.Headers["DAV"] = "1,2";
+        Response.Headers["MS-Author-Via"] = "DAV";
+        Response.Headers.Allow = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY";
+    }
+
+    private int GetDepthHeader()
+    {
+        var depthHeader = Request.Headers["Depth"].FirstOrDefault();
+        return depthHeader switch
         {
-            writer.WriteStartElement("d", "response", null);
-            writer.WriteElementString("d", "href", null, href);
+            "0" => 0,
+            "infinity" => int.MaxValue,
+            _ => 1
+        };
+    }
 
-            writer.WriteStartElement("d", "propstat", null);
-            writer.WriteStartElement("d", "prop", null);
-
-            writer.WriteElementString("d", "displayname", null, displayName);
-
-            writer.WriteStartElement("d", "resourcetype", null);
-            writer.WriteElementString("d", "collection", null, string.Empty);
-            writer.WriteEndElement(); // resourcetype
-
-            writer.WriteElementString("d", "getcontentlength", null, "0");
-            writer.WriteElementString("d", "getlastmodified", null, lastModified.ToString("R"));
-            writer.WriteElementString("d", "getetag", null, etag);
-
-            writer.WriteEndElement(); // prop
-            writer.WriteElementString("d", "status", null, "HTTP/1.1 200 OK");
-            writer.WriteEndElement(); // propstat
-
-            writer.WriteEndElement(); // response
-        }
-
-        private static void WriteFileResponse(
-            XmlWriter writer,
-            string href,
-            string displayName,
-            string contentLength,
-            DateTimeOffset lastModified,
-            string etag)
+    private string? GetDestinationPath()
+    {
+        var destination = Request.Headers["Destination"].FirstOrDefault();
+        if (string.IsNullOrEmpty(destination))
         {
-            writer.WriteStartElement("d", "response", null);
-            writer.WriteElementString("d", "href", null, href);
-
-            writer.WriteStartElement("d", "propstat", null);
-            writer.WriteStartElement("d", "prop", null);
-
-            writer.WriteElementString("d", "displayname", null, displayName);
-
-            // Файл: resourcetype пустой
-            writer.WriteStartElement("d", "resourcetype", null);
-            writer.WriteEndElement(); // resourcetype
-
-            writer.WriteElementString("d", "getcontentlength", null, contentLength);
-            writer.WriteElementString("d", "getlastmodified", null, lastModified.ToString("R"));
-            writer.WriteElementString("d", "getetag", null, etag);
-
-            writer.WriteEndElement(); // prop
-            writer.WriteElementString("d", "status", null, "HTTP/1.1 200 OK");
-            writer.WriteEndElement(); // propstat
-
-            writer.WriteEndElement(); // response
+            return null;
         }
 
-        private void AddDavHeaders()
+        // Parse the destination URL and extract the path
+        if (Uri.TryCreate(destination, UriKind.Absolute, out var uri))
         {
-            Response.Headers["DAV"] = "1,2";
-            Response.Headers["MS-Author-Via"] = "DAV";
-            Response.Headers.Allow = "OPTIONS, PROPFIND, GET, HEAD";
+            destination = uri.AbsolutePath;
         }
 
+        // Remove the WebDAV route prefix
+        var webdavIndex = destination.IndexOf(WebDavRoute, StringComparison.OrdinalIgnoreCase);
+        if (webdavIndex >= 0)
+        {
+            destination = destination[(webdavIndex + WebDavRoute.Length)..];
+        }
 
-        private static string EnsureTrailingSlash(string href) =>
-            href.EndsWith('/') ? href : href + "/";
+        return destination.Trim('/');
+    }
+
+    private bool GetOverwriteHeader()
+    {
+        var overwrite = Request.Headers["Overwrite"].FirstOrDefault();
+        return !string.Equals(overwrite, "F", StringComparison.OrdinalIgnoreCase);
     }
 }
