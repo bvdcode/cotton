@@ -14,6 +14,7 @@ using EasyExtensions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Extensions;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Cotton.Server.Controllers
 {
@@ -40,8 +42,22 @@ namespace Cotton.Server.Controllers
         ILogger<AuthController> _logger,
         IPasswordHashService _hasher) : ControllerBase
     {
+        private const int WebDavTokenLength = 16;
         private const int RefreshTokenLength = 32;
         private const string CookieRefreshTokenKey = "refresh_token";
+
+        [Authorize]
+        [HttpGet("webdav/token")]
+        public async Task<IActionResult> GetWebDavToken()
+        {
+            var userId = User.GetUserId();
+            var user = _dbContext.Users.Find(userId)
+                ?? throw new EntityNotFoundException<User>();
+            string token = StringHelpers.CreateRandomString(WebDavTokenLength);
+            user.WebDavTokenPhc = _hasher.Hash(token);
+            await _dbContext.SaveChangesAsync();
+            return Ok(token);
+        }
 
         [Authorize]
         [HttpDelete("sessions/{sessionId}")]
