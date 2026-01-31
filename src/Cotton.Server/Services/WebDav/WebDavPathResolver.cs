@@ -1,0 +1,172 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
+using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
+using Cotton.Topology.Abstractions;
+using Cotton.Validators;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cotton.Server.Services.WebDav;
+
+/// <summary>
+/// Resolves WebDAV paths to nodes and files
+/// </summary>
+public class WebDavPathResolver(
+    CottonDbContext _dbContext,
+    ILayoutService _layouts) : IWebDavPathResolver
+{
+    public async Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default)
+    {
+        var cleanPath = NormalizePath(path);
+
+        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default);
+
+        // Root path
+        if (string.IsNullOrEmpty(cleanPath))
+        {
+            return new WebDavResolveResult
+            {
+                Found = true,
+                IsCollection = true,
+                Node = rootNode
+            };
+        }
+
+        var parts = cleanPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var currentNode = rootNode;
+
+        // Navigate to parent node (all parts except the last)
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            var part = parts[i];
+            var nameKey = NameValidator.NormalizeAndGetNameKey(part);
+
+            var nextNode = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.LayoutId == layout.Id
+                    && x.ParentId == currentNode.Id
+                    && x.OwnerId == userId
+                    && x.NameKey == nameKey
+                    && x.Type == NodeType.Default)
+                .SingleOrDefaultAsync(ct);
+
+            if (nextNode is null)
+            {
+                return new WebDavResolveResult { Found = false };
+            }
+
+            currentNode = nextNode;
+        }
+
+        // Now check the last part - it can be a node or a file
+        var lastName = parts[^1];
+        var lastNameKey = NameValidator.NormalizeAndGetNameKey(lastName);
+
+        // Try to find as node first
+        var childNode = await _dbContext.Nodes
+            .AsNoTracking()
+            .Where(x => x.LayoutId == layout.Id
+                && x.ParentId == currentNode.Id
+                && x.OwnerId == userId
+                && x.NameKey == lastNameKey
+                && x.Type == NodeType.Default)
+            .SingleOrDefaultAsync(ct);
+
+        if (childNode is not null)
+        {
+            return new WebDavResolveResult
+            {
+                Found = true,
+                IsCollection = true,
+                Node = childNode
+            };
+        }
+
+        // Try to find as file
+        var nodeFile = await _dbContext.NodeFiles
+            .AsNoTracking()
+            .Include(x => x.FileManifest)
+            .ThenInclude(x => x.FileManifestChunks)
+            .ThenInclude(x => x.Chunk)
+            .Where(x => x.NodeId == currentNode.Id
+                && x.OwnerId == userId
+                && x.NameKey == lastNameKey)
+            .SingleOrDefaultAsync(ct);
+
+        if (nodeFile is not null)
+        {
+            return new WebDavResolveResult
+            {
+                Found = true,
+                IsCollection = false,
+                NodeFile = nodeFile
+            };
+        }
+
+        return new WebDavResolveResult { Found = false };
+    }
+
+    public async Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default)
+    {
+        var cleanPath = NormalizePath(path);
+
+        if (string.IsNullOrEmpty(cleanPath))
+        {
+            return new WebDavParentResult { Found = false };
+        }
+
+        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default);
+
+        var parts = cleanPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var resourceName = parts[^1];
+
+        if (parts.Length == 1)
+        {
+            return new WebDavParentResult
+            {
+                Found = true,
+                ParentNode = rootNode,
+                ResourceName = resourceName
+            };
+        }
+
+        var currentNode = rootNode;
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            var part = parts[i];
+            var nameKey = NameValidator.NormalizeAndGetNameKey(part);
+
+            var nextNode = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.LayoutId == layout.Id
+                    && x.ParentId == currentNode.Id
+                    && x.OwnerId == userId
+                    && x.NameKey == nameKey
+                    && x.Type == NodeType.Default)
+                .SingleOrDefaultAsync(ct);
+
+            if (nextNode is null)
+            {
+                return new WebDavParentResult { Found = false };
+            }
+
+            currentNode = nextNode;
+        }
+
+        return new WebDavParentResult
+        {
+            Found = true,
+            ParentNode = currentNode,
+            ResourceName = resourceName
+        };
+    }
+
+    private static string NormalizePath(string? path)
+    {
+        return (path ?? string.Empty).Trim('/');
+    }
+}

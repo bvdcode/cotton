@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Auth;
+using Cotton.Server.Services.WebDav;
 using Cotton.Shared;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Crypto;
@@ -26,6 +27,12 @@ namespace Cotton.Server.Extensions
                 int? threads = settings.EncryptionThreads > 0 ? settings.EncryptionThreads : null;
                 return new AesGcmStreamCipher(keyMaterial, keyId, threads);
             });
+        }
+
+        public static IServiceCollection AddWebDavServices(this IServiceCollection services)
+        {
+            services.AddScoped<IWebDavPathResolver, WebDavPathResolver>();
+            return services;
         }
 
         public static IServiceCollection AddWebDavAuth(this IServiceCollection services)
