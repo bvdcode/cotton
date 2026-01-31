@@ -1,4 +1,6 @@
-﻿using EasyExtensions.AspNetCore.Extensions;
+﻿using Cotton.Server.Auth;
+using Cotton.Topology.Abstractions;
+using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
@@ -8,21 +10,12 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route("api/v1/webdav/{**path}")]
-    [Authorize(Policy = "WebDav")]
-    public class WebDavController(ILogger<WebDavController> _logger) : ControllerBase
+    public class WebDavController(
+        ILayoutService _layouts,
+        ILogger<WebDavController> _logger) : ControllerBase
     {
-        // потом сюда воткнём резолвер путей/хранилище через DI
-        // private readonly IWebDavPathResolver _resolver;
-        // private readonly IFileStorage _storage;
-        // ...
-
-        // public WebDavController(IWebDavPathResolver resolver, IFileStorage storage)
-        // {
-        //     _resolver = resolver;
-        //     _storage = storage;
-        // }
-
         [HttpOptions]
+        [AllowAnonymous]
         public IActionResult HandleOptions()
         {
             AddDavHeaders();
@@ -31,6 +24,7 @@ namespace Cotton.Server.Controllers
         }
 
         [AcceptVerbs("PROPFIND")]
+        [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public Task<IActionResult> HandlePropFindAsync(string? path)
         {
             _logger.LogInformation("Handled PROPFIND request for WebDAV, path: {path}, ip: {ip}",
@@ -73,6 +67,7 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public Task<IActionResult> HandleGetAsync(string? path)
         {
             _logger.LogInformation("Handled GET request for WebDAV, path: {path}, ip: {ip}",
@@ -91,6 +86,7 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpHead]
+        [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
         public Task<IActionResult> HandleHeadAsync(string? path)
         {
             _logger.LogInformation("Handled HEAD request for WebDAV, path: {path}, ip: {ip}",

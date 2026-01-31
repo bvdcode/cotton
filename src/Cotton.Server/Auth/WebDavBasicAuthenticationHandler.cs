@@ -23,6 +23,7 @@ public sealed class WebDavBasicAuthenticationHandler(
     IMemoryCache cache)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    public const string PolicyName = "WebDav";
     public const string SchemeName = "WebDavBasic";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
 
