@@ -41,7 +41,7 @@ namespace Cotton.Server.Controllers
         ILogger<AuthController> _logger,
         IPasswordHashService _hasher) : ControllerBase
     {
-        private const int WebDavTokenLength = 16;
+        private const int WebDavTokenLength = 32;
         private const int RefreshTokenLength = 32;
         private const string CookieRefreshTokenKey = "refresh_token";
 
