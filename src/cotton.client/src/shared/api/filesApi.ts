@@ -51,4 +51,9 @@ export const filesApi = {
   ): Promise<void> => {
     await httpClient.patch(`/files/${nodeFileId}/rename`, request);
   },
+
+  getWebDavToken: async (): Promise<string> => {
+    const response = await httpClient.get<string>("files/webdav/token");
+    return response.data;
+  },
 };
