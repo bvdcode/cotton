@@ -1,15 +1,35 @@
-import { Box, Button, Paper, Stack, Typography, Alert } from "@mui/material";
+import {
+  Box,
+  Button,
+  Paper,
+  Stack,
+  Typography,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Tooltip,
+} from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { Key } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { confirm } from "material-ui-confirm";
 import { authApi } from "../../../shared/api/authApi";
+import { useAuth } from "../../../features/auth";
 
 export const WebDavTokenCard = () => {
   const { t } = useTranslation("profile");
+  const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const webDavUrl = `${window.location.origin}/api/v1/webdav`;
+  const username = user?.username ?? "";
 
   const handleGenerateToken = () => {
     confirm({
@@ -24,6 +44,7 @@ export const WebDavTokenCard = () => {
           setError(null);
           const newToken = await authApi.getWebDavToken();
           setToken(newToken);
+          setDialogOpen(true);
         } catch (err) {
           setError(
             err instanceof Error ? err.message : t("webdav.errors.failed"),
@@ -35,63 +56,128 @@ export const WebDavTokenCard = () => {
     });
   };
 
-  const handleCopyToken = async () => {
-    if (token) {
-      await navigator.clipboard.writeText(token);
-    }
+  const handleCopy = async (value: string) => {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
   };
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-      <Stack spacing={2}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Key color="primary" />
-          <Typography variant="h6" fontWeight={600}>
-            {t("webdav.title")}
-          </Typography>
-        </Stack>
-
-        <Typography variant="body2" color="text.secondary">
-          {t("webdav.description")}
-        </Typography>
-
-        {error && (
-          <Alert severity="error" onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        {token ? (
-          <Stack spacing={1}>
-            <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
-            <Box
-              sx={{
-                p: 2,
-                bgcolor: "action.hover",
-                borderRadius: 1,
-                fontFamily: "monospace",
-                fontSize: "0.875rem",
-                wordBreak: "break-all",
-                userSelect: "all",
-              }}
-            >
-              {token}
-            </Box>
-            <Button variant="outlined" size="small" onClick={handleCopyToken}>
-              {t("webdav.copyToken")}
-            </Button>
+    <>
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Key color="primary" />
+            <Typography variant="h6" fontWeight={600}>
+              {t("webdav.title")}
+            </Typography>
           </Stack>
-        ) : (
-          <Button
-            variant="contained"
-            onClick={handleGenerateToken}
-            disabled={loading}
-            startIcon={<Key />}
-          >
-            {loading ? t("webdav.generating") : t("webdav.generateButton")}
-          </Button>
-        )}
-      </Stack>
-    </Paper>
+
+          <Typography variant="body2" color="text.secondary">
+            {t("webdav.description")}
+          </Typography>
+
+          {error && (
+            <Alert severity="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
+          {token ? (
+            <Stack spacing={1}>
+              <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: "action.hover",
+                  borderRadius: 1,
+                  fontFamily: "monospace",
+                  fontSize: "0.875rem",
+                  wordBreak: "break-all",
+                  userSelect: "all",
+                }}
+              >
+                {token}
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleCopy(token)}
+              >
+                {t("webdav.copyToken")}
+              </Button>
+            </Stack>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleGenerateToken}
+              disabled={loading}
+              startIcon={<Key />}
+            >
+              {loading ? t("webdav.generating") : t("webdav.generateButton")}
+            </Button>
+          )}
+        </Stack>
+      </Paper>
+
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        aria-labelledby="webdav-token-dialog"
+      >
+        <DialogTitle id="webdav-token-dialog">{t("webdav.modalTitle")}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                {t("webdav.usernameLabel")}
+              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box sx={{ fontFamily: "monospace" }}>{username}</Box>
+                <Tooltip title={t("webdav.copyUsername") as string}>
+                  <IconButton size="small" onClick={() => handleCopy(username)}>
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Stack>
+
+            <Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                {t("webdav.connectUrlLabel")}
+              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>{webDavUrl}</Box>
+                <Tooltip title={t("webdav.copyUrl") as string}>
+                  <IconButton size="small" onClick={() => handleCopy(webDavUrl)}>
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Stack>
+
+            <Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                {t("webdav.tokenLabel")}
+              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>{token}</Box>
+                <Tooltip title={t("webdav.copyToken") as string}>
+                  <IconButton size="small" onClick={() => handleCopy(token ?? "") }>
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Stack>
+
+            <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>{t("webdav.closeButton")}</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };

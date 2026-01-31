@@ -152,8 +152,15 @@
       "cancelButton": "Отмена",
       "generateButton": "Сгенерировать токен",
       "generating": "Генерация...",
-      "tokenWarning": "Скопируйте этот токен сейчас. Он больше не будет показан.",
+      "tokenLabel": "Токен",
+      "usernameLabel": "Имя пользователя",
+      "connectUrlLabel": "Адрес WebDAV",
+      "modalTitle": "Учётные данные WebDAV (показываются один раз)",
+      "closeButton": "Закрыть",
       "copyToken": "Скопировать токен",
+      "copyUrl": "Скопировать URL",
+      "copyUsername": "Скопировать имя",
+      "tokenWarning": "Скопируйте этот токен сейчас. Он больше не будет показан.",
       "errors": {
         "failed": "Не удалось сгенерировать токен WebDAV."
       }
