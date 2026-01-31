@@ -27,14 +27,21 @@ type ReadonlyFieldProps = {
   onCopy?: (value: string) => void;
 };
 
-const ReadonlyField = ({ label, value, tooltip, onCopy }: ReadonlyFieldProps) => {
+const ReadonlyField = ({
+  label,
+  value,
+  tooltip,
+  onCopy,
+}: ReadonlyFieldProps) => {
   return (
     <Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
         {label}
       </Typography>
       <Stack direction="row" alignItems="center" spacing={1}>
-        <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>{value}</Box>
+        <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+          {value}
+        </Box>
         <Tooltip title={tooltip ?? label}>
           <IconButton size="small" onClick={() => onCopy?.(value)}>
             <ContentCopyIcon fontSize="small" />
@@ -103,22 +110,26 @@ export const WebDavTokenCard = () => {
 
           {/* Visible connection info — available without generating a token */}
           <Stack spacing={1} sx={{ mt: 1 }}>
-            <ReadonlyField
-              label={t("webdav.usernameLabel")}
-              value={username}
-              tooltip={t("webdav.copyUsername")}
-              onCopy={handleCopy}
-            />
+            <Box display="flex" justifyContent="space-between">
+              <ReadonlyField
+                label={t("webdav.usernameLabel")}
+                value={username}
+                tooltip={t("webdav.copyUsername")}
+                onCopy={handleCopy}
+              />
 
-            <ReadonlyField
-              label={t("webdav.connectUrlLabel")}
-              value={webDavUrl}
-              tooltip={t("webdav.copyUrl")}
-              onCopy={handleCopy}
-            />
-
+              <ReadonlyField
+                label={t("webdav.connectUrlLabel")}
+                value={webDavUrl}
+                tooltip={t("webdav.copyUrl")}
+                onCopy={handleCopy}
+              />
+            </Box>
             <Typography variant="caption" color="text.secondary">
-              {t("webdav.cardHelp", "Use these credentials to connect via a WebDAV client; generate a token to get a password shown once.")}
+              {t(
+                "webdav.cardHelp",
+                "Use these credentials to connect via a WebDAV client; generate a token to get a password shown once.",
+              )}
             </Typography>
           </Stack>
 
@@ -172,11 +183,17 @@ export const WebDavTokenCard = () => {
         maxWidth="sm"
         aria-labelledby="webdav-token-dialog"
       >
-        <DialogTitle id="webdav-token-dialog">{t("webdav.modalTitle")}</DialogTitle>
+        <DialogTitle id="webdav-token-dialog">
+          {t("webdav.modalTitle")}
+        </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Stack>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 0.5 }}
+              >
                 {t("webdav.usernameLabel")}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={1}>
@@ -190,13 +207,22 @@ export const WebDavTokenCard = () => {
             </Stack>
 
             <Stack>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 0.5 }}
+              >
                 {t("webdav.connectUrlLabel")}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={1}>
-                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>{webDavUrl}</Box>
+                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {webDavUrl}
+                </Box>
                 <Tooltip title={t("webdav.copyUrl") as string}>
-                  <IconButton size="small" onClick={() => handleCopy(webDavUrl)}>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleCopy(webDavUrl)}
+                  >
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -204,13 +230,22 @@ export const WebDavTokenCard = () => {
             </Stack>
 
             <Stack>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 0.5 }}
+              >
                 {t("webdav.tokenLabel")}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={1}>
-                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>{token}</Box>
+                <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {token}
+                </Box>
                 <Tooltip title={t("webdav.copyToken") as string}>
-                  <IconButton size="small" onClick={() => handleCopy(token ?? "") }>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleCopy(token ?? "")}
+                  >
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -221,7 +256,9 @@ export const WebDavTokenCard = () => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>{t("webdav.closeButton")}</Button>
+          <Button onClick={() => setDialogOpen(false)}>
+            {t("webdav.closeButton")}
+          </Button>
         </DialogActions>
       </Dialog>
     </>
