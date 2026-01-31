@@ -1,4 +1,5 @@
 ﻿using EasyExtensions.AspNetCore.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Xml;
@@ -7,6 +8,7 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route("api/v1/webdav/{**path}")]
+    [Authorize(Policy = "WebDav")]
     public class WebDavController(ILogger<WebDavController> _logger) : ControllerBase
     {
         // потом сюда воткнём резолвер путей/хранилище через DI
