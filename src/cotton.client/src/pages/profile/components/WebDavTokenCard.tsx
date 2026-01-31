@@ -20,6 +20,31 @@ import { confirm } from "material-ui-confirm";
 import { authApi } from "../../../shared/api/authApi";
 import { useAuth } from "../../../features/auth";
 
+type ReadonlyFieldProps = {
+  label: string;
+  value: string;
+  tooltip?: string;
+  onCopy?: (value: string) => void;
+};
+
+const ReadonlyField = ({ label, value, tooltip, onCopy }: ReadonlyFieldProps) => {
+  return (
+    <Stack>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+        {label}
+      </Typography>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Box sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>{value}</Box>
+        <Tooltip title={tooltip ?? label}>
+          <IconButton size="small" onClick={() => onCopy?.(value)}>
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    </Stack>
+  );
+};
+
 export const WebDavTokenCard = () => {
   const { t } = useTranslation("profile");
   const { user } = useAuth();
@@ -75,6 +100,27 @@ export const WebDavTokenCard = () => {
           <Typography variant="body2" color="text.secondary">
             {t("webdav.description")}
           </Typography>
+
+          {/* Visible connection info — available without generating a token */}
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <ReadonlyField
+              label={t("webdav.usernameLabel")}
+              value={username}
+              tooltip={t("webdav.copyUsername")}
+              onCopy={handleCopy}
+            />
+
+            <ReadonlyField
+              label={t("webdav.connectUrlLabel")}
+              value={webDavUrl}
+              tooltip={t("webdav.copyUrl")}
+              onCopy={handleCopy}
+            />
+
+            <Typography variant="caption" color="text.secondary">
+              {t("webdav.cardHelp", "Use these credentials to connect via a WebDAV client; generate a token to get a password shown once.")}
+            </Typography>
+          </Stack>
 
           {error && (
             <Alert severity="error" onClose={() => setError(null)}>
