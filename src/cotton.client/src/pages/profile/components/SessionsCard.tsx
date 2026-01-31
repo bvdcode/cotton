@@ -71,31 +71,65 @@ export const SessionsCard = () => {
 
   return (
     <Accordion
-      defaultExpanded={false}
-      sx={{
-        p: {
-          xs: 2,
-          sm: 3,
-        },
-      }}
       disableGutters
+      sx={(theme) => ({
+        bgcolor: "background.paper",
+        borderRadius: 2,
+        boxShadow: theme.shadows[1],
+        border: `1px solid ${theme.palette.divider}`,
+        overflow: "hidden",
+      })}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
         aria-controls="sessions-content"
         id="sessions-header"
-        sx={{ alignItems: "center" }}
+        sx={{
+          minHeight: { xs: 56, sm: 64 },
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1.25, sm: 1.5 },
+          "& .MuiAccordionSummary-content": {
+            margin: 0,
+            gap: 1,
+            alignItems: "center",
+          },
+          "& .MuiAccordionSummary-expandIconWrapper": {
+            color: "text.secondary",
+          },
+        }}
       >
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            {t("sessions.title", "Active Sessions")}
-          </Typography>
+        <Box
+          sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2 }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h6" fontWeight={600} noWrap>
+              {t("sessions.title")}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              noWrap
+              sx={{ mt: 0.5, fontSize: "0.9rem" }}
+            >
+              {t("sessions.description")}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, ml: 1 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              {sessions.length}
+            </Typography>
+          </Box>
         </Box>
       </AccordionSummary>
 
-      <AccordionDetails sx={{ px: 0 }}>
-        <Divider />
+      <Divider sx={{ mx: { xs: 0, sm: 3 } }} />
 
+      <AccordionDetails sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress size={32} />
