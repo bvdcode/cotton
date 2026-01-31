@@ -60,7 +60,7 @@ export const WebDavTokenCard = () => {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const webDavUrl = `${window.location.origin}/api/v1/webdav`;
+  const webDavUrl = `${window.location.origin}/api/v1/webdav/`;
   const username = user?.username ?? "";
 
   const handleGenerateToken = () => {

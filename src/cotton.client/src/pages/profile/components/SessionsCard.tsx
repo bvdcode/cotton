@@ -1,12 +1,15 @@
 import {
   Box,
-  Paper,
   Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   Typography,
   Alert,
   CircularProgress,
   Divider,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
@@ -67,21 +70,30 @@ export const SessionsCard = () => {
   };
 
   return (
-    <Paper
+    <Accordion
+      defaultExpanded={false}
       sx={{
         p: {
           xs: 2,
           sm: 3,
         },
       }}
+      disableGutters
     >
-      <Stack spacing={2}>
-        <Box>
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        aria-controls="sessions-content"
+        id="sessions-header"
+        sx={{ alignItems: "center" }}
+      >
+        <Box sx={{ flex: 1 }}>
           <Typography variant="h6" fontWeight={600} gutterBottom>
             {t("sessions.title", "Active Sessions")}
           </Typography>
         </Box>
+      </AccordionSummary>
 
+      <AccordionDetails sx={{ px: 0 }}>
         <Divider />
 
         {loading ? (
@@ -89,7 +101,7 @@ export const SessionsCard = () => {
             <CircularProgress size={32} />
           </Box>
         ) : error ? (
-          <Alert severity="error" onClose={() => setError(null)}>
+          <Alert severity="error" onClose={() => setError(null)} sx={{ mt: 2 }}>
             {error}
           </Alert>
         ) : sessions.length === 0 ? (
@@ -100,7 +112,7 @@ export const SessionsCard = () => {
             {t("sessions.noActiveSessions", "No active sessions")}
           </Typography>
         ) : (
-          <Stack spacing={1.5}>
+          <Stack spacing={1.5} sx={{ mt: 2 }}>
             {sessions.map((session) => (
               <SessionItem
                 key={session.sessionId}
@@ -111,7 +123,7 @@ export const SessionsCard = () => {
             ))}
           </Stack>
         )}
-      </Stack>
-    </Paper>
+      </AccordionDetails>
+    </Accordion>
   );
 };
