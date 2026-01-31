@@ -13,11 +13,13 @@ using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using Cotton.Topology;
 using Cotton.Topology.Abstractions;
+using Cotton.Server.Auth;
 using EasyExtensions.AspNetCore.Authorization.Extensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -38,6 +40,7 @@ namespace Cotton.Server
             builder.Services
                 .AddMediator()
                 .AddQuartzJobs()
+                .AddMemoryCache()
                 .AddSingleton<PerfTracker>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<FileManifestService>()
@@ -52,6 +55,20 @@ namespace Cotton.Server
                 .AddControllers().Services
                 .AddStreamCipher()
                 .AddJwt();
+
+            builder.Services
+                .AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, WebDavBasicAuthenticationHandler>(
+                    WebDavBasicAuthenticationHandler.SchemeName,
+                    _ => { });
+
+            builder.Services
+                .AddAuthorizationBuilder()
+                .AddPolicy("WebDav", policy =>
+                {
+                    policy.AddAuthenticationSchemes(WebDavBasicAuthenticationHandler.SchemeName);
+                    policy.RequireAuthenticatedUser();
+                });
 
             var app = builder.Build();
             app.UseDefaultFiles();
