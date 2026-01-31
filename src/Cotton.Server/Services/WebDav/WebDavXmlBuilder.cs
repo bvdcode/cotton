@@ -18,15 +18,14 @@ public static class WebDavXmlBuilder
         var sb = new StringBuilder();
         var settings = new XmlWriterSettings
         {
-            OmitXmlDeclaration = false,
-            Indent = true,
+            OmitXmlDeclaration = true, // Windows WebDAV client doesn't like encoding declaration
+            Indent = false,
             Encoding = Encoding.UTF8
         };
 
         using var stringWriter = new StringWriter(sb);
         using (var writer = XmlWriter.Create(stringWriter, settings))
         {
-            writer.WriteStartDocument();
             writer.WriteStartElement("d", "multistatus", DavNamespace);
 
             foreach (var resource in resources)
@@ -35,7 +34,6 @@ public static class WebDavXmlBuilder
             }
 
             writer.WriteEndElement(); // multistatus
-            writer.WriteEndDocument();
         }
 
         return sb.ToString();

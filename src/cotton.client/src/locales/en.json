@@ -134,8 +134,15 @@
       "cancelButton": "Cancel",
       "generateButton": "Generate token",
       "generating": "Generating...",
-      "tokenWarning": "Copy this token now. It will not be shown again.",
+      "tokenLabel": "Token",
+      "usernameLabel": "Username",
+      "connectUrlLabel": "WebDAV endpoint",
+      "modalTitle": "WebDAV credentials (shown once)",
+      "closeButton": "Close",
       "copyToken": "Copy token",
+      "copyUrl": "Copy URL",
+      "copyUsername": "Copy username",
+      "tokenWarning": "Copy this token now. It will not be shown again.",
       "errors": {
         "failed": "Failed to generate WebDAV token."
       }
