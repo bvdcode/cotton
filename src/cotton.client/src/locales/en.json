@@ -143,6 +143,7 @@
       "copyUrl": "Copy URL",
       "copyUsername": "Copy username",
       "tokenWarning": "Copy this token now. It will not be shown again.",
+      "cardHelp": "Use these values to connect with a WebDAV client. Generate a token to obtain a one-time password.",
       "errors": {
         "failed": "Failed to generate WebDAV token."
       }
