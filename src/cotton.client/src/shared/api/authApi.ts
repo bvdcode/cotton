@@ -88,4 +88,9 @@ export const authApi = {
   refresh: async (): Promise<string | null> => {
     return await refreshAccessToken();
   },
+
+  getWebDavToken: async (): Promise<string> => {
+    const response = await httpClient.get<string>("auth/webdav/token");
+    return response.data;
+  },
 };

@@ -3,7 +3,7 @@ import { Key } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { confirm } from "material-ui-confirm";
-import { filesApi } from "../../../shared/api/filesApi";
+import { authApi } from "../../../shared/api/authApi";
 
 export const WebDavTokenCard = () => {
   const { t } = useTranslation("profile");
@@ -22,7 +22,7 @@ export const WebDavTokenCard = () => {
         try {
           setLoading(true);
           setError(null);
-          const newToken = await filesApi.getWebDavToken();
+          const newToken = await authApi.getWebDavToken();
           setToken(newToken);
         } catch (err) {
           setError(
