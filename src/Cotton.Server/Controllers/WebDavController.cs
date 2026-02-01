@@ -171,7 +171,7 @@ public class WebDavController(
                 WebDavPutFileError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavPutFileError.Conflict => Conflict("Conflict with existing resource"),
                 WebDavPutFileError.PreconditionFailed => StatusCode(StatusCodes.Status412PreconditionFailed, "Destination exists and Overwrite is false"),
-                WebDavPutFileError.UploadAborted => Conflict("Upload aborted"),
+                WebDavPutFileError.UploadAborted => StatusCode(StatusCodes.Status408RequestTimeout, "Upload aborted"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
