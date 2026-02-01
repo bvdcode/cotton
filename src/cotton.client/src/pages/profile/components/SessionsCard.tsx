@@ -86,7 +86,7 @@ export const SessionsCard = () => {
           {t("sessions.noActiveSessions")}
         </Typography>
       ) : (
-        <Stack spacing={1.5} sx={{ mt: 2 }}>
+        <Stack spacing={1.5} sx={{ mt: 2, mb: 1 }}>
           {sessions.map((session) => (
             <SessionItem
               key={session.sessionId}
