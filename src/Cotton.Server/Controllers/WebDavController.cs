@@ -200,6 +200,34 @@ public class WebDavController(
         return result.Created ? Created() : NoContent();
     }
 
+    [AcceptVerbs("PROPPATCH")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandlePropPatchAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        path ??= string.Empty;
+
+        var query = new WebDavHeadQuery(userId, path);
+        var result = await _mediator.Send(query, HttpContext.RequestAborted);
+        if (!result.Found)
+        {
+            return NotFound();
+        }
+
+        AddDavHeaders();
+
+        var hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
+        var href = hrefBase.TrimEnd('/') + "/" + path.TrimStart('/');
+        var xml = WebDavXmlBuilder.BuildPropPatchOkResponse(href);
+
+        return new ContentResult
+        {
+            StatusCode = StatusCodes.Status207MultiStatus,
+            ContentType = "application/xml; charset=\"utf-8\"",
+            Content = xml
+        };
+    }
+
     [AcceptVerbs("LOCK")]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleLockAsync(string? path)
@@ -377,11 +405,11 @@ public class WebDavController(
     {
         string[] methods =
         [
-            "OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY", "LOCK", "UNLOCK"
+            "OPTIONS", "PROPFIND", "PROPPATCH", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY", "LOCK", "UNLOCK"
         ];
 
         var excludeSet = new HashSet<string>(exclude, StringComparer.OrdinalIgnoreCase);
-        Response.Headers["DAV"] = "1";
+        Response.Headers["DAV"] = "1, 2";
         Response.Headers["MS-Author-Via"] = "DAV";
         Response.Headers.Allow = string.Join(", ",
             methods.Where(m => !excludeSet.Contains(m)));
