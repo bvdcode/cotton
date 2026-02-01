@@ -126,9 +126,21 @@ public class WebDavPutFileCommandHandler(
 
         if (totalBytes == 0)
         {
-            // Empty file - create a single empty chunk
-            chunks = await CreateEmptyChunkAsync(request.UserId, ct);
-            fileHash = Hasher.HashData([]);
+            // Allow empty file only when client explicitly indicates Content-Length: 0.
+            // Otherwise this is likely an aborted upload (e.g. client closed connection early).
+            if (request.ContentLength.HasValue && request.ContentLength.Value == 0)
+            {
+                chunks = await CreateEmptyChunkAsync(request.UserId, ct);
+                fileHash = Hasher.HashData([]);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "WebDAV PUT got 0 bytes but Content-Length was {CL}. Treating as aborted. Path: {Path}, User: {UserId}",
+                    request.ContentLength, request.Path, request.UserId);
+
+                return new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted);
+            }
         }
 
         // Determine content type
