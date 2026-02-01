@@ -51,7 +51,7 @@ public class WebDavCopyCommandHandler(
     public async Task<WebDavCopyResult> Handle(WebDavCopyCommand request, CancellationToken ct)
     {
         // Resolve source
-        var sourceResult = await _pathResolver.ResolvePathAsync(request.UserId, request.SourcePath, ct);
+        var sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
         if (!sourceResult.Found)
         {
             _logger.LogDebug("WebDAV COPY: Source not found: {Path}", request.SourcePath);
@@ -84,7 +84,7 @@ public class WebDavCopyCommandHandler(
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
 
         // Check if destination exists
-        var destExists = await _pathResolver.ResolvePathAsync(request.UserId, request.DestinationPath, ct);
+        var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
         if (destExists.Found && !request.Overwrite)
         {
             _logger.LogDebug("WebDAV COPY: Destination exists and overwrite is false: {Path}", request.DestinationPath);

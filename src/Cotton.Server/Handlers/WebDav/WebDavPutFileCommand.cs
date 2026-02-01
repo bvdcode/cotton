@@ -62,7 +62,7 @@ public class WebDavPutFileCommandHandler(
     public async Task<WebDavPutFileResult> Handle(WebDavPutFileCommand request, CancellationToken ct)
     {
         // Check if path points to existing collection
-        var existing = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
+        var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
         if (existing.Found && existing.IsCollection)
         {
             return new WebDavPutFileResult(false, false, WebDavPutFileError.IsCollection);
