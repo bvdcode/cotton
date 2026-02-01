@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;

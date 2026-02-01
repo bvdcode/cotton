@@ -3,14 +3,9 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Database.Models.Enums;
-using Cotton.Server.Jobs;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
-using Cotton.Storage.Abstractions;
-using Cotton.Storage.Pipelines;
-using Cotton.Storage.Processors;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
@@ -56,10 +51,11 @@ public enum WebDavPutFileError
 public class WebDavPutFileCommandHandler(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
-    IStoragePipeline _storage,
     SettingsProvider _settings,
     IWebDavPathResolver _pathResolver,
     FileManifestService _fileManifestService,
+    IChunkIngestService _chunkIngest,
+    NodeFileHistoryService _history,
     ILogger<WebDavPutFileCommandHandler> _logger)
     : IRequestHandler<WebDavPutFileCommand, WebDavPutFileResult>
 {
@@ -158,22 +154,7 @@ public class WebDavPutFileCommandHandler(
             var nodeFile = await _dbContext.NodeFiles
                 .FirstAsync(f => f.Id == existing.NodeFile.Id, ct);
 
-            var trashNode = await _layouts.CreateTrashItemAsync(request.UserId);
-            var versionFile = new NodeFile
-            {
-                NodeId = trashNode.Id,
-                OwnerId = request.UserId,
-                FileManifestId = nodeFile.FileManifestId,
-                OriginalNodeFileId = nodeFile.OriginalNodeFileId,
-            };
-            if (versionFile.OriginalNodeFileId == Guid.Empty)
-            {
-                versionFile.OriginalNodeFileId = nodeFile.Id;
-                nodeFile.OriginalNodeFileId = nodeFile.Id;
-            }
-            versionFile.SetName(nodeFile.Name);
-            await _dbContext.NodeFiles.AddAsync(versionFile, ct);
-            nodeFile.FileManifestId = fileManifest.Id;
+            await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifest.Id, request.UserId, ct);
         }
         else
         {
@@ -250,54 +231,7 @@ public class WebDavPutFileCommandHandler(
     /// </summary>
     private async Task<Chunk> ProcessSingleChunkAsync(byte[] buffer, int length, Guid userId, CancellationToken ct)
     {
-        // Compute hash of the chunk data
-        byte[] chunkHash = Hasher.HashData(buffer.AsSpan(0, length));
-        string storageKey = Hasher.ToHexStringHash(chunkHash);
-
-        // Wait if chunk is being garbage collected
-        if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
-        {
-            await Task.Delay(1000, ct);
-        }
-
-        // Find or create chunk
-        var chunk = await _layouts.FindChunkAsync(chunkHash);
-        if (chunk is null)
-        {
-            // Write chunk to storage using a memory stream (chunk-sized, not file-sized)
-            using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
-            await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
-
-            chunk = new Chunk
-            {
-                Hash = chunkHash,
-                SizeBytes = length,
-                CompressionAlgorithm = CompressionProcessor.Algorithm
-            };
-            await _dbContext.Chunks.AddAsync(chunk, ct);
-        }
-        else if (chunk.GCScheduledAfter.HasValue)
-        {
-            chunk.GCScheduledAfter = null;
-            _dbContext.Chunks.Update(chunk);
-        }
-
-        // Create chunk ownership if not exists
-        var ownershipExists = await _dbContext.ChunkOwnerships
-            .AnyAsync(co => co.ChunkHash == chunkHash && co.OwnerId == userId, ct);
-
-        if (!ownershipExists)
-        {
-            var ownership = new ChunkOwnership
-            {
-                ChunkHash = chunkHash,
-                OwnerId = userId
-            };
-            await _dbContext.ChunkOwnerships.AddAsync(ownership, ct);
-        }
-
-        await _dbContext.SaveChangesAsync(ct);
-        return chunk;
+        return await _chunkIngest.UpsertChunkAsync(userId, buffer, length, ct);
     }
 
     /// <summary>
@@ -305,36 +239,7 @@ public class WebDavPutFileCommandHandler(
     /// </summary>
     private async Task<List<Chunk>> CreateEmptyChunkAsync(Guid userId, CancellationToken ct)
     {
-        byte[] emptyHash = Hasher.HashData([]);
-        string storageKey = Hasher.ToHexStringHash(emptyHash);
-        var chunk = await _layouts.FindChunkAsync(emptyHash);
-        if (chunk is null)
-        {
-            using var emptyStream = new MemoryStream([], writable: false);
-            await _storage.WriteAsync(storageKey, emptyStream);
-            chunk = new Chunk
-            {
-                Hash = emptyHash,
-                SizeBytes = 0,
-                CompressionAlgorithm = CompressionProcessor.Algorithm
-            };
-            await _dbContext.Chunks.AddAsync(chunk, ct);
-        }
-
-        var ownershipExists = await _dbContext.ChunkOwnerships
-            .AnyAsync(co => co.ChunkHash == emptyHash && co.OwnerId == userId, ct);
-
-        if (!ownershipExists)
-        {
-            var ownership = new ChunkOwnership
-            {
-                ChunkHash = emptyHash,
-                OwnerId = userId
-            };
-            await _dbContext.ChunkOwnerships.AddAsync(ownership, ct);
-        }
-
-        await _dbContext.SaveChangesAsync(ct);
+        var chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);
         return [chunk];
     }
 

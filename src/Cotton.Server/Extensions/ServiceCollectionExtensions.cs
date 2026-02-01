@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Auth;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Shared;
 using EasyExtensions.Abstractions;
@@ -32,6 +33,13 @@ namespace Cotton.Server.Extensions
         public static IServiceCollection AddWebDavServices(this IServiceCollection services)
         {
             services.AddScoped<IWebDavPathResolver, WebDavPathResolver>();
+            return services;
+        }
+
+        public static IServiceCollection AddChunkServices(this IServiceCollection services)
+        {
+            services.AddScoped<IChunkIngestService, ChunkIngestService>();
+            services.AddScoped<NodeFileHistoryService>();
             return services;
         }
 
