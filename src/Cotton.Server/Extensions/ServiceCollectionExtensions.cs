@@ -43,6 +43,12 @@ namespace Cotton.Server.Extensions
             return services;
         }
 
+        public static IServiceCollection AddLayoutPathServices(this IServiceCollection services)
+        {
+            services.AddScoped<ILayoutPathResolver, LayoutPathResolver>();
+            return services;
+        }
+
         public static IServiceCollection AddWebDavAuth(this IServiceCollection services)
         {
             services
