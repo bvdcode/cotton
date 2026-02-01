@@ -174,8 +174,6 @@ Performance characteristics:
 
 This isn’t “engineering overkill for bragging rights” — it’s deliberate headroom. When the crypto/compression pipeline is comfortably faster than your storage/network, the app stays responsive on NAS-class hardware, and you can throw very large trees and multi‑GB transfers at it without the system becoming fragile.
 
-- Faster is only
-
 Hashing for addressing uses SHA-256 from EasyExtensions.Crypto.
 
 ---
