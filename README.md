@@ -40,6 +40,7 @@ Instead, Cotton separates:
 Designed to:
 
 - handle **folders with hundreds of thousands / millions of entries** without choking the UI;
+- feel instantaneous at scale — the UI and controls respond immediately (no dinosaur UI, no perceptible lag) even on large trees and modest NAS hardware;
 - stream **multi-GB uploads in a browser** without locking up;
 - keep crypto and storage performance-oriented, not "just good enough".
 
@@ -94,6 +95,7 @@ Engine / protocol:
 
 UX / behavior:
 
+- **Ultra‑responsive UI** — instant feedback and sub-second interactions even with very large folders; designed so the app never feels like a sluggish, legacy “dinosaur.”
 - Browser uploads of **large folders (tens of GB, thousands of files)** without freezing the UI.
 - Virtualized folder view tuned for very large directories.
 - Simple, focused file viewer: only the controls you actually use (share, download, etc.).
