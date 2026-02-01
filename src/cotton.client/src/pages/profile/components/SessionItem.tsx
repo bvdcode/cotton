@@ -34,7 +34,6 @@ export const SessionItem = ({
         p: 1.5,
         bgcolor: "action.hover",
         borderRadius: 1,
-        border: (theme) => `1px solid ${theme.palette.divider}`,
         display: "flex",
         alignItems: "center",
         gap: 1,
@@ -57,7 +56,9 @@ export const SessionItem = ({
                 maxWidth: "100%",
               }}
             >
-              {session.device || session.userAgent || t("sessions.unknownDevice")}
+              {session.device ||
+                session.userAgent ||
+                t("sessions.unknownDevice")}
             </Typography>
           </Tooltip>
           {session.isCurrentSession && (
@@ -99,10 +100,7 @@ export const SessionItem = ({
         </Stack>
       </Box>
 
-      <Tooltip
-        title={t("sessions.revokeSession")}
-        placement="left"
-      >
+      <Tooltip title={t("sessions.revokeSession")} placement="left">
         <span>
           <IconButton
             size="small"

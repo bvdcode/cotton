@@ -1,10 +1,4 @@
-import {
-  Box,
-  Stack,
-  Typography,
-  Alert,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Stack, Typography, Alert, CircularProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useState } from "react";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
@@ -59,7 +53,9 @@ export const SessionsCard = () => {
           setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
         } catch (err) {
           setError(
-            err instanceof Error ? err.message : t("sessions.errors.revokeFailed"),
+            err instanceof Error
+              ? err.message
+              : t("sessions.errors.revokeFailed"),
           );
         } finally {
           setRevoking(null);
@@ -77,33 +73,30 @@ export const SessionsCard = () => {
       description={t("sessions.description")}
       count={sessions.length}
     >
-        {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress size={32} />
-          </Box>
-        ) : error ? (
-          <Alert severity="error" onClose={() => setError(null)} sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        ) : sessions.length === 0 ? (
-          <Typography
-            color="text.secondary"
-            sx={{ py: 2, textAlign: "center" }}
-          >
-            {t("sessions.noActiveSessions")}
-          </Typography>
-        ) : (
-          <Stack spacing={1.5} sx={{ mt: 2 }}>
-            {sessions.map((session) => (
-              <SessionItem
-                key={session.sessionId}
-                session={session}
-                isRevoking={revoking === session.sessionId}
-                onRevoke={handleRevokeSession}
-              />
-            ))}
-          </Stack>
-        )}
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      ) : sessions.length === 0 ? (
+        <Typography color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
+          {t("sessions.noActiveSessions")}
+        </Typography>
+      ) : (
+        <Stack spacing={1.5} sx={{ mt: 2 }}>
+          {sessions.map((session) => (
+            <SessionItem
+              key={session.sessionId}
+              session={session}
+              isRevoking={revoking === session.sessionId}
+              onRevoke={handleRevokeSession}
+            />
+          ))}
+        </Stack>
+      )}
     </ProfileAccordionCard>
   );
 };
