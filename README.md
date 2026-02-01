@@ -67,7 +67,7 @@ Cotton is opinionated:
   Single .NET service, Postgres, filesystem (or other backends via processors). No exotic deps.
 
 - **Easy for non-technical users; powerful for experts**  
-  First-run setup is a guided, in-browser wizard with clear questions and explicit “not sure” options — Cotton will pick safe defaults when you don’t know what to choose. If you _do_ know, you can configure advanced integrations up front (for example: your own SMTP server, S3 storage, or a separate GPU runner for compute-heavy features).
+  First-run setup is a guided, in‑browser wizard that actually helps non-technical users — there are explicit “Not sure” buttons and safe defaults so an installer can finish setup with one click. If you prefer control, the same wizard exposes expert knobs (custom SMTP, S3, fine-grained encryption and threading options, or an optional NVIDIA/GPU runner for AI workloads) so power users and operators get full control up-front. In short: one UX for both audiences — friendly defaults for novices, explicit expert paths for administrators.
 
 If you want a **storage system** (engine‑first) rather than a thin filesystem wrapper, Cotton is meant for you — it provides first-class APIs (including a production-quality WebDAV v1 endpoint) while keeping the UI thin and focused.
 
@@ -84,6 +84,9 @@ Engine / protocol:
 - Optional streaming Zstandard (zstd) compression — enabled by default, streaming via `ZstdSharp` (transparent to clients; effective because compression runs before encryption).
 - Production-quality WebDAV v1 (RFC 4918) support — core methods implemented: `OPTIONS`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, `MKCOL`, `MOVE`, `COPY`; includes `Range`/`ETag` semantics and `DAV: 1` header. Optional WebDAV extensions (LOCK/UNLOCK, PROPPATCH) are not implemented; see `src/Cotton.Server/Controllers/WebDavController.cs`.
 - Streaming AES-GCM (pure C#) measured at **memory-bound** throughput on encrypt; decrypt on par with OpenSSL in our tests.
+- Instant, one‑click snapshots and restores — snapshots record references (not copies) so restoring a layout is an atomic pointer switch (works instantly even for millions of files).
+- Opt‑in performance telemetry + adaptive autotuning — with operator consent Cotton can collect anonymized measurements and recommend or apply safer, better defaults (chunk sizes, buffers, threading) based on real‑world signals.
+- GC‑safe ingest — the system prevents a concurrent re‑upload of a chunk that is currently being deleted, avoiding rare race conditions between deletes and ingests.
 - Postgres metadata with a clear split between **"what" (content)** and **"where" (layout)**.
 
 UX / behavior:
@@ -116,7 +119,7 @@ Separation of concerns is similar to git:
 
 This enables:
 
-- snapshots of layouts without copying content;
+- instant, one‑click snapshots of layouts without copying content — snapshots record references and restores are an atomic pointer switch (fast even for millions of files);
 - content-level deduplication;
 - mounting the same file in multiple places with no duplication.
 
@@ -172,7 +175,7 @@ Performance characteristics:
 - Encrypt scales to memory bandwidth (~14–16+ GB/s; up to ~16–17 GB/s in favorable benchmarks) around 1–2 threads with ~1 MiB chunks.
 - Scaling efficient up to 2–4 threads, then limited by shared resources (memory BW / caches).
 
-This isn’t “engineering overkill for bragging rights” — it’s deliberate headroom. When the crypto/compression pipeline is comfortably faster than your storage/network, the app stays responsive on NAS-class hardware, and you can throw very large trees and multi‑GB transfers at it without the system becoming fragile.
+This isn’t “engineering overkill for bragging rights” — it’s deliberate headroom. When the crypto/compression pipeline is comfortably faster than your storage/network, the app stays responsive on NAS-class hardware, and you can throw very large trees and multi‑GB transfers at it without the system becoming fragile. Benchmarks include modest/NAS‑class machines — in my tests encryption and streaming compression remain faster than a typical 2.5 Gbit network link.
 
 Hashing for addressing uses SHA-256 from EasyExtensions.Crypto.
 
@@ -257,7 +260,7 @@ Downloads and previews properly support `ETag`, `If-None-Match` (304 responses),
 Share tokens can be single-use (`DeleteAfterUse`) and expire after configurable retention. Background job sweeps expired tokens — no manual "clean up shares" UI needed.
 
 **GC-aware chunk ingest**  
-The garbage collector coordinates with ingestion: if a chunk is currently being deleted, ingestion backs off briefly to avoid edge-case races between deletes and uploads.  
+The garbage collector coordinates with ingestion: if a chunk is currently being deleted, the ingest path will refuse/hold concurrent uploads of that same chunk until the delete completes—this prevents rare races and windows where a delete and an upload could conflict. The behavior is deliberate: safety first, then fast reconciliation.  
 _See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Services/ChunkIngestService.cs`_
 
 **Industrial-strength NameValidator**  
