@@ -55,7 +55,7 @@ public class WebDavController(
         AddDavHeaders();
         return new ContentResult
         {
-            StatusCode = 207,
+            StatusCode = StatusCodes.Status207MultiStatus,
             ContentType = "application/xml; charset=\"utf-8\"",
             Content = result.XmlResponse
         };
@@ -80,9 +80,8 @@ public class WebDavController(
 
         if (result.IsCollection)
         {
-            // Return 200 OK for collections (some clients expect this)
-            AddDavHeaders();
-            return Ok();
+            AddDavHeaders(excludes: "GET");
+            return StatusCode(StatusCodes.Status405MethodNotAllowed, "Cannot GET a collection");
         }
 
         AddDavHeaders();
@@ -94,7 +93,7 @@ public class WebDavController(
             : EntityTagHeaderValue.Any;
 
         return File(
-            result.Content!,
+            result.Content ?? Stream.Null,
             result.ContentType ?? "application/octet-stream",
             result.FileName,
             result.LastModified,
@@ -107,10 +106,6 @@ public class WebDavController(
     public async Task<IActionResult> HandleHeadAsync(string? path)
     {
         var userId = User.GetUserId();
-
-        _logger.LogDebug("WebDAV HEAD: {Path}, user: {UserId}, ip: {Ip}",
-            path ?? "/", userId, Request.GetRemoteAddress());
-
         var query = new WebDavHeadQuery(userId, path ?? string.Empty);
         var result = await _mediator.Send(query);
 
@@ -119,9 +114,18 @@ public class WebDavController(
             return NotFound();
         }
 
+        if (result.IsCollection)
+        {
+            AddDavHeaders(excludes: "HEAD");
+            return StatusCode(StatusCodes.Status405MethodNotAllowed, "Cannot HEAD a collection");
+        }
+
         AddDavHeaders();
         Response.ContentType = result.ContentType ?? "application/octet-stream";
         Response.ContentLength = result.ContentLength;
+        Response.Headers.AcceptRanges = "bytes";
+        Response.Headers.ContentEncoding = "identity";
+        Response.Headers.CacheControl = "private, no-store, no-transform";
 
         if (result.LastModified.HasValue)
         {
@@ -142,10 +146,6 @@ public class WebDavController(
     public async Task<IActionResult> HandlePutAsync(string? path)
     {
         var userId = User.GetUserId();
-
-        _logger.LogDebug("WebDAV PUT: {Path}, user: {UserId}, ip: {Ip}",
-            path ?? "/", userId, Request.GetRemoteAddress());
-
         var contentType = Request.ContentType;
         var command = new WebDavPutFileCommand(
             userId,
@@ -156,7 +156,6 @@ public class WebDavController(
         var result = await _mediator.Send(command);
 
         AddDavHeaders();
-
         if (!result.Success)
         {
             return result.Error switch
@@ -165,7 +164,7 @@ public class WebDavController(
                 WebDavPutFileError.IsCollection => Conflict("Cannot PUT to a collection"),
                 WebDavPutFileError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavPutFileError.Conflict => Conflict("Conflict with existing resource"),
-                _ => StatusCode(500)
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
 
@@ -258,7 +257,7 @@ public class WebDavController(
                 WebDavMoveError.DestinationExists => StatusCode(412, "Destination exists and Overwrite is false"),
                 WebDavMoveError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavMoveError.CannotMoveRoot => Forbid(),
-                _ => StatusCode(500)
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
 
@@ -292,21 +291,28 @@ public class WebDavController(
             {
                 WebDavCopyError.SourceNotFound => NotFound(),
                 WebDavCopyError.DestinationParentNotFound => Conflict("Destination parent not found"),
-                WebDavCopyError.DestinationExists => StatusCode(412, "Destination exists and Overwrite is false"),
+                WebDavCopyError.DestinationExists => StatusCode(StatusCodes.Status412PreconditionFailed, "Destination exists and Overwrite is false"),
                 WebDavCopyError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavCopyError.CannotCopyRoot => Forbid(),
-                _ => StatusCode(500)
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
 
         return result.Created ? Created() : NoContent();
     }
 
-    private void AddDavHeaders()
+    private void AddDavHeaders(params string[] excludes)
     {
+        string[] methods =
+        [
+            "OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY"
+        ];
+
+        var excludeSet = new HashSet<string>(excludes, StringComparer.OrdinalIgnoreCase);
         Response.Headers["DAV"] = "1,2";
         Response.Headers["MS-Author-Via"] = "DAV";
-        Response.Headers.Allow = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY";
+        Response.Headers.Allow = string.Join(", ",
+            methods.Where(m => !excludeSet.Contains(m)));
     }
 
     private int GetDepthHeader()
