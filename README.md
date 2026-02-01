@@ -66,6 +66,9 @@ Cotton is opinionated:
 - **Self-hosting friendly**  
   Single .NET service, Postgres, filesystem (or other backends via processors). No exotic deps.
 
+- **Practical alternative to cloud object storage**  
+  If you're evaluating hosted object storage (for example, Google Cloud Storage) but prefer self-hosting, Cotton is a practical alternative for many use-cases — from a single-user NAS to team and on‑prem deployments. It gives predictable costs, stronger data locality/privacy, and offline/air‑gapped options while still exposing APIs and integrations; it is not a drop‑in replacement for every managed cloud service (managed DBs, global CDNs, GCP-specific managed features, etc.). You can expand features via plugins or write your own.
+
 - **Easy for non-technical users; powerful for experts**  
   First-run setup is a guided, in‑browser wizard that actually helps non-technical users — there are explicit “Not sure” buttons and safe defaults so an installer can finish setup with one click. If you prefer control, the same wizard exposes expert knobs (custom SMTP, S3, fine-grained encryption and threading options, or an optional NVIDIA/GPU runner for AI workloads) so power users and operators get full control up-front. In short: one UX for both audiences — friendly defaults for novices, explicit expert paths for administrators.
 
@@ -99,6 +102,7 @@ UX / behavior:
 Self-hosting / ops:
 
 - All-managed .NET, easy to run under Docker.
+- Practical self-hosted alternative to cloud object storage (including Google Cloud) for teams that need control, predictable costs and stronger privacy — suitable for radically different users (home NAS → teams → on‑prem deployments). All features are expansible via plugins.
 - Optional telemetry (opt-in): enables Cotton Cloud-backed services (email/AI modes) and helps improve reliability and defaults over time.
 - Plugin safety & moderation: runtime extensions are sandboxed and supervised (resource limits, timeouts, crash isolation); an operator can disable or revoke plugins and the app‑store is moderated so problematic plugins are removed. This keeps third‑party innovation from impacting platform reliability.
 - Automatic EF Core migrations on startup.
