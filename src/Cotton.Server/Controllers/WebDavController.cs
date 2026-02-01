@@ -45,7 +45,7 @@ public class WebDavController(
             path ?? "/", depth, userId, Request.GetRemoteAddress());
 
         var query = new WebDavPropFindQuery(userId, path ?? string.Empty, hrefBase, depth);
-        var result = await _mediator.Send(query);
+        var result = await _mediator.Send(query, HttpContext.RequestAborted);
 
         if (!result.Found)
         {
@@ -71,7 +71,7 @@ public class WebDavController(
             path ?? "/", userId, Request.GetRemoteAddress());
 
         var query = new WebDavGetFileQuery(userId, path ?? string.Empty);
-        var result = await _mediator.Send(query);
+        var result = await _mediator.Send(query, HttpContext.RequestAborted);
 
         if (!result.Found)
         {
@@ -107,7 +107,7 @@ public class WebDavController(
     {
         var userId = User.GetUserId();
         var query = new WebDavHeadQuery(userId, path ?? string.Empty);
-        var result = await _mediator.Send(query);
+        var result = await _mediator.Send(query, HttpContext.RequestAborted);
 
         if (!result.Found)
         {
@@ -157,7 +157,7 @@ public class WebDavController(
             overwrite,
             Request.ContentLength);
 
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, HttpContext.RequestAborted);
         if (!result.Success)
         {
             if (result.Error == WebDavPutFileError.IsCollection)
@@ -171,7 +171,7 @@ public class WebDavController(
                 WebDavPutFileError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavPutFileError.Conflict => Conflict("Conflict with existing resource"),
                 WebDavPutFileError.PreconditionFailed => StatusCode(StatusCodes.Status412PreconditionFailed, "Destination exists and Overwrite is false"),
-                WebDavPutFileError.UploadAborted => StatusCode(StatusCodes.Status500InternalServerError, "Upload aborted"),
+                WebDavPutFileError.UploadAborted => Conflict("Upload aborted"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
@@ -186,7 +186,7 @@ public class WebDavController(
     {
         var userId = User.GetUserId();
         var command = new WebDavDeleteCommand(userId, path ?? string.Empty);
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, HttpContext.RequestAborted);
 
         AddDavHeaders();
 
@@ -209,7 +209,7 @@ public class WebDavController(
     {
         var userId = User.GetUserId();
         var command = new WebDavMkColCommand(userId, path ?? string.Empty);
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, HttpContext.RequestAborted);
         AddDavHeaders();
         if (!result.Success)
         {
@@ -239,7 +239,7 @@ public class WebDavController(
         }
 
         var command = new WebDavMoveCommand(userId, path ?? string.Empty, destination, overwrite);
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, HttpContext.RequestAborted);
         AddDavHeaders();
         if (!result.Success)
         {
@@ -270,7 +270,7 @@ public class WebDavController(
             return BadRequest("Destination header is required");
         }
         var command = new WebDavCopyCommand(userId, path ?? string.Empty, destination, overwrite);
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, HttpContext.RequestAborted);
         AddDavHeaders();
         if (!result.Success)
         {
