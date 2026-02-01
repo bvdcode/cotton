@@ -35,6 +35,8 @@ public class WebDavPropFindQueryHandler(
     : IRequestHandler<WebDavPropFindQuery, WebDavPropFindResult>
 {
 
+    private const int MaxDepth = 32;
+
     public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
@@ -47,11 +49,13 @@ public class WebDavPropFindQueryHandler(
 
         var resources = new List<WebDavResource>();
         var hrefBase = EnsureTrailingSlash(request.HrefBase);
+        var depth = Math.Clamp(request.Depth, 0, MaxDepth);
+        var pathCache = new Dictionary<Guid, Database.Models.Node>();
 
         if (resolveResult.IsCollection && resolveResult.Node is not null)
         {
             var node = resolveResult.Node;
-            var nodePath = await BuildNodePathAsync(node, ct);
+            var nodePath = await BuildNodePathAsync(node, pathCache, ct);
             var nodeHref = BuildHref(hrefBase, nodePath);
 
             // Add the collection itself
@@ -64,9 +68,9 @@ public class WebDavPropFindQueryHandler(
                 ETag: $"\"{node.Id}\""));
 
             // If depth > 0, add children
-            if (request.Depth > 0)
+            if (depth > 0)
             {
-                await AddChildResourcesAsync(resources, node, hrefBase, nodePath, ct);
+                await AddChildResourcesAsync(resources, node, hrefBase, nodePath, depth, 1, pathCache, ct);
             }
         }
         else if (resolveResult.NodeFile is not null)
@@ -77,7 +81,7 @@ public class WebDavPropFindQueryHandler(
                 .FirstOrDefaultAsync(n => n.Id == nodeFile.NodeId, ct);
 
             var parentPath = parentNode is not null
-                ? await BuildNodePathAsync(parentNode, ct)
+                ? await BuildNodePathAsync(parentNode, pathCache, ct)
                 : string.Empty;
 
             var fileHref = BuildHref(hrefBase, parentPath, nodeFile.Name);
@@ -101,12 +105,18 @@ public class WebDavPropFindQueryHandler(
         Database.Models.Node parentNode,
         string hrefBase,
         string parentPath,
+        int maxDepth,
+        int currentDepth,
+        Dictionary<Guid, Database.Models.Node> pathCache,
         CancellationToken ct)
     {
         // Get child nodes (folders)
         var childNodes = await _dbContext.Nodes
             .AsNoTracking()
-            .Where(n => n.ParentId == parentNode.Id && n.Type == WebDavPathResolver.DefaultNodeType)
+            .Where(n => n.ParentId == parentNode.Id
+                && n.Type == WebDavPathResolver.DefaultNodeType
+                && n.OwnerId == parentNode.OwnerId
+                && n.LayoutId == parentNode.LayoutId)
             .OrderBy(n => n.NameKey)
             .ToListAsync(ct);
 
@@ -123,13 +133,19 @@ public class WebDavPropFindQueryHandler(
                 ContentLength: 0,
                 LastModified: childNode.UpdatedAt,
                 ETag: $"\"{childNode.Id}\""));
+
+            if (currentDepth < maxDepth)
+            {
+                await AddChildResourcesAsync(resources, childNode, hrefBase, childPath, maxDepth, currentDepth + 1, pathCache, ct);
+            }
         }
 
         // Get child files
         var childFiles = await _dbContext.NodeFiles
             .AsNoTracking()
             .Include(f => f.FileManifest)
-            .Where(f => f.NodeId == parentNode.Id)
+            .Where(f => f.NodeId == parentNode.Id
+                && f.OwnerId == parentNode.OwnerId)
             .OrderBy(f => f.NameKey)
             .ToListAsync(ct);
 
@@ -150,8 +166,15 @@ public class WebDavPropFindQueryHandler(
         }
     }
 
-    private async Task<string> BuildNodePathAsync(Database.Models.Node node, CancellationToken ct)
+    private async Task<string> BuildNodePathAsync(
+        Database.Models.Node node,
+        Dictionary<Guid, Database.Models.Node> cache,
+        CancellationToken ct)
     {
+        if (!cache.ContainsKey(node.Id))
+        {
+            cache[node.Id] = node;
+        }
         var parts = new List<string>();
         var current = node;
 
@@ -159,9 +182,20 @@ public class WebDavPropFindQueryHandler(
         while (current.ParentId is not null)
         {
             parts.Add(current.Name);
-            current = await _dbContext.Nodes
-                .AsNoTracking()
-                .FirstOrDefaultAsync(n => n.Id == current.ParentId, ct);
+
+            if (!cache.TryGetValue(current.ParentId.Value, out var parent))
+            {
+                parent = await _dbContext.Nodes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(n => n.Id == current.ParentId, ct);
+
+                if (parent is not null)
+                {
+                    cache[parent.Id] = parent;
+                }
+            }
+
+            current = parent;
 
             if (current is null)
             {
@@ -175,7 +209,7 @@ public class WebDavPropFindQueryHandler(
 
     private static string BuildHref(string baseHref, params string[] pathParts)
     {
-        var path = string.Join("/", pathParts.Where(p => !string.IsNullOrEmpty(p)));
+        var path = string.Join(WebDavPathResolver.PathSeparator, pathParts.Where(p => !string.IsNullOrEmpty(p)));
         if (string.IsNullOrEmpty(path))
         {
             return baseHref;
