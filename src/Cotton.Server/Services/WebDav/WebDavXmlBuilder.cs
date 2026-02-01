@@ -39,6 +39,47 @@ public static class WebDavXmlBuilder
         return sb.ToString();
     }
 
+    public static string BuildLockDiscoveryResponse(string token, TimeSpan timeout)
+    {
+        var sb = new StringBuilder();
+        var settings = new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true,
+            Indent = false,
+            Encoding = Encoding.UTF8
+        };
+
+        using var stringWriter = new StringWriter(sb);
+        using (var writer = XmlWriter.Create(stringWriter, settings))
+        {
+            writer.WriteStartElement("d", "prop", DavNamespace);
+
+            writer.WriteStartElement("d", "lockdiscovery", DavNamespace);
+            writer.WriteStartElement("d", "activelock", DavNamespace);
+
+            writer.WriteStartElement("d", "locktype", DavNamespace);
+            writer.WriteElementString("d", "write", DavNamespace, string.Empty);
+            writer.WriteEndElement();
+
+            writer.WriteStartElement("d", "lockscope", DavNamespace);
+            writer.WriteElementString("d", "exclusive", DavNamespace, string.Empty);
+            writer.WriteEndElement();
+
+            writer.WriteElementString("d", "depth", DavNamespace, "Infinity");
+            writer.WriteElementString("d", "timeout", DavNamespace, $"Second-{(int)timeout.TotalSeconds}");
+
+            writer.WriteStartElement("d", "locktoken", DavNamespace);
+            writer.WriteElementString("d", "href", DavNamespace, token);
+            writer.WriteEndElement();
+
+            writer.WriteEndElement(); // activelock
+            writer.WriteEndElement(); // lockdiscovery
+            writer.WriteEndElement(); // prop
+        }
+
+        return sb.ToString();
+    }
+
     private static void WriteResourceResponse(XmlWriter writer, WebDavResource resource)
     {
         writer.WriteStartElement("d", "response", DavNamespace);
