@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Database.Models.Enums;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -35,6 +34,7 @@ public class WebDavPropFindQueryHandler(
     ILogger<WebDavPropFindQueryHandler> _logger)
     : IRequestHandler<WebDavPropFindQuery, WebDavPropFindResult>
 {
+
     public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
@@ -106,7 +106,7 @@ public class WebDavPropFindQueryHandler(
         // Get child nodes (folders)
         var childNodes = await _dbContext.Nodes
             .AsNoTracking()
-            .Where(n => n.ParentId == parentNode.Id && n.Type == NodeType.Default)
+            .Where(n => n.ParentId == parentNode.Id && n.Type == WebDavPathResolver.DefaultNodeType)
             .OrderBy(n => n.NameKey)
             .ToListAsync(ct);
 
@@ -114,7 +114,7 @@ public class WebDavPropFindQueryHandler(
         {
             var childPath = string.IsNullOrEmpty(parentPath)
                 ? childNode.Name
-                : $"{parentPath}/{childNode.Name}";
+                : $"{parentPath}{WebDavPathResolver.PathSeparator}{childNode.Name}";
 
             resources.Add(new WebDavResource(
                 Href: EnsureTrailingSlash(BuildHref(hrefBase, childPath)),
@@ -137,7 +137,7 @@ public class WebDavPropFindQueryHandler(
         {
             var filePath = string.IsNullOrEmpty(parentPath)
                 ? childFile.Name
-                : $"{parentPath}/{childFile.Name}";
+                : $"{parentPath}{WebDavPathResolver.PathSeparator}{childFile.Name}";
 
             resources.Add(new WebDavResource(
                 Href: BuildHref(hrefBase, filePath),
@@ -163,11 +163,14 @@ public class WebDavPropFindQueryHandler(
                 .AsNoTracking()
                 .FirstOrDefaultAsync(n => n.Id == current.ParentId, ct);
 
-            if (current is null) break;
+            if (current is null)
+            {
+                break;
+            }
         }
 
         parts.Reverse();
-        return string.Join("/", parts);
+        return string.Join(WebDavPathResolver.PathSeparator, parts);
     }
 
     private static string BuildHref(string baseHref, params string[] pathParts)
@@ -177,9 +180,9 @@ public class WebDavPropFindQueryHandler(
         {
             return baseHref;
         }
-        return baseHref.TrimEnd('/') + "/" + path;
+        return baseHref.TrimEnd(WebDavPathResolver.PathSeparator) + WebDavPathResolver.PathSeparator + path;
     }
 
     private static string EnsureTrailingSlash(string href) =>
-        href.EndsWith('/') ? href : href + "/";
+        href.EndsWith(WebDavPathResolver.PathSeparator) ? href : href + WebDavPathResolver.PathSeparator;
 }
