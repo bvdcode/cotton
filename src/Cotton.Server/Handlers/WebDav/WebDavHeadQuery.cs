@@ -63,7 +63,7 @@ public class WebDavHeadQueryHandler(
                 ContentType: manifest.ContentType,
                 ContentLength: manifest.SizeBytes,
                 LastModified: resolveResult.NodeFile.UpdatedAt,
-                ETag: $"\"{resolveResult.NodeFile.Id}\"");
+                ETag: $"\"{resolveResult.NodeFile.Id}:{resolveResult.NodeFile.FileManifestId}\"");
         }
 
         return new WebDavHeadResult(false, false);

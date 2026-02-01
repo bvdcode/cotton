@@ -126,8 +126,7 @@ public class WebDavCopyCommandHandler(
             {
                 OwnerId = request.UserId,
                 NodeId = destParentResult.ParentNode.Id,
-                FileManifestId = sourceResult.NodeFile.FileManifestId,
-                OriginalNodeFileId = sourceResult.NodeFile.OriginalNodeFileId
+                FileManifestId = sourceResult.NodeFile.FileManifestId
             };
             newNodeFile.SetName(destParentResult.ResourceName);
 
@@ -135,6 +134,23 @@ public class WebDavCopyCommandHandler(
         }
 
         await _dbContext.SaveChangesAsync(ct);
+
+        // Ensure copied files form a new version family.
+        if (sourceResult.NodeFile is not null)
+        {
+            var createdFile = await _dbContext.NodeFiles
+                .Where(f => f.OwnerId == request.UserId
+                    && f.NodeId == destParentResult.ParentNode!.Id
+                    && f.NameKey == NameValidator.NormalizeAndGetNameKey(destParentResult.ResourceName!))
+                .OrderByDescending(f => f.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+
+            if (createdFile is not null && createdFile.OriginalNodeFileId == Guid.Empty)
+            {
+                createdFile.OriginalNodeFileId = createdFile.Id;
+                await _dbContext.SaveChangesAsync(ct);
+            }
+        }
 
         _logger.LogInformation("WebDAV COPY: Copied {Source} to {Dest} for user {UserId}",
             request.SourcePath, request.DestinationPath, request.UserId);
@@ -170,7 +186,10 @@ public class WebDavCopyCommandHandler(
         // Copy child nodes
         var childNodes = await _dbContext.Nodes
             .AsNoTracking()
-            .Where(n => n.ParentId == sourceNodeId)
+            .Where(n => n.ParentId == sourceNodeId
+                && n.OwnerId == userId
+                && n.LayoutId == layoutId
+                && n.Type == sourceNode.Type)
             .ToListAsync(ct);
 
         foreach (var child in childNodes)
@@ -181,7 +200,7 @@ public class WebDavCopyCommandHandler(
         // Copy files
         var childFiles = await _dbContext.NodeFiles
             .AsNoTracking()
-            .Where(f => f.NodeId == sourceNodeId)
+            .Where(f => f.NodeId == sourceNodeId && f.OwnerId == userId)
             .ToListAsync(ct);
 
         foreach (var file in childFiles)
@@ -190,8 +209,7 @@ public class WebDavCopyCommandHandler(
             {
                 OwnerId = userId,
                 NodeId = newNode.Id,
-                FileManifestId = file.FileManifestId,
-                OriginalNodeFileId = file.OriginalNodeFileId
+                FileManifestId = file.FileManifestId
             };
             newFile.SetName(file.Name);
 

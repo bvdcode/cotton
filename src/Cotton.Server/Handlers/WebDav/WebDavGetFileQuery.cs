@@ -80,6 +80,6 @@ public class WebDavGetFileQueryHandler(
             ContentLength: manifest.SizeBytes,
             FileName: nodeFile.Name,
             LastModified: nodeFile.UpdatedAt,
-            ETag: $"\"{nodeFile.Id}\"");
+            ETag: $"\"{nodeFile.Id}:{nodeFile.FileManifestId}\"");
     }
 }
