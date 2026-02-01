@@ -136,6 +136,8 @@
       "title": "Активные сессии",
       "description": "Управление активными сессиями на разных устройствах",
       "noActiveSessions": "Нет активных сессий",
+      "currentSession": "Текущая",
+      "unknownDevice": "Неизвестное устройство",
       "revokeSession": "Завершить сессию",
       "elapsed": "длится {{duration}}",
       "revokeConfirmTitle": "Завершить сессию?",
