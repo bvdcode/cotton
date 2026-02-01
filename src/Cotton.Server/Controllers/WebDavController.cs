@@ -21,6 +21,7 @@ namespace Cotton.Server.Controllers;
 [Route("api/v1/webdav/{**path}")]
 public class WebDavController(
     IMediator _mediator,
+    IWebDavLockGuard _lockGuard,
     ILogger<WebDavController> _logger) : ControllerBase
 {
     private const string WebDavRoute = "/api/v1/webdav/";
@@ -32,6 +33,69 @@ public class WebDavController(
         AddDavHeaders();
         Response.Headers["Public"] = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, LOCK, UNLOCK";
         return Ok();
+    }
+
+    [AcceptVerbs("LOCK")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleLockAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        var ifHeader = Request.Headers["If"].FirstOrDefault();
+        var timeout = GetTimeoutHeader();
+
+        var command = new WebDavLockCommand(userId, path ?? string.Empty, ifHeader, timeout);
+        var result = await _mediator.Send(command);
+
+        AddDavHeaders();
+
+        if (!result.Success)
+        {
+            return result.Error switch
+            {
+                WebDavLockError.NotFound => NotFound(),
+                WebDavLockError.Locked => StatusCode(StatusCodes.Status423Locked),
+                WebDavLockError.PreconditionFailed => StatusCode(StatusCodes.Status412PreconditionFailed),
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
+            };
+        }
+
+        if (result.Lock is null)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        Response.Headers["Lock-Token"] = $"<{result.Lock.Token}>";
+        if (result.Lock.ExpiresAt.HasValue)
+        {
+            var seconds = Math.Max(1, (long)(result.Lock.ExpiresAt.Value - DateTimeOffset.UtcNow).TotalSeconds);
+            Response.Headers["Timeout"] = $"Second-{seconds}";
+        }
+
+        return new ContentResult
+        {
+            StatusCode = result.Created ? StatusCodes.Status201Created : StatusCodes.Status200OK,
+            ContentType = "application/xml; charset=\"utf-8\"",
+            Content = WebDavLockXmlBuilder.BuildPropResponse(result.Lock)
+        };
+    }
+
+    [AcceptVerbs("UNLOCK")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleUnlockAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        var lockToken = Request.Headers["Lock-Token"].FirstOrDefault();
+        var command = new WebDavUnlockCommand(userId, path ?? string.Empty, lockToken);
+        var result = await _mediator.Send(command);
+
+        AddDavHeaders();
+
+        if (!result.Success)
+        {
+            return StatusCode(StatusCodes.Status412PreconditionFailed);
+        }
+
+        return NoContent();
     }
 
     [AcceptVerbs("PROPFIND")]
@@ -147,6 +211,12 @@ public class WebDavController(
     public async Task<IActionResult> HandlePutAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, Request.Headers["If"].FirstOrDefault(), out _))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked);
+        }
+
         var overwrite = GetOverwriteHeader();
         var contentType = Request.ContentType;
         var command = new WebDavPutFileCommand(
@@ -185,6 +255,12 @@ public class WebDavController(
     public async Task<IActionResult> HandleDeleteAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, Request.Headers["If"].FirstOrDefault(), out _))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked);
+        }
+
         var command = new WebDavDeleteCommand(userId, path ?? string.Empty);
         var result = await _mediator.Send(command);
 
@@ -208,6 +284,12 @@ public class WebDavController(
     public async Task<IActionResult> HandleMkColAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, Request.Headers["If"].FirstOrDefault(), out _))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked);
+        }
+
         var command = new WebDavMkColCommand(userId, path ?? string.Empty);
         var result = await _mediator.Send(command);
         AddDavHeaders();
@@ -237,6 +319,15 @@ public class WebDavController(
         {
             return BadRequest("Destination header is required");
         }
+
+        var ifHeader = Request.Headers["If"].FirstOrDefault();
+        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, ifHeader, out _)
+            || !_lockGuard.TryAuthorizeWrite(destination, userId, ifHeader, out _))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked);
+        }
+
         var command = new WebDavMoveCommand(userId, path ?? string.Empty, destination, overwrite);
         var result = await _mediator.Send(command);
         AddDavHeaders();
@@ -267,6 +358,15 @@ public class WebDavController(
         {
             return BadRequest("Destination header is required");
         }
+
+        var ifHeader = Request.Headers["If"].FirstOrDefault();
+        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, ifHeader, out _)
+            || !_lockGuard.TryAuthorizeWrite(destination, userId, ifHeader, out _))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked);
+        }
+
         var command = new WebDavCopyCommand(userId, path ?? string.Empty, destination, overwrite);
         var result = await _mediator.Send(command);
         AddDavHeaders();
@@ -290,7 +390,7 @@ public class WebDavController(
     {
         string[] methods =
         [
-            "OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY"
+            "OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY", "LOCK", "UNLOCK"
         ];
 
         var excludeSet = new HashSet<string>(exclude, StringComparer.OrdinalIgnoreCase);
@@ -339,5 +439,26 @@ public class WebDavController(
     {
         var overwrite = Request.Headers["Overwrite"].FirstOrDefault();
         return !string.Equals(overwrite, "F", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private TimeSpan? GetTimeoutHeader()
+    {
+        var timeoutHeader = Request.Headers["Timeout"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(timeoutHeader))
+        {
+            return TimeSpan.FromHours(1);
+        }
+
+        // Only support Second-N for now, fallback to 1 hour.
+        if (timeoutHeader.StartsWith("Second-", StringComparison.OrdinalIgnoreCase)
+            && long.TryParse(timeoutHeader[7..], out var seconds)
+            && seconds > 0)
+        {
+            // Clamp to 24h to avoid unbounded locks.
+            seconds = Math.Min(seconds, 60 * 60 * 24);
+            return TimeSpan.FromSeconds(seconds);
+        }
+
+        return TimeSpan.FromHours(1);
     }
 }
