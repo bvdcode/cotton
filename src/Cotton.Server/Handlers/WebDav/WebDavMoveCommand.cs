@@ -2,8 +2,9 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Server.Handlers.Files;
+using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services.WebDav;
-using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -42,6 +43,7 @@ public enum WebDavMoveError
 /// </summary>
 public class WebDavMoveCommandHandler(
     CottonDbContext _dbContext,
+    IMediator _mediator,
     IWebDavPathResolver _pathResolver,
     ILogger<WebDavMoveCommandHandler> _logger)
     : IRequestHandler<WebDavMoveCommand, WebDavMoveResult>
@@ -93,21 +95,11 @@ public class WebDavMoveCommandHandler(
         {
             if (destExists.IsCollection && destExists.Node is not null)
             {
-                var nodeToDelete = await _dbContext.Nodes
-                    .FirstOrDefaultAsync(n => n.Id == destExists.Node.Id, ct);
-                if (nodeToDelete is not null)
-                {
-                    _dbContext.Nodes.Remove(nodeToDelete);
-                }
+                await _mediator.Send(new DeleteNodeQuery(request.UserId, destExists.Node.Id, skipTrash: false), ct);
             }
             else if (destExists.NodeFile is not null)
             {
-                var fileToDelete = await _dbContext.NodeFiles
-                    .FirstOrDefaultAsync(f => f.Id == destExists.NodeFile.Id, ct);
-                if (fileToDelete is not null)
-                {
-                    _dbContext.NodeFiles.Remove(fileToDelete);
-                }
+                await _mediator.Send(new DeleteFileQuery(request.UserId, destExists.NodeFile.Id, skipTrash: false), ct);
             }
             created = true;
         }
