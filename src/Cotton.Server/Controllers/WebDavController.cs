@@ -250,6 +250,7 @@ public class WebDavController(
                 WebDavMoveError.DestinationExists => StatusCode(412, "Destination exists and Overwrite is false"),
                 WebDavMoveError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavMoveError.CannotMoveRoot => Forbid(),
+                WebDavMoveError.CannotMoveIntoDescendant => Conflict("Cannot move a collection into its descendant"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
@@ -325,6 +326,8 @@ public class WebDavController(
         {
             destination = uri.AbsolutePath;
         }
+
+        destination = Uri.UnescapeDataString(destination);
 
         // Remove the WebDAV route prefix
         var webdavIndex = destination.IndexOf(WebDavRoute, StringComparison.OrdinalIgnoreCase);
