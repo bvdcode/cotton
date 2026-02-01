@@ -1,4 +1,11 @@
-import { Box, Stack, Typography, Alert, CircularProgress } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Typography,
+  Alert,
+  CircularProgress,
+  Divider,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useState } from "react";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
@@ -86,7 +93,7 @@ export const SessionsCard = () => {
           {t("sessions.noActiveSessions")}
         </Typography>
       ) : (
-        <Stack spacing={1.5} sx={{ mt: 2, mb: 1 }}>
+        <Stack spacing={0} divider={<Divider />}>
           {sessions.map((session) => (
             <SessionItem
               key={session.sessionId}
