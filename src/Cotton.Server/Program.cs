@@ -53,6 +53,7 @@ namespace Cotton.Server
                 .AddControllers().Services
                 .AddStreamCipher()
                 .AddChunkServices()
+                .AddLayoutPathServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
