@@ -80,11 +80,11 @@ public class WebDavController(
 
         if (result.IsCollection)
         {
-            AddDavHeaders(exclude: "GET");
+            AddDavHeaders(exclude: ["GET", "HEAD", "PUT"]);
             return StatusCode(StatusCodes.Status405MethodNotAllowed, "Cannot GET a collection");
         }
 
-        AddDavHeaders(exclude: ["GET", "HEAD", "PUT"]);
+        AddDavHeaders();
         Response.Headers.ContentEncoding = "identity";
         Response.Headers.CacheControl = "private, no-store, no-transform";
 
@@ -157,9 +157,12 @@ public class WebDavController(
             Request.ContentLength);
 
         var result = await _mediator.Send(command);
-        AddDavHeaders(exclude: ["GET", "HEAD", "PUT"]);
         if (!result.Success)
         {
+            if (result.Error == WebDavPutFileError.IsCollection)
+            {
+                AddDavHeaders(exclude: ["GET", "HEAD", "PUT"]);
+            }
             return result.Error switch
             {
                 WebDavPutFileError.ParentNotFound => Conflict("Parent collection not found"),
@@ -172,6 +175,7 @@ public class WebDavController(
             };
         }
 
+        AddDavHeaders();
         return result.Created ? Created() : NoContent();
     }
 
