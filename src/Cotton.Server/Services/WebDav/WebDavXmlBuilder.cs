@@ -39,6 +39,37 @@ public static class WebDavXmlBuilder
         return sb.ToString();
     }
 
+    public static string BuildPropPatchOkResponse(string href)
+    {
+        var sb = new StringBuilder();
+        var settings = new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true,
+            Indent = false,
+            Encoding = Encoding.UTF8
+        };
+
+        using var stringWriter = new StringWriter(sb);
+        using (var writer = XmlWriter.Create(stringWriter, settings))
+        {
+            writer.WriteStartElement("d", "multistatus", DavNamespace);
+
+            writer.WriteStartElement("d", "response", DavNamespace);
+            writer.WriteElementString("d", "href", DavNamespace, href);
+
+            writer.WriteStartElement("d", "propstat", DavNamespace);
+            writer.WriteStartElement("d", "prop", DavNamespace);
+            writer.WriteEndElement(); // prop
+            writer.WriteElementString("d", "status", DavNamespace, "HTTP/1.1 200 OK");
+            writer.WriteEndElement(); // propstat
+
+            writer.WriteEndElement(); // response
+            writer.WriteEndElement(); // multistatus
+        }
+
+        return sb.ToString();
+    }
+
     public static string BuildLockDiscoveryResponse(string token, TimeSpan timeout)
     {
         var sb = new StringBuilder();

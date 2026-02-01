@@ -60,6 +60,8 @@ namespace Cotton.Server
                 .AddJwt();
 
             var app = builder.Build();
+
+            // TODO: Remove after testing
             app.UseWhen(
                 ctx => ctx.Request.Path.StartsWithSegments("/api/v1/webdav"),
                 b => b.Use(async (ctx, next) =>
