@@ -41,32 +41,32 @@ public static class WebDavXmlBuilder
 
     private static void WriteResourceResponse(XmlWriter writer, WebDavResource resource)
     {
-        writer.WriteStartElement("d", "response", null);
-        writer.WriteElementString("d", "href", null, resource.Href);
+        writer.WriteStartElement("d", "response", DavNamespace);
+        writer.WriteElementString("d", "href", DavNamespace, resource.Href);
 
-        writer.WriteStartElement("d", "propstat", null);
-        writer.WriteStartElement("d", "prop", null);
+        writer.WriteStartElement("d", "propstat", DavNamespace);
+        writer.WriteStartElement("d", "prop", DavNamespace);
 
-        writer.WriteElementString("d", "displayname", null, resource.DisplayName);
+        writer.WriteElementString("d", "displayname", DavNamespace, resource.DisplayName);
 
-        writer.WriteStartElement("d", "resourcetype", null);
+        writer.WriteStartElement("d", "resourcetype", DavNamespace);
         if (resource.IsCollection)
         {
-            writer.WriteElementString("d", "collection", null, string.Empty);
+            writer.WriteElementString("d", "collection", DavNamespace, string.Empty);
         }
         writer.WriteEndElement(); // resourcetype
 
-        writer.WriteElementString("d", "getcontentlength", null, resource.ContentLength.ToString());
-        writer.WriteElementString("d", "getlastmodified", null, resource.LastModified.ToString("R"));
-        writer.WriteElementString("d", "getetag", null, resource.ETag);
+        writer.WriteElementString("d", "getcontentlength", DavNamespace, resource.ContentLength.ToString());
+        writer.WriteElementString("d", "getlastmodified", DavNamespace, resource.LastModified.ToString("R"));
+        writer.WriteElementString("d", "getetag", DavNamespace, resource.ETag);
 
         if (!resource.IsCollection && !string.IsNullOrEmpty(resource.ContentType))
         {
-            writer.WriteElementString("d", "getcontenttype", null, resource.ContentType);
+            writer.WriteElementString("d", "getcontenttype", DavNamespace, resource.ContentType);
         }
 
         writer.WriteEndElement(); // prop
-        writer.WriteElementString("d", "status", null, "HTTP/1.1 200 OK");
+        writer.WriteElementString("d", "status", DavNamespace, "HTTP/1.1 200 OK");
         writer.WriteEndElement(); // propstat
 
         writer.WriteEndElement(); // response
