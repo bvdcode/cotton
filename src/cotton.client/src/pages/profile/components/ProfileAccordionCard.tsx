@@ -53,7 +53,20 @@ export const ProfileAccordionCard = ({
       ]}
     >
       <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
+        expandIcon={
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {typeof count === "number" && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                {count}
+              </Typography>
+            )}
+            <ExpandMoreIcon />
+          </Box>
+        }
         aria-controls={ariaControls}
         id={id}
         sx={[
@@ -92,16 +105,6 @@ export const ProfileAccordionCard = ({
                 {title}
               </Typography>
             </Box>
-
-            {typeof count === "number" && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ whiteSpace: "nowrap" }}
-              >
-                {count}
-              </Typography>
-            )}
           </Box>
 
           {description && (
