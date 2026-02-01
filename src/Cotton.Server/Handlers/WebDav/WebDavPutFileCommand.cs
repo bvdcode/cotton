@@ -28,7 +28,8 @@ public record WebDavPutFileCommand(
     string Path,
     Stream Content,
     string? ContentType,
-    bool Overwrite = true) : IRequest<WebDavPutFileResult>;
+    bool Overwrite = true,
+    long? ContentLength = null) : IRequest<WebDavPutFileResult>;
 
 /// <summary>
 /// Result of WebDAV PUT operation
@@ -43,7 +44,9 @@ public enum WebDavPutFileError
     ParentNotFound,
     IsCollection,
     InvalidName,
-    Conflict
+    Conflict,
+    PreconditionFailed,
+    UploadAborted
 }
 
 /// <summary>
@@ -66,7 +69,6 @@ public class WebDavPutFileCommandHandler(
         var existing = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
         if (existing.Found && existing.IsCollection)
         {
-            _logger.LogDebug("WebDAV PUT: Path is a collection: {Path}", request.Path);
             return new WebDavPutFileResult(false, false, WebDavPutFileError.IsCollection);
         }
 
@@ -74,14 +76,12 @@ public class WebDavPutFileCommandHandler(
         var parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
         if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
         {
-            _logger.LogDebug("WebDAV PUT: Parent not found for path: {Path}", request.Path);
             return new WebDavPutFileResult(false, false, WebDavPutFileError.ParentNotFound);
         }
 
         // Validate name
         if (!NameValidator.TryNormalizeAndValidate(parentResult.ResourceName, out _, out var errorMessage))
         {
-            _logger.LogDebug("WebDAV PUT: Invalid name: {Name}, Error: {Error}", parentResult.ResourceName, errorMessage);
             return new WebDavPutFileResult(false, false, WebDavPutFileError.InvalidName);
         }
 
@@ -98,16 +98,38 @@ public class WebDavPutFileCommandHandler(
 
         if (folderExists)
         {
-            _logger.LogDebug("WebDAV PUT: Conflict with existing folder: {Path}", request.Path);
             return new WebDavPutFileResult(false, false, WebDavPutFileError.Conflict);
+        }
+
+        // If file exists and overwrite is false then fail per WebDAV semantics.
+        if (existing.Found && existing.NodeFile is not null && !request.Overwrite)
+        {
+            return new WebDavPutFileResult(false, false, WebDavPutFileError.PreconditionFailed);
         }
 
         bool created = !existing.Found;
 
         // Process stream in chunks without loading entire file into memory
         var chunks = await ProcessStreamInChunksAsync(request.Content, request.UserId, ct);
+        long totalBytes = 0;
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            totalBytes += chunks[i].SizeBytes;
+        }
 
-        if (chunks.Count == 0)
+        if (request.ContentLength.HasValue && request.ContentLength.Value > 0)
+        {
+            if (totalBytes == 0 || totalBytes != request.ContentLength.Value)
+            {
+                _logger.LogWarning(
+                    "WebDAV PUT aborted/truncated: expected length {Expected}, got {Actual} bytes. Path: {Path}, User: {UserId}",
+                    request.ContentLength.Value, totalBytes, request.Path, request.UserId);
+
+                return new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted);
+            }
+        }
+
+        if (totalBytes == 0)
         {
             // Empty file - create a single empty chunk
             chunks = await CreateEmptyChunkAsync(request.UserId, ct);
@@ -221,8 +243,7 @@ public class WebDavPutFileCommandHandler(
         // Wait if chunk is being garbage collected
         if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
         {
-            _logger.LogDebug("WebDAV PUT: Chunk {Hash} is being GC'd, waiting...", storageKey);
-            await Task.Delay(100, ct);
+            await Task.Delay(1000, ct);
         }
 
         // Find or create chunk
