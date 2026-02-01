@@ -1,6 +1,5 @@
 import {
   Box,
-  Paper,
   Stack,
   Typography,
   IconButton,
@@ -29,7 +28,7 @@ export const SessionItem = ({
   const { t } = useTranslation("profile");
 
   return (
-    <Paper
+    <Box
       sx={{
         p: 1.5,
         bgcolor: "action.hover",
@@ -116,6 +115,6 @@ export const SessionItem = ({
           </IconButton>
         </span>
       </Tooltip>
-    </Paper>
+    </Box>
   );
 };

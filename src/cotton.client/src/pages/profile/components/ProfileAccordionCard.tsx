@@ -85,8 +85,18 @@ export const ProfileAccordionCard = ({
             minWidth: 0,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1, minWidth: 0 }}>
+          <Box
+            sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
               {icon}
               <Typography variant="h6" fontWeight={600} noWrap>
                 {title}
@@ -122,7 +132,7 @@ export const ProfileAccordionCard = ({
         sx={[
           {
             px: { xs: 2, sm: 3 },
-            pb: { xs: 2, sm: 3 },
+            pb: { xs: 2, sm: 2 },
           },
           ...(Array.isArray(detailsSx)
             ? detailsSx
