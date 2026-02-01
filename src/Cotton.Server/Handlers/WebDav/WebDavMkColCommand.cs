@@ -90,7 +90,7 @@ public class WebDavMkColCommandHandler(
         {
             OwnerId = request.UserId,
             ParentId = parentResult.ParentNode.Id,
-            Type = NodeType.Default,
+            Type = WebDavPathResolver.DefaultNodeType,
             LayoutId = layout.Id,
         };
         newNode.SetName(parentResult.ResourceName);
