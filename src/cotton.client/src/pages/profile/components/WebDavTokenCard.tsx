@@ -178,24 +178,35 @@ export const WebDavTokenCard = () => {
         <Accordion
           disableGutters
           sx={{
-            borderRadius: 1,
-            overflow: "hidden",
-            bgcolor: "background.default",
+            boxShadow: "none",
+            "&:before": { display: "none" },
           }}
         >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              px: 0,
+              minHeight: 48,
+              "& .MuiAccordionSummary-content": { margin: 0 },
+            }}
+          >
             <Typography variant="body2" fontWeight={500}>
               {t("webdav.examples.title")}
             </Typography>
           </AccordionSummary>
 
-          <AccordionDetails sx={{ px: 2, pb: 2 }}>
+          <AccordionDetails sx={{ px: 0, pb: 0 }}>
             <Stack spacing={0} divider={<Divider />}>
               {examples.map((example) => (
                 <Stack key={example.id} spacing={0.5} sx={{ py: 1.5 }}>
-                  <Typography variant="body2" fontWeight={600}>
-                    {t(`webdav.examples.${example.id}.title`)}
-                  </Typography>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" fontWeight={600}>
+                      {t(`webdav.examples.${example.id}.title`)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {t(`webdav.examples.${example.id}.caption`)}
+                    </Typography>
+                  </Box>
                   <Box
                     sx={{
                       p: 1.5,
@@ -226,9 +237,6 @@ export const WebDavTokenCard = () => {
                       </IconButton>
                     </Tooltip>
                   </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    {t(`webdav.examples.${example.id}.caption`)}
-                  </Typography>
                 </Stack>
               ))}
             </Stack>
