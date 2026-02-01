@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,8 @@ namespace Cotton.Server.Services.WebDav;
 /// </summary>
 public class WebDavPathResolver(
     CottonDbContext _dbContext,
-    ILayoutService _layouts) : IWebDavPathResolver
+    ILayoutService _layouts,
+    ILayoutPathResolver _layoutPathResolver) : IWebDavPathResolver
 {
     public const NodeType DefaultNodeType = NodeType.Default;
     public const char PathSeparator = '/';
@@ -37,49 +39,32 @@ public class WebDavPathResolver(
     {
         var cleanPath = NormalizePath(path);
 
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, DefaultNodeType);
-
         // Root path
         if (string.IsNullOrEmpty(cleanPath))
         {
+            var (Layout, Root) = await _layoutPathResolver.GetLayoutAndRootAsync(userId, DefaultNodeType, ct);
+            var root = Root;
             return new WebDavResolveResult
             {
                 Found = true,
                 IsCollection = true,
-                Node = rootNode
+                Node = root
             };
         }
 
         var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
-        var currentNode = rootNode;
-
-        // Navigate to parent node (all parts except the last)
-        for (int i = 0; i < parts.Length - 1; i++)
+        var parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
+        var currentNode = await _layoutPathResolver.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
+        if (currentNode is null)
         {
-            var part = parts[i];
-            var nameKey = NameValidator.NormalizeAndGetNameKey(part);
-
-            var nextNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.LayoutId == layout.Id
-                    && x.ParentId == currentNode.Id
-                    && x.OwnerId == userId
-                    && x.NameKey == nameKey
-                    && x.Type == DefaultNodeType)
-                .SingleOrDefaultAsync(ct);
-
-            if (nextNode is null)
-            {
-                return new WebDavResolveResult { Found = false };
-            }
-
-            currentNode = nextNode;
+            return new WebDavResolveResult { Found = false };
         }
 
         // Now check the last part - it can be a node or a file
         var lastName = parts[^1];
         var lastNameKey = NameValidator.NormalizeAndGetNameKey(lastName);
+
+        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
 
         // Try to find as node first
         var childNode = await _dbContext.Nodes
