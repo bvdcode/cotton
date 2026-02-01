@@ -66,7 +66,7 @@ Cotton is opinionated:
 - **Self-hosting friendly**  
   Single .NET service, Postgres, filesystem (or other backends via processors). No exotic deps.
 
-If you want a **storage system** rather than "webDAV with a skin", Cotton is meant for you.
+If you want a **storage system** (engine‑first) rather than a thin filesystem wrapper, Cotton is meant for you — it provides first-class APIs (including a production-quality WebDAV v1 endpoint) while keeping the UI thin and focused.
 
 ---
 
@@ -76,7 +76,10 @@ Engine / protocol:
 
 - Content-addressed chunks and manifests with deduplication by design.
 - Chunk-first, idempotent upload protocol resilient to network hiccups and retries.
-- Storage pipeline with pluggable processors (crypto, compression, filesystem, cache/replica in future).
+- Storage pipeline with pluggable processors (crypto, filesystem backends, cache/replica planned).  
+- All stored content is fully *seekable* at the storage level (see ConcatenatedReadStream) — enables efficient `Range` reads, preview extraction and streaming without reassembling files.  
+- Optional streaming Zstandard (zstd) compression — enabled by default, streaming via `ZstdSharp` (transparent to clients; effective because compression runs before encryption).  
+- Production-quality WebDAV v1 (RFC 4918) support — core methods implemented: `OPTIONS`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, `MKCOL`, `MOVE`, `COPY`; includes `Range`/`ETag` semantics and `DAV: 1` header. Optional WebDAV extensions (LOCK/UNLOCK, PROPPATCH) are not implemented; see `src/Cotton.Server/Controllers/WebDavController.cs`.
 - Streaming AES-GCM (pure C#) measured at **memory-bound** throughput on encrypt; decrypt on par with OpenSSL in our tests.
 - Postgres metadata with a clear split between **"what" (content)** and **"where" (layout)**.
 
@@ -301,18 +304,18 @@ _See: `src/Cotton.Storage/Backends/FileSystemStorageBackend.cs`_
 Checks existence before write to avoid redundant uploads. Supports namespace "segments" for partitioning.  
 _See: `src/Cotton.Storage/Backends/S3StorageBackend.cs`_
 
-**ConcatenatedReadStream: seekable stream over chunks**  
-Single logical stream assembled from multiple chunk streams. Supports `Seek` via binary search over cumulative offsets, switches underlying stream on-the-fly.  
-This is **why** Range downloads/video streaming/previews work seamlessly without reassembling files on disk.  
-_See: `src/Cotton.Storage/Streams/ConcatenatedReadStream.cs`_
+**ConcatenatedReadStream: fully seekable stream assembled from chunks**  
+A single logical, seekable stream is assembled from multiple chunk streams (no file reassembly). `Seek` is implemented by locating the target chunk (binary search over cumulative offsets) and switching the underlying stream on‑the‑fly so reads always come from the correct chunk.  
+Why this matters — and why it's hard: it enables true `Range` downloads, fast partial reads, and efficient preview extraction (no temp files or full-file buffering), and it lets the same storage backends serve CDN/HTTP range requests and FFmpeg without extra I/O. Implementing this required non‑trivial coordination: preserving per‑chunk AES‑GCM authentication/nonce layout while supporting arbitrary seeks, cooperating with compression and pipeline ordering, and supporting concurrent range reads with minimal overhead.  
+_See: `src/Cotton.Storage/Streams/ConcatenatedReadStream.cs`, `src/Cotton.Storage/Pipelines/FileStoragePipeline.cs`._
 
 **CachedStoragePipeline for small objects**  
 In-memory cache (~100MB default) with per-object size limits. `StoreInMemoryCache=true` forces caching (ideal for previews/icons).  
 _See: `src/Cotton.Storage/Pipelines/CachedStoragePipeline.cs`, used in `PreviewController.cs`_
 
 **Compression processor**  
-Zstd via `ZstdSharp`. Currently buffers in `MemoryStream` (controlled allocation within chunk limits).  
-_See: `src/Cotton.Storage/Processors/CompressionProcessor.cs`_
+Zstandard (zstd) via `ZstdSharp` — streaming, enabled by default and integrated into the storage pipeline. Compression is applied *before* encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI in `Program.cs` (can be disabled or re-ordered by changing registered processors). Tests and benchmarks exercise compressible vs random data.  
+_See: `src/Cotton.Storage/Processors/CompressionProcessor.cs` and `src/Cotton.Storage.Tests/Processors/CompressionProcessorTests.cs`._
 
 ---
 
@@ -358,13 +361,10 @@ _See: `src/Cotton.Previews/PdfPreviewGenerator.cs`_
 **Video preview generator**
 
 - Auto-downloads FFmpeg/ffprobe if missing (`FFMpegCore`)
-- Launches `RangeStreamServer`: mini HTTP server over seekable stream with semaphore-protected seek+read (FFmpeg makes parallel range requests)
-- Extracts frame from mid-duration
-- Timeouts + process kill, detailed logging  
-  _See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`_
-
-**Background preview job**  
-Generates previews only for supported MIME types. Stores preview as blob by hash, saves encrypted preview hash in DB.  
+- Uses a pragmatic local HTTP shim (`RangeStreamServer`) — a deliberate "hack" that exposes a seekable `ConcatenatedReadStream` over HTTP so FFmpeg/ffprobe can perform parallel `Range` requests. The server serializes seek+read with a semaphore to avoid deadlocks and avoids writing full temp files.  
+- Extracts a frame from mid-duration (or other requested time) directly from chunked, encrypted/compressed storage.  
+- Robust timeouts, process kill and detailed logging to contain external tools.  
+_See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`._
 _See: `src/Cotton.Server/Jobs/GeneratePreviewJob.cs`_
 
 ---
