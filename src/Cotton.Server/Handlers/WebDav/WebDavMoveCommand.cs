@@ -42,7 +42,6 @@ public enum WebDavMoveError
 /// </summary>
 public class WebDavMoveCommandHandler(
     CottonDbContext _dbContext,
-    ILayoutService _layouts,
     IWebDavPathResolver _pathResolver,
     ILogger<WebDavMoveCommandHandler> _logger)
     : IRequestHandler<WebDavMoveCommand, WebDavMoveResult>
@@ -78,9 +77,6 @@ public class WebDavMoveCommandHandler(
             _logger.LogDebug("WebDAV MOVE: Invalid name: {Name}, Error: {Error}", destParentResult.ResourceName, errorMessage);
             return new WebDavMoveResult(false, false, WebDavMoveError.InvalidName);
         }
-
-        var newNameKey = NameValidator.NormalizeAndGetNameKey(destParentResult.ResourceName);
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
 
         // Check if destination exists
         var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);

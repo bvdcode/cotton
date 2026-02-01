@@ -21,8 +21,7 @@ namespace Cotton.Server.Controllers;
 [Route("api/v1/webdav/{**path}")]
 public class WebDavController(
     IMediator _mediator,
-    IWebDavLockGuard _lockGuard,
-    ILogger<WebDavController> _logger) : ControllerBase
+    IWebDavLockGuard _lockGuard) : ControllerBase
 {
     private const string WebDavRoute = "/api/v1/webdav/";
 
@@ -105,10 +104,6 @@ public class WebDavController(
         var userId = User.GetUserId();
         var depth = GetDepthHeader();
         var hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
-
-        _logger.LogDebug("WebDAV PROPFIND: {Path}, depth: {Depth}, user: {UserId}, ip: {Ip}",
-            path ?? "/", depth, userId, Request.GetRemoteAddress());
-
         var query = new WebDavPropFindQuery(userId, path ?? string.Empty, hrefBase, depth);
         var result = await _mediator.Send(query);
 
@@ -131,10 +126,6 @@ public class WebDavController(
     public async Task<IActionResult> HandleGetAsync(string? path)
     {
         var userId = User.GetUserId();
-
-        _logger.LogDebug("WebDAV GET: {Path}, user: {UserId}, ip: {Ip}",
-            path ?? "/", userId, Request.GetRemoteAddress());
-
         var query = new WebDavGetFileQuery(userId, path ?? string.Empty);
         var result = await _mediator.Send(query);
 
@@ -298,7 +289,7 @@ public class WebDavController(
             return result.Error switch
             {
                 WebDavMkColError.ParentNotFound => Conflict("Parent collection not found"),
-                WebDavMkColError.AlreadyExists => StatusCode(StatusCodes.Status409Conflict, "Collection already exists"),
+                WebDavMkColError.AlreadyExists => StatusCode(StatusCodes.Status405MethodNotAllowed, "Collection already exists"),
                 WebDavMkColError.InvalidName => BadRequest("Invalid collection name"),
                 WebDavMkColError.Conflict => Conflict("Conflict with existing resource"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
