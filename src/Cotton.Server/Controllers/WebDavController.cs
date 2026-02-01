@@ -202,7 +202,12 @@ public class WebDavController(
     public async Task<IActionResult> HandlePutAsync(string? path)
     {
         var userId = User.GetUserId();
-        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, Request.Headers["If"].FirstOrDefault(), out _))
+        if (!_lockGuard.TryAuthorizeWrite(
+            path ?? string.Empty,
+            userId,
+            Request.Headers["If"].FirstOrDefault(),
+            Request.Headers["Lock-Token"].FirstOrDefault(),
+            out _))
         {
             AddDavHeaders();
             return StatusCode(StatusCodes.Status423Locked);
@@ -246,7 +251,12 @@ public class WebDavController(
     public async Task<IActionResult> HandleDeleteAsync(string? path)
     {
         var userId = User.GetUserId();
-        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, Request.Headers["If"].FirstOrDefault(), out _))
+        if (!_lockGuard.TryAuthorizeWrite(
+            path ?? string.Empty,
+            userId,
+            Request.Headers["If"].FirstOrDefault(),
+            Request.Headers["Lock-Token"].FirstOrDefault(),
+            out _))
         {
             AddDavHeaders();
             return StatusCode(StatusCodes.Status423Locked);
@@ -275,7 +285,12 @@ public class WebDavController(
     public async Task<IActionResult> HandleMkColAsync(string? path)
     {
         var userId = User.GetUserId();
-        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, Request.Headers["If"].FirstOrDefault(), out _))
+        if (!_lockGuard.TryAuthorizeWrite(
+            path ?? string.Empty,
+            userId,
+            Request.Headers["If"].FirstOrDefault(),
+            Request.Headers["Lock-Token"].FirstOrDefault(),
+            out _))
         {
             AddDavHeaders();
             return StatusCode(StatusCodes.Status423Locked);
@@ -312,8 +327,9 @@ public class WebDavController(
         }
 
         var ifHeader = Request.Headers["If"].FirstOrDefault();
-        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, ifHeader, out _)
-            || !_lockGuard.TryAuthorizeWrite(destination, userId, ifHeader, out _))
+        var lockTokenHeader = Request.Headers["Lock-Token"].FirstOrDefault();
+        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, ifHeader, lockTokenHeader, out _)
+            || !_lockGuard.TryAuthorizeWrite(destination, userId, ifHeader, lockTokenHeader, out _))
         {
             AddDavHeaders();
             return StatusCode(StatusCodes.Status423Locked);
@@ -351,8 +367,9 @@ public class WebDavController(
         }
 
         var ifHeader = Request.Headers["If"].FirstOrDefault();
-        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, ifHeader, out _)
-            || !_lockGuard.TryAuthorizeWrite(destination, userId, ifHeader, out _))
+        var lockTokenHeader = Request.Headers["Lock-Token"].FirstOrDefault();
+        if (!_lockGuard.TryAuthorizeWrite(path ?? string.Empty, userId, ifHeader, lockTokenHeader, out _)
+            || !_lockGuard.TryAuthorizeWrite(destination, userId, ifHeader, lockTokenHeader, out _))
         {
             AddDavHeaders();
             return StatusCode(StatusCodes.Status423Locked);
