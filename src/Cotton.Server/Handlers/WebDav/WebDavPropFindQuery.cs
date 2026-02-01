@@ -92,7 +92,7 @@ public class WebDavPropFindQueryHandler(
                 IsCollection: false,
                 ContentLength: nodeFile.FileManifest.SizeBytes,
                 LastModified: nodeFile.UpdatedAt,
-                ETag: $"\"{nodeFile.Id}\"",
+                ETag: $"\"{nodeFile.Id}:{nodeFile.FileManifestId}\"",
                 ContentType: nodeFile.FileManifest.ContentType));
         }
 
@@ -161,7 +161,7 @@ public class WebDavPropFindQueryHandler(
                 IsCollection: false,
                 ContentLength: childFile.FileManifest.SizeBytes,
                 LastModified: childFile.UpdatedAt,
-                ETag: $"\"{childFile.Id}\"",
+                ETag: $"\"{childFile.Id}:{childFile.FileManifestId}\"",
                 ContentType: childFile.FileManifest.ContentType));
         }
     }
@@ -213,6 +213,7 @@ public class WebDavPropFindQueryHandler(
             WebDavPathResolver.PathSeparator,
             pathParts
                 .Where(p => !string.IsNullOrEmpty(p))
+                .SelectMany(p => p.Split(WebDavPathResolver.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
                 .Select(Uri.EscapeDataString));
         if (string.IsNullOrEmpty(path))
         {
