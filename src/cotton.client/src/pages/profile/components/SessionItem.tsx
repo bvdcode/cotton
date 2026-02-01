@@ -31,12 +31,13 @@ export const SessionItem = ({
   return (
     <Paper
       sx={{
-        p: 1,
-        bgcolor: "background.default",
+        p: 1.5,
+        bgcolor: "action.hover",
+        borderRadius: 1,
+        border: (theme) => `1px solid ${theme.palette.divider}`,
         display: "flex",
         alignItems: "center",
         gap: 1,
-        transition: "background-color 0.2s",
       }}
     >
       {getDeviceIcon(session.device)}
@@ -56,12 +57,12 @@ export const SessionItem = ({
                 maxWidth: "100%",
               }}
             >
-              {session.device || session.userAgent || "Unknown device"}
+              {session.device || session.userAgent || t("sessions.unknownDevice")}
             </Typography>
           </Tooltip>
           {session.isCurrentSession && (
             <Chip
-              label="Current"
+              label={t("sessions.currentSession")}
               size="small"
               color="primary"
               sx={{ height: 20, fontSize: "0.7rem" }}
@@ -99,7 +100,7 @@ export const SessionItem = ({
       </Box>
 
       <Tooltip
-        title={t("sessions.revokeSession", "End session")}
+        title={t("sessions.revokeSession")}
         placement="left"
       >
         <span>

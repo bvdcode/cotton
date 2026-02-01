@@ -188,6 +188,9 @@ export const WebDavTokenCard = () => {
               px: 0,
               minHeight: 48,
               "& .MuiAccordionSummary-content": { margin: 0 },
+              "& .MuiAccordionSummary-expandIconWrapper": {
+                color: "text.secondary",
+              },
             }}
           >
             <Typography variant="body2" fontWeight={500}>

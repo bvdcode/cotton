@@ -118,6 +118,8 @@
       "title": "Active Sessions",
       "description": "Manage your active sessions across different devices",
       "noActiveSessions": "No active sessions",
+      "currentSession": "Current",
+      "unknownDevice": "Unknown device",
       "revokeSession": "End session",
       "elapsed": "{{duration}} elapsed",
       "revokeConfirmTitle": "End session?",
