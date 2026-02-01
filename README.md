@@ -66,6 +66,9 @@ Cotton is opinionated:
 - **Self-hosting friendly**  
   Single .NET service, Postgres, filesystem (or other backends via processors). No exotic deps.
 
+- **Easy for non-technical users; powerful for experts**  
+  First-run setup is a guided, in-browser wizard with clear questions and explicit “not sure” options — Cotton will pick safe defaults when you don’t know what to choose. If you _do_ know, you can configure advanced integrations up front (for example: your own SMTP server, S3 storage, or a separate GPU runner for compute-heavy features).
+
 If you want a **storage system** (engine‑first) rather than a thin filesystem wrapper, Cotton is meant for you — it provides first-class APIs (including a production-quality WebDAV v1 endpoint) while keeping the UI thin and focused.
 
 ---
@@ -93,6 +96,7 @@ UX / behavior:
 Self-hosting / ops:
 
 - All-managed .NET, easy to run under Docker.
+- Optional telemetry (opt-in): enables Cotton Cloud-backed services (email/AI modes) and helps improve reliability and defaults over time.
 - Plugin safety & moderation: runtime extensions are sandboxed and supervised (resource limits, timeouts, crash isolation); an operator can disable or revoke plugins and the app‑store is moderated so problematic plugins are removed. This keeps third‑party innovation from impacting platform reliability.
 - Automatic EF Core migrations on startup.
 - Sensible defaults: modern password hashing, strict name validation, autoconfig from a single master key.
@@ -142,13 +146,14 @@ See controllers under `src/Cotton.Server/Controllers`.
 
 ## Storage Pipeline
 
-`src/Cotton.Storage` implements a processor pipeline:
+`src/Cotton.Storage` composes a backend (`IStorageBackend`) with a set of streaming processors (`IStorageProcessor`) into a single pipeline:
 
-- `FileSystemStorageProcessor` — persists chunk blobs on disk (`.ctn`).
+- `CompressionProcessor` — Zstd (streaming).
 - `CryptoProcessor` — wraps streams with streaming AES-GCM encrypt/decrypt.
-- `CompressionProcessor` — Zstd.
+- Storage backend — persists chunk blobs (e.g. `FileSystemStorageBackend` or `S3StorageBackend`).
 
 Write flows **forward** through processors; read flows **backwards**.  
+In practice, ordering is controlled by processor `Priority`, so writes run **compression → crypto → backend**, and reads run **backend → crypto → decompression**.
 This gives a real storage engine, not just `File.WriteAllBytes`.
 
 ---
@@ -164,8 +169,12 @@ Crypto is powered by **EasyExtensions.Crypto** (NuGet) — a streaming AES-GCM e
 Performance characteristics:
 
 - Decrypt throughput ~9–10 GB/s across large chunk sizes on typical dev hardware.
-- Encrypt scales to memory bandwidth (~14–16+ GB/s) around 1–2 threads with ~1 MiB chunks.
+- Encrypt scales to memory bandwidth (~14–16+ GB/s; up to ~16–17 GB/s in favorable benchmarks) around 1–2 threads with ~1 MiB chunks.
 - Scaling efficient up to 2–4 threads, then limited by shared resources (memory BW / caches).
+
+This isn’t “engineering overkill for bragging rights” — it’s deliberate headroom. When the crypto/compression pipeline is comfortably faster than your storage/network, the app stays responsive on NAS-class hardware, and you can throw very large trees and multi‑GB transfers at it without the system becoming fragile.
+
+- Faster is only
 
 Hashing for addressing uses SHA-256 from EasyExtensions.Crypto.
 
@@ -249,6 +258,10 @@ Downloads and previews properly support `ETag`, `If-None-Match` (304 responses),
 **Download tokens with auto-cleanup**  
 Share tokens can be single-use (`DeleteAfterUse`) and expire after configurable retention. Background job sweeps expired tokens — no manual "clean up shares" UI needed.
 
+**GC-aware chunk ingest**  
+The garbage collector coordinates with ingestion: if a chunk is currently being deleted, ingestion backs off briefly to avoid edge-case races between deletes and uploads.  
+_See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Services/ChunkIngestService.cs`_
+
 **Industrial-strength NameValidator**  
 Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
 
@@ -294,7 +307,7 @@ _See: `src/Cotton.Server/Controllers/AuthController.cs`_
 ### Storage Engine (Cotton.Storage)
 
 **Processor pipeline with proper directionality**  
-`FileStoragePipeline` sorts processors by `Priority`. Writes flow **forward** through processors (FS → crypto → compression), reads flow **backwards**.  
+`FileStoragePipeline` sorts processors by `Priority`. Writes flow **forward** (compression → crypto → backend), reads flow **backwards** (backend → crypto → decompression).  
 _See: `src/Cotton.Storage/Pipelines/FileStoragePipeline.cs`_
 
 **FileSystem backend: atomic writes**  
@@ -315,7 +328,7 @@ In-memory cache (~100MB default) with per-object size limits. `StoreInMemoryCach
 _See: `src/Cotton.Storage/Pipelines/CachedStoragePipeline.cs`, used in `PreviewController.cs`_
 
 **Compression processor**  
-Zstandard (zstd) via `ZstdSharp` — streaming, enabled by default and integrated into the storage pipeline. Compression is applied _before_ encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI in `Program.cs` (can be disabled or re-ordered by changing registered processors). Tests and benchmarks exercise compressible vs random data.  
+Zstandard (zstd) via `ZstdSharp` — streaming, enabled by default and integrated into the storage pipeline. Compression is applied _before_ encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). In practice this typically stays comfortably above multi‑gigabit networking speeds, so compression doesn’t turn into the bottleneck. The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI; ordering is controlled via processor `Priority`. Tests and benchmarks exercise compressible vs random data.  
 _See: `src/Cotton.Storage/Processors/CompressionProcessor.cs` and `src/Cotton.Storage.Tests/Processors/CompressionProcessorTests.cs`._
 
 ---
@@ -432,6 +445,7 @@ _See: `src/Cotton.Server/Program.cs`, `AuthController.cs`, `SetupController.cs`_
 ## Roadmap (short)
 
 - Generational GC with compaction/merging of small "dust" chunks (design complete; implementation pending).
+- Adaptive defaults and auto-tuning (chunk sizes / buffers / threading) informed by opt-in performance telemetry.
 - Additional processors (cache, S3 replica, cold storage, etc.).
 - Hardening auth flows and extending UI around uploads/layouts and sharing.
 - Native/mobile and desktop clients reusing the same engine.
