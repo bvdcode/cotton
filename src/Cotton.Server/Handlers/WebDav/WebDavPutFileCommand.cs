@@ -163,12 +163,17 @@ public class WebDavPutFileCommandHandler(
             {
                 NodeId = trashNode.Id,
                 OwnerId = request.UserId,
+                FileManifestId = nodeFile.FileManifestId,
                 OriginalNodeFileId = nodeFile.OriginalNodeFileId,
             };
+            if (versionFile.OriginalNodeFileId == Guid.Empty)
+            {
+                versionFile.OriginalNodeFileId = nodeFile.Id;
+                nodeFile.OriginalNodeFileId = nodeFile.Id;
+            }
             versionFile.SetName(nodeFile.Name);
             await _dbContext.NodeFiles.AddAsync(versionFile, ct);
             nodeFile.FileManifestId = fileManifest.Id;
-            await _dbContext.SaveChangesAsync(ct);
         }
         else
         {
