@@ -80,11 +80,11 @@ public class WebDavController(
 
         if (result.IsCollection)
         {
-            AddDavHeaders(excludes: "GET");
+            AddDavHeaders(exclude: "GET");
             return StatusCode(StatusCodes.Status405MethodNotAllowed, "Cannot GET a collection");
         }
 
-        AddDavHeaders();
+        AddDavHeaders(exclude: ["GET", "HEAD", "PUT"]);
         Response.Headers.ContentEncoding = "identity";
         Response.Headers.CacheControl = "private, no-store, no-transform";
 
@@ -116,7 +116,7 @@ public class WebDavController(
 
         if (result.IsCollection)
         {
-            AddDavHeaders(excludes: "HEAD");
+            AddDavHeaders(exclude: ["GET", "HEAD", "PUT"]);
             return StatusCode(StatusCodes.Status405MethodNotAllowed, "Cannot HEAD a collection");
         }
 
@@ -146,16 +146,18 @@ public class WebDavController(
     public async Task<IActionResult> HandlePutAsync(string? path)
     {
         var userId = User.GetUserId();
+        var overwrite = GetOverwriteHeader();
         var contentType = Request.ContentType;
         var command = new WebDavPutFileCommand(
             userId,
             path ?? string.Empty,
             Request.Body,
-            contentType);
+            contentType,
+            overwrite,
+            Request.ContentLength);
 
         var result = await _mediator.Send(command);
-
-        AddDavHeaders();
+        AddDavHeaders(exclude: ["GET", "HEAD", "PUT"]);
         if (!result.Success)
         {
             return result.Error switch
@@ -164,6 +166,8 @@ public class WebDavController(
                 WebDavPutFileError.IsCollection => Conflict("Cannot PUT to a collection"),
                 WebDavPutFileError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavPutFileError.Conflict => Conflict("Conflict with existing resource"),
+                WebDavPutFileError.PreconditionFailed => StatusCode(StatusCodes.Status412PreconditionFailed, "Destination exists and Overwrite is false"),
+                WebDavPutFileError.UploadAborted => StatusCode(StatusCodes.Status500InternalServerError, "Upload aborted"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
@@ -301,14 +305,14 @@ public class WebDavController(
         return result.Created ? Created() : NoContent();
     }
 
-    private void AddDavHeaders(params string[] excludes)
+    private void AddDavHeaders(params string[] exclude)
     {
         string[] methods =
         [
             "OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY"
         ];
 
-        var excludeSet = new HashSet<string>(excludes, StringComparer.OrdinalIgnoreCase);
+        var excludeSet = new HashSet<string>(exclude, StringComparer.OrdinalIgnoreCase);
         Response.Headers["DAV"] = "1,2";
         Response.Headers["MS-Author-Via"] = "DAV";
         Response.Headers.Allow = string.Join(", ",
