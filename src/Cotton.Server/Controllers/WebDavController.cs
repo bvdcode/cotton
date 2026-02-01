@@ -30,7 +30,6 @@ public class WebDavController(
     {
         AddDavHeaders();
         Response.Headers["Public"] = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, LOCK, UNLOCK";
-        _logger.LogDebug("WebDAV OPTIONS, ip: {Ip}", Request.GetRemoteAddress());
         return Ok();
     }
 
