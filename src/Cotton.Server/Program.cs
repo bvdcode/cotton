@@ -52,6 +52,7 @@ namespace Cotton.Server
                 .AddPbkdf2PasswordHashService()
                 .AddControllers().Services
                 .AddStreamCipher()
+                .AddChunkServices()
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
