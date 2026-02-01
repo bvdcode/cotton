@@ -2,15 +2,11 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Database.Models;
-using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
-using Cotton.Storage.Pipelines;
-using Cotton.Storage.Processors;
 using Cotton.Topology.Abstractions;
 using EasyExtensions;
 using EasyExtensions.Crypto;
@@ -24,9 +20,8 @@ namespace Cotton.Server.Controllers
         PerfTracker _perf,
         CottonDbContext _dbContext,
         SettingsProvider _settings,
-        IStoragePipeline _storage,
         ILogger<ChunkController> _logger,
-        ILayoutService _layouts) : ControllerBase
+        IChunkIngestService _chunkIngest) : ControllerBase
     {
         [Authorize]
         [HttpGet(Routes.V1.Chunks + "/{hash}/exists")]
@@ -95,45 +90,9 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var foundOwnership = await _dbContext.ChunkOwnerships
-                .FirstOrDefaultAsync(co => co.ChunkHash == hashBytes && co.OwnerId == userId);
-            string storageKey = Hasher.ToHexStringHash(computedHash);
-            if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
-            {
-                return CottonResult.InternalError("Chunk is being deleted. Please try uploading again later.");
-            }
-            var chunk = await _layouts.FindChunkAsync(hashBytes);
-            if (chunk == null)
-            {
-                await _storage.WriteAsync(storageKey, stream, new PipelineContext());
-                chunk = new Chunk
-                {
-                    Hash = hashBytes,
-                    SizeBytes = file.Length,
-                    CompressionAlgorithm = CompressionProcessor.Algorithm
-                };
-                await _dbContext.Chunks.AddAsync(chunk);
-            }
-            else
-            {
-                if (chunk.GCScheduledAfter.HasValue)
-                {
-                    chunk.GCScheduledAfter = null;
-                    _dbContext.Chunks.Update(chunk);
-                }
-            }
+            await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length);
 
-            if (foundOwnership == null)
-            {
-                ChunkOwnership chunkOwnership = new()
-                {
-                    ChunkHash = hashBytes,
-                    OwnerId = User.GetUserId(),
-                };
-                await _dbContext.ChunkOwnerships.AddAsync(chunkOwnership);
-            }
-            await _dbContext.SaveChangesAsync();
-            _logger.LogInformation("Stored new chunk {Hash} of size {Size} bytes", storageKey, file.Length);
+            _logger.LogInformation("Stored chunk {Hash} of size {Size} bytes", hash, file.Length);
             _perf.OnChunkCreated();
             return Created();
         }
