@@ -48,7 +48,7 @@ public class WebDavMkColCommandHandler(
     public async Task<WebDavMkColResult> Handle(WebDavMkColCommand request, CancellationToken ct)
     {
         // Check if path already exists
-        var existing = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
+        var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
         if (existing.Found)
         {
             _logger.LogDebug("WebDAV MKCOL: Path already exists: {Path}", request.Path);
