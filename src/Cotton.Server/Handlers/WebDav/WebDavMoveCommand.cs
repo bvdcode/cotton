@@ -35,7 +35,8 @@ public enum WebDavMoveError
     DestinationParentNotFound,
     DestinationExists,
     InvalidName,
-    CannotMoveRoot
+    CannotMoveRoot,
+    CannotMoveIntoDescendant
 }
 
 /// <summary>
@@ -107,6 +108,13 @@ public class WebDavMoveCommandHandler(
         // Perform the move
         if (sourceResult.IsCollection && sourceResult.Node is not null)
         {
+            if (await IsDescendantAsync(destParentResult.ParentNode.Id, sourceResult.Node.Id, ct))
+            {
+                _logger.LogWarning("WebDAV MOVE: Attempted to move node {NodeId} into its descendant {DestParentId} for user {UserId}",
+                    sourceResult.Node.Id, destParentResult.ParentNode.Id, request.UserId);
+                return new WebDavMoveResult(false, false, WebDavMoveError.CannotMoveIntoDescendant);
+            }
+
             var node = await _dbContext.Nodes
                 .FirstAsync(n => n.Id == sourceResult.Node.Id, ct);
 
@@ -128,5 +136,32 @@ public class WebDavMoveCommandHandler(
             request.SourcePath, request.DestinationPath, request.UserId);
 
         return new WebDavMoveResult(true, created);
+    }
+
+    private async Task<bool> IsDescendantAsync(Guid destParentId, Guid sourceNodeId, CancellationToken ct)
+    {
+        const int MaxDepth = 256;
+        int depth = 0;
+        Guid? currentId = destParentId;
+        while (currentId.HasValue)
+        {
+            if (depth++ >= MaxDepth)
+            {
+                return true;
+            }
+
+            if (currentId.Value == sourceNodeId)
+            {
+                return true;
+            }
+
+            currentId = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(n => n.Id == currentId.Value)
+                .Select(n => n.ParentId)
+                .SingleOrDefaultAsync(ct);
+        }
+
+        return false;
     }
 }

@@ -39,7 +39,7 @@ public class WebDavPropFindQueryHandler(
 
     public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
     {
-        var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
+        var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
 
         if (!resolveResult.Found)
         {

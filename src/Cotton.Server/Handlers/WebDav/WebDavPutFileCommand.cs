@@ -105,7 +105,7 @@ public class WebDavPutFileCommandHandler(
 
         bool created = !existing.Found;
         // Process stream in chunks without loading entire file into memory
-        var chunks = await ProcessStreamInChunksAsync(request.Content, request.UserId, ct);
+        var (chunks, fileHash) = await ProcessStreamInChunksAndHashAsync(request.Content, request.UserId, ct);
         long totalBytes = 0;
         for (int i = 0; i < chunks.Count; i++)
         {
@@ -128,10 +128,8 @@ public class WebDavPutFileCommandHandler(
         {
             // Empty file - create a single empty chunk
             chunks = await CreateEmptyChunkAsync(request.UserId, ct);
+            fileHash = Hasher.HashData([]);
         }
-
-        // Calculate file hash from chunk hashes
-        var fileHash = ComputeFileHashFromChunks(chunks);
 
         // Determine content type
         var contentType = request.ContentType ?? "application/octet-stream";
@@ -185,11 +183,16 @@ public class WebDavPutFileCommandHandler(
     /// Processes the input stream in chunks, creating and storing each chunk on the fly.
     /// Uses a rented buffer to avoid allocations.
     /// </summary>
-    private async Task<List<Chunk>> ProcessStreamInChunksAsync(Stream inputStream, Guid userId, CancellationToken ct)
+    private async Task<(List<Chunk> Chunks, byte[] FileHash)> ProcessStreamInChunksAndHashAsync(
+        Stream inputStream,
+        Guid userId,
+        CancellationToken ct)
     {
         var settings = _settings.GetServerSettings();
         int chunkSize = settings.MaxChunkSizeBytes;
         var chunks = new List<Chunk>();
+
+        using var fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
 
         // Rent a buffer from the array pool to avoid allocations
         byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(chunkSize);
@@ -198,6 +201,7 @@ public class WebDavPutFileCommandHandler(
             int bytesRead;
             while ((bytesRead = await ReadExactlyAsync(inputStream, buffer, chunkSize, ct)) > 0)
             {
+                fileHasher.AppendData(buffer, 0, bytesRead);
                 var chunk = await ProcessSingleChunkAsync(buffer, bytesRead, userId, ct);
                 chunks.Add(chunk);
             }
@@ -207,7 +211,7 @@ public class WebDavPutFileCommandHandler(
             System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
         }
 
-        return chunks;
+        return (chunks, fileHasher.GetHashAndReset());
     }
 
     /// <summary>
@@ -243,16 +247,5 @@ public class WebDavPutFileCommandHandler(
         return [chunk];
     }
 
-    /// <summary>
-    /// Computes the file hash from the concatenation of all chunk hashes.
-    /// </summary>
-    private static byte[] ComputeFileHashFromChunks(IEnumerable<Chunk> chunks)
-    {
-        using var hasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
-        foreach (var chunk in chunks)
-        {
-            hasher.AppendData(chunk.Hash);
-        }
-        return hasher.GetHashAndReset();
-    }
+    // ...existing code...
 }

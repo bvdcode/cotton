@@ -3,7 +3,6 @@
 
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
-using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
