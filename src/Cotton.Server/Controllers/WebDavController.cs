@@ -3,6 +3,7 @@
 
 using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
+using Cotton.Server.Services.WebDav;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
@@ -39,6 +40,15 @@ public class WebDavController(
     public IActionResult HandleOptions()
     {
         AddDavHeaders();
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var (key, value) in _locks)
+        {
+            if (value.ExpiresAt <= now)
+            {
+                _locks.TryRemove(key, out _);
+            }
+        }
         Response.Headers["Public"] = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, LOCK, UNLOCK";
         return Ok();
     }
@@ -226,20 +236,7 @@ public class WebDavController(
         _locks[GetLockKey(userId, lockInfo.Path)] = lockInfo;
         Response.Headers["Lock-Token"] = $"<{token}>";
 
-        var xml =
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
-            "<D:prop xmlns:D=\"DAV:\">" +
-              "<D:lockdiscovery>" +
-                "<D:activelock>" +
-                  "<D:locktype><D:write/></D:locktype>" +
-                  "<D:lockscope><D:exclusive/></D:lockscope>" +
-                  "<D:depth>Infinity</D:depth>" +
-                  "<D:timeout>Second-" + (int)timeout.TotalSeconds + "</D:timeout>" +
-                  "<D:locktoken><D:href>" + token + "</D:href></D:locktoken>" +
-                "</D:activelock>" +
-              "</D:lockdiscovery>" +
-            "</D:prop>";
-
+        var xml = WebDavXmlBuilder.BuildLockDiscoveryResponse(token, timeout);
         return Content(xml, "application/xml; charset=\"utf-8\"");
     }
 
