@@ -24,12 +24,22 @@ public class WebDavController(
 {
     private const string WebDavRoute = "/api/v1/webdav/";
 
+    private sealed record WebDavLock(
+        Guid UserId,
+        string Path,
+        string Token,
+        DateTimeOffset ExpiresAt);
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, WebDavLock> _locks = new();
+
+    private static string GetLockKey(Guid userId, string path) => $"{userId:N}:{path}";
+
     [HttpOptions]
     [AllowAnonymous]
     public IActionResult HandleOptions()
     {
         AddDavHeaders();
-        Response.Headers["Public"] = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY";
+        Response.Headers["Public"] = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, LOCK, UNLOCK";
         return Ok();
     }
 
@@ -180,6 +190,84 @@ public class WebDavController(
         return result.Created ? Created() : NoContent();
     }
 
+    [AcceptVerbs("LOCK")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public async Task<IActionResult> HandleLockAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        path ??= string.Empty;
+
+        var query = new WebDavHeadQuery(userId, path);
+        var result = await _mediator.Send(query, HttpContext.RequestAborted);
+        if (!result.Found)
+        {
+            return NotFound();
+        }
+
+        AddDavHeaders();
+
+        var timeoutHeader = Request.Headers["Timeout"].ToString();
+        TimeSpan timeout = TimeSpan.FromHours(1);
+        if (!string.IsNullOrWhiteSpace(timeoutHeader)
+            && timeoutHeader.StartsWith("Second-", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(timeoutHeader["Second-".Length..], out var seconds)
+            && seconds > 0)
+        {
+            timeout = TimeSpan.FromSeconds(seconds);
+        }
+
+        var token = $"opaquelocktoken:{Guid.NewGuid():D}";
+        var lockInfo = new WebDavLock(
+            userId,
+            path.Trim('/'),
+            token,
+            DateTimeOffset.UtcNow.Add(timeout));
+
+        _locks[GetLockKey(userId, lockInfo.Path)] = lockInfo;
+        Response.Headers["Lock-Token"] = $"<{token}>";
+
+        var xml =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+            "<D:prop xmlns:D=\"DAV:\">" +
+              "<D:lockdiscovery>" +
+                "<D:activelock>" +
+                  "<D:locktype><D:write/></D:locktype>" +
+                  "<D:lockscope><D:exclusive/></D:lockscope>" +
+                  "<D:depth>Infinity</D:depth>" +
+                  "<D:timeout>Second-" + (int)timeout.TotalSeconds + "</D:timeout>" +
+                  "<D:locktoken><D:href>" + token + "</D:href></D:locktoken>" +
+                "</D:activelock>" +
+              "</D:lockdiscovery>" +
+            "</D:prop>";
+
+        return Content(xml, "application/xml; charset=\"utf-8\"");
+    }
+
+    [AcceptVerbs("UNLOCK")]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
+    public IActionResult HandleUnlockAsync(string? path)
+    {
+        var userId = User.GetUserId();
+        path ??= string.Empty;
+
+        AddDavHeaders();
+
+        var tokenHeader = Request.Headers["Lock-Token"].ToString();
+        if (!string.IsNullOrWhiteSpace(tokenHeader))
+        {
+            var token = tokenHeader.Trim().Trim('<', '>');
+            var key = GetLockKey(userId, path.Trim('/'));
+
+            if (_locks.TryGetValue(key, out var info)
+                && string.Equals(info.Token, token, StringComparison.Ordinal))
+            {
+                _locks.TryRemove(key, out _);
+            }
+        }
+
+        return NoContent();
+    }
+
     [HttpDelete]
     [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public async Task<IActionResult> HandleDeleteAsync(string? path)
@@ -292,7 +380,7 @@ public class WebDavController(
     {
         string[] methods =
         [
-            "OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY"
+            "OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "MOVE", "COPY", "LOCK", "UNLOCK"
         ];
 
         var excludeSet = new HashSet<string>(exclude, StringComparer.OrdinalIgnoreCase);
