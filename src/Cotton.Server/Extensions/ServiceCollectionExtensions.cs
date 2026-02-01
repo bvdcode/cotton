@@ -33,6 +33,8 @@ namespace Cotton.Server.Extensions
         public static IServiceCollection AddWebDavServices(this IServiceCollection services)
         {
             services.AddScoped<IWebDavPathResolver, WebDavPathResolver>();
+            services.AddSingleton<IWebDavLockStore, WebDavInMemoryLockStore>();
+            services.AddScoped<IWebDavLockGuard, WebDavLockGuard>();
             return services;
         }
 
