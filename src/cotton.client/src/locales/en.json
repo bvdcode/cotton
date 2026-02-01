@@ -123,11 +123,15 @@
       "revokeConfirmTitle": "End session?",
       "revokeConfirmDescription": "Are you sure you want to end this session? This will sign out the device.",
       "revokeConfirmButton": "End session",
-      "revokeCancelButton": "Cancel"
+      "revokeCancelButton": "Cancel",
+      "errors": {
+        "loadFailed": "Failed to load sessions.",
+        "revokeFailed": "Failed to end session."
+      }
     },
     "webdav": {
       "title": "WebDAV Access",
-      "description": "Generate a one-time token for WebDAV access. This token can only be viewed once and will be replaced if you generate a new one.",
+      "description": "Generate a one-time token to connect via WebDAV.",
       "confirmTitle": "Generate WebDAV token?",
       "confirmDescription": "This will generate a new token and invalidate any previous one. The token will only be shown once.",
       "confirmButton": "Generate",

@@ -1,21 +1,17 @@
 import {
   Box,
   Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Typography,
   Alert,
   CircularProgress,
-  Divider,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
 import { SessionItem } from "./SessionItem";
 import { confirm } from "material-ui-confirm";
 import { Key } from "@mui/icons-material";
+import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
 export const SessionsCard = () => {
   const { t } = useTranslation("profile");
@@ -24,7 +20,7 @@ export const SessionsCard = () => {
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
 
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -36,15 +32,17 @@ export const SessionsCard = () => {
       );
       setSessions(sorted);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load sessions");
+      setError(
+        err instanceof Error ? err.message : t("sessions.errors.loadFailed"),
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     loadSessions();
-  }, []);
+  }, [loadSessions]);
 
   const handleRevokeSession = async (sessionId: string) => {
     confirm({
@@ -61,7 +59,7 @@ export const SessionsCard = () => {
           setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId));
         } catch (err) {
           setError(
-            err instanceof Error ? err.message : "Failed to revoke session",
+            err instanceof Error ? err.message : t("sessions.errors.revokeFailed"),
           );
         } finally {
           setRevoking(null);
@@ -71,64 +69,14 @@ export const SessionsCard = () => {
   };
 
   return (
-    <Accordion
-      disableGutters
-      sx={{
-        borderRadius: 1,
-        overflow: "hidden",
-      }}
+    <ProfileAccordionCard
+      id="sessions-header"
+      ariaControls="sessions-content"
+      icon={<Key color="primary" />}
+      title={t("sessions.title")}
+      description={t("sessions.description")}
+      count={sessions.length}
     >
-      <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
-        aria-controls="sessions-content"
-        id="sessions-header"
-        sx={{
-          minHeight: { xs: 56, sm: 64 },
-          px: { xs: 2, sm: 3 },
-          py: { xs: 1.25, sm: 1.5 },
-          "& .MuiAccordionSummary-content": {
-            margin: 0,
-            gap: 1,
-            alignItems: "center",
-          },
-          "& .MuiAccordionSummary-expandIconWrapper": {
-            color: "text.secondary",
-          },
-        }}
-      >
-        <Box
-          sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2 }}
-        >
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Key color="primary" />
-            <Typography variant="h6" fontWeight={600} noWrap>
-              {t("sessions.title")}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              noWrap
-              sx={{ mt: 0.5, fontSize: "0.9rem" }}
-            >
-              {t("sessions.description")}
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, ml: 1 }}>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              {sessions.length}
-            </Typography>
-          </Box>
-        </Box>
-      </AccordionSummary>
-
-      <Divider sx={{ mx: { xs: 0, sm: 3 } }} />
-
-      <AccordionDetails sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress size={32} />
@@ -142,7 +90,7 @@ export const SessionsCard = () => {
             color="text.secondary"
             sx={{ py: 2, textAlign: "center" }}
           >
-            {t("sessions.noActiveSessions", "No active sessions")}
+            {t("sessions.noActiveSessions")}
           </Typography>
         ) : (
           <Stack spacing={1.5} sx={{ mt: 2 }}>
@@ -156,7 +104,6 @@ export const SessionsCard = () => {
             ))}
           </Stack>
         )}
-      </AccordionDetails>
-    </Accordion>
+    </ProfileAccordionCard>
   );
 };

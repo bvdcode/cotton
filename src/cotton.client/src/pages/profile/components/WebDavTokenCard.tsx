@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  Paper,
   Stack,
   Typography,
   Alert,
@@ -20,6 +19,7 @@ import { useState } from "react";
 import { confirm } from "material-ui-confirm";
 import { authApi } from "../../../shared/api/authApi";
 import { useAuth } from "../../../features/auth";
+import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
 type ReadonlyFieldProps = {
   label: string;
@@ -113,131 +113,128 @@ export const WebDavTokenCard = () => {
   };
 
   return (
-    <>
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <Stack spacing={2}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Folder color="primary" />
-            <Typography variant="h6" fontWeight={600}>
-              {t("webdav.title")}
-            </Typography>
-          </Stack>
-
-          <Typography variant="body2" color="text.secondary">
-            {t("webdav.description")}
-          </Typography>
-
-          <Stack spacing={1} sx={{ mt: 1 }}>
-            <Box display="flex" justifyContent="space-between">
-              <ReadonlyField
-                label={t("webdav.usernameLabel")}
-                value={username}
-                tooltip={t("webdav.copyUsername")}
-                onCopy={handleCopy}
-              />
-
-              <ReadonlyField
-                label={t("webdav.connectUrlLabel")}
-                value={webDavUrl}
-                tooltip={t("webdav.copyUrl")}
-                onCopy={handleCopy}
-              />
-            </Box>
-            {token && (
-              <ReadonlyField
-                label={t("webdav.tokenLabel")}
-                value={token}
-                tooltip={t("webdav.copyToken")}
-                onCopy={handleCopy}
-              />
-            )}
-            <Typography variant="caption" color="text.secondary">
-              {t("webdav.cardHelp")}
-            </Typography>
-          </Stack>
-
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-
-          {token ? (
-            <Stack spacing={1}>
-              <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
-            </Stack>
-          ) : (
-            <Button
-              variant="contained"
-              onClick={handleGenerateToken}
-              disabled={loading}
-              startIcon={<Key />}
-            >
-              {loading ? t("webdav.generating") : t("webdav.generateButton")}
-            </Button>
-          )}
-
-          <Accordion
-            disableGutters
-            sx={{
-              borderRadius: 1,
-              overflow: "hidden",
-              bgcolor: "background.default",
-            }}
+    <ProfileAccordionCard
+      id="webdav-header"
+      ariaControls="webdav-content"
+      icon={<Folder color="primary" />}
+      title={t("webdav.title")}
+      description={t("webdav.description")}
+    >
+      <Stack spacing={2}>
+        <Stack spacing={1} sx={{ mt: 1 }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={{ xs: 1.5, sm: 3 }}
+            sx={{ justifyContent: "space-between" }}
           >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="body2" fontWeight={500}>
-                {t("webdav.examples.title")}
-              </Typography>
-            </AccordionSummary>
+            <ReadonlyField
+              label={t("webdav.usernameLabel")}
+              value={username}
+              tooltip={t("webdav.copyUsername")}
+              onCopy={handleCopy}
+            />
 
-            <AccordionDetails sx={{ px: 2, pb: 2 }}>
-              <Stack spacing={0} divider={<Divider />}>
-                {examples.map((example) => (
-                  <Stack key={example.id} spacing={0.5} sx={{ py: 1.5 }}>
-                    <Typography variant="body2" fontWeight={600}>
-                      {t(`webdav.examples.${example.id}.title`)}
-                    </Typography>
+            <ReadonlyField
+              label={t("webdav.connectUrlLabel")}
+              value={webDavUrl}
+              tooltip={t("webdav.copyUrl")}
+              onCopy={handleCopy}
+            />
+          </Stack>
+          {token && (
+            <ReadonlyField
+              label={t("webdav.tokenLabel")}
+              value={token}
+              tooltip={t("webdav.copyToken")}
+              onCopy={handleCopy}
+            />
+          )}
+          <Typography variant="caption" color="text.secondary">
+            {t("webdav.cardHelp")}
+          </Typography>
+        </Stack>
+
+        {error && (
+          <Alert severity="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        {token ? (
+          <Stack spacing={1}>
+            <Alert severity="warning">{t("webdav.tokenWarning")}</Alert>
+          </Stack>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={handleGenerateToken}
+            disabled={loading}
+            startIcon={<Key />}
+          >
+            {loading ? t("webdav.generating") : t("webdav.generateButton")}
+          </Button>
+        )}
+
+        <Accordion
+          disableGutters
+          sx={{
+            borderRadius: 1,
+            overflow: "hidden",
+            bgcolor: "background.default",
+          }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="body2" fontWeight={500}>
+              {t("webdav.examples.title")}
+            </Typography>
+          </AccordionSummary>
+
+          <AccordionDetails sx={{ px: 2, pb: 2 }}>
+            <Stack spacing={0} divider={<Divider />}>
+              {examples.map((example) => (
+                <Stack key={example.id} spacing={0.5} sx={{ py: 1.5 }}>
+                  <Typography variant="body2" fontWeight={600}>
+                    {t(`webdav.examples.${example.id}.title`)}
+                  </Typography>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      bgcolor: "action.hover",
+                      borderRadius: 1,
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
                     <Box
                       sx={{
-                        p: 1.5,
-                        bgcolor: "action.hover",
-                        borderRadius: 1,
-                        border: (theme) => `1px solid ${theme.palette.divider}`,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
+                        flex: 1,
+                        fontFamily: "monospace",
+                        fontSize: "0.8rem",
+                        wordBreak: "break-all",
                       }}
                     >
-                      <Box
-                        sx={{
-                          flex: 1,
-                          fontFamily: "monospace",
-                          fontSize: "0.8rem",
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        {example.command}
-                      </Box>
-                      <Tooltip title={t("webdav.examples.copy")}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleCopy(example.command)}
-                        >
-                          <ContentCopyIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {example.command}
                     </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {t(`webdav.examples.${example.id}.caption`)}
-                    </Typography>
-                  </Stack>
-                ))}
-              </Stack>
-            </AccordionDetails>
-          </Accordion>
-        </Stack>
-      </Paper>
-    </>
+                    <Tooltip title={t("webdav.examples.copy")}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleCopy(example.command)}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {t(`webdav.examples.${example.id}.caption`)}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+      </Stack>
+    </ProfileAccordionCard>
   );
 };
