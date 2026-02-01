@@ -94,7 +94,7 @@ public class WebDavPutFileCommandHandler(
                 && n.OwnerId == request.UserId
                 && n.NameKey == nameKey
                 && n.LayoutId == layout.Id
-                && n.Type == NodeType.Default, ct);
+                && n.Type == WebDavPathResolver.DefaultNodeType, ct);
 
         if (folderExists)
         {
@@ -108,7 +108,6 @@ public class WebDavPutFileCommandHandler(
         }
 
         bool created = !existing.Found;
-
         // Process stream in chunks without loading entire file into memory
         var chunks = await ProcessStreamInChunksAsync(request.Content, request.UserId, ct);
         long totalBytes = 0;
@@ -159,7 +158,17 @@ public class WebDavPutFileCommandHandler(
             var nodeFile = await _dbContext.NodeFiles
                 .FirstAsync(f => f.Id == existing.NodeFile.Id, ct);
 
+            var trashNode = await _layouts.CreateTrashItemAsync(request.UserId);
+            var versionFile = new NodeFile
+            {
+                NodeId = trashNode.Id,
+                OwnerId = request.UserId,
+                OriginalNodeFileId = nodeFile.OriginalNodeFileId,
+            };
+            versionFile.SetName(nodeFile.Name);
+            await _dbContext.NodeFiles.AddAsync(versionFile, ct);
             nodeFile.FileManifestId = fileManifest.Id;
+            await _dbContext.SaveChangesAsync(ct);
         }
         else
         {
@@ -237,7 +246,7 @@ public class WebDavPutFileCommandHandler(
     private async Task<Chunk> ProcessSingleChunkAsync(byte[] buffer, int length, Guid userId, CancellationToken ct)
     {
         // Compute hash of the chunk data
-        byte[] chunkHash = SHA256.HashData(buffer.AsSpan(0, length));
+        byte[] chunkHash = Hasher.HashData(buffer.AsSpan(0, length));
         string storageKey = Hasher.ToHexStringHash(chunkHash);
 
         // Wait if chunk is being garbage collected
@@ -291,15 +300,13 @@ public class WebDavPutFileCommandHandler(
     /// </summary>
     private async Task<List<Chunk>> CreateEmptyChunkAsync(Guid userId, CancellationToken ct)
     {
-        byte[] emptyHash = SHA256.HashData([]);
+        byte[] emptyHash = Hasher.HashData([]);
         string storageKey = Hasher.ToHexStringHash(emptyHash);
-
         var chunk = await _layouts.FindChunkAsync(emptyHash);
         if (chunk is null)
         {
             using var emptyStream = new MemoryStream([], writable: false);
-            await _storage.WriteAsync(storageKey, emptyStream, new PipelineContext());
-
+            await _storage.WriteAsync(storageKey, emptyStream);
             chunk = new Chunk
             {
                 Hash = emptyHash,
@@ -329,13 +336,13 @@ public class WebDavPutFileCommandHandler(
     /// <summary>
     /// Computes the file hash from the concatenation of all chunk hashes.
     /// </summary>
-    private static byte[] ComputeFileHashFromChunks(List<Chunk> chunks)
+    private static byte[] ComputeFileHashFromChunks(IEnumerable<Chunk> chunks)
     {
-        using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        using var hasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
         foreach (var chunk in chunks)
         {
-            sha256.AppendData(chunk.Hash);
+            hasher.AppendData(chunk.Hash);
         }
-        return sha256.GetHashAndReset();
+        return hasher.GetHashAndReset();
     }
 }
