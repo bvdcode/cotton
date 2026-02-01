@@ -76,9 +76,9 @@ Engine / protocol:
 
 - Content-addressed chunks and manifests with deduplication by design.
 - Chunk-first, idempotent upload protocol resilient to network hiccups and retries.
-- Storage pipeline with pluggable processors (crypto, filesystem backends, cache/replica planned).  
-- All stored content is fully *seekable* at the storage level (see ConcatenatedReadStream) — enables efficient `Range` reads, preview extraction and streaming without reassembling files.  
-- Optional streaming Zstandard (zstd) compression — enabled by default, streaming via `ZstdSharp` (transparent to clients; effective because compression runs before encryption).  
+- Storage pipeline with pluggable processors (crypto, filesystem backends, cache/replica planned).
+- All stored content is fully _seekable_ at the storage level (see ConcatenatedReadStream) — enables efficient `Range` reads, preview extraction and streaming without reassembling files.
+- Optional streaming Zstandard (zstd) compression — enabled by default, streaming via `ZstdSharp` (transparent to clients; effective because compression runs before encryption).
 - Production-quality WebDAV v1 (RFC 4918) support — core methods implemented: `OPTIONS`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, `MKCOL`, `MOVE`, `COPY`; includes `Range`/`ETag` semantics and `DAV: 1` header. Optional WebDAV extensions (LOCK/UNLOCK, PROPPATCH) are not implemented; see `src/Cotton.Server/Controllers/WebDavController.cs`.
 - Streaming AES-GCM (pure C#) measured at **memory-bound** throughput on encrypt; decrypt on par with OpenSSL in our tests.
 - Postgres metadata with a clear split between **"what" (content)** and **"where" (layout)**.
@@ -314,7 +314,7 @@ In-memory cache (~100MB default) with per-object size limits. `StoreInMemoryCach
 _See: `src/Cotton.Storage/Pipelines/CachedStoragePipeline.cs`, used in `PreviewController.cs`_
 
 **Compression processor**  
-Zstandard (zstd) via `ZstdSharp` — streaming, enabled by default and integrated into the storage pipeline. Compression is applied *before* encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI in `Program.cs` (can be disabled or re-ordered by changing registered processors). Tests and benchmarks exercise compressible vs random data.  
+Zstandard (zstd) via `ZstdSharp` — streaming, enabled by default and integrated into the storage pipeline. Compression is applied _before_ encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI in `Program.cs` (can be disabled or re-ordered by changing registered processors). Tests and benchmarks exercise compressible vs random data.  
 _See: `src/Cotton.Storage/Processors/CompressionProcessor.cs` and `src/Cotton.Storage.Tests/Processors/CompressionProcessorTests.cs`._
 
 ---
@@ -361,11 +361,11 @@ _See: `src/Cotton.Previews/PdfPreviewGenerator.cs`_
 **Video preview generator**
 
 - Auto-downloads FFmpeg/ffprobe if missing (`FFMpegCore`)
-- Uses a pragmatic local HTTP shim (`RangeStreamServer`) — a deliberate "hack" that exposes a seekable `ConcatenatedReadStream` over HTTP so FFmpeg/ffprobe can perform parallel `Range` requests. The server serializes seek+read with a semaphore to avoid deadlocks and avoids writing full temp files.  
-- Extracts a frame from mid-duration (or other requested time) directly from chunked, encrypted/compressed storage.  
+- Uses a pragmatic local HTTP shim (`RangeStreamServer`) — a deliberate "hack" that exposes a seekable `ConcatenatedReadStream` over HTTP so FFmpeg/ffprobe can perform parallel `Range` requests. The server serializes seek+read with a semaphore to avoid deadlocks and avoids writing full temp files.
+- Extracts a frame from mid-duration (or other requested time) directly from chunked, encrypted/compressed storage.
 - Robust timeouts, process kill and detailed logging to contain external tools.  
-_See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`._
-_See: `src/Cotton.Server/Jobs/GeneratePreviewJob.cs`_
+  _See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`._
+  _See: `src/Cotton.Server/Jobs/GeneratePreviewJob.cs`_
 
 ---
 
