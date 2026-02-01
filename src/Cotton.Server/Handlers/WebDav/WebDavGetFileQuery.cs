@@ -42,7 +42,7 @@ public class WebDavGetFileQueryHandler(
 {
     public async Task<WebDavGetFileResult> Handle(WebDavGetFileQuery request, CancellationToken ct)
     {
-        var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
+        var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
 
         if (!resolveResult.Found)
         {

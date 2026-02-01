@@ -35,7 +35,7 @@ public class WebDavHeadQueryHandler(
 {
     public async Task<WebDavHeadResult> Handle(WebDavHeadQuery request, CancellationToken ct)
     {
-        var resolveResult = await _pathResolver.ResolvePathAsync(request.UserId, request.Path, ct);
+        var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
 
         if (!resolveResult.Found)
         {

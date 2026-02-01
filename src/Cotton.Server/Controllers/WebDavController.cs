@@ -3,6 +3,7 @@
 
 using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
+using Cotton.Server.Services.WebDav;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
@@ -184,10 +185,6 @@ public class WebDavController(
     public async Task<IActionResult> HandleDeleteAsync(string? path)
     {
         var userId = User.GetUserId();
-
-        _logger.LogDebug("WebDAV DELETE: {Path}, user: {UserId}, ip: {Ip}",
-            path ?? "/", userId, Request.GetRemoteAddress());
-
         var command = new WebDavDeleteCommand(userId, path ?? string.Empty);
         var result = await _mediator.Send(command);
 
@@ -211,27 +208,20 @@ public class WebDavController(
     public async Task<IActionResult> HandleMkColAsync(string? path)
     {
         var userId = User.GetUserId();
-
-        _logger.LogDebug("WebDAV MKCOL: {Path}, user: {UserId}, ip: {Ip}",
-            path ?? "/", userId, Request.GetRemoteAddress());
-
         var command = new WebDavMkColCommand(userId, path ?? string.Empty);
         var result = await _mediator.Send(command);
-
         AddDavHeaders();
-
         if (!result.Success)
         {
             return result.Error switch
             {
                 WebDavMkColError.ParentNotFound => Conflict("Parent collection not found"),
-                WebDavMkColError.AlreadyExists => StatusCode(405, "Collection already exists"),
+                WebDavMkColError.AlreadyExists => StatusCode(StatusCodes.Status409Conflict, "Collection already exists"),
                 WebDavMkColError.InvalidName => BadRequest("Invalid collection name"),
                 WebDavMkColError.Conflict => Conflict("Conflict with existing resource"),
-                _ => StatusCode(500)
+                _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
-
         return Created();
     }
 
@@ -247,15 +237,9 @@ public class WebDavController(
         {
             return BadRequest("Destination header is required");
         }
-
-        _logger.LogDebug("WebDAV MOVE: {Source} -> {Dest}, overwrite: {Overwrite}, user: {UserId}, ip: {Ip}",
-            path ?? "/", destination, overwrite, userId, Request.GetRemoteAddress());
-
         var command = new WebDavMoveCommand(userId, path ?? string.Empty, destination, overwrite);
         var result = await _mediator.Send(command);
-
         AddDavHeaders();
-
         if (!result.Success)
         {
             return result.Error switch
@@ -268,7 +252,6 @@ public class WebDavController(
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
-
         return result.Created ? Created() : NoContent();
     }
 
@@ -284,15 +267,9 @@ public class WebDavController(
         {
             return BadRequest("Destination header is required");
         }
-
-        _logger.LogDebug("WebDAV COPY: {Source} -> {Dest}, overwrite: {Overwrite}, user: {UserId}, ip: {Ip}",
-            path ?? "/", destination, overwrite, userId, Request.GetRemoteAddress());
-
         var command = new WebDavCopyCommand(userId, path ?? string.Empty, destination, overwrite);
         var result = await _mediator.Send(command);
-
         AddDavHeaders();
-
         if (!result.Success)
         {
             return result.Error switch
