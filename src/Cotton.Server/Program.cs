@@ -60,6 +60,29 @@ namespace Cotton.Server
                 .AddJwt();
 
             var app = builder.Build();
+            app.UseWhen(
+                ctx => ctx.Request.Path.StartsWithSegments("/api/v1/webdav"),
+                b => b.Use(async (ctx, next) =>
+                {
+                    var log = ctx.RequestServices.GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("WebDavWire");
+
+                    string allHeaders = string.Join("; ",
+                        ctx.Request.Headers.Select(h => $"{h.Key}={h.Value}"));
+                    log.LogInformation("WEBDAV REQ {Method} {Path} CL={CL} Expect={Expect} UA={UA} All={allHeaders}",
+                        ctx.Request.Method,
+                        ctx.Request.Path + ctx.Request.QueryString,
+                        ctx.Request.ContentLength,
+                        ctx.Request.Headers.Expect.ToString(),
+                        ctx.Request.Headers.UserAgent.ToString(),
+                        allHeaders);
+
+                    await next();
+
+                    log.LogInformation("WEBDAV RESP {StatusCode}",
+                        ctx.Response.StatusCode);
+                }));
+
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
