@@ -60,8 +60,8 @@ Cotton is opinionated:
 - **Real crypto, not checkbox crypto**  
   Streaming AES-GCM in pure C#, per-file wrapped keys, per-chunk authentication, proper nonces.
 
-- **Engine-first, UI-second**  
-  The React UI is thin and fast: virtualized folder views, minimal controls, native OS sharing hooks. No "regenerate metadata" buttons.
+- **Engine‑first; polished, user‑centered UI**  
+  The React UI is minimalist by design **because** it was obsessively refined — not because it was an afterthought. Every page and control was iterated on for usability (many hours of design and testing); most common tasks are reachable in **1–2 clicks**. Virtualized folder views, carefully considered controls and native OS sharing hooks make the UI both fast and genuinely productive.
 
 - **Self-hosting friendly**  
   Single .NET service, Postgres, filesystem (or other backends via processors). No exotic deps.
@@ -93,6 +93,7 @@ UX / behavior:
 Self-hosting / ops:
 
 - All-managed .NET, easy to run under Docker.
+- Plugin safety & moderation: runtime extensions are sandboxed and supervised (resource limits, timeouts, crash isolation); an operator can disable or revoke plugins and the app‑store is moderated so problematic plugins are removed. This keeps third‑party innovation from impacting platform reliability.
 - Automatic EF Core migrations on startup.
 - Sensible defaults: modern password hashing, strict name validation, autoconfig from a single master key.
 
