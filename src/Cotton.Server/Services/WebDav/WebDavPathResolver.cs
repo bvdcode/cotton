@@ -19,7 +19,21 @@ public class WebDavPathResolver(
     public const NodeType DefaultNodeType = NodeType.Default;
     public const char PathSeparator = '/';
 
-    public async Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default)
+    public Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default)
+    {
+        return ResolveInternalAsync(userId, path, includeFileContentGraph: true, ct);
+    }
+
+    public Task<WebDavResolveResult> ResolveMetadataAsync(Guid userId, string path, CancellationToken ct = default)
+    {
+        return ResolveInternalAsync(userId, path, includeFileContentGraph: false, ct);
+    }
+
+    private async Task<WebDavResolveResult> ResolveInternalAsync(
+        Guid userId,
+        string path,
+        bool includeFileContentGraph,
+        CancellationToken ct)
     {
         var cleanPath = NormalizePath(path);
 
@@ -88,15 +102,26 @@ public class WebDavPathResolver(
         }
 
         // Try to find as file
-        var nodeFile = await _dbContext.NodeFiles
+        var fileQuery = _dbContext.NodeFiles
             .AsNoTracking()
-            .Include(x => x.FileManifest)
-            .ThenInclude(x => x.FileManifestChunks)
-            .ThenInclude(x => x.Chunk)
             .Where(x => x.NodeId == currentNode.Id
                 && x.OwnerId == userId
-                && x.NameKey == lastNameKey)
-            .SingleOrDefaultAsync(ct);
+                && x.NameKey == lastNameKey);
+
+        if (includeFileContentGraph)
+        {
+            fileQuery = fileQuery
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .ThenInclude(x => x.Chunk);
+        }
+        else
+        {
+            fileQuery = fileQuery
+                .Include(x => x.FileManifest);
+        }
+
+        var nodeFile = await fileQuery.SingleOrDefaultAsync(ct);
 
         if (nodeFile is not null)
         {
