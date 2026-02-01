@@ -30,9 +30,7 @@ export const SessionItem = ({
   return (
     <Box
       sx={{
-        p: 1.5,
-        bgcolor: "action.hover",
-        borderRadius: 1,
+        py: 1.5,
         display: "flex",
         alignItems: "center",
         gap: 1,
