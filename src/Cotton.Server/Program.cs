@@ -49,6 +49,7 @@ namespace Cotton.Server
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<ILayoutService, StorageLayoutService>()
+                .AddScoped<ILayoutNavigator, LayoutNavigator>()
                 .AddPbkdf2PasswordHashService()
                 .AddControllers().Services
                 .AddStreamCipher()

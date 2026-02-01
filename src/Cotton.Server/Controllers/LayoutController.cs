@@ -8,7 +8,6 @@ using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
@@ -28,7 +27,7 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         CottonDbContext _dbContext,
         ILayoutService _layouts,
-        ILayoutPathResolver _layoutPathResolver) : ControllerBase
+        ILayoutNavigator _navigator) : ControllerBase
     {
         [Authorize]
         [HttpGet("{layoutId:guid}/search")]
@@ -353,7 +352,7 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            var currentNode = await _layoutPathResolver.ResolveNodeByPathAsync(userId, path, nodeType);
+            var currentNode = await _navigator.ResolveNodeByPathAsync(userId, path, nodeType);
             if (currentNode is null)
             {
                 return CottonResult.NotFound("Layout node was not found.");

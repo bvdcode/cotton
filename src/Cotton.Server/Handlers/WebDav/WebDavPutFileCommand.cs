@@ -246,6 +246,4 @@ public class WebDavPutFileCommandHandler(
         var chunk = await _chunkIngest.UpsertChunkAsync(userId, [], 0, ct);
         return [chunk];
     }
-
-    // ...existing code...
 }
