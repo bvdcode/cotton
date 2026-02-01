@@ -169,6 +169,7 @@ public class WebDavPathResolver(
 
     private static string NormalizePath(string? path)
     {
-        return (path ?? string.Empty).Trim(PathSeparator);
+        var p = (path ?? string.Empty).Replace('\\', PathSeparator);
+        return p.Trim(PathSeparator);
     }
 }
