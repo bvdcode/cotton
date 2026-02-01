@@ -15,7 +15,7 @@ namespace Cotton.Server.Services.WebDav;
 public class WebDavPathResolver(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
-    ILayoutPathResolver _layoutPathResolver) : IWebDavPathResolver
+    ILayoutNavigator _navigator) : IWebDavPathResolver
 {
     public const NodeType DefaultNodeType = NodeType.Default;
     public const char PathSeparator = '/';
@@ -41,8 +41,7 @@ public class WebDavPathResolver(
         // Root path
         if (string.IsNullOrEmpty(cleanPath))
         {
-            var (Layout, Root) = await _layoutPathResolver.GetLayoutAndRootAsync(userId, DefaultNodeType, ct);
-            var root = Root;
+            var (_, root) = await _navigator.GetLayoutAndRootAsync(userId, DefaultNodeType, ct);
             return new WebDavResolveResult
             {
                 Found = true,
@@ -53,7 +52,7 @@ public class WebDavPathResolver(
 
         var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
         var parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
-        var currentNode = await _layoutPathResolver.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
+        var currentNode = await _navigator.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
         if (currentNode is null)
         {
             return new WebDavResolveResult { Found = false };
@@ -122,57 +121,17 @@ public class WebDavPathResolver(
 
     public async Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default)
     {
-        var cleanPath = NormalizePath(path);
-
-        if (string.IsNullOrEmpty(cleanPath))
+        var resolved = await _navigator.ResolveParentAndNameAsync(userId, path, DefaultNodeType, ct);
+        if (resolved is null)
         {
             return new WebDavParentResult { Found = false };
-        }
-
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, DefaultNodeType);
-
-        var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
-        var resourceName = parts[^1];
-
-        if (parts.Length == 1)
-        {
-            return new WebDavParentResult
-            {
-                Found = true,
-                ParentNode = rootNode,
-                ResourceName = resourceName
-            };
-        }
-
-        var currentNode = rootNode;
-        for (int i = 0; i < parts.Length - 1; i++)
-        {
-            var part = parts[i];
-            var nameKey = NameValidator.NormalizeAndGetNameKey(part);
-
-            var nextNode = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.LayoutId == layout.Id
-                    && x.ParentId == currentNode.Id
-                    && x.OwnerId == userId
-                    && x.NameKey == nameKey
-                    && x.Type == DefaultNodeType)
-                .SingleOrDefaultAsync(ct);
-
-            if (nextNode is null)
-            {
-                return new WebDavParentResult { Found = false };
-            }
-
-            currentNode = nextNode;
         }
 
         return new WebDavParentResult
         {
             Found = true,
-            ParentNode = currentNode,
-            ResourceName = resourceName
+            ParentNode = resolved.Value.Parent,
+            ResourceName = resolved.Value.ResourceName
         };
     }
 
