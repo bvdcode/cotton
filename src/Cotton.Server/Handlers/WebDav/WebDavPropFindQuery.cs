@@ -209,7 +209,11 @@ public class WebDavPropFindQueryHandler(
 
     private static string BuildHref(string baseHref, params string[] pathParts)
     {
-        var path = string.Join(WebDavPathResolver.PathSeparator, pathParts.Where(p => !string.IsNullOrEmpty(p)));
+        var path = string.Join(
+            WebDavPathResolver.PathSeparator,
+            pathParts
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Select(Uri.EscapeDataString));
         if (string.IsNullOrEmpty(path))
         {
             return baseHref;
