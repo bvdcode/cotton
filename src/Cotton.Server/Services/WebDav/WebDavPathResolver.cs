@@ -17,12 +17,15 @@ public class WebDavPathResolver(
     CottonDbContext _dbContext,
     ILayoutService _layouts) : IWebDavPathResolver
 {
+    public const NodeType DefaultNodeType = NodeType.Default;
+    public const char PathSeparator = '/';
+
     public async Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default)
     {
         var cleanPath = NormalizePath(path);
 
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default);
+        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, DefaultNodeType);
 
         // Root path
         if (string.IsNullOrEmpty(cleanPath))
@@ -35,7 +38,7 @@ public class WebDavPathResolver(
             };
         }
 
-        var parts = cleanPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
         var currentNode = rootNode;
 
         // Navigate to parent node (all parts except the last)
@@ -50,7 +53,7 @@ public class WebDavPathResolver(
                     && x.ParentId == currentNode.Id
                     && x.OwnerId == userId
                     && x.NameKey == nameKey
-                    && x.Type == NodeType.Default)
+                    && x.Type == DefaultNodeType)
                 .SingleOrDefaultAsync(ct);
 
             if (nextNode is null)
@@ -72,7 +75,7 @@ public class WebDavPathResolver(
                 && x.ParentId == currentNode.Id
                 && x.OwnerId == userId
                 && x.NameKey == lastNameKey
-                && x.Type == NodeType.Default)
+                && x.Type == DefaultNodeType)
             .SingleOrDefaultAsync(ct);
 
         if (childNode is not null)
@@ -119,9 +122,9 @@ public class WebDavPathResolver(
         }
 
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default);
+        var rootNode = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, DefaultNodeType);
 
-        var parts = cleanPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
         var resourceName = parts[^1];
 
         if (parts.Length == 1)
@@ -146,7 +149,7 @@ public class WebDavPathResolver(
                     && x.ParentId == currentNode.Id
                     && x.OwnerId == userId
                     && x.NameKey == nameKey
-                    && x.Type == NodeType.Default)
+                    && x.Type == DefaultNodeType)
                 .SingleOrDefaultAsync(ct);
 
             if (nextNode is null)
@@ -167,6 +170,6 @@ public class WebDavPathResolver(
 
     private static string NormalizePath(string? path)
     {
-        return (path ?? string.Empty).Trim('/');
+        return (path ?? string.Empty).Trim(PathSeparator);
     }
 }
