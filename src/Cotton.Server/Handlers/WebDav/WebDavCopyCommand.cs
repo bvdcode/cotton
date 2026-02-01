@@ -3,6 +3,8 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Handlers.Files;
+using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services.WebDav;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
@@ -44,6 +46,7 @@ public enum WebDavCopyError
 public class WebDavCopyCommandHandler(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
+    IMediator _mediator,
     IWebDavPathResolver _pathResolver,
     ILogger<WebDavCopyCommandHandler> _logger)
     : IRequestHandler<WebDavCopyCommand, WebDavCopyResult>
@@ -80,7 +83,6 @@ public class WebDavCopyCommandHandler(
             return new WebDavCopyResult(false, false, WebDavCopyError.InvalidName);
         }
 
-        var newNameKey = NameValidator.NormalizeAndGetNameKey(destParentResult.ResourceName);
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
 
         // Check if destination exists
@@ -98,23 +100,12 @@ public class WebDavCopyCommandHandler(
         {
             if (destExists.IsCollection && destExists.Node is not null)
             {
-                var nodeToDelete = await _dbContext.Nodes
-                    .FirstOrDefaultAsync(n => n.Id == destExists.Node.Id, ct);
-                if (nodeToDelete is not null)
-                {
-                    _dbContext.Nodes.Remove(nodeToDelete);
-                }
+                await _mediator.Send(new DeleteNodeQuery(request.UserId, destExists.Node.Id, skipTrash: false), ct);
             }
             else if (destExists.NodeFile is not null)
             {
-                var fileToDelete = await _dbContext.NodeFiles
-                    .FirstOrDefaultAsync(f => f.Id == destExists.NodeFile.Id, ct);
-                if (fileToDelete is not null)
-                {
-                    _dbContext.NodeFiles.Remove(fileToDelete);
-                }
+                await _mediator.Send(new DeleteFileQuery(request.UserId, destExists.NodeFile.Id, skipTrash: false), ct);
             }
-            await _dbContext.SaveChangesAsync(ct);
             created = true;
         }
 
