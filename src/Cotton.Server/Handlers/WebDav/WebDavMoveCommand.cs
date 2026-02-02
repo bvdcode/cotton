@@ -130,7 +130,6 @@ public class WebDavMoveCommandHandler(
         if (destExists.Found && request.Overwrite)
         {
             await DeleteExistingDestinationAsync(request.UserId, destExists, ct);
-            created = true;
         }
 
         return (created, true);
