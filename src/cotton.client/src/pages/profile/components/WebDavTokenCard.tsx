@@ -71,6 +71,11 @@ export const WebDavTokenCard = () => {
       command: `net use Z: "${webDavUrl}" /user:${username} ${tokenOrPlaceholder} /persistent:yes`,
     },
     {
+      id: "windows-registry",
+      command:
+        'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\WebClient\\Parameters" /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f',
+    },
+    {
       id: "powershell",
       command: `cmd /c net use Z: "${webDavUrl}" /user:${username} "${tokenOrPlaceholder}" /persistent:yes`,
     },
