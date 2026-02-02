@@ -51,6 +51,8 @@ namespace Cotton.Server.Extensions
 
         public static IServiceCollection AddWebDavAuth(this IServiceCollection services)
         {
+            services.AddSingleton<Cotton.Server.Services.WebDav.WebDavAuthCache>();
+
             services
                 .AddAuthentication()
                 .AddScheme<AuthenticationSchemeOptions, WebDavBasicAuthenticationHandler>(
