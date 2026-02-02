@@ -198,6 +198,20 @@ export const TrashPage: React.FC = () => {
     [content?.files, content?.nodes],
   );
 
+  const goToFolder = useMemo(
+    () => (folderId: string) => navigate(`/trash/${folderId}`),
+    [navigate],
+  );
+
+  const goHome = useMemo(() => () => navigate("/trash"), [navigate]);
+
+  const onPaginationModelChange = useMemo(
+    () => (model: { page: number; pageSize: number }) => {
+      handlePaginationChange(model.page, model.pageSize);
+    },
+    [handlePaginationChange],
+  );
+
   const handleGoUp = () => {
     if (ancestors.length > 0) {
       const parent = ancestors[ancestors.length - 1];
@@ -272,9 +286,7 @@ export const TrashPage: React.FC = () => {
     }
   };
 
-  const folderOperations = buildFolderOperations(folderOps, (folderId) =>
-    navigate(`/trash/${folderId}`),
-  );
+  const folderOperations = buildFolderOperations(folderOps, goToFolder);
 
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
@@ -307,7 +319,7 @@ export const TrashPage: React.FC = () => {
           layoutType={layoutType}
           canGoUp={ancestors.length > 0}
           onGoUp={handleGoUp}
-          onHomeClick={() => navigate("/trash")}
+          onHomeClick={goHome}
           onLayoutToggle={setLayoutType}
           statsNamespace="trash"
           customActions={
@@ -360,9 +372,7 @@ export const TrashPage: React.FC = () => {
                 ? {
                     totalCount: listTotalCount,
                     loading: listLoading && !listContent,
-                    onPaginationModelChange: (model) => {
-                      handlePaginationChange(model.page, model.pageSize);
-                    },
+                    onPaginationModelChange,
                   }
                 : undefined
             }
