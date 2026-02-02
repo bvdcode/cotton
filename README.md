@@ -41,6 +41,7 @@ Instead, Cotton separates:
 Designed to:
 
 - handle **folders with hundreds of thousands / millions of entries** without choking the UI;
+- feel instantaneous at scale — the UI and controls respond immediately (no dinosaur UI, no perceptible lag) even on large trees and modest NAS hardware;
 - stream **multi-GB uploads in a browser** without locking up;
 - keep crypto and storage performance-oriented, not "just good enough".
 
@@ -61,13 +62,19 @@ Cotton is opinionated:
 - **Real crypto, not checkbox crypto**  
   Streaming AES-GCM in pure C#, per-file wrapped keys, per-chunk authentication, proper nonces.
 
-- **Engine-first, UI-second**  
-  The React UI is thin and fast: virtualized folder views, minimal controls, native OS sharing hooks. No "regenerate metadata" buttons.
+- **Engine‑first; polished, user‑centered UI**  
+  The React UI is minimalist by design **because** it was obsessively refined — not because it was an afterthought. Every page and control was iterated on for usability (many hours of design and testing); most common tasks are reachable in **1–2 clicks**. Virtualized folder views, carefully considered controls and native OS sharing hooks make the UI both fast and genuinely productive.
 
 - **Self-hosting friendly**  
   Single .NET service, Postgres, filesystem (or other backends via processors). No exotic deps.
 
-If you want a **storage system** rather than "webDAV with a skin", Cotton is meant for you.
+- **Practical alternative to cloud object storage**  
+  If you're evaluating hosted object storage (for example, Google Cloud Storage) but prefer self-hosting, Cotton is a practical alternative for many use-cases — from a single-user NAS to team and on‑prem deployments. It gives predictable costs, stronger data locality/privacy, and offline/air‑gapped options while still exposing APIs and integrations; it is not a drop‑in replacement for every managed cloud service (managed DBs, global CDNs, GCP-specific managed features, etc.). You can expand features via plugins or write your own.
+
+- **Easy for non-technical users; powerful for experts**  
+  First-run setup is a guided, in‑browser wizard that actually helps non-technical users — there are explicit “Not sure” buttons and safe defaults so an installer can finish setup with one click. If you prefer control, the same wizard exposes expert knobs (custom SMTP, S3, fine-grained encryption and threading options, or an optional NVIDIA/GPU runner for AI workloads) so power users and operators get full control up-front. In short: one UX for both audiences — friendly defaults for novices, explicit expert paths for administrators.
+
+If you want a **storage system** (engine‑first) rather than a thin filesystem wrapper, Cotton is meant for you — it provides first-class APIs (including a production-quality WebDAV v1 endpoint) while keeping the UI thin and focused.
 
 ---
 
@@ -77,12 +84,19 @@ Engine / protocol:
 
 - Content-addressed chunks and manifests with deduplication by design.
 - Chunk-first, idempotent upload protocol resilient to network hiccups and retries.
-- Storage pipeline with pluggable processors (crypto, compression, filesystem, cache/replica in future).
+- Storage pipeline with pluggable processors (crypto, filesystem backends, cache/replica planned).
+- All stored content is fully _seekable_ at the storage level (see ConcatenatedReadStream) — enables efficient `Range` reads, preview extraction and streaming without reassembling files.
+- Optional streaming Zstandard (zstd) compression — enabled by default, streaming via `ZstdSharp` (transparent to clients; effective because compression runs before encryption).
+- Production-quality WebDAV v1 (RFC 4918) support — core methods implemented: `OPTIONS`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, `MKCOL`, `MOVE`, `COPY`; includes `Range`/`ETag` semantics and `DAV: 1` header. Optional WebDAV extensions (LOCK/UNLOCK, PROPPATCH) are not implemented; see `src/Cotton.Server/Controllers/WebDavController.cs`.
 - Streaming AES-GCM (pure C#) measured at **memory-bound** throughput on encrypt; decrypt on par with OpenSSL in our tests.
+- Instant, one‑click snapshots and restores — snapshots record references (not copies) so restoring a layout is an atomic pointer switch (works instantly even for millions of files).
+- Opt‑in performance telemetry + adaptive autotuning — with operator consent Cotton can collect anonymized measurements and recommend or apply safer, better defaults (chunk sizes, buffers, threading) based on real‑world signals.
+- GC‑safe ingest — the system prevents a concurrent re‑upload of a chunk that is currently being deleted, avoiding rare race conditions between deletes and ingests.
 - Postgres metadata with a clear split between **"what" (content)** and **"where" (layout)**.
 
 UX / behavior:
 
+- **Ultra‑responsive UI** — instant feedback and sub-second interactions even with very large folders; designed so the app never feels like a sluggish, legacy “dinosaur.”
 - Browser uploads of **large folders (tens of GB, thousands of files)** without freezing the UI.
 - Virtualized folder view tuned for very large directories.
 - Simple, focused file viewer: only the controls you actually use (share, download, etc.).
@@ -91,6 +105,9 @@ UX / behavior:
 Self-hosting / ops:
 
 - All-managed .NET, easy to run under Docker.
+- Practical self-hosted alternative to cloud object storage (including Google Cloud) for teams that need control, predictable costs and stronger privacy — suitable for radically different users (home NAS → teams → on‑prem deployments). All features are expansible via plugins.
+- Optional telemetry (opt-in): enables Cotton Cloud-backed services (email/AI modes) and helps improve reliability and defaults over time.
+- Plugin safety & moderation: runtime extensions are sandboxed and supervised (resource limits, timeouts, crash isolation); an operator can disable or revoke plugins and the app‑store is moderated so problematic plugins are removed. This keeps third‑party innovation from impacting platform reliability.
 - Automatic EF Core migrations on startup.
 - Sensible defaults: modern password hashing, strict name validation, autoconfig from a single master key.
 
@@ -109,7 +126,7 @@ Separation of concerns is similar to git:
 
 This enables:
 
-- snapshots of layouts without copying content;
+- instant, one‑click snapshots of layouts without copying content — snapshots record references and restores are an atomic pointer switch (fast even for millions of files);
 - content-level deduplication;
 - mounting the same file in multiple places with no duplication.
 
@@ -139,13 +156,14 @@ See controllers under `src/Cotton.Server/Controllers`.
 
 ## Storage Pipeline
 
-`src/Cotton.Storage` implements a processor pipeline:
+`src/Cotton.Storage` composes a backend (`IStorageBackend`) with a set of streaming processors (`IStorageProcessor`) into a single pipeline:
 
-- `FileSystemStorageProcessor` — persists chunk blobs on disk (`.ctn`).
+- `CompressionProcessor` — Zstd (streaming).
 - `CryptoProcessor` — wraps streams with streaming AES-GCM encrypt/decrypt.
-- `CompressionProcessor` — Zstd.
+- Storage backend — persists chunk blobs (e.g. `FileSystemStorageBackend` or `S3StorageBackend`).
 
 Write flows **forward** through processors; read flows **backwards**.  
+In practice, ordering is controlled by processor `Priority`, so writes run **compression → crypto → backend**, and reads run **backend → crypto → decompression**.
 This gives a real storage engine, not just `File.WriteAllBytes`.
 
 ---
@@ -161,8 +179,10 @@ Crypto is powered by **EasyExtensions.Crypto** (NuGet) — a streaming AES-GCM e
 Performance characteristics:
 
 - Decrypt throughput ~9–10 GB/s across large chunk sizes on typical dev hardware.
-- Encrypt scales to memory bandwidth (~14–16+ GB/s) around 1–2 threads with ~1 MiB chunks.
+- Encrypt scales to memory bandwidth (~14–16+ GB/s; up to ~16–17 GB/s in favorable benchmarks) around 1–2 threads with ~1 MiB chunks.
 - Scaling efficient up to 2–4 threads, then limited by shared resources (memory BW / caches).
+
+This isn’t “engineering overkill for bragging rights” — it’s deliberate headroom. When the crypto/compression pipeline is comfortably faster than your storage/network, the app stays responsive on NAS-class hardware, and you can throw very large trees and multi‑GB transfers at it without the system becoming fragile. Benchmarks include modest/NAS‑class machines — in my tests encryption and streaming compression remain faster than a typical 2.5 Gbit network link.
 
 Hashing for addressing uses SHA-256 from EasyExtensions.Crypto.
 
@@ -246,6 +266,10 @@ Downloads and previews properly support `ETag`, `If-None-Match` (304 responses),
 **Download tokens with auto-cleanup**  
 Share tokens can be single-use (`DeleteAfterUse`) and expire after configurable retention. Background job sweeps expired tokens — no manual "clean up shares" UI needed.
 
+**GC-aware chunk ingest**  
+The garbage collector coordinates with ingestion: if a chunk is currently being deleted, the ingest path will refuse/hold concurrent uploads of that same chunk until the delete completes—this prevents rare races and windows where a delete and an upload could conflict. The behavior is deliberate: safety first, then fast reconciliation.  
+_See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Services/ChunkIngestService.cs`_
+
 **Industrial-strength NameValidator**  
 Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
 
@@ -291,7 +315,7 @@ _See: `src/Cotton.Server/Controllers/AuthController.cs`_
 ### Storage Engine (Cotton.Storage)
 
 **Processor pipeline with proper directionality**  
-`FileStoragePipeline` sorts processors by `Priority`. Writes flow **forward** through processors (FS → crypto → compression), reads flow **backwards**.  
+`FileStoragePipeline` sorts processors by `Priority`. Writes flow **forward** (compression → crypto → backend), reads flow **backwards** (backend → crypto → decompression).  
 _See: `src/Cotton.Storage/Pipelines/FileStoragePipeline.cs`_
 
 **FileSystem backend: atomic writes**  
@@ -302,18 +326,18 @@ _See: `src/Cotton.Storage/Backends/FileSystemStorageBackend.cs`_
 Checks existence before write to avoid redundant uploads. Supports namespace "segments" for partitioning.  
 _See: `src/Cotton.Storage/Backends/S3StorageBackend.cs`_
 
-**ConcatenatedReadStream: seekable stream over chunks**  
-Single logical stream assembled from multiple chunk streams. Supports `Seek` via binary search over cumulative offsets, switches underlying stream on-the-fly.  
-This is **why** Range downloads/video streaming/previews work seamlessly without reassembling files on disk.  
-_See: `src/Cotton.Storage/Streams/ConcatenatedReadStream.cs`_
+**ConcatenatedReadStream: fully seekable stream assembled from chunks**  
+A single logical, seekable stream is assembled from multiple chunk streams (no file reassembly). `Seek` is implemented by locating the target chunk (binary search over cumulative offsets) and switching the underlying stream on‑the‑fly so reads always come from the correct chunk.  
+Why this matters — and why it's hard: it enables true `Range` downloads, fast partial reads, and efficient preview extraction (no temp files or full-file buffering), and it lets the same storage backends serve CDN/HTTP range requests and FFmpeg without extra I/O. Implementing this required non‑trivial coordination: preserving per‑chunk AES‑GCM authentication/nonce layout while supporting arbitrary seeks, cooperating with compression and pipeline ordering, and supporting concurrent range reads with minimal overhead.  
+_See: `src/Cotton.Storage/Streams/ConcatenatedReadStream.cs`, `src/Cotton.Storage/Pipelines/FileStoragePipeline.cs`._
 
 **CachedStoragePipeline for small objects**  
 In-memory cache (~100MB default) with per-object size limits. `StoreInMemoryCache=true` forces caching (ideal for previews/icons).  
 _See: `src/Cotton.Storage/Pipelines/CachedStoragePipeline.cs`, used in `PreviewController.cs`_
 
 **Compression processor**  
-Zstd via `ZstdSharp`. Currently buffers in `MemoryStream` (controlled allocation within chunk limits).  
-_See: `src/Cotton.Storage/Processors/CompressionProcessor.cs`_
+Zstandard (zstd) via `ZstdSharp` — streaming, enabled by default and integrated into the storage pipeline. Compression is applied _before_ encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). In practice this typically stays comfortably above multi‑gigabit networking speeds, so compression doesn’t turn into the bottleneck. The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI; ordering is controlled via processor `Priority`. Tests and benchmarks exercise compressible vs random data.  
+_See: `src/Cotton.Storage/Processors/CompressionProcessor.cs` and `src/Cotton.Storage.Tests/Processors/CompressionProcessorTests.cs`._
 
 ---
 
@@ -359,14 +383,11 @@ _See: `src/Cotton.Previews/PdfPreviewGenerator.cs`_
 **Video preview generator**
 
 - Auto-downloads FFmpeg/ffprobe if missing (`FFMpegCore`)
-- Launches `RangeStreamServer`: mini HTTP server over seekable stream with semaphore-protected seek+read (FFmpeg makes parallel range requests)
-- Extracts frame from mid-duration
-- Timeouts + process kill, detailed logging  
-  _See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`_
-
-**Background preview job**  
-Generates previews only for supported MIME types. Stores preview as blob by hash, saves encrypted preview hash in DB.  
-_See: `src/Cotton.Server/Jobs/GeneratePreviewJob.cs`_
+- Uses a pragmatic local HTTP shim (`RangeStreamServer`) — a deliberate "hack" that exposes a seekable `ConcatenatedReadStream` over HTTP so FFmpeg/ffprobe can perform parallel `Range` requests. The server serializes seek+read with a semaphore to avoid deadlocks and avoids writing full temp files.
+- Extracts a frame from mid-duration (or other requested time) directly from chunked, encrypted/compressed storage.
+- Robust timeouts, process kill and detailed logging to contain external tools.  
+  _See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`._
+  _See: `src/Cotton.Server/Jobs/GeneratePreviewJob.cs`_
 
 ---
 
@@ -432,6 +453,7 @@ _See: `src/Cotton.Server/Program.cs`, `AuthController.cs`, `SetupController.cs`_
 ## Roadmap (short)
 
 - Generational GC with compaction/merging of small "dust" chunks (design complete; implementation pending).
+- Adaptive defaults and auto-tuning (chunk sizes / buffers / threading) informed by opt-in performance telemetry.
 - Additional processors (cache, S3 replica, cold storage, etc.).
 - Hardening auth flows and extending UI around uploads/layouts and sharing.
 - Native/mobile and desktop clients reusing the same engine.

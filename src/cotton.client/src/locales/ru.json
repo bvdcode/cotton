@@ -136,12 +136,66 @@
       "title": "Активные сессии",
       "description": "Управление активными сессиями на разных устройствах",
       "noActiveSessions": "Нет активных сессий",
+      "currentSession": "Текущая",
+      "unknownDevice": "Неизвестное устройство",
       "revokeSession": "Завершить сессию",
       "elapsed": "длится {{duration}}",
       "revokeConfirmTitle": "Завершить сессию?",
       "revokeConfirmDescription": "Вы уверены, что хотите завершить эту сессию? Произойдёт выход из аккаунта на устройстве.",
       "revokeConfirmButton": "Завершить",
-      "revokeCancelButton": "Отмена"
+      "revokeCancelButton": "Отмена",
+      "errors": {
+        "loadFailed": "Не удалось загрузить сессии.",
+        "revokeFailed": "Не удалось завершить сессию."
+      }
+    },
+    "webdav": {
+      "title": "Доступ по WebDAV",
+      "description": "Сгенерируйте одноразовый токен для подключения по WebDAV.",
+      "confirmTitle": "Сгенерировать токен WebDAV?",
+      "confirmDescription": "Будет сгенерирован новый токен, а предыдущий станет недействительным. Токен будет показан только один раз.",
+      "confirmButton": "Сгенерировать",
+      "cancelButton": "Отмена",
+      "generateButton": "Сгенерировать токен",
+      "generating": "Генерация...",
+      "tokenLabel": "Токен",
+      "usernameLabel": "Имя пользователя",
+      "connectUrlLabel": "Адрес WebDAV",
+      "modalTitle": "Учётные данные WebDAV (показываются один раз)",
+      "closeButton": "Закрыть",
+      "copyToken": "Скопировать токен",
+      "copyUrl": "Скопировать URL",
+      "copyUsername": "Скопировать имя",
+      "tokenWarning": "Скопируйте этот токен сейчас. Он больше не будет показан.",
+      "cardHelp": "Используйте эти данные для подключения через WebDAV‑клиент. Сгенерируйте токен, чтобы получить одноразовый пароль.",
+      "examples": {
+        "title": "Примеры",
+        "copy": "Копировать",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Копировать команду",
+          "caption": "Запустите в командной строке с правами администратора или подключите сетевой диск через Проводник."
+        },
+        "powershell": {
+          "title": "Windows (PowerShell escape)",
+          "copy": "Копировать команду",
+          "caption": "Используйте в PowerShell — команда экранирована для удобства."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Копировать команду",
+          "caption": "Подключение через Finder или Terminal (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Копировать команду",
+          "caption": "Используйте davfs2 или cadaver для монтирования WebDAV."
+        }
+      },
+      "placeholderPassword": "<пароль>",
+      "errors": {
+        "failed": "Не удалось сгенерировать токен WebDAV."
+      }
     }
   },
   "setup": {

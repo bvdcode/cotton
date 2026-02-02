@@ -35,7 +35,8 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ISchedulerFactory _scheduler,
-        FileManifestService _fileManifestService) : ControllerBase
+        FileManifestService _fileManifestService,
+        NodeFileHistoryService _history) : ControllerBase
     {
         private const int DefaultSharedFileTokenLength = 16;
 
@@ -131,10 +132,12 @@ namespace Cotton.Server.Controllers
                 }
             }
 
+            var userId = User.GetUserId();
+
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId);
             if (nodeFile == null)
             {
                 return CottonResult.NotFound("Node file not found");
@@ -143,10 +146,12 @@ namespace Cotton.Server.Controllers
             DownloadToken newToken = new()
             {
                 DeleteAfterUse = deleteAfterUse,
-                CreatedByUserId = User.GetUserId(),
+                CreatedByUserId = userId,
                 FileManifestId = nodeFile.FileManifestId,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = StringHelpers.CreateRandomString(DefaultSharedFileTokenLength),
+                Token = !string.IsNullOrWhiteSpace(customToken)
+                    ? customToken
+                    : StringHelpers.CreateRandomString(DefaultSharedFileTokenLength),
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
             await _dbContext.SaveChangesAsync();
@@ -178,7 +183,8 @@ namespace Cotton.Server.Controllers
             var newFile = await _dbContext.FileManifests
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
                 ?? await _fileManifestService.CreateNewFileManifestAsync(chunks, request.Name, request.ContentType, proposedHash);
-            nodeFile.FileManifestId = newFile.Id;
+
+            await _history.SaveVersionAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
             await _dbContext.SaveChangesAsync();
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();

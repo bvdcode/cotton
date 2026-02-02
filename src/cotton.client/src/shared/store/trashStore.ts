@@ -30,9 +30,11 @@ export const useTrashStore = create<TrashState>((set, get) => ({
     const loadChildren = options?.loadChildren ?? true;
     const state = get();
 
-    if (!force && state.rootId && state.currentNode?.id === state.rootId) {
-      if (!loadChildren || state.contentByNodeId[state.rootId]) {
-        return state.currentNode;
+    if (!force && state.rootId) {
+      const hasCachedContent = !!state.contentByNodeId[state.rootId];
+      if (!loadChildren || hasCachedContent) {
+        await get().loadNode(state.rootId, { loadChildren });
+        return get().currentNode;
       }
     }
 
