@@ -27,6 +27,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Cotton.Server.Services.WebDav;
 
 namespace Cotton.Server.Controllers
 {
@@ -39,7 +40,8 @@ namespace Cotton.Server.Controllers
         SettingsProvider _settings,
         CottonDbContext _dbContext,
         ILogger<AuthController> _logger,
-        IPasswordHashService _hasher) : ControllerBase
+        IPasswordHashService _hasher,
+        WebDavAuthCache _webDavAuthCache) : ControllerBase
     {
         private const int WebDavTokenLength = 32;
         private const int RefreshTokenLength = 32;
@@ -55,6 +57,7 @@ namespace Cotton.Server.Controllers
             string token = StringHelpers.CreateRandomString(WebDavTokenLength);
             user.WebDavTokenPhc = _hasher.Hash(token);
             await _dbContext.SaveChangesAsync();
+            _webDavAuthCache.BumpUsernameCacheVersion(user.Username);
             return Ok(token);
         }
 
