@@ -111,7 +111,7 @@ public class WebDavController(
 
         var entityTag = result.ETag is not null
             ? EntityTagHeaderValue.Parse(result.ETag)
-            : EntityTagHeaderValue.Any;
+            : throw new InvalidOperationException("ETag is required for file response");
 
         return File(
             result.Content ?? Stream.Null,
