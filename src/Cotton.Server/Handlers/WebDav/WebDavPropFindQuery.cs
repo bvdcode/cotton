@@ -34,7 +34,6 @@ public class WebDavPropFindQueryHandler(
     ILogger<WebDavPropFindQueryHandler> _logger)
     : IRequestHandler<WebDavPropFindQuery, WebDavPropFindResult>
 {
-
     private const int MaxDepth = 32;
 
     public async Task<WebDavPropFindResult> Handle(WebDavPropFindQuery request, CancellationToken ct)
