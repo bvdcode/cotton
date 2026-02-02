@@ -20,7 +20,8 @@ public sealed class WebDavBasicAuthenticationHandler(
     UrlEncoder encoder,
     CottonDbContext dbContext,
     IPasswordHashService hasher,
-    IMemoryCache cache)
+    IMemoryCache cache,
+    Cotton.Server.Services.WebDav.WebDavAuthCache authCache)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string PolicyName = "WebDav";
@@ -53,7 +54,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         var username = creds.Value.username.Trim();
         var token = creds.Value.token;
 
-        var cacheKey = $"webdav-basic:{username}:{token}";
+        var cacheKey = authCache.GetCacheKey(username, token);
         if (cache.TryGetValue(cacheKey, out Guid cachedUserId) && cachedUserId != Guid.Empty)
         {
             var principal = CreatePrincipal(cachedUserId, username);
