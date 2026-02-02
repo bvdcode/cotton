@@ -18,6 +18,7 @@ namespace Cotton.Server.Controllers;
 /// Supports: OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY
 /// </summary>
 [ApiController]
+[Route("api/v1/webdav")]
 [Route("api/v1/webdav/{**path}")]
 public class WebDavController(
     IMediator _mediator,
@@ -115,9 +116,9 @@ public class WebDavController(
         return File(
             result.Content ?? Stream.Null,
             result.ContentType ?? "application/octet-stream",
-            result.FileName,
-            result.LastModified,
-            entityTag,
+            fileDownloadName: null,
+            lastModified: result.LastModified,
+            entityTag: entityTag,
             enableRangeProcessing: true);
     }
 
@@ -166,6 +167,11 @@ public class WebDavController(
     public async Task<IActionResult> HandlePutAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!IsLockSatisfied(userId, path ?? string.Empty))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
+        }
         var overwrite = GetOverwriteHeader();
         var contentType = Request.ContentType;
 
@@ -298,6 +304,11 @@ public class WebDavController(
     public async Task<IActionResult> HandleDeleteAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!IsLockSatisfied(userId, path ?? string.Empty))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
+        }
         var command = new WebDavDeleteCommand(userId, path ?? string.Empty);
         var result = await _mediator.Send(command, HttpContext.RequestAborted);
 
@@ -321,6 +332,11 @@ public class WebDavController(
     public async Task<IActionResult> HandleMkColAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!IsLockSatisfied(userId, path ?? string.Empty))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
+        }
         var command = new WebDavMkColCommand(userId, path ?? string.Empty);
         var result = await _mediator.Send(command, HttpContext.RequestAborted);
         AddDavHeaders();
@@ -343,6 +359,11 @@ public class WebDavController(
     public async Task<IActionResult> HandleMoveAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!IsLockSatisfied(userId, path ?? string.Empty))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
+        }
         var destination = GetDestinationPath();
         var overwrite = GetOverwriteHeader();
 
@@ -375,6 +396,11 @@ public class WebDavController(
     public async Task<IActionResult> HandleCopyAsync(string? path)
     {
         var userId = User.GetUserId();
+        if (!IsLockSatisfied(userId, path ?? string.Empty))
+        {
+            AddDavHeaders();
+            return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
+        }
         var destination = GetDestinationPath();
         var overwrite = GetOverwriteHeader();
 
@@ -415,13 +441,68 @@ public class WebDavController(
             methods.Where(m => !excludeSet.Contains(m)));
     }
 
+    private bool IsLockSatisfied(Guid userId, string path)
+    {
+        path = (path ?? string.Empty).Trim('/');
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var (key, value) in _locks)
+        {
+            if (value.ExpiresAt <= now)
+            {
+                _locks.TryRemove(key, out _);
+            }
+        }
+
+        var keyExact = GetLockKey(userId, path);
+        if (!_locks.TryGetValue(keyExact, out var lockInfo))
+        {
+            return true;
+        }
+
+        // RFC 4918: client may send lock token in Lock-Token (UNLOCK) or in If header (all write methods)
+        var lockToken = ExtractLockToken();
+        return lockToken is not null
+               && string.Equals(lockToken, lockInfo.Token, StringComparison.Ordinal);
+    }
+
+    private string? ExtractLockToken()
+    {
+        var lockTokenHeader = Request.Headers["Lock-Token"].ToString();
+        if (!string.IsNullOrWhiteSpace(lockTokenHeader))
+        {
+            return lockTokenHeader.Trim().Trim('<', '>');
+        }
+
+        var ifHeader = Request.Headers["If"].ToString();
+        if (string.IsNullOrWhiteSpace(ifHeader))
+        {
+            return null;
+        }
+
+        // Very small parser: just find first <opaquelocktoken:...>
+        var start = ifHeader.IndexOf("<opaquelocktoken:", StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        var end = ifHeader.IndexOf('>', start);
+        if (end < 0)
+        {
+            return null;
+        }
+
+        return ifHeader[(start + 1)..end];
+    }
+
     private int GetDepthHeader()
     {
         var depthHeader = Request.Headers["Depth"].FirstOrDefault();
         return depthHeader switch
         {
             "0" => 0,
-            "infinity" => int.MaxValue,
+            "infinity" => 25,
             _ => 1
         };
     }
