@@ -132,10 +132,12 @@ namespace Cotton.Server.Controllers
                 }
             }
 
+            var userId = User.GetUserId();
+
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId);
             if (nodeFile == null)
             {
                 return CottonResult.NotFound("Node file not found");
@@ -144,10 +146,12 @@ namespace Cotton.Server.Controllers
             DownloadToken newToken = new()
             {
                 DeleteAfterUse = deleteAfterUse,
-                CreatedByUserId = User.GetUserId(),
+                CreatedByUserId = userId,
                 FileManifestId = nodeFile.FileManifestId,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = StringHelpers.CreateRandomString(DefaultSharedFileTokenLength),
+                Token = !string.IsNullOrWhiteSpace(customToken)
+                    ? customToken
+                    : StringHelpers.CreateRandomString(DefaultSharedFileTokenLength),
             };
             await _dbContext.DownloadTokens.AddAsync(newToken);
             await _dbContext.SaveChangesAsync();

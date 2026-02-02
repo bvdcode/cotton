@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
 {
+    [Index(nameof(Token), IsUnique = true)]
     [Table("download_tokens")]
     public class DownloadToken : BaseEntity<Guid>
     {
