@@ -5,8 +5,9 @@
  * Encapsulates language detection and override logic
  */
 
-import { useState, useCallback } from 'react';
-import { usePreferencesStore } from '../../../../../shared/store/preferencesStore';
+import { useState, useCallback } from "react";
+import { usePreferencesStore } from "../../../../../shared/store/preferencesStore";
+import { detectMonacoLanguageFromFileName } from "../../../../../shared/utils/languageDetection";
 
 /**
  * Detect programming language from file extension
@@ -107,7 +108,11 @@ export function useLanguageSelection({
   fileName,
   fileId,
 }: UseLanguageSelectionOptions): UseLanguageSelectionResult {
-  const { editorPreferences, setLanguageOverride: persistLanguage, removeLanguageOverride } = usePreferencesStore();
+  const {
+    editorPreferences,
+    setLanguageOverride: persistLanguage,
+    removeLanguageOverride,
+  } = usePreferencesStore();
 
   const [language, setLanguageState] = useState<string>(() => {
     const stored = editorPreferences.languageOverrides[fileId];
@@ -116,7 +121,7 @@ export function useLanguageSelection({
       return stored;
     }
     
-    return detectLanguageFromFileName(fileName);
+    return detectMonacoLanguageFromFileName(fileName);
   });
 
   const setLanguage = useCallback((newLanguage: string) => {
