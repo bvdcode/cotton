@@ -133,7 +133,6 @@ public class WebDavCopyCommandHandler(
         if (destExists.Found && request.Overwrite)
         {
             await DeleteExistingDestinationAsync(request.UserId, destExists, ct);
-            created = true;
         }
 
         return (created, true);
@@ -258,6 +257,7 @@ public class WebDavCopyCommandHandler(
             newFile.SetName(file.Name);
 
             await _dbContext.NodeFiles.AddAsync(newFile, ct);
+            newFile.OriginalNodeFileId = newFile.Id;
         }
     }
 }
