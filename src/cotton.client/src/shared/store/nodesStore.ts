@@ -27,6 +27,35 @@ type NodesState = {
   reset: () => void;
 };
 
+async function resolveNodeAndAncestors(
+  nodeId: string,
+  state: Pick<NodesState, "currentNode" | "ancestors" | "ancestorsByNodeId" | "contentByNodeId">,
+): Promise<{ node: NodeDto; ancestors: NodeDto[] }> {
+  let node: NodeDto | null = null;
+  let ancestors = state.ancestorsByNodeId[nodeId];
+
+  const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
+  if (ancestorIndex >= 0) {
+    node = state.ancestors[ancestorIndex];
+    if (!ancestors) {
+      ancestors = state.ancestors.slice(0, ancestorIndex);
+    }
+  }
+
+  if (!node && state.currentNode) {
+    const parentContent = state.contentByNodeId[state.currentNode.id];
+    node = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
+    if (!ancestors && node && node.parentId === state.currentNode.id) {
+      ancestors = [...state.ancestors, state.currentNode];
+    }
+  }
+
+  node ??= await nodesApi.getNode(nodeId);
+  ancestors ??= await nodesApi.getAncestors(nodeId);
+
+  return { node, ancestors };
+}
+
 export const useNodesStore = create<NodesState>((set, get) => ({
   currentNode: null,
   ancestors: [],
@@ -67,102 +96,27 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     const loadChildren = options?.loadChildren ?? true;
     if (state.loading && state.currentNode?.id === nodeId) return;
 
-    if (!loadChildren) {
-      set({ loading: true, error: null });
-
-      try {
-        let node: NodeDto | null = null;
-        let ancestors = state.ancestorsByNodeId[nodeId];
-
-        const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
-        if (ancestorIndex >= 0) {
-          node = state.ancestors[ancestorIndex];
-          if (!ancestors) {
-            ancestors = state.ancestors.slice(0, ancestorIndex);
-          }
-        }
-
-        if (!node && state.currentNode) {
-          const parentContent = state.contentByNodeId[state.currentNode.id];
-          node = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
-          if (!ancestors && node && node.parentId === state.currentNode.id) {
-            ancestors = [...state.ancestors, state.currentNode];
-          }
-        }
-
-        if (!node) {
-          node = await nodesApi.getNode(nodeId);
-        }
-
-        if (!ancestors) {
-          ancestors = await nodesApi.getAncestors(nodeId);
-        }
-
-        set((prev) => ({
-          currentNode: node!,
-          ancestors,
-          ancestorsByNodeId: {
-            ...prev.ancestorsByNodeId,
-            [nodeId]: ancestors,
-          },
-          lastUpdatedByNodeId: {
-            ...prev.lastUpdatedByNodeId,
-            [nodeId]: Date.now(),
-          },
-          loading: false,
-          error: null,
-        }));
-      } catch (error) {
-        console.error("Failed to load node view", error);
-        set({ loading: false, error: "Failed to load folder contents" });
-      }
-
-      return;
-    }
-
     set({ loading: true, error: null });
 
     try {
-      let node: NodeDto | null = null;
-      let ancestors = state.ancestorsByNodeId[nodeId];
-
-      const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
-      if (ancestorIndex >= 0) {
-        node = state.ancestors[ancestorIndex];
-        if (!ancestors) {
-          ancestors = state.ancestors.slice(0, ancestorIndex);
-        }
-      }
-
-      if (!node && state.currentNode) {
-        const parentContent = state.contentByNodeId[state.currentNode.id];
-        node = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
-        if (!ancestors && node && node.parentId === state.currentNode.id) {
-          ancestors = [...state.ancestors, state.currentNode];
-        }
-      }
-
-      if (!node) {
-        node = await nodesApi.getNode(nodeId);
-      }
-
-      if (!ancestors) {
-        ancestors = await nodesApi.getAncestors(nodeId);
-      }
-
-      const content = (await nodesApi.getChildren(nodeId)).content;
+      const resolved = await resolveNodeAndAncestors(nodeId, state);
+      const content = loadChildren
+        ? (await nodesApi.getChildren(nodeId)).content
+        : undefined;
 
       set((prev) => ({
-        currentNode: node!,
-        ancestors,
+        currentNode: resolved.node,
+        ancestors: resolved.ancestors,
         ancestorsByNodeId: {
           ...prev.ancestorsByNodeId,
-          [nodeId]: ancestors,
+          [nodeId]: resolved.ancestors,
         },
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [nodeId]: content,
-        },
+        contentByNodeId: loadChildren
+          ? {
+              ...prev.contentByNodeId,
+              [nodeId]: content,
+            }
+          : prev.contentByNodeId,
         lastUpdatedByNodeId: {
           ...prev.lastUpdatedByNodeId,
           [nodeId]: Date.now(),

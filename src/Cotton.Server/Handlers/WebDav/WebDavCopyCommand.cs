@@ -53,109 +53,153 @@ public class WebDavCopyCommandHandler(
 {
     public async Task<WebDavCopyResult> Handle(WebDavCopyCommand request, CancellationToken ct)
     {
-        // Resolve source
-        var sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
+        var sourceResult = await ResolveSourceAsync(request, ct);
         if (!sourceResult.Found)
         {
-            _logger.LogDebug("WebDAV COPY: Source not found: {Path}", request.SourcePath);
             return new WebDavCopyResult(false, false, WebDavCopyError.SourceNotFound);
         }
 
-        // Can't copy root
         if (sourceResult.IsCollection && sourceResult.Node?.ParentId is null)
         {
             _logger.LogWarning("WebDAV COPY: Attempted to copy root node for user {UserId}", request.UserId);
             return new WebDavCopyResult(false, false, WebDavCopyError.CannotCopyRoot);
         }
 
-        // Get destination parent
-        var destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
+        var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
         if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
         {
-            _logger.LogDebug("WebDAV COPY: Destination parent not found: {Path}", request.DestinationPath);
             return new WebDavCopyResult(false, false, WebDavCopyError.DestinationParentNotFound);
         }
 
-        // Validate new name
-        if (!NameValidator.TryNormalizeAndValidate(destParentResult.ResourceName, out _, out var errorMessage))
-        {
-            _logger.LogDebug("WebDAV COPY: Invalid name: {Name}, Error: {Error}", destParentResult.ResourceName, errorMessage);
-            return new WebDavCopyResult(false, false, WebDavCopyError.InvalidName);
-        }
-
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
-
-        // Check if destination exists
-        var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
-        if (destExists.Found && !request.Overwrite)
+        var (created, allowed) = await HandleDestinationOverwriteAsync(request, ct);
+        if (!allowed)
         {
-            _logger.LogDebug("WebDAV COPY: Destination exists and overwrite is false: {Path}", request.DestinationPath);
             return new WebDavCopyResult(false, false, WebDavCopyError.DestinationExists);
         }
 
-        bool created = !destExists.Found;
-
-        // Handle overwrite by deleting existing destination
-        if (destExists.Found && request.Overwrite)
-        {
-            if (destExists.IsCollection && destExists.Node is not null)
-            {
-                await _mediator.Send(new DeleteNodeQuery(request.UserId, destExists.Node.Id, skipTrash: false), ct);
-            }
-            else if (destExists.NodeFile is not null)
-            {
-                await _mediator.Send(new DeleteFileQuery(request.UserId, destExists.NodeFile.Id, skipTrash: false), ct);
-            }
-            created = true;
-        }
-
-        // Perform the copy
-        if (sourceResult.IsCollection && sourceResult.Node is not null)
-        {
-            await CopyNodeRecursivelyAsync(
-                sourceResult.Node.Id,
-                destParentResult.ParentNode.Id,
-                destParentResult.ResourceName,
-                request.UserId,
-                layout.Id,
-                ct);
-        }
-        else if (sourceResult.NodeFile is not null)
-        {
-            var newNodeFile = new NodeFile
-            {
-                OwnerId = request.UserId,
-                NodeId = destParentResult.ParentNode.Id,
-                FileManifestId = sourceResult.NodeFile.FileManifestId
-            };
-            newNodeFile.SetName(destParentResult.ResourceName);
-
-            await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
-        }
-
+        await PerformCopyAsync(request, sourceResult, destParentResult, layout.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
 
-        // Ensure copied files form a new version family.
         if (sourceResult.NodeFile is not null)
         {
-            var createdFile = await _dbContext.NodeFiles
-                .Where(f => f.OwnerId == request.UserId
-                    && f.NodeId == destParentResult.ParentNode!.Id
-                    && f.NameKey == NameValidator.NormalizeAndGetNameKey(destParentResult.ResourceName!))
-                .OrderByDescending(f => f.CreatedAt)
-                .FirstOrDefaultAsync(ct);
-
-            if (createdFile is not null && createdFile.OriginalNodeFileId == Guid.Empty)
-            {
-                createdFile.OriginalNodeFileId = createdFile.Id;
-                await _dbContext.SaveChangesAsync(ct);
-            }
+            await EnsureNewVersionFamilyAsync(request.UserId, destParentResult.ParentNode.Id, destParentResult.ResourceName, ct);
         }
 
         _logger.LogInformation("WebDAV COPY: Copied {Source} to {Dest} for user {UserId}",
             request.SourcePath, request.DestinationPath, request.UserId);
 
         return new WebDavCopyResult(true, created);
+    }
+
+    private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyCommand request, CancellationToken ct)
+    {
+        var sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
+        if (!sourceResult.Found)
+        {
+            _logger.LogDebug("WebDAV COPY: Source not found: {Path}", request.SourcePath);
+        }
+        return sourceResult;
+    }
+
+    private async Task<WebDavParentResult> GetAndValidateDestinationParentAsync(WebDavCopyCommand request, CancellationToken ct)
+    {
+        var destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
+        if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
+        {
+            _logger.LogDebug("WebDAV COPY: Destination parent not found: {Path}", request.DestinationPath);
+            return destParentResult;
+        }
+
+        if (!NameValidator.TryNormalizeAndValidate(destParentResult.ResourceName, out _, out var errorMessage))
+        {
+            _logger.LogDebug("WebDAV COPY: Invalid name: {Name}, Error: {Error}", destParentResult.ResourceName, errorMessage);
+            return destParentResult with { Found = false };
+        }
+
+        return destParentResult;
+    }
+
+    private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavCopyCommand request, CancellationToken ct)
+    {
+        var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
+        if (destExists.Found && !request.Overwrite)
+        {
+            _logger.LogDebug("WebDAV COPY: Destination exists and overwrite is false: {Path}", request.DestinationPath);
+            return (false, false);
+        }
+
+        bool created = !destExists.Found;
+        if (destExists.Found && request.Overwrite)
+        {
+            await DeleteExistingDestinationAsync(request.UserId, destExists, ct);
+            created = true;
+        }
+
+        return (created, true);
+    }
+
+    private async Task DeleteExistingDestinationAsync(Guid userId, WebDavResolveResult destination, CancellationToken ct)
+    {
+        if (destination.IsCollection && destination.Node is not null)
+        {
+            await _mediator.Send(new DeleteNodeQuery(userId, destination.Node.Id, skipTrash: false), ct);
+            return;
+        }
+
+        if (destination.NodeFile is not null)
+        {
+            await _mediator.Send(new DeleteFileQuery(userId, destination.NodeFile.Id, skipTrash: false), ct);
+        }
+    }
+
+    private async Task PerformCopyAsync(
+        WebDavCopyCommand request,
+        WebDavResolveResult sourceResult,
+        WebDavParentResult destParentResult,
+        Guid layoutId,
+        CancellationToken ct)
+    {
+        if (sourceResult.IsCollection && sourceResult.Node is not null)
+        {
+            await CopyNodeRecursivelyAsync(
+                sourceResult.Node.Id,
+                destParentResult.ParentNode!.Id,
+                destParentResult.ResourceName!,
+                request.UserId,
+                layoutId,
+                ct);
+            return;
+        }
+
+        if (sourceResult.NodeFile is not null)
+        {
+            var newNodeFile = new NodeFile
+            {
+                OwnerId = request.UserId,
+                NodeId = destParentResult.ParentNode!.Id,
+                FileManifestId = sourceResult.NodeFile.FileManifestId,
+            };
+            newNodeFile.SetName(destParentResult.ResourceName!);
+
+            await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
+        }
+    }
+
+    private async Task EnsureNewVersionFamilyAsync(Guid userId, Guid destParentNodeId, string resourceName, CancellationToken ct)
+    {
+        var createdFile = await _dbContext.NodeFiles
+            .Where(f => f.OwnerId == userId
+                && f.NodeId == destParentNodeId
+                && f.NameKey == NameValidator.NormalizeAndGetNameKey(resourceName))
+            .OrderByDescending(f => f.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (createdFile is not null && createdFile.OriginalNodeFileId == Guid.Empty)
+        {
+            createdFile.OriginalNodeFileId = createdFile.Id;
+            await _dbContext.SaveChangesAsync(ct);
+        }
     }
 
     private async Task CopyNodeRecursivelyAsync(
