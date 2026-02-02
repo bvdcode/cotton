@@ -25,6 +25,7 @@ public class WebDavController(
     ILogger<WebDavController> _logger) : ControllerBase
 {
     private const string WebDavRoute = "/api/v1/webdav/";
+    private static readonly string WebDavPrefix = WebDavRoute.TrimEnd('/');
 
     private sealed record WebDavLock(
         Guid UserId,
@@ -34,6 +35,8 @@ public class WebDavController(
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, WebDavLock> _locks = new();
 
+    private static long _lastLocksCleanupTicks;
+    private static readonly long LocksCleanupIntervalTicks = TimeSpan.FromSeconds(30).Ticks;
     private static string GetLockKey(Guid userId, string path) => $"{userId:N}:{path}";
 
     [HttpOptions]
@@ -42,14 +45,7 @@ public class WebDavController(
     {
         AddDavHeaders();
 
-        var now = DateTimeOffset.UtcNow;
-        foreach (var (key, value) in _locks)
-        {
-            if (value.ExpiresAt <= now)
-            {
-                _locks.TryRemove(key, out _);
-            }
-        }
+        CleanupExpiredLocksIfNeeded(force: true);
         Response.Headers["Public"] = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, LOCK, UNLOCK";
         return Ok();
     }
@@ -241,12 +237,9 @@ public class WebDavController(
         var userId = User.GetUserId();
         path ??= string.Empty;
 
+        // Allow lock-null resources (common behavior in Windows WebDAV)
         var query = new WebDavHeadQuery(userId, path);
         var result = await _mediator.Send(query, HttpContext.RequestAborted);
-        if (!result.Found)
-        {
-            return NotFound();
-        }
 
         AddDavHeaders();
 
@@ -269,8 +262,19 @@ public class WebDavController(
 
         _locks[GetLockKey(userId, lockInfo.Path)] = lockInfo;
         Response.Headers["Lock-Token"] = $"<{token}>";
+        Response.Headers["Timeout"] = $"Second-{(int)timeout.TotalSeconds}";
 
         var xml = WebDavXmlBuilder.BuildLockDiscoveryResponse(token, timeout);
+        if (!result.Found)
+        {
+            return new ContentResult
+            {
+                StatusCode = StatusCodes.Status201Created,
+                ContentType = "application/xml; charset=\"utf-8\"",
+                Content = xml
+            };
+        }
+
         return Content(xml, "application/xml; charset=\"utf-8\"");
     }
 
@@ -445,25 +449,54 @@ public class WebDavController(
     {
         path = (path ?? string.Empty).Trim('/');
 
-        var now = DateTimeOffset.UtcNow;
-        foreach (var (key, value) in _locks)
+        CleanupExpiredLocksIfNeeded(force: false);
+
+        // Check exact and all parents: "a/b/c" -> "a/b/c", "a/b", "a", ""
+        for (var p = path; ; p = ParentPath(p))
         {
-            if (value.ExpiresAt <= now)
+            var key = GetLockKey(userId, p);
+            if (_locks.TryGetValue(key, out var lockInfo))
             {
-                _locks.TryRemove(key, out _);
+                var lockToken = ExtractLockToken();
+                return lockToken is not null
+                       && string.Equals(lockToken, lockInfo.Token, StringComparison.Ordinal);
+            }
+
+            if (string.IsNullOrEmpty(p))
+            {
+                break;
             }
         }
 
-        var keyExact = GetLockKey(userId, path);
-        if (!_locks.TryGetValue(keyExact, out var lockInfo))
+        return true;
+    }
+
+    private static string ParentPath(string path)
+    {
+        var i = path.LastIndexOf('/');
+        return i < 0 ? string.Empty : path[..i];
+    }
+
+    private static void CleanupExpiredLocksIfNeeded(bool force)
+    {
+        var nowTicks = DateTimeOffset.UtcNow.UtcTicks;
+        var last = System.Threading.Interlocked.Read(ref _lastLocksCleanupTicks);
+        if (!force && nowTicks - last < LocksCleanupIntervalTicks)
         {
-            return true;
+            return;
         }
 
-        // RFC 4918: client may send lock token in Lock-Token (UNLOCK) or in If header (all write methods)
-        var lockToken = ExtractLockToken();
-        return lockToken is not null
-               && string.Equals(lockToken, lockInfo.Token, StringComparison.Ordinal);
+        if (System.Threading.Interlocked.Exchange(ref _lastLocksCleanupTicks, nowTicks) == last || force)
+        {
+            var now = DateTimeOffset.UtcNow;
+            foreach (var (key, value) in _locks)
+            {
+                if (value.ExpiresAt <= now)
+                {
+                    _locks.TryRemove(key, out _);
+                }
+            }
+        }
     }
 
     private string? ExtractLockToken()
@@ -499,12 +532,28 @@ public class WebDavController(
     private int GetDepthHeader()
     {
         var depthHeader = Request.Headers["Depth"].FirstOrDefault();
-        return depthHeader switch
+        if (string.IsNullOrWhiteSpace(depthHeader))
         {
-            "0" => 0,
-            "infinity" => 25,
-            _ => 1
-        };
+            return 1;
+        }
+
+        depthHeader = depthHeader.Split(',')[0].Trim();
+        if (depthHeader == "0")
+        {
+            return 0;
+        }
+
+        if (depthHeader == "1")
+        {
+            return 1;
+        }
+
+        if (string.Equals(depthHeader, "infinity", StringComparison.OrdinalIgnoreCase))
+        {
+            return 25;
+        }
+
+        return 1;
     }
 
     private string? GetDestinationPath()
@@ -516,18 +565,19 @@ public class WebDavController(
         }
 
         // Parse the destination URL and extract the path
-        if (Uri.TryCreate(destination, UriKind.Absolute, out var uri))
+        if (Uri.TryCreate(destination, UriKind.RelativeOrAbsolute, out var uri))
         {
-            destination = uri.AbsolutePath;
+            destination = uri.IsAbsoluteUri ? uri.AbsolutePath : uri.OriginalString;
         }
 
         destination = Uri.UnescapeDataString(destination);
 
-        // Remove the WebDAV route prefix
-        var webdavIndex = destination.IndexOf(WebDavRoute, StringComparison.OrdinalIgnoreCase);
-        if (webdavIndex >= 0)
+        // Remove the WebDAV route prefix (with or without trailing slash)
+        var idx = destination.IndexOf(WebDavPrefix, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
         {
-            destination = destination[(webdavIndex + WebDavRoute.Length)..];
+            destination = destination[(idx + WebDavPrefix.Length)..];
+            destination = destination.TrimStart('/');
         }
 
         return destination.Trim('/');
