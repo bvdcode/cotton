@@ -131,6 +131,13 @@ export const FilesPage: React.FC = () => {
     [deferredContent?.files, deferredContent?.nodes],
   );
 
+  const goToFolder = useMemo(
+    () => (folderId: string) => navigate(`/files/${folderId}`),
+    [navigate],
+  );
+
+  const goHome = useMemo(() => () => navigate("/files"), [navigate]);
+
   const handleGoUp = () => {
     if (ancestors.length > 0) {
       const parent = ancestors[ancestors.length - 1];
@@ -155,10 +162,15 @@ export const FilesPage: React.FC = () => {
     }
   };
 
-  // Build folder operations adapter
-  const folderOperations = buildFolderOperations(folderOps, (folderId) =>
-    navigate(`/files/${folderId}`),
+  const onPaginationModelChange = useMemo(
+    () => (model: { page: number; pageSize: number }) => {
+      handlePaginationChange(model.page, model.pageSize);
+    },
+    [handlePaginationChange],
   );
+
+  // Build folder operations adapter
+  const folderOperations = buildFolderOperations(folderOps, goToFolder);
 
   // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
@@ -226,7 +238,7 @@ export const FilesPage: React.FC = () => {
           layoutType={layoutType}
           canGoUp={ancestors.length > 0}
           onGoUp={handleGoUp}
-          onHomeClick={() => navigate("/files")}
+          onHomeClick={goHome}
           onLayoutToggle={setLayoutType}
           showUpload={!!nodeId}
           showNewFolder={!!nodeId}
@@ -273,9 +285,7 @@ export const FilesPage: React.FC = () => {
                 ? {
                     totalCount: listTotalCount,
                     loading: listLoading,
-                    onPaginationModelChange: (model) => {
-                      handlePaginationChange(model.page, model.pageSize);
-                    },
+                    onPaginationModelChange,
                   }
                 : undefined
             }

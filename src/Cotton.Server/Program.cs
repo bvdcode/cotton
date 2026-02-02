@@ -38,6 +38,7 @@ namespace Cotton.Server
             builder.Services
                 .AddMediator()
                 .AddQuartzJobs()
+                .AddMemoryCache()
                 .AddSingleton<PerfTracker>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<FileManifestService>()
@@ -48,9 +49,14 @@ namespace Cotton.Server
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
                 .AddPostgresDbContext<CottonDbContext>(x => x.UseLazyLoadingProxies = false)
                 .AddScoped<ILayoutService, StorageLayoutService>()
+                .AddScoped<ILayoutNavigator, LayoutNavigator>()
                 .AddPbkdf2PasswordHashService()
                 .AddControllers().Services
                 .AddStreamCipher()
+                .AddChunkServices()
+                .AddLayoutPathServices()
+                .AddWebDavServices()
+                .AddWebDavAuth()
                 .AddJwt();
 
             var app = builder.Build();

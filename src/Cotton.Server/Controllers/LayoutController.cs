@@ -26,7 +26,8 @@ namespace Cotton.Server.Controllers
     public class LayoutController(
         IMediator _mediator,
         CottonDbContext _dbContext,
-        ILayoutService _layouts) : ControllerBase
+        ILayoutService _layouts,
+        ILayoutNavigator _navigator) : ControllerBase
     {
         [Authorize]
         [HttpGet("{layoutId:guid}/search")]
@@ -351,35 +352,13 @@ namespace Cotton.Server.Controllers
             [FromQuery] NodeType nodeType = NodeType.Default)
         {
             Guid userId = User.GetUserId();
-            var found = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-            Node currentNode = await _layouts.GetOrCreateRootNodeAsync(found.Id, userId, nodeType);
-            if (string.IsNullOrWhiteSpace(path))
+            var currentNode = await _navigator.ResolveNodeByPathAsync(userId, path, nodeType);
+            if (currentNode is null)
             {
-                var dto = currentNode.Adapt<NodeDto>();
-                return Ok(dto);
+                return CottonResult.NotFound("Layout node was not found.");
             }
 
-            var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            // search for the root node of this layout and user, using node type
-            foreach (var part in parts)
-            {
-                string normalizedPart = NameValidator.NormalizeAndGetNameKey(part);
-                var nextNode = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.Layout.OwnerId == userId
-                        && x.LayoutId == found.Id
-                        && x.ParentId == currentNode.Id
-                        && x.NameKey == normalizedPart
-                        && x.Type == nodeType)
-                    .SingleOrDefaultAsync();
-                if (nextNode == null)
-                {
-                    return CottonResult.NotFound($"Layout node '{part}' was not found.");
-                }
-                currentNode = nextNode;
-            }
-            var mapped = currentNode.Adapt<NodeDto>();
-            return Ok(mapped);
+            return Ok(currentNode.Adapt<NodeDto>());
         }
     }
 }

@@ -1,6 +1,11 @@
 import { Box, Stack } from "@mui/material";
 import { useAuth } from "../../features/auth";
-import { UserInfoCard, TotpSettingsCard, SessionsCard } from "./components";
+import {
+  UserInfoCard,
+  TotpSettingsCard,
+  SessionsCard,
+  WebDavTokenCard,
+} from "./components";
 import { useEffect } from "react";
 
 export const ProfilePage = () => {
@@ -39,6 +44,7 @@ export const ProfilePage = () => {
           </Box>
         </Stack>
         <SessionsCard />
+        <WebDavTokenCard />
       </Stack>
     </Box>
   );

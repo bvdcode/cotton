@@ -118,12 +118,66 @@
       "title": "Active Sessions",
       "description": "Manage your active sessions across different devices",
       "noActiveSessions": "No active sessions",
+      "currentSession": "Current",
+      "unknownDevice": "Unknown device",
       "revokeSession": "End session",
       "elapsed": "{{duration}} elapsed",
       "revokeConfirmTitle": "End session?",
       "revokeConfirmDescription": "Are you sure you want to end this session? This will sign out the device.",
       "revokeConfirmButton": "End session",
-      "revokeCancelButton": "Cancel"
+      "revokeCancelButton": "Cancel",
+      "errors": {
+        "loadFailed": "Failed to load sessions.",
+        "revokeFailed": "Failed to end session."
+      }
+    },
+    "webdav": {
+      "title": "WebDAV Access",
+      "description": "Generate a one-time token to connect via WebDAV.",
+      "confirmTitle": "Generate WebDAV token?",
+      "confirmDescription": "This will generate a new token and invalidate any previous one. The token will only be shown once.",
+      "confirmButton": "Generate",
+      "cancelButton": "Cancel",
+      "generateButton": "Generate token",
+      "generating": "Generating...",
+      "tokenLabel": "Token",
+      "usernameLabel": "Username",
+      "connectUrlLabel": "WebDAV endpoint",
+      "modalTitle": "WebDAV credentials (shown once)",
+      "closeButton": "Close",
+      "copyToken": "Copy token",
+      "copyUrl": "Copy URL",
+      "copyUsername": "Copy username",
+      "tokenWarning": "Copy this token now. It will not be shown again.",
+      "cardHelp": "Use these values to connect with a WebDAV client. Generate a token to obtain a one-time password.",
+      "examples": {
+        "title": "Examples",
+        "copy": "Copy",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Copy",
+          "caption": "Run in an elevated Command Prompt or use mapped drive in Explorer."
+        },
+        "powershell": {
+          "title": "Windows (PowerShell escape)",
+          "copy": "Copy",
+          "caption": "Use when running from PowerShell; the command is escaped for convenience."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Copy",
+          "caption": "Mount via Finder & Terminal (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Copy",
+          "caption": "Use davfs2 or cadaver to mount the WebDAV endpoint."
+        }
+      },
+      "placeholderPassword": "<password>",
+      "errors": {
+        "failed": "Failed to generate WebDAV token."
+      }
     }
   },
   "setup": {

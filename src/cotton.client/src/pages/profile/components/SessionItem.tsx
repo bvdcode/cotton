@@ -1,6 +1,5 @@
 import {
   Box,
-  Paper,
   Stack,
   Typography,
   IconButton,
@@ -29,14 +28,12 @@ export const SessionItem = ({
   const { t } = useTranslation("profile");
 
   return (
-    <Paper
+    <Box
       sx={{
-        p: 1,
-        bgcolor: "background.default",
+        py: 1.5,
         display: "flex",
         alignItems: "center",
         gap: 1,
-        transition: "background-color 0.2s",
       }}
     >
       {getDeviceIcon(session.device)}
@@ -56,12 +53,14 @@ export const SessionItem = ({
                 maxWidth: "100%",
               }}
             >
-              {session.device || session.userAgent || "Unknown device"}
+              {session.device ||
+                session.userAgent ||
+                t("sessions.unknownDevice")}
             </Typography>
           </Tooltip>
           {session.isCurrentSession && (
             <Chip
-              label="Current"
+              label={t("sessions.currentSession")}
               size="small"
               color="primary"
               sx={{ height: 20, fontSize: "0.7rem" }}
@@ -98,10 +97,7 @@ export const SessionItem = ({
         </Stack>
       </Box>
 
-      <Tooltip
-        title={t("sessions.revokeSession", "End session")}
-        placement="left"
-      >
+      <Tooltip title={t("sessions.revokeSession")} placement="left">
         <span>
           <IconButton
             size="small"
@@ -117,6 +113,6 @@ export const SessionItem = ({
           </IconButton>
         </span>
       </Tooltip>
-    </Paper>
+    </Box>
   );
 };

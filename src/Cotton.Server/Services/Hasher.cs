@@ -18,6 +18,11 @@ namespace Cotton.Server.Services
         public static string SupportedHashAlgorithm => nameof(SHA256);
 
         /// <summary>
+        /// Gets the hash algorithm name supported by this implementation.
+        /// </summary>
+        public static HashAlgorithmName SupportedHashAlgorithmName => HashAlgorithmName.SHA256;
+
+        /// <summary>
         /// Specifies the size, in bytes, of the hash output.
         /// </summary>
         public const int HashSizeInBytes = 32;
@@ -42,6 +47,16 @@ namespace Cotton.Server.Services
         public static byte[] HashData(Stream input)
         {
             return SHA256.HashData(input);
+        }
+
+        /// <summary>
+        /// Computes the SHA-256 hash value for the specified span of bytes.
+        /// </summary>
+        /// <param name="span">The span of bytes to compute the hash for.</param>
+        /// <returns>A byte array containing the SHA-256 hash of the input data.</returns>
+        public static byte[] HashData(Span<byte> span)
+        {
+            return SHA256.HashData(span);
         }
 
         public static async Task<byte[]> HashDataAsync(Stream stream)
