@@ -164,7 +164,20 @@ public class WebDavPutFileCommandHandler(
             var nodeFile = await _dbContext.NodeFiles
                 .FirstAsync(f => f.Id == existing.NodeFile.Id, ct);
 
-            await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifest.Id, request.UserId, ct);
+            // If previous version is an empty file, don't create a version entry in trash.
+            // Treat it as a simple overwrite by replacing the manifest.
+            var previousManifest = await _dbContext.FileManifests
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == nodeFile.FileManifestId, ct);
+
+            if (previousManifest?.SizeBytes == 0)
+            {
+                nodeFile.FileManifestId = fileManifest.Id;
+            }
+            else
+            {
+                await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifest.Id, request.UserId, ct);
+            }
         }
         else
         {
