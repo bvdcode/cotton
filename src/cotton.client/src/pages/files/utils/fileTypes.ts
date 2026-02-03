@@ -18,7 +18,7 @@ export interface FileTypeInfo {
   supportsInlineView: boolean;
 }
 
-const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic"];
 const PDF_EXTENSIONS = ["pdf"];
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "ogg", "flac", "m4a"];
