@@ -24,7 +24,7 @@ public class NodeFileHistoryService(
         }
 
         bool shouldSaveVersion = await ShouldSaveVersionAsync(nodeFile.FileManifestId, newFileManifestId, ct);
-        
+
         if (shouldSaveVersion)
         {
             var trashNode = await _layouts.CreateTrashItemAsync(userId);
