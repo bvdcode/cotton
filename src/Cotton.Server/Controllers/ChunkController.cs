@@ -90,7 +90,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length);
 
-            _logger.LogInformation("Stored chunk {Hash} of size {Size} bytes", hash, file.Length);
+            _logger.LogDebug("Stored chunk {Hash} of size {Size} bytes", hash, file.Length);
             _perf.OnChunkCreated();
             return Created();
         }

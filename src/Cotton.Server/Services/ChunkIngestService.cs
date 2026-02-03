@@ -27,7 +27,7 @@ public class ChunkIngestService(
 
         if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
         {
-            _logger.LogDebug("Chunk {Hash} is being GC'd, waiting...", storageKey);
+            _logger.LogInformation("Chunk {Hash} is being GC'd, waiting...", storageKey);
             await Task.Delay(100, ct);
         }
 

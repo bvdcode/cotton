@@ -154,7 +154,7 @@ namespace Cotton.Storage.Backends
 
             try
             {
-                _logger.LogInformation("Storing new file {Uid}", uid);
+                _logger.LogDebug("Storing new file {Uid}", uid);
                 await using var tmp = new FileStream(tmpFilePath, fso);
                 if (stream.CanSeek)
                 {
