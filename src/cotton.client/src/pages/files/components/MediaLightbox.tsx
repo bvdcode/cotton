@@ -23,6 +23,7 @@ import {
   ViewCarousel,
 } from "@mui/icons-material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
+import { isHeicFile, convertHeicToJpeg } from "../../../shared/utils/heicConverter";
 
 type MediaKind = "image" | "video";
 
@@ -79,7 +80,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       if (originalUrls[item.id]) return;
 
       try {
-        const url = await getSignedMediaUrl(item.id);
+        let url = await getSignedMediaUrl(item.id);
+
+        if (item.kind === "image" && isHeicFile(item.name)) {
+          url = await convertHeicToJpeg(url);
+        }
+
         setOriginalUrls((prev) => ({ ...prev, [item.id]: url }));
       } catch (e) {
         console.error("Failed to load media original URL", e);
