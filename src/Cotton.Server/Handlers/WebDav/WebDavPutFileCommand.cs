@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Jobs;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
@@ -10,7 +11,9 @@ using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using EasyExtensions.Quartz.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Quartz;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Handlers.WebDav;
@@ -49,13 +52,14 @@ public enum WebDavPutFileError
 /// Processes large files without loading them entirely into memory.
 /// </summary>
 public class WebDavPutFileCommandHandler(
-    CottonDbContext _dbContext,
     ILayoutService _layouts,
+    CottonDbContext _dbContext,
     SettingsProvider _settings,
+    ISchedulerFactory _scheduler,
+    NodeFileHistoryService _history,
+    IChunkIngestService _chunkIngest,
     IWebDavPathResolver _pathResolver,
     FileManifestService _fileManifestService,
-    IChunkIngestService _chunkIngest,
-    NodeFileHistoryService _history,
     ILogger<WebDavPutFileCommandHandler> _logger)
     : IRequestHandler<WebDavPutFileCommand, WebDavPutFileResult>
 {
@@ -201,6 +205,7 @@ public class WebDavPutFileCommandHandler(
         _logger.LogInformation("WebDAV PUT: {Action} file {Path} ({ChunkCount} chunks) for user {UserId}",
             created ? "Created" : "Updated", request.Path, chunks.Count, request.UserId);
 
+        await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
         return new WebDavPutFileResult(true, created);
     }
 
