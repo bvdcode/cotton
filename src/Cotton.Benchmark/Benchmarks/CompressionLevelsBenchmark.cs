@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Benchmark.Infrastructure;
@@ -129,13 +129,13 @@ namespace Cotton.Benchmark.Benchmarks
             return dict;
         }
 
-        private void PrintDetailedComparison(Dictionary<int, LevelResult> results)
+        private static void PrintDetailedComparison(Dictionary<int, LevelResult> results)
         {
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("????????????????????????????????????????????????????????????????????????????????????????????????");
-            Console.WriteLine(" Level ?  Throughput  ?   Time   ?  Compressed  ? Reduction ?  Ratio  ?  Speed vs L-5 ?  Notes");
-            Console.WriteLine("????????????????????????????????????????????????????????????????????????????????????????????????");
+            Console.WriteLine("════════════════════════════════════════════════════════════════════════════════════════════════");
+            Console.WriteLine(" Level │  Throughput  │   Time   │  Compressed  │ Reduction │  Ratio  │  Speed vs L-5 │  Notes");
+            Console.WriteLine("───────┼──────────────┼──────────┼──────────────┼───────────┼─────────┼───────────────┼─────────");
 
             var baseline = results[-5];
 
@@ -148,10 +148,10 @@ namespace Cotton.Benchmark.Benchmarks
                 var note = GetLevelNote(level);
 
                 Console.WriteLine(
-                    $"   {level,2}  ? {result.ThroughputMBps,9:F2} MB/s ? {result.TimeMs,6:F1} ms ? {FormatBytes(result.CompressedSize),12} ? {result.ReductionPercent,6:F1}%  ? {result.CompressionRatio,5:F2}x ? {speedVsBaseline,-13} ? {note}");
+                    $"   {level,2}  │ {result.ThroughputMBps,9:F2} MB/s │ {result.TimeMs,6:F1} ms │ {FormatBytes(result.CompressedSize),12} │ {result.ReductionPercent,6:F1}%  │ {result.CompressionRatio,5:F2}x │ {speedVsBaseline,-13} │ {note}");
             }
 
-            Console.WriteLine("????????????????????????????????????????????????????????????????????????????????????????????????");
+            Console.WriteLine("════════════════════════════════════════════════════════════════════════════════════════════════");
             
             // Print key insights
             Console.ForegroundColor = ConsoleColor.Cyan;
@@ -159,13 +159,13 @@ namespace Cotton.Benchmark.Benchmarks
             var compressionGain = results[22].CompressionRatio / baseline.CompressionRatio;
             var negativeVsPositive = results[-5].ThroughputMBps / results[1].ThroughputMBps;
             Console.WriteLine();
-            Console.WriteLine($"?? Key Insights:");
-            Console.WriteLine($"   � Level -5 is {speedGain:F1}x FASTER than Level 22");
-            Console.WriteLine($"   � Level 22 achieves {compressionGain:F2}x BETTER compression than Level -5");
-            Console.WriteLine($"   � NEGATIVE Level -5 is {negativeVsPositive:F2}x faster than positive Level 1");
-            Console.WriteLine($"   � Level -5 compression: {results[-5].CompressionRatio:F2}x (minimal), Level 22: {results[22].CompressionRatio:F2}x (maximum)");
-            Console.WriteLine($"   � Level 3 (default) offers good balance: {results[3].ThroughputMBps:F0} MB/s, {results[3].CompressionRatio:F2}x ratio");
-            Console.WriteLine($"   � Recommendation: Level -5/-1 for speed-critical, Level 1-3 for balanced, Level 9-15 for good compression, Level 19+ for archival");
+            Console.WriteLine($"📊 Key Insights:");
+            Console.WriteLine($"   • Level -5 is {speedGain:F1}x FASTER than Level 22");
+            Console.WriteLine($"   • Level 22 achieves {compressionGain:F2}x BETTER compression than Level -5");
+            Console.WriteLine($"   • NEGATIVE Level -5 is {negativeVsPositive:F2}x faster than positive Level 1");
+            Console.WriteLine($"   • Level -5 compression: {results[-5].CompressionRatio:F2}x (minimal), Level 22: {results[22].CompressionRatio:F2}x (maximum)");
+            Console.WriteLine($"   • Level 3 (default) offers good balance: {results[3].ThroughputMBps:F0} MB/s, {results[3].CompressionRatio:F2}x ratio");
+            Console.WriteLine($"   • Recommendation: Level -5/-1 for speed-critical, Level 1-3 for balanced, Level 9-15 for good compression, Level 19+ for archival");
             Console.ResetColor();
             Console.WriteLine();
         }
