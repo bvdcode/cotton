@@ -30,6 +30,8 @@ namespace Cotton.Server.Jobs
                 .ToList();
             foreach (var manifest in unprocessedManifests)
             {
+                await Task.Delay(250);
+
                 _logger.LogInformation("Computing hash for manifest {ManifestId}", manifest.Id);
                 string[] hashes = manifest.FileManifestChunks.GetChunkHashes();
                 PipelineContext pipelineContext = new()

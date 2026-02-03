@@ -42,6 +42,8 @@ namespace Cotton.Server.Jobs
             int processed = 0;
             foreach (var item in itemsToProcess)
             {
+                await Task.Delay(250);
+
                 processed++;
                 _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
                     processed, itemsToProcess.Count, item.Id, item.ContentType, item.SizeBytes);
