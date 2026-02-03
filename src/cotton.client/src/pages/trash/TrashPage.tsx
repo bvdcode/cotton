@@ -401,7 +401,7 @@ export const TrashPage: React.FC = () => {
 
       {emptyingTrash && (
         <Dialog open={emptyingTrash} disableEscapeKeyDown>
-          <DialogTitle>
+          <DialogTitle sx={{ fontFamily: "monospace" }}>
             {t("emptyTrash.inProgress", {
               current: emptyTrashProgress.current,
               total: emptyTrashProgress.total,

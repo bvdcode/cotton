@@ -90,6 +90,7 @@ namespace Cotton.Benchmark
                 new CompressionBenchmark(configuration),
                 new DecompressionBenchmark(configuration),
                 new MultiSizeCompressionBenchmark(configuration),
+                new CompressionLevelsBenchmark(configuration),
                 new EncryptionBenchmark(configuration),
                 new DecryptionBenchmark(configuration),
                 new FileSystemBenchmark(configuration),
@@ -159,6 +160,7 @@ namespace Cotton.Benchmark
             Console.WriteLine("This tool measures the performance of:");
             Console.WriteLine("  • SHA-256 hashing for content addressing");
             Console.WriteLine("  • Zstd compression and decompression");
+            Console.WriteLine("  • Extreme compression levels comparison (Level 1 to 22)");
             Console.WriteLine("  • AES-GCM encryption and decryption");
             Console.WriteLine("  • Full storage pipeline (compression + encryption)");
         }

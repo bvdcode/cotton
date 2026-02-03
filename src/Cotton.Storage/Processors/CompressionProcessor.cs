@@ -12,7 +12,7 @@ namespace Cotton.Storage.Processors
 {
     public class CompressionProcessor : IStorageProcessor
     {
-        public const int CompressionLevel = 2;
+        public const int CompressionLevel = 0;
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
         public int Priority => 10000;
         private const int CompressBufferSize = 1 * 1024 * 1024;
