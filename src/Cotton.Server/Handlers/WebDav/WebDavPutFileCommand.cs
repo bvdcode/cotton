@@ -12,6 +12,7 @@ using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Quartz.Extensions;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System.Security.Cryptography;
@@ -148,7 +149,11 @@ public class WebDavPutFileCommandHandler(
         }
 
         // Determine content type
-        var contentType = request.ContentType ?? "application/octet-stream";
+        FileExtensionContentTypeProvider contentTypeProvider = new();
+        var contentType = request.ContentType ??
+            (contentTypeProvider.TryGetContentType(parentResult.ResourceName, out var detectedType)
+                ? detectedType
+                : "application/octet-stream");
 
         // Find or create file manifest
         var fileManifest = await _dbContext.FileManifests
