@@ -7,6 +7,7 @@
         private static readonly IPreviewGenerator[] Generators =
         [
             new PdfPreviewGenerator(),
+            new HeicPreviewGenerator(),
             new TextPreviewGenerator(),
             new VideoPreviewGenerator(),
             new ImagePreviewGenerator(),
