@@ -15,6 +15,7 @@ namespace Cotton.Server.Jobs
 {
     [JobTrigger(hours: 1)]
     public class GeneratePreviewJob(
+        PerfTracker _perf,
         IStreamCipher _crypto,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
@@ -42,8 +43,6 @@ namespace Cotton.Server.Jobs
             int processed = 0;
             foreach (var item in itemsToProcess)
             {
-                await Task.Delay(250);
-
                 processed++;
                 _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
                     processed, itemsToProcess.Count, item.Id, item.ContentType, item.SizeBytes);
@@ -81,11 +80,21 @@ namespace Cotton.Server.Jobs
                     await _dbContext.SaveChangesAsync();
 
                     _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
+
+                    // TODO: Move to settings or autoconfig
+                    await Task.Delay(250);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
                     item.PreviewGenerationError = ex.Message;
+                }
+
+                if (_perf.IsUploading())
+                {
+                    _logger.LogInformation("Upload in progress, pausing preview generation job...");
+                    await Task.Delay(5000);
+                    break;
                 }
             }
 
