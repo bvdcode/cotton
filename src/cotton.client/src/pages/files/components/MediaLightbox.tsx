@@ -23,7 +23,28 @@ import {
   ViewCarousel,
 } from "@mui/icons-material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
-import { isHeicFile, convertHeicToJpeg } from "../../../shared/utils/heicConverter";
+import {
+  isHeicFile,
+  convertHeicToJpeg,
+} from "../../../shared/utils/heicConverter";
+
+const LOADING_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <style>
+    .spinner { animation: spin 1s linear infinite; transform-origin: 60px 60px; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+  <circle class="spinner" cx="60" cy="20" r="8" fill="#888"/>
+  <circle class="spinner" cx="60" cy="20" r="8" fill="#666" style="animation-delay: -0.875s"/>
+  <circle class="spinner" cx="88.3" cy="31.7" r="8" fill="#888" style="animation-delay: -0.75s"/>
+  <circle class="spinner" cx="100" cy="60" r="8" fill="#888" style="animation-delay: -0.625s"/>
+  <circle class="spinner" cx="88.3" cy="88.3" r="8" fill="#888" style="animation-delay: -0.5s"/>
+  <circle class="spinner" cx="60" cy="100" r="8" fill="#888" style="animation-delay: -0.375s"/>
+  <circle class="spinner" cx="31.7" cy="88.3" r="8" fill="#888" style="animation-delay: -0.25s"/>
+  <circle class="spinner" cx="20" cy="60" r="8" fill="#888" style="animation-delay: -0.125s"/>
+  <circle class="spinner" cx="31.7" cy="31.7" r="8" fill="#888" style="animation-delay: 0s"/>
+</svg>
+`)}`;
 
 type MediaKind = "image" | "video";
 
@@ -67,6 +88,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     Record<string, string>
   >({});
 
+  const loadingRef = React.useRef<Set<string>>(new Set());
+
   // Rebuild slides when originalUrls change
   const slides = React.useMemo(() => {
     return buildSlidesFromItems(items, originalUrls);
@@ -77,21 +100,33 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       const item = items[targetIndex];
       if (!item) return;
 
-      if (originalUrls[item.id]) return;
+      if (loadingRef.current.has(item.id)) return;
 
-      try {
-        let url = await getSignedMediaUrl(item.id);
+      setOriginalUrls((prev) => {
+        if (prev[item.id]) return prev;
 
-        if (item.kind === "image" && isHeicFile(item.name)) {
-          url = await convertHeicToJpeg(url);
-        }
+        loadingRef.current.add(item.id);
 
-        setOriginalUrls((prev) => ({ ...prev, [item.id]: url }));
-      } catch (e) {
-        console.error("Failed to load media original URL", e);
-      }
+        (async () => {
+          try {
+            let url = await getSignedMediaUrl(item.id);
+
+            if (item.kind === "image" && isHeicFile(item.name)) {
+              url = await convertHeicToJpeg(url);
+            }
+
+            setOriginalUrls((p) => ({ ...p, [item.id]: url }));
+          } catch (e) {
+            console.error("Failed to load media original URL", e);
+          } finally {
+            loadingRef.current.delete(item.id);
+          }
+        })();
+
+        return prev;
+      });
     },
-    [items, originalUrls, getSignedMediaUrl],
+    [items, getSignedMediaUrl],
   );
 
   React.useEffect(() => {
@@ -199,24 +234,28 @@ function buildSlidesFromItems(
     const description = sizeStr ? `${item.name} | ${sizeStr}` : item.name;
 
     if (item.kind === "image") {
-      const src = maybeOriginal ?? item.previewUrl;
+      const isLoading = !maybeOriginal && !item.previewUrl;
+      const src = maybeOriginal || item.previewUrl || LOADING_PLACEHOLDER;
       return {
         type: "image",
         src,
-        width: item.width,
-        height: item.height,
+        width: isLoading ? 120 : item.width,
+        height: isLoading ? 120 : item.height,
         description,
         download: maybeOriginal
           ? { url: maybeOriginal, filename: item.name }
           : undefined,
-        share: {
-          url: src,
-          title: item.name,
-        },
+        share:
+          maybeOriginal || item.previewUrl
+            ? {
+                url: maybeOriginal || item.previewUrl,
+                title: item.name,
+              }
+            : undefined,
       };
     }
 
-    const poster = item.previewUrl;
+    const poster = item.previewUrl || undefined;
     const src = maybeOriginal;
 
     if (!src) {
@@ -226,10 +265,12 @@ function buildSlidesFromItems(
         width: item.width,
         height: item.height,
         description,
-        share: {
-          url: poster,
-          title: item.name,
-        },
+        share: poster
+          ? {
+              url: poster,
+              title: item.name,
+            }
+          : undefined,
       } as Slide;
     }
 
