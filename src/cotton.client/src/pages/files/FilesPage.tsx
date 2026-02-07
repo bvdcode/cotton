@@ -338,6 +338,8 @@ export const FilesPage: React.FC = () => {
           position: "relative",
           display: "flex",
           flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
         }}
       >
         <PageHeader
@@ -362,7 +364,7 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
