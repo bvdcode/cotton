@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20260207225847_AddDownloadTokenFileName")]
-    partial class AddDownloadTokenFileName
+    [Migration("20260207232339_RemoveDownloadTokens")]
+    partial class RemoveDownloadTokens
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -266,59 +266,6 @@ namespace Cotton.Database.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("server_settings");
-                });
-
-            modelBuilder.Entity("Cotton.Database.Models.DownloadToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by_user_id");
-
-                    b.Property<bool>("DeleteAfterUse")
-                        .HasColumnType("boolean")
-                        .HasColumnName("delete_after_use");
-
-                    b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<Guid>("FileManifestId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_manifest_id");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("file_name");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("token");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("FileManifestId");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.ToTable("download_tokens");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
@@ -694,25 +641,6 @@ namespace Cotton.Database.Migrations
                     b.Navigation("Owner");
                 });
 
-            modelBuilder.Entity("Cotton.Database.Models.DownloadToken", b =>
-                {
-                    b.HasOne("Cotton.Database.Models.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Cotton.Database.Models.FileManifest", "FileManifest")
-                        .WithMany("DownloadTokens")
-                        .HasForeignKey("FileManifestId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("FileManifest");
-                });
-
             modelBuilder.Entity("Cotton.Database.Models.FileManifestChunk", b =>
                 {
                     b.HasOne("Cotton.Database.Models.Chunk", "Chunk")
@@ -805,8 +733,6 @@ namespace Cotton.Database.Migrations
 
             modelBuilder.Entity("Cotton.Database.Models.FileManifest", b =>
                 {
-                    b.Navigation("DownloadTokens");
-
                     b.Navigation("FileManifestChunks");
 
                     b.Navigation("NodeFiles");
