@@ -16,6 +16,10 @@ export const useFilesData = ({
   loadNode,
   refreshNodeContent,
 }: UseFilesDataParams) => {
+  const [childrenTotalCount, setChildrenTotalCount] = useState<number | null>(
+    null,
+  );
+  const [childrenCountLoading, setChildrenCountLoading] = useState(false);
   const [listTotalCount, setListTotalCount] = useState(0);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -25,6 +29,38 @@ export const useFilesData = ({
 
   const DEFAULT_PAGE_SIZE = 100;
   const clampPageSize = (pageSize: number) => Math.max(1, Math.min(100, pageSize));
+
+  useEffect(() => {
+    if (!nodeId) {
+      setChildrenTotalCount(null);
+      return;
+    }
+
+    let cancelled = false;
+    setChildrenCountLoading(true);
+
+    const probe = async () => {
+      try {
+        const response = await nodesApi.getChildren(nodeId, {
+          page: 1,
+          pageSize: 1,
+        });
+        if (cancelled) return;
+        setChildrenTotalCount(response.totalCount);
+      } catch {
+        if (cancelled) return;
+        setChildrenTotalCount(null);
+      } finally {
+        if (!cancelled) setChildrenCountLoading(false);
+      }
+    };
+
+    void probe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nodeId]);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) {
@@ -92,10 +128,18 @@ export const useFilesData = ({
     if (!nodeId) {
       return;
     }
-    void loadNode(nodeId);
-  }, [nodeId, loadNode]);
+
+    if (layoutType === InterfaceLayoutType.List && currentPagination) {
+      void fetchListPage(currentPagination.page, currentPagination.pageSize);
+      return;
+    }
+
+    void loadNode(nodeId, { loadChildren: true });
+  }, [nodeId, loadNode, layoutType, currentPagination, fetchListPage]);
 
   return {
+    childrenTotalCount,
+    childrenCountLoading,
     listTotalCount,
     listLoading,
     listError,
