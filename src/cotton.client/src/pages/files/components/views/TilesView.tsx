@@ -13,7 +13,7 @@ import {
 } from "../../utils/fileTypes";
 import { Download, Edit, Delete, Share } from "@mui/icons-material";
 import type { IFileListView } from "../../types/FileListViewTypes";
-import { useTheme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
 import { useTranslation } from "react-i18next";
 
@@ -181,20 +181,10 @@ export const TilesView: React.FC<IFileListView> = ({
           );
           const previewUrl = typeof preview === "string" ? preview : null;
 
-          const previewBackdropColor = "rgba(255, 255, 255, 0.75)";
-
           const iconContainerSx = previewUrl
             ? {
-                mx: { xs: -1, sm: -1.25, md: -1 },
-                mt: { xs: -1, sm: -1.25, md: -1 },
-                width: {
-                  xs: "calc(100% + 16px)",
-                  sm: "calc(100% + 20px)",
-                  md: "calc(100% + 16px)",
-                },
-                borderRadius: 0,
                 ...(shouldLightenPreviewBackdrop && {
-                  bgcolor: previewBackdropColor,
+                  bgcolor: alpha(theme.palette.common.white, 0.75),
                 }),
               }
             : undefined;
@@ -287,7 +277,10 @@ export const TilesView: React.FC<IFileListView> = ({
                           height: "100%",
                           objectFit: "contain",
                           ...(shouldLightenPreviewBackdrop && {
-                            backgroundColor: previewBackdropColor,
+                            backgroundColor: alpha(
+                              theme.palette.common.white,
+                              0.75,
+                            ),
                           }),
                           ...(isTextPreview &&
                             theme.palette.mode === "dark" && {
