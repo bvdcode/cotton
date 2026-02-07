@@ -10,6 +10,7 @@ import {
   InsertDriveFile,
   TextSnippet,
   VideoFile,
+  Share,
 } from "@mui/icons-material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { formatBytes } from "../../utils/formatBytes";
@@ -60,6 +61,7 @@ interface ColumnOptions {
     onCancelRename: () => void;
     onStartRename: (id: string, name: string) => void;
     onDownload: (id: string, name: string) => void;
+    onShare: (id: string, name: string) => void;
     onDelete: (id: string, name: string) => void;
   };
   failedPreviews: Set<string>;
@@ -324,7 +326,7 @@ export const createActionsColumn = (
               e.stopPropagation();
               options.folderOperations.onStartRename(row.id, row.name);
             }}
-            title="Rename"
+            title={options.t("common:actions.rename")}
           >
             <Edit fontSize="small" />
           </IconButton>
@@ -334,7 +336,7 @@ export const createActionsColumn = (
               e.stopPropagation();
               options.folderOperations.onDelete(row.id, row.name);
             }}
-            title="Delete"
+            title={options.t("common:actions.delete")}
           >
             <Delete fontSize="small" />
           </IconButton>
@@ -359,7 +361,7 @@ export const createActionsColumn = (
             e.stopPropagation();
             options.fileOperations.onDownload(row.id, row.name);
           }}
-          title="Download"
+          title={options.t("common:actions.download")}
         >
           <Download fontSize="small" />
         </IconButton>
@@ -367,9 +369,19 @@ export const createActionsColumn = (
           size="small"
           onClick={(e) => {
             e.stopPropagation();
+            options.fileOperations.onShare(row.id, row.name);
+          }}
+          title={options.t("common:actions.share")}
+        >
+          <Share fontSize="small" />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
             options.fileOperations.onStartRename(row.id, row.name);
           }}
-          title="Rename"
+          title={options.t("common:actions.rename")}
         >
           <Edit fontSize="small" />
         </IconButton>
@@ -379,7 +391,7 @@ export const createActionsColumn = (
             e.stopPropagation();
             options.fileOperations.onDelete(row.id, row.name);
           }}
-          title="Delete"
+          title={options.t("common:actions.delete")}
         >
           <Delete fontSize="small" />
         </IconButton>

@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Snackbar,
 } from "@mui/material";
 import {
   FileListViewFactory,
@@ -38,6 +39,7 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { filesApi } from "../../shared/api/filesApi";
+import { shareLinks } from "../../shared/utils/shareLinks";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { usePreferencesStore } from "../../shared/store/preferencesStore";
 
@@ -275,6 +277,51 @@ export const TrashPage: React.FC = () => {
     await downloadFile(nodeFileId, fileName);
   };
 
+  const [shareToast, setShareToast] = React.useState<{
+    open: boolean;
+    message: string;
+  }>({ open: false, message: "" });
+
+  const handleShareFile = React.useCallback(
+    async (nodeFileId: string, fileName: string) => {
+      try {
+        const downloadLink = await filesApi.getDownloadLink(
+          nodeFileId,
+          60 * 24 * 365,
+        );
+
+        const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
+        if (!token) {
+          setShareToast({
+            open: true,
+            message: t("share.errors.token", { ns: "files" }),
+          });
+          return;
+        }
+
+        const url = shareLinks.buildShareUrl(token);
+        try {
+          await navigator.clipboard.writeText(url);
+          setShareToast({
+            open: true,
+            message: t("share.copied", { ns: "files", name: fileName }),
+          });
+        } catch {
+          setShareToast({
+            open: true,
+            message: t("share.errors.copy", { ns: "files" }),
+          });
+        }
+      } catch {
+        setShareToast({
+          open: true,
+          message: t("share.errors.link", { ns: "files" }),
+        });
+      }
+    },
+    [t],
+  );
+
   const handleFileClick = (
     fileId: string,
     fileName: string,
@@ -290,6 +337,7 @@ export const TrashPage: React.FC = () => {
 
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
+    onShare: handleShareFile,
     onClick: handleFileClick,
     onMediaClick: handleMediaClick,
   });
@@ -302,6 +350,12 @@ export const TrashPage: React.FC = () => {
 
   return (
     <>
+      <Snackbar
+        open={shareToast.open}
+        autoHideDuration={2500}
+        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
+        message={shareToast.message}
+      />
       <Box
         width="100%"
         sx={{
