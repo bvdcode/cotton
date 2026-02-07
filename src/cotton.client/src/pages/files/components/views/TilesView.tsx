@@ -129,7 +129,8 @@ export const TilesView: React.FC<IFileListView> = ({
             <Box
               sx={{
                 width: "100%",
-                aspectRatio: "16 / 9",
+                flex: 1,
+                minHeight: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -143,7 +144,7 @@ export const TilesView: React.FC<IFileListView> = ({
             >
               <Folder sx={{ color: "primary.main" }} />
             </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flex: 1, minHeight: 0 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
               <TextField
                 autoFocus
                 fullWidth

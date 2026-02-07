@@ -79,7 +79,9 @@ export const RenamableItemCard = ({
       <Box
         sx={{
           width: "100%",
-          aspectRatio: variant === "squareTile" ? "16 / 9" : "1 / 1",
+          ...(variant === "squareTile"
+            ? { flex: 1, minHeight: 0 }
+            : { aspectRatio: "1 / 1" }),
           position: "relative",
           display: "flex",
           alignItems: "center",
@@ -111,7 +113,6 @@ export const RenamableItemCard = ({
           display: "flex",
           alignItems: "center",
           gap: 0.5,
-          ...(variant === "squareTile" && { flex: 1, minHeight: 0 }),
         }}
       >
         <TextField
