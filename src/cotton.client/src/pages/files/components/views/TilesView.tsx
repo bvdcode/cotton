@@ -45,30 +45,14 @@ export const TilesView: React.FC<IFileListView> = ({
   const isDarkMode = theme.palette.mode === "dark";
   const { t } = useTranslation(["common"]);
 
-  const gridTemplateColumns =
+  const minTileWidth =
     tileSize === "small"
-      ? {
-          xs: "repeat(4, minmax(0, 1fr))",
-          sm: "repeat(5, minmax(0, 1fr))",
-          md: "repeat(6, minmax(0, 1fr))",
-          lg: "repeat(8, minmax(0, 1fr))",
-          xl: "repeat(10, minmax(0, 1fr))",
-        }
+      ? theme.spacing(14) // 112px
       : tileSize === "large"
-        ? {
-            xs: "repeat(3, minmax(0, 1fr))",
-            sm: "repeat(3, minmax(0, 1fr))",
-            md: "repeat(4, minmax(0, 1fr))",
-            lg: "repeat(5, minmax(0, 1fr))",
-            xl: "repeat(6, minmax(0, 1fr))",
-          }
-        : {
-            xs: "repeat(3, minmax(0, 1fr))",
-            sm: "repeat(4, minmax(0, 1fr))",
-            md: "repeat(5, minmax(0, 1fr))",
-            lg: "repeat(6, minmax(0, 1fr))",
-            xl: "repeat(8, minmax(0, 1fr))",
-          };
+        ? theme.spacing(26) // 208px
+        : theme.spacing(19); // 152px
+
+  const gridTemplateColumns = `repeat(auto-fill, minmax(${minTileWidth}, 1fr))`;
 
   const gridGap =
     tileSize === "small"
