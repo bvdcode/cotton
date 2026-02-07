@@ -40,6 +40,71 @@ namespace Cotton.Server.Controllers
     {
         private const int DefaultSharedFileTokenLength = 16;
 
+        [HttpGet("/s/{token}")]
+        public async Task<IActionResult> Share(
+            [FromRoute] string token,
+            [FromQuery] bool download = false)
+        {
+            DateTime now = DateTime.UtcNow;
+            var downloadToken = await _dbContext.DownloadTokens
+                .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
+                .Include(x => x.FileManifest)
+                .ThenInclude(x => x.FileManifestChunks)
+                .FirstOrDefaultAsync();
+            
+            bool ishtml = Request.Headers.Accept.ToString()
+                .Contains("text/html", StringComparison.OrdinalIgnoreCase);
+
+            string baseAppUrl = $"{Request.Scheme}://{Request.Host}";
+
+            if (downloadToken == null)
+            {
+                return ishtml
+                    ? Redirect($"{baseAppUrl}/404")
+                    : this.ApiNotFound("File not found");
+            }
+
+            var file = downloadToken.FileManifest;
+            if (ishtml)
+            {
+                string shareUrl = $"{baseAppUrl}/share/{token}";
+                string previewUrl = $"{baseAppUrl}/api/v1/preview/{file.EncryptedFilePreviewHash}.webp";
+                string html = $"""
+                <!doctype html>
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <title>{System.Net.WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
+
+                  <meta http-equiv="refresh" content="0;url={shareUrl}" />
+                  <link rel="canonical" href="{shareUrl}" />
+
+                  <meta property="og:title" content="{System.Net.WebUtility.HtmlEncode(downloadToken.FileName)}">
+                  <meta property="og:description" content="Shared via Cotton Cloud">
+                  <meta property="og:type" content="website">
+                  <meta property="og:url" content="{shareUrl}">
+                  <meta property="og:image" content="{previewUrl}">
+
+                  <meta name="twitter:card" content="summary_large_image">
+                </head>
+                <body>
+                  <noscript>
+                    <p><a href="{shareUrl}">Continue</a></p>
+                  </noscript>
+                  <script>
+                    window.location.replace({System.Text.Json.JsonSerializer.Serialize(shareUrl)});
+                  </script>
+                </body>
+                </html>
+                """;
+                return Content(html, "text/html; charset=utf-8");
+            }
+            else
+            {
+                return await DownloadFileByToken(Guid.Empty, token, download);
+            }
+        }
+
         [Authorize]
         [HttpDelete(Routes.V1.Files + "/{nodeFileId:guid}")]
         public async Task<IActionResult> DeleteFile(
@@ -145,6 +210,7 @@ namespace Cotton.Server.Controllers
 
             DownloadToken newToken = new()
             {
+                FileName = nodeFile.Name,
                 DeleteAfterUse = deleteAfterUse,
                 CreatedByUserId = userId,
                 FileManifestId = nodeFile.FileManifestId,
