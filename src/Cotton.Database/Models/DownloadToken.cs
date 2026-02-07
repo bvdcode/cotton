@@ -8,6 +8,9 @@ namespace Cotton.Database.Models
     [Table("download_tokens")]
     public class DownloadToken : BaseEntity<Guid>
     {
+        [Column("file_name")]
+        public string FileName { get; set; } = null!;
+
         [Column("token")]
         public string Token { get; set; } = null!;
 
