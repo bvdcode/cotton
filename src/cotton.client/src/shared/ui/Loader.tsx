@@ -1,3 +1,4 @@
+import { alpha } from "@mui/material/styles";
 import { Box, CircularProgress, Typography } from "@mui/material";
 
 interface LoaderProps {
@@ -20,9 +21,12 @@ const Loader: React.FC<LoaderProps> = ({ overlay, title, caption }) => {
         left: 0,
         opacity: 0,
         zIndex: 1300,
-        backgroundColor: "background.default",
-        transition: "background-color 1s ease",
+        backgroundColor: (theme) =>
+          overlay
+            ? alpha(theme.palette.background.default, 0.35)
+            : theme.palette.background.default,
         position: overlay ? "fixed" : "static",
+        pointerEvents: overlay ? "auto" : "auto",
         animation: "fadeIn 0.3s ease-in forwards",
         "@keyframes fadeIn": {
           from: {
@@ -36,12 +40,12 @@ const Loader: React.FC<LoaderProps> = ({ overlay, title, caption }) => {
     >
       <CircularProgress />
       {title && (
-        <Typography variant="h6" style={{ marginTop: 16 }}>
+        <Typography variant="h6" sx={{ mt: 2 }}>
           {title}
         </Typography>
       )}
       {caption && (
-        <Typography variant="caption" color="textSecondary">
+        <Typography variant="caption" color="text.secondary">
           {caption}
         </Typography>
       )}

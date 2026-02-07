@@ -300,6 +300,21 @@ export const TrashPage: React.FC = () => {
         }
 
         const url = shareLinks.buildShareUrl(token);
+
+        if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+          try {
+            await navigator.share({ title: fileName, url });
+            setShareToast({
+              open: true,
+              message: t("share.shared", { ns: "files", name: fileName }),
+            });
+            return;
+          } catch (e) {
+            if (e instanceof Error && e.name === "AbortError") {
+              return;
+            }
+          }
+        }
         try {
           await navigator.clipboard.writeText(url);
           setShareToast({
