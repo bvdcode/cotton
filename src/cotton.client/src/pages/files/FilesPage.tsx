@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useEffect, useMemo } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useRef } from "react";
 import { Alert, Box, Snackbar, Typography } from "@mui/material";
 import {
   FileListViewFactory,
@@ -48,22 +48,23 @@ export const FilesPage: React.FC = () => {
 
   const routeNodeId = params.nodeId;
 
-  const { layoutType, tilesSize, viewMode, cycleViewMode } = useFilesLayout();
+  const { layoutType, setLayoutType, tilesSize, viewMode, cycleViewMode } =
+    useFilesLayout();
 
   useEffect(() => {
-    const loadChildren = layoutType !== InterfaceLayoutType.List;
-
+    // Always load node metadata/ancestors fast; decide children loading separately.
     if (!routeNodeId) {
-      void loadRoot({ force: false, loadChildren });
+      void loadRoot({ force: false, loadChildren: false });
       return;
     }
-    void loadNode(routeNodeId, { loadChildren });
-  }, [routeNodeId, layoutType, loadRoot, loadNode]);
+    void loadNode(routeNodeId, { loadChildren: false });
+  }, [routeNodeId, loadRoot, loadNode]);
 
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
   const {
+    childrenTotalCount,
     listTotalCount,
     listLoading,
     listError,
@@ -78,6 +79,36 @@ export const FilesPage: React.FC = () => {
     loadNode,
     refreshNodeContent,
   });
+
+  const HUGE_FOLDER_THRESHOLD = 10_000;
+  const isHugeFolder =
+    childrenTotalCount !== null && childrenTotalCount > HUGE_FOLDER_THRESHOLD;
+
+  const loadedChildrenNodeIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isHugeFolder) return;
+    if (layoutType === InterfaceLayoutType.List) return;
+    setLayoutType(InterfaceLayoutType.List);
+  }, [isHugeFolder, layoutType, setLayoutType]);
+
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.Tiles) return;
+    if (!nodeId) return;
+    if (childrenTotalCount === null) return;
+    if (childrenTotalCount > HUGE_FOLDER_THRESHOLD) return;
+
+    if (loadedChildrenNodeIdRef.current === nodeId) return;
+    loadedChildrenNodeIdRef.current = nodeId;
+
+    void loadNode(nodeId, { loadChildren: true });
+  }, [
+    layoutType,
+    nodeId,
+    childrenTotalCount,
+    loadNode,
+    HUGE_FOLDER_THRESHOLD,
+  ]);
 
   useEffect(() => {
     const folderName = currentNode?.name;
@@ -339,7 +370,6 @@ export const FilesPage: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           flex: 1,
-          minHeight: 0,
         }}
       >
         <PageHeader
@@ -351,6 +381,7 @@ export const FilesPage: React.FC = () => {
           onGoUp={handleGoUp}
           onHomeClick={goHome}
           onViewModeCycle={cycleViewMode}
+          showViewModeToggle={!isHugeFolder}
           showUpload={!!nodeId}
           showNewFolder={!!nodeId}
           onUploadClick={fileUpload.handleUploadClick}
@@ -365,12 +396,11 @@ export const FilesPage: React.FC = () => {
         )}
 
         <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            overflow:
-              layoutType === InterfaceLayoutType.Tiles ? "auto" : "hidden",
-          }}
+          sx={
+            layoutType === InterfaceLayoutType.List
+              ? { flex: 1, minHeight: 0 }
+              : { flex: 1 }
+          }
         >
           <FileListViewFactory
             layoutType={layoutType}

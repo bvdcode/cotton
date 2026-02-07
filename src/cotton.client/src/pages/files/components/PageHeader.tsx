@@ -22,6 +22,7 @@ export interface PageHeaderProps {
   onGoUp: () => void;
   onHomeClick: () => void;
   onViewModeCycle: () => void;
+  showViewModeToggle?: boolean;
   statsNamespace?: string;
 
   // Optional actions
@@ -50,6 +51,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onGoUp,
   onHomeClick,
   onViewModeCycle,
+  showViewModeToggle = true,
   statsNamespace = "files",
   showUpload = false,
   showNewFolder = false,
@@ -166,13 +168,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             >
               <Home />
             </IconButton>
-            <IconButton
-              color="primary"
-              onClick={onViewModeCycle}
-              title={t(nextViewTitleKey)}
-            >
-              {viewIcon}
-            </IconButton>
+            {showViewModeToggle && (
+              <IconButton
+                color="primary"
+                onClick={onViewModeCycle}
+                title={t(nextViewTitleKey)}
+              >
+                {viewIcon}
+              </IconButton>
+            )}
           </Box>
         </Box>
 
