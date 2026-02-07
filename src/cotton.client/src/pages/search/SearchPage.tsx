@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { Box, Alert, Typography } from "@mui/material";
+import { Box, Alert, Snackbar, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
@@ -19,6 +19,8 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { filesApi } from "../../shared/api/filesApi";
+import { shareLinks } from "../../shared/utils/shareLinks";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -77,6 +79,50 @@ export const SearchPage: React.FC = () => {
     [],
   );
 
+  const [shareToast, setShareToast] = React.useState<{
+    open: boolean;
+    message: string;
+  }>({ open: false, message: "" });
+
+  const handleShareFile = useCallback(
+    async (fileId: string, fileName: string) => {
+      try {
+        const downloadLink = await filesApi.getDownloadLink(
+          fileId,
+          60 * 24 * 365,
+        );
+        const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
+        if (!token) {
+          setShareToast({
+            open: true,
+            message: t("share.errors.token", { ns: "files" }),
+          });
+          return;
+        }
+
+        const url = shareLinks.buildShareUrl(token);
+        try {
+          await navigator.clipboard.writeText(url);
+          setShareToast({
+            open: true,
+            message: t("share.copied", { ns: "files", name: fileName }),
+          });
+        } catch {
+          setShareToast({
+            open: true,
+            message: t("share.errors.copy", { ns: "files" }),
+          });
+        }
+      } catch {
+        setShareToast({
+          open: true,
+          message: t("share.errors.link", { ns: "files" }),
+        });
+      }
+    },
+    [t],
+  );
+
   const handleFileClick = useCallback(
     (fileId: string, fileName: string, fileSizeBytes?: number) => {
       const opened = openPreview(fileId, fileName, fileSizeBytes);
@@ -131,12 +177,13 @@ export const SearchPage: React.FC = () => {
     () =>
       buildFileOperations(rawFileOps, {
         onDownload: handleDownloadFile,
+        onShare: handleShareFile,
         onClick: (fileId, fileName, fileSizeBytes) => {
           void handleFileClick(fileId, fileName, fileSizeBytes);
         },
         onMediaClick: handleMediaClick,
       }),
-    [rawFileOps, handleDownloadFile, handleFileClick, handleMediaClick],
+    [rawFileOps, handleDownloadFile, handleShareFile, handleFileClick, handleMediaClick],
   );
 
   return (
@@ -145,6 +192,12 @@ export const SearchPage: React.FC = () => {
       width="100%"
       sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
     >
+      <Snackbar
+        open={shareToast.open}
+        autoHideDuration={2500}
+        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
+        message={shareToast.message}
+      />
       <SearchBar
         value={query}
         onChange={setQuery}

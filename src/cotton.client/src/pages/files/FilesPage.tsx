@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
-import { Alert, Box, Typography } from "@mui/material";
+import { Alert, Box, Snackbar, Typography } from "@mui/material";
 import {
   FileListViewFactory,
   PageHeader,
@@ -26,6 +26,8 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { filesApi } from "../../shared/api/filesApi";
+import { shareLinks } from "../../shared/utils/shareLinks";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -152,6 +154,52 @@ export const FilesPage: React.FC = () => {
     await downloadFile(nodeFileId, fileName);
   };
 
+  const [shareToast, setShareToast] = React.useState<{
+    open: boolean;
+    message: string;
+  }>({ open: false, message: "" });
+
+  const handleShareFile = React.useCallback(
+    async (nodeFileId: string, fileName: string) => {
+      try {
+        const downloadLink = await filesApi.getDownloadLink(
+          nodeFileId,
+          60 * 24 * 365,
+        );
+
+        const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
+        if (!token) {
+          setShareToast({
+            open: true,
+            message: t("share.errors.token", { ns: "files" }),
+          });
+          return;
+        }
+
+        const url = shareLinks.buildShareUrl(token);
+
+        try {
+          await navigator.clipboard.writeText(url);
+          setShareToast({
+            open: true,
+            message: t("share.copied", { ns: "files", name: fileName }),
+          });
+        } catch {
+          setShareToast({
+            open: true,
+            message: t("share.errors.copy", { ns: "files" }),
+          });
+        }
+      } catch {
+        setShareToast({
+          open: true,
+          message: t("share.errors.link", { ns: "files" }),
+        });
+      }
+    },
+    [t],
+  );
+
   const handleFileClick = (
     fileId: string,
     fileName: string,
@@ -176,6 +224,7 @@ export const FilesPage: React.FC = () => {
   // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
+    onShare: handleShareFile,
     onClick: handleFileClick,
     onMediaClick: handleMediaClick,
   });
@@ -185,6 +234,12 @@ export const FilesPage: React.FC = () => {
 
   return (
     <>
+      <Snackbar
+        open={shareToast.open}
+        autoHideDuration={2500}
+        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
+        message={shareToast.message}
+      />
       {fileUpload.isDragging && (
         <Box
           onDragOver={fileUpload.handleDragOver}

@@ -11,10 +11,11 @@ import {
   isTextFile,
   isVideoFile,
 } from "../../utils/fileTypes";
-import { Download, Edit, Delete } from "@mui/icons-material";
+import { Download, Edit, Delete, Share } from "@mui/icons-material";
 import type { IFileListView } from "../../types/FileListViewTypes";
 import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
+import { useTranslation } from "react-i18next";
 
 /**
  * TilesView Component
@@ -41,6 +42,7 @@ export const TilesView: React.FC<IFileListView> = ({
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
+  const { t } = useTranslation(["common"]);
 
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
@@ -259,19 +261,25 @@ export const TilesView: React.FC<IFileListView> = ({
                 icon: <Download />,
                 onClick: () =>
                   fileOperations.onDownload(tile.file.id, tile.file.name),
-                tooltip: "Download",
+                tooltip: t("actions.download", { ns: "common" }),
+              },
+              {
+                icon: <Share />,
+                onClick: () =>
+                  fileOperations.onShare(tile.file.id, tile.file.name),
+                tooltip: t("actions.share", { ns: "common" }),
               },
               {
                 icon: <Edit />,
                 onClick: () =>
                   fileOperations.onStartRename(tile.file.id, tile.file.name),
-                tooltip: "Rename",
+                tooltip: t("actions.rename", { ns: "common" }),
               },
               {
                 icon: <Delete />,
                 onClick: () =>
                   fileOperations.onDelete(tile.file.id, tile.file.name),
-                tooltip: "Delete",
+                tooltip: t("actions.delete", { ns: "common" }),
               },
             ]}
             isRenaming={fileOperations.isRenaming(tile.file.id)}

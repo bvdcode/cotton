@@ -45,6 +45,7 @@ export const buildFileOperations = (
   },
   handlers: {
     onDownload: (fileId: string, fileName: string) => Promise<void>;
+    onShare: (fileId: string, fileName: string) => Promise<void>;
     onClick: (fileId: string, fileName: string, fileSizeBytes?: number) => void;
     onMediaClick: (fileId: string) => void;
   },
@@ -58,6 +59,9 @@ export const buildFileOperations = (
     onStartRename: fileOps.handleRenameFile,
     onDelete: fileOps.handleDeleteFile,
     onDownload: handlers.onDownload,
+    onShare: (fileId: string, fileName: string) => {
+      void handlers.onShare(fileId, fileName);
+    },
     onClick: handlers.onClick,
     onMediaClick: handlers.onMediaClick,
   };
