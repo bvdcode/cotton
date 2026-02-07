@@ -370,6 +370,10 @@ export const FilesPage: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           flex: 1,
+          ...(layoutType === InterfaceLayoutType.List && {
+            minHeight: 0,
+            overflow: "hidden",
+          }),
         }}
       >
         <PageHeader
@@ -398,8 +402,8 @@ export const FilesPage: React.FC = () => {
         <Box
           sx={
             layoutType === InterfaceLayoutType.List
-              ? { flex: 1, minHeight: 0 }
-              : { flex: 1 }
+              ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
+              : {}
           }
         >
           <FileListViewFactory
