@@ -78,7 +78,6 @@ export const RenamableItemCard = ({
           justifyContent: "center",
           borderRadius: 1.5,
           overflow: "hidden",
-          mb: 0.75,
         }}
       >
         <Box
@@ -99,7 +98,7 @@ export const RenamableItemCard = ({
         </Box>
       </Box>
 
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
         <TextField
           autoFocus
           fullWidth
