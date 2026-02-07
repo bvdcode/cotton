@@ -421,6 +421,8 @@ export const TrashPage: React.FC = () => {
           position: "relative",
           display: "flex",
           flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
         }}
       >
         <PageHeader
@@ -455,7 +457,7 @@ export const TrashPage: React.FC = () => {
           </Box>
         )}
 
-        <Box pb={{ xs: 2, sm: 3 }} sx={{ flex: 1, minHeight: 0 }}>
+        <Box pb={{ xs: 2, sm: 3 }} sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}

@@ -14,6 +14,7 @@ interface FolderCardProps {
   onStartRename: () => void;
   onDelete: () => void;
   onClick: () => void;
+  variant?: "default" | "squareTile";
 }
 
 export const FolderCard = ({
@@ -26,6 +27,7 @@ export const FolderCard = ({
   onStartRename,
   onDelete,
   onClick,
+  variant = "default",
 }: FolderCardProps) => {
   const { t } = useTranslation(["files", "common"]);
 
@@ -36,6 +38,7 @@ export const FolderCard = ({
       title={folder.name}
       subtitle={new Date(folder.createdAt).toLocaleDateString()}
       onClick={onClick}
+      variant={variant}
       actions={[
         {
           icon: <Edit />,
