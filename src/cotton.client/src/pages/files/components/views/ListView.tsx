@@ -136,6 +136,7 @@ export const ListView: React.FC<IFileListView> = ({
     }
   };
 
+
   return (
     <Box
       sx={{
@@ -172,8 +173,23 @@ export const ListView: React.FC<IFileListView> = ({
         onColumnResize={handleColumnResize}
         hideFooter={!pagination}
         paginationMode={pagination ? "server" : "client"}
-        autoPageSize={true}
-        onPaginationModelChange={pagination?.onPaginationModelChange}
+        initialState={
+          pagination
+            ? {
+                pagination: {
+                  paginationModel: { page: 0, pageSize: 100 },
+                },
+              }
+            : undefined
+        }
+        onPaginationModelChange={(model) => {
+          if (!pagination) return;
+          pagination.onPaginationModelChange({
+            page: model.page,
+            pageSize: Math.min(100, model.pageSize),
+          });
+        }}
+        pageSizeOptions={[100]}
         rowCount={pagination ? pagination.totalCount : rows.length}
         loading={pagination?.loading}
         autoHeight={autoHeight}
