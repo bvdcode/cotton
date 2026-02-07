@@ -1,4 +1,4 @@
-import { Box, IconButton, Typography } from "@mui/material";
+import { Box, IconButton, Menu, MenuItem, Typography } from "@mui/material";
 import { MoreVert } from "@mui/icons-material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode, MouseEvent } from "react";
@@ -179,36 +179,20 @@ export const FileSystemItemCard = ({
   variant = "default",
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
-  const [actionsOpen, setActionsOpen] = useState(false);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const hasActions = Boolean(actions && actions.length > 0);
-  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!actionsOpen) return;
-
-    const handleClickOutside = (e: Event) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setActionsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [actionsOpen]);
+  const actionsOpen = Boolean(menuAnchorEl);
 
   const handleToggleActions = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    setActionsOpen(!actionsOpen);
+    setMenuAnchorEl(actionsOpen ? null : e.currentTarget);
   };
 
-  const handleActionClick =
-    (action: FileSystemItemCardAction) =>
-    (e: MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      setActionsOpen(false);
-      action.onClick();
-    };
+  const handleCloseMenu = () => {
+    setMenuAnchorEl(null);
+  };
 
   return (
     <Box
@@ -317,7 +301,6 @@ export const FileSystemItemCard = ({
 
           {hasActions && (
             <Box
-              ref={menuRef}
               className="card-menu-slot"
               sx={{
                 width: 0,
@@ -351,50 +334,6 @@ export const FileSystemItemCard = ({
                 >
                   <MoreVert />
                 </IconButton>
-
-                {actionsOpen && (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      right: 0,
-                      bottom: 32,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 0.75,
-                      bgcolor: "background.paper",
-                      boxShadow: 3,
-                      borderRadius: 1,
-                      py: 0.5,
-                      zIndex: 10,
-                      animation: "slideUp 0.2s ease-out",
-                      "@keyframes slideUp": {
-                        from: {
-                          opacity: 0,
-                          transform: "translateY(10px)",
-                        },
-                        to: {
-                          opacity: 1,
-                          transform: "translateY(0)",
-                        },
-                      },
-                    }}
-                  >
-                    {actions!.map((action, idx) => (
-                      <IconButton
-                        key={idx}
-                        onClick={handleActionClick(action)}
-                        title={action.tooltip}
-                        sx={{
-                          p: 0.5,
-                          width: 28,
-                          height: 28,
-                        }}
-                      >
-                        {action.icon}
-                      </IconButton>
-                    ))}
-                  </Box>
-                )}
               </Box>
             </Box>
           )}
@@ -413,6 +352,43 @@ export const FileSystemItemCard = ({
           </Typography>
         )}
       </Box>
+
+      {hasActions && (
+        <Menu
+          anchorEl={menuAnchorEl}
+          open={actionsOpen}
+          onClose={handleCloseMenu}
+          onClick={(e) => e.stopPropagation()}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+          transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+          disablePortal={false}
+          PaperProps={{
+            variant: "outlined",
+            sx: {
+              bgcolor: "background.default",
+              borderColor: "divider",
+            },
+          }}
+        >
+          {actions!.map((action, idx) => (
+            <MenuItem
+              key={idx}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuAnchorEl(null);
+                action.onClick();
+              }}
+              title={action.tooltip}
+              sx={{ gap: 1 }}
+            >
+              {action.icon}
+              <Typography variant="body2">
+                {action.tooltip ?? ""}
+              </Typography>
+            </MenuItem>
+          ))}
+        </Menu>
+      )}
     </Box>
   );
 };
