@@ -66,14 +66,15 @@ export const UploadQueueWidget = () => {
           hasActive={stats.hasActive}
           progressPercent={totalProgress}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
-          onClose={() => uploadManager.setOpen(false)}
-          onClearFinished={() => uploadManager.clearFinished()}
-          clearDisabled={!tasks.some((x) => x.status === "completed" || x.status === "failed")}
+          onClose={() => {
+            // Close clears the list to avoid keeping stale tasks.
+            // Close is hidden while uploads are active.
+            uploadManager.clearFinished({ includeCompleted: true, includeFailed: true });
+          }}
           aria={{
             expand: t("actions.expand"),
             collapse: t("actions.collapse"),
             close: t("actions.close"),
-            clearFinished: t("actions.clearFinished"),
           }}
         />
 
