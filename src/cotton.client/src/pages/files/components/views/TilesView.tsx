@@ -136,7 +136,6 @@ export const TilesView: React.FC<IFileListView> = ({
               }}
               onBlur={onConfirmNewFolder}
               placeholder={folderNamePlaceholder}
-              sx={{ mt: 0.5 }}
               slotProps={{
                 input: {
                   sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
@@ -221,6 +220,7 @@ export const TilesView: React.FC<IFileListView> = ({
                         sx={{
                           position: "absolute",
                           inset: 0,
+                          display: "block",
                           width: "100%",
                           height: "100%",
                           objectFit: "cover",
@@ -237,6 +237,7 @@ export const TilesView: React.FC<IFileListView> = ({
                         decoding="async"
                         sx={{
                           position: "relative",
+                          display: "block",
                           width: "100%",
                           height: "100%",
                           objectFit: "contain",
@@ -264,6 +265,7 @@ export const TilesView: React.FC<IFileListView> = ({
                         sx={{
                           position: "absolute",
                           inset: 0,
+                          display: "block",
                           width: "100%",
                           height: "100%",
                           objectFit: "cover",
@@ -280,6 +282,7 @@ export const TilesView: React.FC<IFileListView> = ({
                         decoding="async"
                         sx={(theme) => ({
                           position: "relative",
+                          display: "block",
                           width: "100%",
                           height: "100%",
                           objectFit: "contain",

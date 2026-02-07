@@ -12,7 +12,7 @@ namespace Cotton.Validators
 
         // Policy
         public const int MaxSegmentBytes = 255;     // segment (name) in UTF-8
-        public const int MaxGraphemes = 128;     // to prevent abuse with combining characters
+        public const int MaxGraphemes = 255;     // to prevent abuse with combining characters
 
         // Frequently abused zero-width/format characters
         private static readonly int[] ForbiddenCodepoints =
