@@ -10,18 +10,18 @@ import {
   ViewList,
 } from "@mui/icons-material";
 import { FileBreadcrumbs } from "./FileBreadcrumbs";
-import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import { formatBytes } from "../utils/formatBytes";
+import type { FileBrowserViewMode } from "../hooks/useFilesLayout";
 
 export interface PageHeaderProps {
   loading: boolean;
   breadcrumbs: Array<{ id: string; name: string }>;
   stats: { folders: number; files: number; sizeBytes: number };
-  layoutType: InterfaceLayoutType;
+  viewMode: FileBrowserViewMode;
   canGoUp: boolean;
   onGoUp: () => void;
   onHomeClick: () => void;
-  onLayoutToggle: (layoutType: InterfaceLayoutType) => void;
+  onViewModeCycle: () => void;
   statsNamespace?: string;
 
   // Optional actions
@@ -45,11 +45,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   loading,
   breadcrumbs,
   stats,
-  layoutType,
+  viewMode,
   canGoUp,
   onGoUp,
   onHomeClick,
-  onLayoutToggle,
+  onViewModeCycle,
   statsNamespace = "files",
   showUpload = false,
   showNewFolder = false,
@@ -59,6 +59,37 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   customActions,
   t,
 }) => {
+  const nextViewTitleKey: string = (() => {
+    switch (viewMode) {
+      case "table":
+        return "actions.switchToSmallTilesView";
+      case "tiles-small":
+        return "actions.switchToMediumTilesView";
+      case "tiles-medium":
+        return "actions.switchToLargeTilesView";
+      case "tiles-large":
+        return "actions.switchToTableView";
+      default:
+        return "actions.switchToTableView";
+    }
+  })();
+
+  const viewIcon =
+    viewMode === "table" ? (
+      <ViewList />
+    ) : (
+      <ViewModule
+        sx={{
+          transform:
+            viewMode === "tiles-small"
+              ? "scale(0.9)"
+              : viewMode === "tiles-large"
+                ? "scale(1.1)"
+                : "scale(1)",
+        }}
+      />
+    );
+
   return (
     <Box
       sx={{
@@ -135,23 +166,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             >
               <Home />
             </IconButton>
-            {layoutType === InterfaceLayoutType.Tiles ? (
-              <IconButton
-                color="primary"
-                onClick={() => onLayoutToggle(InterfaceLayoutType.List)}
-                title={t("actions.switchToListView")}
-              >
-                <ViewList />
-              </IconButton>
-            ) : (
-              <IconButton
-                color="primary"
-                onClick={() => onLayoutToggle(InterfaceLayoutType.Tiles)}
-                title={t("actions.switchToTilesView")}
-              >
-                <ViewModule />
-              </IconButton>
-            )}
+            <IconButton
+              color="primary"
+              onClick={onViewModeCycle}
+              title={t(nextViewTitleKey)}
+            >
+              {viewIcon}
+            </IconButton>
           </Box>
         </Box>
 

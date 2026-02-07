@@ -501,7 +501,11 @@
       "goUp": "Вверх",
       "dropFiles": "Перетащите файлы для загрузки",
       "switchToTilesView": "Переключиться на плитки",
-      "switchToListView": "Переключиться на просмотр списка"
+      "switchToListView": "Переключиться на просмотр списка",
+      "switchToTableView": "Переключить на таблицу",
+      "switchToSmallTilesView": "Мелкие плитки",
+      "switchToMediumTilesView": "Средние плитки",
+      "switchToLargeTilesView": "Крупные плитки"
     },
     "breadcrumbs": {
       "ariaLabel": "Хлебные крошки",
@@ -618,6 +622,10 @@
       "switchToTiles": "Переключить на плитки",
       "switchToListView": "Переключить на список",
       "switchToTilesView": "Переключить на плитки",
+      "switchToTableView": "Переключить на таблицу",
+      "switchToSmallTilesView": "Мелкие плитки",
+      "switchToMediumTilesView": "Средние плитки",
+      "switchToLargeTilesView": "Крупные плитки",
       "emptyTrash": "Очистить корзину"
     },
     "breadcrumbs": {

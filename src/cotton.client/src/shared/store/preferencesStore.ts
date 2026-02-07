@@ -12,6 +12,8 @@ interface EditorPreferences {
 interface LayoutPreferences {
   filesLayoutType?: InterfaceLayoutType;
   trashLayoutType?: InterfaceLayoutType;
+  filesTilesSize?: "small" | "medium" | "large";
+  trashTilesSize?: "small" | "medium" | "large";
   fileListColumnWidths?: Record<string, number>;
 }
 
@@ -25,6 +27,8 @@ interface PreferencesState {
   layoutPreferences: LayoutPreferences;
   setFilesLayoutType: (layoutType: InterfaceLayoutType) => void;
   setTrashLayoutType: (layoutType: InterfaceLayoutType) => void;
+  setFilesTilesSize: (size: "small" | "medium" | "large") => void;
+  setTrashTilesSize: (size: "small" | "medium" | "large") => void;
   setFileListColumnWidth: (field: string, width: number) => void;
 }
 
@@ -80,6 +84,20 @@ export const usePreferencesStore = create<PreferencesState>()(
           layoutPreferences: {
             ...state.layoutPreferences,
             trashLayoutType: layoutType,
+          },
+        })),
+      setFilesTilesSize: (size) =>
+        set((state) => ({
+          layoutPreferences: {
+            ...state.layoutPreferences,
+            filesTilesSize: size,
+          },
+        })),
+      setTrashTilesSize: (size) =>
+        set((state) => ({
+          layoutPreferences: {
+            ...state.layoutPreferences,
+            trashTilesSize: size,
           },
         })),
       setFileListColumnWidth: (field, width) =>
