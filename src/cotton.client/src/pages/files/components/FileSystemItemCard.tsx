@@ -259,7 +259,9 @@ export const FileSystemItemCard = ({
       <Box
         sx={{
           width: "100%",
-          aspectRatio: variant === "squareTile" ? "16 / 9" : "1 / 1",
+          ...(variant === "squareTile"
+            ? { flex: 1, minHeight: 0 }
+            : { aspectRatio: "1 / 1" }),
           position: "relative",
           display: "flex",
           alignItems: "center",
@@ -288,13 +290,6 @@ export const FileSystemItemCard = ({
         sx={{
           px: 0.75,
           pb: 0.75,
-          ...(variant === "squareTile" && {
-            flex: 1,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }),
         }}
       >
         <Box
