@@ -13,6 +13,7 @@ interface RenamableItemCardProps {
   actions?: FileSystemItemCardAction[];
   iconContainerSx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
+  variant?: "default" | "squareTile";
 
   isRenaming: boolean;
   renamingValue: string;
@@ -31,6 +32,7 @@ export const RenamableItemCard = ({
   actions,
   iconContainerSx,
   sx,
+  variant = "default",
   isRenaming,
   renamingValue,
   onRenamingValueChange,
@@ -48,6 +50,7 @@ export const RenamableItemCard = ({
         actions={actions}
         iconContainerSx={iconContainerSx}
         sx={sx}
+        variant={variant}
       />
     );
   }
@@ -58,6 +61,11 @@ export const RenamableItemCard = ({
         border: "1px solid",
         borderColor: "primary.main",
         borderRadius: 1,
+        ...(variant === "squareTile" && {
+          aspectRatio: "1 / 1",
+          display: "flex",
+          flexDirection: "column",
+        }),
         p: {
           xs: 1,
           sm: 1.25,
@@ -71,7 +79,7 @@ export const RenamableItemCard = ({
       <Box
         sx={{
           width: "100%",
-          aspectRatio: "1 / 1",
+          aspectRatio: variant === "squareTile" ? "16 / 9" : "1 / 1",
           position: "relative",
           display: "flex",
           alignItems: "center",
@@ -98,7 +106,14 @@ export const RenamableItemCard = ({
         </Box>
       </Box>
 
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 0.5,
+          ...(variant === "squareTile" && { flex: 1, minHeight: 0 }),
+        }}
+      >
         <TextField
           autoFocus
           fullWidth

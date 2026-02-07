@@ -25,6 +25,7 @@ export interface FileSystemItemCardProps {
   actions?: FileSystemItemCardAction[];
   iconContainerSx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
+  variant?: "default" | "squareTile";
 }
 
 const HoverMarqueeText = ({
@@ -175,6 +176,7 @@ export const FileSystemItemCard = ({
   actions,
   iconContainerSx,
   sx,
+  variant = "default",
 }: FileSystemItemCardProps) => {
   const clickable = typeof onClick === "function";
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -228,6 +230,11 @@ export const FileSystemItemCard = ({
         border: "1px solid",
         borderColor: "divider",
         borderRadius: 1,
+        ...(variant === "squareTile" && {
+          aspectRatio: "1 / 1",
+          display: "flex",
+          flexDirection: "column",
+        }),
         cursor: clickable ? "pointer" : "default",
         userSelect: "none",
         outline: "none",
@@ -252,7 +259,7 @@ export const FileSystemItemCard = ({
       <Box
         sx={{
           width: "100%",
-          aspectRatio: "1 / 1",
+          aspectRatio: variant === "squareTile" ? "16 / 9" : "1 / 1",
           position: "relative",
           display: "flex",
           alignItems: "center",
@@ -277,7 +284,19 @@ export const FileSystemItemCard = ({
           {icon}
         </Box>
       </Box>
-      <Box sx={{ px: 0.75, pb: 0.75 }}>
+      <Box
+        sx={{
+          px: 0.75,
+          pb: 0.75,
+          ...(variant === "squareTile" && {
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+          }),
+        }}
+      >
         <Box
           sx={{
             position: "relative",

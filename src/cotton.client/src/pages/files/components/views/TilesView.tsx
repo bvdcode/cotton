@@ -77,7 +77,15 @@ export const TilesView: React.FC<IFileListView> = ({
   }
 
   return (
-    <Box sx={{ position: "relative", pb: { xs: 1, sm: 3 } }}>
+    <Box
+      sx={{
+        position: "relative",
+        pb: { xs: 1, sm: 3 },
+        height: "100%",
+        minHeight: 0,
+        overflow: "auto",
+      }}
+    >
       {loading && tiles.length === 0 && (
         <Box
           sx={{
@@ -111,6 +119,9 @@ export const TilesView: React.FC<IFileListView> = ({
               border: "2px solid",
               borderColor: "primary.main",
               borderRadius: 1,
+              aspectRatio: "1 / 1",
+              display: "flex",
+              flexDirection: "column",
               p: { xs: 1, sm: 1.25, md: 1 },
               bgcolor: "action.hover",
             }}
@@ -118,7 +129,7 @@ export const TilesView: React.FC<IFileListView> = ({
             <Box
               sx={{
                 width: "100%",
-                aspectRatio: "1 / 1",
+                aspectRatio: "16 / 9",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -132,27 +143,29 @@ export const TilesView: React.FC<IFileListView> = ({
             >
               <Folder sx={{ color: "primary.main" }} />
             </Box>
-            <TextField
-              autoFocus
-              fullWidth
-              size="small"
-              value={newFolderName}
-              onChange={(e) => onNewFolderNameChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  void onConfirmNewFolder();
-                } else if (e.key === "Escape") {
-                  onCancelNewFolder();
-                }
-              }}
-              onBlur={onConfirmNewFolder}
-              placeholder={folderNamePlaceholder}
-              slotProps={{
-                input: {
-                  sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
-                },
-              }}
-            />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flex: 1, minHeight: 0 }}>
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                value={newFolderName}
+                onChange={(e) => onNewFolderNameChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void onConfirmNewFolder();
+                  } else if (e.key === "Escape") {
+                    onCancelNewFolder();
+                  }
+                }}
+                onBlur={onConfirmNewFolder}
+                placeholder={folderNamePlaceholder}
+                slotProps={{
+                  input: {
+                    sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
+                  },
+                }}
+              />
+            </Box>
           </Box>
         )}
 
@@ -175,6 +188,7 @@ export const TilesView: React.FC<IFileListView> = ({
                   folderOperations.onDelete(tile.node.id, tile.node.name)
                 }
                 onClick={() => folderOperations.onClick(tile.node.id)}
+                variant="squareTile"
               />
             );
           }
@@ -203,6 +217,7 @@ export const TilesView: React.FC<IFileListView> = ({
           return (
             <RenamableItemCard
               key={tile.file.id}
+              variant="squareTile"
               icon={(() => {
                 if (previewUrl && (isImage || isVideo)) {
                   return (
