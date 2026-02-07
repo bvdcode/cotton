@@ -258,7 +258,6 @@ export const FileSystemItemCard = ({
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
-          mb: 0.5,
         }}
       >
         <Box
@@ -278,7 +277,7 @@ export const FileSystemItemCard = ({
           {icon}
         </Box>
       </Box>
-      <Box sx={{ px: 0.75, pb: 0.75 }}>
+      <Box sx={{ px: 0.75, pb: 0.75, mt: 0.5 }}>
         <Box
           sx={{
             position: "relative",
