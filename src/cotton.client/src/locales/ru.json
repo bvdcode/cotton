@@ -21,9 +21,23 @@
           "title": "Сканирование файлов…"
         },
         "preparing": {
-          "title": "Подготовка загрузки…"
+          "title": "Подготовка загрузки…",
+          "mapping": {
+            "title": "Подготовка загрузки…"
+          },
+          "folders": {
+            "title": "Создание папок…"
+          },
+          "conflicts": {
+            "title": "Проверка конфликтов…"
+          },
+          "enqueue": {
+            "title": "Запуск загрузки…"
+          }
         },
-        "caption": "Найдено файлов: {{count}}"
+        "caption": "Найдено файлов: {{count}}",
+        "captionFound": "Найдено файлов: {{count}}",
+        "captionProgress": "{{processed}} / {{total}}"
       },
       "minutesAgo_one": "{{count}} минуту назад",
       "minutesAgo_few": "{{count}} минуты назад",
