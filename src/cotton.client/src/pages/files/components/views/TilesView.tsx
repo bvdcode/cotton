@@ -99,7 +99,7 @@ export const TilesView: React.FC<IFileListView> = ({
           sx={{
             border: "2px solid",
             borderColor: "primary.main",
-            borderRadius: 2,
+            borderRadius: 1,
             p: { xs: 1, sm: 1.25, md: 1 },
             bgcolor: "action.hover",
           }}
@@ -206,42 +206,80 @@ export const TilesView: React.FC<IFileListView> = ({
             icon={(() => {
               if (previewUrl && (isImage || isVideo)) {
                 return (
-                  <Box
-                    component="img"
-                    src={previewUrl}
-                    alt={tile.file.name}
-                    loading="lazy"
-                    decoding="async"
-                    sx={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                      cursor: isImage || isVideo ? "pointer" : "default",
-                    }}
-                  />
+                  <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
+                    <Box
+                      component="img"
+                      src={previewUrl}
+                      alt=""
+                      aria-hidden
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        filter: "blur(24px)",
+                        transform: "scale(1.15)",
+                        opacity: 0.6,
+                      }}
+                    />
+                    <Box
+                      component="img"
+                      src={previewUrl}
+                      alt={tile.file.name}
+                      loading="lazy"
+                      decoding="async"
+                      sx={{
+                        position: "relative",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                        cursor: isImage || isVideo ? "pointer" : "default",
+                      }}
+                    />
+                  </Box>
                 );
               }
               if (previewUrl) {
                 const isTextPreview = isTextFile(tile.file.name);
                 return (
-                  <Box
-                    component="img"
-                    src={previewUrl}
-                    alt={tile.file.name}
-                    loading="lazy"
-                    decoding="async"
-                    sx={(theme) => ({
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                      ...(shouldLightenPreviewBackdrop && {
-                        backgroundColor: previewBackdropColor,
-                      }),
-                      ...(isTextPreview && theme.palette.mode === "dark" && {
-                        filter: "invert(1)",
-                      }),
-                    })}
-                  />
+                  <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
+                    <Box
+                      component="img"
+                      src={previewUrl}
+                      alt=""
+                      aria-hidden
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        filter: "blur(24px)",
+                        transform: "scale(1.15)",
+                        opacity: 0.5,
+                      }}
+                    />
+                    <Box
+                      component="img"
+                      src={previewUrl}
+                      alt={tile.file.name}
+                      loading="lazy"
+                      decoding="async"
+                      sx={(theme) => ({
+                        position: "relative",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                        ...(shouldLightenPreviewBackdrop && {
+                          backgroundColor: previewBackdropColor,
+                        }),
+                        ...(isTextPreview && theme.palette.mode === "dark" && {
+                          filter: "invert(1)",
+                        }),
+                      })}
+                    />
+                  </Box>
                 );
               }
               return preview;
