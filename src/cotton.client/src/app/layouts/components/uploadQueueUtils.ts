@@ -17,11 +17,11 @@ export const sortTasksByPriority = <T extends { status: string }>(
   tasks: T[],
 ): T[] => {
   const statusPriority: Record<string, number> = {
+    failed: 0,
     uploading: 1,
     finalizing: 1,
     queued: 2,
     completed: 3,
-    failed: 4,
   };
 
   return [...tasks].sort((a, b) => {
@@ -73,7 +73,7 @@ export const getWidgetTitle = (
   _totalProgress: number,
   totalSpeed: number,
 ): string => {
-  const { hasActive, allCompleted, hasErrors, completed, total } = stats;
+  const { hasActive, allCompleted, hasErrors, completed, failed, total } = stats;
 
   if (hasActive) {
     return t("titleWithProgress", {
@@ -83,8 +83,8 @@ export const getWidgetTitle = (
     });
   }
 
-  if (isCollapsed && allCompleted && hasErrors) {
-    return t("error");
+  if (allCompleted && hasErrors) {
+    return t("titleWithErrors", { total, failed });
   }
 
   if (isCollapsed && allCompleted) {

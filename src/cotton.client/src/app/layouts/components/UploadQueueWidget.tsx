@@ -67,6 +67,14 @@ export const UploadQueueWidget = () => {
           progressPercent={totalProgress}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
           onClose={() => uploadManager.setOpen(false)}
+          onClearFinished={() => uploadManager.clearFinished()}
+          clearDisabled={!tasks.some((x) => x.status === "completed" || x.status === "failed")}
+          aria={{
+            expand: t("actions.expand"),
+            collapse: t("actions.collapse"),
+            close: t("actions.close"),
+            clearFinished: t("actions.clearFinished"),
+          }}
         />
 
         <Box

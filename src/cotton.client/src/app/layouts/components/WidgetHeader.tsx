@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, IconButton, Typography } from "@mui/material";
 import { Close, ExpandMore, ExpandLess } from "@mui/icons-material";
+import { DeleteSweep } from "@mui/icons-material";
 
 interface WidgetHeaderProps {
   title: string;
@@ -9,6 +10,14 @@ interface WidgetHeaderProps {
   progressPercent: number;
   onToggleCollapse: () => void;
   onClose: () => void;
+  onClearFinished?: () => void;
+  clearDisabled?: boolean;
+  aria: {
+    expand: string;
+    collapse: string;
+    close: string;
+    clearFinished: string;
+  };
 }
 
 export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
@@ -18,6 +27,9 @@ export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
   progressPercent,
   onToggleCollapse,
   onClose,
+  onClearFinished,
+  clearDisabled,
+  aria,
 }) => {
   return (
     <Box
@@ -63,10 +75,20 @@ export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
         {title}
       </Typography>
       <Box display="flex" gap={0.5} sx={{ position: "relative", zIndex: 1 }}>
+        {onClearFinished && (
+          <IconButton
+            size="small"
+            onClick={onClearFinished}
+            aria-label={aria.clearFinished}
+            disabled={clearDisabled}
+          >
+            <DeleteSweep fontSize="small" />
+          </IconButton>
+        )}
         <IconButton
           size="small"
           onClick={onToggleCollapse}
-          aria-label={isCollapsed ? "Expand" : "Collapse"}
+          aria-label={isCollapsed ? aria.expand : aria.collapse}
         >
           {isCollapsed ? (
             <ExpandLess fontSize="small" />
@@ -74,7 +96,7 @@ export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
             <ExpandMore fontSize="small" />
           )}
         </IconButton>
-        <IconButton size="small" onClick={onClose} aria-label="Close">
+        <IconButton size="small" onClick={onClose} aria-label={aria.close}>
           <Close fontSize="small" />
         </IconButton>
       </Box>
