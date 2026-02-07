@@ -227,7 +227,7 @@ export const FileSystemItemCard = ({
         overflow: "hidden",
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: 2,
+        borderRadius: 1,
         cursor: clickable ? "pointer" : "default",
         userSelect: "none",
         outline: "none",
@@ -258,7 +258,7 @@ export const FileSystemItemCard = ({
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
-          mb: 0.75,
+          mb: 0.5,
         }}
       >
         <Box
@@ -278,7 +278,7 @@ export const FileSystemItemCard = ({
           {icon}
         </Box>
       </Box>
-      <Box sx={{ px: 1, pb: 1 }}>
+      <Box sx={{ px: 0.75, pb: 0.75 }}>
         <Box
           sx={{
             position: "relative",

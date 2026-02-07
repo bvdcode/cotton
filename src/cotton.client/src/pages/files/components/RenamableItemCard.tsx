@@ -57,7 +57,7 @@ export const RenamableItemCard = ({
       sx={{
         border: "1px solid",
         borderColor: "primary.main",
-        borderRadius: 2,
+        borderRadius: 1,
         p: {
           xs: 1,
           sm: 1.25,
