@@ -49,25 +49,25 @@ export const TilesView: React.FC<IFileListView> = ({
     tileSize === "small"
       ? {
           xs: "repeat(4, minmax(0, 1fr))",
-          sm: "repeat(6, minmax(0, 1fr))",
-          md: "repeat(8, minmax(0, 1fr))",
-          lg: "repeat(10, minmax(0, 1fr))",
-          xl: "repeat(12, minmax(0, 1fr))",
+          sm: "repeat(5, minmax(0, 1fr))",
+          md: "repeat(6, minmax(0, 1fr))",
+          lg: "repeat(8, minmax(0, 1fr))",
+          xl: "repeat(10, minmax(0, 1fr))",
         }
       : tileSize === "large"
         ? {
-            xs: "repeat(2, minmax(0, 1fr))",
+            xs: "repeat(3, minmax(0, 1fr))",
             sm: "repeat(3, minmax(0, 1fr))",
             md: "repeat(4, minmax(0, 1fr))",
-            lg: "repeat(6, minmax(0, 1fr))",
-            xl: "repeat(8, minmax(0, 1fr))",
+            lg: "repeat(5, minmax(0, 1fr))",
+            xl: "repeat(6, minmax(0, 1fr))",
           }
         : {
             xs: "repeat(3, minmax(0, 1fr))",
             sm: "repeat(4, minmax(0, 1fr))",
-            md: "repeat(6, minmax(0, 1fr))",
-            lg: "repeat(8, minmax(0, 1fr))",
-            xl: "repeat(12, minmax(0, 1fr))",
+            md: "repeat(5, minmax(0, 1fr))",
+            lg: "repeat(6, minmax(0, 1fr))",
+            xl: "repeat(8, minmax(0, 1fr))",
           };
 
   const gridGap =

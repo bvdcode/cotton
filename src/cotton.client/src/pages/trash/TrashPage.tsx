@@ -455,7 +455,7 @@ export const TrashPage: React.FC = () => {
           </Box>
         )}
 
-        <Box pb={{ xs: 2, sm: 3 }}>
+        <Box pb={{ xs: 2, sm: 3 }} sx={{ flex: 1, minHeight: 0 }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
@@ -463,7 +463,6 @@ export const TrashPage: React.FC = () => {
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
             tileSize={tilesSize}
-            autoHeight={layoutType === InterfaceLayoutType.List}
             loading={
               layoutType === InterfaceLayoutType.List
                 ? listLoading && !listContent
