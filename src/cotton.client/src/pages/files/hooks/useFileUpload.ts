@@ -21,10 +21,20 @@ type DroppedFile = {
 
 type DropPreparationPhase = "idle" | "scanning" | "preparing";
 
+type DropPreparationStep =
+  | "idle"
+  | "scanning"
+  | "mapping"
+  | "folders"
+  | "conflicts"
+  | "enqueue";
+
 type DropPreparationState = {
   active: boolean;
   phase: DropPreparationPhase;
+  step: DropPreparationStep;
   filesFound: number;
+  processed: number;
 };
 
 export const useFileUpload = (
@@ -37,7 +47,9 @@ export const useFileUpload = (
   const [dropPreparation, setDropPreparation] = useState<DropPreparationState>({
     active: false,
     phase: "idle",
+    step: "idle",
     filesFound: 0,
+    processed: 0,
   });
   const { dialogState, showConflictDialog, handleResolve, handleExited } =
     useFileConflictDialog();
@@ -95,6 +107,15 @@ export const useFileUpload = (
     () => async (dropped: DroppedFile[]) => {
       if (!nodeId) return;
       if (dropped.length === 0) return;
+
+      setDropPreparation((prev) => ({
+        ...prev,
+        active: true,
+        phase: "preparing",
+        step: "folders",
+        filesFound: dropped.length,
+        processed: 0,
+      }));
 
       skipAllConflictsRef.current = false;
 
@@ -201,7 +222,27 @@ export const useFileUpload = (
 
       const filesByTarget = new Map<string, { label: string; files: File[] }>();
 
-      for (const item of dropped) {
+      let lastProgressTime = 0;
+      const updateProgress = (processed: number) => {
+        const now = Date.now();
+        if (now - lastProgressTime < 120 && processed < dropped.length) return;
+        lastProgressTime = now;
+        setDropPreparation((prev) => ({
+          ...prev,
+          active: true,
+          phase: "preparing",
+          step: "folders",
+          processed,
+          filesFound: dropped.length,
+        }));
+      };
+
+      updateProgress(0);
+
+      for (let i = 0; i < dropped.length; i += 1) {
+        updateProgress(i);
+
+        const item = dropped[i];
         const normalized = item.relativePath.replace(/^\\+|^\/+/, "");
         const parts = normalized.split(/[\\/]+/).filter((p) => p.length > 0);
 
@@ -229,6 +270,15 @@ export const useFileUpload = (
         filesByTarget.set(targetNodeId, bucket);
       }
 
+      setDropPreparation((prev) => ({
+        ...prev,
+        active: true,
+        phase: "preparing",
+        step: "conflicts",
+        filesFound: dropped.length,
+        processed: dropped.length,
+      }));
+
       for (const [targetNodeId, bucket] of filesByTarget) {
         const contentForCheck = (await nodesApi.getChildren(targetNodeId))
           .content;
@@ -239,6 +289,15 @@ export const useFileUpload = (
         );
         if (result.cancelled) return;
         if (result.files.length === 0) continue;
+
+        setDropPreparation((prev) => ({
+          ...prev,
+          active: true,
+          phase: "preparing",
+          step: "enqueue",
+          filesFound: dropped.length,
+          processed: dropped.length,
+        }));
         uploadManager.enqueue(result.files, targetNodeId, bucket.label);
       }
     },
@@ -356,7 +415,13 @@ export const useFileUpload = (
     if (!nodeId) return;
 
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setDropPreparation({ active: true, phase: "scanning", filesFound: 0 });
+      setDropPreparation({
+        active: true,
+        phase: "scanning",
+        step: "scanning",
+        filesFound: 0,
+        processed: 0,
+      });
       try {
         const files = await getAllFilesFromItems(
           e.dataTransfer.items,
@@ -365,7 +430,9 @@ export const useFileUpload = (
               ...prev,
               active: true,
               phase: "scanning",
+              step: "scanning",
               filesFound,
+              processed: 0,
             })),
         );
 
@@ -374,23 +441,39 @@ export const useFileUpload = (
             ...prev,
             active: true,
             phase: "preparing",
+            step: "mapping",
             filesFound: files.length,
+            processed: 0,
           }));
           await handleUploadDroppedFiles(files);
         }
       } finally {
-        setDropPreparation({ active: false, phase: "idle", filesFound: 0 });
+        setDropPreparation({
+          active: false,
+          phase: "idle",
+          step: "idle",
+          filesFound: 0,
+          processed: 0,
+        });
       }
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       setDropPreparation({
         active: true,
         phase: "preparing",
+        step: "conflicts",
         filesFound: e.dataTransfer.files.length,
+        processed: e.dataTransfer.files.length,
       });
       try {
         await handleUploadFiles(Array.from(e.dataTransfer.files));
       } finally {
-        setDropPreparation({ active: false, phase: "idle", filesFound: 0 });
+        setDropPreparation({
+          active: false,
+          phase: "idle",
+          step: "idle",
+          filesFound: 0,
+          processed: 0,
+        });
       }
     }
   };
