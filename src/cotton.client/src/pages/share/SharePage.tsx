@@ -50,21 +50,22 @@ export const SharePage: React.FC = () => {
   const params = useParams<{ token?: string }>();
 
   const token = params.token ?? null;
-  const downloadUrl = React.useMemo(() => {
-    if (!token) return null;
-    return shareLinks.buildBackendDownloadUrlFromToken(token);
+
+  const downloadUrlCandidates = React.useMemo(() => {
+    if (!token) return [];
+    return shareLinks.buildTokenDownloadUrlCandidates(token);
   }, [token]);
 
-  const inlineUrl = React.useMemo(() => {
-    if (!downloadUrl) return null;
-    return `${downloadUrl}${downloadUrl.includes("?") ? "&" : "?"}download=false`;
-  }, [downloadUrl]);
+  const withInlineFlag = React.useCallback((url: string) => {
+    return `${url}${url.includes("?") ? "&" : "?"}download=false`;
+  }, []);
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [contentType, setContentType] = React.useState<string | null>(null);
   const [textContent, setTextContent] = React.useState<string | null>(null);
+  const [resolvedDownloadUrl, setResolvedDownloadUrl] = React.useState<string | null>(null);
 
   const viewerKind = React.useMemo(
     () => guessViewerKind(contentType),
@@ -72,7 +73,7 @@ export const SharePage: React.FC = () => {
   );
 
   React.useEffect(() => {
-    if (!inlineUrl) {
+    if (!token || downloadUrlCandidates.length === 0) {
       setLoading(false);
       setError(t("errors.invalidLink", { ns: "share" }));
       return;
@@ -84,22 +85,45 @@ export const SharePage: React.FC = () => {
       setLoading(true);
       setError(null);
       setTextContent(null);
+      setResolvedDownloadUrl(null);
 
       try {
-        let response: Response;
-        try {
-          response = await fetch(inlineUrl, { method: "HEAD" });
-        } catch {
-          response = await fetch(inlineUrl, { method: "GET" });
+        let response: Response | null = null;
+        let chosenDownloadUrl: string | null = null;
+
+        for (const candidate of downloadUrlCandidates) {
+          const inlineCandidate = withInlineFlag(candidate);
+          try {
+            response = await fetch(inlineCandidate, { method: "HEAD" });
+            if (!response.ok) {
+              continue;
+            }
+            chosenDownloadUrl = candidate;
+            break;
+          } catch {
+            // Some backends may not support HEAD.
+            try {
+              response = await fetch(inlineCandidate, { method: "GET" });
+              if (!response.ok) {
+                continue;
+              }
+              chosenDownloadUrl = candidate;
+              break;
+            } catch {
+              continue;
+            }
+          }
         }
 
         if (cancelled) return;
 
-        if (!response.ok) {
+        if (!response || !chosenDownloadUrl) {
           setError(t("errors.notFound", { ns: "share" }));
           setLoading(false);
           return;
         }
+
+        setResolvedDownloadUrl(chosenDownloadUrl);
 
         const ct = response.headers.get("content-type");
         const cd = response.headers.get("content-disposition");
@@ -108,6 +132,7 @@ export const SharePage: React.FC = () => {
 
         const kind = guessViewerKind(ct);
         if (kind === "text") {
+          const inlineUrl = withInlineFlag(chosenDownloadUrl);
           const textResp = response.type === "opaque" ? await fetch(inlineUrl) : response;
           const text = await textResp.text();
           if (cancelled) return;
@@ -127,7 +152,12 @@ export const SharePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [inlineUrl, t]);
+  }, [token, downloadUrlCandidates, withInlineFlag, t]);
+
+  const inlineUrl = React.useMemo(() => {
+    if (!resolvedDownloadUrl) return null;
+    return withInlineFlag(resolvedDownloadUrl);
+  }, [resolvedDownloadUrl, withInlineFlag]);
 
   return (
     <Box
@@ -155,12 +185,12 @@ export const SharePage: React.FC = () => {
         <Typography variant="subtitle1" noWrap sx={{ flex: 1, minWidth: 0 }}>
           {fileName ?? t("title", { ns: "share" })}
         </Typography>
-        {downloadUrl && (
+        {resolvedDownloadUrl && (
           <Button
             variant="outlined"
             size="small"
             component="a"
-            href={downloadUrl}
+            href={resolvedDownloadUrl}
             target="_blank"
             rel="noopener noreferrer"
           >

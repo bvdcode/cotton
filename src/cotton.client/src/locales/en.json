@@ -500,6 +500,7 @@
     },
     "share": {
       "copied": "Share link copied: {{name}}",
+      "shared": "Sharing: {{name}}",
       "errors": {
         "link": "Failed to generate share link.",
         "token": "Failed to extract share token.",
