@@ -16,6 +16,15 @@
       "secondsAgo_few": "{{count}} секунды назад",
       "secondsAgo_many": "{{count}} секунд назад",
       "secondsAgo_other": "{{count}} секунд назад",
+      "uploadDrop": {
+        "scanning": {
+          "title": "Сканирование файлов…"
+        },
+        "preparing": {
+          "title": "Подготовка загрузки…"
+        },
+        "caption": "Найдено файлов: {{count}}"
+      },
       "minutesAgo_one": "{{count}} минуту назад",
       "minutesAgo_few": "{{count}} минуты назад",
       "minutesAgo_many": "{{count}} минут назад",
@@ -564,6 +573,13 @@
     "error": "Ошибка",
     "titleWithTotal": "Загрузки ({{total}})",
     "titleWithProgress": "Загрузки ({{completed}} / {{total}} • {{speed}}/с)",
+    "titleWithErrors": "Загрузки ({{total}} • с ошибкой: {{failed}})",
+    "actions": {
+      "expand": "Развернуть",
+      "collapse": "Свернуть",
+      "close": "Закрыть",
+      "clearFinished": "Очистить завершённые"
+    },
     "status": {
       "queued": "В очереди",
       "uploading": "Загружается",

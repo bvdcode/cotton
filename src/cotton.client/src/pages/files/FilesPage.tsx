@@ -28,6 +28,7 @@ import {
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { filesApi } from "../../shared/api/filesApi";
 import { shareLinks } from "../../shared/utils/shareLinks";
+import Loader from "../../shared/ui/Loader";
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -234,6 +235,20 @@ export const FilesPage: React.FC = () => {
 
   return (
     <>
+      {fileUpload.dropPreparation.active && (
+        <Loader
+          overlay
+          title={
+            fileUpload.dropPreparation.phase === "scanning"
+              ? t("uploadDrop.scanning.title", { ns: "files" })
+              : t("uploadDrop.preparing.title", { ns: "files" })
+          }
+          caption={t("uploadDrop.caption", {
+            ns: "files",
+            count: fileUpload.dropPreparation.filesFound,
+          })}
+        />
+      )}
       <Snackbar
         open={shareToast.open}
         autoHideDuration={2500}

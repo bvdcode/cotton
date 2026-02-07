@@ -81,6 +81,32 @@ export class UploadManager {
     return this.snapshot;
   }
 
+  clearFinished(options?: { includeCompleted?: boolean; includeFailed?: boolean }) {
+    const includeCompleted = options?.includeCompleted ?? true;
+    const includeFailed = options?.includeFailed ?? true;
+
+    const remaining = this.tasks.filter((t) => {
+      if (t.status === "completed") return !includeCompleted;
+      if (t.status === "failed") return !includeFailed;
+      return true;
+    });
+
+    if (remaining.length === this.tasks.length) return;
+
+    this.tasks.length = 0;
+    this.tasks.push(...remaining);
+
+    this.overallBytesTotal = this.tasks.reduce((sum, t) => sum + t.bytesTotal, 0);
+    this.overallBytesUploaded = this.tasks.reduce((sum, t) => sum + t.bytesUploaded, 0);
+    this.overallEstimator.reset();
+
+    if (this.tasks.length === 0) {
+      this.open = false;
+    }
+
+    this.emit();
+  }
+
   setFilePickerOpen(fn: ((options: { multiple: boolean; accept?: string }) => void) | null) {
     this.filePickerOpen = fn;
   }

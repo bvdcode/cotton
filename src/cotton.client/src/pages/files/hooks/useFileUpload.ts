@@ -19,6 +19,14 @@ type DroppedFile = {
   relativePath: string;
 };
 
+type DropPreparationPhase = "idle" | "scanning" | "preparing";
+
+type DropPreparationState = {
+  active: boolean;
+  phase: DropPreparationPhase;
+  filesFound: number;
+};
+
 export const useFileUpload = (
   nodeId: string | null,
   breadcrumbs: UseBreadcrumb[],
@@ -26,6 +34,11 @@ export const useFileUpload = (
 ) => {
   const { t } = useTranslation(["files"]);
   const [isDragging, setIsDragging] = useState(false);
+  const [dropPreparation, setDropPreparation] = useState<DropPreparationState>({
+    active: false,
+    phase: "idle",
+    filesFound: 0,
+  });
   const { dialogState, showConflictDialog, handleResolve, handleExited } =
     useFileConflictDialog();
   const skipAllConflictsRef = useRef<boolean>(false);
@@ -75,7 +88,7 @@ export const useFileUpload = (
 
       uploadManager.enqueue(result.files, nodeId, baseLabel);
     },
-    [nodeId, content, t, baseLabel, showConflictDialog],
+    [nodeId, content, baseLabel, showConflictDialog],
   );
 
   const handleUploadDroppedFiles = useMemo(
@@ -248,8 +261,21 @@ export const useFileUpload = (
 
   const getAllFilesFromItems = async (
     items: DataTransferItemList,
+    onFileFound: (filesFound: number) => void,
   ): Promise<DroppedFile[]> => {
     const files: DroppedFile[] = [];
+
+    let lastNotifiedCount = 0;
+    let lastNotifyTime = 0;
+    const notify = () => {
+      const now = Date.now();
+      const count = files.length;
+      if (count === lastNotifiedCount) return;
+      if (now - lastNotifyTime < 120 && count < 10_000) return;
+      lastNotifiedCount = count;
+      lastNotifyTime = now;
+      onFileFound(count);
+    };
 
     const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
       if (entry.isFile) {
@@ -265,6 +291,7 @@ export const useFileUpload = (
         const fullPath = (entry as unknown as { fullPath?: string }).fullPath;
         const relativePath = (fullPath ?? file.name).replace(/^\/+/, "");
         files.push({ file: clonedFile, relativePath });
+        notify();
       } else if (entry.isDirectory) {
         const dirEntry = entry as FileSystemDirectoryEntry;
         const reader = dirEntry.createReader();
@@ -329,17 +356,48 @@ export const useFileUpload = (
     if (!nodeId) return;
 
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      const files = await getAllFilesFromItems(e.dataTransfer.items);
-      if (files.length > 0) {
-        void handleUploadDroppedFiles(files);
+      setDropPreparation({ active: true, phase: "scanning", filesFound: 0 });
+      try {
+        const files = await getAllFilesFromItems(
+          e.dataTransfer.items,
+          (filesFound) =>
+            setDropPreparation((prev) => ({
+              ...prev,
+              active: true,
+              phase: "scanning",
+              filesFound,
+            })),
+        );
+
+        if (files.length > 0) {
+          setDropPreparation((prev) => ({
+            ...prev,
+            active: true,
+            phase: "preparing",
+            filesFound: files.length,
+          }));
+          await handleUploadDroppedFiles(files);
+        }
+      } finally {
+        setDropPreparation({ active: false, phase: "idle", filesFound: 0 });
       }
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      void handleUploadFiles(Array.from(e.dataTransfer.files));
+      setDropPreparation({
+        active: true,
+        phase: "preparing",
+        filesFound: e.dataTransfer.files.length,
+      });
+      try {
+        await handleUploadFiles(Array.from(e.dataTransfer.files));
+      } finally {
+        setDropPreparation({ active: false, phase: "idle", filesFound: 0 });
+      }
     }
   };
 
   return {
     isDragging,
+    dropPreparation,
     handleUploadClick,
     handleUploadFiles,
     handleDragOver,
