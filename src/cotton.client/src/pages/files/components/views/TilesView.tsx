@@ -80,7 +80,7 @@ export const TilesView: React.FC<IFileListView> = ({
     <Box
       sx={{
         position: "relative",
-        pb: { xs: 1, sm: 3 },
+        pb: { xs: 1, sm: 2 },
       }}
     >
       {loading && tiles.length === 0 && (
