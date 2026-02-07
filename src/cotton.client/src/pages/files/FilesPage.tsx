@@ -362,7 +362,7 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
@@ -370,7 +370,6 @@ export const FilesPage: React.FC = () => {
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
             tileSize={tilesSize}
-            autoHeight={layoutType === InterfaceLayoutType.List}
             loading={
               layoutType === InterfaceLayoutType.List
                 ? listLoading && !listContent
