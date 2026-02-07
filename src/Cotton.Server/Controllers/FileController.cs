@@ -45,15 +45,22 @@ namespace Cotton.Server.Controllers
         [HttpGet("/s/{token}")]
         public async Task<IActionResult> Share(
             [FromRoute] string token,
-            [FromQuery] bool? download = null)
+            [FromQuery] string? view = null)
         {
             DateTime now = DateTime.UtcNow;
-            bool ishtml = Request.Headers.Accept.ToString()
-                .Contains("text/html", StringComparison.OrdinalIgnoreCase);
-            if (download.HasValue)
+            string accept = Request.Headers.Accept.ToString();
+            bool acceptHtml = accept.Contains("text/html", StringComparison.OrdinalIgnoreCase);
+
+            string mode = view?.Trim().ToLowerInvariant() ?? "auto";
+            bool ishtml = mode switch
             {
-                ishtml = !download.Value;
-            }
+                "page" => true,
+                "download" => false,
+                "inline" => false,
+                _ => acceptHtml,
+            };
+
+            bool isInlineFile = mode == "inline";
 
             string baseAppUrl = $"{Request.Scheme}://{Request.Host}";
 
@@ -139,11 +146,11 @@ namespace Cotton.Server.Controllers
                 }
 
                 var lastModified = new DateTimeOffset(downloadToken.CreatedAt);
-                bool shouldDownload = download ?? true;
+                string? downloadName = isInlineFile ? null : downloadToken.FileName;
                 return File(
                     stream,
                     file.ContentType,
-                    fileDownloadName: shouldDownload ? downloadToken.FileName : null,
+                    fileDownloadName: downloadName,
                     lastModified: lastModified,
                     entityTag: entityTag,
                     enableRangeProcessing: true);
