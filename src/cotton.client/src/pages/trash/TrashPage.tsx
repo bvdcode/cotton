@@ -457,7 +457,15 @@ export const TrashPage: React.FC = () => {
           </Box>
         )}
 
-        <Box pb={{ xs: 2, sm: 3 }} sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <Box
+          pb={{ xs: 2, sm: 3 }}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow:
+              layoutType === InterfaceLayoutType.Tiles ? "auto" : "hidden",
+          }}
+        >
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}

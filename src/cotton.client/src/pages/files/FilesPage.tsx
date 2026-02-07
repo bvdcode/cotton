@@ -364,7 +364,14 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow:
+              layoutType === InterfaceLayoutType.Tiles ? "auto" : "hidden",
+          }}
+        >
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
