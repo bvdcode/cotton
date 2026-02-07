@@ -53,6 +53,10 @@ export const shareLinks = {
   buildTokenDownloadUrlCandidates: (token: string): string[] => {
     const encoded = encodeURIComponent(token);
     return [
+      // Backend public share endpoint (preferred)
+      `/s/${encoded}`,
+
+      // Legacy/alternate endpoints (keep as fallbacks)
       `/api/v1/files/download/${encoded}`,
       `/api/v1/files/download?token=${encoded}`,
     ];
