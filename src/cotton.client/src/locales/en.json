@@ -452,6 +452,15 @@
       "title": "Loading",
       "caption": "Fetching folder contents…"
     },
+    "uploadDrop": {
+      "scanning": {
+        "title": "Scanning files…"
+      },
+      "preparing": {
+        "title": "Preparing upload…"
+      },
+      "caption": "{{count}} files found"
+    },
     "refreshing": "Refreshing…",
     "actions": {
       "upload": "Upload",
@@ -546,6 +555,13 @@
     "error": "Error",
     "titleWithTotal": "Uploads ({{total}})",
     "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",
+    "titleWithErrors": "Uploads ({{total}} • {{failed}} failed)",
+    "actions": {
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "close": "Close",
+      "clearFinished": "Clear finished"
+    },
     "status": {
       "queued": "Queued",
       "uploading": "Uploading",

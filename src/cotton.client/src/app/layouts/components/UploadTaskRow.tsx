@@ -13,6 +13,8 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
   t,
   showDivider,
 }) => {
+  const isFailed = task.status === "failed";
+
   return (
     <Box sx={{ pr: 0.5, pb: 1 }}>
       {showDivider && <Divider sx={{ mb: 1 }} />}
@@ -44,6 +46,7 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
       <LinearProgress
         variant="determinate"
         value={Math.round(task.progress01 * 100)}
+        color={isFailed ? "error" : "primary"}
         sx={{ mt: 0.5 }}
       />
 
@@ -55,10 +58,10 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
         </Typography>
         <Typography
           variant="caption"
-          color={task.status === "failed" ? "error" : "text.secondary"}
+          color={isFailed ? "error" : "text.secondary"}
         >
-          {task.status === "failed"
-            ? (task.error ?? "Failed")
+          {isFailed
+            ? (task.error ?? t("status.failed"))
             : `${Math.round(task.progress01 * 100)}%`}
         </Typography>
       </Box>
