@@ -14,6 +14,8 @@ namespace Cotton.Previews
             "text/plain",
             "text/markdown",
             "application/xml",
+            "application/json",
+            "application/javascript",
         ];
 
         private const int MaxCharsToRead = 24_000;
