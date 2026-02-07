@@ -196,9 +196,15 @@ export const SharePage: React.FC = () => {
         const parsedLength = cl ? Number.parseInt(cl, 10) : NaN;
         setContentLength(Number.isFinite(parsedLength) ? parsedLength : null);
 
-        const kind = guessViewerKind(ct) !== "unknown" ? guessViewerKind(ct) : guessViewerKindFromName(parsedName);
+        const kind =
+          guessViewerKind(ct) !== "unknown"
+            ? guessViewerKind(ct)
+            : guessViewerKindFromName(parsedName);
         if (kind === "text") {
-          const textResp = response.type === "opaque" ? await fetch(chosenDownloadUrl) : response;
+          const textResp =
+            response.type === "opaque"
+              ? await fetch(chosenDownloadUrl)
+              : response;
           const text = await textResp.text();
           if (cancelled) return;
           setTextContent(text);
@@ -377,7 +383,9 @@ export const SharePage: React.FC = () => {
             </Box>
           )}
 
-          {(viewerKind === "unknown" || previewFailed || (viewerKind === "pdf" && !pdfBlobUrl)) && (
+          {(viewerKind === "unknown" ||
+            previewFailed ||
+            (viewerKind === "pdf" && !pdfBlobUrl)) && (
             <Box
               sx={{
                 width: "100%",
