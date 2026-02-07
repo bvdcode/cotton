@@ -52,6 +52,10 @@ namespace Cotton.Server.Controllers
             bool acceptHtml = accept.Contains("text/html", StringComparison.OrdinalIgnoreCase);
 
             string mode = view?.Trim().ToLowerInvariant() ?? "auto";
+            if (view is not null && mode is not ("auto" or "page" or "download" or "inline"))
+            {
+                return this.ApiBadRequest("Invalid view mode. Valid values: auto, page, download, inline.");
+            }
             bool ishtml = mode switch
             {
                 "page" => true,
@@ -89,10 +93,9 @@ namespace Cotton.Server.Controllers
                 string shareUrl = $"{baseAppUrl}/share/{token}";
                 string? hex = (file.EncryptedFilePreviewHash == null || file.EncryptedFilePreviewHash.Length == 0)
                     ? null : Convert.ToHexString(file.EncryptedFilePreviewHash);
-                string previewUrl = $"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp";
-                string previewTag = file.EncryptedFilePreviewHash == null
+                string previewTag = hex == null
                     ? string.Empty
-                    : $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\">";
+                    : $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\">";
                 string html = $"""
                 <!doctype html>
                 <html lang="en">

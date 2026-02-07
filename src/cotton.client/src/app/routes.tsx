@@ -1,6 +1,11 @@
 import type { RouteConfig } from "./types";
 import { RequireAuth } from "../features/auth";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
+
+const RedirectSToShare = () => {
+  const { token } = useParams<{ token: string }>();
+  return <Navigate to={`/share/${token ?? ""}`} replace />;
+};
 import {
   FilesPage,
   HomePage,
@@ -27,7 +32,7 @@ const publicRoutes: RouteConfig[] = [
   {
     path: "/s/:token",
     displayName: "",
-    element: <SharePage />,
+    element: <RedirectSToShare />,
   },
   {
     path: "/share/:token",
