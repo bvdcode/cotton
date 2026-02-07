@@ -47,10 +47,14 @@ export const shareLinks = {
   },
 
   /**
-   * Best-guess backend endpoint for serving a file by share token.
-   * If backend uses a different endpoint, adjust this in one place.
+   * Candidate backend endpoints for serving a file by share token.
+   * SharePage will probe these patterns and use the first one that works.
    */
-  buildBackendDownloadUrlFromToken: (token: string): string => {
-    return `/api/v1/files/download/${encodeURIComponent(token)}`;
+  buildTokenDownloadUrlCandidates: (token: string): string[] => {
+    const encoded = encodeURIComponent(token);
+    return [
+      `/api/v1/files/download/${encoded}`,
+      `/api/v1/files/download?token=${encoded}`,
+    ];
   },
 } as const;
