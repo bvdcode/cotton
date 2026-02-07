@@ -13,8 +13,8 @@ import {
   Movie,
   PictureAsPdf,
 } from "@mui/icons-material";
-import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import { shareLinks } from "../../shared/utils/shareLinks";
 import { formatBytes } from "../files/utils/formatBytes";
 
@@ -34,6 +34,7 @@ function guessViewerKind(contentType: string | null): ViewerKind {
 function guessViewerKindFromName(fileName: string | null): ViewerKind {
   if (!fileName) return "unknown";
   const lower = fileName.toLowerCase();
+
   if (lower.endsWith(".pdf")) return "pdf";
   if (
     lower.endsWith(".png") ||
@@ -106,16 +107,16 @@ function tryParseFileName(contentDisposition: string | null): string | null {
 export const SharePage: React.FC = () => {
   const { t } = useTranslation(["share", "common"]);
   const params = useParams<{ token?: string }>();
-
   const token = params.token ?? null;
 
-  const downloadUrlCandidates = React.useMemo(() => {
-    if (!token) return [];
-    return shareLinks.buildTokenDownloadUrlCandidates(token);
+  const downloadUrl = React.useMemo(() => {
+    if (!token) return null;
+    return shareLinks.buildTokenDownloadUrl(token);
   }, [token]);
 
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
+
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [contentType, setContentType] = React.useState<string | null>(null);
   const [contentLength, setContentLength] = React.useState<number | null>(null);
@@ -124,16 +125,16 @@ export const SharePage: React.FC = () => {
     string | null
   >(null);
   const [pdfBlobUrl, setPdfBlobUrl] = React.useState<string | null>(null);
-  const [previewFailed, setPreviewFailed] = React.useState(false);
+  const [previewFailed, setPreviewFailed] = React.useState<boolean>(false);
 
-  const viewerKind = React.useMemo(() => {
+  const viewerKind = React.useMemo<ViewerKind>(() => {
     const byType = guessViewerKind(contentType);
     if (byType !== "unknown") return byType;
     return guessViewerKindFromName(fileName);
   }, [contentType, fileName]);
 
   React.useEffect(() => {
-    if (!token || downloadUrlCandidates.length === 0) {
+    if (!token || !downloadUrl) {
       setLoading(false);
       setError(t("errors.invalidLink", { ns: "share" }));
       return;
@@ -144,67 +145,56 @@ export const SharePage: React.FC = () => {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setFileName(null);
+      setContentType(null);
+      setContentLength(null);
       setTextContent(null);
       setResolvedDownloadUrl(null);
       setPdfBlobUrl(null);
       setPreviewFailed(false);
-      setContentLength(null);
 
       try {
-        let response: Response | null = null;
-        let chosenDownloadUrl: string | null = null;
-
-        for (const candidate of downloadUrlCandidates) {
-          try {
-            response = await fetch(candidate, { method: "HEAD" });
-            if (!response.ok) {
-              continue;
-            }
-            chosenDownloadUrl = candidate;
-            break;
-          } catch {
-            // Some backends may not support HEAD.
-            try {
-              response = await fetch(candidate, { method: "GET" });
-              if (!response.ok) {
-                continue;
-              }
-              chosenDownloadUrl = candidate;
-              break;
-            } catch {
-              continue;
-            }
+        let response: Response;
+        try {
+          response = await fetch(downloadUrl, { method: "HEAD" });
+          if (!response.ok) {
+            response = await fetch(downloadUrl, { method: "GET" });
           }
+        } catch {
+          response = await fetch(downloadUrl, { method: "GET" });
         }
 
         if (cancelled) return;
 
-        if (!response || !chosenDownloadUrl) {
+        if (!response.ok) {
           setError(t("errors.notFound", { ns: "share" }));
           setLoading(false);
           return;
         }
 
-        setResolvedDownloadUrl(chosenDownloadUrl);
+        setResolvedDownloadUrl(downloadUrl);
 
         const ct = response.headers.get("content-type");
         const cd = response.headers.get("content-disposition");
         const cl = response.headers.get("content-length");
+
         setContentType(ct);
         const parsedName = tryParseFileName(cd);
         setFileName(parsedName);
-        const parsedLength = cl ? Number.parseInt(cl, 10) : NaN;
+
+        const parsedLength = cl ? Number.parseInt(cl, 10) : Number.NaN;
         setContentLength(Number.isFinite(parsedLength) ? parsedLength : null);
 
         const kind =
           guessViewerKind(ct) !== "unknown"
             ? guessViewerKind(ct)
             : guessViewerKindFromName(parsedName);
+
         if (kind === "text") {
-          const textResp =
-            response.type === "opaque"
-              ? await fetch(chosenDownloadUrl)
-              : response;
+          const textResp = await fetch(downloadUrl, { method: "GET" });
+          if (!textResp.ok) {
+            throw new Error("text download failed");
+          }
           const text = await textResp.text();
           if (cancelled) return;
           setTextContent(text);
@@ -223,7 +213,7 @@ export const SharePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, downloadUrlCandidates, t]);
+  }, [downloadUrl, t, token]);
 
   React.useEffect(() => {
     if (!resolvedDownloadUrl) return;
@@ -259,13 +249,13 @@ export const SharePage: React.FC = () => {
   }, [resolvedDownloadUrl, viewerKind]);
 
   const inlineUrl = resolvedDownloadUrl;
-
-  const fallbackKind = viewerKind === "unknown" ? "unknown" : viewerKind;
+  const fallbackKind: ViewerKind =
+    viewerKind === "unknown" ? "unknown" : viewerKind;
+  const title = fileName ?? t("title", { ns: "share" });
 
   return (
     <Box
       width="100%"
-      height="100%"
       sx={{
         display: "flex",
         flexDirection: "column",
@@ -280,24 +270,23 @@ export const SharePage: React.FC = () => {
         sx={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
           gap: 1,
           mb: 1,
           minWidth: 0,
         }}
       >
-        <Typography variant="subtitle1" noWrap sx={{ flex: 1, minWidth: 0 }}>
-          {fileName ?? t("title", { ns: "share" })}
+        <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+          {title}
         </Typography>
-        {resolvedDownloadUrl && (
+        {downloadUrl && (
           <Button
-            variant="outlined"
-            size="small"
-            component="a"
-            href={resolvedDownloadUrl}
+            href={downloadUrl}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noreferrer"
+            variant="outlined"
           >
-            {t("common:actions.download")}
+            {t("actions.download", { ns: "common" })}
           </Button>
         )}
       </Box>
@@ -308,13 +297,12 @@ export const SharePage: React.FC = () => {
             flex: 1,
             minHeight: 0,
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             gap: 2,
           }}
         >
-          <CircularProgress />
+          <CircularProgress size={20} />
           <Typography color="text.secondary">
             {t("loading", { ns: "share" })}
           </Typography>
@@ -359,11 +347,11 @@ export const SharePage: React.FC = () => {
             />
           )}
 
-          {viewerKind === "pdf" && !previewFailed && (
+          {viewerKind === "pdf" && !previewFailed && pdfBlobUrl && (
             <Box
               component="iframe"
-              src={pdfBlobUrl ?? undefined}
-              title={fileName ?? t("title", { ns: "share" })}
+              src={pdfBlobUrl}
+              title={title}
               sx={{ width: "100%", height: "100%", border: "none" }}
             />
           )}
@@ -409,16 +397,19 @@ export const SharePage: React.FC = () => {
               >
                 {getFallbackIcon(fallbackKind)}
               </Box>
+
               {contentLength !== null && (
                 <Typography color="text.secondary" variant="body2">
                   {formatBytes(contentLength)}
                 </Typography>
               )}
+
               {contentType && (
                 <Typography color="text.secondary" variant="caption" noWrap>
                   {contentType}
                 </Typography>
               )}
+
               <Typography color="text.secondary" sx={{ mt: 1 }}>
                 {t("unsupported", { ns: "share" })}
               </Typography>
