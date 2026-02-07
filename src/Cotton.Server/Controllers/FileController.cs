@@ -43,19 +43,25 @@ namespace Cotton.Server.Controllers
         [HttpGet("/s/{token}")]
         public async Task<IActionResult> Share(
             [FromRoute] string token,
-            [FromQuery] bool download = false)
+            [FromQuery] bool? download = null)
         {
             DateTime now = DateTime.UtcNow;
-            var downloadToken = await _dbContext.DownloadTokens
-                .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                .Include(x => x.FileManifest)
-                .ThenInclude(x => x.FileManifestChunks)
-                .FirstOrDefaultAsync();
-            
             bool ishtml = Request.Headers.Accept.ToString()
                 .Contains("text/html", StringComparison.OrdinalIgnoreCase);
 
             string baseAppUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var downloadToken = ishtml
+                ? await _dbContext.DownloadTokens
+                    .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
+                    .Include(x => x.FileManifest)
+                    .FirstOrDefaultAsync()
+                : await _dbContext.DownloadTokens
+                    .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
+                    .Include(x => x.FileManifest)
+                    .ThenInclude(x => x.FileManifestChunks)
+                    .ThenInclude(x => x.Chunk)
+                    .FirstOrDefaultAsync();
 
             if (downloadToken == null)
             {
@@ -76,7 +82,7 @@ namespace Cotton.Server.Controllers
                   <meta charset="utf-8">
                   <title>{System.Net.WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
 
-                  <meta http-equiv="refresh" content="0;url={shareUrl}" />
+                  <meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(shareUrl)}" />
                   <link rel="canonical" href="{shareUrl}" />
 
                   <meta property="og:title" content="{System.Net.WebUtility.HtmlEncode(downloadToken.FileName)}">
@@ -101,7 +107,35 @@ namespace Cotton.Server.Controllers
             }
             else
             {
-                return await DownloadFileByToken(Guid.Empty, token, download);
+                string[] uids = file.FileManifestChunks.GetChunkHashes();
+                PipelineContext context = new()
+                {
+                    FileSizeBytes = file.SizeBytes,
+                    ChunkLengths = file.FileManifestChunks.GetChunkLengths()
+                };
+                Stream stream = _storage.GetBlobStream(uids, context);
+                Response.Headers.ContentEncoding = "identity";
+                Response.Headers.CacheControl = "private, no-store, no-transform";
+                var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(file.ProposedContentHash)}\"");
+
+                if (downloadToken.DeleteAfterUse)
+                {
+                    Response.OnCompleted(async () =>
+                    {
+                        _dbContext.DownloadTokens.Remove(downloadToken);
+                        await _dbContext.SaveChangesAsync();
+                    });
+                }
+
+                var lastModified = new DateTimeOffset(downloadToken.CreatedAt);
+                bool shouldDownload = download ?? true;
+                return File(
+                    stream,
+                    file.ContentType,
+                    fileDownloadName: shouldDownload ? downloadToken.FileName : null,
+                    lastModified: lastModified,
+                    entityTag: entityTag,
+                    enableRangeProcessing: true);
             }
         }
 
