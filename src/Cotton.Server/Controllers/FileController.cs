@@ -26,6 +26,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Quartz;
+using System.Net;
+using System.Text.Json;
 
 namespace Cotton.Server.Controllers
 {
@@ -48,6 +50,10 @@ namespace Cotton.Server.Controllers
             DateTime now = DateTime.UtcNow;
             bool ishtml = Request.Headers.Accept.ToString()
                 .Contains("text/html", StringComparison.OrdinalIgnoreCase);
+            if (download.HasValue)
+            {
+                ishtml = !download.Value;
+            }
 
             string baseAppUrl = $"{Request.Scheme}://{Request.Host}";
 
@@ -74,31 +80,36 @@ namespace Cotton.Server.Controllers
             if (ishtml)
             {
                 string shareUrl = $"{baseAppUrl}/share/{token}";
-                string previewUrl = $"{baseAppUrl}/api/v1/preview/{file.EncryptedFilePreviewHash}.webp";
+                string? hex = (file.EncryptedFilePreviewHash == null || file.EncryptedFilePreviewHash.Length == 0)
+                    ? null : Convert.ToHexString(file.EncryptedFilePreviewHash);
+                string previewUrl = $"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp";
+                string previewTag = file.EncryptedFilePreviewHash == null
+                    ? string.Empty
+                    : $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\">";
                 string html = $"""
                 <!doctype html>
                 <html lang="en">
                 <head>
                   <meta charset="utf-8">
-                  <title>{System.Net.WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
+                  <title>{WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
 
-                  <meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(shareUrl)}" />
-                  <link rel="canonical" href="{shareUrl}" />
+                  <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(shareUrl)}" />
+                  <link rel="canonical" href="{WebUtility.HtmlEncode(shareUrl)}" />
 
-                  <meta property="og:title" content="{System.Net.WebUtility.HtmlEncode(downloadToken.FileName)}">
+                  <meta property="og:title" content="{WebUtility.HtmlEncode(downloadToken.FileName)}">
                   <meta property="og:description" content="Shared via Cotton Cloud">
                   <meta property="og:type" content="website">
-                  <meta property="og:url" content="{shareUrl}">
-                  <meta property="og:image" content="{previewUrl}">
+                  <meta property="og:url" content="{WebUtility.HtmlEncode(shareUrl)}">
+                  {previewTag}
 
                   <meta name="twitter:card" content="summary_large_image">
                 </head>
                 <body>
                   <noscript>
-                    <p><a href="{shareUrl}">Continue</a></p>
+                    <p><a href="{WebUtility.HtmlEncode(shareUrl)}">Continue</a></p>
                   </noscript>
                   <script>
-                    window.location.replace({System.Text.Json.JsonSerializer.Serialize(shareUrl)});
+                    window.location.replace({JsonSerializer.Serialize(shareUrl)});
                   </script>
                 </body>
                 </html>
