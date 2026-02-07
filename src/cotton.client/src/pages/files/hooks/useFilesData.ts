@@ -23,6 +23,9 @@ export const useFilesData = ({
   const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
   const lastNodeIdRef = useRef<string | null>(null);
 
+  const DEFAULT_PAGE_SIZE = 100;
+  const clampPageSize = (pageSize: number) => Math.max(1, Math.min(100, pageSize));
+
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) {
       setListTotalCount(0);
@@ -33,11 +36,19 @@ export const useFilesData = ({
       return;
     }
 
+    // Ensure list view loads immediately after switching.
+    // DataGrid does not necessarily trigger onPaginationModelChange on mount.
+    if (nodeId && !currentPagination) {
+      setCurrentPagination({ page: 0, pageSize: DEFAULT_PAGE_SIZE });
+      lastNodeIdRef.current = nodeId;
+      return;
+    }
+
     if (nodeId && lastNodeIdRef.current && lastNodeIdRef.current !== nodeId) {
       setCurrentPagination((prev) => (prev ? { ...prev, page: 0 } : prev));
     }
     lastNodeIdRef.current = nodeId ?? null;
-  }, [nodeId, layoutType]);
+  }, [nodeId, layoutType, currentPagination]);
 
   const fetchListPage = useCallback(async (page: number, pageSize: number) => {
     if (!nodeId) {
@@ -48,12 +59,13 @@ export const useFilesData = ({
     try {
       const response = await nodesApi.getChildren(nodeId, {
         page: page + 1,
-        pageSize,
+        pageSize: clampPageSize(pageSize),
       });
       setListContent(response.content);
       setListTotalCount(response.totalCount);
     } catch (err) {
       console.error("Failed to load paged content", err);
+      setListError("Failed to load list");
     } finally {
       setListLoading(false);
     }
@@ -66,7 +78,7 @@ export const useFilesData = ({
   }, [nodeId, layoutType, currentPagination, fetchListPage]);
 
   const handlePaginationChange = useCallback((page: number, pageSize: number) => {
-    setCurrentPagination({ page, pageSize });
+    setCurrentPagination({ page, pageSize: clampPageSize(pageSize) });
   }, []);
 
   const handleFolderChanged = useCallback(() => {
