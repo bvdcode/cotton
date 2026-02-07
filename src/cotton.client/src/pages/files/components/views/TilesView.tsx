@@ -81,9 +81,6 @@ export const TilesView: React.FC<IFileListView> = ({
       sx={{
         position: "relative",
         pb: { xs: 1, sm: 3 },
-        height: "100%",
-        minHeight: 0,
-        overflow: "auto",
       }}
     >
       {loading && tiles.length === 0 && (
