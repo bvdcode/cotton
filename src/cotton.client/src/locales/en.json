@@ -35,7 +35,8 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "rename": "Rename",
-      "download": "Download"
+      "download": "Download",
+      "share": "Share"
     },
     "userMenu": {
       "lightMode": "Light Mode",
@@ -45,6 +46,16 @@
     },
     "title": "Cotton Cloud",
     "subtitle": "Setup Wizard"
+  },
+  "share": {
+    "title": "Shared file",
+    "loading": "Loading...",
+    "unsupported": "Preview is not available for this file type.",
+    "errors": {
+      "invalidLink": "Invalid share link.",
+      "notFound": "File not found or link expired.",
+      "loadFailed": "Failed to load the shared file."
+    }
   },
   "login": {
     "title": "Sign in to your account",
@@ -477,6 +488,14 @@
     },
     "rename": {
       "fileNamePlaceholder": "File name"
+    },
+    "share": {
+      "copied": "Share link copied: {{name}}",
+      "errors": {
+        "link": "Failed to generate share link.",
+        "token": "Failed to extract share token.",
+        "copy": "Failed to copy link to clipboard."
+      }
     },
     "preview": {
       "actions": {

@@ -57,6 +57,7 @@ export interface FileOperations {
   onStartRename: (fileId: string, name: string) => void;
   onDelete: (fileId: string, name: string) => void;
   onDownload: (fileId: string, name: string) => void;
+  onShare: (fileId: string, name: string) => void;
   onClick: (fileId: string, name: string, sizeBytes?: number) => void;
   onMediaClick?: (fileId: string) => void;
 }

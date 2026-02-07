@@ -10,6 +10,7 @@ import {
   ProfilePage,
   TrashPage,
   SearchPage,
+  SharePage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Person, Delete, Search } from "@mui/icons-material";
@@ -22,6 +23,16 @@ const publicRoutes: RouteConfig[] = [
     path: "/login",
     displayName: i18n.t("login", { ns: "routes" }),
     element: <LoginPage />,
+  },
+  {
+    path: "/s/:token",
+    displayName: "",
+    element: <SharePage />,
+  },
+  {
+    path: "/share/:token",
+    displayName: "",
+    element: <SharePage />,
   },
 ];
 
