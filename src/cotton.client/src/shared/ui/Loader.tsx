@@ -20,13 +20,13 @@ const Loader: React.FC<LoaderProps> = ({ overlay, title, caption }) => {
         top: 0,
         left: 0,
         opacity: 0,
-        zIndex: 1300,
+        zIndex: (theme) => (overlay ? theme.zIndex.modal - 1 : "auto"),
         backgroundColor: (theme) =>
           overlay
-            ? alpha(theme.palette.background.default, 0.35)
+            ? alpha(theme.palette.background.default, 0.85)
             : theme.palette.background.default,
         position: overlay ? "fixed" : "static",
-        pointerEvents: overlay ? "auto" : "auto",
+        pointerEvents: overlay ? "none" : "auto",
         animation: "fadeIn 0.3s ease-in forwards",
         "@keyframes fadeIn": {
           from: {

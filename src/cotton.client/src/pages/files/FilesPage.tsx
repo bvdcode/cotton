@@ -253,15 +253,40 @@ export const FilesPage: React.FC = () => {
       {fileUpload.dropPreparation.active && (
         <Loader
           overlay
-          title={
-            fileUpload.dropPreparation.phase === "scanning"
-              ? t("uploadDrop.scanning.title", { ns: "files" })
-              : t("uploadDrop.preparing.title", { ns: "files" })
-          }
-          caption={t("uploadDrop.caption", {
-            ns: "files",
-            count: fileUpload.dropPreparation.filesFound,
-          })}
+          title={(() => {
+            const { phase, step } = fileUpload.dropPreparation;
+            if (phase === "scanning") {
+              return t("uploadDrop.scanning.title", { ns: "files" });
+            }
+            if (step === "mapping") {
+              return t("uploadDrop.preparing.mapping.title", { ns: "files" });
+            }
+            if (step === "folders") {
+              return t("uploadDrop.preparing.folders.title", { ns: "files" });
+            }
+            if (step === "conflicts") {
+              return t("uploadDrop.preparing.conflicts.title", { ns: "files" });
+            }
+            if (step === "enqueue") {
+              return t("uploadDrop.preparing.enqueue.title", { ns: "files" });
+            }
+            return t("uploadDrop.preparing.title", { ns: "files" });
+          })()}
+          caption={(() => {
+            const { phase, filesFound, processed } = fileUpload.dropPreparation;
+            const found = t("uploadDrop.captionFound", {
+              ns: "files",
+              count: filesFound,
+            });
+            if (phase === "scanning") return found;
+            if (filesFound <= 0) return found;
+            const progress = t("uploadDrop.captionProgress", {
+              ns: "files",
+              processed: Math.max(0, Math.min(filesFound, processed)),
+              total: filesFound,
+            });
+            return `${found} • ${progress}`;
+          })()}
         />
       )}
       <Snackbar

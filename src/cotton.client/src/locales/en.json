@@ -457,9 +457,23 @@
         "title": "Scanning files…"
       },
       "preparing": {
-        "title": "Preparing upload…"
+        "title": "Preparing upload…",
+        "mapping": {
+          "title": "Preparing upload…"
+        },
+        "folders": {
+          "title": "Creating folders…"
+        },
+        "conflicts": {
+          "title": "Checking conflicts…"
+        },
+        "enqueue": {
+          "title": "Starting upload…"
+        }
       },
-      "caption": "{{count}} files found"
+      "caption": "{{count}} files found",
+      "captionFound": "{{count}} files found",
+      "captionProgress": "{{processed}} / {{total}}"
     },
     "refreshing": "Refreshing…",
     "actions": {
