@@ -42,6 +42,8 @@ import { filesApi } from "../../shared/api/filesApi";
 import { shareLinks } from "../../shared/utils/shareLinks";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { usePreferencesStore } from "../../shared/store/preferencesStore";
+import type { TilesSize } from "../files/types/FileListViewTypes";
+import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
 
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common"]);
@@ -62,11 +64,53 @@ export const TrashPage: React.FC = () => {
 
   const routeNodeId = params.nodeId;
 
-  const { layoutPreferences, setTrashLayoutType } = usePreferencesStore();
+  const { layoutPreferences, setTrashLayoutType, setTrashTilesSize } =
+    usePreferencesStore();
   const initialLayoutType =
     layoutPreferences.trashLayoutType ?? InterfaceLayoutType.Tiles;
   const [layoutType, setLayoutType] =
     React.useState<InterfaceLayoutType>(initialLayoutType);
+
+  const initialTilesSize: TilesSize =
+    layoutPreferences.trashTilesSize ?? "medium";
+  const [tilesSize, setTilesSize] = React.useState<TilesSize>(initialTilesSize);
+
+  React.useEffect(() => {
+    setTrashLayoutType(layoutType);
+  }, [layoutType, setTrashLayoutType]);
+
+  React.useEffect(() => {
+    setTrashTilesSize(tilesSize);
+  }, [tilesSize, setTrashTilesSize]);
+
+  const viewMode: FileBrowserViewMode =
+    layoutType === InterfaceLayoutType.List
+      ? "table"
+      : tilesSize === "small"
+        ? "tiles-small"
+        : tilesSize === "large"
+          ? "tiles-large"
+          : "tiles-medium";
+
+  const cycleViewMode = React.useCallback(() => {
+    switch (viewMode) {
+      case "table":
+        setLayoutType(InterfaceLayoutType.Tiles);
+        setTilesSize("small");
+        return;
+      case "tiles-small":
+        setTilesSize("medium");
+        return;
+      case "tiles-medium":
+        setTilesSize("large");
+        return;
+      case "tiles-large":
+        setLayoutType(InterfaceLayoutType.List);
+        return;
+      default:
+        setLayoutType(InterfaceLayoutType.List);
+    }
+  }, [viewMode]);
 
   const [listTotalCount, setListTotalCount] = React.useState(0);
   const [listLoading, setListLoading] = React.useState(false);
@@ -377,19 +421,17 @@ export const TrashPage: React.FC = () => {
           position: "relative",
           display: "flex",
           flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
         }}
       >
         <PageHeader
           loading={layoutType !== InterfaceLayoutType.List && loading}
           breadcrumbs={breadcrumbs}
           stats={stats}
-          layoutType={layoutType}
+          viewMode={viewMode}
           canGoUp={ancestors.length > 0}
           onGoUp={handleGoUp}
           onHomeClick={goHome}
-          onLayoutToggle={setLayoutType}
+          onViewModeCycle={cycleViewMode}
           statsNamespace="trash"
           customActions={
             ancestors.length === 0 ? (
@@ -413,13 +455,15 @@ export const TrashPage: React.FC = () => {
           </Box>
         )}
 
-        <Box pb={{ xs: 2, sm: 3 }} sx={{ flex: 1, minHeight: 0 }}>
+        <Box pb={{ xs: 2, sm: 3 }}>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
+            tileSize={tilesSize}
+            autoHeight={layoutType === InterfaceLayoutType.List}
             loading={
               layoutType === InterfaceLayoutType.List
                 ? listLoading && !listContent

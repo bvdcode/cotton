@@ -39,10 +39,43 @@ export const TilesView: React.FC<IFileListView> = ({
   loading = false,
   loadingTitle,
   loadingCaption,
+  tileSize = "medium",
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
   const { t } = useTranslation(["common"]);
+
+  const gridTemplateColumns =
+    tileSize === "small"
+      ? {
+          xs: "repeat(4, minmax(0, 1fr))",
+          sm: "repeat(6, minmax(0, 1fr))",
+          md: "repeat(8, minmax(0, 1fr))",
+          lg: "repeat(10, minmax(0, 1fr))",
+          xl: "repeat(12, minmax(0, 1fr))",
+        }
+      : tileSize === "large"
+        ? {
+            xs: "repeat(2, minmax(0, 1fr))",
+            sm: "repeat(3, minmax(0, 1fr))",
+            md: "repeat(4, minmax(0, 1fr))",
+            lg: "repeat(6, minmax(0, 1fr))",
+            xl: "repeat(8, minmax(0, 1fr))",
+          }
+        : {
+            xs: "repeat(3, minmax(0, 1fr))",
+            sm: "repeat(4, minmax(0, 1fr))",
+            md: "repeat(6, minmax(0, 1fr))",
+            lg: "repeat(8, minmax(0, 1fr))",
+            xl: "repeat(12, minmax(0, 1fr))",
+          };
+
+  const gridGap =
+    tileSize === "small"
+      ? { xs: 0.75, sm: 1 }
+      : tileSize === "large"
+        ? { xs: 1.25, sm: 2 }
+        : { xs: 1, sm: 1.5 };
 
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
@@ -83,14 +116,8 @@ export const TilesView: React.FC<IFileListView> = ({
       <Box
         sx={{
           display: "grid",
-          gap: { xs: 1, sm: 1.5 },
-          gridTemplateColumns: {
-            xs: "repeat(3, minmax(0, 1fr))",
-            sm: "repeat(4, minmax(0, 1fr))",
-            md: "repeat(6, minmax(0, 1fr))",
-            lg: "repeat(8, minmax(0, 1fr))",
-            xl: "repeat(12, minmax(0, 1fr))",
-          },
+          gap: gridGap,
+          gridTemplateColumns,
         }}
       >
         {/* New Folder Creation Card */}

@@ -12,6 +12,7 @@ import {
   IconButton,
 } from "@mui/material";
 import React, { useEffect } from "react";
+import { alpha, useTheme } from "@mui/material/styles";
 import { useAuth } from "../../features/auth";
 import { useSettingsStore } from "../../shared/store/settingsStore";
 import { useNodesStore } from "../../shared/store/nodesStore";
@@ -24,11 +25,16 @@ interface AppLayoutProps {
 export const AppLayout = ({ routes }: AppLayoutProps) => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
+  const theme = useTheme();
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const settingsLoading = useSettingsStore((s) => s.loading);
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
   const nodesLoading = useNodesStore((s) => s.loading);
   const [showOverlayLoader, setShowOverlayLoader] = React.useState(false);
+
+  const navTextColor = theme.palette.text.primary;
+  const navActiveBg = alpha(navTextColor, 0.14);
+  const navHoverBg = alpha(navTextColor, 0.2);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -70,6 +76,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
         elevation={1}
         sx={{
           boxShadow: "none",
+          color: navTextColor,
         }}
       >
         <Toolbar
@@ -105,10 +112,10 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                     sx={{
                       display: { xs: "inline-flex", sm: "none" },
                       bgcolor: isActive
-                        ? "rgba(255, 255, 255, 0.1)"
+                        ? navActiveBg
                         : "transparent",
                       "&:hover": {
-                        bgcolor: "rgba(255, 255, 255, 0.15)",
+                        bgcolor: navHoverBg,
                       },
                     }}
                   >
@@ -123,10 +130,10 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                       display: { xs: "none", sm: "inline-flex" },
                       color: "inherit",
                       bgcolor: isActive
-                        ? "rgba(255, 255, 255, 0.1)"
+                        ? navActiveBg
                         : "transparent",
                       "&:hover": {
-                        bgcolor: "rgba(255, 255, 255, 0.15)",
+                        bgcolor: navHoverBg,
                       },
                     }}
                   >

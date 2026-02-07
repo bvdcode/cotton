@@ -140,7 +140,7 @@ export const ListView: React.FC<IFileListView> = ({
     <Box
       sx={{
         width: "100%",
-        height: "100%",
+        height: autoHeight ? "auto" : "100%",
         minHeight: 0,
         position: "relative",
       }}
@@ -164,7 +164,7 @@ export const ListView: React.FC<IFileListView> = ({
         </Box>
       )}
       <DataGrid
-        sx={{ height: "100%" }}
+        sx={{ height: autoHeight ? "auto" : "100%" }}
         rows={rows}
         columns={columns}
         disableRowSelectionOnClick

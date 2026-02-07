@@ -82,6 +82,8 @@ export interface PaginationProps {
   loading?: boolean;
 }
 
+export type TilesSize = "small" | "medium" | "large";
+
 /**
  * Interface for file list view components.
  * Follows the Interface Segregation Principle (ISP) - defines minimal required contract.
@@ -146,6 +148,12 @@ export interface IFileListView {
    * Optional pagination props for List view (not used in Tiles view)
    */
   pagination?: PaginationProps;
+
+  /**
+   * Optional tile size for Tiles view.
+   * Defaults to "medium" when not provided.
+   */
+  tileSize?: TilesSize;
 
   /**
    * Whether to use auto height for rows (DataGrid built-in feature)

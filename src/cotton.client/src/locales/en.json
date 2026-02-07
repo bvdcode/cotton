@@ -483,7 +483,11 @@
       "goUp": "Go up",
       "dropFiles": "Drop files to upload",
       "switchToTilesView": "Switch to tiles",
-      "switchToListView": "Switch to list view"
+      "switchToListView": "Switch to list view",
+      "switchToTableView": "Switch to table",
+      "switchToSmallTilesView": "Small tiles",
+      "switchToMediumTilesView": "Medium tiles",
+      "switchToLargeTilesView": "Large tiles"
     },
     "breadcrumbs": {
       "ariaLabel": "Breadcrumbs",
@@ -600,6 +604,10 @@
       "switchToTiles": "Switch to tiles view",
       "switchToListView": "Switch to list view",
       "switchToTilesView": "Switch to tiles view",
+      "switchToTableView": "Switch to table",
+      "switchToSmallTilesView": "Small tiles",
+      "switchToMediumTilesView": "Medium tiles",
+      "switchToLargeTilesView": "Large tiles",
       "emptyTrash": "Empty trash"
     },
     "breadcrumbs": {

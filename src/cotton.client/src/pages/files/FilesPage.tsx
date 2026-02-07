@@ -48,7 +48,7 @@ export const FilesPage: React.FC = () => {
 
   const routeNodeId = params.nodeId;
 
-  const { layoutType, setLayoutType } = useFilesLayout();
+  const { layoutType, tilesSize, viewMode, cycleViewMode } = useFilesLayout();
 
   useEffect(() => {
     const loadChildren = layoutType !== InterfaceLayoutType.List;
@@ -338,19 +338,17 @@ export const FilesPage: React.FC = () => {
           position: "relative",
           display: "flex",
           flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
         }}
       >
         <PageHeader
           loading={loading}
           breadcrumbs={breadcrumbs}
           stats={stats}
-          layoutType={layoutType}
+          viewMode={viewMode}
           canGoUp={ancestors.length > 0}
           onGoUp={handleGoUp}
           onHomeClick={goHome}
-          onLayoutToggle={setLayoutType}
+          onViewModeCycle={cycleViewMode}
           showUpload={!!nodeId}
           showNewFolder={!!nodeId}
           onUploadClick={fileUpload.handleUploadClick}
@@ -364,13 +362,15 @@ export const FilesPage: React.FC = () => {
           </Box>
         )}
 
-        <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Box>
           <FileListViewFactory
             layoutType={layoutType}
             tiles={tiles}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             isCreatingFolder={isCreatingInThisFolder}
+            tileSize={tilesSize}
+            autoHeight={layoutType === InterfaceLayoutType.List}
             loading={
               layoutType === InterfaceLayoutType.List
                 ? listLoading && !listContent
