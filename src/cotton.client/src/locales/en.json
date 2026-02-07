@@ -460,7 +460,9 @@
     },
     "conflicts": {
       "title": "File already exists",
-      "description": "A file with this name already exists in this folder. Upload as {{newName}}?"
+      "description": "A file with this name already exists in this folder. Upload as {{newName}}?",
+      "skip": "Skip",
+      "skipAll": "Skip all"
     },
     "deleteFolder": {
       "confirmTitle": "Delete folder \"{{name}}\"?",

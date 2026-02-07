@@ -5,5 +5,6 @@ export type { MediaItem } from "./MediaLightbox";
 export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";
 export { FilePreviewModal } from "./FilePreviewModal";
+export { FileConflictDialog } from "./FileConflictDialog";
 export * from "./preview";
 export * from "./views";

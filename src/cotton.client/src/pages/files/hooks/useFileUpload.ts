@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useConfirm } from "material-ui-confirm";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { uploadManager } from "../../../shared/upload/UploadManager";
-import { resolveUploadConflicts } from "../utils/uploadConflicts";
+import {
+  resolveUploadConflicts,
+  ConflictAction,
+} from "../utils/uploadConflicts";
+import { useFileConflictDialog } from "./useFileConflictDialog";
 
 interface UseBreadcrumb {
   id: string;
@@ -22,8 +25,10 @@ export const useFileUpload = (
   content: NodeContentDto | undefined,
 ) => {
   const { t } = useTranslation(["files"]);
-  const confirm = useConfirm();
   const [isDragging, setIsDragging] = useState(false);
+  const { dialogState, showConflictDialog, handleResolve, handleExited } =
+    useFileConflictDialog();
+  const skipAllConflictsRef = useRef<boolean>(false);
 
   const baseLabel = useMemo(() => {
     const label = breadcrumbs
@@ -41,32 +46,36 @@ export const useFileUpload = (
       const list = Array.isArray(files) ? files : Array.from(files);
       if (list.length === 0) return;
 
+      skipAllConflictsRef.current = false;
+
       const contentForCheck =
         content ?? (await nodesApi.getChildren(nodeId)).content;
 
       const confirmRename = async (
         newName: string,
-      ): Promise<{ confirmed: boolean }> => {
-        const result = await confirm({
-          title: t("conflicts.title", { ns: "files" }),
-          description: t("conflicts.description", { ns: "files", newName }),
-          confirmationText: t("common:actions.confirm"),
-          cancellationText: t("common:actions.cancel"),
-        });
-        return { confirmed: result.confirmed };
+      ): Promise<ConflictAction> => {
+        if (skipAllConflictsRef.current) {
+          return ConflictAction.SkipAll;
+        }
+
+        const action = await showConflictDialog(newName);
+        if (action === ConflictAction.SkipAll) {
+          skipAllConflictsRef.current = true;
+        }
+        return action;
       };
 
-      const resolved = await resolveUploadConflicts(
+      const result = await resolveUploadConflicts(
         list,
         contentForCheck,
         confirmRename,
       );
 
-      if (resolved.length === 0) return;
+      if (result.cancelled || result.files.length === 0) return;
 
-      uploadManager.enqueue(resolved, nodeId, baseLabel);
+      uploadManager.enqueue(result.files, nodeId, baseLabel);
     },
-    [nodeId, content, confirm, t, baseLabel],
+    [nodeId, content, t, baseLabel, showConflictDialog],
   );
 
   const handleUploadDroppedFiles = useMemo(
@@ -74,16 +83,20 @@ export const useFileUpload = (
       if (!nodeId) return;
       if (dropped.length === 0) return;
 
+      skipAllConflictsRef.current = false;
+
       const confirmRename = async (
         newName: string,
-      ): Promise<{ confirmed: boolean }> => {
-        const result = await confirm({
-          title: t("conflicts.title", { ns: "files" }),
-          description: t("conflicts.description", { ns: "files", newName }),
-          confirmationText: t("common:actions.confirm"),
-          cancellationText: t("common:actions.cancel"),
-        });
-        return { confirmed: result.confirmed };
+      ): Promise<ConflictAction> => {
+        if (skipAllConflictsRef.current) {
+          return ConflictAction.SkipAll;
+        }
+
+        const action = await showConflictDialog(newName);
+        if (action === ConflictAction.SkipAll) {
+          skipAllConflictsRef.current = true;
+        }
+        return action;
       };
 
       const folderIdByKey = new Map<string, string>();
@@ -206,16 +219,17 @@ export const useFileUpload = (
       for (const [targetNodeId, bucket] of filesByTarget) {
         const contentForCheck = (await nodesApi.getChildren(targetNodeId))
           .content;
-        const resolved = await resolveUploadConflicts(
+        const result = await resolveUploadConflicts(
           bucket.files,
           contentForCheck,
           confirmRename,
         );
-        if (resolved.length === 0) continue;
-        uploadManager.enqueue(resolved, targetNodeId, bucket.label);
+        if (result.cancelled) return;
+        if (result.files.length === 0) continue;
+        uploadManager.enqueue(result.files, targetNodeId, bucket.label);
       }
     },
-    [nodeId, baseLabel, confirm, t],
+    [nodeId, baseLabel, showConflictDialog],
   );
 
   const handleUploadClick = () => {
@@ -331,5 +345,10 @@ export const useFileUpload = (
     handleDragOver,
     handleDragLeave,
     handleDrop,
+    conflictDialog: {
+      state: dialogState,
+      onResolve: handleResolve,
+      onExited: handleExited,
+    },
   };
 };

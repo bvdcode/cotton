@@ -5,6 +5,7 @@ import {
   PageHeader,
   MediaLightbox,
   FilePreviewModal,
+  FileConflictDialog,
 } from "./components";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -316,6 +317,13 @@ export const FilesPage: React.FC = () => {
           getSignedMediaUrl={getSignedMediaUrl}
         />
       )}
+
+      <FileConflictDialog
+        open={fileUpload.conflictDialog.state.open}
+        newName={fileUpload.conflictDialog.state.newName}
+        onResolve={fileUpload.conflictDialog.onResolve}
+        onExited={fileUpload.conflictDialog.onExited}
+      />
     </>
   );
 };
