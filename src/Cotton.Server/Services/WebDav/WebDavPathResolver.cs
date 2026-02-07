@@ -50,7 +50,9 @@ public class WebDavPathResolver(
             };
         }
 
-        var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+        var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.UnescapeDataString)
+            .ToArray();
         var parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
         var currentNode = await _navigator.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
         if (currentNode is null)
@@ -121,7 +123,10 @@ public class WebDavPathResolver(
 
     public async Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default)
     {
-        var resolved = await _navigator.ResolveParentAndNameAsync(userId, path, DefaultNodeType, ct);
+        // Decode percent-encoded sequences so Windows WebDAV clients can upload names containing
+        // reserved URL characters like '#' and '%' (sent as %23, %25).
+        var decodedPath = Uri.UnescapeDataString(path ?? string.Empty);
+        var resolved = await _navigator.ResolveParentAndNameAsync(userId, decodedPath, DefaultNodeType, ct);
         if (resolved is null)
         {
             return new WebDavParentResult { Found = false };
