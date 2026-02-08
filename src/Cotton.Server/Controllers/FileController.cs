@@ -97,7 +97,8 @@ namespace Cotton.Server.Controllers
                     ? null : Convert.ToHexString(file.EncryptedFilePreviewHash);
                 string previewTag = hex == null
                     ? string.Empty
-                    : $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\">";
+                    : ($"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\">\n" +
+                      $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\">");
                 string html = $"""
                 <!doctype html>
                 <html lang="en">
