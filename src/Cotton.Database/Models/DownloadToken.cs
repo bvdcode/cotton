@@ -14,8 +14,8 @@ namespace Cotton.Database.Models
         [Column("token")]
         public string Token { get; set; } = null!;
 
-        [Column("file_manifest_id")]
-        public Guid FileManifestId { get; set; }
+        [Column("node_file_id")]
+        public Guid NodeFileId { get; set; }
 
         [Column("expires_at")]
         public DateTime? ExpiresAt { get; set; }
@@ -30,6 +30,6 @@ namespace Cotton.Database.Models
         public virtual User CreatedByUser { get; set; } = null!;
 
         [DeleteBehavior(DeleteBehavior.Restrict)]
-        public virtual FileManifest FileManifest { get; set; } = null!;
+        public virtual NodeFile NodeFile { get; set; } = null!;
     }
 }

@@ -89,23 +89,25 @@ export const useSearchFileList = ({
           ({
             kind: "folder",
             node,
-            path: nodePaths[node.id] ? stripRootPrefix(nodePaths[node.id]) : undefined,
+            path: nodePaths[node.id]
+              ? stripRootPrefix(nodePaths[node.id])
+              : undefined,
           }) as const,
       ),
-      ...sortedFiles.map(
-        (file) => {
-          const fullPath = consumeNextPath(file.name);
-          // containerPath stays as the full original path for backend resolution
-          const containerPath = fullPath ? getContainerPath(fullPath) : undefined;
-          const displayContainerPath = containerPath ? stripRootPrefix(containerPath) : undefined;
-          return {
-            kind: "file",
-            file,
-            path: displayContainerPath,
-            containerPath,
-          } as const;
-        },
-      ),
+      ...sortedFiles.map((file) => {
+        const fullPath = consumeNextPath(file.name);
+        // containerPath stays as the full original path for backend resolution
+        const containerPath = fullPath ? getContainerPath(fullPath) : undefined;
+        const displayContainerPath = containerPath
+          ? stripRootPrefix(containerPath)
+          : undefined;
+        return {
+          kind: "file",
+          file,
+          path: displayContainerPath,
+          containerPath,
+        } as const;
+      }),
     ];
   }, [results, hasQuery, rootNodeName]);
 

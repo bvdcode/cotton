@@ -48,7 +48,7 @@ namespace Cotton.Server.Jobs
             }
 
             await _dbContext.DownloadTokens
-                .Where(dt => manifestIds.Contains(dt.FileManifestId))
+                .Where(dt => manifestIds.Contains(dt.NodeFile.FileManifestId))
                 .ExecuteDeleteAsync(ct);
 
             await _dbContext.FileManifestChunks

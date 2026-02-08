@@ -49,13 +49,16 @@ namespace Cotton.Server.Handlers.Files
 
             IQueryable<DownloadToken> query = _dbContext.DownloadTokens
                 .Where(x => x.Token == request.Token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                .Include(x => x.FileManifest)
+                .Include(x => x.NodeFile)
+                .ThenInclude(x => x.FileManifest)
                 .AsQueryable();
 
             if (!isHtml && !isHead)
             {
                 query = query
-                    .Include(x => x.FileManifest.FileManifestChunks)
+                    .Include(x => x.NodeFile)
+                    .ThenInclude(x => x.FileManifest)
+                    .ThenInclude(x => x.FileManifestChunks)
                     .ThenInclude(x => x.Chunk);
             }
 
@@ -68,7 +71,7 @@ namespace Cotton.Server.Handlers.Files
                     : ShareFileResult.AsNotFound("File not found");
             }
 
-            var file = downloadToken.FileManifest;
+            var file = downloadToken.NodeFile.FileManifest;
 
             if (isHtml)
             {
