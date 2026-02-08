@@ -342,6 +342,7 @@ export const useFileUpload = (
   type DroppedScanResult = {
     files: DroppedFile[];
     skippedNotFound: number;
+    skippedExamples: string[];
   };
 
   type NamedErrorLike = { name?: string };
@@ -364,6 +365,16 @@ export const useFileUpload = (
   ): Promise<DroppedScanResult> => {
     const files: DroppedFile[] = [];
     let skippedNotFound = 0;
+    const skippedExamples: string[] = [];
+    const MAX_SKIPPED_EXAMPLES = 3;
+
+    const rememberSkippedExample = (entry: FileSystemEntry) => {
+      if (skippedExamples.length >= MAX_SKIPPED_EXAMPLES) return;
+      const fullPath = (entry as { fullPath?: string }).fullPath;
+      const display = (fullPath ?? entry.name).replace(/^\/+/, "").trim();
+      if (display.length === 0) return;
+      skippedExamples.push(display);
+    };
 
     let lastNotifiedCount = 0;
     let lastNotifyTime = 0;
@@ -388,6 +399,7 @@ export const useFileUpload = (
         } catch (e) {
           if (isNotFoundError(e as Error)) {
             skippedNotFound += 1;
+            rememberSkippedExample(entry);
             return;
           }
           throw e;
@@ -425,6 +437,7 @@ export const useFileUpload = (
         } catch (e) {
           if (isNotFoundError(e as Error)) {
             skippedNotFound += 1;
+            rememberSkippedExample(entry);
             return;
           }
           throw e;
@@ -447,7 +460,7 @@ export const useFileUpload = (
     }
     await Promise.all(promises);
 
-    return { files, skippedNotFound };
+    return { files, skippedNotFound, skippedExamples };
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -510,11 +523,27 @@ export const useFileUpload = (
         );
 
         if (scan.skippedNotFound > 0) {
+          const more = Math.max(0, scan.skippedNotFound - scan.skippedExamples.length);
+          const moreSuffix =
+            more > 0
+              ? t("uploadDrop.toasts.more", { ns: "files", count: more })
+              : "";
+          const examples =
+            scan.skippedExamples.length > 0
+              ? `${scan.skippedExamples.join(", ")}${moreSuffix}`
+              : "";
+
           onToast?.(
-            t("uploadDrop.toasts.someItemsSkipped", {
-              ns: "files",
-              count: scan.skippedNotFound,
-            }),
+            examples.length > 0
+              ? t("uploadDrop.toasts.someItemsSkippedWithExamples", {
+                  ns: "files",
+                  count: scan.skippedNotFound,
+                  examples,
+                })
+              : t("uploadDrop.toasts.someItemsSkipped", {
+                  ns: "files",
+                  count: scan.skippedNotFound,
+                }),
           );
         }
 
