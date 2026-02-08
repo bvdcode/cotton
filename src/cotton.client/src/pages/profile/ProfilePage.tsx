@@ -6,6 +6,7 @@ import {
   SessionsCard,
   WebDavTokenCard,
 } from "./components";
+import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { useEffect } from "react";
 
 export const ProfilePage = () => {
@@ -44,6 +45,7 @@ export const ProfilePage = () => {
           </Box>
         </Stack>
         <SessionsCard />
+        <ChangePasswordCard />
         <WebDavTokenCard />
       </Stack>
     </Box>

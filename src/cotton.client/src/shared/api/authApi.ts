@@ -17,6 +17,11 @@ interface LoginResponse {
   accessToken: string;
 }
 
+interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
 /**
  * User info response matching backend UserDto : BaseDto<Guid>
  */
@@ -51,12 +56,15 @@ export const authApi = {
    */
   me: async (): Promise<User> => {
     const response = await httpClient.get<UserInfoResponse>("auth/me");
-    
+
     // Validate critical fields from BaseDto
     if (!response.data.createdAt || !response.data.updatedAt) {
-      console.error("Missing required BaseDto fields from /auth/me:", response.data);
+      console.error(
+        "Missing required BaseDto fields from /auth/me:",
+        response.data,
+      );
     }
-    
+
     return {
       id: response.data.id,
       role: response.data.role,
@@ -92,5 +100,9 @@ export const authApi = {
   getWebDavToken: async (): Promise<string> => {
     const response = await httpClient.get<string>("auth/webdav/token");
     return response.data;
+  },
+
+  changePassword: async (request: ChangePasswordRequest): Promise<void> => {
+    await httpClient.put("users/me/password", request);
   },
 };

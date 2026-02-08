@@ -3,21 +3,19 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
-using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Mediator;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using System.Net;
 using System.Text.Json;
-using Cotton.Database.Models.Enums;
 
 namespace Cotton.Server.Handlers.Files
 {

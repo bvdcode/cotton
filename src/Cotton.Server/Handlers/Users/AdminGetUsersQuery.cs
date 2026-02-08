@@ -3,7 +3,6 @@
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
-using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;

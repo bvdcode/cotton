@@ -8,7 +8,6 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
-using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Providers
