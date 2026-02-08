@@ -34,7 +34,12 @@ namespace Cotton.Server
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
-
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+                options.KnownIPNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services
                 .AddMediator()
@@ -61,10 +66,7 @@ namespace Cotton.Server
                 .AddJwt();
 
             var app = builder.Build();
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
-            });
+            app.UseForwardedHeaders();
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
