@@ -26,8 +26,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Quartz;
-using System.Net;
-using System.Text.Json;
 
 namespace Cotton.Server.Controllers
 {
@@ -48,128 +46,59 @@ namespace Cotton.Server.Controllers
             [FromRoute] string token,
             [FromQuery] string? view = null)
         {
-            bool isHead = HttpMethods.IsHead(Request.Method);
-            DateTime now = DateTime.UtcNow;
+            var result = await _mediator.Send(new ShareFileQuery(token, view, Request));
 
-            string mode = (view ?? "page").Trim().ToLowerInvariant();
-            if (view is not null && mode is not ("page" or "download" or "inline"))
+            switch (result.Kind)
             {
-                return this.ApiBadRequest("Invalid view mode. Valid values: page, download, inline.");
-            }
-
-            bool ishtml = mode == "page";
-            bool isInlineFile = mode == "inline";
-
-            string baseAppUrl = $"{Request.Scheme}://{Request.Host}";
-
-            var query = _dbContext.DownloadTokens
-                .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                .Include(x => x.FileManifest)
-                .AsQueryable();
-            if (!ishtml && !isHead)
-            {
-                query = query
-                    .Include(x => x.FileManifest.FileManifestChunks)
-                    .ThenInclude(x => x.Chunk);
-            }
-            var downloadToken = await query.FirstOrDefaultAsync();
-
-            if (downloadToken == null)
-            {
-                return ishtml
-                    ? Redirect($"{baseAppUrl}/404")
-                    : this.ApiNotFound("File not found");
-            }
-
-            var file = downloadToken.FileManifest;
-            if (ishtml)
-            {
-                string canonicalUrl = $"{baseAppUrl}/s/{token}";
-                string appShareUrl = $"{baseAppUrl}/share/{token}";
-                string? hex = (file.EncryptedFilePreviewHash == null || file.EncryptedFilePreviewHash.Length == 0)
-                    ? null : Convert.ToHexString(file.EncryptedFilePreviewHash);
-                string previewTag = hex == null
-                    ? string.Empty
-                    : ($"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />\n" +
-                      $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />");
-                string html = $"""
-                <!doctype html>
-                <html lang="en">
-                <head>
-                  <meta charset="utf-8">
-                  <title>{WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
-
-                  <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(appShareUrl)}" />
-                  <link rel="canonical" href="{WebUtility.HtmlEncode(canonicalUrl)}" />
-                  <meta property="og:site_name" content="Cotton Cloud" />
-                  <meta property="og:title" content="{WebUtility.HtmlEncode(downloadToken.FileName)}" />
-                  <meta property="og:description" content="Shared via Cotton Cloud" />
-                  <meta property="og:type" content="website" />
-                  <meta property="og:url" content="{WebUtility.HtmlEncode(canonicalUrl)}" />
-                  {previewTag}
-
-                  <meta name="twitter:card" content="summary_large_image" />
-                </head>
-                <body>
-                  <noscript>
-                    <p><a href="{WebUtility.HtmlEncode(appShareUrl)}">Continue</a></p>
-                  </noscript>
-                  <script>
-                    window.location.replace({JsonSerializer.Serialize(appShareUrl)});
-                  </script>
-                </body>
-                </html>
-                """;
-                return Content(html, "text/html; charset=utf-8");
-            }
-            else
-            {
-                Response.Headers.ContentEncoding = "identity";
-                Response.Headers.CacheControl = "private, no-store, no-transform";
-                var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(file.ProposedContentHash)}\"");
-
-                var lastModified = new DateTimeOffset(downloadToken.CreatedAt);
-
-                if (isHead)
-                {
-                    Response.ContentType = file.ContentType;
-                    Response.ContentLength = file.SizeBytes;
-                    Response.Headers.ETag = entityTag.ToString();
-
-                    var cd = new ContentDispositionHeaderValue(isInlineFile ? "inline" : "attachment")
+                case "badRequest":
+                    return this.ApiBadRequest(result.ErrorMessage ?? "Bad request");
+                case "notFound":
+                    return this.ApiNotFound(result.ErrorMessage ?? "File not found");
+                case "redirect":
+                    return Redirect(result.RedirectUrl ?? "/");
+                case "html":
+                    return Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8");
+                case "head":
+                    Response.Headers.ContentEncoding = "identity";
+                    Response.Headers.CacheControl = "private, no-store, no-transform";
+                    Response.ContentType = result.ContentType;
+                    Response.ContentLength = result.ContentLength;
+                    if (!string.IsNullOrWhiteSpace(result.EntityTag))
                     {
-                        FileNameStar = downloadToken.FileName,
-                        FileName = downloadToken.FileName
+                        Response.Headers.ETag = result.EntityTag;
+                    }
+                    var cd = new ContentDispositionHeaderValue(result.Inline == true ? "inline" : "attachment")
+                    {
+                        FileNameStar = result.FileName,
+                        FileName = result.FileName,
                     };
                     Response.Headers[HeaderNames.ContentDisposition] = cd.ToString();
-
                     return new EmptyResult();
-                }
-
-                string[] uids = file.FileManifestChunks.GetChunkHashes();
-                PipelineContext context = new()
-                {
-                    FileSizeBytes = file.SizeBytes,
-                    ChunkLengths = file.FileManifestChunks.GetChunkLengths()
-                };
-                Stream stream = _storage.GetBlobStream(uids, context);
-
-                if (downloadToken.DeleteAfterUse)
-                {
-                    Response.OnCompleted(async () =>
+                case "stream":
+                    Response.Headers.ContentEncoding = "identity";
+                    Response.Headers.CacheControl = "private, no-store, no-transform";
+                    if (result.DeleteAfterUse && result.DeleteTokenId.HasValue)
                     {
-                        _dbContext.DownloadTokens.Remove(downloadToken);
-                        await _dbContext.SaveChangesAsync();
-                    });
-                }
-                string? downloadName = isInlineFile ? null : downloadToken.FileName;
-                return File(
-                    stream,
-                    file.ContentType,
-                    fileDownloadName: downloadName,
-                    lastModified: lastModified,
-                    entityTag: entityTag,
-                    enableRangeProcessing: true);
+                        Response.OnCompleted(async () =>
+                        {
+                            var tokenEntity = await _dbContext.DownloadTokens
+                                .FirstOrDefaultAsync(x => x.Id == result.DeleteTokenId.Value);
+                            if (tokenEntity != null)
+                            {
+                                _dbContext.DownloadTokens.Remove(tokenEntity);
+                                await _dbContext.SaveChangesAsync();
+                            }
+                        });
+                    }
+                    return File(
+                        result.FileStream!,
+                        result.ContentType!,
+                        fileDownloadName: result.DownloadName,
+                        lastModified: result.LastModified,
+                        entityTag: result.EntityTagValue!,
+                        enableRangeProcessing: true);
+                default:
+                    return this.ApiBadRequest("Invalid share response");
             }
         }
 
