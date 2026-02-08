@@ -481,7 +481,15 @@
       },
       "caption": "{{count}} files found",
       "captionFound": "{{count}} files found",
-      "captionProgress": "{{processed}} / {{total}}"
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "No files were uploaded (all were skipped).",
+        "someItemsSkipped_one": "Skipped {{count}} item that could not be read.",
+        "someItemsSkipped_other": "Skipped {{count}} items that could not be read."
+      },
+      "errors": {
+        "dropFailed": "Failed to process dropped items. Please try again."
+      }
     },
     "refreshing": "Refreshing…",
     "actions": {

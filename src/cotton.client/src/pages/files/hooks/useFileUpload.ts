@@ -37,13 +37,19 @@ type DropPreparationState = {
   processed: number;
 };
 
+type FileUploadOptions = {
+  onToast?: (message: string) => void;
+};
+
 export const useFileUpload = (
   nodeId: string | null,
   breadcrumbs: UseBreadcrumb[],
   content: NodeContentDto | undefined,
+  options?: FileUploadOptions,
 ) => {
   const { t } = useTranslation(["files"]);
   const [isDragging, setIsDragging] = useState(false);
+  const dragDepthRef = useRef<number>(0);
   const [dropPreparation, setDropPreparation] = useState<DropPreparationState>({
     active: false,
     phase: "idle",
@@ -54,6 +60,7 @@ export const useFileUpload = (
   const { dialogState, showConflictDialog, handleResolve, handleExited } =
     useFileConflictDialog();
   const skipAllConflictsRef = useRef<boolean>(false);
+  const onToast = options?.onToast;
 
   const baseLabel = useMemo(() => {
     const label = breadcrumbs
@@ -96,11 +103,18 @@ export const useFileUpload = (
         confirmRename,
       );
 
-      if (result.cancelled || result.files.length === 0) return;
+      if (result.cancelled) return;
+
+      if (result.files.length === 0) {
+        if (skipAllConflictsRef.current) {
+          onToast?.(t("uploadDrop.toasts.noneCopied", { ns: "files" }));
+        }
+        return;
+      }
 
       uploadManager.enqueue(result.files, nodeId, baseLabel);
     },
-    [nodeId, content, baseLabel, showConflictDialog],
+    [nodeId, content, baseLabel, showConflictDialog, onToast, t],
   );
 
   const handleUploadDroppedFiles = useMemo(
@@ -118,6 +132,8 @@ export const useFileUpload = (
       }));
 
       skipAllConflictsRef.current = false;
+
+      let totalEnqueued = 0;
 
       const confirmRename = async (
         newName: string,
@@ -299,9 +315,14 @@ export const useFileUpload = (
           processed: dropped.length,
         }));
         uploadManager.enqueue(result.files, targetNodeId, bucket.label);
+        totalEnqueued += result.files.length;
+      }
+
+      if (totalEnqueued === 0 && skipAllConflictsRef.current) {
+        onToast?.(t("uploadDrop.toasts.noneCopied", { ns: "files" }));
       }
     },
-    [nodeId, baseLabel, showConflictDialog],
+    [nodeId, baseLabel, showConflictDialog, onToast, t],
   );
 
   const handleUploadClick = () => {
@@ -318,11 +339,31 @@ export const useFileUpload = (
     input.click();
   };
 
+  type DroppedScanResult = {
+    files: DroppedFile[];
+    skippedNotFound: number;
+  };
+
+  type NamedErrorLike = { name?: string };
+
+  const isNotFoundError = (
+    error: DOMException | Error | NamedErrorLike | null | undefined,
+  ): boolean => {
+    if (error instanceof DOMException) return error.name === "NotFoundError";
+    if (error instanceof Error) return error.name === "NotFoundError";
+    if (typeof error === "object" && error !== null) {
+      const maybe = error as NamedErrorLike;
+      return maybe.name === "NotFoundError";
+    }
+    return false;
+  };
+
   const getAllFilesFromItems = async (
     items: DataTransferItemList,
     onFileFound: (filesFound: number) => void,
-  ): Promise<DroppedFile[]> => {
+  ): Promise<DroppedScanResult> => {
     const files: DroppedFile[] = [];
+    let skippedNotFound = 0;
 
     let lastNotifiedCount = 0;
     let lastNotifyTime = 0;
@@ -339,15 +380,24 @@ export const useFileUpload = (
     const traverseEntry = async (entry: FileSystemEntry): Promise<void> => {
       if (entry.isFile) {
         const fileEntry = entry as FileSystemFileEntry;
-        const file = await new Promise<File>((resolve, reject) => {
-          fileEntry.file(resolve, reject);
-        });
+        let file: File;
+        try {
+          file = await new Promise<File>((resolve, reject) => {
+            fileEntry.file(resolve, reject);
+          });
+        } catch (e) {
+          if (isNotFoundError(e as Error)) {
+            skippedNotFound += 1;
+            return;
+          }
+          throw e;
+        }
         const clonedFile = new File([file], file.name, {
           type: file.type,
           lastModified: file.lastModified,
         });
 
-        const fullPath = (entry as unknown as { fullPath?: string }).fullPath;
+        const fullPath = (entry as { fullPath?: string }).fullPath;
         const relativePath = (fullPath ?? file.name).replace(/^\/+/, "");
         files.push({ file: clonedFile, relativePath });
         notify();
@@ -369,7 +419,16 @@ export const useFileUpload = (
           return allEntries;
         };
 
-        const entries = await readAllEntries();
+        let entries: FileSystemEntry[];
+        try {
+          entries = await readAllEntries();
+        } catch (e) {
+          if (isNotFoundError(e as Error)) {
+            skippedNotFound += 1;
+            return;
+          }
+          throw e;
+        }
         for (const childEntry of entries) {
           await traverseEntry(childEntry);
         }
@@ -388,21 +447,30 @@ export const useFileUpload = (
     }
     await Promise.all(promises);
 
-    return files;
+    return { files, skippedNotFound };
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    dragDepthRef.current += 1;
     if (!isDragging) {
       setIsDragging(true);
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.currentTarget === e.target) {
+
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
       setIsDragging(false);
     }
   };
@@ -410,11 +478,15 @@ export const useFileUpload = (
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    dragDepthRef.current = 0;
     setIsDragging(false);
 
     if (!nodeId) return;
 
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+    const hasItems = e.dataTransfer.items && e.dataTransfer.items.length > 0;
+    const hasFiles = e.dataTransfer.files && e.dataTransfer.files.length > 0;
+
+    if (hasItems) {
       setDropPreparation({
         active: true,
         phase: "scanning",
@@ -422,8 +494,9 @@ export const useFileUpload = (
         filesFound: 0,
         processed: 0,
       });
+
       try {
-        const files = await getAllFilesFromItems(
+        const scan = await getAllFilesFromItems(
           e.dataTransfer.items,
           (filesFound) =>
             setDropPreparation((prev) => ({
@@ -436,17 +509,28 @@ export const useFileUpload = (
             })),
         );
 
-        if (files.length > 0) {
+        if (scan.skippedNotFound > 0) {
+          onToast?.(
+            t("uploadDrop.toasts.someItemsSkipped", {
+              ns: "files",
+              count: scan.skippedNotFound,
+            }),
+          );
+        }
+
+        if (scan.files.length > 0) {
           setDropPreparation((prev) => ({
             ...prev,
             active: true,
             phase: "preparing",
             step: "mapping",
-            filesFound: files.length,
+            filesFound: scan.files.length,
             processed: 0,
           }));
-          await handleUploadDroppedFiles(files);
+          await handleUploadDroppedFiles(scan.files);
         }
+      } catch {
+        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }));
       } finally {
         setDropPreparation({
           active: false,
@@ -456,7 +540,11 @@ export const useFileUpload = (
           processed: 0,
         });
       }
-    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+
+      return;
+    }
+
+    if (hasFiles) {
       setDropPreparation({
         active: true,
         phase: "preparing",
@@ -464,8 +552,11 @@ export const useFileUpload = (
         filesFound: e.dataTransfer.files.length,
         processed: e.dataTransfer.files.length,
       });
+
       try {
         await handleUploadFiles(Array.from(e.dataTransfer.files));
+      } catch {
+        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }));
       } finally {
         setDropPreparation({
           active: false,
@@ -483,6 +574,7 @@ export const useFileUpload = (
     dropPreparation,
     handleUploadClick,
     handleUploadFiles,
+    handleDragEnter,
     handleDragOver,
     handleDragLeave,
     handleDrop,
