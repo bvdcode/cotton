@@ -66,7 +66,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             var downloadToken = await query.FirstOrDefaultAsync(cancellationToken: ct);
-            if (downloadToken == null || downloadToken.NodeFile.Node.Type == NodeType.Trash)
+            if (downloadToken == null || downloadToken.NodeFile.Node.Type != NodeType.Default)
             {
                 return isHtml
                     ? ShareFileResult.AsRedirect($"{baseAppUrl}/404")
