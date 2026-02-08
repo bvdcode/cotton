@@ -125,8 +125,20 @@ export const FilesPage: React.FC = () => {
 
   const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
 
+  const [shareToast, setShareToast] = React.useState<{
+    open: boolean;
+    message: string;
+  }>({ open: false, message: "" });
+
+  const showToast = React.useCallback(
+    (message: string) => setShareToast({ open: true, message }),
+    [],
+  );
+
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
-  const fileUpload = useFileUpload(nodeId, breadcrumbs, content);
+  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
+    onToast: showToast,
+  });
   const fileOps = useFileOperations(reloadCurrentNode);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
@@ -163,11 +175,6 @@ export const FilesPage: React.FC = () => {
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
     await downloadFile(nodeFileId, fileName);
   };
-
-  const [shareToast, setShareToast] = React.useState<{
-    open: boolean;
-    message: string;
-  }>({ open: false, message: "" });
 
   const handleShareFile = React.useCallback(
     async (nodeFileId: string, fileName: string) => {
@@ -306,6 +313,7 @@ export const FilesPage: React.FC = () => {
       />
       {fileUpload.isDragging && (
         <Box
+          onDragEnter={fileUpload.handleDragEnter}
           onDragOver={fileUpload.handleDragOver}
           onDragLeave={fileUpload.handleDragLeave}
           onDrop={fileUpload.handleDrop}
@@ -340,6 +348,7 @@ export const FilesPage: React.FC = () => {
       )}
       <Box
         width="100%"
+        onDragEnter={fileUpload.handleDragEnter}
         onDragOver={fileUpload.handleDragOver}
         onDragLeave={fileUpload.handleDragLeave}
         onDrop={fileUpload.handleDrop}

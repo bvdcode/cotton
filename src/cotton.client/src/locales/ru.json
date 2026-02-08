@@ -501,6 +501,39 @@
       "title": "Загрузка",
       "caption": "Загружаем содержимое папки…"
     },
+    "uploadDrop": {
+      "scanning": {
+        "title": "Сканирование файлов…"
+      },
+      "preparing": {
+        "title": "Подготовка загрузки…",
+        "mapping": {
+          "title": "Подготовка загрузки…"
+        },
+        "folders": {
+          "title": "Создание папок…"
+        },
+        "conflicts": {
+          "title": "Проверка конфликтов…"
+        },
+        "enqueue": {
+          "title": "Запуск загрузки…"
+        }
+      },
+      "caption": "Найдено файлов: {{count}}",
+      "captionFound": "Найдено файлов: {{count}}",
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "Ни один файл не был загружен (всё пропущено).",
+        "someItemsSkipped_one": "Пропущен {{count}} элемент: не удалось прочитать.",
+        "someItemsSkipped_few": "Пропущено {{count}} элемента: не удалось прочитать.",
+        "someItemsSkipped_many": "Пропущено {{count}} элементов: не удалось прочитать.",
+        "someItemsSkipped_other": "Пропущено {{count}} элементов: не удалось прочитать."
+      },
+      "errors": {
+        "dropFailed": "Не удалось обработать перетаскивание. Попробуйте ещё раз."
+      }
+    },
     "refreshing": "Обновляем…",
     "actions": {
       "upload": "Загрузить",
