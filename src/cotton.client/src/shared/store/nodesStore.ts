@@ -24,6 +24,8 @@ type NodesState = {
     newName: string,
     parentNodeId?: string,
   ) => Promise<boolean>;
+  optimisticRenameFile: (parentNodeId: string, fileId: string, newName: string) => void;
+  optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
   reset: () => void;
 };
 
@@ -351,6 +353,40 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       set({ loading: false, error: "Failed to rename folder" });
       return false;
     }
+  },
+
+  optimisticRenameFile: (parentNodeId, fileId, newName) => {
+    set((prev) => {
+      const existing = prev.contentByNodeId[parentNodeId];
+      if (!existing) return {};
+      return {
+        contentByNodeId: {
+          ...prev.contentByNodeId,
+          [parentNodeId]: {
+            ...existing,
+            files: existing.files.map((f) =>
+              f.id === fileId ? { ...f, name: newName } : f,
+            ),
+          },
+        },
+      };
+    });
+  },
+
+  optimisticDeleteFile: (parentNodeId, fileId) => {
+    set((prev) => {
+      const existing = prev.contentByNodeId[parentNodeId];
+      if (!existing) return {};
+      return {
+        contentByNodeId: {
+          ...prev.contentByNodeId,
+          [parentNodeId]: {
+            ...existing,
+            files: existing.files.filter((f) => f.id !== fileId),
+          },
+        },
+      };
+    });
   },
 
   reset: () => {

@@ -6,7 +6,7 @@ import { useLayoutsStore } from "../../shared/store/layoutsStore";
 import { formatBytes } from "../../shared/utils/formatBytes";
 
 export const HomePage: React.FC = () => {
-  const { t } = useTranslation("home");
+  const { t } = useTranslation(["home", "common"]);
   const {
     rootNode,
     statsByLayoutId,
@@ -52,7 +52,7 @@ export const HomePage: React.FC = () => {
             <Typography variant="overline" color="text.secondary">
               {t("cards.folders.layoutTitle")}
             </Typography>
-            <Typography variant="h4">{rootNode?.name ?? "—"}</Typography>
+            <Typography variant="h4">{rootNode?.name ?? t("common:placeholder")}</Typography>
             <Typography variant="caption" color="text.secondary">
               {t("cards.folders.layoutCaption")}
             </Typography>
@@ -65,7 +65,7 @@ export const HomePage: React.FC = () => {
               {t("cards.folders.title")}
             </Typography>
             <Typography variant="h4">
-              {stats ? stats.nodeCount.toLocaleString() : "—"}
+              {stats ? stats.nodeCount.toLocaleString() : t("common:placeholder")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {t("cards.folders.caption")}
@@ -79,7 +79,7 @@ export const HomePage: React.FC = () => {
               {t("cards.files.title")}
             </Typography>
             <Typography variant="h4">
-              {stats ? stats.fileCount.toLocaleString() : "—"}
+              {stats ? stats.fileCount.toLocaleString() : t("common:placeholder")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {t("cards.files.caption")}
@@ -93,7 +93,7 @@ export const HomePage: React.FC = () => {
               {t("cards.data.title")}
             </Typography>
             <Typography variant="h4">
-              {stats ? formatBytes(stats.sizeBytes) : "—"}
+              {stats ? formatBytes(stats.sizeBytes) : t("common:placeholder")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {t("cards.data.caption")}
