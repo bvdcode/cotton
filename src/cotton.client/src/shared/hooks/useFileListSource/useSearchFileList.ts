@@ -17,6 +17,7 @@ interface UseSearchFileListOptions {
   error: string | null;
   totalCount: number;
   hasQuery: boolean;
+  rootNodeName?: string | null;
 }
 
 export const useSearchFileList = ({
@@ -25,12 +26,23 @@ export const useSearchFileList = ({
   error,
   totalCount,
   hasQuery,
+  rootNodeName,
 }: UseSearchFileListOptions): FileListSource => {
   const tiles: FileSystemTile[] = useMemo(() => {
     if (!results || !hasQuery) return [];
 
     const nodePaths = results.nodePaths ?? {};
     const filePaths = results.filePaths ?? {};
+
+    // Strip root node prefix from display paths (e.g. "/Default/Music" → "/Music")
+    const rootPrefix = rootNodeName ? `/${rootNodeName}` : null;
+    const stripRootPrefix = (path: string): string => {
+      if (rootPrefix && path.startsWith(rootPrefix)) {
+        const stripped = path.slice(rootPrefix.length);
+        return stripped.length === 0 ? "/" : stripped;
+      }
+      return path;
+    };
 
     const getContainerPath = (fullPath: string): string => {
       const normalized = fullPath.trim();
@@ -77,22 +89,25 @@ export const useSearchFileList = ({
           ({
             kind: "folder",
             node,
-            path: nodePaths[node.id],
+            path: nodePaths[node.id] ? stripRootPrefix(nodePaths[node.id]) : undefined,
           }) as const,
       ),
       ...sortedFiles.map(
         (file) => {
           const fullPath = consumeNextPath(file.name);
+          // containerPath stays as the full original path for backend resolution
+          const containerPath = fullPath ? getContainerPath(fullPath) : undefined;
+          const displayContainerPath = containerPath ? stripRootPrefix(containerPath) : undefined;
           return {
             kind: "file",
             file,
-            path: fullPath,
-            containerPath: fullPath ? getContainerPath(fullPath) : undefined,
+            path: displayContainerPath,
+            containerPath,
           } as const;
         },
       ),
     ];
-  }, [results, hasQuery]);
+  }, [results, hasQuery, rootNodeName]);
 
   return {
     loading,
