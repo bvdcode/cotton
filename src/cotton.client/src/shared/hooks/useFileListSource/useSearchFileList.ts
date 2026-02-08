@@ -47,6 +47,27 @@ export const useSearchFileList = ({
       return sorted;
     };
 
+    // filePaths keys are node-file association IDs, not file manifest IDs.
+    // Build a reverse map: fileName → [fullPath, ...] to match by name.
+    const filePathsByName = new Map<string, string[]>();
+    for (const fullPath of Object.values(filePaths)) {
+      const segments = fullPath.split("/");
+      const fileName = segments[segments.length - 1];
+      const list = filePathsByName.get(fileName) ?? [];
+      list.push(fullPath);
+      filePathsByName.set(fileName, list);
+    }
+
+    const consumedIndices = new Map<string, number>();
+    const consumeNextPath = (fileName: string): string | undefined => {
+      const paths = filePathsByName.get(fileName);
+      if (!paths) return undefined;
+      const idx = consumedIndices.get(fileName) ?? 0;
+      if (idx >= paths.length) return undefined;
+      consumedIndices.set(fileName, idx + 1);
+      return paths[idx];
+    };
+
     const sortedFolders = sortByName(results.nodes ?? []);
     const sortedFiles = sortByName(results.files ?? []);
 
@@ -61,7 +82,7 @@ export const useSearchFileList = ({
       ),
       ...sortedFiles.map(
         (file) => {
-          const fullPath = filePaths[file.id];
+          const fullPath = consumeNextPath(file.name);
           return {
             kind: "file",
             file,
