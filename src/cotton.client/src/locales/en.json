@@ -679,6 +679,7 @@
   "admin": {
     "title": "Admin",
     "menu": {
+      "navigate": "Section",
       "users": "Users"
     },
     "roles": {
