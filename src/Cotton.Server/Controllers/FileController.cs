@@ -135,13 +135,12 @@ namespace Cotton.Server.Controllers
                 .Include(x => x.FileManifest)
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
-            if (nodeFile == null)
+            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("File not found.");
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-
             // Check for duplicate files in the same folder
             bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x =>
@@ -270,7 +269,7 @@ namespace Cotton.Server.Controllers
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null || nodeFile.Node.Type == NodeType.Trash)
+            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
             {
                 return CottonResult.NotFound("File not found");
             }

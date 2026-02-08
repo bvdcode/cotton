@@ -49,7 +49,7 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task MoveToTrashAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
         {
-            if (nodeFile.Node.Type == NodeType.Trash)
+            if (nodeFile.Node.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException(nameof(FileManifest));
             }
