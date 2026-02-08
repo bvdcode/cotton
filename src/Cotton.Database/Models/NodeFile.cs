@@ -55,5 +55,7 @@ namespace Cotton.Database.Models
 
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Node Node { get; set; } = null!;
+
+        public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
     }
 }
