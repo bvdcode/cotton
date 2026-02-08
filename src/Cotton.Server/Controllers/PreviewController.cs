@@ -17,7 +17,7 @@ namespace Cotton.Server.Controllers
         IStreamCipher _crypto,
         IStoragePipeline _storage) : ControllerBase
     {
-        private static readonly SemaphoreSlim _previewGate = new(32);
+        private static readonly SemaphoreSlim _previewGate = new(8);
 
         [HttpGet("{encryptedFilePreviewHashHex}")]
         [HttpGet("{encryptedFilePreviewHashHex}.webp")]
