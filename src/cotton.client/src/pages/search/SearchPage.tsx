@@ -253,6 +253,7 @@ export const SearchPage: React.FC = () => {
             folderOperations={folderOperations}
             fileOperations={fileOperations}
             onGoToFileLocation={handleGoToFileLocation}
+            listColumnFlex={{ name: 1, location: 2 }}
             isCreatingFolder={false}
             newFolderName=""
             onNewFolderNameChange={() => {}}

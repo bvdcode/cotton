@@ -87,6 +87,11 @@ export interface PaginationProps {
 
 export type TilesSize = "small" | "medium" | "large";
 
+export interface ListViewColumnFlex {
+  name: number;
+  location: number;
+}
+
 /**
  * Interface for file list view components.
  * Follows the Interface Segregation Principle (ISP) - defines minimal required contract.
@@ -112,6 +117,12 @@ export interface IFileListView {
    * Used by Search results to jump to the node where a file is located.
    */
   onGoToFileLocation?: (containerPath: string) => void;
+
+  /**
+   * Optional list-view column flex configuration.
+   * Used to adjust Name/Location proportions on specific pages (e.g. Search).
+   */
+  listColumnFlex?: ListViewColumnFlex;
 
   /**
    * Whether a new folder is being created in this view
