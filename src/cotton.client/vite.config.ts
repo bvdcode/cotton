@@ -10,13 +10,13 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       proxy: {
-        "/s": {
+        "/api": {
           target: apiTarget,
           changeOrigin: true,
           secure: true,
           ws: true,
         },
-        "/api": {
+        "^/s/[^/]+": {
           target: apiTarget,
           changeOrigin: true,
           secure: true,

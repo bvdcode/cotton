@@ -48,9 +48,11 @@ export const shareLinks = {
 
   /**
    * Backend public share endpoint for serving a file by share token.
+   * Use view=download for download button, view=inline for preview.
    */
-  buildTokenDownloadUrl: (token: string): string => {
+  buildTokenDownloadUrl: (token: string, view?: "download" | "inline"): string => {
     const encoded = encodeURIComponent(token);
-    return `/s/${encoded}`;
+    const viewParam = view ? `?view=${view}` : "";
+    return `/s/${encoded}${viewParam}`;
   },
 } as const;
