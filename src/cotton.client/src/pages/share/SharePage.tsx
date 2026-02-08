@@ -89,31 +89,30 @@ function getFallbackIcon(kind: ViewerKind) {
 function tryParseFileName(contentDisposition: string | null): string | null {
   if (!contentDisposition) return null;
 
-  const stripQuotes = (value: string): string => {
-    const trimmed = value.trim();
-    if (
-      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("'") && trimmed.endsWith("'"))
-    ) {
-      return trimmed.slice(1, -1);
-    }
-    return trimmed;
-  };
-
+  // RFC 5987 / RFC 6266: prefer `filename*` over `filename`.
+  // Example: inline; filename*=UTF-8''20250903_130511.heic; filename=20250903_130511.heic
   const filenameStarMatch = contentDisposition.match(
-    /filename\*\s*=\s*(?:"|')?([^"';\s]+)''([^"';]+)(?:"|')?/i,
+    /filename\*\s*=\s*([^']+)''([^;]+)/i,
   );
-  if (filenameStarMatch && filenameStarMatch[2]) {
+  if (filenameStarMatch?.[2]) {
+    const value = filenameStarMatch[2].trim();
     try {
-      return decodeURIComponent(stripQuotes(filenameStarMatch[2]));
+      return decodeURIComponent(value);
     } catch {
-      return stripQuotes(filenameStarMatch[2]);
+      return value;
     }
   }
 
-  const filenameMatch = contentDisposition.match(/filename\s*=\s*("[^"]+"|'[^']+'|[^;]+)/i);
-  if (filenameMatch && filenameMatch[1]) {
-    return stripQuotes(filenameMatch[1]);
+  const filenameMatch = contentDisposition.match(/filename\s*=\s*([^;]+)/i);
+  if (filenameMatch?.[1]) {
+    const value = filenameMatch[1].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      return value.slice(1, -1);
+    }
+    return value;
   }
 
   return null;
