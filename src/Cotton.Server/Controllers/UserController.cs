@@ -38,7 +38,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
         {
             AdminGetUsersQuery query = new();
-            var users = await _mediator.Send(query, cancellationToken);
+            IEnumerable<AdminUserDto> users = await _mediator.Send(query, cancellationToken);
             return Ok(users);
         }
 
@@ -47,7 +47,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequestDto request, CancellationToken cancellationToken)
         {
             AdminCreateUserCommand command = new(request.Username, request.Password, request.Role);
-            var user = await _mediator.Send(command, cancellationToken);
+            UserDto user = await _mediator.Send(command, cancellationToken);
             return Ok(user);
         }
 
@@ -57,7 +57,7 @@ namespace Cotton.Server.Controllers
             [FromBody] ChangePasswordRequestDto request,
             CancellationToken cancellationToken)
         {
-            var userId = User.GetUserId();
+            Guid userId = User.GetUserId();
             ChangePasswordCommand command = new(userId, request.OldPassword, request.NewPassword);
             await _mediator.Send(command, cancellationToken);
             return Ok();
