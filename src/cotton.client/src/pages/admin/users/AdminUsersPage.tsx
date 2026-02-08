@@ -51,12 +51,14 @@ export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
 
   const theme = useTheme();
+  const isSmUp = useMediaQuery(theme.breakpoints.up("sm"));
   const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
 
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "idle" });
 
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.User);
   const [createLoading, setCreateLoading] = useState(false);
@@ -97,16 +99,20 @@ export const AdminUsersPage = () => {
 
   const [columnVisibilityModel, setColumnVisibilityModel] =
     useState<GridColumnVisibilityModel>(() => ({
+      role: false,
+      isTotpEnabled: false,
       activeSessionCount: false,
       lastActivityAt: false,
     }));
 
   useEffect(() => {
     setColumnVisibilityModel({
+      role: isSmUp,
+      isTotpEnabled: isSmUp,
       activeSessionCount: isMdUp,
       lastActivityAt: isMdUp,
     });
-  }, [isMdUp]);
+  }, [isMdUp, isSmUp]);
 
   const columns: GridColDef<AdminUserDto>[] = useMemo(
     () => [
@@ -114,19 +120,27 @@ export const AdminUsersPage = () => {
         field: "username",
         headerName: t("users.columns.username"),
         flex: 1,
-        minWidth: 140,
+        minWidth: 120,
+      },
+      {
+        field: "email",
+        headerName: t("users.columns.email"),
+        flex: 1,
+        minWidth: 160,
+        valueGetter: (_, row) => row.email ?? "",
+        sortable: false,
       },
       {
         field: "role",
         headerName: t("users.columns.role"),
-        minWidth: 140,
+        minWidth: 120,
         valueGetter: (_, row) => roleLabel(row.role),
         sortable: false,
       },
       {
         field: "isTotpEnabled",
         headerName: t("users.columns.totp"),
-        minWidth: 110,
+        minWidth: 90,
         valueGetter: (_, row) =>
           row.isTotpEnabled
             ? t("yes", { ns: "common" })
@@ -136,13 +150,13 @@ export const AdminUsersPage = () => {
       {
         field: "activeSessionCount",
         headerName: t("users.columns.sessions"),
-        minWidth: 110,
+        minWidth: 90,
         type: "number",
       },
       {
         field: "lastActivityAt",
         headerName: t("users.columns.lastActivity"),
-        minWidth: 180,
+        minWidth: 160,
         valueGetter: (_, row) => formatDateTime(row.lastActivityAt),
         sortable: false,
       },
@@ -161,6 +175,7 @@ export const AdminUsersPage = () => {
 
     const request: AdminCreateUserRequestDto = {
       username: username.trim(),
+      email: email.trim().length > 0 ? email.trim() : null,
       password,
       role,
     };
@@ -170,6 +185,7 @@ export const AdminUsersPage = () => {
       await adminApi.createUser(request);
       setCreateSuccess(true);
       setUsername("");
+      setEmail("");
       setPassword("");
       setRole(UserRole.User);
       await fetchUsers();
@@ -225,6 +241,20 @@ export const AdminUsersPage = () => {
             disableRowSelectionOnClick
             hideFooter
             autoHeight
+            sx={{
+              width: "100%",
+              minWidth: 0,
+              "& .MuiDataGrid-cell": {
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              },
+              "& .MuiDataGrid-columnHeaderTitle": {
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              },
+            }}
             slots={{
               noRowsOverlay: () => (
                 <Stack height="100%" alignItems="center" justifyContent="center">
@@ -256,6 +286,14 @@ export const AdminUsersPage = () => {
               onChange={(e) => setUsername(e.target.value)}
               fullWidth
               autoComplete="off"
+            />
+            <TextField
+              label={t("users.create.email")}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              fullWidth
+              autoComplete="email"
             />
             <TextField
               label={t("users.create.password")}

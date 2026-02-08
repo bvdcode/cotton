@@ -4,6 +4,7 @@ import { UserRole } from "../../features/auth/types";
 
 export interface AdminUserDto extends BaseDto<string> {
   username: string;
+  email: string | null;
   role: UserRole;
   isTotpEnabled: boolean;
   totpEnabledAt: string | null;
@@ -14,6 +15,7 @@ export interface AdminUserDto extends BaseDto<string> {
 
 export interface AdminCreateUserRequestDto {
   username: string;
+  email: string | null;
   password: string;
   role: UserRole;
 }

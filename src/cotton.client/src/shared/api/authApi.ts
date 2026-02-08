@@ -27,6 +27,7 @@ interface ChangePasswordRequest {
  */
 interface UserInfoResponse extends BaseDto<string> {
   username: string;
+  email?: string | null;
   role: UserRole;
   displayName?: string;
   pictureUrl?: string;
@@ -69,6 +70,7 @@ export const authApi = {
       id: response.data.id,
       role: response.data.role,
       username: response.data.username,
+      email: response.data.email ?? null,
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
       createdAt: response.data.createdAt,

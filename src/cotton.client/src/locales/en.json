@@ -133,6 +133,7 @@
       "twoFactor": "Two-factor authentication",
       "totpEnabledAt": "Enabled at",
       "totpFailedAttempts": "2FA Failed attempts",
+      "email": "E-mail",
       "createdAt": "Created at"
     },
     "password": {
@@ -694,6 +695,7 @@
       "empty": "No users",
       "columns": {
         "username": "Username",
+        "email": "E-mail",
         "role": "Role",
         "totp": "2FA",
         "sessions": "Sessions",
@@ -706,6 +708,7 @@
       "create": {
         "title": "Create user",
         "username": "Username",
+          "email": "E-mail",
         "password": "Password",
         "role": "Role",
         "button": "Create",

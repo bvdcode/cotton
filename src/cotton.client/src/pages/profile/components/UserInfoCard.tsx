@@ -94,6 +94,21 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
       <Divider sx={{ mb: 2 }} />
 
       <Stack spacing={1.5}>
+        {user.email && (
+          <Box display="flex" justifyContent="space-between" gap={2}>
+            <Typography variant="body2" color="text.secondary">
+              {t("fields.email")}
+            </Typography>
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              textAlign="right"
+              noWrap
+            >
+              {user.email}
+            </Typography>
+          </Box>
+        )}
         <Box display="flex" justifyContent="space-between" gap={2}>
           <Typography variant="body2" color="text.secondary">
             {t("fields.createdAt")}
