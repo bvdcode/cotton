@@ -3,7 +3,7 @@ import { useConfirm } from "material-ui-confirm";
 import { filesApi } from "../../../shared/api/filesApi";
 import { useRenameState } from "../../../shared/hooks/useRenameState";
 
-export const useFileOperations = (onFileDeleted?: () => void) => {
+export const useFileOperations = (onFilesChanged?: () => void) => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
 
@@ -18,9 +18,8 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
       try {
         await filesApi.renameFile(fileId, { name: newName });
 
-        // Trigger parent refresh
-        if (onFileDeleted) {
-          onFileDeleted();
+        if (onFilesChanged) {
+          onFilesChanged();
         }
       } catch (error) {
         console.error("Failed to rename file:", error);
@@ -48,9 +47,8 @@ export const useFileOperations = (onFileDeleted?: () => void) => {
 
     await filesApi.deleteFile(fileId);
 
-    // Trigger parent refresh
-    if (onFileDeleted) {
-      onFileDeleted();
+    if (onFilesChanged) {
+      onFilesChanged();
     }
   };
 
