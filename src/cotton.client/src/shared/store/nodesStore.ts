@@ -1,6 +1,8 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
+import { NODES_STORAGE_KEY } from "../config/storageKeys";
 
 type NodesState = {
   currentNode: NodeDto | null;
@@ -58,7 +60,9 @@ async function resolveNodeAndAncestors(
   return { node, ancestors };
 }
 
-export const useNodesStore = create<NodesState>((set, get) => ({
+export const useNodesStore = create<NodesState>()(
+  persist(
+    (set, get) => ({
   currentNode: null,
   ancestors: [],
   contentByNodeId: {},
@@ -401,4 +405,15 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       lastUpdatedByNodeId: {},
     });
   },
-}));
+    }),
+    {
+      name: NODES_STORAGE_KEY,
+      partialize: (state) => ({
+        contentByNodeId: state.contentByNodeId,
+        ancestorsByNodeId: state.ancestorsByNodeId,
+        rootNodeId: state.rootNodeId,
+        lastUpdatedByNodeId: state.lastUpdatedByNodeId,
+      }),
+    },
+  ),
+);

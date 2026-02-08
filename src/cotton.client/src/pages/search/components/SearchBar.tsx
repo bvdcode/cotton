@@ -6,6 +6,7 @@ export interface SearchBarProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  ariaLabel?: string;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
@@ -13,22 +14,28 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onChange,
   disabled = false,
   placeholder,
+  ariaLabel,
 }) => {
   return (
     <Box
-      sx={{
-        display: "flex",
-        gap: 1,
-        my: 3,
-        alignItems: "center",
-      }}
+      role="search"
+      display="flex"
+      gap={1}
+      my={3}
+      alignItems="center"
     >
       <TextField
         fullWidth
+        autoFocus
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
+        slotProps={{
+          input: {
+            "aria-label": ariaLabel ?? placeholder,
+          },
+        }}
       />
     </Box>
   );

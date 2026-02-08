@@ -6,9 +6,9 @@ import { useNodesStore } from "../../../shared/store/nodesStore";
 interface UseFilesDataParams {
   nodeId: string | null;
   layoutType: InterfaceLayoutType;
-  loadRoot: (options?: { force?: boolean; loadChildren?: boolean }) => Promise<unknown>;
   loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<unknown>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
+  hugeFolderThreshold: number;
 }
 
 export const useFilesData = ({
@@ -16,60 +16,82 @@ export const useFilesData = ({
   layoutType,
   loadNode,
   refreshNodeContent,
+  hugeFolderThreshold,
 }: UseFilesDataParams) => {
   const [childrenTotalCount, setChildrenTotalCount] = useState<number | null>(
     null,
   );
-  const [childrenCountLoading, setChildrenCountLoading] = useState(false);
   const [listTotalCount, setListTotalCount] = useState(0);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [listContent, setListContent] = useState<NodeContentDto | null>(null);
   const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
   const lastNodeIdRef = useRef<string | null>(null);
+  const tilesLoadedNodeIdRef = useRef<string | null>(null);
 
   const DEFAULT_PAGE_SIZE = 100;
   const clampPageSize = (pageSize: number) => Math.max(1, Math.min(100, pageSize));
 
+  // Combined tiles loading: check cache → probe (if cold) → load children.
+  // Replaces separate probe + tiles effects to eliminate duplicate requests.
   useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.Tiles) {
+      tilesLoadedNodeIdRef.current = null;
+      return;
+    }
     if (!nodeId) {
       setChildrenTotalCount(null);
       return;
     }
-
-    // Skip network probe when content is already cached
-    const cached = useNodesStore.getState().contentByNodeId[nodeId];
-    if (cached) {
-      setChildrenTotalCount(cached.nodes.length + cached.files.length);
-      setChildrenCountLoading(false);
-      return;
-    }
+    if (tilesLoadedNodeIdRef.current === nodeId) return;
 
     let cancelled = false;
-    setChildrenCountLoading(true);
 
-    const probe = async () => {
+    const loadTiles = async () => {
+      // Check persisted cache — avoids network requests for visited folders
+      const cached = useNodesStore.getState().contentByNodeId[nodeId];
+      if (cached) {
+        const count = cached.nodes.length + cached.files.length;
+        if (!cancelled) {
+          setChildrenTotalCount(count);
+          tilesLoadedNodeIdRef.current = nodeId;
+        }
+        // SWR: show cached data, background refresh inside loadNode
+        void loadNode(nodeId, { loadChildren: true });
+        return;
+      }
+
+      // Cold cache: lightweight probe first to guard against huge folders
       try {
-        const response = await nodesApi.getChildren(nodeId, {
+        const probe = await nodesApi.getChildren(nodeId, {
           page: 1,
           pageSize: 1,
         });
         if (cancelled) return;
-        setChildrenTotalCount(response.totalCount);
+
+        setChildrenTotalCount(probe.totalCount);
+
+        if (probe.totalCount > hugeFolderThreshold) {
+          // Will switch to list mode via isHugeFolder effect in FilesPage
+          return;
+        }
+
+        tilesLoadedNodeIdRef.current = nodeId;
+        void loadNode(nodeId, { loadChildren: true });
       } catch {
         if (cancelled) return;
-        setChildrenTotalCount(null);
-      } finally {
-        if (!cancelled) setChildrenCountLoading(false);
+        // Probe failed — try loading anyway
+        tilesLoadedNodeIdRef.current = nodeId;
+        void loadNode(nodeId, { loadChildren: true });
       }
     };
 
-    void probe();
+    void loadTiles();
 
     return () => {
       cancelled = true;
     };
-  }, [nodeId]);
+  }, [nodeId, layoutType, loadNode, hugeFolderThreshold]);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) {
@@ -148,7 +170,6 @@ export const useFilesData = ({
 
   return {
     childrenTotalCount,
-    childrenCountLoading,
     listTotalCount,
     listLoading,
     listError,

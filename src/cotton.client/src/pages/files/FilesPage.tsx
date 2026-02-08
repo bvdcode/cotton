@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useEffect, useMemo, useRef } from "react";
+import React, { useDeferredValue, useEffect, useMemo } from "react";
 import { Alert, Box, Snackbar, Typography } from "@mui/material";
 import {
   FileListViewFactory,
@@ -63,6 +63,8 @@ export const FilesPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
+  const HUGE_FOLDER_THRESHOLD = 10_000;
+
   const {
     childrenTotalCount,
     listTotalCount,
@@ -75,40 +77,19 @@ export const FilesPage: React.FC = () => {
   } = useFilesData({
     nodeId,
     layoutType,
-    loadRoot,
     loadNode,
     refreshNodeContent,
+    hugeFolderThreshold: HUGE_FOLDER_THRESHOLD,
   });
 
-  const HUGE_FOLDER_THRESHOLD = 10_000;
   const isHugeFolder =
     childrenTotalCount !== null && childrenTotalCount > HUGE_FOLDER_THRESHOLD;
-
-  const loadedChildrenNodeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isHugeFolder) return;
     if (layoutType === InterfaceLayoutType.List) return;
     setLayoutType(InterfaceLayoutType.List);
   }, [isHugeFolder, layoutType, setLayoutType]);
-
-  useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.Tiles) return;
-    if (!nodeId) return;
-    if (childrenTotalCount === null) return;
-    if (childrenTotalCount > HUGE_FOLDER_THRESHOLD) return;
-
-    if (loadedChildrenNodeIdRef.current === nodeId) return;
-    loadedChildrenNodeIdRef.current = nodeId;
-
-    void loadNode(nodeId, { loadChildren: true });
-  }, [
-    layoutType,
-    nodeId,
-    childrenTotalCount,
-    loadNode,
-    HUGE_FOLDER_THRESHOLD,
-  ]);
 
   useEffect(() => {
     const folderName = currentNode?.name;
