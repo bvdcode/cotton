@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Snackbar,
   Typography,
 } from "@mui/material";
 import {
@@ -13,6 +14,7 @@ import {
   Movie,
   PictureAsPdf,
   Download,
+  Share,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
@@ -132,6 +134,11 @@ export const SharePage: React.FC = () => {
   >(null);
   const [pdfBlobUrl, setPdfBlobUrl] = React.useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = React.useState<boolean>(false);
+
+  const [shareToast, setShareToast] = React.useState<{
+    open: boolean;
+    message: string;
+  }>({ open: false, message: "" });
 
   const viewerKind = React.useMemo<ViewerKind>(() => {
     const byType = guessViewerKind(contentType);
@@ -259,6 +266,13 @@ export const SharePage: React.FC = () => {
     viewerKind === "unknown" ? "unknown" : viewerKind;
   const title = fileName ?? t("title", { ns: "share" });
 
+  const previewSupported =
+    Boolean(previewUrl) && viewerKind !== "unknown" && !previewFailed;
+
+  const isPdfPreviewLoading = previewSupported && viewerKind === "pdf" && !pdfBlobUrl;
+  const isTextPreviewLoading =
+    previewSupported && viewerKind === "text" && textContent === null;
+
   const handleDownload = () => {
     if (!downloadUrl) return;
     const link = document.createElement("a");
@@ -272,6 +286,38 @@ export const SharePage: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleShareLink = React.useCallback(async () => {
+    const url = window.location.href;
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: fileName ?? undefined, url });
+        setShareToast({
+          open: true,
+          message: t("toasts.shared", { ns: "share" }),
+        });
+        return;
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareToast({
+        open: true,
+        message: t("toasts.copied", { ns: "share" }),
+      });
+    } catch {
+      setShareToast({
+        open: true,
+        message: t("errors.copyLink", { ns: "share" }),
+      });
+    }
+  }, [fileName, t]);
+
   return (
     <Box
       width="100%"
@@ -281,6 +327,12 @@ export const SharePage: React.FC = () => {
       minHeight={0}
       minWidth={0}
     >
+      <Snackbar
+        open={shareToast.open}
+        autoHideDuration={2500}
+        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
+        message={shareToast.message}
+      />
 
       {loading && (
         <Box
@@ -313,6 +365,52 @@ export const SharePage: React.FC = () => {
 
       {!loading && !error && previewUrl && (
         <>
+          {previewSupported && (
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap={2}
+              px={{ xs: 2, sm: 3 }}
+              py={2}
+              minWidth={0}
+            >
+              <Box
+                display="flex"
+                flexDirection="column"
+                minWidth={0}
+              >
+                <Typography variant="h6" noWrap>
+                  {fileName ?? title}
+                </Typography>
+                {contentLength !== null && (
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {formatBytes(contentLength)}
+                  </Typography>
+                )}
+              </Box>
+
+              <Box display="flex" alignItems="center" gap={1}>
+                <Button
+                  onClick={handleShareLink}
+                  variant="outlined"
+                  startIcon={<Share />}
+                >
+                  {t("actions.share", { ns: "common" })}
+                </Button>
+                {downloadUrl && (
+                  <Button
+                    onClick={handleDownload}
+                    variant="contained"
+                    startIcon={<Download />}
+                  >
+                    {t("actions.download", { ns: "common" })}
+                  </Button>
+                )}
+              </Box>
+            </Box>
+          )}
+
           <Box
             flex={1}
             minHeight={0}
@@ -321,6 +419,20 @@ export const SharePage: React.FC = () => {
             justifyContent="center"
             overflow="hidden"
           >
+            {(isPdfPreviewLoading || isTextPreviewLoading) && (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                gap={2}
+              >
+                <CircularProgress size={20} />
+                <Typography color="text.secondary">
+                  {t("loading", { ns: "share" })}
+                </Typography>
+              </Box>
+            )}
+
             {viewerKind === "image" && !previewFailed && (
               <Box
                 component="img"
@@ -360,27 +472,27 @@ export const SharePage: React.FC = () => {
               />
             )}
 
-            {viewerKind === "text" && !previewFailed && (
+            {viewerKind === "text" && !previewFailed && textContent !== null && (
               <Box
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  overflow: "auto",
-                  p: 2,
-                }}
+                width="100%"
+                height="100%"
+                overflow="auto"
+                display="flex"
+                justifyContent="center"
               >
-                <Typography
-                  component="pre"
-                  sx={{ m: 0, whiteSpace: "pre-wrap" }}
+                <Box
+                  width="100%"
+                  sx={{ maxWidth: 960 }}
+                  p={{ xs: 2, sm: 3 }}
                 >
-                  {textContent ?? ""}
-                </Typography>
+                  <Typography component="pre" sx={{ m: 0, whiteSpace: "pre-wrap" }}>
+                    {textContent}
+                  </Typography>
+                </Box>
               </Box>
             )}
 
-            {(viewerKind === "unknown" ||
-              previewFailed ||
-              (viewerKind === "pdf" && !pdfBlobUrl)) && (
+            {(viewerKind === "unknown" || previewFailed) && (
               <Box
                 display="flex"
                 flexDirection="column"
@@ -433,7 +545,7 @@ export const SharePage: React.FC = () => {
             )}
           </Box>
 
-          {downloadUrl && (
+          {downloadUrl && !previewSupported && (
             <Box
               display="flex"
               justifyContent="center"

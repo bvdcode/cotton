@@ -51,10 +51,15 @@
     "title": "Shared file",
     "loading": "Loading...",
     "unsupported": "Preview is not available for this file type.",
+    "toasts": {
+      "copied": "Link copied",
+      "shared": "Link shared"
+    },
     "errors": {
       "invalidLink": "Invalid share link.",
       "notFound": "File not found or link expired.",
-      "loadFailed": "Failed to load the shared file."
+      "loadFailed": "Failed to load the shared file.",
+      "copyLink": "Failed to copy link to clipboard."
     }
   },
   "login": {
