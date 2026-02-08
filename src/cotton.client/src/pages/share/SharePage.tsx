@@ -421,12 +421,12 @@ export const SharePage: React.FC = () => {
               >
                 <Typography variant="subtitle1" noWrap sx={{ minWidth: 0 }}>
                   {fileName ?? title}
+                  {contentLength !== null && (
+                    <Box component="span" sx={{ color: "text.secondary", ml: 1 }}>
+                      • {formatBytes(contentLength)}
+                    </Box>
+                  )}
                 </Typography>
-                {contentLength !== null && (
-                  <Typography variant="body2" color="text.secondary" noWrap>
-                    • {formatBytes(contentLength)}
-                  </Typography>
-                )}
               </Box>
 
               <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
