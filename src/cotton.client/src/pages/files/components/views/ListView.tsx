@@ -1,10 +1,7 @@
 import React, { useMemo } from "react";
 import { Box } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import type {
-  GridRowParams,
-  GridRowsProp,
-} from "@mui/x-data-grid";
+import type { GridRowParams, GridRowsProp } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
 import { isImageFile, isVideoFile } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
@@ -69,8 +66,23 @@ export const ListView: React.FC<IFileListView> = ({
     ];
   }, [tiles, isCreatingFolder, newFolderName]);
 
-  const columns = useMemo(() =>
-    createFileListColumns({
+  const columns = useMemo(
+    () =>
+      createFileListColumns({
+        t,
+        newFolderName,
+        onNewFolderNameChange,
+        onConfirmNewFolder,
+        onCancelNewFolder,
+        folderNamePlaceholder,
+        fileNamePlaceholder,
+        folderOperations,
+        fileOperations,
+        onGoToFileLocation,
+        failedPreviews,
+        setFailedPreviews,
+      }),
+    [
       t,
       newFolderName,
       onNewFolderNameChange,
@@ -82,21 +94,8 @@ export const ListView: React.FC<IFileListView> = ({
       fileOperations,
       onGoToFileLocation,
       failedPreviews,
-      setFailedPreviews,
-    }),
-  [
-    t,
-    newFolderName,
-    onNewFolderNameChange,
-    onConfirmNewFolder,
-    onCancelNewFolder,
-    folderNamePlaceholder,
-    fileNamePlaceholder,
-    folderOperations,
-    fileOperations,
-    onGoToFileLocation,
-    failedPreviews,
-  ]);
+    ],
+  );
 
   const handleRowClick = (params: GridRowParams<FileListRow>) => {
     const row = params.row;
