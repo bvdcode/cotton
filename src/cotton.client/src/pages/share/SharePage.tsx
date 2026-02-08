@@ -89,20 +89,31 @@ function getFallbackIcon(kind: ViewerKind) {
 function tryParseFileName(contentDisposition: string | null): string | null {
   if (!contentDisposition) return null;
 
+  const stripQuotes = (value: string): string => {
+    const trimmed = value.trim();
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      return trimmed.slice(1, -1);
+    }
+    return trimmed;
+  };
+
   const filenameStarMatch = contentDisposition.match(
-    /filename\*=([^']*)''([^;]+)/i,
+    /filename\*\s*=\s*(?:"|')?([^"';\s]+)''([^"';]+)(?:"|')?/i,
   );
   if (filenameStarMatch && filenameStarMatch[2]) {
     try {
-      return decodeURIComponent(filenameStarMatch[2]);
+      return decodeURIComponent(stripQuotes(filenameStarMatch[2]));
     } catch {
-      return filenameStarMatch[2];
+      return stripQuotes(filenameStarMatch[2]);
     }
   }
 
-  const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  const filenameMatch = contentDisposition.match(/filename\s*=\s*("[^"]+"|'[^']+'|[^;]+)/i);
   if (filenameMatch && filenameMatch[1]) {
-    return filenameMatch[1];
+    return stripQuotes(filenameMatch[1]);
   }
 
   return null;
@@ -243,7 +254,7 @@ export const SharePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [inlineUrl, t, token]);
+  }, [downloadUrl, inlineUrl, t, token]);
 
   React.useEffect(() => {
     if (!resolvedDownloadUrl) return;
@@ -338,6 +349,8 @@ export const SharePage: React.FC = () => {
   return (
     <Box
       width="100%"
+      height="100%"
+      alignSelf="stretch"
       display="flex"
       flexDirection="column"
       flex={1}
@@ -393,18 +406,21 @@ export const SharePage: React.FC = () => {
               justifyContent="space-between"
               gap={2}
               px={{ xs: 2, sm: 3 }}
-              py={1}
+              py={0.75}
               minWidth={0}
               borderBottom={1}
               borderColor="divider"
+              sx={{ minHeight: 48 }}
             >
               <Box
                 display="flex"
                 alignItems="center"
                 gap={1}
                 minWidth={0}
+                flex={1}
+                overflow="hidden"
               >
-                <Typography variant="subtitle1" noWrap>
+                <Typography variant="subtitle1" noWrap sx={{ minWidth: 0 }}>
                   {fileName ?? title}
                 </Typography>
                 {contentLength !== null && (
@@ -414,11 +430,12 @@ export const SharePage: React.FC = () => {
                 )}
               </Box>
 
-              <Box display="flex" alignItems="center" gap={1}>
+              <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
                 <Button
                   onClick={handleShareLink}
                   variant="outlined"
                   startIcon={<Share />}
+                  size="small"
                 >
                   {t("actions.share", { ns: "common" })}
                 </Button>
@@ -427,6 +444,7 @@ export const SharePage: React.FC = () => {
                     onClick={handleDownload}
                     variant="contained"
                     startIcon={<Download />}
+                    size="small"
                   >
                     {t("actions.download", { ns: "common" })}
                   </Button>
