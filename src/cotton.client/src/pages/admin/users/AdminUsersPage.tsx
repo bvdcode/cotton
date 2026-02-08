@@ -4,21 +4,21 @@ import {
   CircularProgress,
   FormControl,
   InputLabel,
-  LinearProgress,
   MenuItem,
   Paper,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  DataGrid,
+  type GridColDef,
+  type GridColumnVisibilityModel,
+} from "@mui/x-data-grid";
+import { useMediaQuery, useTheme } from "@mui/material";
 import { isAxiosError } from "../../../shared/api/httpClient";
 import {
   adminApi,
@@ -49,6 +49,9 @@ const formatDateTime = (iso: string | null): string => {
 
 export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
+
+  const theme = useTheme();
+  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
 
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "idle" });
@@ -92,6 +95,61 @@ export const AdminUsersPage = () => {
 
   const isLoading = loadState.kind === "loading";
 
+  const [columnVisibilityModel, setColumnVisibilityModel] =
+    useState<GridColumnVisibilityModel>(() => ({
+      activeSessionCount: false,
+      lastActivityAt: false,
+    }));
+
+  useEffect(() => {
+    setColumnVisibilityModel({
+      activeSessionCount: isMdUp,
+      lastActivityAt: isMdUp,
+    });
+  }, [isMdUp]);
+
+  const columns: GridColDef<AdminUserDto>[] = useMemo(
+    () => [
+      {
+        field: "username",
+        headerName: t("users.columns.username"),
+        flex: 1,
+        minWidth: 140,
+      },
+      {
+        field: "role",
+        headerName: t("users.columns.role"),
+        minWidth: 140,
+        valueGetter: (_, row) => roleLabel(row.role),
+        sortable: false,
+      },
+      {
+        field: "isTotpEnabled",
+        headerName: t("users.columns.totp"),
+        minWidth: 110,
+        valueGetter: (_, row) =>
+          row.isTotpEnabled
+            ? t("yes", { ns: "common" })
+            : t("no", { ns: "common" }),
+        sortable: false,
+      },
+      {
+        field: "activeSessionCount",
+        headerName: t("users.columns.sessions"),
+        minWidth: 110,
+        type: "number",
+      },
+      {
+        field: "lastActivityAt",
+        headerName: t("users.columns.lastActivity"),
+        minWidth: 180,
+        valueGetter: (_, row) => formatDateTime(row.lastActivityAt),
+        sortable: false,
+      },
+    ],
+    [roleLabel, t]
+  );
+
   useEffect(() => {
     void fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,7 +192,11 @@ export const AdminUsersPage = () => {
     <Stack spacing={2}>
       <Paper>
         <Stack spacing={1} p={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Typography variant="h6" fontWeight={700}>
               {t("users.title")}
             </Typography>
@@ -151,43 +213,28 @@ export const AdminUsersPage = () => {
             <Alert severity="error">{loadState.message}</Alert>
           )}
 
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell colSpan={5} sx={{ p: 0 }}>
-                  <LinearProgress
-                    sx={{
-                      height: 3,
-                      borderRadius: 0,
-                      visibility: isLoading ? "visible" : "hidden",
-                    }}
-                  />
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>{t("users.columns.username")}</TableCell>
-                <TableCell>{t("users.columns.role")}</TableCell>
-                <TableCell>{t("users.columns.totp")}</TableCell>
-                <TableCell align="right">{t("users.columns.sessions")}</TableCell>
-                <TableCell>{t("users.columns.lastActivity")}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((u) => (
-                <TableRow key={u.id} hover>
-                  <TableCell>{u.username}</TableCell>
-                  <TableCell>{roleLabel(u.role)}</TableCell>
-                  <TableCell>
-                    {u.isTotpEnabled
-                      ? t("yes", { ns: "common" })
-                      : t("no", { ns: "common" })}
-                  </TableCell>
-                  <TableCell align="right">{u.activeSessionCount}</TableCell>
-                  <TableCell>{formatDateTime(u.lastActivityAt)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataGrid
+            rows={users}
+            columns={columns}
+            getRowId={(row) => row.id}
+            loading={isLoading}
+            columnVisibilityModel={columnVisibilityModel}
+            onColumnVisibilityModelChange={setColumnVisibilityModel}
+            disableColumnMenu
+            disableColumnFilter
+            disableRowSelectionOnClick
+            hideFooter
+            autoHeight
+            slots={{
+              noRowsOverlay: () => (
+                <Stack height="100%" alignItems="center" justifyContent="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {t("users.empty")}
+                  </Typography>
+                </Stack>
+              ),
+            }}
+          />
         </Stack>
       </Paper>
 

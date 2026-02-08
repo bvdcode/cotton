@@ -691,6 +691,7 @@
       "title": "Users",
       "refresh": "Refresh",
       "loading": "Loading users...",
+      "empty": "No users",
       "columns": {
         "username": "Username",
         "role": "Role",

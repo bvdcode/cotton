@@ -21,6 +21,9 @@ namespace Cotton.Database.Models
         [Column("webdav_token_phc")]
         public string WebDavTokenPhc { get; set; } = null!;
 
+        [Column("email", TypeName = "citext")]
+        public string? Email { get; set; }
+
         [Column("role")]
         public UserRole Role { get; set; }
 
