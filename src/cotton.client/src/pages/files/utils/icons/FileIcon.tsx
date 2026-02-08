@@ -78,10 +78,18 @@ function getGenericFileIcon(extension: string): IconResult {
   const displayExtension = truncateExtension(extension);
 
   return (
-    <Box sx={{ position: "relative", display: "inline-flex" }}>
+    <Box
+      sx={{
+        position: "relative",
+        display: "inline-flex",
+        width: "70%",
+        height: "70%",
+      }}
+    >
       <InsertDriveFile
         sx={{
-          fontSize: ICON_SIZE,
+          width: "100%",
+          height: "100%",
           color: (theme) =>
             theme.palette.mode === "light" 
               ? "rgba(0, 0, 0, 0.26)" 
