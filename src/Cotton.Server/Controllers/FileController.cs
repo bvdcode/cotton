@@ -196,9 +196,10 @@ namespace Cotton.Server.Controllers
 
             var userId = User.GetUserId();
             var nodeFile = await _dbContext.NodeFiles
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId);
+                .SingleOrDefaultAsync();
             if (nodeFile == null)
             {
                 return CottonResult.NotFound("Node file not found");
