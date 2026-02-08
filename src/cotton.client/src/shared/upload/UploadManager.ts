@@ -45,7 +45,7 @@ interface UploadOverallStats {
   uploadSpeedBytesPerSec: number;
 }
 
-const MAX_FINISHED_TASKS = 200;
+const MAX_FINISHED_TASKS = 10000;
 const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
 
