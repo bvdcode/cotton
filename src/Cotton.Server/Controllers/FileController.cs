@@ -84,7 +84,8 @@ namespace Cotton.Server.Controllers
             var file = downloadToken.FileManifest;
             if (ishtml)
             {
-                string shareUrl = $"{baseAppUrl}/share/{token}";
+                string canonicalUrl = $"{baseAppUrl}/s/{token}";
+                string appShareUrl = $"{baseAppUrl}/share/{token}";
                 string? hex = (file.EncryptedFilePreviewHash == null || file.EncryptedFilePreviewHash.Length == 0)
                     ? null : Convert.ToHexString(file.EncryptedFilePreviewHash);
                 string previewTag = hex == null
@@ -98,23 +99,23 @@ namespace Cotton.Server.Controllers
                   <meta charset="utf-8">
                   <title>{WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
 
-                  <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(shareUrl)}" />
-                  <link rel="canonical" href="{WebUtility.HtmlEncode(shareUrl)}" />
+                  <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(appShareUrl)}" />
+                  <link rel="canonical" href="{WebUtility.HtmlEncode(canonicalUrl)}" />
                   <meta property="og:site_name" content="Cotton Cloud" />
                   <meta property="og:title" content="{WebUtility.HtmlEncode(downloadToken.FileName)}" />
                   <meta property="og:description" content="Shared via Cotton Cloud" />
                   <meta property="og:type" content="website" />
-                  <meta property="og:url" content="{WebUtility.HtmlEncode(shareUrl)}" />
+                  <meta property="og:url" content="{WebUtility.HtmlEncode(canonicalUrl)}" />
                   {previewTag}
 
                   <meta name="twitter:card" content="summary_large_image" />
                 </head>
                 <body>
                   <noscript>
-                    <p><a href="{WebUtility.HtmlEncode(shareUrl)}">Continue</a></p>
+                    <p><a href="{WebUtility.HtmlEncode(appShareUrl)}">Continue</a></p>
                   </noscript>
                   <script>
-                    window.location.replace({JsonSerializer.Serialize(shareUrl)});
+                    window.location.replace({JsonSerializer.Serialize(appShareUrl)});
                   </script>
                 </body>
                 </html>
