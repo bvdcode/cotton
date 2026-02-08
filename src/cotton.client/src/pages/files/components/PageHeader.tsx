@@ -10,7 +10,7 @@ import {
   ViewList,
 } from "@mui/icons-material";
 import { FileBreadcrumbs } from "./FileBreadcrumbs";
-import { formatBytes } from "../utils/formatBytes";
+import { formatBytes } from "../../../shared/utils/formatBytes";
 import type { FileBrowserViewMode } from "../hooks/useFilesLayout";
 
 export interface PageHeaderProps {
