@@ -37,7 +37,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       title={fileType === "pdf" ? fileName : undefined}
     >
       {fileType === "pdf" && (
-        <PdfPreview fileId={fileId} fileName={fileName} />
+        <PdfPreview fileId={fileId} fileName={fileName} fileSizeBytes={fileSizeBytes} />
       )}
       {fileType === "text" && (
         <TextPreview

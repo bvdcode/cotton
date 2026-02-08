@@ -22,6 +22,7 @@ export interface UploadTask {
   progress01: number;
   status: UploadTaskStatus;
   error?: string;
+  errorKey?: string;
   uploadSpeedBytesPerSec?: number;
 }
 
@@ -42,6 +43,8 @@ interface UploadOverallStats {
   progress01: number;
   uploadSpeedBytesPerSec: number;
 }
+
+const MAX_FINISHED_TASKS = 200;
 
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
@@ -154,9 +157,30 @@ export class UploadManager {
 
     // Pop open the widget.
     this.open = true;
+    this.pruneFinishedTasks();
     this.emit();
 
     void this.pump();
+  }
+
+  private pruneFinishedTasks(): void {
+    const finishedStatuses: UploadTaskStatus[] = ["completed", "failed"];
+    const finished = this.tasks.filter((t) => finishedStatuses.includes(t.status));
+
+    if (finished.length <= MAX_FINISHED_TASKS) return;
+
+    const toRemove = finished.length - MAX_FINISHED_TASKS;
+    let removed = 0;
+
+    for (let i = this.tasks.length - 1; i >= 0 && removed < toRemove; i--) {
+      if (finishedStatuses.includes(this.tasks[i].status)) {
+        this.tasks.splice(i, 1);
+        removed++;
+      }
+    }
+
+    this.overallBytesTotal = this.tasks.reduce((sum, t) => sum + t.bytesTotal, 0);
+    this.overallBytesUploaded = this.tasks.reduce((sum, t) => sum + t.bytesUploaded, 0);
   }
 
   private emit() {
@@ -212,7 +236,7 @@ export class UploadManager {
         const settings = useSettingsStore.getState().data;
         if (!settings) {
           next.status = "failed";
-          next.error = "Server settings are not loaded";
+          next.errorKey = "serverSettingsNotLoaded";
           this.emit();
           continue;
         }
@@ -279,7 +303,8 @@ export class UploadManager {
           this.scheduleNodeRefresh(next.nodeId);
         } catch (e) {
           next.status = "failed";
-          next.error = e instanceof Error ? e.message : "Upload failed";
+          next.error = e instanceof Error ? e.message : undefined;
+          next.errorKey = "uploadFailed";
           this.emit();
         }
       }
