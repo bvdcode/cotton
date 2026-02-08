@@ -18,6 +18,7 @@ using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -60,6 +61,10 @@ namespace Cotton.Server
                 .AddJwt();
 
             var app = builder.Build();
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+            });
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()

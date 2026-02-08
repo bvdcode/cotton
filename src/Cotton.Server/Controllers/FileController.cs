@@ -97,8 +97,8 @@ namespace Cotton.Server.Controllers
                     ? null : Convert.ToHexString(file.EncryptedFilePreviewHash);
                 string previewTag = hex == null
                     ? string.Empty
-                    : ($"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\">\n" +
-                      $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\">");
+                    : ($"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />\n" +
+                      $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />");
                 string html = $"""
                 <!doctype html>
                 <html lang="en">
@@ -108,14 +108,14 @@ namespace Cotton.Server.Controllers
 
                   <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(shareUrl)}" />
                   <link rel="canonical" href="{WebUtility.HtmlEncode(shareUrl)}" />
-
-                  <meta property="og:title" content="{WebUtility.HtmlEncode(downloadToken.FileName)}">
-                  <meta property="og:description" content="Shared via Cotton Cloud">
-                  <meta property="og:type" content="website">
-                  <meta property="og:url" content="{WebUtility.HtmlEncode(shareUrl)}">
+                  <meta property="og:site_name" content="Cotton Cloud" />
+                  <meta property="og:title" content="{WebUtility.HtmlEncode(downloadToken.FileName)}" />
+                  <meta property="og:description" content="Shared via Cotton Cloud" />
+                  <meta property="og:type" content="website" />
+                  <meta property="og:url" content="{WebUtility.HtmlEncode(shareUrl)}" />
                   {previewTag}
 
-                  <meta name="twitter:card" content="summary_large_image">
+                  <meta name="twitter:card" content="summary_large_image" />
                 </head>
                 <body>
                   <noscript>
