@@ -25,7 +25,7 @@ public class WebDavController(
     ILogger<WebDavController> _logger) : ControllerBase
 {
     private const string WebDavRoute = "/api/v1/webdav/";
-    private static readonly string WebDavPrefix = WebDavRoute.TrimEnd('/');
+    private static readonly string WebDavPrefix = WebDavRoute.TrimEnd(WebDavPathResolver.PathSeparator);
 
     private sealed record WebDavLock(
         Guid UserId,
@@ -219,7 +219,9 @@ public class WebDavController(
         AddDavHeaders();
 
         var hrefBase = Url.Content("~" + WebDavRoute) ?? WebDavRoute;
-        var href = hrefBase.TrimEnd('/') + "/" + path.TrimStart('/');
+        var href = hrefBase.TrimEnd(WebDavPathResolver.PathSeparator)
+            + WebDavPathResolver.PathSeparator
+            + path.TrimStart(WebDavPathResolver.PathSeparator);
         var xml = WebDavXmlBuilder.BuildPropPatchOkResponse(href);
 
         return new ContentResult
@@ -256,7 +258,7 @@ public class WebDavController(
         var token = $"opaquelocktoken:{Guid.NewGuid():D}";
         var lockInfo = new WebDavLock(
             userId,
-            path.Trim('/'),
+            path.Trim(WebDavPathResolver.PathSeparator),
             token,
             DateTimeOffset.UtcNow.Add(timeout));
 
@@ -291,7 +293,7 @@ public class WebDavController(
         if (!string.IsNullOrWhiteSpace(tokenHeader))
         {
             var token = tokenHeader.Trim().Trim('<', '>');
-            var key = GetLockKey(userId, path.Trim('/'));
+            var key = GetLockKey(userId, path.Trim(WebDavPathResolver.PathSeparator));
 
             if (_locks.TryGetValue(key, out var info)
                 && string.Equals(info.Token, token, StringComparison.Ordinal))
@@ -447,7 +449,7 @@ public class WebDavController(
 
     private bool IsLockSatisfied(Guid userId, string path)
     {
-        path = (path ?? string.Empty).Trim('/');
+        path = (path ?? string.Empty).Trim(WebDavPathResolver.PathSeparator);
 
         CleanupExpiredLocksIfNeeded(force: false);
 
@@ -473,7 +475,7 @@ public class WebDavController(
 
     private static string ParentPath(string path)
     {
-        var i = path.LastIndexOf('/');
+        var i = path.LastIndexOf(WebDavPathResolver.PathSeparator);
         return i < 0 ? string.Empty : path[..i];
     }
 
@@ -577,10 +579,10 @@ public class WebDavController(
         if (idx >= 0)
         {
             destination = destination[(idx + WebDavPrefix.Length)..];
-            destination = destination.TrimStart('/');
+            destination = destination.TrimStart(WebDavPathResolver.PathSeparator);
         }
 
-        return destination.Trim('/');
+        return destination.Trim(WebDavPathResolver.PathSeparator);
     }
 
     private bool GetOverwriteHeader()

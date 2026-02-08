@@ -138,9 +138,7 @@ namespace Cotton.Server.Handlers.Files
                 ChunkLengths = file.FileManifestChunks.GetChunkLengths()
             };
             Stream stream = _storage.GetBlobStream(uids, context);
-
             string? downloadName = isInlineFile ? null : downloadToken.FileName;
-
             return ShareFileResult.AsStream(
                 stream: stream,
                 contentType: file.ContentType,
