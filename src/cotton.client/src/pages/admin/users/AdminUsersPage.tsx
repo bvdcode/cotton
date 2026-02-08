@@ -4,6 +4,7 @@ import {
   CircularProgress,
   FormControl,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Paper,
   Select,
@@ -89,6 +90,8 @@ export const AdminUsersPage = () => {
     }
   };
 
+  const isLoading = loadState.kind === "loading";
+
   useEffect(() => {
     void fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,7 +133,12 @@ export const AdminUsersPage = () => {
   return (
     <Stack spacing={2}>
       <Paper>
-        <Stack spacing={1} p={2}>
+        <Stack spacing={1} p={2} position="relative">
+          {isLoading && (
+            <LinearProgress
+              sx={{ position: "absolute", top: 0, left: 0, right: 0 }}
+            />
+          )}
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" fontWeight={700}>
               {t("users.title")}
@@ -138,7 +146,7 @@ export const AdminUsersPage = () => {
             <Button
               variant="outlined"
               onClick={() => fetchUsers()}
-              disabled={loadState.kind === "loading"}
+              disabled={isLoading}
             >
               {t("users.refresh")}
             </Button>
@@ -148,43 +156,32 @@ export const AdminUsersPage = () => {
             <Alert severity="error">{loadState.message}</Alert>
           )}
 
-          {loadState.kind === "loading" ? (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <CircularProgress size={18} />
-              <Typography variant="body2" color="text.secondary">
-                {t("users.loading")}
-              </Typography>
-            </Stack>
-          ) : (
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("users.columns.username")}</TableCell>
-                  <TableCell>{t("users.columns.role")}</TableCell>
-                  <TableCell>{t("users.columns.totp")}</TableCell>
-                  <TableCell align="right">
-                    {t("users.columns.sessions")}
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>{t("users.columns.username")}</TableCell>
+                <TableCell>{t("users.columns.role")}</TableCell>
+                <TableCell>{t("users.columns.totp")}</TableCell>
+                <TableCell align="right">{t("users.columns.sessions")}</TableCell>
+                <TableCell>{t("users.columns.lastActivity")}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {users.map((u) => (
+                <TableRow key={u.id} hover>
+                  <TableCell>{u.username}</TableCell>
+                  <TableCell>{roleLabel(u.role)}</TableCell>
+                  <TableCell>
+                    {u.isTotpEnabled
+                      ? t("yes", { ns: "common" })
+                      : t("no", { ns: "common" })}
                   </TableCell>
-                  <TableCell>{t("users.columns.lastActivity")}</TableCell>
+                  <TableCell align="right">{u.activeSessionCount}</TableCell>
+                  <TableCell>{formatDateTime(u.lastActivityAt)}</TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.id} hover>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>{roleLabel(u.role)}</TableCell>
-                    <TableCell>
-                      {u.isTotpEnabled
-                        ? t("yes", { ns: "common" })
-                        : t("no", { ns: "common" })}
-                    </TableCell>
-                    <TableCell align="right">{u.activeSessionCount}</TableCell>
-                    <TableCell>{formatDateTime(u.lastActivityAt)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+              ))}
+            </TableBody>
+          </Table>
         </Stack>
       </Paper>
 
