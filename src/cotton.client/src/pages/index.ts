@@ -7,3 +7,4 @@ export { ProfilePage } from "./profile";
 export { TrashPage } from "./trash";
 export { SearchPage } from "./search/SearchPage";
 export { SharePage } from "./share/SharePage";
+export { AdminLayoutPage, AdminUsersPage } from "./admin";
