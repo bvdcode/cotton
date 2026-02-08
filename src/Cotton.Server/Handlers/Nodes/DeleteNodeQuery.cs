@@ -1,5 +1,6 @@
 ﻿using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -45,9 +46,47 @@ namespace Cotton.Server.Handlers.Nodes
         {
             Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
             node.ParentId = trashItem.Id;
+
+            // Ensure the whole subtree is considered trash for browsing/search/filtering.
+            await MoveDescendantsToTrashAsync(command.UserId, node.Id, ct);
+
             await _dbContext.SaveChangesAsync(ct);
             _logger.LogInformation("User {UserId} deleted node {NodeId} to trash.",
                 command.UserId, command.NodeId);
+        }
+
+        private async Task MoveDescendantsToTrashAsync(Guid userId, Guid rootId, CancellationToken ct)
+        {
+            var visited = new HashSet<Guid> { rootId };
+            var frontier = new List<Guid> { rootId };
+
+            while (frontier.Count > 0)
+            {
+                var batch = frontier.ToArray();
+                frontier.Clear();
+
+                var children = await _dbContext.Nodes
+                    .Where(x => x.OwnerId == userId
+                        && x.ParentId != null
+                        && batch.Contains(x.ParentId.Value))
+                    .Select(x => new { x.Id })
+                    .ToListAsync(ct);
+
+                foreach (var child in children)
+                {
+                    if (visited.Add(child.Id))
+                    {
+                        frontier.Add(child.Id);
+                    }
+                }
+            }
+
+            // Update in one shot. Root node's Type is also switched to trash.
+            var ids = visited.ToArray();
+            await _dbContext.Nodes
+                .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Type, NodeType.Trash), ct);
         }
 
         private async Task DeletePermanentlyAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
