@@ -1,4 +1,12 @@
-import { Box, List, ListItemButton, ListItemText, Paper, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -24,14 +32,21 @@ export const AdminLayoutPage = () => {
   const isActive = (to: string) => location.pathname === to;
 
   return (
-    <Box p={{ xs: 2, sm: 3 }} display="flex" flex={1} minHeight={0}>
-      <Stack direction="row" spacing={2} alignItems="stretch" flex={1} minHeight={0}>
-        <Paper sx={{ width: 280, flexShrink: 0, display: { xs: "none", md: "block" } }}>
-          <Box p={2}>
-            <Typography variant="h6" fontWeight={700}>
-              {t("title")}
-            </Typography>
-          </Box>
+    <Box py={3} display="flex" flex={1} minHeight={0}>
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="stretch"
+        flex={1}
+        minHeight={0}
+      >
+        <Paper
+          sx={{
+            width: 280,
+            flexShrink: 0,
+            display: { xs: "none", md: "block" },
+          }}
+        >
           <List disablePadding>
             {items.map((item) => (
               <ListItemButton
