@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Jobs;
@@ -265,11 +266,12 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found");
             }
             var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
                 .SingleOrDefaultAsync(x => x.Id == nodeFileId);
-            if (nodeFile == null)
+            if (nodeFile == null || nodeFile.Node.Type == NodeType.Trash)
             {
                 return CottonResult.NotFound("File not found");
             }

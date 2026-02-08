@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using System.Net;
 using System.Text.Json;
+using Cotton.Database.Models.Enums;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -51,6 +52,8 @@ namespace Cotton.Server.Handlers.Files
                 .Where(x => x.Token == request.Token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
                 .Include(x => x.NodeFile)
                 .ThenInclude(x => x.FileManifest)
+                .Include(x => x.NodeFile)
+                .ThenInclude(x => x.Node)
                 .AsQueryable();
 
             if (!isHtml && !isHead)
@@ -63,8 +66,7 @@ namespace Cotton.Server.Handlers.Files
             }
 
             var downloadToken = await query.FirstOrDefaultAsync(cancellationToken: ct);
-
-            if (downloadToken == null)
+            if (downloadToken == null || downloadToken.NodeFile.Node.Type == NodeType.Trash)
             {
                 return isHtml
                     ? ShareFileResult.AsRedirect($"{baseAppUrl}/404")
@@ -72,7 +74,6 @@ namespace Cotton.Server.Handlers.Files
             }
 
             var file = downloadToken.NodeFile.FileManifest;
-
             if (isHtml)
             {
                 string canonicalUrl = $"{baseAppUrl}/s/{request.Token}";
@@ -93,7 +94,6 @@ namespace Cotton.Server.Handlers.Files
                 <head>
                   <meta charset=\"utf-8\">
                   <title>{WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
-
                   <meta http-equiv=\"refresh\" content=\"0;url={WebUtility.HtmlEncode(appShareUrl)}\" />
                   <link rel=\"canonical\" href=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
                   <meta property=\"og:site_name\" content=\"Cotton Cloud\" />
@@ -102,7 +102,6 @@ namespace Cotton.Server.Handlers.Files
                   <meta property=\"og:type\" content=\"website\" />
                   <meta property=\"og:url\" content=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
                   {previewTag}
-
                   <meta name=\"twitter:card\" content=\"summary_large_image\" />
                 </head>
                 <body>
