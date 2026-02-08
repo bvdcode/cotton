@@ -167,13 +167,13 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         return filePaths;
     }
 
-    private async Task<Dictionary<Guid, (Guid? ParentId, string Name)>> LoadNodeLineageAsync(
+    private async Task<Dictionary<Guid, (Guid? ParentId, string Name, int Type)>> LoadNodeLineageAsync(
         Guid userId,
         Guid layoutId,
         HashSet<Guid> startNodeIds,
         CancellationToken ct)
     {
-        Dictionary<Guid, (Guid? ParentId, string Name)> nodeInfo = [];
+        Dictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo = [];
 
         var frontier = new HashSet<Guid>(startNodeIds);
         while (frontier.Count > 0)
@@ -186,7 +186,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
                 .Where(x => x.OwnerId == userId
                     && x.LayoutId == layoutId
                     && ids.Contains(x.Id))
-                .Select(x => new { x.Id, x.ParentId, x.Name })
+                .Select(x => new { x.Id, x.ParentId, x.Name, x.Type })
                 .ToListAsync(ct);
 
             foreach (var n in chunk)
@@ -196,12 +196,29 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
                     continue;
                 }
 
-                nodeInfo[n.Id] = (n.ParentId, n.Name);
+                nodeInfo[n.Id] = (n.ParentId, n.Name, (int)n.Type);
 
-                if (n.ParentId.HasValue && !nodeInfo.ContainsKey(n.ParentId.Value))
+                if (n.ParentId.HasValue)
                 {
-                    frontier.Add(n.ParentId.Value);
+                    // Only traverse within the same node type, because Default/Trash have separate roots.
+                    var parentId = n.ParentId.Value;
+                    if (!nodeInfo.ContainsKey(parentId))
+                    {
+                        frontier.Add(parentId);
+                    }
                 }
+            }
+        }
+
+        // Second pass: remove accidental cross-type parent links from traversal.
+        // This keeps path resolution stable if a node ever references a parent of another root type.
+        foreach (var (id, info) in nodeInfo.ToArray())
+        {
+            if (info.ParentId.HasValue
+                && nodeInfo.TryGetValue(info.ParentId.Value, out var parent)
+                && parent.Type != info.Type)
+            {
+                nodeInfo[id] = (null, info.Name, info.Type);
             }
         }
 
@@ -209,7 +226,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
     }
 
     private static string ResolveNodePath(
-        IReadOnlyDictionary<Guid, (Guid? ParentId, string Name)> nodeInfo,
+        IReadOnlyDictionary<Guid, (Guid? ParentId, string Name, int Type)> nodeInfo,
         Guid id)
     {
         const int MaxDepth = 256;
