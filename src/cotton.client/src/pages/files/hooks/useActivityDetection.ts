@@ -28,11 +28,11 @@ export function useActivityDetection(timeout: number = 2500): boolean {
     // Start as active when mounted
     resetActivity();
 
-    // Listen to all user interaction events
+    // Listen to user interaction events.
+    // NOTE: Intentionally excludes `keydown` so keyboard navigation doesn't force-show UI.
     const events: (keyof DocumentEventMap)[] = [
       "mousemove",
       "mousedown",
-      "keydown",
       "wheel",
       "touchstart",
       "touchmove",
