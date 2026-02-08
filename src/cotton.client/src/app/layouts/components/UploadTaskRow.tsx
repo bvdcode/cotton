@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Divider, LinearProgress, Typography } from "@mui/material";
-import { formatBytes, type UploadTask } from "./uploadQueueUtils";
+import { formatBytes } from "../../../shared/utils/formatBytes";
+import type { UploadTask } from "./uploadQueueUtils";
 
 interface UploadTaskRowProps {
   task: UploadTask;

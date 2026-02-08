@@ -7,7 +7,7 @@ import { useRenameState } from "../../../shared/hooks/useRenameState";
  * Hook for trash file operations - similar to useFileOperations
  * but uses skipTrash=true when deleting
  */
-export const useTrashFileOperations = (onFileDeleted?: () => void) => {
+export const useTrashFileOperations = (onFilesChanged?: () => void) => {
   const { t } = useTranslation(["trash", "common"]);
   const confirm = useConfirm();
 
@@ -22,9 +22,8 @@ export const useTrashFileOperations = (onFileDeleted?: () => void) => {
       try {
         await filesApi.renameFile(fileId, { name: newName });
 
-        // Trigger parent refresh
-        if (onFileDeleted) {
-          onFileDeleted();
+        if (onFilesChanged) {
+          onFilesChanged();
         }
       } catch (error) {
         console.error("Failed to rename file:", error);
@@ -53,9 +52,8 @@ export const useTrashFileOperations = (onFileDeleted?: () => void) => {
     // Pass skipTrash=true for permanent deletion
     await filesApi.deleteFile(fileId, true);
 
-    // Trigger parent refresh
-    if (onFileDeleted) {
-      onFileDeleted();
+    if (onFilesChanged) {
+      onFilesChanged();
     }
   };
 

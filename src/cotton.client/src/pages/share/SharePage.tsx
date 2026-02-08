@@ -20,7 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { shareLinks } from "../../shared/utils/shareLinks";
-import { formatBytes } from "../files/utils/formatBytes";
+import { formatBytes } from "../../shared/utils/formatBytes";
 
 type ViewerKind = "image" | "video" | "pdf" | "text" | "unknown";
 

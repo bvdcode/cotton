@@ -27,6 +27,7 @@ import {
   isHeicFile,
   convertHeicToJpeg,
 } from "../../../shared/utils/heicConverter";
+import { formatBytes } from "../../../shared/utils/formatBytes";
 
 const LOADING_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
@@ -230,7 +231,7 @@ function buildSlidesFromItems(
 ): Slide[] {
   return items.map<Slide>((item) => {
     const maybeOriginal = originalUrls[item.id];
-    const sizeStr = item.sizeBytes ? formatFileSize(item.sizeBytes) : "";
+    const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
     const description = sizeStr ? `${item.name} | ${sizeStr}` : item.name;
 
     if (item.kind === "image") {
@@ -295,10 +296,4 @@ function buildSlidesFromItems(
   });
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-}
+

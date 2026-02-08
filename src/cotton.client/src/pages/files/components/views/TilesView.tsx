@@ -4,7 +4,7 @@ import { Folder } from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
 import { getFileIcon } from "../../utils/icons";
-import { formatBytes } from "../../utils/formatBytes";
+import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
   isImageFile,
   isPdfFile,

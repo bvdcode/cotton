@@ -14,7 +14,7 @@ import {
   Share,
 } from "@mui/icons-material";
 import type { GridColDef } from "@mui/x-data-grid";
-import { formatBytes } from "../../utils/formatBytes";
+import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
   isImageFile,
   isPdfFile,
