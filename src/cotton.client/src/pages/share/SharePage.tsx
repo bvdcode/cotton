@@ -109,9 +109,14 @@ export const SharePage: React.FC = () => {
   const params = useParams<{ token?: string }>();
   const token = params.token ?? null;
 
+  const inlineUrl = React.useMemo(() => {
+    if (!token) return null;
+    return shareLinks.buildTokenDownloadUrl(token, "inline");
+  }, [token]);
+
   const downloadUrl = React.useMemo(() => {
     if (!token) return null;
-    return shareLinks.buildTokenDownloadUrl(token);
+    return shareLinks.buildTokenDownloadUrl(token, "download");
   }, [token]);
 
   const [loading, setLoading] = React.useState<boolean>(true);
@@ -134,7 +139,7 @@ export const SharePage: React.FC = () => {
   }, [contentType, fileName]);
 
   React.useEffect(() => {
-    if (!token || !downloadUrl) {
+    if (!token || !inlineUrl) {
       setLoading(false);
       setError(t("errors.invalidLink", { ns: "share" }));
       return;
@@ -156,12 +161,12 @@ export const SharePage: React.FC = () => {
       try {
         let response: Response;
         try {
-          response = await fetch(downloadUrl, { method: "HEAD" });
+          response = await fetch(inlineUrl, { method: "HEAD" });
           if (!response.ok) {
-            response = await fetch(downloadUrl, { method: "GET" });
+            response = await fetch(inlineUrl, { method: "GET" });
           }
         } catch {
-          response = await fetch(downloadUrl, { method: "GET" });
+          response = await fetch(inlineUrl, { method: "GET" });
         }
 
         if (cancelled) return;
@@ -172,7 +177,7 @@ export const SharePage: React.FC = () => {
           return;
         }
 
-        setResolvedDownloadUrl(downloadUrl);
+        setResolvedDownloadUrl(inlineUrl);
 
         const ct = response.headers.get("content-type");
         const cd = response.headers.get("content-disposition");
@@ -191,7 +196,7 @@ export const SharePage: React.FC = () => {
             : guessViewerKindFromName(parsedName);
 
         if (kind === "text") {
-          const textResp = await fetch(downloadUrl, { method: "GET" });
+          const textResp = await fetch(inlineUrl, { method: "GET" });
           if (!textResp.ok) {
             throw new Error("text download failed");
           }
@@ -213,7 +218,7 @@ export const SharePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [downloadUrl, t, token]);
+  }, [inlineUrl, t, token]);
 
   React.useEffect(() => {
     if (!resolvedDownloadUrl) return;
@@ -248,7 +253,7 @@ export const SharePage: React.FC = () => {
     };
   }, [resolvedDownloadUrl, viewerKind]);
 
-  const inlineUrl = resolvedDownloadUrl;
+  const previewUrl = resolvedDownloadUrl;
   const fallbackKind: ViewerKind =
     viewerKind === "unknown" ? "unknown" : viewerKind;
   const title = fileName ?? t("title", { ns: "share" });
@@ -311,7 +316,7 @@ export const SharePage: React.FC = () => {
 
       {!loading && error && <Alert severity="error">{error}</Alert>}
 
-      {!loading && !error && inlineUrl && (
+      {!loading && !error && previewUrl && (
         <Box
           sx={{
             flex: 1,
@@ -325,7 +330,7 @@ export const SharePage: React.FC = () => {
           {viewerKind === "image" && !previewFailed && (
             <Box
               component="img"
-              src={inlineUrl}
+              src={previewUrl}
               alt={fileName ?? ""}
               onError={() => setPreviewFailed(true)}
               sx={{
@@ -340,7 +345,7 @@ export const SharePage: React.FC = () => {
           {viewerKind === "video" && !previewFailed && (
             <Box
               component="video"
-              src={inlineUrl}
+              src={previewUrl}
               controls
               onError={() => setPreviewFailed(true)}
               sx={{ width: "100%", height: "100%", display: "block" }}
