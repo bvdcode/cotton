@@ -39,6 +39,7 @@ export const FilesPage: React.FC = () => {
     currentNode,
     ancestors,
     contentByNodeId,
+    rootNodeId,
     loading,
     error,
     loadRoot,
@@ -51,16 +52,13 @@ export const FilesPage: React.FC = () => {
   const { layoutType, setLayoutType, tilesSize, viewMode, cycleViewMode } =
     useFilesLayout();
 
+  // Resolve root node ID on cold start (home route with no persisted root)
   useEffect(() => {
-    // Always load node metadata/ancestors fast; decide children loading separately.
-    if (!routeNodeId) {
-      void loadRoot({ force: false, loadChildren: false });
-      return;
-    }
-    void loadNode(routeNodeId, { loadChildren: false });
-  }, [routeNodeId, loadRoot, loadNode]);
+    if (routeNodeId || rootNodeId) return;
+    void loadRoot({ force: false, loadChildren: false });
+  }, [routeNodeId, rootNodeId, loadRoot]);
 
-  const nodeId = routeNodeId ?? currentNode?.id ?? null;
+  const nodeId = routeNodeId ?? rootNodeId ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
   const HUGE_FOLDER_THRESHOLD = 10_000;
@@ -79,7 +77,6 @@ export const FilesPage: React.FC = () => {
     layoutType,
     loadNode,
     refreshNodeContent,
-    hugeFolderThreshold: HUGE_FOLDER_THRESHOLD,
   });
 
   const isHugeFolder =

@@ -8,7 +8,6 @@ interface UseFilesDataParams {
   layoutType: InterfaceLayoutType;
   loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<unknown>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
-  hugeFolderThreshold: number;
 }
 
 export const useFilesData = ({
@@ -16,11 +15,7 @@ export const useFilesData = ({
   layoutType,
   loadNode,
   refreshNodeContent,
-  hugeFolderThreshold,
 }: UseFilesDataParams) => {
-  const [childrenTotalCount, setChildrenTotalCount] = useState<number | null>(
-    null,
-  );
   const [listTotalCount, setListTotalCount] = useState(0);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -32,66 +27,26 @@ export const useFilesData = ({
   const DEFAULT_PAGE_SIZE = 100;
   const clampPageSize = (pageSize: number) => Math.max(1, Math.min(100, pageSize));
 
-  // Combined tiles loading: check cache → probe (if cold) → load children.
-  // Replaces separate probe + tiles effects to eliminate duplicate requests.
+  // Derive children count reactively from cached/loaded content
+  const cachedContent = useNodesStore(
+    (s) => (nodeId ? s.contentByNodeId[nodeId] : undefined),
+  );
+  const childrenTotalCount = cachedContent
+    ? cachedContent.nodes.length + cachedContent.files.length
+    : null;
+
+  // Tiles mode: single loadNode call — store handles SWR internally
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.Tiles) {
       tilesLoadedNodeIdRef.current = null;
       return;
     }
-    if (!nodeId) {
-      setChildrenTotalCount(null);
-      return;
-    }
+    if (!nodeId) return;
     if (tilesLoadedNodeIdRef.current === nodeId) return;
+    tilesLoadedNodeIdRef.current = nodeId;
 
-    let cancelled = false;
-
-    const loadTiles = async () => {
-      // Check persisted cache — avoids network requests for visited folders
-      const cached = useNodesStore.getState().contentByNodeId[nodeId];
-      if (cached) {
-        const count = cached.nodes.length + cached.files.length;
-        if (!cancelled) {
-          setChildrenTotalCount(count);
-          tilesLoadedNodeIdRef.current = nodeId;
-        }
-        // SWR: show cached data, background refresh inside loadNode
-        void loadNode(nodeId, { loadChildren: true });
-        return;
-      }
-
-      // Cold cache: lightweight probe first to guard against huge folders
-      try {
-        const probe = await nodesApi.getChildren(nodeId, {
-          page: 1,
-          pageSize: 1,
-        });
-        if (cancelled) return;
-
-        setChildrenTotalCount(probe.totalCount);
-
-        if (probe.totalCount > hugeFolderThreshold) {
-          // Will switch to list mode via isHugeFolder effect in FilesPage
-          return;
-        }
-
-        tilesLoadedNodeIdRef.current = nodeId;
-        void loadNode(nodeId, { loadChildren: true });
-      } catch {
-        if (cancelled) return;
-        // Probe failed — try loading anyway
-        tilesLoadedNodeIdRef.current = nodeId;
-        void loadNode(nodeId, { loadChildren: true });
-      }
-    };
-
-    void loadTiles();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [nodeId, layoutType, loadNode, hugeFolderThreshold]);
+    void loadNode(nodeId, { loadChildren: true });
+  }, [nodeId, layoutType, loadNode]);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) {

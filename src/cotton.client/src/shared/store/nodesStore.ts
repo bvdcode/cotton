@@ -38,19 +38,43 @@ async function resolveNodeAndAncestors(
   let node: NodeDto | null = null;
   let ancestors = state.ancestorsByNodeId[nodeId];
 
-  const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
-  if (ancestorIndex >= 0) {
-    node = state.ancestors[ancestorIndex];
+  // Direct match: resolving the currently persisted node (e.g. home after refresh)
+  if (state.currentNode?.id === nodeId) {
+    node = state.currentNode;
     if (!ancestors) {
-      ancestors = state.ancestors.slice(0, ancestorIndex);
+      ancestors = state.ancestors;
     }
   }
 
+  // Check in-memory ancestors (back navigation)
+  if (!node) {
+    const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
+    if (ancestorIndex >= 0) {
+      node = state.ancestors[ancestorIndex];
+      if (!ancestors) {
+        ancestors = state.ancestors.slice(0, ancestorIndex);
+      }
+    }
+  }
+
+  // Check current node's children (forward navigation)
   if (!node && state.currentNode) {
     const parentContent = state.contentByNodeId[state.currentNode.id];
     node = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
     if (!ancestors && node && node.parentId === state.currentNode.id) {
       ancestors = [...state.ancestors, state.currentNode];
+    }
+  }
+
+  // Search all cached content (previously visited node after persistence reload)
+  if (!node) {
+    for (const content of Object.values(state.contentByNodeId)) {
+      if (!content) continue;
+      const found = content.nodes.find((n) => n.id === nodeId);
+      if (found) {
+        node = found;
+        break;
+      }
     }
   }
 
@@ -102,13 +126,10 @@ export const useNodesStore = create<NodesState>()(
     const loadChildren = options?.loadChildren ?? true;
     if (state.loading && state.currentNode?.id === nodeId) return;
 
-    const cachedContent = loadChildren
-      ? state.contentByNodeId[nodeId]
-      : undefined;
-    const hasCachedContent = !!cachedContent;
+    const cachedContent = state.contentByNodeId[nodeId];
 
-    // Only show loading spinner when no cached content is available
-    if (hasCachedContent) {
+    // Only show loading spinner when no cached content exists for this node
+    if (cachedContent) {
       set({ error: null });
     } else {
       set({ loading: true, error: null });
@@ -142,7 +163,7 @@ export const useNodesStore = create<NodesState>()(
       }));
 
       // Background refresh when cached content was used
-      if (loadChildren && hasCachedContent) {
+      if (loadChildren && cachedContent) {
         void (async () => {
           try {
             const fresh = await nodesApi.getChildren(nodeId);
@@ -409,6 +430,8 @@ export const useNodesStore = create<NodesState>()(
     {
       name: NODES_STORAGE_KEY,
       partialize: (state) => ({
+        currentNode: state.currentNode,
+        ancestors: state.ancestors,
         contentByNodeId: state.contentByNodeId,
         ancestorsByNodeId: state.ancestorsByNodeId,
         rootNodeId: state.rootNodeId,
