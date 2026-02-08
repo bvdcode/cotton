@@ -43,10 +43,12 @@ namespace Cotton.Server.Controllers
         private const int DefaultSharedFileTokenLength = 16;
 
         [HttpGet("/s/{token}")]
+        [HttpHead("/s/{token}")]
         public async Task<IActionResult> Share(
             [FromRoute] string token,
             [FromQuery] string? view = null)
         {
+            bool isHead = HttpMethods.IsHead(Request.Method);
             DateTime now = DateTime.UtcNow;
             string accept = Request.Headers.Accept.ToString();
             bool acceptHtml = accept.Contains("text/html", StringComparison.OrdinalIgnoreCase);
@@ -68,17 +70,17 @@ namespace Cotton.Server.Controllers
 
             string baseAppUrl = $"{Request.Scheme}://{Request.Host}";
 
-            var downloadToken = ishtml
-                ? await _dbContext.DownloadTokens
-                    .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                    .Include(x => x.FileManifest)
-                    .FirstOrDefaultAsync()
-                : await _dbContext.DownloadTokens
-                    .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                    .Include(x => x.FileManifest)
-                    .ThenInclude(x => x.FileManifestChunks)
-                    .ThenInclude(x => x.Chunk)
-                    .FirstOrDefaultAsync();
+            var query = _dbContext.DownloadTokens
+                .Where(x => x.Token == token && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
+                .Include(x => x.FileManifest)
+                .AsQueryable();
+            if (!ishtml && !isHead)
+            {
+                query = query
+                    .Include(x => x.FileManifest.FileManifestChunks)
+                    .ThenInclude(x => x.Chunk);
+            }
+            var downloadToken = await query.FirstOrDefaultAsync();
 
             if (downloadToken == null)
             {
@@ -128,6 +130,20 @@ namespace Cotton.Server.Controllers
             }
             else
             {
+                Response.Headers.ContentEncoding = "identity";
+                Response.Headers.CacheControl = "private, no-store, no-transform";
+                var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(file.ProposedContentHash)}\"");
+
+                var lastModified = new DateTimeOffset(downloadToken.CreatedAt);
+
+                if (isHead)
+                {
+                    Response.ContentType = file.ContentType;
+                    Response.ContentLength = file.SizeBytes;
+                    Response.Headers.ETag = entityTag.ToString();
+                    return new EmptyResult();
+                }
+
                 string[] uids = file.FileManifestChunks.GetChunkHashes();
                 PipelineContext context = new()
                 {
@@ -135,9 +151,6 @@ namespace Cotton.Server.Controllers
                     ChunkLengths = file.FileManifestChunks.GetChunkLengths()
                 };
                 Stream stream = _storage.GetBlobStream(uids, context);
-                Response.Headers.ContentEncoding = "identity";
-                Response.Headers.CacheControl = "private, no-store, no-transform";
-                var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(file.ProposedContentHash)}\"");
 
                 if (downloadToken.DeleteAfterUse)
                 {
@@ -147,8 +160,6 @@ namespace Cotton.Server.Controllers
                         await _dbContext.SaveChangesAsync();
                     });
                 }
-
-                var lastModified = new DateTimeOffset(downloadToken.CreatedAt);
                 string? downloadName = isInlineFile ? null : downloadToken.FileName;
                 return File(
                     stream,
