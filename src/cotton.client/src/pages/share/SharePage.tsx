@@ -16,12 +16,14 @@ import {
   PictureAsPdf,
   Download,
   Share,
+  Check,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { shareLinks } from "../../shared/utils/shareLinks";
 import { formatBytes } from "../../shared/utils/formatBytes";
 import { previewConfig } from "../../shared/config/previewConfig";
+import { useCopyFeedback } from "../../shared/hooks/useCopyFeedback";
 
 type ViewerKind = "image" | "video" | "pdf" | "text" | "unknown";
 
@@ -156,6 +158,8 @@ export const SharePage: React.FC = () => {
     open: boolean;
     message: string;
   }>({ open: false, message: "" });
+
+  const [isCopied, markCopied] = useCopyFeedback();
 
   const viewerKind = React.useMemo<ViewerKind>(() => {
     const byType = guessViewerKind(contentType);
@@ -342,6 +346,7 @@ export const SharePage: React.FC = () => {
 
     try {
       await navigator.clipboard.writeText(url);
+      markCopied();
       setShareToast({
         open: true,
         message: t("toasts.copied", { ns: "share" }),
@@ -442,10 +447,11 @@ export const SharePage: React.FC = () => {
                 <Button
                   onClick={handleShareLink}
                   variant="outlined"
-                  startIcon={<Share />}
+                  startIcon={isCopied ? <Check /> : <Share />}
                   size="small"
+                  color={isCopied ? "success" : "primary"}
                 >
-                  {t("actions.share", { ns: "common" })}
+                  {isCopied ? t("actions.copied", { ns: "common" }) : t("actions.share", { ns: "common" })}
                 </Button>
                 {downloadUrl && (
                   <Button

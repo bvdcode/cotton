@@ -37,7 +37,8 @@
       "delete": "Delete",
       "rename": "Rename",
       "download": "Download",
-      "share": "Share"
+      "share": "Share",
+      "copied": "Copied!"
     },
     "userMenu": {
       "lightMode": "Light Mode",

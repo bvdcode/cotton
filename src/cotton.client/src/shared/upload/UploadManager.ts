@@ -24,6 +24,7 @@ export interface UploadTask {
   error?: string;
   errorKey?: string;
   uploadSpeedBytesPerSec?: number;
+  completedAt?: number;
 }
 
 export interface UploadFilePickerContext {
@@ -45,6 +46,8 @@ interface UploadOverallStats {
 }
 
 const MAX_FINISHED_TASKS = 200;
+const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
+const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
 
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
@@ -65,6 +68,19 @@ export class UploadManager {
 
   private filePickerOpen: ((options: { multiple: boolean; accept?: string }) => void) | null = null;
   private pendingFilePickerContext: UploadFilePickerContext | null = null;
+  private pruneIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    this.pruneIntervalId = setInterval(() => {
+      if (this.tasks.length > 0) {
+        const before = this.tasks.length;
+        this.pruneFinishedTasks();
+        if (this.tasks.length !== before) {
+          this.emit();
+        }
+      }
+    }, PRUNE_INTERVAL_MS);
+  }
 
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
@@ -165,17 +181,26 @@ export class UploadManager {
 
   private pruneFinishedTasks(): void {
     const finishedStatuses: UploadTaskStatus[] = ["completed", "failed"];
-    const finished = this.tasks.filter((t) => finishedStatuses.includes(t.status));
+    const now = Date.now();
 
-    if (finished.length <= MAX_FINISHED_TASKS) return;
-
-    const toRemove = finished.length - MAX_FINISHED_TASKS;
-    let removed = 0;
-
-    for (let i = this.tasks.length - 1; i >= 0 && removed < toRemove; i--) {
-      if (finishedStatuses.includes(this.tasks[i].status)) {
+    // First pass: remove tasks older than TTL
+    for (let i = this.tasks.length - 1; i >= 0; i--) {
+      const t = this.tasks[i];
+      if (finishedStatuses.includes(t.status) && t.completedAt && now - t.completedAt > FINISHED_TASK_TTL_MS) {
         this.tasks.splice(i, 1);
-        removed++;
+      }
+    }
+
+    // Second pass: enforce max count limit
+    const finished = this.tasks.filter((t) => finishedStatuses.includes(t.status));
+    if (finished.length > MAX_FINISHED_TASKS) {
+      const toRemove = finished.length - MAX_FINISHED_TASKS;
+      let removed = 0;
+      for (let i = this.tasks.length - 1; i >= 0 && removed < toRemove; i--) {
+        if (finishedStatuses.includes(this.tasks[i].status)) {
+          this.tasks.splice(i, 1);
+          removed++;
+        }
       }
     }
 
@@ -236,6 +261,7 @@ export class UploadManager {
         const settings = useSettingsStore.getState().data;
         if (!settings) {
           next.status = "failed";
+          next.completedAt = Date.now();
           next.errorKey = "serverSettingsNotLoaded";
           this.emit();
           continue;
@@ -288,6 +314,7 @@ export class UploadManager {
           });
 
           next.status = "completed";
+          next.completedAt = Date.now();
           const beforeFinalize = next.bytesUploaded;
           next.bytesUploaded = next.bytesTotal;
           next.progress01 = 1;
@@ -303,6 +330,7 @@ export class UploadManager {
           this.scheduleNodeRefresh(next.nodeId);
         } catch (e) {
           next.status = "failed";
+          next.completedAt = Date.now();
           next.error = e instanceof Error ? e.message : undefined;
           next.errorKey = "uploadFailed";
           this.emit();
@@ -318,6 +346,10 @@ export class UploadManager {
    * Call this when the application is being unmounted or reset.
    */
   destroy(): void {
+    if (this.pruneIntervalId) {
+      clearInterval(this.pruneIntervalId);
+      this.pruneIntervalId = null;
+    }
     globalHashWorkerPool.destroy();
   }
 
