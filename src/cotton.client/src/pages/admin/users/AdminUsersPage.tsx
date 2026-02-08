@@ -133,12 +133,7 @@ export const AdminUsersPage = () => {
   return (
     <Stack spacing={2}>
       <Paper>
-        <Stack spacing={1} p={2} position="relative">
-          {isLoading && (
-            <LinearProgress
-              sx={{ position: "absolute", top: 0, left: 0, right: 0 }}
-            />
-          )}
+        <Stack spacing={1} p={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" fontWeight={700}>
               {t("users.title")}
@@ -158,6 +153,17 @@ export const AdminUsersPage = () => {
 
           <Table size="small">
             <TableHead>
+              <TableRow>
+                <TableCell colSpan={5} sx={{ p: 0 }}>
+                  <LinearProgress
+                    sx={{
+                      height: 3,
+                      borderRadius: 0,
+                      visibility: isLoading ? "visible" : "hidden",
+                    }}
+                  />
+                </TableCell>
+              </TableRow>
               <TableRow>
                 <TableCell>{t("users.columns.username")}</TableCell>
                 <TableCell>{t("users.columns.role")}</TableCell>
