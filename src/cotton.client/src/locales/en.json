@@ -485,7 +485,11 @@
       "toasts": {
         "noneCopied": "No files were uploaded (all were skipped).",
         "someItemsSkipped_one": "Skipped {{count}} item that could not be read.",
-        "someItemsSkipped_other": "Skipped {{count}} items that could not be read."
+        "someItemsSkipped_other": "Skipped {{count}} items that could not be read.",
+        "someItemsSkippedWithExamples_one": "Skipped {{count}} item (e.g. {{examples}}).",
+        "someItemsSkippedWithExamples_other": "Skipped {{count}} items (e.g. {{examples}}).",
+        "more_one": " +{{count}} more",
+        "more_other": " +{{count}} more"
       },
       "errors": {
         "dropFailed": "Failed to process dropped items. Please try again."

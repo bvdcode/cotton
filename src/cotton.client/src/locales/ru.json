@@ -528,7 +528,15 @@
         "someItemsSkipped_one": "Пропущен {{count}} элемент: не удалось прочитать.",
         "someItemsSkipped_few": "Пропущено {{count}} элемента: не удалось прочитать.",
         "someItemsSkipped_many": "Пропущено {{count}} элементов: не удалось прочитать.",
-        "someItemsSkipped_other": "Пропущено {{count}} элементов: не удалось прочитать."
+        "someItemsSkipped_other": "Пропущено {{count}} элементов: не удалось прочитать.",
+        "someItemsSkippedWithExamples_one": "Пропущен {{count}} элемент (например: {{examples}}).",
+        "someItemsSkippedWithExamples_few": "Пропущено {{count}} элемента (например: {{examples}}).",
+        "someItemsSkippedWithExamples_many": "Пропущено {{count}} элементов (например: {{examples}}).",
+        "someItemsSkippedWithExamples_other": "Пропущено {{count}} элементов (например: {{examples}}).",
+        "more_one": " +ещё {{count}}",
+        "more_few": " +ещё {{count}}",
+        "more_many": " +ещё {{count}}",
+        "more_other": " +ещё {{count}}"
       },
       "errors": {
         "dropFailed": "Не удалось обработать перетаскивание. Попробуйте ещё раз."
