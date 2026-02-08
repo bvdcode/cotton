@@ -13,6 +13,7 @@ export const ListView: React.FC<IFileListView> = ({
   folderOperations,
   fileOperations,
   onGoToFileLocation,
+  listColumnFlex,
   isCreatingFolder,
   newFolderName,
   onNewFolderNameChange,
@@ -79,6 +80,7 @@ export const ListView: React.FC<IFileListView> = ({
         folderOperations,
         fileOperations,
         onGoToFileLocation,
+        columnFlex: listColumnFlex,
         failedPreviews,
         setFailedPreviews,
       }),
@@ -93,6 +95,7 @@ export const ListView: React.FC<IFileListView> = ({
       folderOperations,
       fileOperations,
       onGoToFileLocation,
+      listColumnFlex,
       failedPreviews,
     ],
   );
