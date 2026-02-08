@@ -32,7 +32,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
     {
         if (string.IsNullOrWhiteSpace(request.Query))
         {
-            throw new ArgumentException("Query cannot be empty.", nameof(request.Query));
+            throw new BadHttpRequestException("Query cannot be empty.");
         }
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
@@ -76,7 +76,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         var nodePaths = await ResolveNodePathsAsync(request.UserId, request.LayoutId, nodes.Select(x => x.Id), ct);
 
         var filePaths = filesToTake == 0
-            ? new Dictionary<Guid, string>()
+            ? []
             : await ResolveFilePathsAsync(
                 request.UserId,
                 request.LayoutId,
@@ -105,7 +105,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         var nodeIds = startNodeIds.ToHashSet();
         if (nodeIds.Count == 0)
         {
-            return new Dictionary<Guid, string>();
+            return [];
         }
 
         var nodeInfo = await LoadNodeLineageAsync(userId, layoutId, nodeIds, ct);
@@ -141,7 +141,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
 
         var neededNodeIds = fileInfos.Select(x => x.NodeId).ToHashSet();
 
-        Dictionary<Guid, string> fullNodePaths = new();
+        Dictionary<Guid, string> fullNodePaths = [];
         foreach (var kvp in alreadyResolvedNodePaths)
         {
             fullNodePaths[kvp.Key] = kvp.Value;
@@ -173,7 +173,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         HashSet<Guid> startNodeIds,
         CancellationToken ct)
     {
-        Dictionary<Guid, (Guid? ParentId, string Name)> nodeInfo = new();
+        Dictionary<Guid, (Guid? ParentId, string Name)> nodeInfo = [];
 
         var frontier = new HashSet<Guid>(startNodeIds);
         while (frontier.Count > 0)
