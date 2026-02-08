@@ -18,7 +18,7 @@ import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
-import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
+import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { filesApi } from "../../shared/api/filesApi";
 import { shareLinks } from "../../shared/utils/shareLinks";
 
@@ -91,6 +91,7 @@ export const SearchPage: React.FC = () => {
           fileId,
           60 * 24 * 365,
         );
+
         const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
         if (!token) {
           setShareToast({
@@ -116,6 +117,7 @@ export const SearchPage: React.FC = () => {
             }
           }
         }
+
         try {
           await navigator.clipboard.writeText(url);
           setShareToast({
@@ -148,18 +150,6 @@ export const SearchPage: React.FC = () => {
     [handleDownloadFile, openPreview],
   );
 
-  const handleGoToFileLocation = useCallback(
-    async (containerPath: string) => {
-      try {
-        const node = await layoutsApi.resolve({ path: containerPath });
-        navigate(`/files/${node.id}`);
-      } catch {
-        // Intentionally silent: the button is best-effort.
-      }
-    },
-    [navigate],
-  );
-
   const sortedFiles = useMemo(() => {
     if (!results) return [];
     const files = results.files ?? [];
@@ -176,7 +166,6 @@ export const SearchPage: React.FC = () => {
     error: error ?? null,
     totalCount,
     hasQuery: !!query.trim(),
-    rootNodeName: rootNode?.name,
   });
 
   const {
@@ -252,8 +241,6 @@ export const SearchPage: React.FC = () => {
             tiles={results ? tiles : []}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
-            onGoToFileLocation={handleGoToFileLocation}
-            listColumnFlex={{ name: 1, location: 2 }}
             isCreatingFolder={false}
             newFolderName=""
             onNewFolderNameChange={() => {}}
