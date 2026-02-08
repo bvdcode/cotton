@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
+using Cotton.Shared;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ public class WebDavPathResolver(
     ILayoutNavigator _navigator) : IWebDavPathResolver
 {
     public const NodeType DefaultNodeType = NodeType.Default;
-    public const char PathSeparator = '/';
+    public const char PathSeparator = Constants.DefaultPathSeparator;
 
     public Task<WebDavResolveResult> ResolvePathAsync(Guid userId, string path, CancellationToken ct = default)
     {

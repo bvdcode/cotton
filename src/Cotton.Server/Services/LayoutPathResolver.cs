@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Shared;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +31,7 @@ public class LayoutPathResolver(
             return currentNode;
         }
 
-        var parts = path.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = path.Replace('\\', Constants.DefaultPathSeparator).Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
         foreach (var part in parts)
         {
             var nameKey = NameValidator.NormalizeAndGetNameKey(part);

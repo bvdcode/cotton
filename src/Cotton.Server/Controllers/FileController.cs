@@ -196,7 +196,6 @@ namespace Cotton.Server.Controllers
             }
 
             var userId = User.GetUserId();
-
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
