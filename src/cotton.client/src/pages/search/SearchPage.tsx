@@ -176,6 +176,7 @@ export const SearchPage: React.FC = () => {
     error: error ?? null,
     totalCount,
     hasQuery: !!query.trim(),
+    rootNodeName: rootNode?.name,
   });
 
   const {

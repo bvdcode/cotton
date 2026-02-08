@@ -278,7 +278,7 @@ export const createSizeColumn = (
 ): GridColDef<FileListRow> => ({
   field: "sizeBytes",
   headerName: options.t("size"),
-  width: 80,
+  width: 70,
   renderCell: (params) => {
     if (params.row.sizeBytes == null) {
       return (
@@ -304,7 +304,8 @@ export const createLocationColumn = (
 ): GridColDef<FileListRow> => ({
   field: "location",
   headerName: options.t("location"),
-  width: 220,
+  flex: 1,
+  minWidth: 120,
   renderCell: (params) => {
     const value = params.row.location;
     if (!value) {
