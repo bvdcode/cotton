@@ -67,9 +67,9 @@ export const RenamableItemCard = ({
           flexDirection: "column",
         }),
         p: {
-          xs: 1,
-          sm: 1.25,
-          md: 1,
+          xs: 0.5,
+          sm: 0.75,
+          md: 0.5,
         },
         bgcolor: "action.hover",
         overflow: "hidden",
@@ -119,6 +119,7 @@ export const RenamableItemCard = ({
           autoFocus
           fullWidth
           size="small"
+          variant="standard"
           value={renamingValue}
           onChange={(e) => onRenamingValueChange(e.target.value)}
           onKeyDown={(e) => {
@@ -134,6 +135,8 @@ export const RenamableItemCard = ({
             input: {
               sx: {
                 fontSize: { xs: "0.8rem", md: "0.85rem" },
+                px: 0,
+                py: 0.25,
               },
             },
           }}
