@@ -2,9 +2,13 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Server.Handlers.Users;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Models.Requests;
 using Cotton.Shared;
 using EasyExtensions;
+using EasyExtensions.Mediator;
+using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +17,7 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Users)]
-    public class UserController(CottonDbContext _dbContext) : ControllerBase
+    public class UserController(CottonDbContext _dbContext, IMediator _mediator) : ControllerBase
     {
         [Authorize]
         [HttpGet("me")]
@@ -27,6 +31,36 @@ namespace Cotton.Server.Controllers
             }
             UserDto userDto = user.Adapt<UserDto>();
             return Ok(userDto);
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet]
+        public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
+        {
+            AdminGetUsersQuery query = new();
+            var users = await _mediator.Send(query, cancellationToken);
+            return Ok(users);
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPost]
+        public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequestDto request, CancellationToken cancellationToken)
+        {
+            AdminCreateUserCommand command = new(request.Username, request.Password, request.Role);
+            var user = await _mediator.Send(command, cancellationToken);
+            return Ok(user);
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPut("{userId:guid}/password")]
+        public async Task<IActionResult> ChangePassword(
+            [FromRoute] Guid userId,
+            [FromBody] AdminChangeUserPasswordRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            AdminChangeUserPasswordCommand command = new(userId, request.Password);
+            await _mediator.Send(command, cancellationToken);
+            return Ok();
         }
     }
 }
