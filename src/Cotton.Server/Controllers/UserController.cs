@@ -51,14 +51,14 @@ namespace Cotton.Server.Controllers
             return Ok(user);
         }
 
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPut("{userId:guid}/password")]
+        [Authorize]
+        [HttpPut("me/password")]
         public async Task<IActionResult> ChangePassword(
-            [FromRoute] Guid userId,
-            [FromBody] AdminChangeUserPasswordRequestDto request,
+            [FromBody] ChangePasswordRequestDto request,
             CancellationToken cancellationToken)
         {
-            AdminChangeUserPasswordCommand command = new(userId, request.Password);
+            var userId = User.GetUserId();
+            ChangePasswordCommand command = new(userId, request.OldPassword, request.NewPassword);
             await _mediator.Send(command, cancellationToken);
             return Ok();
         }
