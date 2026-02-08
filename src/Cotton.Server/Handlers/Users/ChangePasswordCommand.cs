@@ -23,12 +23,12 @@ namespace Cotton.Server.Handlers.Users
         {
             if (string.IsNullOrWhiteSpace(request.OldPassword))
             {
-                throw new BadRequestException("Old password is required");
+                throw new BadRequestException<User>("Old password is required");
             }
 
             if (string.IsNullOrWhiteSpace(request.NewPassword))
             {
-                throw new BadRequestException("New password is required");
+                throw new BadRequestException<User>("New password is required");
             }
 
             var user = await _dbContext.Users.FindAsync([request.UserId], cancellationToken)
@@ -36,7 +36,7 @@ namespace Cotton.Server.Handlers.Users
 
             if (!_hasher.Verify(request.OldPassword, user.PasswordPhc))
             {
-                throw new BadRequestException("Old password is incorrect");
+                throw new BadRequestException<User>("Old password is incorrect");
             }
 
             user.PasswordPhc = _hasher.Hash(request.NewPassword);

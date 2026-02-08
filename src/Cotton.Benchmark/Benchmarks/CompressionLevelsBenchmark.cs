@@ -15,7 +15,7 @@ namespace Cotton.Benchmark.Benchmarks
     public sealed class CompressionLevelsBenchmark(BenchmarkConfiguration configuration) : BenchmarkBase(configuration)
     {
         private readonly byte[] _testData = TestDataGenerator.GenerateCompressibleText(configuration.DataSizeBytes);
-        
+
         // Test extreme levels from NEGATIVE (ultra-fast, minimal compression) to MAXIMUM (slowest, best compression)
         // Negative levels: practically no compression, maximum speed
         // Positive levels: balanced to maximum compression
@@ -111,7 +111,7 @@ namespace Cotton.Benchmark.Benchmarks
             // Calculate extremes
             var fastest = resultsByLevel.Values.OrderByDescending(r => r.ThroughputMBps).First();
             var bestCompression = resultsByLevel.Values.OrderByDescending(r => r.CompressionRatio).First();
-            
+
             dict["FastestLevel"] = $"Level {fastest.Level} ({fastest.ThroughputMBps:F2} MB/s)";
             dict["BestCompressionLevel"] = $"Level {bestCompression.Level} ({bestCompression.CompressionRatio:F2}x)";
             dict["SpeedDifference"] = $"{(resultsByLevel[-5].ThroughputMBps / resultsByLevel[22].ThroughputMBps):F2}x (L-5 vs L22)";
@@ -141,8 +141,8 @@ namespace Cotton.Benchmark.Benchmarks
 
             foreach (var (level, result) in results.OrderBy(kvp => kvp.Key))
             {
-                var speedVsBaseline = level == -5 
-                    ? "baseline" 
+                var speedVsBaseline = level == -5
+                    ? "baseline"
                     : $"{(baseline.ThroughputMBps / result.ThroughputMBps):F2}x slower";
 
                 var note = GetLevelNote(level);
@@ -152,7 +152,7 @@ namespace Cotton.Benchmark.Benchmarks
             }
 
             Console.WriteLine("════════════════════════════════════════════════════════════════════════════════════════════════");
-            
+
             // Print key insights
             Console.ForegroundColor = ConsoleColor.Cyan;
             var speedGain = baseline.ThroughputMBps / results[22].ThroughputMBps;

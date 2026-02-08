@@ -1,5 +1,4 @@
 ﻿using Cotton.Database.Models.Enums;
-using System.Threading;
 
 namespace Cotton.Server.Providers
 {

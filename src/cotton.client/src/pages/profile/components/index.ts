@@ -3,3 +3,4 @@ export { TotpSettingsCard } from "./TotpSettingsCard";
 export { SessionsCard } from "./SessionsCard";
 export { TotpSetupForm } from "./TotpSetupForm";
 export { WebDavTokenCard } from "./WebDavTokenCard";
+export { ChangePasswordCard } from "./ChangePasswordCard";

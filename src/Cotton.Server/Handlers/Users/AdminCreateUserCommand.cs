@@ -27,19 +27,19 @@ namespace Cotton.Server.Handlers.Users
         {
             if (string.IsNullOrWhiteSpace(request.Username))
             {
-                throw new BadRequestException("Username is required");
+                throw new BadRequestException<User>("Username is required");
             }
 
             if (string.IsNullOrWhiteSpace(request.Password))
             {
-                throw new BadRequestException("Password is required");
+                throw new BadRequestException<User>("Password is required");
             }
 
             var username = request.Username.Trim();
             bool exists = await _dbContext.Users.AnyAsync(x => x.Username == username, cancellationToken);
             if (exists)
             {
-                throw new BadRequestException("User already exists");
+                throw new BadRequestException<User>("User already exists");
             }
 
             var user = new User

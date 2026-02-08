@@ -9,6 +9,8 @@
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
     "placeholder": "—",
+    "yes": "Yes",
+    "no": "No",
     "time": {
       "justNow": "just now",
       "secondsAgo_one": "{{count}} second ago",
@@ -132,6 +134,20 @@
       "totpEnabledAt": "Enabled at",
       "totpFailedAttempts": "2FA Failed attempts",
       "createdAt": "Created at"
+    },
+    "password": {
+      "title": "Change password",
+      "description": "Update your account password.",
+      "old": "Old password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "save": "Save",
+      "saving": "Saving...",
+      "success": "Password changed.",
+      "errors": {
+        "mismatch": "Passwords do not match.",
+        "failed": "Failed to change password."
+      }
     },
     "sessions": {
       "title": "Active Sessions",
@@ -658,11 +674,48 @@
       "completed": "Trash emptied successfully"
     }
   },
+  "admin": {
+    "title": "Admin",
+    "menu": {
+      "users": "Users"
+    },
+    "roles": {
+      "user": "User",
+      "admin": "Admin",
+      "unknown": "Unknown"
+    },
+    "users": {
+      "title": "Users",
+      "refresh": "Refresh",
+      "loading": "Loading users...",
+      "columns": {
+        "username": "Username",
+        "role": "Role",
+        "totp": "2FA",
+        "sessions": "Sessions",
+        "lastActivity": "Last activity"
+      },
+      "errors": {
+        "loadFailed": "Failed to load users.",
+        "createFailed": "Failed to create user."
+      },
+      "create": {
+        "title": "Create user",
+        "username": "Username",
+        "password": "Password",
+        "role": "Role",
+        "button": "Create",
+        "creating": "Creating...",
+        "success": "User created."
+      }
+    }
+  },
   "routes": {
     "login": "Login",
     "home": "Home",
     "files": "Files",
     "trash": "Trash",
-    "profile": "Profile"
+    "profile": "Profile",
+    "admin": "Admin"
   }
 }
