@@ -24,32 +24,31 @@ export const AdminLayoutPage = () => {
   const isActive = (to: string) => location.pathname === to;
 
   return (
-    <Stack direction="row" spacing={2} alignItems="stretch" flex={1} minHeight={0}>
-      <Paper
-        variant="outlined"
-        sx={{ width: 280, flexShrink: 0, display: { xs: "none", md: "block" } }}
-      >
-        <Box p={2}>
-          <Typography variant="h6" fontWeight={700}>
-            {t("title")}
-          </Typography>
-        </Box>
-        <List disablePadding>
-          {items.map((item) => (
-            <ListItemButton
-              key={item.id}
-              selected={isActive(item.to)}
-              onClick={() => navigate(item.to)}
-            >
-              <ListItemText primary={item.title} />
-            </ListItemButton>
-          ))}
-        </List>
-      </Paper>
+    <Box p={{ xs: 2, sm: 3 }} display="flex" flex={1} minHeight={0}>
+      <Stack direction="row" spacing={2} alignItems="stretch" flex={1} minHeight={0}>
+        <Paper sx={{ width: 280, flexShrink: 0, display: { xs: "none", md: "block" } }}>
+          <Box p={2}>
+            <Typography variant="h6" fontWeight={700}>
+              {t("title")}
+            </Typography>
+          </Box>
+          <List disablePadding>
+            {items.map((item) => (
+              <ListItemButton
+                key={item.id}
+                selected={isActive(item.to)}
+                onClick={() => navigate(item.to)}
+              >
+                <ListItemText primary={item.title} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Paper>
 
-      <Box flex={1} minWidth={0} minHeight={0}>
-        <Outlet />
-      </Box>
-    </Stack>
+        <Box flex={1} minWidth={0} minHeight={0}>
+          <Outlet />
+        </Box>
+      </Stack>
+    </Box>
   );
 };

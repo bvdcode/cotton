@@ -129,7 +129,7 @@ export const AdminUsersPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Paper variant="outlined">
+      <Paper>
         <Stack spacing={1} p={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" fontWeight={700}>
@@ -188,7 +188,7 @@ export const AdminUsersPage = () => {
         </Stack>
       </Paper>
 
-      <Paper variant="outlined">
+      <Paper>
         <Stack spacing={2} p={2}>
           <Typography variant="h6" fontWeight={700}>
             {t("users.create.title")}
