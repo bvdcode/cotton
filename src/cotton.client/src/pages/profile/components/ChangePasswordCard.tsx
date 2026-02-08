@@ -155,9 +155,9 @@ export const ChangePasswordCard = () => {
                       }
                     >
                       {showOldPassword ? (
-                        <VisibilityOffIcon />
-                      ) : (
                         <VisibilityIcon />
+                      ) : (
+                        <VisibilityOffIcon />
                       )}
                     </IconButton>
                   </Tooltip>
@@ -195,9 +195,9 @@ export const ChangePasswordCard = () => {
                       }
                     >
                       {showNewPassword ? (
-                        <VisibilityOffIcon />
-                      ) : (
                         <VisibilityIcon />
+                      ) : (
+                        <VisibilityOffIcon />
                       )}
                     </IconButton>
                   </Tooltip>
@@ -235,9 +235,9 @@ export const ChangePasswordCard = () => {
                       }
                     >
                       {showConfirmNewPassword ? (
-                        <VisibilityOffIcon />
-                      ) : (
                         <VisibilityIcon />
+                      ) : (
+                        <VisibilityOffIcon />
                       )}
                     </IconButton>
                   </Tooltip>
