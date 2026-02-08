@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  Container,
   CircularProgress,
   Snackbar,
   Typography,
@@ -122,6 +123,11 @@ export const SharePage: React.FC = () => {
     return shareLinks.buildTokenDownloadUrl(token, "download");
   }, [token]);
 
+  const shareUrl = React.useMemo(() => {
+    if (!token) return null;
+    return shareLinks.buildShareUrl(token);
+  }, [token]);
+
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -192,16 +198,27 @@ export const SharePage: React.FC = () => {
         const cl = response.headers.get("content-length");
 
         setContentType(ct);
-        const parsedName = tryParseFileName(cd);
-        setFileName(parsedName);
+        let resolvedName: string | null = tryParseFileName(cd);
+        if (!resolvedName && downloadUrl) {
+          try {
+            const nameResp = await fetch(downloadUrl, { method: "HEAD" });
+            if (nameResp.ok) {
+              resolvedName = tryParseFileName(
+                nameResp.headers.get("content-disposition"),
+              );
+            }
+          } catch {
+            // ignore
+          }
+        }
+        if (cancelled) return;
+        setFileName(resolvedName);
 
         const parsedLength = cl ? Number.parseInt(cl, 10) : Number.NaN;
         setContentLength(Number.isFinite(parsedLength) ? parsedLength : null);
 
-        const kind =
-          guessViewerKind(ct) !== "unknown"
-            ? guessViewerKind(ct)
-            : guessViewerKindFromName(parsedName);
+        const byType = guessViewerKind(ct);
+        const kind = byType !== "unknown" ? byType : guessViewerKindFromName(resolvedName);
 
         if (kind === "text") {
           const textResp = await fetch(inlineUrl, { method: "GET" });
@@ -287,7 +304,7 @@ export const SharePage: React.FC = () => {
   };
 
   const handleShareLink = React.useCallback(async () => {
-    const url = window.location.href;
+    const url = shareUrl ?? window.location.href;
 
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
@@ -316,7 +333,7 @@ export const SharePage: React.FC = () => {
         message: t("errors.copyLink", { ns: "share" }),
       });
     }
-  }, [fileName, t]);
+  }, [fileName, shareUrl, t]);
 
   return (
     <Box
@@ -367,25 +384,32 @@ export const SharePage: React.FC = () => {
         <>
           {previewSupported && (
             <Box
+              position="sticky"
+              top={0}
+              zIndex={1}
+              bgcolor="background.default"
               display="flex"
               alignItems="center"
               justifyContent="space-between"
               gap={2}
               px={{ xs: 2, sm: 3 }}
-              py={2}
+              py={1}
               minWidth={0}
+              borderBottom={1}
+              borderColor="divider"
             >
               <Box
                 display="flex"
-                flexDirection="column"
+                alignItems="center"
+                gap={1}
                 minWidth={0}
               >
-                <Typography variant="h6" noWrap>
+                <Typography variant="subtitle1" noWrap>
                   {fileName ?? title}
                 </Typography>
                 {contentLength !== null && (
-                  <Typography variant="caption" color="text.secondary" noWrap>
-                    {formatBytes(contentLength)}
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    • {formatBytes(contentLength)}
                   </Typography>
                 )}
               </Box>
@@ -434,28 +458,52 @@ export const SharePage: React.FC = () => {
             )}
 
             {viewerKind === "image" && !previewFailed && (
-              <Box
-                component="img"
-                src={previewUrl}
-                alt={fileName ?? ""}
-                onError={() => setPreviewFailed(true)}
+              <Container
+                maxWidth="lg"
+                disableGutters
                 sx={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "contain",
-                  display: "block",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  px: { xs: 2, sm: 3 },
                 }}
-              />
+              >
+                <Box
+                  component="img"
+                  src={previewUrl}
+                  alt={fileName ?? ""}
+                  onError={() => setPreviewFailed(true)}
+                  sx={{
+                    width: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                />
+              </Container>
             )}
 
             {viewerKind === "video" && !previewFailed && (
-              <Box
-                component="video"
-                src={previewUrl}
-                controls
-                onError={() => setPreviewFailed(true)}
-                sx={{ maxWidth: "100%", maxHeight: "100%", display: "block" }}
-              />
+              <Container
+                maxWidth="lg"
+                disableGutters
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  px: { xs: 2, sm: 3 },
+                }}
+              >
+                <Box
+                  component="video"
+                  src={previewUrl}
+                  controls
+                  onError={() => setPreviewFailed(true)}
+                  sx={{ width: "100%", maxHeight: "100%", display: "block" }}
+                />
+              </Container>
             )}
 
             {viewerKind === "pdf" && !previewFailed && pdfBlobUrl && (
@@ -480,15 +528,11 @@ export const SharePage: React.FC = () => {
                 display="flex"
                 justifyContent="center"
               >
-                <Box
-                  width="100%"
-                  sx={{ maxWidth: 960 }}
-                  p={{ xs: 2, sm: 3 }}
-                >
+                <Container maxWidth="md" sx={{ py: { xs: 2, sm: 3 } }}>
                   <Typography component="pre" sx={{ m: 0, whiteSpace: "pre-wrap" }}>
                     {textContent}
                   </Typography>
-                </Box>
+                </Container>
               </Box>
             )}
 
