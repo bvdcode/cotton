@@ -370,7 +370,7 @@ export const FileSystemItemCard = ({
             },
           }}
         >
-          {actions!.map((action, idx) => (
+          {actions?.map((action, idx) => (
             <MenuItem
               key={idx}
               onClick={(e) => {
