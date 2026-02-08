@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Shared;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,10 @@ public sealed class LayoutNavigator(
             return currentNode;
         }
 
-        var parts = (path ?? string.Empty).Replace('\\', '/').Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = (path ?? string.Empty)
+            .Replace('\\', Constants.DefaultPathSeparator)
+            .Trim(Constants.DefaultPathSeparator)
+            .Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
         foreach (var part in parts)
         {
             var nameKey = NameValidator.NormalizeAndGetNameKey(part);
@@ -55,15 +59,15 @@ public sealed class LayoutNavigator(
 
     public async Task<(Node Parent, string ResourceName)?> ResolveParentAndNameAsync(Guid userId, string path, NodeType nodeType, CancellationToken ct = default)
     {
-        var cleanPath = (path ?? string.Empty).Replace('\\', '/').Trim('/');
+        var cleanPath = (path ?? string.Empty).Replace('\\', Constants.DefaultPathSeparator).Trim(Constants.DefaultPathSeparator);
         if (string.IsNullOrEmpty(cleanPath))
         {
             return null;
         }
 
-        var parts = cleanPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = cleanPath.Split(Constants.DefaultPathSeparator, StringSplitOptions.RemoveEmptyEntries);
         var resourceName = parts[^1];
-        var parentPath = parts.Length == 1 ? null : string.Join('/', parts.Take(parts.Length - 1));
+        var parentPath = parts.Length == 1 ? null : string.Join(Constants.DefaultPathSeparator, parts.Take(parts.Length - 1));
 
         var parent = await ResolveNodeByPathAsync(userId, parentPath, nodeType, ct);
         return parent is null ? null : (parent, resourceName);

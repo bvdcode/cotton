@@ -9,6 +9,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
+		<ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
 	</ItemGroup>
 
 </Project>

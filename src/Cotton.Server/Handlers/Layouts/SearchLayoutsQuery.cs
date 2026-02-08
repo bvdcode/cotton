@@ -3,6 +3,8 @@
 
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services.WebDav;
+using Cotton.Shared;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -37,7 +39,6 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
-
         string searchKey = NameValidator.NormalizeAndGetNameKey(request.Query);
 
         var nodesQuery = _dbContext.Nodes
@@ -74,7 +75,6 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
                 .ToListAsync(ct);
 
         var nodePaths = await ResolveNodePathsAsync(request.UserId, request.LayoutId, nodes.Select(x => x.Id), ct);
-
         var filePaths = filesToTake == 0
             ? []
             : await ResolveFilePathsAsync(
@@ -160,8 +160,8 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         var filePaths = new Dictionary<Guid, string>(fileInfos.Count);
         foreach (var f in fileInfos)
         {
-            var parentPath = fullNodePaths.TryGetValue(f.NodeId, out var p) ? p : "/";
-            filePaths[f.FileManifestId] = parentPath.TrimEnd('/') + "/" + f.Name;
+            var parentPath = fullNodePaths.TryGetValue(f.NodeId, out var p) ? p : Constants.DefaultPathSeparator.ToString();
+            filePaths[f.FileManifestId] = parentPath.TrimEnd(Constants.DefaultPathSeparator) + Constants.DefaultPathSeparator + f.Name;
         }
 
         return filePaths;
@@ -213,7 +213,6 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         Guid id)
     {
         const int MaxDepth = 256;
-
         var parts = new Stack<string>();
         var visited = new HashSet<Guid>();
         var currentId = id;
@@ -234,6 +233,6 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
             currentId = info.ParentId.Value;
         }
 
-        return "/" + string.Join('/', parts);
+        return Constants.DefaultPathSeparator + string.Join(Constants.DefaultPathSeparator, parts);
     }
 }
