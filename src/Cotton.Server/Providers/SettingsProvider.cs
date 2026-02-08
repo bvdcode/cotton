@@ -17,6 +17,7 @@ namespace Cotton.Server.Providers
         IStreamCipher _crypto,
         CottonDbContext _dbContext)
     {
+        private static readonly Lock _cacheLock = new();
         private static CottonServerSettings? _cache;
         private const int defaultSessionTimeoutHours = 24 * 30;
         private const int defaultTotpMaxFailedAttempts = 64;
@@ -25,31 +26,50 @@ namespace Cotton.Server.Providers
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
         public CottonServerSettings GetServerSettings()
         {
-            if (_cache != null)
+            if (_cache is not null)
             {
                 return _cache;
             }
-            var settings = _dbContext.ServerSettings
-                .AsNoTracking()
-                .OrderByDescending(s => s.CreatedAt)
-                .FirstOrDefault();
-            if (settings is not null)
+
+            lock (_cacheLock)
             {
-                return settings;
+                if (_cache is not null)
+                {
+                    return _cache;
+                }
+
+                var settings = _dbContext.ServerSettings
+                    .AsNoTracking()
+                    .OrderByDescending(s => s.CreatedAt)
+                    .FirstOrDefault();
+                if (settings is not null)
+                {
+                    _cache = settings;
+                    return _cache;
+                }
+
+                _cache = new()
+                {
+                    AllowCrossUserDeduplication = false,
+                    AllowGlobalIndexing = false,
+                    CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                    EncryptionThreads = defaultEncryptionThreads,
+                    MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
+                    SessionTimeoutHours = defaultSessionTimeoutHours,
+                    TelemetryEnabled = false,
+                    Timezone = "America/Los_Angeles",
+                    TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
+                };
+                return _cache;
             }
-            _cache = new()
+        }
+
+        public static void InvalidateCache()
+        {
+            lock (_cacheLock)
             {
-                AllowCrossUserDeduplication = false,
-                AllowGlobalIndexing = false,
-                CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
-                EncryptionThreads = defaultEncryptionThreads,
-                MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
-                SessionTimeoutHours = defaultSessionTimeoutHours,
-                TelemetryEnabled = false,
-                Timezone = "America/Los_Angeles",
-                TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
-            };
-            return _cache.Adapt<CottonServerSettings>();
+                _cache = null;
+            }
         }
 
         public Task<bool> IsServerInitializedAsync()
