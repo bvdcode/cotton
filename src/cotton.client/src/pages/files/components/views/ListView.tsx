@@ -13,6 +13,7 @@ export const ListView: React.FC<IFileListView> = ({
   tiles,
   folderOperations,
   fileOperations,
+  onGoToFileLocation,
   isCreatingFolder,
   newFolderName,
   onNewFolderNameChange,
@@ -37,6 +38,7 @@ export const ListView: React.FC<IFileListView> = ({
           id: tile.node.id,
           type: "folder",
           name: tile.node.name,
+          location: tile.path ?? null,
           sizeBytes: null,
           tile,
         };
@@ -46,6 +48,8 @@ export const ListView: React.FC<IFileListView> = ({
         id: tile.file.id,
         type: "file",
         name: tile.file.name,
+        location: tile.containerPath ?? null,
+        containerPath: tile.containerPath ?? null,
         sizeBytes: tile.file.sizeBytes,
         tile,
       };
@@ -76,6 +80,7 @@ export const ListView: React.FC<IFileListView> = ({
         fileNamePlaceholder,
         folderOperations,
         fileOperations,
+        onGoToFileLocation,
         failedPreviews,
         setFailedPreviews,
       });
@@ -103,6 +108,7 @@ export const ListView: React.FC<IFileListView> = ({
       fileNamePlaceholder,
       folderOperations,
       fileOperations,
+      onGoToFileLocation,
       failedPreviews,
       layoutPreferences.fileListColumnWidths,
     ],

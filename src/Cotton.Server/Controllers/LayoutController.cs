@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
@@ -37,159 +38,10 @@ namespace Cotton.Server.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return CottonResult.BadRequest("Query cannot be empty.");
-            }
             Guid userId = User.GetUserId();
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
-            string searchKey = NameValidator.NormalizeAndGetNameKey(query);
-            var nodesQuery = _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.OwnerId == userId
-                    && x.LayoutId == layoutId
-                    && x.NameKey.Contains(searchKey))
-                .OrderBy(x => x.NameKey);
-
-            var filesQuery = _dbContext.NodeFiles
-                .AsNoTracking()
-                .Where(x => x.OwnerId == userId
-                    && x.Node.LayoutId == layoutId
-                    && x.NameKey.Contains(searchKey))
-                .OrderBy(x => x.NameKey);
-
-            int nodesCount = await nodesQuery.CountAsync();
-            int filesCount = await filesQuery.CountAsync();
-            int totalCount = nodesCount + filesCount;
-
-            int skip = (page - 1) * pageSize;
-            int nodesToTake = Math.Max(0, Math.Min(pageSize, nodesCount - skip));
-            int filesSkip = Math.Max(0, skip - nodesCount);
-            int filesToTake = Math.Max(0, pageSize - nodesToTake);
-
-            var nodes = nodesToTake == 0 ? []
-                : await nodesQuery.Skip(skip).Take(nodesToTake)
-                    .ProjectToType<NodeDto>()
-                    .ToListAsync();
-
-            var files = filesToTake == 0 ? []
-                : await filesQuery.Skip(filesSkip).Take(filesToTake)
-                    .ProjectToType<FileManifestDto>()
-                    .ToListAsync();
-
-            // Build resolved paths for returned items efficiently.
-            // We do a single query for nodes (Id/ParentId/Name) referenced by the returned nodes/files,
-            // then assemble paths in-memory.
-            var nodeIds = nodes.Select(x => x.Id).ToHashSet();
-            var fileNodeIds = filesToTake == 0
-                ? new HashSet<Guid>()
-                : await _dbContext.NodeFiles
-                    .AsNoTracking()
-                    .Where(x => x.OwnerId == userId
-                        && x.Node.LayoutId == layoutId
-                        && x.NameKey.Contains(searchKey))
-                    .OrderBy(x => x.NameKey)
-                    .Skip(filesSkip)
-                    .Take(filesToTake)
-                    .Select(x => x.NodeId)
-                    .ToHashSetAsync();
-
-            var allStartNodeIds = nodeIds;
-            allStartNodeIds.UnionWith(fileNodeIds);
-
-            Dictionary<Guid, (Guid? ParentId, string Name)> nodeInfo = new();
-            if (allStartNodeIds.Count > 0)
-            {
-                var frontier = new HashSet<Guid>(allStartNodeIds);
-                while (frontier.Count > 0)
-                {
-                    var ids = frontier.ToArray();
-                    frontier.Clear();
-
-                    var chunk = await _dbContext.Nodes
-                        .AsNoTracking()
-                        .Where(x => x.OwnerId == userId
-                            && x.LayoutId == layoutId
-                            && ids.Contains(x.Id))
-                        .Select(x => new { x.Id, x.ParentId, x.Name })
-                        .ToListAsync();
-
-                    foreach (var n in chunk)
-                    {
-                        if (nodeInfo.ContainsKey(n.Id))
-                        {
-                            continue;
-                        }
-                        nodeInfo[n.Id] = (n.ParentId, n.Name);
-                        if (n.ParentId.HasValue && !nodeInfo.ContainsKey(n.ParentId.Value))
-                        {
-                            frontier.Add(n.ParentId.Value);
-                        }
-                    }
-                }
-            }
-
-            string ResolveNodePath(Guid id)
-            {
-                const int MaxDepth = 256;
-                var parts = new Stack<string>();
-                var visited = new HashSet<Guid>();
-                var currentId = id;
-                int depth = 0;
-                while (nodeInfo.TryGetValue(currentId, out var info))
-                {
-                    if (!visited.Add(currentId) || depth++ >= MaxDepth)
-                    {
-                        break;
-                    }
-
-                    parts.Push(info.Name);
-                    if (!info.ParentId.HasValue)
-                    {
-                        break;
-                    }
-                    currentId = info.ParentId.Value;
-                }
-                return "/" + string.Join('/', parts);
-            }
-
-            var nodePaths = new Dictionary<Guid, string>(nodes.Count);
-            foreach (var n in nodes)
-            {
-                nodePaths[n.Id] = ResolveNodePath(n.Id);
-            }
-
-            var filePaths = new Dictionary<Guid, string>(files.Count);
-            if (filesToTake > 0)
-            {
-                var fileIdToNodeAndName = await _dbContext.NodeFiles
-                    .AsNoTracking()
-                    .Where(x => x.OwnerId == userId
-                        && x.Node.LayoutId == layoutId
-                        && x.NameKey.Contains(searchKey))
-                    .OrderBy(x => x.NameKey)
-                    .Skip(filesSkip)
-                    .Take(filesToTake)
-                    .Select(x => new { x.FileManifestId, x.NodeId, x.Name })
-                    .ToListAsync();
-
-                foreach (var f in fileIdToNodeAndName)
-                {
-                    var parentPath = ResolveNodePath(f.NodeId);
-                    filePaths[f.FileManifestId] = parentPath.TrimEnd('/') + "/" + f.Name;
-                }
-            }
-
-            Response.Headers.Append("X-Total-Count", totalCount.ToString());
-            SearchResultDto result = new()
-            {
-                Nodes = nodes,
-                Files = files,
-                NodePaths = nodePaths,
-                FilePaths = filePaths,
-            };
-
+            SearchLayoutsQuery request = new(userId, layoutId, query, page, pageSize);
+            var result = await _mediator.Send(request);
+            Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result);
         }
 
