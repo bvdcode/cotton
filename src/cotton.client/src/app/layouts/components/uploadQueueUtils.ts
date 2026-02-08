@@ -26,6 +26,7 @@ export type UploadTask = {
   nodeLabel: string;
   uploadSpeedBytesPerSec?: number | null;
   error?: string;
+  errorKey?: string;
 };
 
 export const calculateUploadStats = (tasks: UploadTask[]) => {

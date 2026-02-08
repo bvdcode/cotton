@@ -2,6 +2,8 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../../shared/api/filesApi";
+import { previewConfig } from "../../../../shared/config/previewConfig";
+import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -11,16 +13,44 @@ import pdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 interface PdfPreviewProps {
   fileId: string;
   fileName: string;
+  fileSizeBytes?: number | null;
 }
 
 // Blob URL cache for PDFs
 const blobUrlCache = new Map<string, string>();
 
-export const PdfPreview = ({ fileId, fileName }: PdfPreviewProps) => {
+export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps) => {
   const { t } = useTranslation(["files", "common"]);
   const isMobile =
     typeof navigator !== "undefined" &&
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (fileSizeBytes && fileSizeBytes > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES) {
+    const maxMB = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES / (1024 * 1024);
+    return (
+      <Box
+        sx={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          p: 3,
+        }}
+      >
+        <Typography variant="body1" color="text.secondary" align="center">
+          {t("preview.errors.pdfTooLarge", {
+            ns: "files",
+            size: formatBytes(fileSizeBytes),
+            maxSize: `${Math.round(maxMB)} MB`,
+          })}
+        </Typography>
+      </Box>
+    );
+  }
+
   const cachedBlobUrl = blobUrlCache.get(fileId);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
   const [loading, setLoading] = useState(!cachedBlobUrl);
