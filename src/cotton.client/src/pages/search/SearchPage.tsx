@@ -18,7 +18,7 @@ import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
-import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
 import { filesApi } from "../../shared/api/filesApi";
 import { shareLinks } from "../../shared/utils/shareLinks";
 
@@ -148,6 +148,18 @@ export const SearchPage: React.FC = () => {
     [handleDownloadFile, openPreview],
   );
 
+  const handleGoToFileLocation = useCallback(
+    async (containerPath: string) => {
+      try {
+        const node = await layoutsApi.resolve({ path: containerPath });
+        navigate(`/files/${node.id}`);
+      } catch {
+        // Intentionally silent: the button is best-effort.
+      }
+    },
+    [navigate],
+  );
+
   const sortedFiles = useMemo(() => {
     if (!results) return [];
     const files = results.files ?? [];
@@ -239,6 +251,7 @@ export const SearchPage: React.FC = () => {
             tiles={results ? tiles : []}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
+            onGoToFileLocation={handleGoToFileLocation}
             isCreatingFolder={false}
             newFolderName=""
             onNewFolderNameChange={() => {}}

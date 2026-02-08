@@ -28,6 +28,8 @@ export interface LayoutStatsDto {
 export interface LayoutSearchResultDto {
   nodes: NodeDto[];
   files: NodeFileManifestDto[];
+  nodePaths: Record<string, string>;
+  filePaths: Record<string, string>;
 }
 
 export interface LayoutSearchResult {

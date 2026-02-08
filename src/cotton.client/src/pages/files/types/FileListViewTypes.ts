@@ -7,6 +7,7 @@ import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 export interface FolderTile {
   kind: "folder";
   node: NodeDto;
+  path?: string;
 }
 
 /**
@@ -15,6 +16,8 @@ export interface FolderTile {
 export interface FileTile {
   kind: "file";
   file: NodeFileManifestDto;
+  path?: string;
+  containerPath?: string;
 }
 
 /**
@@ -103,6 +106,12 @@ export interface IFileListView {
    * Operations available for files
    */
   fileOperations: FileOperations;
+
+  /**
+   * Optional handler for navigating to a file's containing folder.
+   * Used by Search results to jump to the node where a file is located.
+   */
+  onGoToFileLocation?: (containerPath: string) => void;
 
   /**
    * Whether a new folder is being created in this view

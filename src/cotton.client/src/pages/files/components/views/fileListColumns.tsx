@@ -6,6 +6,7 @@ import {
   Download,
   Edit,
   Folder,
+  FolderOpen,
   Image as ImageIcon,
   InsertDriveFile,
   TextSnippet,
@@ -25,6 +26,8 @@ export interface FileListRow {
   id: string;
   type: "folder" | "file" | "new-folder";
   name: string;
+  location?: string | null;
+  containerPath?: string | null;
   sizeBytes: number | null;
   tile?: {
     kind: "folder" | "file";
@@ -44,6 +47,7 @@ interface ColumnOptions {
   onCancelNewFolder: () => void;
   folderNamePlaceholder: string;
   fileNamePlaceholder: string;
+  onGoToFileLocation?: (containerPath: string) => void;
   folderOperations: {
     isRenaming: (id: string) => boolean;
     getRenamingName: () => string;
@@ -280,7 +284,7 @@ export const createSizeColumn = (
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
           <Typography variant="body2" color="text.secondary">
-            —
+            {options.t("common:placeholder")}
           </Typography>
         </Box>
       );
@@ -295,8 +299,52 @@ export const createSizeColumn = (
   },
 });
 
+export const createLocationColumn = (
+  options: Pick<ColumnOptions, "t">,
+): GridColDef<FileListRow> => ({
+  field: "location",
+  headerName: options.t("location"),
+  width: 220,
+  renderCell: (params) => {
+    const value = params.row.location;
+    if (!value) {
+      return (
+        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+          <Typography variant="body2" color="text.secondary">
+            {options.t("common:placeholder")}
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          height: "100%",
+          width: "100%",
+        }}
+      >
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          noWrap
+          sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+          title={value}
+        >
+          {value}
+        </Typography>
+      </Box>
+    );
+  },
+});
+
 export const createActionsColumn = (
-  options: Pick<ColumnOptions, "t" | "folderOperations" | "fileOperations">,
+  options: Pick<
+    ColumnOptions,
+    "t" | "folderOperations" | "fileOperations" | "onGoToFileLocation"
+  >,
 ): GridColDef<FileListRow> => ({
   field: "actions",
   headerName: options.t("actionsTitle"),
@@ -355,6 +403,18 @@ export const createActionsColumn = (
           justifyContent: "flex-end",
         }}
       >
+        {options.onGoToFileLocation && row.containerPath && (
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              options.onGoToFileLocation?.(row.containerPath ?? "/");
+            }}
+            title={options.t("actions.goToFolder")}
+          >
+            <FolderOpen fontSize="small" />
+          </IconButton>
+        )}
         <IconButton
           size="small"
           onClick={(e) => {
@@ -402,9 +462,16 @@ export const createActionsColumn = (
 
 export const createFileListColumns = (
   options: ColumnOptions,
-): GridColDef<FileListRow>[] => [
-  createIconColumn(options),
-  createNameColumn(options),
-  createSizeColumn(options),
-  createActionsColumn(options),
-];
+): GridColDef<FileListRow>[] => {
+  const columns: GridColDef<FileListRow>[] = [
+    createIconColumn(options),
+    createNameColumn(options),
+  ];
+
+  if (options.onGoToFileLocation) {
+    columns.push(createLocationColumn(options));
+  }
+
+  columns.push(createSizeColumn(options), createActionsColumn(options));
+  return columns;
+};
