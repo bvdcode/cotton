@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services.WebDav;
 using Cotton.Shared;
@@ -136,7 +137,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
             .OrderBy(x => x.NameKey)
             .Skip(filesSkip)
             .Take(filesToTake)
-            .Select(x => new { x.FileManifestId, x.NodeId, x.Name })
+            .Select(x => new { x.Id, x.NodeId, x.Name })
             .ToListAsync(ct);
 
         var neededNodeIds = fileInfos.Select(x => x.NodeId).ToHashSet();
@@ -161,7 +162,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         foreach (var f in fileInfos)
         {
             var parentPath = fullNodePaths.TryGetValue(f.NodeId, out var p) ? p : Constants.DefaultPathSeparator.ToString();
-            filePaths[f.FileManifestId] = parentPath.TrimEnd(Constants.DefaultPathSeparator) + Constants.DefaultPathSeparator + f.Name;
+            filePaths[f.Id] = parentPath.TrimEnd(Constants.DefaultPathSeparator) + Constants.DefaultPathSeparator + f.Name;
         }
 
         return filePaths;
