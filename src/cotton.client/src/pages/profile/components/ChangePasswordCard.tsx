@@ -134,32 +134,36 @@ export const ChangePasswordCard = () => {
           onChange={(e) => setOldPassword(e.target.value)}
           autoComplete="current-password"
           fullWidth
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Tooltip
-                  title={
-                    showOldPassword ? t("password.hide") : t("password.show")
-                  }
-                >
-                  <IconButton
-                    edge="end"
-                    onClick={() => setShowOldPassword((v) => !v)}
-                    aria-label={
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Tooltip
+                    title={
                       showOldPassword
                         ? t("password.hide")
                         : t("password.show")
                     }
                   >
-                    {showOldPassword ? (
-                      <VisibilityOffIcon />
-                    ) : (
-                      <VisibilityIcon />
-                    )}
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ),
+                    <IconButton
+                      edge="end"
+                      onClick={() => setShowOldPassword((v) => !v)}
+                      aria-label={
+                        showOldPassword
+                          ? t("password.hide")
+                          : t("password.show")
+                      }
+                    >
+                      {showOldPassword ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                </InputAdornment>
+              ),
+            },
           }}
         />
 
@@ -170,32 +174,36 @@ export const ChangePasswordCard = () => {
           onChange={(e) => setNewPassword(e.target.value)}
           autoComplete="new-password"
           fullWidth
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Tooltip
-                  title={
-                    showNewPassword ? t("password.hide") : t("password.show")
-                  }
-                >
-                  <IconButton
-                    edge="end"
-                    onClick={() => setShowNewPassword((v) => !v)}
-                    aria-label={
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Tooltip
+                    title={
                       showNewPassword
                         ? t("password.hide")
                         : t("password.show")
                     }
                   >
-                    {showNewPassword ? (
-                      <VisibilityOffIcon />
-                    ) : (
-                      <VisibilityIcon />
-                    )}
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ),
+                    <IconButton
+                      edge="end"
+                      onClick={() => setShowNewPassword((v) => !v)}
+                      aria-label={
+                        showNewPassword
+                          ? t("password.hide")
+                          : t("password.show")
+                      }
+                    >
+                      {showNewPassword ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                </InputAdornment>
+              ),
+            },
           }}
         />
 
@@ -206,34 +214,36 @@ export const ChangePasswordCard = () => {
           onChange={(e) => setConfirmNewPassword(e.target.value)}
           autoComplete="new-password"
           fullWidth
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Tooltip
-                  title={
-                    showConfirmNewPassword
-                      ? t("password.hide")
-                      : t("password.show")
-                  }
-                >
-                  <IconButton
-                    edge="end"
-                    onClick={() => setShowConfirmNewPassword((v) => !v)}
-                    aria-label={
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Tooltip
+                    title={
                       showConfirmNewPassword
                         ? t("password.hide")
                         : t("password.show")
                     }
                   >
-                    {showConfirmNewPassword ? (
-                      <VisibilityOffIcon />
-                    ) : (
-                      <VisibilityIcon />
-                    )}
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ),
+                    <IconButton
+                      edge="end"
+                      onClick={() => setShowConfirmNewPassword((v) => !v)}
+                      aria-label={
+                        showConfirmNewPassword
+                          ? t("password.hide")
+                          : t("password.show")
+                      }
+                    >
+                      {showConfirmNewPassword ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                </InputAdornment>
+              ),
+            },
           }}
         />
 
