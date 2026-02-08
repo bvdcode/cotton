@@ -210,7 +210,7 @@ namespace Cotton.Server.Controllers
                 FileName = nodeFile.Name,
                 DeleteAfterUse = deleteAfterUse,
                 CreatedByUserId = userId,
-                FileManifestId = nodeFile.FileManifestId,
+                NodeFileId = nodeFile.Id,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
                 Token = !string.IsNullOrWhiteSpace(customToken)
                     ? customToken
@@ -274,7 +274,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found");
             }
             var downloadToken = await _dbContext.DownloadTokens
-                .FirstOrDefaultAsync(x => x.Token == token && x.FileManifestId == nodeFile.FileManifestId);
+                .FirstOrDefaultAsync(x => x.Token == token && x.NodeFileId == nodeFile.Id);
             if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
             {
                 return CottonResult.NotFound("File not found");
