@@ -31,7 +31,6 @@ namespace Cotton.Database.Models
         public string? PreviewGenerationError { get; set; }
 
         public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
-        public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];
     }
 }
