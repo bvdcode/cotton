@@ -48,6 +48,10 @@ interface ColumnOptions {
   folderNamePlaceholder: string;
   fileNamePlaceholder: string;
   onGoToFileLocation?: (containerPath: string) => void;
+  columnFlex?: {
+    name: number;
+    location: number;
+  };
   folderOperations: {
     isRenaming: (id: string) => boolean;
     getRenamingName: () => string;
@@ -135,6 +139,7 @@ export const createNameColumn = (
   options: Pick<
     ColumnOptions,
     | "t"
+    | "columnFlex"
     | "newFolderName"
     | "onNewFolderNameChange"
     | "onConfirmNewFolder"
@@ -147,7 +152,7 @@ export const createNameColumn = (
 ): GridColDef<FileListRow> => ({
   field: "name",
   headerName: options.t("name"),
-  flex: 1,
+  flex: options.columnFlex?.name ?? 1,
   minWidth: 120,
   renderCell: (params) => {
     const row = params.row;
@@ -300,11 +305,11 @@ export const createSizeColumn = (
 });
 
 export const createLocationColumn = (
-  options: Pick<ColumnOptions, "t">,
+  options: Pick<ColumnOptions, "t" | "columnFlex">,
 ): GridColDef<FileListRow> => ({
   field: "location",
   headerName: options.t("location"),
-  flex: 1,
+  flex: options.columnFlex?.location ?? 1,
   minWidth: 120,
   renderCell: (params) => {
     const value = params.row.location;
