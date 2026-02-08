@@ -7,6 +7,8 @@ import type { NodeFileManifestDto } from "../../api/nodesApi";
 interface SearchResults {
   nodes?: NodeDto[];
   files?: NodeFileManifestDto[];
+  nodePaths?: Record<string, string>;
+  filePaths?: Record<string, string>;
 }
 
 interface UseSearchFileListOptions {
@@ -27,6 +29,16 @@ export const useSearchFileList = ({
   const tiles: FileSystemTile[] = useMemo(() => {
     if (!results || !hasQuery) return [];
 
+    const nodePaths = results.nodePaths ?? {};
+    const filePaths = results.filePaths ?? {};
+
+    const getContainerPath = (fullPath: string): string => {
+      const normalized = fullPath.trim();
+      const parts = normalized.split("/").filter((p) => p.length > 0);
+      if (parts.length <= 1) return "/";
+      return `/${parts.slice(0, -1).join("/")}`;
+    };
+
     const sortByName = <T extends { name: string }>(items: T[]): T[] => {
       const sorted = items.slice();
       sorted.sort((a, b) =>
@@ -39,8 +51,25 @@ export const useSearchFileList = ({
     const sortedFiles = sortByName(results.files ?? []);
 
     return [
-      ...sortedFolders.map((node) => ({ kind: "folder", node }) as const),
-      ...sortedFiles.map((file) => ({ kind: "file", file }) as const),
+      ...sortedFolders.map(
+        (node) =>
+          ({
+            kind: "folder",
+            node,
+            path: nodePaths[node.id],
+          }) as const,
+      ),
+      ...sortedFiles.map(
+        (file) => {
+          const fullPath = filePaths[file.id];
+          return {
+            kind: "file",
+            file,
+            path: fullPath,
+            containerPath: fullPath ? getContainerPath(fullPath) : undefined,
+          } as const;
+        },
+      ),
     ];
   }, [results, hasQuery]);
 

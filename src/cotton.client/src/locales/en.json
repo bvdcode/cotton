@@ -8,6 +8,7 @@
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
+    "placeholder": "—",
     "time": {
       "justNow": "just now",
       "secondsAgo_one": "{{count}} second ago",
@@ -485,6 +486,7 @@
       "upload": "Upload",
       "newFolder": "New folder",
       "folderNamePlaceholder": "Folder name",
+      "goToFolder": "Go to folder",
       "goUp": "Go up",
       "dropFiles": "Drop files to upload",
       "switchToTilesView": "Switch to tiles",
@@ -572,6 +574,7 @@
     "actionsTitle": "Actions",
     "size": "Size",
     "name": "Name",
+    "location": "Location",
     "noFilesOrFolders": "No files or folders"
   },
   "upload": {

@@ -8,6 +8,7 @@
   "common": {
     "languageName": "Русский",
     "switchToThisLanguage": "Переключить на русский",
+    "placeholder": "—",
     "title": "Cotton Cloud",
     "subtitle": "Мастер настройки",
     "time": {
@@ -503,6 +504,7 @@
       "upload": "Загрузить",
       "newFolder": "Новая папка",
       "folderNamePlaceholder": "Название папки",
+      "goToFolder": "Перейти в папку",
       "goUp": "Вверх",
       "dropFiles": "Перетащите файлы для загрузки",
       "switchToTilesView": "Переключиться на плитки",
@@ -590,6 +592,7 @@
     "actionsTitle": "Действия",
     "size": "Размер",
     "name": "Название",
+    "location": "Расположение",
     "noFilesOrFolders": "Нет файлов и папок"
   },
   "upload": {
