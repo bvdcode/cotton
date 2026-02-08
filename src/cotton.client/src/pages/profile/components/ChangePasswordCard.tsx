@@ -1,10 +1,21 @@
-import { Alert, Button, CircularProgress, Stack, TextField } from "@mui/material";
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  Stack,
+  TextField,
+  Tooltip,
+} from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "../../../shared/api/httpClient";
 import { authApi } from "../../../shared/api/authApi";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import PasswordIcon from "@mui/icons-material/Password";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 type ChangePasswordStatus =
   | { kind: "idle" }
@@ -14,9 +25,49 @@ type ChangePasswordStatus =
 export const ChangePasswordCard = () => {
   const { t } = useTranslation("profile");
 
+  type ApiErrorResponse = {
+    message?: string;
+    title?: string;
+    errors?: Record<string, string | string[]>;
+  };
+
+  const extractApiErrorMessage = (data?: ApiErrorResponse): string | null => {
+    if (!data) return null;
+    if (typeof data.message === "string" && data.message.length > 0) {
+      return data.message;
+    }
+
+    const errors = data.errors;
+    if (errors && typeof errors === "object") {
+      const values = Object.values(errors);
+      for (const value of values) {
+        if (typeof value === "string" && value.length > 0) {
+          return value;
+        }
+        if (Array.isArray(value)) {
+          const first = value.find(
+            (v) => typeof v === "string" && v.length > 0,
+          );
+          if (first) {
+            return first;
+          }
+        }
+      }
+    }
+
+    if (typeof data.title === "string" && data.title.length > 0) {
+      return data.title;
+    }
+
+    return null;
+  };
+
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<ChangePasswordStatus>({ kind: "idle" });
 
@@ -47,10 +98,10 @@ export const ChangePasswordCard = () => {
       resetForm();
     } catch (e) {
       if (isAxiosError(e)) {
-        const message = (e.response?.data as { message?: string } | undefined)
-          ?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setStatus({ kind: "error", message });
+        const data = e.response?.data as ApiErrorResponse | undefined;
+        const message = extractApiErrorMessage(data);
+        if (message) {
+          setStatus({ kind: "error", message: message });
           return;
         }
       }
@@ -78,29 +129,112 @@ export const ChangePasswordCard = () => {
 
         <TextField
           label={t("password.old")}
-          type="password"
+          type={showOldPassword ? "text" : "password"}
           value={oldPassword}
           onChange={(e) => setOldPassword(e.target.value)}
           autoComplete="current-password"
           fullWidth
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Tooltip
+                  title={
+                    showOldPassword ? t("password.hide") : t("password.show")
+                  }
+                >
+                  <IconButton
+                    edge="end"
+                    onClick={() => setShowOldPassword((v) => !v)}
+                    aria-label={
+                      showOldPassword
+                        ? t("password.hide")
+                        : t("password.show")
+                    }
+                  >
+                    {showOldPassword ? (
+                      <VisibilityOffIcon />
+                    ) : (
+                      <VisibilityIcon />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </InputAdornment>
+            ),
+          }}
         />
 
         <TextField
           label={t("password.new")}
-          type="password"
+          type={showNewPassword ? "text" : "password"}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           autoComplete="new-password"
           fullWidth
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Tooltip
+                  title={
+                    showNewPassword ? t("password.hide") : t("password.show")
+                  }
+                >
+                  <IconButton
+                    edge="end"
+                    onClick={() => setShowNewPassword((v) => !v)}
+                    aria-label={
+                      showNewPassword
+                        ? t("password.hide")
+                        : t("password.show")
+                    }
+                  >
+                    {showNewPassword ? (
+                      <VisibilityOffIcon />
+                    ) : (
+                      <VisibilityIcon />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </InputAdornment>
+            ),
+          }}
         />
 
         <TextField
           label={t("password.confirm")}
-          type="password"
+          type={showConfirmNewPassword ? "text" : "password"}
           value={confirmNewPassword}
           onChange={(e) => setConfirmNewPassword(e.target.value)}
           autoComplete="new-password"
           fullWidth
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Tooltip
+                  title={
+                    showConfirmNewPassword
+                      ? t("password.hide")
+                      : t("password.show")
+                  }
+                >
+                  <IconButton
+                    edge="end"
+                    onClick={() => setShowConfirmNewPassword((v) => !v)}
+                    aria-label={
+                      showConfirmNewPassword
+                        ? t("password.hide")
+                        : t("password.show")
+                    }
+                  >
+                    {showConfirmNewPassword ? (
+                      <VisibilityOffIcon />
+                    ) : (
+                      <VisibilityIcon />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </InputAdornment>
+            ),
+          }}
         />
 
         <Stack direction="row" justifyContent="flex-end" spacing={1}>
