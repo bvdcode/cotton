@@ -60,7 +60,8 @@
       "invalidLink": "Invalid share link.",
       "notFound": "File not found or link expired.",
       "loadFailed": "Failed to load the shared file.",
-      "copyLink": "Failed to copy link to clipboard."
+      "copyLink": "Failed to copy link to clipboard.",
+      "fileTooLargePreview": "File is too large to preview ({{size}}). Please download the file to view it."
     }
   },
   "login": {
@@ -568,6 +569,7 @@
         "downloadFailed": "Download failed",
         "pdfLoadFailed": "Failed to load PDF",
         "pdfDisplayFailed": "Failed to display PDF",
+        "pdfTooLarge": "PDF is too large to preview ({{size}}). Maximum size is {{maxSize}}. Please download the file to view it.",
         "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for text preview is {{maxSize}}. Please download the file to view it."
       }
     },
@@ -580,6 +582,10 @@
   "upload": {
     "title": "Uploads",
     "error": "Error",
+    "errors": {
+      "serverSettingsNotLoaded": "Server settings are not loaded",
+      "uploadFailed": "Upload failed"
+    },
     "titleWithTotal": "Uploads ({{total}})",
     "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",
     "titleWithErrors": "Uploads ({{total}} • {{failed}} failed)",

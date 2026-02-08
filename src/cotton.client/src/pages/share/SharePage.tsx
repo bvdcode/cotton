@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { shareLinks } from "../../shared/utils/shareLinks";
 import { formatBytes } from "../../shared/utils/formatBytes";
+import { previewConfig } from "../../shared/config/previewConfig";
 
 type ViewerKind = "image" | "video" | "pdf" | "text" | "unknown";
 
@@ -231,6 +232,10 @@ export const SharePage: React.FC = () => {
         const kind = byType !== "unknown" ? byType : guessViewerKindFromName(resolvedName);
 
         if (kind === "text") {
+          if (Number.isFinite(parsedLength) && parsedLength > previewConfig.MAX_SHARE_TEXT_PREVIEW_SIZE_BYTES) {
+            setLoading(false);
+            return;
+          }
           const textResp = await fetch(inlineUrl, { method: "GET" });
           if (!textResp.ok) {
             throw new Error("text download failed");
@@ -258,6 +263,10 @@ export const SharePage: React.FC = () => {
   React.useEffect(() => {
     if (!resolvedDownloadUrl) return;
     if (viewerKind !== "pdf") return;
+    if (contentLength !== null && contentLength > previewConfig.MAX_SHARE_PDF_PREVIEW_SIZE_BYTES) {
+      setPreviewFailed(true);
+      return;
+    }
 
     let cancelled = false;
     let nextUrl: string | null = null;
