@@ -12,6 +12,7 @@ import {
   InsertDriveFile,
   Movie,
   PictureAsPdf,
+  Download,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
@@ -258,54 +259,37 @@ export const SharePage: React.FC = () => {
     viewerKind === "unknown" ? "unknown" : viewerKind;
   const title = fileName ?? t("title", { ns: "share" });
 
+  const handleDownload = () => {
+    if (!downloadUrl) return;
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = fileName ?? "file";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Box
       width="100%"
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        minHeight: 0,
-        minWidth: 0,
-        px: { xs: 1, sm: 2 },
-        py: { xs: 1, sm: 2 },
-      }}
+      display="flex"
+      flexDirection="column"
+      flex={1}
+      minHeight={0}
+      minWidth={0}
     >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1,
-          mb: 1,
-          minWidth: 0,
-        }}
-      >
-        <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
-          {title}
-        </Typography>
-        {downloadUrl && (
-          <Button
-            href={downloadUrl}
-            target="_blank"
-            rel="noreferrer"
-            variant="outlined"
-          >
-            {t("actions.download", { ns: "common" })}
-          </Button>
-        )}
-      </Box>
 
       {loading && (
         <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 2,
-          }}
+          flex={1}
+          minHeight={0}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap={2}
         >
           <CircularProgress size={20} />
           <Typography color="text.secondary">
@@ -314,113 +298,160 @@ export const SharePage: React.FC = () => {
         </Box>
       )}
 
-      {!loading && error && <Alert severity="error">{error}</Alert>}
+      {!loading && error && (
+        <Box
+          flex={1}
+          minHeight={0}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={2}
+        >
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      )}
 
       {!loading && !error && previewUrl && (
-        <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 1,
-            overflow: "hidden",
-          }}
-        >
-          {viewerKind === "image" && !previewFailed && (
-            <Box
-              component="img"
-              src={previewUrl}
-              alt={fileName ?? ""}
-              onError={() => setPreviewFailed(true)}
-              sx={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                display: "block",
-              }}
-            />
-          )}
+        <>
+          <Box
+            flex={1}
+            minHeight={0}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            overflow="hidden"
+          >
+            {viewerKind === "image" && !previewFailed && (
+              <Box
+                component="img"
+                src={previewUrl}
+                alt={fileName ?? ""}
+                onError={() => setPreviewFailed(true)}
+                sx={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                  display: "block",
+                }}
+              />
+            )}
 
-          {viewerKind === "video" && !previewFailed && (
-            <Box
-              component="video"
-              src={previewUrl}
-              controls
-              onError={() => setPreviewFailed(true)}
-              sx={{ width: "100%", height: "100%", display: "block" }}
-            />
-          )}
+            {viewerKind === "video" && !previewFailed && (
+              <Box
+                component="video"
+                src={previewUrl}
+                controls
+                onError={() => setPreviewFailed(true)}
+                sx={{ maxWidth: "100%", maxHeight: "100%", display: "block" }}
+              />
+            )}
 
-          {viewerKind === "pdf" && !previewFailed && pdfBlobUrl && (
-            <Box
-              component="iframe"
-              src={pdfBlobUrl}
-              title={title}
-              sx={{ width: "100%", height: "100%", border: "none" }}
-            />
-          )}
+            {viewerKind === "pdf" && !previewFailed && pdfBlobUrl && (
+              <Box
+                component="iframe"
+                src={pdfBlobUrl}
+                title={title}
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  maxWidth: "100%",
+                }}
+              />
+            )}
 
-          {viewerKind === "text" && !previewFailed && (
-            <Box
-              sx={{
-                width: "100%",
-                height: "100%",
-                overflow: "auto",
-                p: 2,
-              }}
-            >
-              <Typography component="pre" sx={{ m: 0, whiteSpace: "pre-wrap" }}>
-                {textContent ?? ""}
-              </Typography>
-            </Box>
-          )}
-
-          {(viewerKind === "unknown" ||
-            previewFailed ||
-            (viewerKind === "pdf" && !pdfBlobUrl)) && (
-            <Box
-              sx={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                p: 2,
-                gap: 1,
-              }}
-            >
+            {viewerKind === "text" && !previewFailed && (
               <Box
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  "& > svg": { width: 56, height: 56 },
-                  color: "text.secondary",
+                  width: "100%",
+                  height: "100%",
+                  overflow: "auto",
+                  p: 2,
                 }}
               >
-                {getFallbackIcon(fallbackKind)}
+                <Typography
+                  component="pre"
+                  sx={{ m: 0, whiteSpace: "pre-wrap" }}
+                >
+                  {textContent ?? ""}
+                </Typography>
               </Box>
+            )}
 
-              {contentLength !== null && (
-                <Typography color="text.secondary" variant="body2">
-                  {formatBytes(contentLength)}
-                </Typography>
-              )}
+            {(viewerKind === "unknown" ||
+              previewFailed ||
+              (viewerKind === "pdf" && !pdfBlobUrl)) && (
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                p={2}
+                gap={1}
+              >
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  sx={{
+                    "& > svg": { width: 80, height: 80 },
+                    color: "text.secondary",
+                  }}
+                >
+                  {getFallbackIcon(fallbackKind)}
+                </Box>
 
-              {contentType && (
-                <Typography color="text.secondary" variant="caption" noWrap>
-                  {contentType}
-                </Typography>
-              )}
+                {fileName && (
+                  <Typography
+                    color="text.primary"
+                    variant="h6"
+                    align="center"
+                    sx={{ mt: 2 }}
+                  >
+                    {fileName}
+                  </Typography>
+                )}
 
-              <Typography color="text.secondary" sx={{ mt: 1 }}>
-                {t("unsupported", { ns: "share" })}
-              </Typography>
+                {contentLength !== null && (
+                  <Typography color="text.secondary" variant="body2">
+                    {formatBytes(contentLength)}
+                  </Typography>
+                )}
+
+                {contentType && (
+                  <Typography color="text.secondary" variant="caption">
+                    {contentType}
+                  </Typography>
+                )}
+
+                {previewFailed && (
+                  <Typography color="text.secondary" sx={{ mt: 1 }}>
+                    {t("unsupported", { ns: "share" })}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
+
+          {downloadUrl && (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              p={3}
+            >
+              <Button
+                onClick={handleDownload}
+                variant="contained"
+                size="large"
+                startIcon={<Download />}
+                sx={{ minWidth: 200 }}
+              >
+                {t("actions.download", { ns: "common" })}
+              </Button>
             </Box>
           )}
-        </Box>
+        </>
       )}
     </Box>
   );
