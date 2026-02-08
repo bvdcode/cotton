@@ -12,7 +12,7 @@ namespace Cotton.Previews
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
         {
             using Image<Rgba32> image = Image.Load<Rgba32>(stream);
-            image.Mutate(x => x.Resize(new ResizeOptions
+            image.Mutate(x => x.AutoOrient().Resize(new ResizeOptions
             {
                 Size = new Size(size, size),
                 Mode = ResizeMode.Max
