@@ -46,6 +46,7 @@ namespace Cotton.Server
                 .AddQuartzJobs()
                 .AddMemoryCache()
                 .AddSingleton<PerfTracker>()
+                .AddSingleton<Cotton.Server.Providers.IStorageBackendTypeCache, Cotton.Server.Providers.StorageBackendTypeCache>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
