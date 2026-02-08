@@ -141,6 +141,8 @@
       "old": "Old password",
       "new": "New password",
       "confirm": "Confirm new password",
+      "show": "Show password",
+      "hide": "Hide password",
       "save": "Save",
       "saving": "Saving...",
       "success": "Password changed.",
