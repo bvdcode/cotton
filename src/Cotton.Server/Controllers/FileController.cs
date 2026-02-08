@@ -50,22 +50,14 @@ namespace Cotton.Server.Controllers
         {
             bool isHead = HttpMethods.IsHead(Request.Method);
             DateTime now = DateTime.UtcNow;
-            string accept = Request.Headers.Accept.ToString();
-            bool acceptHtml = accept.Contains("text/html", StringComparison.OrdinalIgnoreCase);
 
-            string mode = view?.Trim().ToLowerInvariant() ?? "auto";
-            if (view is not null && mode is not ("auto" or "page" or "download" or "inline"))
+            string mode = (view ?? "page").Trim().ToLowerInvariant();
+            if (view is not null && mode is not ("page" or "download" or "inline"))
             {
-                return this.ApiBadRequest("Invalid view mode. Valid values: auto, page, download, inline.");
+                return this.ApiBadRequest("Invalid view mode. Valid values: page, download, inline.");
             }
-            bool ishtml = mode switch
-            {
-                "page" => true,
-                "download" => false,
-                "inline" => false,
-                _ => acceptHtml,
-            };
 
+            bool ishtml = mode == "page";
             bool isInlineFile = mode == "inline";
 
             string baseAppUrl = $"{Request.Scheme}://{Request.Host}";
