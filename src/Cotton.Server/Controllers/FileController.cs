@@ -134,6 +134,14 @@ namespace Cotton.Server.Controllers
                     Response.ContentType = file.ContentType;
                     Response.ContentLength = file.SizeBytes;
                     Response.Headers.ETag = entityTag.ToString();
+
+                    var cd = new ContentDispositionHeaderValue(isInlineFile ? "inline" : "attachment")
+                    {
+                        FileNameStar = downloadToken.FileName,
+                        FileName = downloadToken.FileName
+                    };
+                    Response.Headers[HeaderNames.ContentDisposition] = cd.ToString();
+
                     return new EmptyResult();
                 }
 
