@@ -415,8 +415,8 @@ export const FilesPage: React.FC = () => {
             tileSize={tilesSize}
             loading={
               layoutType === InterfaceLayoutType.List
-                ? listLoading && !listContent
-                : (loading && !content) || isContentTransitioning
+                ? !listContent && !listError
+                : (!content && !error) || isContentTransitioning
             }
             loadingTitle={t("loading.title")}
             loadingCaption={t("loading.caption")}

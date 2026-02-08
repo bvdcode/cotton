@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
+import { useNodesStore } from "../../../shared/store/nodesStore";
 
 interface UseFilesDataParams {
   nodeId: string | null;
@@ -33,6 +34,14 @@ export const useFilesData = ({
   useEffect(() => {
     if (!nodeId) {
       setChildrenTotalCount(null);
+      return;
+    }
+
+    // Skip network probe when content is already cached
+    const cached = useNodesStore.getState().contentByNodeId[nodeId];
+    if (cached) {
+      setChildrenTotalCount(cached.nodes.length + cached.files.length);
+      setChildrenCountLoading(false);
       return;
     }
 

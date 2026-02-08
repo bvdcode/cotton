@@ -113,7 +113,7 @@ export const TrashPage: React.FC = () => {
   }, [viewMode]);
 
   const [listTotalCount, setListTotalCount] = React.useState(0);
-  const [listLoading, setListLoading] = React.useState(false);
+  const [, setListLoading] = React.useState(false);
   const [listError, setListError] = React.useState<string | null>(null);
   const [listContent, setListContent] = React.useState<NodeContentDto | null>(
     null,
@@ -174,6 +174,19 @@ export const TrashPage: React.FC = () => {
       void fetchListPage(currentPagination.page, currentPagination.pageSize);
     }
   }, [nodeId, layoutType, currentPagination, fetchListPage]);
+
+  // Auto-init pagination when switching to list mode
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) {
+      setListContent(null);
+      setListError(null);
+      setCurrentPagination(null);
+      return;
+    }
+    if (nodeId && !currentPagination) {
+      setCurrentPagination({ page: 0, pageSize: 100 });
+    }
+  }, [nodeId, layoutType, currentPagination]);
 
   const handlePaginationChange = React.useCallback(
     (page: number, pageSize: number) => {
@@ -403,7 +416,7 @@ export const TrashPage: React.FC = () => {
 
   const isCreatingInThisFolder = false;
 
-  if (loading && !content && layoutType !== InterfaceLayoutType.List) {
+  if (!content && !error && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
@@ -473,8 +486,8 @@ export const TrashPage: React.FC = () => {
             tileSize={tilesSize}
             loading={
               layoutType === InterfaceLayoutType.List
-                ? listLoading && !listContent
-                : loading && !content
+                ? !listContent && !listError
+                : !content && !error
             }
             loadingTitle={t("loading.title")}
             loadingCaption={t("loading.caption")}
@@ -491,7 +504,7 @@ export const TrashPage: React.FC = () => {
               layoutType === InterfaceLayoutType.List
                 ? {
                     totalCount: listTotalCount,
-                    loading: listLoading && !listContent,
+                    loading: !listContent && !listError,
                     onPaginationModelChange,
                   }
                 : undefined

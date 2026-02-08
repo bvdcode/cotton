@@ -96,12 +96,22 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     const loadChildren = options?.loadChildren ?? true;
     if (state.loading && state.currentNode?.id === nodeId) return;
 
-    set({ loading: true, error: null });
+    const cachedContent = loadChildren
+      ? state.contentByNodeId[nodeId]
+      : undefined;
+    const hasCachedContent = !!cachedContent;
+
+    // Only show loading spinner when no cached content is available
+    if (hasCachedContent) {
+      set({ error: null });
+    } else {
+      set({ loading: true, error: null });
+    }
 
     try {
       const resolved = await resolveNodeAndAncestors(nodeId, state);
       const content = loadChildren
-        ? (await nodesApi.getChildren(nodeId)).content
+        ? (cachedContent ?? (await nodesApi.getChildren(nodeId)).content)
         : undefined;
 
       set((prev) => ({
@@ -124,6 +134,27 @@ export const useNodesStore = create<NodesState>((set, get) => ({
         loading: false,
         error: null,
       }));
+
+      // Background refresh when cached content was used
+      if (loadChildren && hasCachedContent) {
+        void (async () => {
+          try {
+            const fresh = await nodesApi.getChildren(nodeId);
+            set((prev) => ({
+              contentByNodeId: {
+                ...prev.contentByNodeId,
+                [nodeId]: fresh.content,
+              },
+              lastUpdatedByNodeId: {
+                ...prev.lastUpdatedByNodeId,
+                [nodeId]: Date.now(),
+              },
+            }));
+          } catch {
+            // Silent: background refresh failure is non-critical
+          }
+        })();
+      }
     } catch (error) {
       console.error("Failed to load node view", error);
       set({ loading: false, error: "Failed to load folder contents" });
