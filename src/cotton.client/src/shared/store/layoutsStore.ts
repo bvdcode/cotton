@@ -98,17 +98,22 @@ export const useLayoutsStore = create<LayoutsState>()(
       },
 
       ensureHomeData: async () => {
-        // Show cached data if present, but always refetch to avoid stale state after reload.
+        // Use cached data immediately if present. Refetch in background so UI doesn't
+        // block/flicker when user already has data from persisted store.
         const root = await get().resolveRootNode({ force: false });
+        const cachedLayoutId = root?.layoutId;
 
-        // Refetch root even if cached.
-        const refreshedRoot = await get().resolveRootNode({ force: true });
-        const layoutId = (refreshedRoot ?? root)?.layoutId;
-        if (!layoutId) return;
+        if (cachedLayoutId) {
+          await get().fetchLayoutStats(cachedLayoutId, { force: false });
+        }
 
-        // Same policy for stats: use cached then refetch.
-        await get().fetchLayoutStats(layoutId, { force: false });
-        await get().fetchLayoutStats(layoutId, { force: true });
+        void (async () => {
+          const refreshedRoot = await get().resolveRootNode({ force: true });
+          const refreshedLayoutId = refreshedRoot?.layoutId ?? cachedLayoutId;
+          if (!refreshedLayoutId) return;
+
+          await get().fetchLayoutStats(refreshedLayoutId, { force: true });
+        })();
       },
 
       reset: () => {

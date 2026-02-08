@@ -37,7 +37,7 @@ export const HomePage: React.FC = () => {
 
   const isLoading = loadingRoot || loadingStats;
 
-  if (isLoading && !stats) {
+  if (isLoading && !rootNode && !stats) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
