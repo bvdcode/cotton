@@ -13,12 +13,8 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  DataGrid,
-  type GridColDef,
-  type GridColumnVisibilityModel,
-} from "@mui/x-data-grid";
-import { useMediaQuery, useTheme } from "@mui/material";
+import { DataGrid, type GridColDef, GridActionsCellItem } from "@mui/x-data-grid";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { isAxiosError } from "../../../shared/api/httpClient";
 import {
   adminApi,
@@ -35,9 +31,7 @@ type LoadState =
 const formatDateTime = (iso: string | null): string => {
   if (!iso) return "";
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return iso;
-  }
+  if (Number.isNaN(date.getTime())) return iso;
   return new Intl.DateTimeFormat(undefined, {
     year: "numeric",
     month: "short",
@@ -49,10 +43,6 @@ const formatDateTime = (iso: string | null): string => {
 
 export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
-
-  const theme = useTheme();
-  const isSmUp = useMediaQuery(theme.breakpoints.up("sm"));
-  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
 
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "idle" });
@@ -97,23 +87,6 @@ export const AdminUsersPage = () => {
 
   const isLoading = loadState.kind === "loading";
 
-  const [columnVisibilityModel, setColumnVisibilityModel] =
-    useState<GridColumnVisibilityModel>(() => ({
-      role: false,
-      isTotpEnabled: false,
-      activeSessionCount: false,
-      lastActivityAt: false,
-    }));
-
-  useEffect(() => {
-    setColumnVisibilityModel({
-      role: isSmUp,
-      isTotpEnabled: isSmUp,
-      activeSessionCount: isMdUp,
-      lastActivityAt: isMdUp,
-    });
-  }, [isMdUp, isSmUp]);
-
   const columns: GridColDef<AdminUserDto>[] = useMemo(
     () => [
       {
@@ -126,21 +99,21 @@ export const AdminUsersPage = () => {
         field: "email",
         headerName: t("users.columns.email"),
         flex: 1,
-        minWidth: 160,
+        minWidth: 120,
         valueGetter: (_, row) => row.email ?? "",
         sortable: false,
       },
       {
         field: "role",
         headerName: t("users.columns.role"),
-        minWidth: 120,
+        width: 110,
         valueGetter: (_, row) => roleLabel(row.role),
         sortable: false,
       },
       {
         field: "isTotpEnabled",
         headerName: t("users.columns.totp"),
-        minWidth: 90,
+        width: 80,
         valueGetter: (_, row) =>
           row.isTotpEnabled
             ? t("yes", { ns: "common" })
@@ -150,18 +123,34 @@ export const AdminUsersPage = () => {
       {
         field: "activeSessionCount",
         headerName: t("users.columns.sessions"),
-        minWidth: 90,
+        width: 100,
         type: "number",
       },
       {
         field: "lastActivityAt",
         headerName: t("users.columns.lastActivity"),
-        minWidth: 160,
+        flex: 1,
+        minWidth: 140,
         valueGetter: (_, row) => formatDateTime(row.lastActivityAt),
         sortable: false,
       },
+      {
+        field: "actions",
+        headerName: t("users.columns.actions"),
+        type: "actions",
+        width: 80,
+        getActions: () => [
+          <GridActionsCellItem
+            key="edit"
+            icon={<EditOutlinedIcon />}
+            label={t("users.actions.edit")}
+            disabled
+            onClick={() => undefined}
+          />,
+        ],
+      },
     ],
-    [roleLabel, t]
+    [roleLabel, t],
   );
 
   useEffect(() => {
@@ -207,7 +196,7 @@ export const AdminUsersPage = () => {
   return (
     <Stack spacing={2}>
       <Paper>
-        <Stack spacing={1} p={2}>
+        <Stack spacing={2} p={2}>
           <Stack
             direction="row"
             justifyContent="space-between"
@@ -234,36 +223,11 @@ export const AdminUsersPage = () => {
             columns={columns}
             getRowId={(row) => row.id}
             loading={isLoading}
-            columnVisibilityModel={columnVisibilityModel}
-            onColumnVisibilityModelChange={setColumnVisibilityModel}
             disableColumnMenu
             disableColumnFilter
             disableRowSelectionOnClick
             hideFooter
             autoHeight
-            sx={{
-              width: "100%",
-              minWidth: 0,
-              "& .MuiDataGrid-cell": {
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              },
-              "& .MuiDataGrid-columnHeaderTitle": {
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              },
-            }}
-            slots={{
-              noRowsOverlay: () => (
-                <Stack height="100%" alignItems="center" justifyContent="center">
-                  <Typography variant="body2" color="text.secondary">
-                    {t("users.empty")}
-                  </Typography>
-                </Stack>
-              ),
-            }}
           />
         </Stack>
       </Paper>
@@ -279,44 +243,48 @@ export const AdminUsersPage = () => {
           )}
           {createError && <Alert severity="error">{createError}</Alert>}
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              label={t("users.create.username")}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              fullWidth
-              autoComplete="off"
-            />
-            <TextField
-              label={t("users.create.email")}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              fullWidth
-              autoComplete="email"
-            />
-            <TextField
-              label={t("users.create.password")}
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              fullWidth
-              autoComplete="new-password"
-            />
-            <FormControl fullWidth>
-              <InputLabel id="admin-user-role-label">
-                {t("users.create.role")}
-              </InputLabel>
-              <Select
-                labelId="admin-user-role-label"
-                label={t("users.create.role")}
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-              >
-                <MenuItem value={UserRole.User}>{t("roles.user")}</MenuItem>
-                <MenuItem value={UserRole.Admin}>{t("roles.admin")}</MenuItem>
-              </Select>
-            </FormControl>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label={t("users.create.username")}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                fullWidth
+                autoComplete="off"
+              />
+              <TextField
+                label={t("users.create.email")}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                fullWidth
+                autoComplete="email"
+              />
+            </Stack>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label={t("users.create.password")}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                fullWidth
+                autoComplete="new-password"
+              />
+              <FormControl fullWidth>
+                <InputLabel id="admin-user-role-label">
+                  {t("users.create.role")}
+                </InputLabel>
+                <Select
+                  labelId="admin-user-role-label"
+                  label={t("users.create.role")}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                >
+                  <MenuItem value={UserRole.User}>{t("roles.user")}</MenuItem>
+                  <MenuItem value={UserRole.Admin}>{t("roles.admin")}</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
           </Stack>
 
           <Stack direction="row" justifyContent="flex-end">
