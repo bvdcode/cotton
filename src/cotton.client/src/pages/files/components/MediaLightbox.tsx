@@ -66,6 +66,7 @@ export interface MediaLightboxProps {
   initialIndex: number;
   onClose: () => void;
   getSignedMediaUrl: (id: string) => Promise<string>;
+  getShareUrl?: (id: string) => Promise<string>;
 }
 
 /**
@@ -78,6 +79,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   initialIndex,
   onClose,
   getSignedMediaUrl,
+  getShareUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
   const thumbnailsRef = React.useRef(null);
@@ -89,12 +91,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     Record<string, string>
   >({});
 
+  const [shareUrls, setShareUrls] = React.useState<
+    Record<string, string>
+  >({});
+
   const loadingRef = React.useRef<Set<string>>(new Set());
 
-  // Rebuild slides when originalUrls change
+  // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, originalUrls);
-  }, [items, originalUrls]);
+    return buildSlidesFromItems(items, originalUrls, shareUrls);
+  }, [items, originalUrls, shareUrls]);
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -126,8 +132,26 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
         return prev;
       });
+
+      // Also load share URL if function is provided
+      if (getShareUrl) {
+        setShareUrls((prev) => {
+          if (prev[item.id]) return prev;
+
+          (async () => {
+            try {
+              const url = await getShareUrl(item.id);
+              setShareUrls((p) => ({ ...p, [item.id]: url }));
+            } catch (e) {
+              console.error("Failed to load share URL", e);
+            }
+          })();
+
+          return prev;
+        });
+      }
     },
-    [items, getSignedMediaUrl],
+    [items, getSignedMediaUrl, getShareUrl],
   );
 
   React.useEffect(() => {
@@ -228,6 +252,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 function buildSlidesFromItems(
   items: MediaItem[],
   originalUrls: Record<string, string>,
+  shareUrls: Record<string, string>,
 ): Slide[] {
   return items.map<Slide>((item) => {
     const maybeOriginal = originalUrls[item.id];
@@ -237,6 +262,7 @@ function buildSlidesFromItems(
     if (item.kind === "image") {
       const isLoading = !maybeOriginal && !item.previewUrl;
       const src = maybeOriginal || item.previewUrl || LOADING_PLACEHOLDER;
+      const shareUrl = shareUrls[item.id];
       return {
         type: "image",
         src,
@@ -246,18 +272,18 @@ function buildSlidesFromItems(
         download: maybeOriginal
           ? { url: maybeOriginal, filename: item.name }
           : undefined,
-        share:
-          maybeOriginal || item.previewUrl
-            ? {
-                url: maybeOriginal || item.previewUrl,
-                title: item.name,
-              }
-            : undefined,
+        share: shareUrl
+          ? {
+              url: shareUrl,
+              title: item.name,
+            }
+          : undefined,
       };
     }
 
     const poster = item.previewUrl || undefined;
     const src = maybeOriginal;
+    const shareUrl = shareUrls[item.id];
 
     if (!src) {
       return {
@@ -266,9 +292,9 @@ function buildSlidesFromItems(
         width: item.width,
         height: item.height,
         description,
-        share: poster
+        share: shareUrl
           ? {
-              url: poster,
+              url: shareUrl,
               title: item.name,
             }
           : undefined,
@@ -282,10 +308,12 @@ function buildSlidesFromItems(
       height: item.height,
       description,
       download: { url: src, filename: item.name },
-      share: {
-        url: src,
-        title: item.name,
-      },
+      share: shareUrl
+        ? {
+            url: shareUrl,
+            title: item.name,
+          }
+        : undefined,
       sources: [
         {
           src,

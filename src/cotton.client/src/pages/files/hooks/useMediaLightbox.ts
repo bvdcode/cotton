@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { filesApi } from "../../../shared/api/filesApi";
+import { shareLinks } from "../../../shared/utils/shareLinks";
 import { isImageFile, isVideoFile } from "../utils/fileTypes";
 import { getFileIcon } from "../utils/icons";
 import type { MediaItem } from "../components";
@@ -9,6 +10,7 @@ export interface MediaHandlers {
   lightboxIndex: number;
   mediaItems: MediaItem[];
   getSignedMediaUrl: (fileId: string) => Promise<string>;
+  getShareUrl: (fileId: string) => Promise<string>;
   handleMediaClick: (fileId: string) => void;
   setLightboxOpen: (open: boolean) => void;
   setLightboxIndex: (index: number) => void;
@@ -59,6 +61,16 @@ export const useMediaLightbox = (
     return await filesApi.getDownloadLink(fileId, 60 * 24);
   };
 
+  // Get share URL for file
+  const getShareUrl = async (fileId: string): Promise<string> => {
+    const downloadLink = await filesApi.getDownloadLink(fileId, 60 * 24 * 7); // 7 days
+    const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
+    if (!token) {
+      throw new Error("Failed to extract share token from download link");
+    }
+    return shareLinks.buildShareUrl(token);
+  };
+
   // Handler to open media lightbox
   const handleMediaClick = (fileId: string) => {
     const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
@@ -73,6 +85,7 @@ export const useMediaLightbox = (
     lightboxIndex,
     mediaItems,
     getSignedMediaUrl,
+    getShareUrl,
     handleMediaClick,
     setLightboxOpen,
     setLightboxIndex,
