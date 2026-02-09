@@ -699,7 +699,11 @@
         "role": "Role",
         "totp": "2FA",
         "sessions": "Sessions",
-        "lastActivity": "Last activity"
+        "lastActivity": "Last activity",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit"
       },
       "errors": {
         "loadFailed": "Failed to load users.",

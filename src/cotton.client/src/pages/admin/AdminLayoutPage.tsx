@@ -8,7 +8,6 @@ import {
   MenuItem,
   Paper,
   Select,
-  Stack,
   Typography,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
@@ -44,72 +43,59 @@ export const AdminLayoutPage = () => {
   };
 
   return (
-    <Box p={{ xs: 2, sm: 3 }} display="flex" flex={1} minHeight={0}>
-      <Stack spacing={2} flex={1} minHeight={0}>
-        <Paper sx={{ display: { xs: "block", md: "none" } }}>
-          <Box p={2}>
-            <FormControl fullWidth>
-              <InputLabel id="admin-menu-navigate-label">
-                {t("menu.navigate")}
-              </InputLabel>
-              <Select
-                labelId="admin-menu-navigate-label"
-                value={selectedTo}
-                label={t("menu.navigate")}
-                onChange={handleMobileNavigate}
+    <Box width="100%" display="flex" flexDirection="column" flex={1}>
+      <Paper sx={{ display: { xs: "block", md: "none" }, p: 2, mb: 2 }}>
+        <FormControl fullWidth size="small">
+          <InputLabel id="admin-menu-navigate-label">
+            {t("menu.navigate")}
+          </InputLabel>
+          <Select
+            labelId="admin-menu-navigate-label"
+            value={selectedTo}
+            label={t("menu.navigate")}
+            onChange={handleMobileNavigate}
+          >
+            {items.map((item) => (
+              <MenuItem key={item.id} value={item.to}>
+                {item.title}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Paper>
+
+      <Box
+        display="grid"
+        flex={1}
+        sx={{
+          gridTemplateColumns: { xs: "1fr", md: "220px 1fr" },
+          gap: 2,
+        }}
+      >
+        <Paper sx={{ display: { xs: "none", md: "block" } }}>
+          <Typography variant="h6" fontWeight={700} p={2} pb={1}>
+            {t("title")}
+          </Typography>
+          <List disablePadding>
+            {items.map((item) => (
+              <ListItemButton
+                key={item.id}
+                selected={isActive(item.to)}
+                onClick={() => navigate(item.to)}
               >
-                {items.map((item) => (
-                  <MenuItem key={item.id} value={item.to}>
-                    {item.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+                <ListItemText
+                  primary={item.title}
+                  slotProps={{ primary: { noWrap: true } }}
+                />
+              </ListItemButton>
+            ))}
+          </List>
         </Paper>
 
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={2}
-          alignItems="stretch"
-          flex={1}
-          minHeight={0}
-        >
-          <Paper
-            sx={{
-              flexShrink: 0,
-              display: { xs: "none", md: "block" },
-              overflow: "hidden",
-              minWidth: 220,
-              maxWidth: 280,
-            }}
-          >
-            <Box p={2}>
-              <Typography variant="h6" fontWeight={700}>
-                {t("title")}
-              </Typography>
-            </Box>
-            <List disablePadding>
-              {items.map((item) => (
-                <ListItemButton
-                  key={item.id}
-                  selected={isActive(item.to)}
-                  onClick={() => navigate(item.to)}
-                >
-                  <ListItemText
-                    primary={item.title}
-                    primaryTypographyProps={{ noWrap: true }}
-                  />
-                </ListItemButton>
-              ))}
-            </List>
-          </Paper>
-
-          <Box flex={1} minWidth={0} minHeight={0}>
-            <Outlet />
-          </Box>
-        </Stack>
-      </Stack>
+        <Box overflow="hidden">
+          <Outlet />
+        </Box>
+      </Box>
     </Box>
   );
 };
