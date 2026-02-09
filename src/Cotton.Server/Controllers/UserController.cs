@@ -46,7 +46,7 @@ namespace Cotton.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequestDto request, CancellationToken cancellationToken)
         {
-            AdminCreateUserCommand command = new(request.Username, request.Password, request.Role);
+            AdminCreateUserCommand command = new(request.Username, request.Email, request.Password, request.Role);
             UserDto user = await _mediator.Send(command, cancellationToken);
             return Ok(user);
         }
