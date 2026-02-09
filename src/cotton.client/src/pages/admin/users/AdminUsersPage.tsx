@@ -13,7 +13,11 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { DataGrid, type GridColDef, GridActionsCellItem } from "@mui/x-data-grid";
+import {
+  DataGrid,
+  type GridColDef,
+  GridActionsCellItem,
+} from "@mui/x-data-grid";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { isAxiosError } from "../../../shared/api/httpClient";
 import {
@@ -106,7 +110,7 @@ export const AdminUsersPage = () => {
       {
         field: "role",
         headerName: t("users.columns.role"),
-        width: 110,
+        width: 130,
         valueGetter: (_, row) => roleLabel(row.role),
         sortable: false,
       },
