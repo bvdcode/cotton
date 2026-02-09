@@ -16,8 +16,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
 import { useSettingsStore } from "../../shared/store/settingsStore";
-import { useNodesStore } from "../../shared/store/nodesStore";
-import Loader from "../../shared/ui/Loader";
+
 
 interface AppLayoutProps {
   routes: RouteConfig[];
@@ -31,8 +30,6 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const settingsLoading = useSettingsStore((s) => s.loading);
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
-  const nodesLoading = useNodesStore((s) => s.loading);
-  const [showOverlayLoader, setShowOverlayLoader] = React.useState(false);
 
   const navTextColor = theme.palette.text.primary;
   const navActiveBg = alpha(navTextColor, 0.14);
@@ -47,21 +44,6 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
     }
     fetchSettings();
   }, [isAuthenticated, settingsLoaded, settingsLoading, fetchSettings]);
-
-  useEffect(() => {
-    if (!nodesLoading) {
-      setShowOverlayLoader(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setShowOverlayLoader(true);
-    }, 350);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [nodesLoading]);
 
   return (
     <Box
@@ -149,8 +131,6 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
           <UserMenu />
         </Toolbar>
       </AppBar>
-
-      {showOverlayLoader && <Loader overlay />}
 
       <Container
         component="main"
