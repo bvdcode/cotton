@@ -243,48 +243,55 @@ export const AdminUsersPage = () => {
           )}
           {createError && <Alert severity="error">{createError}</Alert>}
 
-          <Stack spacing={2}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label={t("users.create.username")}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                fullWidth
-                autoComplete="off"
-              />
-              <TextField
-                label={t("users.create.email")}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                fullWidth
-                autoComplete="email"
-              />
-            </Stack>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label={t("users.create.password")}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                fullWidth
-                autoComplete="new-password"
-              />
-              <FormControl fullWidth>
-                <InputLabel id="admin-user-role-label">
-                  {t("users.create.role")}
-                </InputLabel>
-                <Select
-                  labelId="admin-user-role-label"
-                  label={t("users.create.role")}
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as UserRole)}
-                >
-                  <MenuItem value={UserRole.User}>{t("roles.user")}</MenuItem>
-                  <MenuItem value={UserRole.Admin}>{t("roles.admin")}</MenuItem>
-                </Select>
-              </FormControl>
-            </Stack>
+          <Stack
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(auto-fit, 250px)",
+              },
+              gap: 2,
+              justifyContent: "start",
+              alignItems: "start",
+            }}
+          >
+            <TextField
+              label={t("users.create.username")}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              fullWidth
+              autoComplete="off"
+            />
+            <TextField
+              label={t("users.create.email")}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              fullWidth
+              autoComplete="email"
+            />
+            <TextField
+              label={t("users.create.password")}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              autoComplete="new-password"
+            />
+            <FormControl fullWidth>
+              <InputLabel id="admin-user-role-label">
+                {t("users.create.role")}
+              </InputLabel>
+              <Select
+                labelId="admin-user-role-label"
+                label={t("users.create.role")}
+                value={role}
+                onChange={(e) => setRole(e.target.value as UserRole)}
+              >
+                <MenuItem value={UserRole.User}>{t("roles.user")}</MenuItem>
+                <MenuItem value={UserRole.Admin}>{t("roles.admin")}</MenuItem>
+              </Select>
+            </FormControl>
           </Stack>
 
           <Stack direction="row" justifyContent="flex-end">
