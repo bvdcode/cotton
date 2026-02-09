@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import React, { useEffect } from "react";
 import { alpha, useTheme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
 import { useSettingsStore } from "../../shared/store/settingsStore";
 import { useNodesStore } from "../../shared/store/nodesStore";
@@ -24,6 +25,7 @@ interface AppLayoutProps {
 
 export const AppLayout = ({ routes }: AppLayoutProps) => {
   const location = useLocation();
+  const { t } = useTranslation("routes");
   const { isAuthenticated } = useAuth();
   const theme = useTheme();
   const settingsLoaded = useSettingsStore((s) => s.loaded);
@@ -137,7 +139,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                       },
                     }}
                   >
-                    {route.displayName}
+                    {route.translationKey ? t(route.translationKey) : route.displayName}
                   </Button>
                 </React.Fragment>
               );

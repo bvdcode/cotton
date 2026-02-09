@@ -23,22 +23,18 @@ import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Person, Delete, Search, AdminPanelSettings } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
-import i18n from "../i18n";
 
 const publicRoutes: RouteConfig[] = [
   {
     path: "/login",
-    displayName: i18n.t("login", { ns: "routes" }),
     element: <LoginPage />,
   },
   {
     path: "/s/:token",
-    displayName: "",
     element: <RedirectSToShare />,
   },
   {
     path: "/share/:token",
-    displayName: "",
     element: <SharePage />,
   },
 ];
@@ -52,35 +48,35 @@ export function AppRoutes() {
       path: "/",
       icon: <Home />,
       protected: true,
-      displayName: i18n.t("home", { ns: "routes" }),
+      translationKey: "home",
       element: <HomePage />,
     },
     {
       path: "/files",
       icon: <Folder />,
       protected: true,
-      displayName: i18n.t("files", { ns: "routes" }),
+      translationKey: "files",
       element: <FilesPage />,
     },
     {
       path: "/trash",
       icon: <Delete />,
       protected: true,
-      displayName: i18n.t("trash", { ns: "routes" }),
+      translationKey: "trash",
       element: <TrashPage />,
     },
     {
       path: "/search",
       icon: <Search />,
       protected: true,
-      displayName: i18n.t("search", { ns: "routes" }),
+      translationKey: "search",
       element: <SearchPage />,
     },
     {
       path: "/profile",
       icon: <Person />,
       protected: true,
-      displayName: i18n.t("profile", { ns: "routes" }),
+      translationKey: "profile",
       element: <ProfilePage />,
     },
   ];
@@ -90,7 +86,7 @@ export function AppRoutes() {
       path: "/admin",
       icon: <AdminPanelSettings />,
       protected: true,
-      displayName: i18n.t("admin", { ns: "routes" }),
+      translationKey: "admin",
       element: <Navigate to="/admin/users" replace />,
     });
   }
