@@ -49,7 +49,8 @@ export const AdminLayoutPage = () => {
       flexDirection="column"
       flex={1}
       minHeight={0}
-      py={3}
+      pt={3}
+      pb={2}
     >
       <Paper sx={{ display: { xs: "block", md: "none" }, p: 2, mb: 2 }}>
         <FormControl fullWidth size="small">
