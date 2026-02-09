@@ -8,7 +8,6 @@ import {
   MenuItem,
   Paper,
   Select,
-  Typography,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -76,15 +75,12 @@ export const AdminLayoutPage = () => {
         display="grid"
         flex={1}
         sx={{
-          gridTemplateColumns: { xs: "1fr", md: "220px 1fr" },
+          gridTemplateColumns: { xs: "1fr", md: "260px 1fr" },
           gap: 2,
         }}
       >
         <Paper sx={{ display: { xs: "none", md: "block" } }}>
-          <Typography variant="h6" fontWeight={700} p={2} pb={1}>
-            {t("title")}
-          </Typography>
-          <List disablePadding>
+          <List sx={{ pt: 1 }}>
             {items.map((item) => (
               <ListItemButton
                 key={item.id}
