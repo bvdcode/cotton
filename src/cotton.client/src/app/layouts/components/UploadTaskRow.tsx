@@ -1,19 +1,19 @@
 import React from "react";
 import { Box, Divider, LinearProgress, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import type { UploadTask } from "./uploadQueueUtils";
 
 interface UploadTaskRowProps {
   task: UploadTask;
-  t: (key: string) => string;
   showDivider: boolean;
 }
 
 export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
   task,
-  t,
   showDivider,
 }) => {
+  const { t } = useTranslation("upload");
   const isFailed = task.status === "failed";
 
   return (

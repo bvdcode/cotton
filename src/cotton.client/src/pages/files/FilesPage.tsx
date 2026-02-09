@@ -378,7 +378,6 @@ export const FilesPage: React.FC = () => {
           onUploadClick={fileUpload.handleUploadClick}
           onNewFolderClick={folderOps.handleNewFolder}
           isCreatingFolder={folderOps.isCreatingFolder}
-          t={t}
         />
         {(error || listError) && (
           <Box mb={1} px={1}>

@@ -100,7 +100,7 @@ export const UploadQueueWidget = () => {
               itemContent={(index) => (
                 <UploadTaskRow
                   task={tasks[index]}
-                  t={t}
+
                   showDivider={index > 0}
                 />
               )}
