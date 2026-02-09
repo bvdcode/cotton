@@ -462,7 +462,6 @@ export const TrashPage: React.FC = () => {
               </IconButton>
             ) : null
           }
-          t={t}
         />
         {(error || listError) && (
           <Box mb={1} px={1}>
