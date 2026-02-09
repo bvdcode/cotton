@@ -30,7 +30,7 @@ export const HomePage: React.FC = () => {
   }
 
   return (
-    <Box p={3} width="100%">
+    <Box py={3} width="100%">
       {error && (
         <Box mb={2}>
           <Alert severity="error">{error}</Alert>
@@ -52,7 +52,9 @@ export const HomePage: React.FC = () => {
             <Typography variant="overline" color="text.secondary">
               {t("cards.folders.layoutTitle")}
             </Typography>
-            <Typography variant="h4">{rootNode?.name ?? t("common:placeholder")}</Typography>
+            <Typography variant="h4">
+              {rootNode?.name ?? t("common:placeholder")}
+            </Typography>
             <Typography variant="caption" color="text.secondary">
               {t("cards.folders.layoutCaption")}
             </Typography>
@@ -65,7 +67,9 @@ export const HomePage: React.FC = () => {
               {t("cards.folders.title")}
             </Typography>
             <Typography variant="h4">
-              {stats ? stats.nodeCount.toLocaleString() : t("common:placeholder")}
+              {stats
+                ? stats.nodeCount.toLocaleString()
+                : t("common:placeholder")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {t("cards.folders.caption")}
@@ -79,7 +83,9 @@ export const HomePage: React.FC = () => {
               {t("cards.files.title")}
             </Typography>
             <Typography variant="h4">
-              {stats ? stats.fileCount.toLocaleString() : t("common:placeholder")}
+              {stats
+                ? stats.fileCount.toLocaleString()
+                : t("common:placeholder")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {t("cards.files.caption")}
