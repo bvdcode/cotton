@@ -242,7 +242,7 @@ export function SetupWizardPage() {
             overflow: "auto",
           }}
         >
-          <WizardHeader t={t} />
+          <WizardHeader />
 
           <Box
             sx={{

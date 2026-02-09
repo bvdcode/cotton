@@ -15,8 +15,9 @@ import {
   Translate as TranslateIcon,
 } from "@mui/icons-material";
 
-export function WizardHeader({ t }: { t: (key: string) => string }) {
+export function WizardHeader() {
   const { i18n, t: tCommon } = useTranslation("common");
+  const { t } = useTranslation("setup");
   const { mode, setTheme } = useTheme();
 
   const toggleLanguage = () => {

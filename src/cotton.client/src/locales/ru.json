@@ -11,37 +11,12 @@
     "placeholder": "—",
     "yes": "Да",
     "no": "Нет",
-    "title": "Cotton Cloud",
-    "subtitle": "Мастер настройки",
     "time": {
       "justNow": "только что",
       "secondsAgo_one": "{{count}} секунду назад",
       "secondsAgo_few": "{{count}} секунды назад",
       "secondsAgo_many": "{{count}} секунд назад",
       "secondsAgo_other": "{{count}} секунд назад",
-      "uploadDrop": {
-        "scanning": {
-          "title": "Сканирование файлов…"
-        },
-        "preparing": {
-          "title": "Подготовка загрузки…",
-          "mapping": {
-            "title": "Подготовка загрузки…"
-          },
-          "folders": {
-            "title": "Создание папок…"
-          },
-          "conflicts": {
-            "title": "Проверка конфликтов…"
-          },
-          "enqueue": {
-            "title": "Запуск загрузки…"
-          }
-        },
-        "caption": "Найдено файлов: {{count}}",
-        "captionFound": "Найдено файлов: {{count}}",
-        "captionProgress": "{{processed}} / {{total}}"
-      },
       "minutesAgo_one": "{{count}} минуту назад",
       "minutesAgo_few": "{{count}} минуты назад",
       "minutesAgo_many": "{{count}} минут назад",
@@ -90,7 +65,9 @@
       "darkMode": "Тёмная тема",
       "changeLanguage": "Сменить язык",
       "logout": "Выйти"
-    }
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "Мастер настройки"
   },
   "share": {
     "title": "Доступ по ссылке",
@@ -570,7 +547,7 @@
       "goUp": "Вверх",
       "dropFiles": "Перетащите файлы для загрузки",
       "switchToTilesView": "Переключиться на плитки",
-      "switchToListView": "Переключиться на просмотр списка",
+      "switchToListView": "Переключиться на список",
       "switchToTableView": "Переключить на таблицу",
       "switchToSmallTilesView": "Мелкие плитки",
       "switchToMediumTilesView": "Средние плитки",
@@ -602,50 +579,6 @@
     },
     "rename": {
       "fileNamePlaceholder": "Имя файла"
-    },
-    "admin": {
-      "title": "Администрирование",
-      "menu": {
-        "navigate": "Раздел",
-        "users": "Пользователи"
-      },
-      "roles": {
-        "user": "Пользователь",
-        "admin": "Администратор",
-        "unknown": "Неизвестно"
-      },
-      "users": {
-        "title": "Пользователи",
-        "refresh": "Обновить",
-        "loading": "Загрузка пользователей...",
-        "empty": "Пользователей нет",
-        "columns": {
-          "username": "Имя пользователя",
-          "email": "E-mail",
-          "role": "Роль",
-          "totp": "2FA",
-          "sessions": "Сессии",
-          "lastActivity": "Последняя активность",
-          "actions": "Действия"
-        },
-        "actions": {
-          "edit": "Редактировать"
-        },
-        "errors": {
-          "loadFailed": "Не удалось загрузить пользователей.",
-          "createFailed": "Не удалось создать пользователя."
-        },
-        "create": {
-          "title": "Создать пользователя",
-          "username": "Имя пользователя",
-          "email": "E-mail",
-          "password": "Пароль",
-          "role": "Роль",
-          "button": "Создать",
-          "creating": "Создание...",
-          "success": "Пользователь создан."
-        }
-      }
     },
     "share": {
       "copied": "Ссылка скопирована: {{name}}",
@@ -766,6 +699,50 @@
       "confirmDescription": "Это действие нельзя отменить. Все элементы в корзине будут удалены навсегда.",
       "inProgress": "Удаление {{current}} из {{total}} элементов...",
       "completed": "Корзина успешно очищена"
+    }
+  },
+  "admin": {
+    "title": "Администрирование",
+    "menu": {
+      "navigate": "Раздел",
+      "users": "Пользователи"
+    },
+    "roles": {
+      "user": "Пользователь",
+      "admin": "Администратор",
+      "unknown": "Неизвестно"
+    },
+    "users": {
+      "title": "Пользователи",
+      "refresh": "Обновить",
+      "loading": "Загрузка пользователей...",
+      "empty": "Пользователей нет",
+      "columns": {
+        "username": "Имя пользователя",
+        "email": "E-mail",
+        "role": "Роль",
+        "totp": "2FA",
+        "sessions": "Сессии",
+        "lastActivity": "Последняя активность",
+        "actions": "Действия"
+      },
+      "actions": {
+        "edit": "Редактировать"
+      },
+      "errors": {
+        "loadFailed": "Не удалось загрузить пользователей.",
+        "createFailed": "Не удалось создать пользователя."
+      },
+      "create": {
+        "title": "Создать пользователя",
+        "username": "Имя пользователя",
+        "email": "E-mail",
+        "password": "Пароль",
+        "role": "Роль",
+        "button": "Создать",
+        "creating": "Создание...",
+        "success": "Пользователь создан."
+      }
     }
   },
   "routes": {

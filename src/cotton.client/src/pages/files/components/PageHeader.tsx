@@ -9,6 +9,7 @@ import {
   ViewModule,
   ViewList,
 } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import { FileBreadcrumbs } from "./FileBreadcrumbs";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import type { FileBrowserViewMode } from "../hooks/useFilesLayout";
@@ -34,9 +35,6 @@ export interface PageHeaderProps {
 
   // Custom actions slot
   customActions?: ReactNode;
-
-  // Translations
-  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 /**
@@ -59,8 +57,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onNewFolderClick,
   isCreatingFolder = false,
   customActions,
-  t,
 }) => {
+  const { t } = useTranslation(["files", "trash", "common"]);
   const nextViewTitleKey: string = (() => {
     switch (viewMode) {
       case "table":
