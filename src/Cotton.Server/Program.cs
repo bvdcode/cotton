@@ -28,15 +28,6 @@ namespace Cotton.Server
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
-            builder.WebHost.ConfigureKestrel(options =>
-            {
-                // WebDAV clients (especially Windows) can send very long request-target lines
-                // when browsing deep paths with percent-encoded UTF-8 characters.
-                // If the line is rejected by Kestrel, ASP.NET returns 400 before controllers run.
-                options.Limits.MaxRequestLineSize = 32 * 1024;
-            });
-
             builder.Configuration.AddCottonOptions();
             MapsterConfig.Register();
             builder.Services
@@ -55,7 +46,7 @@ namespace Cotton.Server
                 .AddQuartzJobs()
                 .AddMemoryCache()
                 .AddSingleton<PerfTracker>()
-                .AddSingleton<Cotton.Server.Providers.IStorageBackendTypeCache, Cotton.Server.Providers.StorageBackendTypeCache>()
+                .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
