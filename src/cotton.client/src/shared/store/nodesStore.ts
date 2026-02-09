@@ -432,10 +432,7 @@ export const useNodesStore = create<NodesState>()(
       partialize: (state) => ({
         currentNode: state.currentNode,
         ancestors: state.ancestors,
-        contentByNodeId: state.contentByNodeId,
-        ancestorsByNodeId: state.ancestorsByNodeId,
         rootNodeId: state.rootNodeId,
-        lastUpdatedByNodeId: state.lastUpdatedByNodeId,
       }),
     },
   ),
