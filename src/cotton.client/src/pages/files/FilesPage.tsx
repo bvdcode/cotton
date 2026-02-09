@@ -147,6 +147,7 @@ export const FilesPage: React.FC = () => {
     lightboxIndex,
     mediaItems,
     getSignedMediaUrl,
+    getShareUrl,
     handleMediaClick,
     setLightboxOpen,
   } = useMediaLightbox(sortedFiles);
@@ -453,6 +454,7 @@ export const FilesPage: React.FC = () => {
           initialIndex={lightboxIndex}
           onClose={() => setLightboxOpen(false)}
           getSignedMediaUrl={getSignedMediaUrl}
+          getShareUrl={getShareUrl}
         />
       )}
 
