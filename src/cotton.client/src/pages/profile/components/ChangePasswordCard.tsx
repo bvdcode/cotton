@@ -119,7 +119,7 @@ export const ChangePasswordCard = () => {
       title={t("password.title")}
       description={t("password.description")}
     >
-      <Stack spacing={2}>
+      <Stack spacing={2} paddingY={2}>
         {status.kind === "success" && (
           <Alert severity="success">{t("password.success")}</Alert>
         )}
@@ -140,9 +140,7 @@ export const ChangePasswordCard = () => {
                 <InputAdornment position="end">
                   <Tooltip
                     title={
-                      showOldPassword
-                        ? t("password.hide")
-                        : t("password.show")
+                      showOldPassword ? t("password.hide") : t("password.show")
                     }
                   >
                     <IconButton
@@ -180,9 +178,7 @@ export const ChangePasswordCard = () => {
                 <InputAdornment position="end">
                   <Tooltip
                     title={
-                      showNewPassword
-                        ? t("password.hide")
-                        : t("password.show")
+                      showNewPassword ? t("password.hide") : t("password.show")
                     }
                   >
                     <IconButton
