@@ -43,7 +43,14 @@ export const AdminLayoutPage = () => {
   };
 
   return (
-    <Box width="100%" display="flex" flexDirection="column" flex={1}>
+    <Box
+      width="100%"
+      display="flex"
+      flexDirection="column"
+      flex={1}
+      minHeight={0}
+      py={3}
+    >
       <Paper sx={{ display: { xs: "block", md: "none" }, p: 2, mb: 2 }}>
         <FormControl fullWidth size="small">
           <InputLabel id="admin-menu-navigate-label">
