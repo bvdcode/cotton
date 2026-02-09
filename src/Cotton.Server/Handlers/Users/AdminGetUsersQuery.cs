@@ -41,6 +41,7 @@ namespace Cotton.Server.Handlers.Users
                 {
                     Id = u.Id,
                     Username = u.Username,
+                    Email = u.Email,
                     Role = u.Role,
                     IsTotpEnabled = u.IsTotpEnabled,
                     TotpEnabledAt = u.TotpEnabledAt,

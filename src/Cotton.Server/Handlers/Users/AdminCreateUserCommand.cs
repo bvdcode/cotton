@@ -14,9 +14,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    public class AdminCreateUserCommand(string username, string password, UserRole role) : IRequest<UserDto>
+    public class AdminCreateUserCommand(string username, string? email, string password, UserRole role) : IRequest<UserDto>
     {
         public string Username { get; } = username;
+        public string? Email { get; } = email;
         public string Password { get; } = password;
         public UserRole Role { get; } = role;
     }
@@ -45,6 +46,7 @@ namespace Cotton.Server.Handlers.Users
             var user = new User
             {
                 Username = username,
+                Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
                 Role = request.Role,
                 PasswordPhc = _hasher.Hash(request.Password),
                 WebDavTokenPhc = _hasher.Hash(request.Password),

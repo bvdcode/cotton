@@ -9,6 +9,7 @@ namespace Cotton.Server.Models.Dto
     public class AdminUserDto : BaseDto<Guid>
     {
         public string Username { get; set; } = null!;
+        public string? Email { get; set; }
         public UserRole Role { get; set; }
         public bool IsTotpEnabled { get; set; }
         public DateTime? TotpEnabledAt { get; set; }
