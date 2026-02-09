@@ -201,43 +201,6 @@ export const AdminUsersPage = () => {
     <Stack spacing={2}>
       <Paper>
         <Stack spacing={2} p={2}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Typography variant="h6" fontWeight={700}>
-              {t("users.title")}
-            </Typography>
-            <Button
-              variant="outlined"
-              onClick={() => fetchUsers()}
-              disabled={isLoading}
-            >
-              {t("users.refresh")}
-            </Button>
-          </Stack>
-
-          {loadState.kind === "error" && (
-            <Alert severity="error">{loadState.message}</Alert>
-          )}
-
-          <DataGrid
-            rows={users}
-            columns={columns}
-            getRowId={(row) => row.id}
-            loading={isLoading}
-            disableColumnMenu
-            disableColumnFilter
-            disableRowSelectionOnClick
-            hideFooter
-            autoHeight
-          />
-        </Stack>
-      </Paper>
-
-      <Paper>
-        <Stack spacing={2} p={2}>
           <Typography variant="h6" fontWeight={700}>
             {t("users.create.title")}
           </Typography>
@@ -314,6 +277,42 @@ export const AdminUsersPage = () => {
               )}
             </Button>
           </Stack>
+        </Stack>
+      </Paper>
+      <Paper>
+        <Stack spacing={2} p={2}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="h6" fontWeight={700}>
+              {t("users.title")}
+            </Typography>
+            <Button
+              variant="outlined"
+              onClick={() => fetchUsers()}
+              disabled={isLoading}
+            >
+              {t("users.refresh")}
+            </Button>
+          </Stack>
+
+          {loadState.kind === "error" && (
+            <Alert severity="error">{loadState.message}</Alert>
+          )}
+
+          <DataGrid
+            rows={users}
+            columns={columns}
+            getRowId={(row) => row.id}
+            loading={isLoading}
+            disableColumnMenu
+            disableColumnFilter
+            disableRowSelectionOnClick
+            hideFooter
+            autoHeight
+          />
         </Stack>
       </Paper>
     </Stack>
