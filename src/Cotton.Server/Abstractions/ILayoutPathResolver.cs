@@ -4,7 +4,7 @@
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 
-namespace Cotton.Server.Services;
+namespace Cotton.Server.Abstractions;
 
 public interface ILayoutPathResolver
 {

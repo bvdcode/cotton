@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
