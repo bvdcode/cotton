@@ -1,6 +1,4 @@
 ﻿using Cotton.Database.Models.Enums;
-using Microsoft.Extensions.Primitives;
-using System.Net;
 
 namespace Cotton.Server.Abstractions
 {

@@ -86,5 +86,19 @@
                    $"in {city}, {region}, {country} ({ipAddress}). " +
                    $"You will need to update your WebDAV client with the new token.";
         }
+
+        public static string SharedFileDownloadedTitle => "Shared file downloaded";
+
+        public static string SharedFileDownloadedContent(
+            string fileName,
+            string ipAddress,
+            string device,
+            string country,
+            string region,
+            string city)
+        {
+            return $"Your shared file '{fileName}' was downloaded from {device} " +
+                   $"in {city}, {region}, {country} ({ipAddress}).";
+        }
     }
 }
