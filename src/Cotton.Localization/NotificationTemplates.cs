@@ -7,104 +7,84 @@
         public static string FailedLoginAttemptContent(
             string username,
             string ipAddress,
-            string userAgent,
             string device,
             string country,
             string region,
             string city)
         {
-            return $"Failed login attempt for '{username}'.\n" +
-                   $"IP: {ipAddress}\n" +
-                   $"User-Agent: {userAgent}\n" +
-                   $"Device: {device}\n" +
-                   $"Location: {city}, {region}, {country}";
+            return $"Someone tried to log in to your account '{username}' but failed. " +
+                   $"The attempt was made from {device} in {city}, {region}, {country} ({ipAddress}).";
         }
 
-        public static string SuccessfulLoginTitle => "Successful login";
+        public static string SuccessfulLoginTitle => "New login to your account";
 
         public static string SuccessfulLoginContent(
             string ipAddress,
-            string userAgent,
             string device,
             string country,
             string region,
             string city)
         {
-            return $"New successful login.\n" +
-                   $"IP: {ipAddress}\n" +
-                   $"User-Agent: {userAgent}\n" +
-                   $"Device: {device}\n" +
-                   $"Location: {city}, {region}, {country}";
+            return $"Your account was accessed from {device} in {city}, {region}, {country} ({ipAddress}). " +
+                   $"If this wasn't you, please secure your account immediately.";
         }
 
-        public static string OtpEnabledTitle => "Two-factor authentication enabled";
+        public static string OtpEnabledTitle => "Two-factor authentication activated";
 
         public static string OtpEnabledContent(
             string ipAddress,
-            string userAgent,
             string device,
             string country,
             string region,
             string city)
         {
-            return $"Two-factor authentication (TOTP) was enabled.\n" +
-                   $"IP: {ipAddress}\n" +
-                   $"User-Agent: {userAgent}\n" +
-                   $"Device: {device}\n" +
-                   $"Location: {city}, {region}, {country}";
+            return $"Two-factor authentication has been enabled for your account from {device} " +
+                   $"in {city}, {region}, {country} ({ipAddress}). " +
+                   $"Your account is now more secure.";
         }
 
-        public static string TotpFailedAttemptTitle => "Invalid two-factor authentication code";
+        public static string TotpFailedAttemptTitle => "Invalid authentication code";
 
         public static string TotpFailedAttemptContent(
             int failedAttempts,
             string ipAddress,
-            string userAgent,
             string device,
             string country,
             string region,
             string city)
         {
-            return $"Invalid TOTP code entered ({failedAttempts} failed attempt(s)).\n" +
-                   $"IP: {ipAddress}\n" +
-                   $"User-Agent: {userAgent}\n" +
-                   $"Device: {device}\n" +
-                   $"Location: {city}, {region}, {country}";
+            return $"An invalid two-factor authentication code was entered ({failedAttempts} failed attempt(s)). " +
+                   $"The attempt was made from {device} in {city}, {region}, {country} ({ipAddress}). " +
+                   $"If this wasn't you, your account may be under attack.";
         }
 
-        public static string TotpLockoutTitle => "Two-factor authentication locked";
+        public static string TotpLockoutTitle => "Account temporarily locked";
 
         public static string TotpLockoutContent(
             int maxFailedAttempts,
             string ipAddress,
-            string userAgent,
             string device,
             string country,
             string region,
             string city)
         {
-            return $"Two-factor authentication was locked after {maxFailedAttempts} failed attempt(s).\n" +
-                   $"IP: {ipAddress}\n" +
-                   $"User-Agent: {userAgent}\n" +
-                   $"Device: {device}\n" +
-                   $"Location: {city}, {region}, {country}";
+            return $"Your account has been temporarily locked due to {maxFailedAttempts} failed authentication attempts. " +
+                   $"The last attempt was from {device} in {city}, {region}, {country} ({ipAddress}). " +
+                   $"Please wait before trying again.";
         }
 
-        public static string WebDavTokenResetTitle => "WebDAV token reset";
+        public static string WebDavTokenResetTitle => "WebDAV access token changed";
 
         public static string WebDavTokenResetContent(
             string ipAddress,
-            string userAgent,
             string device,
             string country,
             string region,
             string city)
         {
-            return $"WebDAV token was reset.\n" +
-                   $"IP: {ipAddress}\n" +
-                   $"User-Agent: {userAgent}\n" +
-                   $"Device: {device}\n" +
-                   $"Location: {city}, {region}, {country}";
+            return $"Your WebDAV access token has been reset from {device} " +
+                   $"in {city}, {region}, {country} ({ipAddress}). " +
+                   $"You will need to update your WebDAV client with the new token.";
         }
     }
 }

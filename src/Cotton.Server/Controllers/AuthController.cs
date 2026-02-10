@@ -175,16 +175,13 @@ namespace Cotton.Server.Controllers
                 user = await TryGetNewUserAsync(request);
                 if (user == null)
                 {
-                    await _notifications.SendFailedLoginAttemptAsync(
-                        request.Username,
-                        Request.GetRemoteIPAddress(),
-                        Request.Headers.UserAgent);
                     return this.ApiUnauthorized("Invalid username or password");
                 }
             }
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
                 await _notifications.SendFailedLoginAttemptAsync(
+                    user.Id,
                     request.Username,
                     Request.GetRemoteIPAddress(),
                     Request.Headers.UserAgent);
@@ -203,7 +200,7 @@ namespace Cotton.Server.Controllers
                 int maxFailedAttempts = _settings.GetServerSettings().TotpMaxFailedAttempts;
                 if (user.TotpFailedAttempts >= maxFailedAttempts)
                 {
-                    _notifications.SendTotpLockoutAsync(user.Id,
+                    await _notifications.SendTotpLockoutAsync(user.Id,
                         maxFailedAttempts,
                         Request.GetRemoteIPAddress(),
                         Request.Headers.UserAgent);
@@ -215,7 +212,7 @@ namespace Cotton.Server.Controllers
                 {
                     user.TotpFailedAttempts += 1;
                     await _dbContext.SaveChangesAsync();
-                    _notifications.SendTotpFailedAttemptAsync(user.Id,
+                    await _notifications.SendTotpFailedAttemptAsync(user.Id,
                         user.TotpFailedAttempts,
                         Request.GetRemoteIPAddress(),
                         Request.Headers.UserAgent);
