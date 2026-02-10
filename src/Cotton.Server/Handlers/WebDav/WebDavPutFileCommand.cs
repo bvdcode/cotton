@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
