@@ -12,6 +12,7 @@
             public const string Chunks = Base + "/chunks";
             public const string Layouts = Base + "/layouts";
             public const string Previews = Base + "/preview";
+            public const string EventHub = Base + "/hub/events";
         }
     }
 }
