@@ -30,6 +30,7 @@ COPY ["Cotton.Storage/Cotton.Storage.csproj", "Cotton.Storage/"]
 COPY ["Cotton.Topology/Cotton.Topology.csproj", "Cotton.Topology/"]
 COPY ["Cotton.Database/Cotton.Database.csproj", "Cotton.Database/"]
 COPY ["Cotton.Validators/Cotton.Validators.csproj", "Cotton.Validators/"]
+COPY ["Cotton.Localization/Cotton.Localization.csproj", "Cotton.Localization/"]
 RUN dotnet restore "./Cotton.Server/Cotton.Server.csproj"
 COPY . .
 WORKDIR "/src/Cotton.Server"
