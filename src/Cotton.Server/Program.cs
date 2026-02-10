@@ -48,6 +48,7 @@ namespace Cotton.Server
                 .AddQuartzJobs()
                 .AddMemoryCache()
                 .AddSignalR().Services
+                .AddHttpContextAccessor()
                 .AddSingleton<PerfTracker>()
                 .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
                 .AddScoped<SettingsProvider>()
