@@ -11,6 +11,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.WebDav;
+using Cotton.Server.Extensions;
 using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
@@ -60,7 +61,9 @@ namespace Cotton.Server.Controllers
             user.WebDavTokenPhc = _hasher.Hash(token);
             await _dbContext.SaveChangesAsync();
             _webDavAuthCache.BumpUsernameCacheVersion(user.Username);
-            await _notifications.SendWebDavTokenResetAsync(userId);
+            await _notifications.SendWebDavTokenResetAsync(userId,
+                Request.GetRemoteIPAddress(),
+                Request.Headers.UserAgent);
             return Ok(token);
         }
 
@@ -81,7 +84,8 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetSessions()
         {
             var userId = User.GetUserId();
-            string currentSessionId = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
+            string currentSessionId = User.Claims.FirstOrDefault(x =>
+                x.Type == JwtRegisteredClaimNames.Sid)?.Value ?? string.Empty;
             GetSessionsQuery query = new(userId, currentSessionId);
             var sessions = await _mediator.Send(query);
             return Ok(sessions);
@@ -118,7 +122,9 @@ namespace Cotton.Server.Controllers
             user.IsTotpEnabled = true;
             user.TotpEnabledAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync();
-            await _notifications.SendOtpEnabledAsync(userId);
+            await _notifications.SendOtpEnabledAsync(userId,
+                Request.GetRemoteIPAddress(),
+                Request.Headers.UserAgent);
             return Ok();
         }
 
@@ -169,13 +175,19 @@ namespace Cotton.Server.Controllers
                 user = await TryGetNewUserAsync(request);
                 if (user == null)
                 {
-                    await _notifications.SendFailedLoginAttemptAsync(request.Username);
+                    await _notifications.SendFailedLoginAttemptAsync(
+                        request.Username,
+                        Request.GetRemoteIPAddress(),
+                        Request.Headers.UserAgent);
                     return this.ApiUnauthorized("Invalid username or password");
                 }
             }
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
-                await _notifications.SendFailedLoginAttemptAsync(request.Username);
+                await _notifications.SendFailedLoginAttemptAsync(
+                    request.Username,
+                    Request.GetRemoteIPAddress(),
+                    Request.Headers.UserAgent);
                 return this.ApiUnauthorized("Invalid username or password");
             }
             if (user.IsTotpEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
@@ -191,7 +203,10 @@ namespace Cotton.Server.Controllers
                 int maxFailedAttempts = _settings.GetServerSettings().TotpMaxFailedAttempts;
                 if (user.TotpFailedAttempts >= maxFailedAttempts)
                 {
-                    _notifications.SendTotpLockoutAsync(user.Id, maxFailedAttempts);
+                    _notifications.SendTotpLockoutAsync(user.Id,
+                        maxFailedAttempts,
+                        Request.GetRemoteIPAddress(),
+                        Request.Headers.UserAgent);
                     return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
                 }
                 string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
@@ -200,7 +215,10 @@ namespace Cotton.Server.Controllers
                 {
                     user.TotpFailedAttempts += 1;
                     await _dbContext.SaveChangesAsync();
-                    _notifications.SendTotpFailedAttemptAsync(user.Id, user.TotpFailedAttempts);
+                    _notifications.SendTotpFailedAttemptAsync(user.Id,
+                        user.TotpFailedAttempts,
+                        Request.GetRemoteIPAddress(),
+                        Request.Headers.UserAgent);
                     return this.ApiForbidden("Invalid two-factor authentication code");
                 }
                 else
@@ -213,7 +231,9 @@ namespace Cotton.Server.Controllers
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token);
-            await _notifications.SendSuccessfulLoginAsync(user.Id, Request.GetRemoteIPAddress(), Request.Headers.UserAgent);
+            await _notifications.SendSuccessfulLoginAsync(user.Id,
+                Request.GetRemoteIPAddress(),
+                Request.Headers.UserAgent);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
@@ -325,7 +345,8 @@ namespace Cotton.Server.Controllers
             var uptime = DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
             if (uptime.TotalMinutes > 5)
             {
-                _logger.LogWarning("Attempt to create initial admin user after uptime of {Uptime}. Please restart the application to enable initial admin user creation.", uptime);
+                _logger.LogWarning("Attempt to create initial admin user after uptime of {Uptime}. " +
+                    "Please restart the application to enable initial admin user creation.", uptime);
                 return null;
             }
             User user = new()
@@ -344,7 +365,7 @@ namespace Cotton.Server.Controllers
         private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(User user, string? sessionId = null)
         {
             var lookup = await GeoIpHelpers.LookupAsync(Request.GetRemoteAddress());
-            sessionId ??= StringHelpers.CreateRandomString(32);
+            sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
             return new()
             {
                 RevokedAt = null,
@@ -356,7 +377,7 @@ namespace Cotton.Server.Controllers
                 AuthType = AuthType.Credentials,
                 IpAddress = Request.GetRemoteIPAddress(),
                 UserAgent = Request.Headers.UserAgent.ToString(),
-                Token = StringHelpers.CreatePseudoRandomString(RefreshTokenLength),
+                Token = StringHelpers.CreateRandomString(RefreshTokenLength),
                 Device = UserAgentHelpers.GetDevice(Request.Headers.UserAgent.ToString()),
             };
         }
