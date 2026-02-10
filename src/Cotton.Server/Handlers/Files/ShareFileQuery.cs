@@ -4,12 +4,14 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +30,8 @@ namespace Cotton.Server.Handlers.Files
 
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
+        INotificationsProvider _notifications,
+        IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
@@ -137,6 +141,13 @@ namespace Cotton.Server.Handlers.Files
             };
             Stream stream = _storage.GetBlobStream(uids, context);
             string? downloadName = isInlineFile ? null : downloadToken.FileName;
+            if (_httpContextAccessor.HttpContext != null)
+            {
+                await _notifications.SendSharedFileDownloadedNotification(
+                    downloadToken.NodeFile.OwnerId,
+                    _httpContextAccessor.HttpContext.Request.GetRemoteIPAddress(),
+                    _httpContextAccessor.HttpContext.Request.Headers.UserAgent);
+            }
             return ShareFileResult.AsStream(
                 stream: stream,
                 contentType: file.ContentType,
