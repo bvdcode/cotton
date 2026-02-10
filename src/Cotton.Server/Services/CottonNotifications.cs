@@ -49,18 +49,19 @@ namespace Cotton.Server.Services
             string host = settings.SmtpServerAddress ?? throw new InvalidOperationException("SMTP server address is not configured.");
             int port = settings.SmtpServerPort ?? throw new InvalidOperationException("SMTP server port is not configured.");
             string username = settings.SmtpUsername ?? throw new InvalidOperationException("SMTP username is not configured.");
+            string senderEmail = settings.SmtpSenderEmail ?? throw new InvalidOperationException("SMTP sender email is not configured.");
             string? password = _settingsProvider.DecryptValue(settings.SmtpPasswordEncrypted);
             using SmtpClient client = new()
             {
                 Host = host,
                 Port = port,
                 Timeout = 15000,
-                EnableSsl = true,
+                EnableSsl = settings.SmtpUseSsl,
                 Credentials = new NetworkCredential(username, password)
             };
             using MailMessage mailMessage = new()
             {
-                From = new MailAddress(FromEmail, "Cotton Cloud"),
+                From = new MailAddress(senderEmail, "Cotton Cloud"),
                 Subject = subject,
             };
             var recipient = new MailAddress(foundUser.Email, foundUser.Username);
