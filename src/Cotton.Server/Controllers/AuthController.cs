@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Handlers.Auth;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
@@ -39,9 +40,10 @@ namespace Cotton.Server.Controllers
         ITokenProvider _tokens,
         SettingsProvider _settings,
         CottonDbContext _dbContext,
-        ILogger<AuthController> _logger,
         IPasswordHashService _hasher,
-        WebDavAuthCache _webDavAuthCache) : ControllerBase
+        ILogger<AuthController> _logger,
+        WebDavAuthCache _webDavAuthCache,
+        INotificationsProvider _notifications) : ControllerBase
     {
         private const int WebDavTokenLength = 32;
         private const int RefreshTokenLength = 32;
@@ -58,6 +60,7 @@ namespace Cotton.Server.Controllers
             user.WebDavTokenPhc = _hasher.Hash(token);
             await _dbContext.SaveChangesAsync();
             _webDavAuthCache.BumpUsernameCacheVersion(user.Username);
+            await _notifications.SendWebDavTokenResetAsync(userId);
             return Ok(token);
         }
 
@@ -115,6 +118,7 @@ namespace Cotton.Server.Controllers
             user.IsTotpEnabled = true;
             user.TotpEnabledAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync();
+            await _notifications.SendOtpEnabledAsync(userId);
             return Ok();
         }
 
@@ -165,11 +169,13 @@ namespace Cotton.Server.Controllers
                 user = await TryGetNewUserAsync(request);
                 if (user == null)
                 {
+                    await _notifications.SendFailedLoginAttemptAsync(request.Username);
                     return this.ApiUnauthorized("Invalid username or password");
                 }
             }
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
+                await _notifications.SendFailedLoginAttemptAsync(request.Username);
                 return this.ApiUnauthorized("Invalid username or password");
             }
             if (user.IsTotpEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
@@ -185,6 +191,7 @@ namespace Cotton.Server.Controllers
                 int maxFailedAttempts = _settings.GetServerSettings().TotpMaxFailedAttempts;
                 if (user.TotpFailedAttempts >= maxFailedAttempts)
                 {
+                    _notifications.SendTotpLockoutAsync(user.Id, maxFailedAttempts);
                     return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
                 }
                 string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
@@ -193,6 +200,7 @@ namespace Cotton.Server.Controllers
                 {
                     user.TotpFailedAttempts += 1;
                     await _dbContext.SaveChangesAsync();
+                    _notifications.SendTotpFailedAttemptAsync(user.Id, user.TotpFailedAttempts);
                     return this.ApiForbidden("Invalid two-factor authentication code");
                 }
                 else
@@ -205,6 +213,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token);
+            await _notifications.SendSuccessfulLoginAsync(user.Id, Request.GetRemoteIPAddress(), Request.Headers.UserAgent);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
