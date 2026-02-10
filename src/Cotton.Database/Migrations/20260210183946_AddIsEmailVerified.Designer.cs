@@ -5,6 +5,7 @@ using System.Net;
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    partial class CottonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260210183946_AddIsEmailVerified")]
+    partial class AddIsEmailVerified
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -608,10 +611,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("citext")
                         .HasColumnName("email");
 
-                    b.Property<string>("EmailVerificationToken")
-                        .HasColumnType("text")
-                        .HasColumnName("email_verification_token");
-
                     b.Property<bool>("IsEmailVerified")
                         .HasColumnType("boolean")
                         .HasColumnName("is_email_verified");
@@ -624,10 +623,6 @@ namespace Cotton.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("password_phc");
-
-                    b.Property<string>("PasswordResetToken")
-                        .HasColumnType("text")
-                        .HasColumnName("password_reset_token");
 
                     b.Property<int>("Role")
                         .HasColumnType("integer")
