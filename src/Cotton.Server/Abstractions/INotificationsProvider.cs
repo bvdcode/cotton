@@ -4,7 +4,7 @@ namespace Cotton.Server.Abstractions
 {
     public interface INotificationsProvider
     {
-        Task SendEmailAsync(Guid userId);
+        Task SendEmailAsync(Guid userId, string subject, string body);
         Task SendNotificationAsync(
             Guid userId,
             string title,
