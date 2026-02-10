@@ -12,6 +12,7 @@ namespace Cotton.Server.Extensions
     {
         public static async Task SendFailedLoginAttemptAsync(
             this INotificationsProvider notifications,
+            Guid userId,
             string username,
             IPAddress ipAddress,
             StringValues userAgent)
@@ -23,12 +24,11 @@ namespace Cotton.Server.Extensions
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
             await notifications.SendNotificationAsync(
-                userId: Guid.Empty,
+                userId: userId,
                 title: NotificationTemplates.FailedLoginAttemptTitle,
                 content: NotificationTemplates.FailedLoginAttemptContent(
                     username,
                     ipAddress.ToString(),
-                    userAgent.ToString(),
                     deviceName,
                     ipInfo.Country,
                     ipInfo.Region,
@@ -63,7 +63,6 @@ namespace Cotton.Server.Extensions
                 title: NotificationTemplates.OtpEnabledTitle,
                 content: NotificationTemplates.OtpEnabledContent(
                     ipAddress.ToString(),
-                    userAgent.ToString(),
                     deviceName,
                     ipInfo.Country,
                     ipInfo.Region,
@@ -97,7 +96,6 @@ namespace Cotton.Server.Extensions
                 title: NotificationTemplates.SuccessfulLoginTitle,
                 content: NotificationTemplates.SuccessfulLoginContent(
                     ipAddress.ToString(),
-                    userAgent.ToString(),
                     deviceName,
                     ipInfo.Country,
                     ipInfo.Region,
@@ -133,7 +131,6 @@ namespace Cotton.Server.Extensions
                 content: NotificationTemplates.TotpFailedAttemptContent(
                     totpFailedAttempts,
                     ipAddress.ToString(),
-                    userAgent.ToString(),
                     deviceName,
                     ipInfo.Country,
                     ipInfo.Region,
@@ -170,7 +167,6 @@ namespace Cotton.Server.Extensions
                 content: NotificationTemplates.TotpLockoutContent(
                     maxFailedAttempts,
                     ipAddress.ToString(),
-                    userAgent.ToString(),
                     deviceName,
                     ipInfo.Country,
                     ipInfo.Region,
@@ -205,7 +201,6 @@ namespace Cotton.Server.Extensions
                 title: NotificationTemplates.WebDavTokenResetTitle,
                 content: NotificationTemplates.WebDavTokenResetContent(
                     ipAddress.ToString(),
-                    userAgent.ToString(),
                     deviceName,
                     ipInfo.Country,
                     ipInfo.Region,
