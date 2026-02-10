@@ -3,13 +3,10 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Hubs;
-using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
-using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.AspNetCore.SignalR;
-using Quartz;
 
 namespace Cotton.Server.Services
 {

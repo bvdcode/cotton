@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Auth;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
@@ -11,7 +12,6 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.WebDav;
-using Cotton.Server.Extensions;
 using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.Abstractions;

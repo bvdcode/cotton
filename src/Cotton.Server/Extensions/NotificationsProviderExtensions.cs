@@ -216,5 +216,41 @@ namespace Cotton.Server.Extensions
                     ["city"] = ipInfo.City
                 });
         }
+
+        public static async Task SendSharedFileDownloadedNotificationAsync(
+            this INotificationsProvider notifications,
+            Guid userId,
+            string fileName,
+            IPAddress ipAddress,
+            StringValues userAgent)
+        {
+            ArgumentNullException.ThrowIfNull(notifications);
+
+            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
+            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            string deviceName = device.FriendlyName ?? device.Type.ToString();
+
+            await notifications.SendNotificationAsync(
+                userId,
+                title: NotificationTemplates.SharedFileDownloadedTitle,
+                content: NotificationTemplates.SharedFileDownloadedContent(
+                    fileName,
+                    ipAddress.ToString(),
+                    deviceName,
+                    ipInfo.Country,
+                    ipInfo.Region,
+                    ipInfo.City),
+                priority: NotificationPriority.None,
+                metadata: new Dictionary<string, string>
+                {
+                    ["fileName"] = fileName,
+                    ["ip"] = ipAddress.ToString(),
+                    ["userAgent"] = userAgent.ToString(),
+                    ["device"] = deviceName,
+                    ["country"] = ipInfo.Country,
+                    ["region"] = ipInfo.Region,
+                    ["city"] = ipInfo.City
+                });
+        }
     }
 }
