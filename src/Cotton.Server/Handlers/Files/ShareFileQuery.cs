@@ -143,8 +143,9 @@ namespace Cotton.Server.Handlers.Files
             string? downloadName = isInlineFile ? null : downloadToken.FileName;
             if (_httpContextAccessor.HttpContext != null)
             {
-                await _notifications.SendSharedFileDownloadedNotification(
+                await _notifications.SendSharedFileDownloadedNotificationAsync(
                     downloadToken.NodeFile.OwnerId,
+                    downloadToken.FileName,
                     _httpContextAccessor.HttpContext.Request.GetRemoteIPAddress(),
                     _httpContextAccessor.HttpContext.Request.Headers.UserAgent);
             }
