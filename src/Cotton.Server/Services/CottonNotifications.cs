@@ -5,8 +5,10 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
+using EasyExtensions.AspNetCore.Exceptions;
 using Mapster;
 using Microsoft.AspNetCore.SignalR;
+using System.Net;
 using System.Net.Mail;
 using System.Net.Mime;
 using System.Text;
@@ -18,7 +20,7 @@ namespace Cotton.Server.Services
         SettingsProvider _settingsProvider,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
     {
-        public Task SendEmailAsync(Guid userId, string subject)
+        public Task SendEmailAsync(Guid userId, string subject, string body)
         {
             var settings = _settingsProvider.GetServerSettings();
             if (settings.EmailMode == EmailMode.None)
@@ -31,13 +33,19 @@ namespace Cotton.Server.Services
             }
             if (settings.EmailMode == EmailMode.Custom)
             {
-                return SendEmailAsync(userId, subject, settings);
+                return SendEmailAsync(userId, subject, body, settings);
             }
             throw new InvalidOperationException("Invalid email mode configured.");
         }
 
-        private async Task SendEmailAsync(Guid userId, string subject, CottonServerSettings settings)
+        private async Task SendEmailAsync(Guid userId, string subject, string body, CottonServerSettings settings)
         {
+            var foundUser = await _dbContext.Users.FindAsync(userId)
+                ?? throw new EntityNotFoundException<User>();
+            if (string.IsNullOrWhiteSpace(foundUser.Email))
+            {
+                return;
+            }
             string host = settings.SmtpServerAddress ?? throw new InvalidOperationException("SMTP server address is not configured.");
             int port = settings.SmtpServerPort ?? throw new InvalidOperationException("SMTP server port is not configured.");
             string username = settings.SmtpUsername ?? throw new InvalidOperationException("SMTP username is not configured.");
@@ -48,14 +56,15 @@ namespace Cotton.Server.Services
                 Port = port,
                 Timeout = 15000,
                 EnableSsl = true,
-                Credentials = new System.Net.NetworkCredential(username, password)
+                Credentials = new NetworkCredential(username, password)
             };
             using MailMessage mailMessage = new()
             {
                 From = new MailAddress(FromEmail, "Cotton Cloud"),
                 Subject = subject,
             };
-            mailMessage.To.Add(email);
+            var recipient = new MailAddress(foundUser.Email, foundUser.Username);
+            mailMessage.To.Add(recipient);
             bool isHtml = body.Contains("<html", StringComparison.OrdinalIgnoreCase);
 
             if (!isHtml)
@@ -66,18 +75,18 @@ namespace Cotton.Server.Services
             else
             {
                 var htmlView = AlternateView.CreateAlternateViewFromString(body, Encoding.UTF8, MediaTypeNames.Text.Html);
-                if (body.Contains($"cid:{EmailLetterBuilder.LogoContentId}", StringComparison.OrdinalIgnoreCase))
-                {
-                    byte[] iconBytes = Constants.GetCompanyIconPngBytes();
-                    var stream = new MemoryStream(iconBytes);
-                    var logoResource = new LinkedResource(stream, MediaTypeNames.Image.Png)
-                    {
-                        ContentId = EmailLetterBuilder.LogoContentId,
-                        TransferEncoding = TransferEncoding.Base64
-                    };
+                //if (body.Contains($"cid:{EmailLetterBuilder.LogoContentId}", StringComparison.OrdinalIgnoreCase))
+                //{
+                //    byte[] iconBytes = Constants.GetCompanyIconPngBytes();
+                //    var stream = new MemoryStream(iconBytes);
+                //    var logoResource = new LinkedResource(stream, MediaTypeNames.Image.Png)
+                //    {
+                //        ContentId = EmailLetterBuilder.LogoContentId,
+                //        TransferEncoding = TransferEncoding.Base64
+                //    };
 
-                    htmlView.LinkedResources.Add(logoResource);
-                }
+                //    htmlView.LinkedResources.Add(logoResource);
+                //}
 
                 mailMessage.AlternateViews.Add(htmlView);
                 mailMessage.IsBodyHtml = true;
