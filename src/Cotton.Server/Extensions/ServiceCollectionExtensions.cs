@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Server.Abstractions;
 using Cotton.Server.Auth;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;

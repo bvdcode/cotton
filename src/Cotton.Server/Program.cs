@@ -3,6 +3,7 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Mappings;
 using Cotton.Server.Providers;
@@ -50,6 +51,7 @@ namespace Cotton.Server
                 .AddScoped<SettingsProvider>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
+                .AddScoped<INotificationsProvider, CottonNotifications>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
