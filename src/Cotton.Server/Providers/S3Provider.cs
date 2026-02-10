@@ -1,14 +1,10 @@
 ﻿using Amazon.Runtime;
 using Amazon.S3;
 using Cotton.Storage.Abstractions;
-using EasyExtensions.Abstractions;
-using EasyExtensions.Extensions;
 
 namespace Cotton.Server.Providers
 {
-    public class S3Provider(
-        IStreamCipher _crypto,
-        SettingsProvider _settingsProvider) : IS3Provider
+    public class S3Provider(SettingsProvider _settingsProvider) : IS3Provider
     {
         private IAmazonS3? _s3Client;
         private string? _bucketName;
