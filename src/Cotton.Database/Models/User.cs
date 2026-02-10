@@ -24,6 +24,15 @@ namespace Cotton.Database.Models
         [Column("email", TypeName = "citext")]
         public string? Email { get; set; }
 
+        [Column("is_email_verified")]
+        public bool IsEmailVerified { get; set; }
+
+        [Column("email_verification_token")]
+        public string? EmailVerificationToken { get; set; }
+
+        [Column("password_reset_token")]
+        public string? PasswordResetToken { get; set; }
+
         [Column("role")]
         public UserRole Role { get; set; }
 
