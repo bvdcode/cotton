@@ -30,8 +30,14 @@ namespace Cotton.Database.Models
         [Column("email_verification_token")]
         public string? EmailVerificationToken { get; set; }
 
+        [Column("email_verification_token_sent_at")]
+        public DateTime? EmailVerificationTokenSentAt { get; set; }
+
         [Column("password_reset_token")]
         public string? PasswordResetToken { get; set; }
+
+        [Column("password_reset_token_sent_at")]
+        public DateTime? PasswordResetTokenSentAt { get; set; }
 
         [Column("role")]
         public UserRole Role { get; set; }
