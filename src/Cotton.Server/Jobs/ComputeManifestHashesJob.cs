@@ -62,7 +62,11 @@ namespace Cotton.Server.Jobs
                     // send notification for each related file
                     foreach (var file in relatedFiles)
                     {
-                        await _notifications.SendNotificationAsync(file.OwnerId, "Hash mismatch detected for your file upload. Please re-upload.");
+                        await _notifications.SendUploadHashMismatchNotificationAsync(
+                            file.OwnerId,
+                            file.Name,
+                            Hasher.ToHexStringHash(manifest.ProposedContentHash),
+                            Hasher.ToHexStringHash(computedContentHash));
                     }
                 }
             }
