@@ -26,7 +26,7 @@ import { usePreferencesStore } from "../../../shared/store/preferencesStore";
 import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 
 export const NotificationsMenu = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["notifications", "common"]);
   const confirm = useConfirm();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
@@ -114,7 +114,7 @@ export const NotificationsMenu = () => {
 
   return (
     <>
-      <Tooltip title={t("notifications.title")}>
+      <Tooltip title={t("title")}>
         <IconButton size="small" onClick={handleOpen}>
           <Badge badgeContent={unreadCount} color="error">
             <NotificationsIcon fontSize="small" />
@@ -138,14 +138,14 @@ export const NotificationsMenu = () => {
           py={1}
         >
           <Typography variant="subtitle2" fontWeight={700}>
-            {t("notifications.title")}
+            {t("title")}
           </Typography>
           <Box display="flex" gap={0.5}>
             <Tooltip
               title={
                 showOnlyUnread
-                  ? t("notifications.showAll")
-                  : t("notifications.showOnlyUnread")
+                  ? t("showAll")
+                  : t("showOnlyUnread")
               }
             >
               <IconButton
@@ -166,8 +166,8 @@ export const NotificationsMenu = () => {
             <Tooltip
               title={
                 soundEnabled
-                  ? t("notifications.muteSound")
-                  : t("notifications.unmuteSound")
+                  ? t("muteSound")
+                  : t("unmuteSound")
               }
             >
               <IconButton
@@ -181,7 +181,7 @@ export const NotificationsMenu = () => {
                 )}
               </IconButton>
             </Tooltip>
-            <Tooltip title={t("notifications.markAllAsRead")}>
+            <Tooltip title={t("markAllAsRead")}>
               <IconButton size="small" onClick={handleMarkAllAsRead}>
                 <MarkChatRead fontSize="small" />
               </IconButton>
@@ -209,7 +209,7 @@ export const NotificationsMenu = () => {
                         title: n.title,
                         description: n.content ?? undefined,
                         hideCancelButton: true,
-                        confirmationText: t("ok"),
+                        confirmationText: t("common:ok"),
                       });
 
                       if (result?.confirmed) {
