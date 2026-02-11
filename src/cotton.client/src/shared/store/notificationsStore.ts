@@ -95,14 +95,18 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
   },
 
   markAllAsRead: async () => {
-    await notificationsApi.markAllAsRead();
-    const now = new Date().toISOString();
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.readAt ? n : { ...n, readAt: now },
-      ),
-      unreadCount: 0,
-    }));
+    try {
+      await notificationsApi.markAllAsRead();
+      const now = new Date().toISOString();
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.readAt ? n : { ...n, readAt: now },
+        ),
+        unreadCount: 0,
+      }));
+    } catch {
+      // silent
+    }
   },
 
   prependNotification: (notification: NotificationDto) => {

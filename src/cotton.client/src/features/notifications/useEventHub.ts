@@ -6,10 +6,16 @@ import { useAuth } from "../auth";
 
 const HUB_METHOD = "OnNotificationReceived";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+type JsonObject = { [key: string]: JsonValue };
+
+type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
+
+const isRecord = (value: JsonValue): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const isNotificationDto = (value: unknown): value is NotificationDto => {
+const isNotificationDto = (
+  value: JsonValue,
+): value is NotificationDto & JsonObject => {
   if (!isRecord(value)) return false;
 
   const id = value.id;
@@ -43,14 +49,17 @@ export function useEventHub() {
   const fetchUnreadCount = useNotificationsStore((s) => s.fetchUnreadCount);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      eventHub.dispose();
+      return;
+    }
 
     eventHub.start().catch(() => {
       // connection will retry automatically
     });
 
     const unsubscribe = eventHub.on(HUB_METHOD, (...args) => {
-      const first = args[0];
+      const first = (args[0] ?? null) as JsonValue;
       if (isNotificationDto(first)) {
         prependNotification(first);
         fetchUnreadCount();
@@ -59,7 +68,6 @@ export function useEventHub() {
 
     return () => {
       unsubscribe();
-      eventHub.dispose();
     };
   }, [isAuthenticated, prependNotification, fetchUnreadCount]);
 }
