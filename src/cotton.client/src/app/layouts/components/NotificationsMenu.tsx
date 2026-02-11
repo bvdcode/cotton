@@ -15,12 +15,14 @@ import {
   MarkChatRead,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "material-ui-confirm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNotificationsStore } from "../../../shared/store/notificationsStore";
 import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 
 export const NotificationsMenu = () => {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -141,6 +143,22 @@ export const NotificationsMenu = () => {
                 <ListItem
                   key={n.id}
                   onMouseEnter={() => handleHover(n.id, n.readAt)}
+                  onClick={async () => {
+                    try {
+                      const result = await confirm({
+                        title: n.title,
+                        description: n.content ?? undefined,
+                        confirmationText: t("notifications.viewAll"),
+                        cancellationText: t("common:actions.close"),
+                      });
+
+                      if (result?.confirmed) {
+                        markAsRead(n.id);
+                      }
+                    } catch (err) {
+                      console.debug("notification confirm failed", err);
+                    }
+                  }}
                   sx={{
                     px: 2,
                     py: 1,
