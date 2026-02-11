@@ -7,6 +7,8 @@ import {
   Typography,
   Avatar,
   Alert,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
@@ -39,6 +41,7 @@ export const LoginPage = () => {
   } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [trustDevice, setTrustDevice] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,6 +65,7 @@ export const LoginPage = () => {
           twoFactorCode: requiresTwoFactor
             ? twoFactorCode.replace(/\D/g, "").slice(0, 6)
             : undefined,
+          trustDevice,
         });
         const user = await authApi.me();
         setAuthenticated(true, user);
@@ -122,6 +126,7 @@ export const LoginPage = () => {
       twoFactorCode,
       username,
       password,
+      trustDevice,
       t,
       setAuthenticated,
       navigate,
@@ -231,6 +236,18 @@ export const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
+                />
+
+                <FormControlLabel
+                  sx={{ mt: 1, userSelect: "none" }}
+                  control={
+                    <Checkbox
+                      checked={trustDevice}
+                      onChange={(e) => setTrustDevice(e.target.checked)}
+                      disabled={loading}
+                    />
+                  }
+                  label={t("rememberMe")}
                 />
               </>
             )}
