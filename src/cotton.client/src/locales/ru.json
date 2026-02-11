@@ -700,6 +700,10 @@
       "confirmTitle": "Удалить папку \"{{name}}\"?",
       "confirmDescription": "Это действие нельзя отменить. Папка и всё её содержимое будут удалены навсегда."
     },
+    "deleteFile": {
+      "confirmTitle": "Удалить файл \"{{name}}\"?",
+      "confirmDescription": "Это действие нельзя отменить."
+    },
     "deleteFileForever": {
       "confirmTitle": "Удалить файл \"{{name}}\"?",
       "confirmDescription": "Это действие нельзя отменить. Файл будет удалён навсегда."
