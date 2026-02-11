@@ -1,4 +1,5 @@
 import { httpClient } from "./httpClient";
+import type { JsonValue } from "../types/json";
 
 export interface ServerSettings {
   serverHasUsers: boolean;
@@ -32,7 +33,9 @@ export const settingsApi = {
     };
   },
 
-  saveSetupAnswers: async (answers: Record<string, unknown>): Promise<void> => {
+  saveSetupAnswers: async (
+    answers: Record<string, JsonValue>,
+  ): Promise<void> => {
     await httpClient.post("server/settings", answers);
   },
 };
