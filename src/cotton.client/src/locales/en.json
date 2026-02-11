@@ -45,7 +45,9 @@
     },
     "errors": {
       "unexpectedTitle": "Something went wrong",
-      "unexpectedDescription": "An unexpected error occurred. Please reload the page."
+      "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
+      "showDetails": "Show details",
+      "hideDetails": "Hide details"
     },
     "userMenu": {
       "lightMode": "Light Mode",
