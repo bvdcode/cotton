@@ -5,6 +5,17 @@
     "enterQueryHint": "Start typing to search...",
     "noResults": "No files or folders found"
   },
+  "notifications": {
+    "title": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "empty": "No notifications",
+    "viewAll": "View all",
+    "unreadCount": "{count} unread",
+    "showOnlyUnread": "Show only unread",
+    "showAll": "Show all",
+    "muteSound": "Mute sound",
+    "unmuteSound": "Unmute sound"
+  },
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
@@ -48,17 +59,6 @@
       "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
       "showDetails": "Show details",
       "hideDetails": "Hide details"
-    },
-    "notifications": {
-      "title": "Notifications",
-      "markAllAsRead": "Mark all as read",
-      "empty": "No notifications",
-      "viewAll": "View all",
-      "unreadCount": "{count} unread",
-      "showOnlyUnread": "Show only unread",
-      "showAll": "Show all",
-      "muteSound": "Mute sound",
-      "unmuteSound": "Unmute sound"
     },
     "userMenu": {
       "lightMode": "Light Mode",
@@ -743,11 +743,6 @@
         "success": "User created."
       }
     }
-  },
-  "notifications": {
-    "title": "Notifications",
-    "empty": "No notifications",
-    "markAllAsRead": "Mark all as read"
   },
   "routes": {
     "login": "Login",
