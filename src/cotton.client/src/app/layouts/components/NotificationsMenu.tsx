@@ -148,8 +148,8 @@ export const NotificationsMenu = () => {
                       const result = await confirm({
                         title: n.title,
                         description: n.content ?? undefined,
-                        confirmationText: t("notifications.viewAll"),
-                        cancellationText: t("common:actions.close"),
+                        hideCancelButton: true,
+                        confirmationText: t("common.ok"),
                       });
 
                       if (result?.confirmed) {
