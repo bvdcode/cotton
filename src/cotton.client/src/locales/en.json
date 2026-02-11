@@ -63,7 +63,8 @@
       "logout": "Logout"
     },
     "title": "Cotton Cloud",
-    "subtitle": "Setup Wizard"
+    "subtitle": "Setup Wizard",
+    "ok": "OK"
   },
   "share": {
     "title": "Shared file",
@@ -730,7 +731,7 @@
       "create": {
         "title": "Create user",
         "username": "Username",
-          "email": "E-mail",
+        "email": "E-mail",
         "password": "Password",
         "role": "Role",
         "button": "Create",
