@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
+using Cotton.Server.Providers;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
@@ -18,6 +19,7 @@ public class ChunkIngestService(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
     IStoragePipeline _storage,
+    SettingsProvider _settingsProvider,
     ILogger<ChunkIngestService> _logger)
     : IChunkIngestService
 {
@@ -32,7 +34,22 @@ public class ChunkIngestService(
             await Task.Delay(100, ct);
         }
 
+        var settings = _settingsProvider.GetServerSettings();
+
         var chunk = await _layouts.FindChunkAsync(chunkHash);
+        if (chunk is not null && settings.AllowCrossUserDeduplication)
+        {
+            if (chunk.GCScheduledAfter.HasValue)
+            {
+                chunk.GCScheduledAfter = null;
+                _dbContext.Chunks.Update(chunk);
+            }
+
+            await EnsureOwnershipAsync(chunkHash, userId, ct);
+            await _dbContext.SaveChangesAsync(ct);
+            return chunk;
+        }
+
         if (chunk is null)
         {
             using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
