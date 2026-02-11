@@ -32,12 +32,16 @@ export const UploadQueueWidget = () => {
   );
 
   const widgetTitle = getWidgetTitle(
-    t,
     stats,
     isCollapsed,
     totalProgress,
     totalSpeed,
   );
+
+  const widgetTitleText =
+    "options" in widgetTitle
+      ? t(widgetTitle.key, widgetTitle.options)
+      : t(widgetTitle.key);
 
   if (!visible) return null;
 
@@ -61,7 +65,7 @@ export const UploadQueueWidget = () => {
         }}
       >
         <WidgetHeader
-          title={widgetTitle}
+          title={widgetTitleText}
           isCollapsed={isCollapsed}
           hasActive={stats.hasActive}
           progressPercent={totalProgress}
