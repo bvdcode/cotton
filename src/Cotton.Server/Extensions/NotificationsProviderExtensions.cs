@@ -252,5 +252,30 @@ namespace Cotton.Server.Extensions
                     ["city"] = ipInfo.City
                 });
         }
+
+        public static async Task SendUploadHashMismatchNotificationAsync(
+            this INotificationsProvider notifications,
+            Guid userId,
+            string fileName,
+            string proposedHash,
+            string computedHash)
+        {
+            ArgumentNullException.ThrowIfNull(notifications);
+
+            await notifications.SendNotificationAsync(
+                userId,
+                title: NotificationTemplates.UploadHashMismatchTitle,
+                content: NotificationTemplates.UploadHashMismatchContent(
+                    fileName,
+                    proposedHash,
+                    computedHash),
+                priority: NotificationPriority.High,
+                metadata: new Dictionary<string, string>
+                {
+                    ["fileName"] = fileName,
+                    ["proposedHash"] = proposedHash,
+                    ["computedHash"] = computedHash
+                });
+        }
     }
 }

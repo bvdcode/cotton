@@ -100,5 +100,20 @@
             return $"Your shared file '{fileName}' was downloaded from {device} " +
                    $"in {city}, {region}, {country} ({ipAddress}).";
         }
+
+        public static string UploadHashMismatchTitle => "Upload verification failed";
+
+        public static string UploadHashMismatchContent(
+            string fileName,
+            string proposedHash,
+            string computedHash)
+        {
+            string proposedTail = "..." + proposedHash[^4..];
+            string computedTail = "..." + computedHash[^4..];
+            return $"We couldn't verify the integrity of your upload for '{fileName}'. " +
+                   $"Please re-upload the file.\n\n" +
+                   $"Proposed: {proposedTail}\n" +
+                   $"Computed: {computedTail}";
+        }
     }
 }
