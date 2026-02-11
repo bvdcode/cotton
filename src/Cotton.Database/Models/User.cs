@@ -15,6 +15,15 @@ namespace Cotton.Database.Models
         [Column("username", TypeName = "citext")]
         public string Username { get; set; } = null!;
 
+        [Column("first_name")]
+        public string? FirstName { get; set; }
+
+        [Column("last_name")]
+        public string? LastName { get; set; }
+
+        [Column("birth_date")]
+        public DateOnly? BirthDate { get; set; }
+
         [Column("password_phc")]
         public string PasswordPhc { get; set; } = null!;
 
