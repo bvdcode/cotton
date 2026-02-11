@@ -71,7 +71,7 @@
     "title": "Sign in to your account",
     "usernameLabel": "Username",
     "passwordLabel": "Password",
-    "rememberMe": "Remember me",
+    "rememberMe": "Trust this device",
     "twoFactor": {
       "title": "Two-factor authentication",
       "caption": "Enter the 6-digit code from your authenticator app.",
@@ -721,6 +721,11 @@
         "success": "User created."
       }
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markAllAsRead": "Mark all as read"
   },
   "routes": {
     "login": "Login",
