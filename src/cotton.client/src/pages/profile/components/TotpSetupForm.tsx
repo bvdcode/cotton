@@ -46,19 +46,17 @@ export const TotpSetupForm = ({
           p: 2,
           borderRadius: 2,
           display: "inline-flex",
-          bgcolor: theme.palette.mode === "dark" ? "background.paper" : "#fff",
+          bgcolor: theme.palette.common.white,
+          border: "1px solid",
+          borderColor: "divider",
         }}
       >
         <QRCode
           value={totpSetup.otpAuthUri}
           size={200}
           level="M"
-          fgColor={theme.palette.text.primary}
-          bgColor={
-            theme.palette.mode === "dark"
-              ? theme.palette.background.paper
-              : "#ffffff"
-          }
+          fgColor={theme.palette.common.black}
+          bgColor={theme.palette.common.white}
         />
       </Box>
 
