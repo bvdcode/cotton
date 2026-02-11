@@ -54,7 +54,11 @@
       "markAllAsRead": "Mark all as read",
       "empty": "No notifications",
       "viewAll": "View all",
-      "unreadCount": "{count} unread"
+      "unreadCount": "{count} unread",
+      "showOnlyUnread": "Show only unread",
+      "showAll": "Show all",
+      "muteSound": "Mute sound",
+      "unmuteSound": "Unmute sound"
     },
     "userMenu": {
       "lightMode": "Light Mode",

@@ -11,10 +11,12 @@ interface NotificationsState {
   hasMore: boolean;
   loading: boolean;
   loadingMore: boolean;
+  unreadOnly: boolean;
 
   fetchUnreadCount: () => Promise<void>;
   fetchFirstPage: () => Promise<void>;
   fetchNextPage: () => Promise<void>;
+  setUnreadOnlyFilter: (unreadOnly: boolean) => void;
 
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -30,6 +32,7 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
   hasMore: true,
   loading: false,
   loadingMore: false,
+  unreadOnly: false,
 
   fetchUnreadCount: async () => {
     try {
@@ -41,9 +44,10 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
   },
 
   fetchFirstPage: async () => {
+    const { unreadOnly } = get();
     set({ loading: true });
     try {
-      const result = await notificationsApi.list(1, PAGE_SIZE);
+      const result = await notificationsApi.list(1, PAGE_SIZE, unreadOnly);
       set({
         notifications: result.data,
         page: 1,
@@ -57,13 +61,13 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
   },
 
   fetchNextPage: async () => {
-    const { hasMore, loading, loadingMore, page } = get();
+    const { hasMore, loading, loadingMore, page, unreadOnly } = get();
     if (!hasMore || loading || loadingMore) return;
 
     const nextPage = page + 1;
     set({ loadingMore: true });
     try {
-      const result = await notificationsApi.list(nextPage, PAGE_SIZE);
+      const result = await notificationsApi.list(nextPage, PAGE_SIZE, unreadOnly);
       const existingIds = new Set(get().notifications.map((n) => n.id));
       const newItems = result.data.filter((n) => !existingIds.has(n.id));
 
@@ -122,6 +126,11 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
     });
   },
 
+  setUnreadOnlyFilter: (unreadOnly: boolean) => {
+    set({ unreadOnly });
+    get().fetchFirstPage();
+  },
+
   reset: () => {
     set({
       notifications: [],
@@ -130,6 +139,7 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
       hasMore: true,
       loading: false,
       loadingMore: false,
+      unreadOnly: false,
     });
   },
 }));

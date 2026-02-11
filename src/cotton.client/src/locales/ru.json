@@ -72,7 +72,11 @@
       "markAllAsRead": "Отметить все как прочитанные",
       "empty": "Нет уведомлений",
       "viewAll": "Посмотреть все",
-      "unreadCount": "{count} непрочитанных"
+      "unreadCount": "{count} непрочитанных",
+      "showOnlyUnread": "Только непрочитанные",
+      "showAll": "Показать все",
+      "muteSound": "Отключить звук",
+      "unmuteSound": "Включить звук"
     },
     "userMenu": {
       "lightMode": "Светлая тема",

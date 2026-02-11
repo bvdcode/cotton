@@ -1,9 +1,22 @@
 import { useEffect } from "react";
 import { eventHub } from "../../shared/signalr";
 import { useNotificationsStore } from "../../shared/store/notificationsStore";
+import { usePreferencesStore } from "../../shared/store/preferencesStore";
 import type { NotificationDto } from "../../shared/types/notification";
 import { isJsonObject, type JsonValue } from "../../shared/types/json";
 import { useAuth } from "../auth";
+
+const playNotificationSound = () => {
+  try {
+    const audio = new Audio("/assets/sounds/notification-3.mp3");
+    audio.volume = 0.5;
+    audio.play().catch(() => {
+      // audio playback may fail due to browser autoplay policy
+    });
+  } catch {
+    // audio not available
+  }
+};
 
 const HUB_METHOD = "OnNotificationReceived";
 
@@ -43,6 +56,9 @@ export function useEventHub() {
     (s) => s.prependNotification,
   );
   const fetchUnreadCount = useNotificationsStore((s) => s.fetchUnreadCount);
+  const soundEnabled = usePreferencesStore(
+    (s) => s.notificationPreferences.soundEnabled,
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -59,6 +75,9 @@ export function useEventHub() {
       if (isNotificationDto(first)) {
         prependNotification(first);
         fetchUnreadCount();
+        if (soundEnabled) {
+          playNotificationSound();
+        }
       }
     });
 
