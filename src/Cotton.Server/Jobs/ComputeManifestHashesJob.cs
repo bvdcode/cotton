@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -14,6 +15,7 @@ namespace Cotton.Server.Jobs
     public class ComputeManifestHashesJob(
         PerfTracker _perf,
         IStoragePipeline _storage,
+        INotificationsProvider _notifications,
         ILogger<ComputeManifestHashesJob> _logger,
         CottonDbContext _dbContext) : IJob
     {
@@ -53,6 +55,15 @@ namespace Cotton.Server.Jobs
                         manifest.Id,
                         Hasher.ToHexStringHash(computedContentHash),
                         Hasher.ToHexStringHash(manifest.ProposedContentHash));
+                    var relatedFiles = await _dbContext.NodeFiles
+                        .Where(nf => nf.FileManifestId == manifest.Id)
+                        .ToListAsync();
+
+                    // send notification for each related file
+                    foreach (var file in relatedFiles)
+                    {
+                        await _notifications.SendNotificationAsync(file.OwnerId, "Hash mismatch detected for your file upload. Please re-upload.");
+                    }
                 }
             }
         }
