@@ -81,7 +81,8 @@
       "logout": "Выйти"
     },
     "title": "Cotton Cloud",
-    "subtitle": "Мастер настройки"
+    "subtitle": "Мастер настройки",
+    "ok": "Ладно"
   },
   "share": {
     "title": "Доступ по ссылке",
