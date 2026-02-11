@@ -13,11 +13,16 @@ import {
 import {
   Notifications as NotificationsIcon,
   MarkChatRead,
+  VolumeUp,
+  VolumeOff,
+  FilterList,
+  FilterListOff,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNotificationsStore } from "../../../shared/store/notificationsStore";
+import { usePreferencesStore } from "../../../shared/store/preferencesStore";
 import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 
 export const NotificationsMenu = () => {
@@ -30,6 +35,19 @@ export const NotificationsMenu = () => {
 
   const notifications = useNotificationsStore((s) =>
     Array.isArray(s.notifications) ? s.notifications : [],
+  );
+  const setUnreadOnlyFilter = useNotificationsStore((s) => s.setUnreadOnlyFilter);
+  const soundEnabled = usePreferencesStore(
+    (s) => s.notificationPreferences.soundEnabled,
+  );
+  const showOnlyUnread = usePreferencesStore(
+    (s) => s.notificationPreferences.showOnlyUnread,
+  );
+  const setSoundEnabled = usePreferencesStore(
+    (s) => s.setNotificationSoundEnabled,
+  );
+  const setShowOnlyUnread = usePreferencesStore(
+    (s) => s.setShowOnlyUnreadNotifications,
   );
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const hasMore = useNotificationsStore((s) => s.hasMore);
@@ -122,11 +140,53 @@ export const NotificationsMenu = () => {
           <Typography variant="subtitle2" fontWeight={700}>
             {t("notifications.title")}
           </Typography>
-          <Tooltip title={t("notifications.markAllAsRead")}>
-            <IconButton size="small" onClick={handleMarkAllAsRead}>
-              <MarkChatRead fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <Box display="flex" gap={0.5}>
+            <Tooltip
+              title={
+                showOnlyUnread
+                  ? t("notifications.showAll")
+                  : t("notifications.showOnlyUnread")
+              }
+            >
+              <IconButton
+                size="small"
+                onClick={() => {
+                  const newValue = !showOnlyUnread;
+                  setShowOnlyUnread(newValue);
+                  setUnreadOnlyFilter(newValue);
+                }}
+              >
+                {showOnlyUnread ? (
+                  <FilterListOff fontSize="small" />
+                ) : (
+                  <FilterList fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+            <Tooltip
+              title={
+                soundEnabled
+                  ? t("notifications.muteSound")
+                  : t("notifications.unmuteSound")
+              }
+            >
+              <IconButton
+                size="small"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+              >
+                {soundEnabled ? (
+                  <VolumeUp fontSize="small" />
+                ) : (
+                  <VolumeOff fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={t("notifications.markAllAsRead")}>
+              <IconButton size="small" onClick={handleMarkAllAsRead}>
+                <MarkChatRead fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
 
         <Divider />
@@ -149,7 +209,7 @@ export const NotificationsMenu = () => {
                         title: n.title,
                         description: n.content ?? undefined,
                         hideCancelButton: true,
-                        confirmationText: t("common.ok"),
+                        confirmationText: t("ok"),
                       });
 
                       if (result?.confirmed) {

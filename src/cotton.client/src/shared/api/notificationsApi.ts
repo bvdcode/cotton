@@ -59,9 +59,9 @@ const extractNotifications = (payload: JsonValue): NotificationDto[] => {
 };
 
 export const notificationsApi = {
-  list: async (page = 1, pageSize = 20): Promise<NotificationsPage> => {
+  list: async (page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationsPage> => {
     const response = await httpClient.get<JsonValue>("/notifications", {
-      params: { page, pageSize },
+      params: { page, pageSize, unreadOnly },
     });
     const headerRaw = response.headers["x-total-count"];
     const totalCount = headerRaw ? parseInt(headerRaw, 10) : 0;
