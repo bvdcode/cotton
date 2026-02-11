@@ -6,14 +6,7 @@ import {
   HttpTransportType,
 } from "@microsoft/signalr";
 import { getAccessToken, refreshAccessToken } from "../api/httpClient";
-
-type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+import type { JsonValue } from "../types/json";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
 
