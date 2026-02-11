@@ -167,7 +167,7 @@ namespace Cotton.Server.Controllers
 
         //[EnableRateLimiting("auth")]
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginRequestDto request)
+        public async Task<IActionResult> Login(LoginRequest request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
             if (user == null)
@@ -223,11 +223,11 @@ namespace Cotton.Server.Controllers
                     user.TotpFailedAttempts = 0;
                 }
             }
-            ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user);
+            ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user, request.TrustDevice);
             string accessToken = CreateAccessToken(user, dbToken.SessionId!);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(dbToken.Token);
+            AddRefreshTokenToCookies(dbToken.Token, request.TrustDevice);
             await _notifications.SendSuccessfulLoginAsync(user.Id,
                 Request.GetRemoteIPAddress(),
                 Request.Headers.UserAgent);
@@ -260,10 +260,11 @@ namespace Cotton.Server.Controllers
             }
             var accessToken = CreateAccessToken(user, dbToken.SessionId!);
             dbToken.RevokedAt = DateTime.UtcNow;
-            ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(user, dbToken.SessionId);
+            ExtendedRefreshToken newDbToken = await CreateRefreshTokenAsync(
+                user, dbToken.IsTrusted, dbToken.SessionId);
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(newDbToken.Token);
+            AddRefreshTokenToCookies(newDbToken.Token, dbToken.IsTrusted);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
@@ -303,19 +304,20 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        private void AddRefreshTokenToCookies(string refreshToken)
+        private void AddRefreshTokenToCookies(string refreshToken, bool trustDevice)
         {
+            const int yearHours = 24 * 365;
             int sessionTimeoutHours = _settings.GetServerSettings().SessionTimeoutHours;
             Response.Cookies.Append(CookieRefreshTokenKey, refreshToken, new CookieOptions
             {
                 Secure = true,
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddHours(sessionTimeoutHours)
+                Expires = DateTimeOffset.UtcNow.AddHours(trustDevice ? yearHours : sessionTimeoutHours)
             });
         }
 
-        private async Task<User?> TryGetNewUserAsync(LoginRequestDto request)
+        private async Task<User?> TryGetNewUserAsync(LoginRequest request)
         {
             bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
             if (isPublicInstance)
@@ -359,7 +361,10 @@ namespace Cotton.Server.Controllers
             return user;
         }
 
-        private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(User user, string? sessionId = null)
+        private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(
+            User user,
+            bool trustDevice,
+            string? sessionId = null)
         {
             var lookup = await GeoIpHelpers.LookupAsync(Request.GetRemoteAddress());
             sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
@@ -370,6 +375,7 @@ namespace Cotton.Server.Controllers
                 City = lookup.City,
                 SessionId = sessionId,
                 Region = lookup.Region,
+                IsTrusted = trustDevice,
                 Country = lookup.Country,
                 AuthType = AuthType.Credentials,
                 IpAddress = Request.GetRemoteIPAddress(),
