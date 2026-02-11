@@ -16,7 +16,6 @@ import React, { useEffect } from "react";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
-import { useEventHub } from "../../features/notifications";
 import { useSettingsStore } from "../../shared/store/settingsStore";
 
 
@@ -32,8 +31,6 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const settingsLoading = useSettingsStore((s) => s.loading);
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
-
-  useEventHub();
 
   const navTextColor = theme.palette.text.primary;
   const navActiveBg = alpha(navTextColor, 0.14);

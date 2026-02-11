@@ -3,12 +3,19 @@ import { AuthProvider } from "./features/auth";
 import { BrowserRouter } from "react-router-dom";
 import { ThemeContextProvider } from "./app/providers";
 import { ConfirmProvider } from "material-ui-confirm";
+import { useEventHub } from "./features/notifications";
+
+const EventHubBootstrap = () => {
+  useEventHub();
+  return null;
+};
 
 function App() {
   return (
     <ThemeContextProvider>
       <ConfirmProvider>
         <AuthProvider>
+          <EventHubBootstrap />
           <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>
