@@ -71,6 +71,7 @@
     "title": "Sign in to your account",
     "usernameLabel": "Username",
     "passwordLabel": "Password",
+    "rememberMe": "Remember me",
     "twoFactor": {
       "title": "Two-factor authentication",
       "caption": "Enter the 6-digit code from your authenticator app.",
