@@ -1,21 +1,17 @@
 import { httpClient } from "./httpClient";
 import type { NotificationDto } from "../types/notification";
+import { isJsonObject, type JsonValue } from "../types/json";
 
 interface NotificationsPage {
   data: NotificationDto[];
   totalCount: number;
 }
 
-type JsonObject = { [key: string]: JsonValue };
-
-type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
-
-const isRecord = (value: JsonValue): value is JsonObject =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+const isRecord = (value: JsonValue) => isJsonObject(value);
 
 const isNotificationDto = (
   value: JsonValue,
-): value is NotificationDto & JsonObject => {
+): value is NotificationDto & Record<string, JsonValue> => {
   if (!isRecord(value)) return false;
 
   const id = value.id;

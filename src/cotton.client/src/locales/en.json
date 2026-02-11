@@ -40,7 +40,12 @@
       "rename": "Rename",
       "download": "Download",
       "share": "Share",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "reload": "Reload"
+    },
+    "errors": {
+      "unexpectedTitle": "Something went wrong",
+      "unexpectedDescription": "An unexpected error occurred. Please reload the page."
     },
     "userMenu": {
       "lightMode": "Light Mode",
@@ -223,6 +228,9 @@
     "title": "Server setup wizard",
     "subtitle": "Complete the initial server configuration to get started. This won't take long and will personalize the app for you.",
     "repoLink": "Project on GitHub",
+    "errors": {
+      "saveFailed": "Failed to save settings. Please try again."
+    },
     "status": {
       "hasUsers": "Has users",
       "maxChunk": "Max chunk size",

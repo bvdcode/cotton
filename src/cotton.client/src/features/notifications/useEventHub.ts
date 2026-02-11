@@ -2,20 +2,16 @@ import { useEffect } from "react";
 import { eventHub } from "../../shared/signalr";
 import { useNotificationsStore } from "../../shared/store/notificationsStore";
 import type { NotificationDto } from "../../shared/types/notification";
+import { isJsonObject, type JsonValue } from "../../shared/types/json";
 import { useAuth } from "../auth";
 
 const HUB_METHOD = "OnNotificationReceived";
 
-type JsonObject = { [key: string]: JsonValue };
-
-type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
-
-const isRecord = (value: JsonValue): value is JsonObject =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+const isRecord = (value: JsonValue) => isJsonObject(value);
 
 const isNotificationDto = (
   value: JsonValue,
-): value is NotificationDto & JsonObject => {
+): value is NotificationDto & Record<string, JsonValue> => {
   if (!isRecord(value)) return false;
 
   const id = value.id;
