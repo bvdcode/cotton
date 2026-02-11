@@ -49,6 +49,13 @@
       "showDetails": "Show details",
       "hideDetails": "Hide details"
     },
+    "notifications": {
+      "title": "Notifications",
+      "markAllAsRead": "Mark all as read",
+      "empty": "No notifications",
+      "viewAll": "View all",
+      "unreadCount": "{count} unread"
+    },
     "userMenu": {
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
