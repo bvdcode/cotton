@@ -3,14 +3,12 @@ using Cotton.Server.Models.Dto;
 using EasyExtensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Hubs
 {
     [Authorize]
-    [EnableCors]
     public class EventHub(CottonDbContext _dbContext) : Hub
     {
         public const string NotificationMethod = "OnNotificationReceived";
