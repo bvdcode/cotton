@@ -10,15 +10,6 @@ import type { JsonValue } from "../types/json";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
 
-const getHubUrlCandidates = (): string[] => {
-  const envUrl = import.meta.env.VITE_EVENT_HUB_PATH;
-  if (typeof envUrl === "string" && envUrl.trim().length > 0) {
-    return [envUrl.trim()];
-  }
-  // Backend uses a concrete hub endpoint, keep minimal fallbacks for routing differences.
-  return ["/api/v1/hub/events", "/hub/events", "/api/hub/events"];
-};
-
 class EventHubService {
   private connection: HubConnection | null = null;
   private listeners = new Map<string, Set<HubEventCallback>>();
@@ -26,7 +17,10 @@ class EventHubService {
   private startPromise: Promise<void> | null = null;
 
   async start(): Promise<void> {
-    if (this.started && this.connection?.state === HubConnectionState.Connected) {
+    if (
+      this.started &&
+      this.connection?.state === HubConnectionState.Connected
+    ) {
       return;
     }
 
@@ -44,8 +38,6 @@ class EventHubService {
 
   private async initConnection(): Promise<void> {
     this.dispose();
-
-    const urls = getHubUrlCandidates();
 
     const accessTokenFactory = async (): Promise<string> => {
       const token = getAccessToken();
@@ -76,11 +68,10 @@ class EventHubService {
 
     let lastError: Error | null = null;
 
-    for (const url of urls) {
       for (const spec of attemptSpecs) {
         try {
           this.connection = new HubConnectionBuilder()
-            .withUrl(url, {
+            .withUrl("/api/v1/hub/events", {
               accessTokenFactory,
               transport: spec.transport,
               skipNegotiation: spec.skipNegotiation,
@@ -106,7 +97,6 @@ class EventHubService {
           lastError = e instanceof Error ? e : new Error("Failed to start hub");
           this.dispose();
         }
-      }
     }
 
     throw lastError ?? new Error("Failed to start hub");
@@ -120,7 +110,10 @@ class EventHubService {
     const wrapped = callback;
     set.add(wrapped);
 
-    if (this.connection && this.connection.state === HubConnectionState.Connected) {
+    if (
+      this.connection &&
+      this.connection.state === HubConnectionState.Connected
+    ) {
       this.connection.on(method, wrapped);
     }
 
