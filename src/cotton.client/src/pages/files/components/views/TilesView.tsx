@@ -1,6 +1,6 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
-import { VirtuosoGrid } from "react-virtuoso";
+import { Virtuoso } from "react-virtuoso";
 import type { IFileListView, FileSystemTile } from "../../types/FileListViewTypes";
 import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
@@ -43,6 +43,39 @@ const useTileLayout = (tileSize: "small" | "medium" | "large") => {
 
 const VIRTUALIZATION_THRESHOLD = 80;
 
+const DEFAULT_COLUMNS_FALLBACK = 2;
+
+const tryParsePx = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed.endsWith("px")) return null;
+  const parsed = Number.parseFloat(trimmed.slice(0, -2));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+  let current: HTMLElement | null = element?.parentElement ?? null;
+
+  while (current) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    const overflow = style.overflow;
+
+    const isScrollable =
+      overflowY === "auto" ||
+      overflowY === "scroll" ||
+      overflow === "auto" ||
+      overflow === "scroll";
+
+    if (isScrollable) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+};
+
 /**
  * TilesView Component
  *
@@ -68,6 +101,32 @@ export const TilesView: React.FC<IFileListView> = ({
   tileSize = "medium",
 }) => {
   const layout = useTileLayout(tileSize);
+  const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setContainerWidth(entry.contentRect.width);
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    setScrollParent(findScrollableParent(el));
+  }, []);
 
   const gridTemplateColumns = `repeat(auto-fill, minmax(${layout.minWidth}, 1fr))`;
   const gapPx = layout.gap;
@@ -78,21 +137,19 @@ export const TilesView: React.FC<IFileListView> = ({
     gridTemplateColumns,
   };
 
-  const renderTile = useCallback(
-    (index: number) => {
-      const tile = tiles[index];
-      if (!tile) return null;
-      return (
-        <TileItem
-          tile={tile}
-          folderOperations={folderOperations}
-          fileOperations={fileOperations}
-          fileNamePlaceholder={fileNamePlaceholder}
-        />
-      );
-    },
-    [tiles, folderOperations, fileOperations, fileNamePlaceholder],
-  );
+  const columns = useMemo(() => {
+    if (tileSize === "large" && isXs && layout.minWidth.trim().endsWith("%")) {
+      return 2;
+    }
+
+    const minWidthPx = tryParsePx(layout.minWidth);
+    if (!minWidthPx || containerWidth <= 0) {
+      return DEFAULT_COLUMNS_FALLBACK;
+    }
+
+    const calculated = Math.floor((containerWidth + gapPx) / (minWidthPx + gapPx));
+    return Math.max(1, calculated);
+  }, [containerWidth, gapPx, isXs, layout.minWidth, tileSize]);
 
   const shouldVirtualize = tiles.length > VIRTUALIZATION_THRESHOLD;
 
@@ -109,33 +166,8 @@ export const TilesView: React.FC<IFileListView> = ({
     );
   }
 
-  /**
-   * VirtuosoGrid List wrapper.
-   * Keep CSS Grid rules consistent with the non-virtualized view.
-   * Preserve Virtuoso inline styles (paddingTop/paddingBottom) that control
-   * scroll-height virtualization.
-   */
-  const listComponent = useMemo(
-    () =>
-      React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-        function VirtuosoList({ children, style, ...props }, ref) {
-          return (
-            <div
-              ref={ref}
-              {...props}
-              style={{ ...gridStyles, ...(style ?? {}) }}
-            >
-              {children}
-            </div>
-          );
-        },
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [gridTemplateColumns, gapPx],
-  );
-
   return (
-    <Box position="relative" pb={{ xs: 1, sm: 2 }}>
+    <Box ref={containerRef} position="relative" pb={{ xs: 1, sm: 2 }}>
       {loading && tiles.length === 0 && (
         <Box
           sx={{
@@ -169,14 +201,34 @@ export const TilesView: React.FC<IFileListView> = ({
       )}
 
       {shouldVirtualize ? (
-        <VirtuosoGrid
-          useWindowScroll
-          totalCount={tiles.length}
+        <Virtuoso
+          customScrollParent={scrollParent ?? undefined}
+          totalCount={Math.ceil(tiles.length / columns)}
           overscan={600}
-          components={{
-            List: listComponent,
+          itemContent={(rowIndex: number) => {
+            const start = rowIndex * columns;
+            const rowTiles = tiles.slice(start, start + columns);
+
+            return (
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: `${gapPx}px`,
+                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                }}
+              >
+                {rowTiles.map((tile: FileSystemTile) => (
+                  <TileItem
+                    key={tile.kind === "folder" ? tile.node.id : tile.file.id}
+                    tile={tile}
+                    folderOperations={folderOperations}
+                    fileOperations={fileOperations}
+                    fileNamePlaceholder={fileNamePlaceholder}
+                  />
+                ))}
+              </Box>
+            );
           }}
-          itemContent={renderTile}
         />
       ) : (
         <Box sx={gridStyles}>

@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import { filesApi } from "../api/filesApi";
+import { usePreferencesStore } from "../store/preferencesStore";
 import { shareLinks } from "./shareLinks";
 
 interface ShareToast {
@@ -33,9 +34,12 @@ export const shareFile = async (
   setShareToast: SetShareToast,
 ): Promise<void> => {
   try {
+    const expireAfterMinutes =
+      usePreferencesStore.getState().shareLinkPreferences.expireAfterMinutes;
+
     const downloadLink = await filesApi.getDownloadLink(
       nodeFileId,
-      60 * 24 * 365,
+      expireAfterMinutes,
     );
 
     const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
