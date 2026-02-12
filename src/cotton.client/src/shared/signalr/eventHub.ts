@@ -15,8 +15,8 @@ const getHubUrlCandidates = (): string[] => {
   if (typeof envUrl === "string" && envUrl.trim().length > 0) {
     return [envUrl.trim()];
   }
-  // Prefer versioned API, but keep fallbacks for different backend routing.
-  return ["/api/v1/hub", "/hub", "/api/hub"];
+  // Backend uses a concrete hub endpoint, keep minimal fallbacks for routing differences.
+  return ["/api/v1/hub/events", "/hub/events", "/api/hub/events"];
 };
 
 class EventHubService {
