@@ -95,7 +95,7 @@ namespace Cotton.Server.Handlers.Files
                 <html lang=\"en\">
                 <head>
                   <meta charset=\"utf-8\">
-                  <title>{WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
+                  <title>{WebUtility.HtmlEncode(downloadToken.FileName)} - Cotton Cloud</title>
                   <meta http-equiv=\"refresh\" content=\"0;url={WebUtility.HtmlEncode(appShareUrl)}\" />
                   <link rel=\"canonical\" href=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
                   <meta property=\"og:site_name\" content=\"Cotton Cloud\" />
