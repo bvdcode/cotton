@@ -52,7 +52,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPut("{userId:guid}")]
+        [HttpPut("/{userId:guid}")]
         public async Task<IActionResult> UpdateUser(
             [FromRoute] Guid userId,
             [FromBody] AdminUpdateUserRequestDto request,
