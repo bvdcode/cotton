@@ -22,19 +22,7 @@ export default defineConfig(({ mode }) => {
           secure: true,
           ws: true,
         },
-        "/api/hub": {
-          target: apiTarget,
-          changeOrigin: true,
-          secure: true,
-          ws: true,
-        },
         "/api/v1/hub": {
-          target: apiTarget,
-          changeOrigin: true,
-          secure: true,
-          ws: true,
-        },
-        "/hub": {
           target: apiTarget,
           changeOrigin: true,
           secure: true,
