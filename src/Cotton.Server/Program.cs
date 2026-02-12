@@ -3,7 +3,9 @@
 
 using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
+using Cotton.Server.Hubs;
 using Cotton.Server.Mappings;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -45,11 +47,14 @@ namespace Cotton.Server
                 .AddMediator()
                 .AddQuartzJobs()
                 .AddMemoryCache()
+                .AddSignalR().Services
+                .AddHttpContextAccessor()
                 .AddSingleton<PerfTracker>()
-                .AddSingleton<Cotton.Server.Providers.IStorageBackendTypeCache, Cotton.Server.Providers.StorageBackendTypeCache>()
+                .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
+                .AddScoped<INotificationsProvider, CottonNotifications>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
@@ -76,6 +81,7 @@ namespace Cotton.Server
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
             app.ApplyMigrations<CottonDbContext>();
+            app.MapHub<EventHub>(Routes.V1.EventHub);
             app.Run();
         }
     }

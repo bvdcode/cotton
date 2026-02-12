@@ -56,29 +56,35 @@ export const calculateUploadStats = (tasks: UploadTask[]) => {
 };
 
 export const getWidgetTitle = (
-  t: (key: string, options?: Record<string, unknown>) => string,
   stats: ReturnType<typeof calculateUploadStats>,
   isCollapsed: boolean,
   _totalProgress: number,
   totalSpeed: number,
-): string => {
+):
+  | { key: "titleWithProgress"; options: { completed: number; total: number; speed: string } }
+  | { key: "titleWithErrors"; options: { total: number; failed: number } }
+  | { key: "title" }
+  | { key: "titleWithTotal"; options: { total: number } } => {
   const { hasActive, allCompleted, hasErrors, completed, failed, total } = stats;
 
   if (hasActive) {
-    return t("titleWithProgress", {
+    return {
+      key: "titleWithProgress",
+      options: {
       completed: Math.min(completed + 1, total),
       total,
       speed: formatBytes(totalSpeed),
-    });
+      },
+    };
   }
 
   if (allCompleted && hasErrors) {
-    return t("titleWithErrors", { total, failed });
+    return { key: "titleWithErrors", options: { total, failed } };
   }
 
   if (isCollapsed && allCompleted) {
-    return t("title");
+    return { key: "title" };
   }
 
-  return t("titleWithTotal", { total });
+  return { key: "titleWithTotal", options: { total } };
 };

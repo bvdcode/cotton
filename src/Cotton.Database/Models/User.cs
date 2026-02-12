@@ -15,6 +15,15 @@ namespace Cotton.Database.Models
         [Column("username", TypeName = "citext")]
         public string Username { get; set; } = null!;
 
+        [Column("first_name")]
+        public string? FirstName { get; set; }
+
+        [Column("last_name")]
+        public string? LastName { get; set; }
+
+        [Column("birth_date")]
+        public DateOnly? BirthDate { get; set; }
+
         [Column("password_phc")]
         public string PasswordPhc { get; set; } = null!;
 
@@ -23,6 +32,21 @@ namespace Cotton.Database.Models
 
         [Column("email", TypeName = "citext")]
         public string? Email { get; set; }
+
+        [Column("is_email_verified")]
+        public bool IsEmailVerified { get; set; }
+
+        [Column("email_verification_token")]
+        public string? EmailVerificationToken { get; set; }
+
+        [Column("email_verification_token_sent_at")]
+        public DateTime? EmailVerificationTokenSentAt { get; set; }
+
+        [Column("password_reset_token")]
+        public string? PasswordResetToken { get; set; }
+
+        [Column("password_reset_token_sent_at")]
+        public DateTime? PasswordResetTokenSentAt { get; set; }
 
         [Column("role")]
         public UserRole Role { get; set; }
@@ -38,5 +62,10 @@ namespace Cotton.Database.Models
 
         [Column("totp_failed_attempts")]
         public int TotpFailedAttempts { get; set; }
+
+        public virtual ICollection<ChunkOwnership> ChunkOwnerships { get; set; } = [];
+        public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
+        public virtual ICollection<Notification> Notifications { get; set; } = [];
+        public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
     }
 }

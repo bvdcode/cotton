@@ -5,6 +5,17 @@
     "enterQueryHint": "Start typing to search...",
     "noResults": "No files or folders found"
   },
+  "notifications": {
+    "title": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "empty": "No notifications",
+    "viewAll": "View all",
+    "unreadCount": "{count} unread",
+    "showOnlyUnread": "Show only unread",
+    "showAll": "Show all",
+    "muteSound": "Mute sound",
+    "unmuteSound": "Unmute sound"
+  },
   "common": {
     "languageName": "English",
     "switchToThisLanguage": "Switch to English",
@@ -14,22 +25,40 @@
     "time": {
       "justNow": "just now",
       "secondsAgo_one": "{{count}} second ago",
+      "secondsAgo_few": "{{count}} seconds ago",
+      "secondsAgo_many": "{{count}} seconds ago",
       "secondsAgo_other": "{{count}} seconds ago",
       "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_few": "{{count}} minutes ago",
+      "minutesAgo_many": "{{count}} minutes ago",
       "minutesAgo_other": "{{count}} minutes ago",
       "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_few": "{{count}} hours ago",
+      "hoursAgo_many": "{{count}} hours ago",
       "hoursAgo_other": "{{count}} hours ago",
       "daysAgo_one": "{{count}} day ago",
+      "daysAgo_few": "{{count}} days ago",
+      "daysAgo_many": "{{count}} days ago",
       "daysAgo_other": "{{count}} days ago",
       "monthsAgo_one": "{{count}} month ago",
+      "monthsAgo_few": "{{count}} months ago",
+      "monthsAgo_many": "{{count}} months ago",
       "monthsAgo_other": "{{count}} months ago",
       "yearsAgo_one": "{{count}} year ago",
+      "yearsAgo_few": "{{count}} years ago",
+      "yearsAgo_many": "{{count}} years ago",
       "yearsAgo_other": "{{count}} years ago",
       "durationMinutes_one": "{{count}} min",
+      "durationMinutes_few": "{{count}} min",
+      "durationMinutes_many": "{{count}} min",
       "durationMinutes_other": "{{count}} min",
       "durationHours_one": "{{count}} hour",
+      "durationHours_few": "{{count}} hours",
+      "durationHours_many": "{{count}} hours",
       "durationHours_other": "{{count}} hours",
       "durationDays_one": "{{count}} day",
+      "durationDays_few": "{{count}} days",
+      "durationDays_many": "{{count}} days",
       "durationDays_other": "{{count}} days",
       "lessThanMinute": "less than a minute"
     },
@@ -40,7 +69,14 @@
       "rename": "Rename",
       "download": "Download",
       "share": "Share",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "reload": "Reload"
+    },
+    "errors": {
+      "unexpectedTitle": "Something went wrong",
+      "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
+      "showDetails": "Show details",
+      "hideDetails": "Hide details"
     },
     "userMenu": {
       "lightMode": "Light Mode",
@@ -49,12 +85,14 @@
       "logout": "Logout"
     },
     "title": "Cotton Cloud",
-    "subtitle": "Setup Wizard"
+    "subtitle": "Setup Wizard",
+    "ok": "OK"
   },
   "share": {
     "title": "Shared file",
     "loading": "Loading...",
     "unsupported": "Preview is not available for this file type.",
+    "message": "Check out \"{{name}}\" on Cotton Cloud",
     "toasts": {
       "copied": "Link copied",
       "shared": "Link shared"
@@ -71,6 +109,7 @@
     "title": "Sign in to your account",
     "usernameLabel": "Username",
     "passwordLabel": "Password",
+    "rememberMe": "Trust this device",
     "twoFactor": {
       "title": "Two-factor authentication",
       "caption": "Enter the 6-digit code from your authenticator app.",
@@ -95,6 +134,16 @@
     "roles": {
       "user": "User",
       "admin": "Admin"
+    },
+    "shareLinks": {
+      "title": "Share links",
+      "description": "Control how long generated share links stay valid.",
+      "current": "Current: {{days}} days",
+      "presets": {
+        "week": "Week",
+        "month": "Month",
+        "year": "Year"
+      }
     },
     "totp": {
       "enabled": "2FA enabled",
@@ -122,6 +171,7 @@
       "errors": {
         "setupFailed": "Failed to start 2FA setup.",
         "confirmFailed": "Failed to confirm 2FA.",
+        "saveFailed": "Failed to save 2FA settings.",
         "codeRequired": "Please enter the 6-digit code.",
         "invalidCode": "Invalid two-factor authentication code.",
         "alreadyEnabled": "2FA is already enabled.",
@@ -222,6 +272,9 @@
     "title": "Server setup wizard",
     "subtitle": "Complete the initial server configuration to get started. This won't take long and will personalize the app for you.",
     "repoLink": "Project on GitHub",
+    "errors": {
+      "saveFailed": "Failed to save settings. Please try again."
+    },
     "status": {
       "hasUsers": "Has users",
       "maxChunk": "Max chunk size",
@@ -504,10 +557,16 @@
       "toasts": {
         "noneCopied": "No files were uploaded (all were skipped).",
         "someItemsSkipped_one": "Skipped {{count}} item that could not be read.",
+        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
+        "someItemsSkipped_many": "Skipped {{count}} items that could not be read.",
         "someItemsSkipped_other": "Skipped {{count}} items that could not be read.",
         "someItemsSkippedWithExamples_one": "Skipped {{count}} item (e.g. {{examples}}).",
+        "someItemsSkippedWithExamples_few": "Skipped {{count}} items (e.g. {{examples}}).",
+        "someItemsSkippedWithExamples_many": "Skipped {{count}} items (e.g. {{examples}}).",
         "someItemsSkippedWithExamples_other": "Skipped {{count}} items (e.g. {{examples}}).",
         "more_one": " +{{count}} more",
+        "more_few": " +{{count}} more",
+        "more_many": " +{{count}} more",
         "more_other": " +{{count}} more"
       },
       "errors": {
@@ -559,6 +618,7 @@
     "share": {
       "copied": "Share link copied: {{name}}",
       "shared": "Sharing: {{name}}",
+      "message": "Check out \"{{name}}\" on Cotton Cloud",
       "errors": {
         "link": "Failed to generate share link.",
         "token": "Failed to extract share token.",
@@ -666,6 +726,10 @@
       "confirmTitle": "Delete folder \"{{name}}\"?",
       "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
     },
+    "deleteFile": {
+      "confirmTitle": "Delete file \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone."
+    },
     "deleteFileForever": {
       "confirmTitle": "Delete file \"{{name}}\"?",
       "confirmDescription": "This action cannot be undone."
@@ -697,6 +761,8 @@
         "username": "Username",
         "email": "E-mail",
         "role": "Role",
+        "firstName": "First name",
+        "lastName": "Last name",
         "totp": "2FA",
         "sessions": "Sessions",
         "lastActivity": "Last activity",
@@ -707,17 +773,27 @@
       },
       "errors": {
         "loadFailed": "Failed to load users.",
-        "createFailed": "Failed to create user."
+        "createFailed": "Failed to create user.",
+        "updateFailed": "Failed to update user."
       },
       "create": {
         "title": "Create user",
         "username": "Username",
-          "email": "E-mail",
+        "email": "E-mail",
         "password": "Password",
         "role": "Role",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "birthDate": "Date of birth",
         "button": "Create",
         "creating": "Creating...",
         "success": "User created."
+      },
+      "edit": {
+        "title": "Edit user",
+        "save": "Save",
+        "saving": "Saving...",
+        "success": "User updated."
       }
     }
   },

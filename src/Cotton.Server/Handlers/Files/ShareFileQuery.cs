@@ -4,12 +4,14 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +30,8 @@ namespace Cotton.Server.Handlers.Files
 
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
+        INotificationsProvider _notifications,
+        IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
         public async Task<ShareFileResult> Handle(ShareFileQuery request, CancellationToken ct)
@@ -91,7 +95,7 @@ namespace Cotton.Server.Handlers.Files
                 <html lang=\"en\">
                 <head>
                   <meta charset=\"utf-8\">
-                  <title>{WebUtility.HtmlEncode(downloadToken.FileName)} – Cotton</title>
+                  <title>{WebUtility.HtmlEncode(downloadToken.FileName)} - Cotton Cloud</title>
                   <meta http-equiv=\"refresh\" content=\"0;url={WebUtility.HtmlEncode(appShareUrl)}\" />
                   <link rel=\"canonical\" href=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
                   <meta property=\"og:site_name\" content=\"Cotton Cloud\" />
@@ -137,6 +141,14 @@ namespace Cotton.Server.Handlers.Files
             };
             Stream stream = _storage.GetBlobStream(uids, context);
             string? downloadName = isInlineFile ? null : downloadToken.FileName;
+            if (_httpContextAccessor.HttpContext != null)
+            {
+                await _notifications.SendSharedFileDownloadedNotificationAsync(
+                    downloadToken.NodeFile.OwnerId,
+                    downloadToken.FileName,
+                    _httpContextAccessor.HttpContext.Request.GetRemoteIPAddress(),
+                    _httpContextAccessor.HttpContext.Request.Headers.UserAgent);
+            }
             return ShareFileResult.AsStream(
                 stream: stream,
                 contentType: file.ContentType,

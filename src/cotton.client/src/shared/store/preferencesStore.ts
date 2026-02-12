@@ -17,6 +17,15 @@ interface LayoutPreferences {
   fileListColumnWidths?: Record<string, number>;
 }
 
+interface NotificationPreferences {
+  soundEnabled: boolean;
+  showOnlyUnread: boolean;
+}
+
+interface ShareLinkPreferences {
+  expireAfterMinutes: number;
+}
+
 interface PreferencesState {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
@@ -30,6 +39,12 @@ interface PreferencesState {
   setFilesTilesSize: (size: "small" | "medium" | "large") => void;
   setTrashTilesSize: (size: "small" | "medium" | "large") => void;
   setFileListColumnWidth: (field: string, width: number) => void;
+  notificationPreferences: NotificationPreferences;
+  setNotificationSoundEnabled: (enabled: boolean) => void;
+  setShowOnlyUnreadNotifications: (showOnlyUnread: boolean) => void;
+
+  shareLinkPreferences: ShareLinkPreferences;
+  setShareLinkExpireAfterMinutes: (expireAfterMinutes: number) => void;
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -42,6 +57,13 @@ export const usePreferencesStore = create<PreferencesState>()(
         languageOverrides: {},
       },
       layoutPreferences: {},
+      notificationPreferences: {
+        soundEnabled: true,
+        showOnlyUnread: false,
+      },
+      shareLinkPreferences: {
+        expireAfterMinutes: 60 * 24 * 30,
+      },
       setEditorMode: (fileId, mode) =>
         set((state) => ({
           editorPreferences: {
@@ -108,6 +130,27 @@ export const usePreferencesStore = create<PreferencesState>()(
               ...state.layoutPreferences.fileListColumnWidths,
               [field]: width,
             },
+          },
+        })),
+      setNotificationSoundEnabled: (enabled) =>
+        set((state) => ({
+          notificationPreferences: {
+            ...state.notificationPreferences,
+            soundEnabled: enabled,
+          },
+        })),
+      setShowOnlyUnreadNotifications: (showOnlyUnread) =>
+        set((state) => ({
+          notificationPreferences: {
+            ...state.notificationPreferences,
+            showOnlyUnread,
+          },
+        })),
+      setShareLinkExpireAfterMinutes: (expireAfterMinutes) =>
+        set((state) => ({
+          shareLinkPreferences: {
+            ...state.shareLinkPreferences,
+            expireAfterMinutes,
           },
         })),
     }),
