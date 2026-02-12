@@ -5,6 +5,8 @@ import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
 import { isAxiosError } from "../api/httpClient";
 
+let rootResolvePromise: Promise<void> | null = null;
+
 type NodesState = {
   currentNode: NodeDto | null;
   ancestors: NodeDto[];
@@ -21,6 +23,7 @@ type NodesState = {
     nodeId: string,
     options?: { loadChildren?: boolean; allowRootRecovery?: boolean },
   ) => Promise<void>;
+  resolveRootInBackground: (options?: { loadChildren?: boolean }) => void;
   refreshNodeContent: (nodeId: string) => Promise<void>;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
@@ -90,7 +93,47 @@ async function resolveNodeAndAncestors(
 
 export const useNodesStore = create<NodesState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      const scheduleRootResolve = (options?: { loadChildren?: boolean }): void => {
+        // If we don't have a root yet, loadRoot() will resolve it.
+        const existingRootId = get().rootNodeId;
+        if (!existingRootId) return;
+
+        if (rootResolvePromise) return;
+
+        const loadChildren = options?.loadChildren ?? true;
+
+        rootResolvePromise = (async () => {
+          try {
+            const root = await layoutsApi.resolve();
+            const state = get();
+
+            if (state.rootNodeId === root.id) {
+              return;
+            }
+
+            const previousRootId = state.rootNodeId;
+            set({ rootNodeId: root.id });
+
+            // If the user is currently viewing the root folder, switch to the new root.
+            const isViewingRoot =
+              state.currentNode == null || state.currentNode.id === previousRootId;
+            if (isViewingRoot) {
+              await get().loadNode(root.id, {
+                loadChildren,
+                allowRootRecovery: false,
+              });
+            }
+          } catch (error) {
+            // Non-blocking best-effort refresh.
+            console.error("Failed to resolve root node in background", error);
+          }
+        })().finally(() => {
+          rootResolvePromise = null;
+        });
+      };
+
+      return {
   currentNode: null,
   ancestors: [],
   contentByNodeId: {},
@@ -109,6 +152,9 @@ export const useNodesStore = create<NodesState>()(
       const hasCachedContent = state.contentByNodeId[state.rootNodeId];
       if (!loadChildren || hasCachedContent) {
         await get().loadNode(state.rootNodeId, { loadChildren });
+
+        // Always try to keep the persisted root in sync with backend.
+        scheduleRootResolve({ loadChildren });
         return state.currentNode;
       }
     }
@@ -187,6 +233,11 @@ export const useNodesStore = create<NodesState>()(
           }
         })();
       }
+
+      // If we're loading the current root, keep it synced in background.
+      if (allowRootRecovery && get().rootNodeId === nodeId) {
+        scheduleRootResolve({ loadChildren });
+      }
     } catch (error) {
       const statusCode = isAxiosError(error) ? error.response?.status : undefined;
 
@@ -224,6 +275,10 @@ export const useNodesStore = create<NodesState>()(
       console.error("Failed to load node view", error);
       set({ loading: false, error: "Failed to load folder contents" });
     }
+  },
+
+  resolveRootInBackground: (options) => {
+    scheduleRootResolve(options);
   },
 
   refreshNodeContent: async (nodeId) => {
@@ -464,7 +519,8 @@ export const useNodesStore = create<NodesState>()(
       lastUpdatedByNodeId: {},
     });
   },
-    }),
+      };
+    },
     {
       name: NODES_STORAGE_KEY,
       partialize: (state) => ({
