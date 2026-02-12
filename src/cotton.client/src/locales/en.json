@@ -135,6 +135,16 @@
       "user": "User",
       "admin": "Admin"
     },
+    "shareLinks": {
+      "title": "Share links",
+      "description": "Control how long generated share links stay valid.",
+      "current": "Current: {{days}} days",
+      "presets": {
+        "week": "Week",
+        "month": "Month",
+        "year": "Year"
+      }
+    },
     "totp": {
       "enabled": "2FA enabled",
       "disabled": "2FA disabled",
