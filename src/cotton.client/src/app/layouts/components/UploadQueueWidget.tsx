@@ -49,7 +49,9 @@ export const UploadQueueWidget = () => {
     <Box
       sx={{
         position: "fixed",
-        right: 16,
+        left: { xs: "50%", sm: "unset" },
+        right: { xs: "unset", sm: 16 },
+        transform: { xs: "translateX(-50%)", sm: "none" },
         bottom: 16,
         zIndex: (theme) => theme.zIndex.snackbar,
         width: 360,
