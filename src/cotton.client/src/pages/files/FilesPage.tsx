@@ -43,6 +43,7 @@ export const FilesPage: React.FC = () => {
     error,
     loadRoot,
     loadNode,
+    resolveRootInBackground,
     refreshNodeContent,
   } = useNodesStore();
 
@@ -56,6 +57,14 @@ export const FilesPage: React.FC = () => {
     if (routeNodeId || rootNodeId) return;
     void loadRoot({ force: false, loadChildren: false });
   }, [routeNodeId, rootNodeId, loadRoot]);
+
+  // Always keep root node synced with backend resolver (non-blocking).
+  useEffect(() => {
+    if (routeNodeId) return;
+    resolveRootInBackground({
+      loadChildren: layoutType !== InterfaceLayoutType.List,
+    });
+  }, [routeNodeId, layoutType, resolveRootInBackground]);
 
   const nodeId = routeNodeId ?? rootNodeId ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
