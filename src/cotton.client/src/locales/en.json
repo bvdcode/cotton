@@ -92,6 +92,7 @@
     "title": "Shared file",
     "loading": "Loading...",
     "unsupported": "Preview is not available for this file type.",
+    "message": "Check out \"{{name}}\" on Cotton Cloud",
     "toasts": {
       "copied": "Link copied",
       "shared": "Link shared"
@@ -607,6 +608,7 @@
     "share": {
       "copied": "Share link copied: {{name}}",
       "shared": "Sharing: {{name}}",
+      "message": "Check out \"{{name}}\" on Cotton Cloud",
       "errors": {
         "link": "Failed to generate share link.",
         "token": "Failed to extract share token.",
@@ -749,6 +751,8 @@
         "username": "Username",
         "email": "E-mail",
         "role": "Role",
+        "firstName": "First name",
+        "lastName": "Last name",
         "totp": "2FA",
         "sessions": "Sessions",
         "lastActivity": "Last activity",
@@ -759,7 +763,8 @@
       },
       "errors": {
         "loadFailed": "Failed to load users.",
-        "createFailed": "Failed to create user."
+        "createFailed": "Failed to create user.",
+        "updateFailed": "Failed to update user."
       },
       "create": {
         "title": "Create user",
@@ -767,9 +772,18 @@
         "email": "E-mail",
         "password": "Password",
         "role": "Role",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "birthDate": "Date of birth",
         "button": "Create",
         "creating": "Creating...",
         "success": "User created."
+      },
+      "edit": {
+        "title": "Edit user",
+        "save": "Save",
+        "saving": "Saving...",
+        "success": "User updated."
       }
     }
   },
