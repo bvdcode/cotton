@@ -92,7 +92,6 @@ export const UploadQueueWidget = () => {
             zIndex: 1,
             transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
             opacity: isCollapsed ? 0 : 1,
-            px: isCollapsed ? 0 : 1.5,
             pb: isCollapsed ? 0 : 1.5,
           }}
         >
@@ -102,11 +101,9 @@ export const UploadQueueWidget = () => {
               totalCount={tasks.length}
               overscan={5}
               itemContent={(index) => (
-                <UploadTaskRow
-                  task={tasks[index]}
-
-                  showDivider={index > 0}
-                />
+                <Box px={1.5}>
+                  <UploadTaskRow task={tasks[index]} showDivider={index > 0} />
+                </Box>
               )}
             />
           )}
