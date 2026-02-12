@@ -51,6 +51,27 @@ namespace Cotton.Server.Controllers
             return Ok(user);
         }
 
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPut("{userId:guid}")]
+        public async Task<IActionResult> UpdateUser(
+            [FromRoute] Guid userId,
+            [FromBody] AdminUpdateUserRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            AdminUpdateUserCommand command = new(
+                User.GetUserId(),
+                userId,
+                request.Username,
+                request.Email,
+                request.Role,
+                request.FirstName,
+                request.LastName,
+                request.BirthDate);
+
+            AdminUserDto updated = await _mediator.Send(command, cancellationToken);
+            return Ok(updated);
+        }
+
         [Authorize]
         [HttpPut("me/password")]
         public async Task<IActionResult> ChangePassword(

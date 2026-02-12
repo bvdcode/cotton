@@ -7,9 +7,10 @@ import {
   Typography,
   Avatar,
   Alert,
-  Checkbox,
-  FormControlLabel,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
+import { Shield, ShieldOutlined } from "@mui/icons-material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
 import {
@@ -237,18 +238,6 @@ export const LoginPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                 />
-
-                <FormControlLabel
-                  sx={{ mt: 1, userSelect: "none" }}
-                  control={
-                    <Checkbox
-                      checked={trustDevice}
-                      onChange={(e) => setTrustDevice(e.target.checked)}
-                      disabled={loading}
-                    />
-                  }
-                  label={t("rememberMe")}
-                />
               </>
             )}
 
@@ -278,16 +267,32 @@ export const LoginPage = () => {
                 {error}
               </Alert>
             )}
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={loading}
-              fullWidth
-              sx={{ mt: 3 }}
-            >
-              {loading ? t("loggingIn") : t("loginButton")}
-            </Button>
+            <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={loading}
+                fullWidth
+              >
+                {loading ? t("loggingIn") : t("loginButton")}
+              </Button>
+              {!requiresTwoFactor && (
+                <Tooltip title={t("rememberMe")}>
+                  <IconButton
+                    color={trustDevice ? "primary" : "default"}
+                    onClick={() => setTrustDevice(!trustDevice)}
+                    disabled={loading}
+                    sx={{
+                      border: 1,
+                      borderColor: trustDevice ? "primary.main" : "divider",
+                    }}
+                  >
+                    {trustDevice ? <Shield /> : <ShieldOutlined />}
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
           </Box>
         </Paper>
       </Container>
