@@ -1,6 +1,7 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
+import type { JsonValue } from "../../shared/types/json";
 import {
   QuestionBlock,
   QuestionBlockMulti,
@@ -16,8 +17,8 @@ type BuiltStep = {
 };
 
 export function useSetupSteps(
-  answers: Record<string, unknown>,
-  updateAnswer: (key: string, value: unknown) => void,
+  answers: Record<string, JsonValue>,
+  updateAnswer: (key: string, value: JsonValue) => void,
   updateFormField: (stepKey: string, fieldKey: string, value: string | boolean) => void,
 ) {
   const { t } = useTranslation();
@@ -141,9 +142,10 @@ export function useSetupSteps(
           render: () => {
             // Get selected key
             let selectedKey: string | null = null;
-            
-            if (answers[def.key] !== undefined && typeof answers[def.key] === "string") {
-              selectedKey = answers[def.key] as string;
+
+            const rawValue = answers[def.key];
+            if (typeof rawValue === "string") {
+              selectedKey = rawValue;
             } else if (def.getDefaultValue && answers[def.key] === undefined) {
               // Set default value on first render
               const defaultValue = def.getDefaultValue();
@@ -225,8 +227,9 @@ export function useSetupSteps(
         steps.push({
           key: def.key,
           render: () => {
-            const selectedKeys = Array.isArray(answers[def.key])
-              ? (answers[def.key] as string[])
+            const value = answers[def.key];
+            const selectedKeys = Array.isArray(value)
+              ? value.filter((v): v is string => typeof v === "string")
               : [];
 
             return (

@@ -70,7 +70,18 @@ export const ListView: React.FC<IFileListView> = ({
   const columns = useMemo(
     () =>
       createFileListColumns({
-        t,
+        labels: {
+          name: t("name"),
+          size: t("size"),
+          location: t("location"),
+          actionsTitle: t("actionsTitle"),
+          placeholder: t("common:placeholder"),
+          goToFolder: t("actions.goToFolder"),
+          rename: t("common:actions.rename"),
+          delete: t("common:actions.delete"),
+          download: t("common:actions.download"),
+          share: t("common:actions.share"),
+        },
         newFolderName,
         onNewFolderNameChange,
         onConfirmNewFolder,
