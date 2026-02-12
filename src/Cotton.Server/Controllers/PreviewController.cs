@@ -6,7 +6,6 @@ using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
