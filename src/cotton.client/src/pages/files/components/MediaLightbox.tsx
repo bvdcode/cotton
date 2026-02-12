@@ -91,7 +91,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   const loadingRef = React.useRef<Set<string>>(new Set());
 
-  // Rebuild slides when originalUrls change
+  // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
     return buildSlidesFromItems(items, originalUrls);
   }, [items, originalUrls]);
@@ -246,13 +246,12 @@ function buildSlidesFromItems(
         download: maybeOriginal
           ? { url: maybeOriginal, filename: item.name }
           : undefined,
-        share:
-          maybeOriginal || item.previewUrl
-            ? {
-                url: maybeOriginal || item.previewUrl,
-                title: item.name,
-              }
-            : undefined,
+        share: maybeOriginal
+          ? {
+              url: maybeOriginal,
+              title: item.name,
+            }
+          : undefined,
       };
     }
 
@@ -266,12 +265,7 @@ function buildSlidesFromItems(
         width: item.width,
         height: item.height,
         description,
-        share: poster
-          ? {
-              url: poster,
-              title: item.name,
-            }
-          : undefined,
+        share: undefined,
       } as Slide;
     }
 
@@ -282,10 +276,12 @@ function buildSlidesFromItems(
       height: item.height,
       description,
       download: { url: src, filename: item.name },
-      share: {
-        url: src,
-        title: item.name,
-      },
+      share: src
+        ? {
+            url: src,
+            title: item.name,
+          }
+        : undefined,
       sources: [
         {
           src,

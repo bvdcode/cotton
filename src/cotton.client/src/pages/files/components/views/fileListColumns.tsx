@@ -40,7 +40,18 @@ export interface FileListRow {
 }
 
 interface ColumnOptions {
-  t: (key: string) => string;
+  labels: {
+    name: string;
+    size: string;
+    location: string;
+    actionsTitle: string;
+    placeholder: string;
+    goToFolder: string;
+    rename: string;
+    delete: string;
+    download: string;
+    share: string;
+  };
   newFolderName: string;
   onNewFolderNameChange: (value: string) => void;
   onConfirmNewFolder: () => void;
@@ -138,7 +149,7 @@ export const createIconColumn = (
 export const createNameColumn = (
   options: Pick<
     ColumnOptions,
-    | "t"
+    | "labels"
     | "columnFlex"
     | "newFolderName"
     | "onNewFolderNameChange"
@@ -151,7 +162,7 @@ export const createNameColumn = (
   >,
 ): GridColDef<FileListRow> => ({
   field: "name",
-  headerName: options.t("name"),
+  headerName: options.labels.name,
   flex: options.columnFlex?.name ?? 1,
   minWidth: 120,
   renderCell: (params) => {
@@ -279,17 +290,17 @@ export const createNameColumn = (
 });
 
 export const createSizeColumn = (
-  options: Pick<ColumnOptions, "t">,
+  options: Pick<ColumnOptions, "labels">,
 ): GridColDef<FileListRow> => ({
   field: "sizeBytes",
-  headerName: options.t("size"),
+  headerName: options.labels.size,
   width: 70,
   renderCell: (params) => {
     if (params.row.sizeBytes == null) {
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
           <Typography variant="body2" color="text.secondary">
-            {options.t("common:placeholder")}
+            {options.labels.placeholder}
           </Typography>
         </Box>
       );
@@ -305,10 +316,10 @@ export const createSizeColumn = (
 });
 
 export const createLocationColumn = (
-  options: Pick<ColumnOptions, "t" | "columnFlex">,
+  options: Pick<ColumnOptions, "labels" | "columnFlex">,
 ): GridColDef<FileListRow> => ({
   field: "location",
-  headerName: options.t("location"),
+  headerName: options.labels.location,
   flex: options.columnFlex?.location ?? 1,
   minWidth: 120,
   renderCell: (params) => {
@@ -317,7 +328,7 @@ export const createLocationColumn = (
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
           <Typography variant="body2" color="text.secondary">
-            {options.t("common:placeholder")}
+            {options.labels.placeholder}
           </Typography>
         </Box>
       );
@@ -349,11 +360,11 @@ export const createLocationColumn = (
 export const createActionsColumn = (
   options: Pick<
     ColumnOptions,
-    "t" | "folderOperations" | "fileOperations" | "onGoToFileLocation"
+    "labels" | "folderOperations" | "fileOperations" | "onGoToFileLocation"
   >,
 ): GridColDef<FileListRow> => ({
   field: "actions",
-  headerName: options.t("actionsTitle"),
+  headerName: options.labels.actionsTitle,
   minWidth: 110,
   sortable: false,
   align: "right",
@@ -380,7 +391,7 @@ export const createActionsColumn = (
               e.stopPropagation();
               options.folderOperations.onStartRename(row.id, row.name);
             }}
-            title={options.t("common:actions.rename")}
+            title={options.labels.rename}
           >
             <Edit fontSize="small" />
           </IconButton>
@@ -390,7 +401,7 @@ export const createActionsColumn = (
               e.stopPropagation();
               options.folderOperations.onDelete(row.id, row.name);
             }}
-            title={options.t("common:actions.delete")}
+            title={options.labels.delete}
           >
             <Delete fontSize="small" />
           </IconButton>
@@ -416,7 +427,7 @@ export const createActionsColumn = (
               e.stopPropagation();
               options.onGoToFileLocation?.(row.containerPath ?? "/");
             }}
-            title={options.t("actions.goToFolder")}
+            title={options.labels.goToFolder}
           >
             <FolderOpen fontSize="small" />
           </IconButton>
@@ -427,7 +438,7 @@ export const createActionsColumn = (
             e.stopPropagation();
             options.fileOperations.onDownload(row.id, row.name);
           }}
-          title={options.t("common:actions.download")}
+          title={options.labels.download}
         >
           <Download fontSize="small" />
         </IconButton>
@@ -437,7 +448,7 @@ export const createActionsColumn = (
             e.stopPropagation();
             options.fileOperations.onShare(row.id, row.name);
           }}
-          title={options.t("common:actions.share")}
+          title={options.labels.share}
         >
           <Share fontSize="small" />
         </IconButton>
@@ -447,7 +458,7 @@ export const createActionsColumn = (
             e.stopPropagation();
             options.fileOperations.onStartRename(row.id, row.name);
           }}
-          title={options.t("common:actions.rename")}
+          title={options.labels.rename}
         >
           <Edit fontSize="small" />
         </IconButton>
@@ -457,7 +468,7 @@ export const createActionsColumn = (
             e.stopPropagation();
             options.fileOperations.onDelete(row.id, row.name);
           }}
-          title={options.t("common:actions.delete")}
+          title={options.labels.delete}
         >
           <Delete fontSize="small" />
         </IconButton>

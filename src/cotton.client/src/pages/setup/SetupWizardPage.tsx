@@ -20,27 +20,40 @@ import { useAuth } from "../../features/auth/useAuth";
 import { UserRole } from "../../features/auth/types";
 import { settingsApi } from "../../shared/api/settingsApi";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
-
+import { isJsonObject, type JsonValue } from "../../shared/types/json";
 // Helper function to convert keys to values for server
-function convertAnswersToValues(answers: Record<string, unknown>): Record<string, unknown> {
-  const converted: Record<string, unknown> = {};
+function convertAnswersToValues(
+  answers: Record<string, JsonValue>,
+): Record<string, JsonValue> {
+  const converted: Record<string, JsonValue> = {};
   
   for (const [questionKey, answer] of Object.entries(answers)) {
-    const stepDef = setupStepDefinitions.find(s => s.key === questionKey);
-    
+    const stepDef = setupStepDefinitions.find((s) => s.key === questionKey);
+
     if (!stepDef) {
       // Keep as-is if not found (form fields, etc)
       converted[questionKey] = answer;
       continue;
     }
-    
+
     if (stepDef.type === "single" && typeof answer === "string") {
       // Find the option and get its value
-      const options = "getOptions" in stepDef && stepDef.getOptions 
-        ? stepDef.getOptions() 
-        : stepDef.options;
-      const option = options.find(opt => opt.key === answer);
-      converted[questionKey] = option?.value ?? answer;
+      const options =
+        "getOptions" in stepDef && stepDef.getOptions
+          ? stepDef.getOptions()
+          : stepDef.options;
+      const option = options.find((opt) => opt.key === answer);
+      const value = option?.value;
+      if (
+        value === null ||
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+      ) {
+        converted[questionKey] = value;
+      } else {
+        converted[questionKey] = answer;
+      }
     } else {
       // Keep as-is for multi, form types
       converted[questionKey] = answer;
@@ -60,18 +73,24 @@ export function SetupWizardPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Generic answers storage
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [answers, setAnswers] = useState<Record<string, JsonValue>>({});
 
-  const updateAnswer = useCallback((key: string, value: unknown) => {
-    setAnswers((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const updateAnswer = useCallback(
+    (key: string, value: JsonValue) => {
+      setAnswers((prev) => {
+        const next: Record<string, JsonValue> = { ...prev, [key]: value };
+        return next;
+      });
+    },
+    [],
+  );
 
   const updateFormField = useCallback(
     (stepKey: string, fieldKey: string, value: string | boolean) => {
       setAnswers((prev) => ({
         ...prev,
         [stepKey]: {
-          ...(prev[stepKey] || {}),
+          ...(isJsonObject(prev[stepKey]) ? prev[stepKey] : {}),
           [fieldKey]: value,
         },
       }));
@@ -105,7 +124,7 @@ export function SetupWizardPage() {
         navigate("/onboarding");
       } catch (err) {
         console.error("Failed to save setup:", err);
-        setError("Failed to save settings. Please try again.");
+        setError(t("errors.saveFailed"));
       } finally {
         setLoading(false);
       }

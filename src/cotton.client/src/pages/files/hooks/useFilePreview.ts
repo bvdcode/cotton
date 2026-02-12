@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { getFileTypeInfo } from "../utils/fileTypes";
 import type { FileType } from "../utils/fileTypes";
 import { previewConfig } from "../../../shared/config/previewConfig";
@@ -11,6 +11,8 @@ interface PreviewState {
   fileSizeBytes: number | null;
 }
 
+const PREVIEW_HISTORY_STATE = "preview";
+
 export const useFilePreview = () => {
   const [previewState, setPreviewState] = useState<PreviewState>({
     isOpen: false,
@@ -19,6 +21,18 @@ export const useFilePreview = () => {
     fileType: null,
     fileSizeBytes: null,
   });
+
+  const historyPushedRef = useRef(false);
+
+  const closePreviewInternal = useCallback(() => {
+    setPreviewState({
+      isOpen: false,
+      fileId: null,
+      fileName: null,
+      fileType: null,
+      fileSizeBytes: null,
+    });
+  }, []);
 
   const openPreview = useCallback((fileId: string, fileName: string, fileSizeBytes?: number) => {
     const typeInfo = getFileTypeInfo(fileName);
@@ -34,20 +48,35 @@ export const useFilePreview = () => {
         fileType: typeInfo.type,
         fileSizeBytes: fileSizeBytes ?? null,
       });
+      window.history.pushState({ overlay: PREVIEW_HISTORY_STATE }, "");
+      historyPushedRef.current = true;
       return true;
     }
     return false;
   }, []);
 
   const closePreview = useCallback(() => {
-    setPreviewState({
-      isOpen: false,
-      fileId: null,
-      fileName: null,
-      fileType: null,
-      fileSizeBytes: null,
-    });
-  }, []);
+    closePreviewInternal();
+    if (historyPushedRef.current) {
+      historyPushedRef.current = false;
+      window.history.back();
+    }
+  }, [closePreviewInternal]);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (
+        historyPushedRef.current &&
+        !(e.state && (e.state as { overlay?: string }).overlay === PREVIEW_HISTORY_STATE)
+      ) {
+        historyPushedRef.current = false;
+        closePreviewInternal();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [closePreviewInternal]);
 
   return {
     previewState,

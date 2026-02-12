@@ -11,6 +11,7 @@ interface LoginRequest {
   username: string;
   password: string;
   twoFactorCode?: string;
+  trustDevice?: boolean;
 }
 
 interface LoginResponse {

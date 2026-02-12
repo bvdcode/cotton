@@ -23,6 +23,17 @@ namespace Cotton.Server.Providers
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
+
+        public string? DecryptValue(string? encryptedValue)
+        {
+            if (string.IsNullOrWhiteSpace(encryptedValue))
+            {
+                return null;
+            }
+            byte[] encryptedBytes = Convert.FromBase64String(encryptedValue);
+            return _crypto.Decrypt(encryptedBytes);
+        }
+
         public CottonServerSettings GetServerSettings()
         {
             if (_cache is not null)

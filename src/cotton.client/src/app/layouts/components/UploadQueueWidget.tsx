@@ -32,12 +32,16 @@ export const UploadQueueWidget = () => {
   );
 
   const widgetTitle = getWidgetTitle(
-    t,
     stats,
     isCollapsed,
     totalProgress,
     totalSpeed,
   );
+
+  const widgetTitleText =
+    "options" in widgetTitle
+      ? t(widgetTitle.key, widgetTitle.options)
+      : t(widgetTitle.key);
 
   if (!visible) return null;
 
@@ -45,7 +49,9 @@ export const UploadQueueWidget = () => {
     <Box
       sx={{
         position: "fixed",
-        right: 16,
+        left: { xs: "50%", sm: "unset" },
+        right: { xs: "unset", sm: 16 },
+        transform: { xs: "translateX(-50%)", sm: "none" },
         bottom: 16,
         zIndex: (theme) => theme.zIndex.snackbar,
         width: 360,
@@ -61,7 +67,7 @@ export const UploadQueueWidget = () => {
         }}
       >
         <WidgetHeader
-          title={widgetTitle}
+          title={widgetTitleText}
           isCollapsed={isCollapsed}
           hasActive={stats.hasActive}
           progressPercent={totalProgress}
@@ -88,7 +94,6 @@ export const UploadQueueWidget = () => {
             zIndex: 1,
             transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
             opacity: isCollapsed ? 0 : 1,
-            px: isCollapsed ? 0 : 1.5,
             pb: isCollapsed ? 0 : 1.5,
           }}
         >
@@ -98,11 +103,9 @@ export const UploadQueueWidget = () => {
               totalCount={tasks.length}
               overscan={5}
               itemContent={(index) => (
-                <UploadTaskRow
-                  task={tasks[index]}
-
-                  showDivider={index > 0}
-                />
+                <Box px={1.5}>
+                  <UploadTaskRow task={tasks[index]} showDivider={index > 0} />
+                </Box>
               )}
             />
           )}
