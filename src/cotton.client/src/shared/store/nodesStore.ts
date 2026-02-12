@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
+import { isAxiosError } from "../api/httpClient";
 
 type NodesState = {
   currentNode: NodeDto | null;
@@ -16,7 +17,10 @@ type NodesState = {
   lastUpdatedByNodeId: Record<string, number | undefined>;
 
   loadRoot: (options?: { force?: boolean; loadChildren?: boolean }) => Promise<NodeDto | null>;
-  loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<void>;
+  loadNode: (
+    nodeId: string,
+    options?: { loadChildren?: boolean; allowRootRecovery?: boolean },
+  ) => Promise<void>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
@@ -124,6 +128,7 @@ export const useNodesStore = create<NodesState>()(
   loadNode: async (nodeId, options) => {
     const state = get();
     const loadChildren = options?.loadChildren ?? true;
+    const allowRootRecovery = options?.allowRootRecovery ?? true;
     if (state.loading && state.currentNode?.id === nodeId) return;
 
     const cachedContent = state.contentByNodeId[nodeId];
@@ -183,6 +188,39 @@ export const useNodesStore = create<NodesState>()(
         })();
       }
     } catch (error) {
+      const statusCode = isAxiosError(error) ? error.response?.status : undefined;
+
+      if (
+        allowRootRecovery &&
+        statusCode === 404 &&
+        get().rootNodeId === nodeId
+      ) {
+        try {
+          // Persisted root can become stale after backend data reset.
+          // Recover by clearing cached root and resolving a fresh one.
+          set({
+            rootNodeId: null,
+            currentNode: null,
+            ancestors: [],
+            contentByNodeId: {},
+            ancestorsByNodeId: {},
+            lastUpdatedByNodeId: {},
+          });
+
+          const root = await layoutsApi.resolve();
+          set({ rootNodeId: root.id });
+          await get().loadNode(root.id, {
+            loadChildren,
+            allowRootRecovery: false,
+          });
+          return;
+        } catch (recoveryError) {
+          console.error("Failed to recover root node", recoveryError);
+          set({ loading: false, error: "Failed to resolve root node" });
+          return;
+        }
+      }
+
       console.error("Failed to load node view", error);
       set({ loading: false, error: "Failed to load folder contents" });
     }
