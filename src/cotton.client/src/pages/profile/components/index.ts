@@ -4,3 +4,4 @@ export { SessionsCard } from "./SessionsCard";
 export { TotpSetupForm } from "./TotpSetupForm";
 export { WebDavTokenCard } from "./WebDavTokenCard";
 export { ChangePasswordCard } from "./ChangePasswordCard";
+export { ShareLinkSettingsCard } from "./ShareLinkSettingsCard";

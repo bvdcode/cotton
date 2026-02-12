@@ -1,28 +1,87 @@
-import React from "react";
-import { Box, TextField, Typography } from "@mui/material";
-import { Folder } from "@mui/icons-material";
-import { FolderCard } from "../FolderCard";
-import { RenamableItemCard } from "../RenamableItemCard";
-import { getFileIcon } from "../../utils/icons";
-import { formatBytes } from "../../../../shared/utils/formatBytes";
-import {
-  isImageFile,
-  isPdfFile,
-  isTextFile,
-  isVideoFile,
-} from "../../utils/fileTypes";
-import { Download, Edit, Delete, Share } from "@mui/icons-material";
-import type { IFileListView } from "../../types/FileListViewTypes";
-import { alpha, useTheme } from "@mui/material/styles";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Box, Typography, useMediaQuery } from "@mui/material";
+import { Virtuoso } from "react-virtuoso";
+import type { IFileListView, FileSystemTile } from "../../types/FileListViewTypes";
+import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
-import { useTranslation } from "react-i18next";
+import { TileItem, NewFolderCard } from "./TileItem";
+
+/**
+ * Returns responsive tile min-width based on tile size.
+ *
+ * Adjusted for mobile:
+ * - small:  80px (xs) / 112px (sm+) — visibly smaller on phone
+ * - medium: 112px (xs) / 152px (sm+)
+ * - large:  44% on xs (guarantees max 2 columns), 208px on sm+
+ */
+const useTileLayout = (tileSize: "small" | "medium" | "large") => {
+  const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+
+  return useMemo(() => {
+    if (isXs) {
+      switch (tileSize) {
+        case "small":
+          return { minWidth: "80px", gap: 6 };
+        case "medium":
+          return { minWidth: "112px", gap: 8 };
+        case "large":
+          return { minWidth: "44%", gap: 10 };
+      }
+    }
+
+    switch (tileSize) {
+      case "small":
+        return { minWidth: theme.spacing(14), gap: 8 };
+      case "medium":
+        return { minWidth: theme.spacing(19), gap: 12 };
+      case "large":
+        return { minWidth: theme.spacing(26), gap: 16 };
+    }
+  }, [tileSize, isXs, theme]);
+};
+
+const VIRTUALIZATION_THRESHOLD = 80;
+
+const DEFAULT_COLUMNS_FALLBACK = 2;
+
+const tryParsePx = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed.endsWith("px")) return null;
+  const parsed = Number.parseFloat(trimmed.slice(0, -2));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+  let current: HTMLElement | null = element?.parentElement ?? null;
+
+  while (current) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    const overflow = style.overflow;
+
+    const isScrollable =
+      overflowY === "auto" ||
+      overflowY === "scroll" ||
+      overflow === "auto" ||
+      overflow === "scroll";
+
+    if (isScrollable) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+};
 
 /**
  * TilesView Component
  *
- * Displays files and folders in a responsive grid layout (tiles/cards).
- * Follows the Dependency Inversion Principle (DIP) by depending on the IFileListView interface.
- * Single Responsibility Principle (SRP): Responsible only for rendering the grid layout.
+ * Renders files/folders in a responsive grid. For large collections
+ * (>80 items) uses react-virtuoso VirtuosoGrid for DOM virtualization.
+ * Smaller collections render directly for simplicity.
  */
 export const TilesView: React.FC<IFileListView> = ({
   tiles,
@@ -41,35 +100,66 @@ export const TilesView: React.FC<IFileListView> = ({
   loadingCaption,
   tileSize = "medium",
 }) => {
+  const layout = useTileLayout(tileSize);
   const theme = useTheme();
-  const isDarkMode = theme.palette.mode === "dark";
-  const { t } = useTranslation(["common"]);
+  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
 
-  const minTileWidth =
-    tileSize === "small"
-      ? theme.spacing(14) // 112px
-      : tileSize === "large"
-        ? theme.spacing(26) // 208px
-        : theme.spacing(19); // 152px
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
 
-  const gridTemplateColumns = `repeat(auto-fill, minmax(${minTileWidth}, 1fr))`;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setContainerWidth(entry.contentRect.width);
+    });
 
-  const gridGap =
-    tileSize === "small"
-      ? { xs: 0.75, sm: 1 }
-      : tileSize === "large"
-        ? { xs: 1.25, sm: 2 }
-        : { xs: 1, sm: 1.5 };
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    setScrollParent(findScrollableParent(el));
+  }, []);
+
+  const gridTemplateColumns = `repeat(auto-fill, minmax(${layout.minWidth}, 1fr))`;
+  const gapPx = layout.gap;
+
+  const gridStyles: React.CSSProperties = {
+    display: "grid",
+    gap: `${gapPx}px`,
+    gridTemplateColumns,
+  };
+
+  const columns = useMemo(() => {
+    if (tileSize === "large" && isXs && layout.minWidth.trim().endsWith("%")) {
+      return 2;
+    }
+
+    const minWidthPx = tryParsePx(layout.minWidth);
+    if (!minWidthPx || containerWidth <= 0) {
+      return DEFAULT_COLUMNS_FALLBACK;
+    }
+
+    const calculated = Math.floor((containerWidth + gapPx) / (minWidthPx + gapPx));
+    return Math.max(1, calculated);
+  }, [containerWidth, gapPx, isXs, layout.minWidth, tileSize]);
+
+  const shouldVirtualize = tiles.length > VIRTUALIZATION_THRESHOLD;
 
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
       <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 160,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        minHeight={160}
       >
         <Typography color="text.secondary">{emptyStateText}</Typography>
       </Box>
@@ -77,12 +167,7 @@ export const TilesView: React.FC<IFileListView> = ({
   }
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-        pb: { xs: 1, sm: 2 },
-      }}
-    >
+    <Box ref={containerRef} position="relative" pb={{ xs: 1, sm: 2 }}>
       {loading && tiles.length === 0 && (
         <Box
           sx={{
@@ -102,274 +187,62 @@ export const TilesView: React.FC<IFileListView> = ({
           <Loader title={loadingTitle} caption={loadingCaption} />
         </Box>
       )}
-      <Box
-        sx={{
-          display: "grid",
-          gap: gridGap,
-          gridTemplateColumns,
-        }}
-      >
-        {/* New Folder Creation Card */}
-        {isCreatingFolder && (
-          <Box
-            sx={{
-              border: "2px solid",
-              borderColor: "primary.main",
-              borderRadius: 1,
-              aspectRatio: "1 / 1",
-              display: "flex",
-              flexDirection: "column",
-              p: { xs: 1, sm: 1.25, md: 1 },
-              bgcolor: "action.hover",
-            }}
-          >
-            <Box
-              sx={{
-                width: "100%",
-                flex: 1,
-                minHeight: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 1.5,
-                overflow: "hidden",
-                "& > svg": {
-                  width: "70%",
-                  height: "70%",
-                },
-              }}
-            >
-              <Folder sx={{ color: "primary.main" }} />
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <TextField
-                autoFocus
-                fullWidth
-                size="small"
-                value={newFolderName}
-                onChange={(e) => onNewFolderNameChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void onConfirmNewFolder();
-                  } else if (e.key === "Escape") {
-                    onCancelNewFolder();
-                  }
-                }}
-                onBlur={onConfirmNewFolder}
-                placeholder={folderNamePlaceholder}
-                slotProps={{
-                  input: {
-                    sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } },
-                  },
-                }}
-              />
-            </Box>
-          </Box>
-        )}
 
-        {/* Render all tiles (folders and files) */}
-        {tiles.map((tile) => {
-          if (tile.kind === "folder") {
+      {isCreatingFolder && (
+        <Box sx={{ ...gridStyles, mb: `${gapPx}px` }}>
+          <NewFolderCard
+            newFolderName={newFolderName}
+            onNewFolderNameChange={onNewFolderNameChange}
+            onConfirmNewFolder={onConfirmNewFolder}
+            onCancelNewFolder={onCancelNewFolder}
+            folderNamePlaceholder={folderNamePlaceholder}
+          />
+        </Box>
+      )}
+
+      {shouldVirtualize ? (
+        <Virtuoso
+          customScrollParent={scrollParent ?? undefined}
+          totalCount={Math.ceil(tiles.length / columns)}
+          overscan={600}
+          itemContent={(rowIndex: number) => {
+            const start = rowIndex * columns;
+            const rowTiles = tiles.slice(start, start + columns);
+
             return (
-              <FolderCard
-                key={tile.node.id}
-                folder={tile.node}
-                isRenaming={folderOperations.isRenaming(tile.node.id)}
-                renamingName={folderOperations.getRenamingName()}
-                onRenamingNameChange={folderOperations.onRenamingNameChange}
-                onConfirmRename={folderOperations.onConfirmRename}
-                onCancelRename={folderOperations.onCancelRename}
-                onStartRename={() =>
-                  folderOperations.onStartRename(tile.node.id, tile.node.name)
-                }
-                onDelete={() =>
-                  folderOperations.onDelete(tile.node.id, tile.node.name)
-                }
-                onClick={() => folderOperations.onClick(tile.node.id)}
-                variant="squareTile"
-              />
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: `${gapPx}px`,
+                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                }}
+              >
+                {rowTiles.map((tile: FileSystemTile) => (
+                  <TileItem
+                    key={tile.kind === "folder" ? tile.node.id : tile.file.id}
+                    tile={tile}
+                    folderOperations={folderOperations}
+                    fileOperations={fileOperations}
+                    fileNamePlaceholder={fileNamePlaceholder}
+                  />
+                ))}
+              </Box>
             );
-          }
-
-          // File tile rendering
-          const isImage = isImageFile(tile.file.name);
-          const isVideo = isVideoFile(tile.file.name);
-          const shouldLightenPreviewBackdrop =
-            isDarkMode &&
-            (isPdfFile(tile.file.name) || isTextFile(tile.file.name));
-          const preview = getFileIcon(
-            tile.file.encryptedFilePreviewHashHex ?? null,
-            tile.file.name,
-            tile.file.contentType,
-          );
-          const previewUrl = typeof preview === "string" ? preview : null;
-
-          const iconContainerSx = previewUrl
-            ? {
-                ...(shouldLightenPreviewBackdrop && {
-                  bgcolor: alpha(theme.palette.common.white, 0.75),
-                }),
-              }
-            : undefined;
-
-          return (
-            <RenamableItemCard
-              key={tile.file.id}
-              variant="squareTile"
-              icon={(() => {
-                if (previewUrl && (isImage || isVideo)) {
-                  return (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: "100%",
-                        position: "relative",
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={previewUrl}
-                        alt=""
-                        aria-hidden
-                        sx={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "block",
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          filter: "blur(24px)",
-                          transform: "scale(1.15)",
-                          opacity: 0.6,
-                        }}
-                      />
-                      <Box
-                        component="img"
-                        src={previewUrl}
-                        alt={tile.file.name}
-                        loading="lazy"
-                        decoding="async"
-                        sx={{
-                          position: "relative",
-                          display: "block",
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          cursor: isImage || isVideo ? "pointer" : "default",
-                        }}
-                      />
-                    </Box>
-                  );
-                }
-                if (previewUrl) {
-                  const isTextPreview = isTextFile(tile.file.name);
-                  return (
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: "100%",
-                        position: "relative",
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={previewUrl}
-                        alt=""
-                        aria-hidden
-                        sx={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "block",
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          filter: "blur(24px)",
-                          transform: "scale(1.15)",
-                          opacity: 0.5,
-                        }}
-                      />
-                      <Box
-                        component="img"
-                        src={previewUrl}
-                        alt={tile.file.name}
-                        loading="lazy"
-                        decoding="async"
-                        sx={(theme) => ({
-                          position: "relative",
-                          display: "block",
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          ...(shouldLightenPreviewBackdrop && {
-                            backgroundColor: alpha(
-                              theme.palette.common.white,
-                              0.75,
-                            ),
-                          }),
-                          ...(isTextPreview &&
-                            theme.palette.mode === "dark" && {
-                              filter: "invert(1)",
-                            }),
-                        })}
-                      />
-                    </Box>
-                  );
-                }
-                return preview;
-              })()}
-              title={tile.file.name}
-              subtitle={formatBytes(tile.file.sizeBytes)}
-              onClick={
-                isImage || isVideo
-                  ? () => {
-                      fileOperations.onMediaClick?.(tile.file.id);
-                    }
-                  : () =>
-                      fileOperations.onClick(
-                        tile.file.id,
-                        tile.file.name,
-                        tile.file.sizeBytes,
-                      )
-              }
-              iconContainerSx={iconContainerSx}
-              actions={[
-                {
-                  icon: <Download />,
-                  onClick: () =>
-                    fileOperations.onDownload(tile.file.id, tile.file.name),
-                  tooltip: t("actions.download", { ns: "common" }),
-                },
-                {
-                  icon: <Share />,
-                  onClick: () =>
-                    fileOperations.onShare(tile.file.id, tile.file.name),
-                  tooltip: t("actions.share", { ns: "common" }),
-                },
-                {
-                  icon: <Edit />,
-                  onClick: () =>
-                    fileOperations.onStartRename(tile.file.id, tile.file.name),
-                  tooltip: t("actions.rename", { ns: "common" }),
-                },
-                {
-                  icon: <Delete />,
-                  onClick: () =>
-                    fileOperations.onDelete(tile.file.id, tile.file.name),
-                  tooltip: t("actions.delete", { ns: "common" }),
-                },
-              ]}
-              isRenaming={fileOperations.isRenaming(tile.file.id)}
-              renamingValue={fileOperations.getRenamingName()}
-              onRenamingValueChange={fileOperations.onRenamingNameChange}
-              onConfirmRename={() => {
-                void fileOperations.onConfirmRename();
-              }}
-              onCancelRename={fileOperations.onCancelRename}
-              placeholder={fileNamePlaceholder}
+          }}
+        />
+      ) : (
+        <Box sx={gridStyles}>
+          {tiles.map((tile: FileSystemTile) => (
+            <TileItem
+              key={tile.kind === "folder" ? tile.node.id : tile.file.id}
+              tile={tile}
+              folderOperations={folderOperations}
+              fileOperations={fileOperations}
+              fileNamePlaceholder={fileNamePlaceholder}
             />
-          );
-        })}
-      </Box>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 };

@@ -7,7 +7,10 @@ import {
   Typography,
   Avatar,
   Alert,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
+import { Shield, ShieldOutlined } from "@mui/icons-material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
 import {
@@ -39,6 +42,7 @@ export const LoginPage = () => {
   } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [trustDevice, setTrustDevice] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,6 +66,7 @@ export const LoginPage = () => {
           twoFactorCode: requiresTwoFactor
             ? twoFactorCode.replace(/\D/g, "").slice(0, 6)
             : undefined,
+          trustDevice,
         });
         const user = await authApi.me();
         setAuthenticated(true, user);
@@ -122,6 +127,7 @@ export const LoginPage = () => {
       twoFactorCode,
       username,
       password,
+      trustDevice,
       t,
       setAuthenticated,
       navigate,
@@ -261,16 +267,32 @@ export const LoginPage = () => {
                 {error}
               </Alert>
             )}
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={loading}
-              fullWidth
-              sx={{ mt: 3 }}
-            >
-              {loading ? t("loggingIn") : t("loginButton")}
-            </Button>
+            <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={loading}
+                fullWidth
+              >
+                {loading ? t("loggingIn") : t("loginButton")}
+              </Button>
+              {!requiresTwoFactor && (
+                <Tooltip title={t("rememberMe")}>
+                  <IconButton
+                    color={trustDevice ? "primary" : "default"}
+                    onClick={() => setTrustDevice(!trustDevice)}
+                    disabled={loading}
+                    sx={{
+                      border: 1,
+                      borderColor: trustDevice ? "primary.main" : "divider",
+                    }}
+                  >
+                    {trustDevice ? <Shield /> : <ShieldOutlined />}
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
           </Box>
         </Paper>
       </Container>

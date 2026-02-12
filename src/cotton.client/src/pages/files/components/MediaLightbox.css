@@ -24,6 +24,12 @@
   transition: opacity 0.3s ease-in-out;
 }
 
+/* Video slides have vertical padding to prevent controls overlap */
+.lightbox-autohide .yarl__slide video {
+  padding: 48px 0;
+  box-sizing: border-box;
+}
+
 /* Idle state: controls hidden */
 .lightbox-autohide--idle .yarl__toolbar,
 .lightbox-autohide--idle .yarl__navigation_prev,

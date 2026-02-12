@@ -5,6 +5,7 @@ import {
   TotpSettingsCard,
   SessionsCard,
   WebDavTokenCard,
+  ShareLinkSettingsCard,
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { useEffect } from "react";
@@ -45,6 +46,7 @@ export const ProfilePage = () => {
           </Box>
         </Stack>
         <SessionsCard />
+        <ShareLinkSettingsCard />
         <ChangePasswordCard />
         <WebDavTokenCard />
       </Stack>

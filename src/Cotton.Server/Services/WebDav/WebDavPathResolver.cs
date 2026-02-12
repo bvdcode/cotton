@@ -52,7 +52,7 @@ public class WebDavPathResolver(
         }
 
         var parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-            .Select(Uri.UnescapeDataString)
+            .Select(SafeUnescapePathSegment)
             .ToArray();
         var parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
         var currentNode = await _navigator.ResolveNodeByPathAsync(userId, parentPath, DefaultNodeType, ct);
@@ -145,5 +145,24 @@ public class WebDavPathResolver(
     {
         var p = (path ?? string.Empty).Replace('\\', PathSeparator);
         return p.Trim(PathSeparator);
+    }
+
+    private static string SafeUnescapePathSegment(string segment)
+    {
+        if (string.IsNullOrEmpty(segment))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            return Uri.UnescapeDataString(segment);
+        }
+        catch (UriFormatException)
+        {
+            // Some clients may send raw '%' (not percent-encoded) or otherwise malformed escapes.
+            // Treat it as a literal segment to avoid failing the whole request.
+            return segment;
+        }
     }
 }

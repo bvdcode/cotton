@@ -26,8 +26,7 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
-import { filesApi } from "../../shared/api/filesApi";
-import { shareLinks } from "../../shared/utils/shareLinks";
+import { shareFile } from "../../shared/utils/shareFile";
 import Loader from "../../shared/ui/Loader";
 
 export const FilesPage: React.FC = () => {
@@ -44,6 +43,7 @@ export const FilesPage: React.FC = () => {
     error,
     loadRoot,
     loadNode,
+    resolveRootInBackground,
     refreshNodeContent,
   } = useNodesStore();
 
@@ -57,6 +57,14 @@ export const FilesPage: React.FC = () => {
     if (routeNodeId || rootNodeId) return;
     void loadRoot({ force: false, loadChildren: false });
   }, [routeNodeId, rootNodeId, loadRoot]);
+
+  // Always keep root node synced with backend resolver (non-blocking).
+  useEffect(() => {
+    if (routeNodeId) return;
+    resolveRootInBackground({
+      loadChildren: layoutType !== InterfaceLayoutType.List,
+    });
+  }, [routeNodeId, layoutType, resolveRootInBackground]);
 
   const nodeId = routeNodeId ?? rootNodeId ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
@@ -178,56 +186,7 @@ export const FilesPage: React.FC = () => {
 
   const handleShareFile = React.useCallback(
     async (nodeFileId: string, fileName: string) => {
-      try {
-        const downloadLink = await filesApi.getDownloadLink(
-          nodeFileId,
-          60 * 24 * 365,
-        );
-
-        const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
-        if (!token) {
-          setShareToast({
-            open: true,
-            message: t("share.errors.token", { ns: "files" }),
-          });
-          return;
-        }
-
-        const url = shareLinks.buildShareUrl(token);
-
-        if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-          try {
-            await navigator.share({ title: fileName, url });
-            setShareToast({
-              open: true,
-              message: t("share.shared", { ns: "files", name: fileName }),
-            });
-            return;
-          } catch (e) {
-            if (e instanceof Error && e.name === "AbortError") {
-              return;
-            }
-          }
-        }
-
-        try {
-          await navigator.clipboard.writeText(url);
-          setShareToast({
-            open: true,
-            message: t("share.copied", { ns: "files", name: fileName }),
-          });
-        } catch {
-          setShareToast({
-            open: true,
-            message: t("share.errors.copy", { ns: "files" }),
-          });
-        }
-      } catch {
-        setShareToast({
-          open: true,
-          message: t("share.errors.link", { ns: "files" }),
-        });
-      }
+      await shareFile(nodeFileId, fileName, t, setShareToast);
     },
     [t],
   );

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { filesApi } from "../../../shared/api/filesApi";
 import { isImageFile, isVideoFile } from "../utils/fileTypes";
 import { getFileIcon } from "../utils/icons";
@@ -14,8 +14,12 @@ export interface MediaHandlers {
   setLightboxIndex: (index: number) => void;
 }
 
+const LIGHTBOX_HISTORY_STATE = "lightbox";
+
 /**
- * Hook for managing media lightbox state and handlers
+ * Hook for managing media lightbox state and handlers.
+ * Pushes a history entry when opening so that mobile swipe-back
+ * closes the viewer instead of navigating away.
  */
 export const useMediaLightbox = (
   sortedFiles: Array<{
@@ -26,8 +30,38 @@ export const useMediaLightbox = (
     contentType?: string | null;
   }>,
 ): MediaHandlers => {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpenRaw] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const historyPushedRef = useRef(false);
+
+  const closeLightbox = useCallback(() => {
+    setLightboxOpenRaw(false);
+    if (historyPushedRef.current) {
+      historyPushedRef.current = false;
+      window.history.back();
+    }
+  }, []);
+
+  const openLightbox = useCallback(() => {
+    setLightboxOpenRaw(true);
+    window.history.pushState({ overlay: LIGHTBOX_HISTORY_STATE }, "");
+    historyPushedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (
+        historyPushedRef.current &&
+        !(e.state && (e.state as { overlay?: string }).overlay === LIGHTBOX_HISTORY_STATE)
+      ) {
+        historyPushedRef.current = false;
+        setLightboxOpenRaw(false);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Build media items for lightbox (images and videos only)
   const mediaItems = useMemo<MediaItem[]>(() => {
@@ -60,13 +94,27 @@ export const useMediaLightbox = (
   };
 
   // Handler to open media lightbox
-  const handleMediaClick = (fileId: string) => {
-    const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
-    if (mediaIndex !== -1) {
-      setLightboxIndex(mediaIndex);
-      setLightboxOpen(true);
-    }
-  };
+  const handleMediaClick = useCallback(
+    (fileId: string) => {
+      const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
+      if (mediaIndex !== -1) {
+        setLightboxIndex(mediaIndex);
+        openLightbox();
+      }
+    },
+    [mediaItems, openLightbox],
+  );
+
+  const setLightboxOpen = useCallback(
+    (open: boolean) => {
+      if (open) {
+        openLightbox();
+      } else {
+        closeLightbox();
+      }
+    },
+    [openLightbox, closeLightbox],
+  );
 
   return {
     lightboxOpen,

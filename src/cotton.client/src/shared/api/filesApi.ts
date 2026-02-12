@@ -1,6 +1,8 @@
 import { httpClient } from "./httpClient";
 import type { Guid } from "./layoutsApi";
 
+const downloadLinkInFlight = new Map<string, Promise<string>>();
+
 export interface CreateFileFromChunksRequest {
   nodeId: Guid;
   chunkHashes: string[];
@@ -32,11 +34,23 @@ export const filesApi = {
     nodeFileId: Guid,
     expireAfterMinutes = 1440,
   ): Promise<string> => {
-    const response = await httpClient.get<string>(
-      `files/${nodeFileId}/download-link`,
-      { params: { expireAfterMinutes } },
-    );
-    return response.data;
+    const key = `${nodeFileId}:${expireAfterMinutes}`;
+    const existing = downloadLinkInFlight.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = httpClient
+      .get<string>(`files/${nodeFileId}/download-link`, {
+        params: { expireAfterMinutes },
+      })
+      .then((r) => r.data)
+      .finally(() => {
+        downloadLinkInFlight.delete(key);
+      });
+
+    downloadLinkInFlight.set(key, promise);
+    return promise;
   },
 
   deleteFile: async (nodeFileId: Guid, skipTrash = false): Promise<void> => {
