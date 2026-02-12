@@ -13,6 +13,7 @@
             public const string Layouts = Base + "/layouts";
             public const string Previews = Base + "/preview";
             public const string EventHub = Base + "/hub/events";
+            public const string Notifications = Base + "/notifications";
         }
     }
 }
