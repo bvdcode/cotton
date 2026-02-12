@@ -110,10 +110,10 @@ class EventHubService {
     const wrapped = callback;
     set.add(wrapped);
 
-    if (
-      this.connection &&
-      this.connection.state === HubConnectionState.Connected
-    ) {
+    // SignalR allows registering handlers before and during connection start.
+    // If we only register when state === Connected, we can miss attaching
+    // handlers during the Connecting window and never receive events.
+    if (this.connection) {
       this.connection.on(method, wrapped);
     }
 

@@ -84,5 +84,5 @@ export function useEventHub() {
     return () => {
       unsubscribe();
     };
-  }, [isAuthenticated, prependNotification, fetchUnreadCount]);
+  }, [isAuthenticated, prependNotification, fetchUnreadCount, soundEnabled]);
 }
