@@ -48,9 +48,9 @@ namespace Cotton.Server.Handlers.Users
             var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken)
                 ?? throw new EntityNotFoundException<User>();
 
-            if (foundAdmin.Role < user.Role)
+            if (user.Role != request.Role && foundAdmin.Role < user.Role)
             {
-                throw new AccessDeniedException<User>("User with higher role cannot be modified by user with lower role");
+                throw new AccessDeniedException<User>("User role cannot be changed to a different role by an admin with lower role");
             }
 
             var newUsername = request.Username.Trim();
