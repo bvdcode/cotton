@@ -23,7 +23,7 @@ namespace Cotton.Server.Controllers
     public class UserController(CottonDbContext _dbContext, IMediator _mediator) : ControllerBase
     {
         [Authorize]
-        [HttpPatch("preferences")]
+        [HttpPatch("me/preferences")]
         public async Task<IActionResult> UpdatePreferences(
             [FromBody] Dictionary<string, string> request,
             CancellationToken cancellationToken)
