@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { User } from "../../features/auth/types";
 import type { ThemeMode } from "../theme";
 import type { InterfaceLayoutType } from "../api/layoutsApi";
+import { supportedLanguages, type SupportedLanguage } from "../../locales";
 import {
   userPreferencesApi,
   type UserPreferences,
@@ -9,6 +10,9 @@ import {
 
 export const USER_PREFERENCE_KEYS = {
   themeMode: "themeMode",
+  uiLanguage: "uiLanguage",
+
+  // Legacy keys (kept for backward compatibility)
   editorModes: "editorModes",
   languageOverrides: "languageOverrides",
 
@@ -21,6 +25,11 @@ export const USER_PREFERENCE_KEYS = {
   notificationsShowOnlyUnread: "notificationsShowOnlyUnread",
 
   shareLinkExpireAfterMinutes: "shareLinkExpireAfterMinutes",
+} as const;
+
+const USER_PREFERENCE_PREFIXES = {
+  editorMode: "editorMode.",
+  languageOverride: "languageOverride.",
 } as const;
 
 const DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES = 60 * 24 * 30;
@@ -45,6 +54,13 @@ const parseThemeModePreference = (value: string | undefined): ThemeMode => {
     return value;
   }
   return DEFAULT_THEME_MODE;
+};
+
+const parseUiLanguagePreference = (
+  value: string | undefined,
+): SupportedLanguage | null => {
+  if (!value) return null;
+  return supportedLanguages.includes(value) ? (value as SupportedLanguage) : null;
 };
 
 const parseTilesSizePreference = (value: string | undefined): TilesSize => {
@@ -111,6 +127,7 @@ interface UserPreferencesState {
   updatePreferences: (patch: UserPreferences) => Promise<void>;
 
   setThemeMode: (mode: ThemeMode) => void;
+  setUiLanguage: (language: SupportedLanguage) => void;
 
   setFilesLayoutType: (layoutType: InterfaceLayoutType) => void;
   setTrashLayoutType: (layoutType: InterfaceLayoutType) => void;
@@ -166,6 +183,12 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       });
     },
 
+    setUiLanguage: (language) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.uiLanguage]: language,
+      });
+    },
+
     setFilesLayoutType: (layoutType) => {
       void get().updatePreferences({
         [USER_PREFERENCE_KEYS.filesLayoutType]: `${layoutType}`,
@@ -211,27 +234,22 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
     },
 
     setEditorMode: (fileId, mode) => {
-      const existing = selectEditorModes(get());
-      const next = { ...existing, [fileId]: mode };
       void get().updatePreferences({
-        [USER_PREFERENCE_KEYS.editorModes]: JSON.stringify(next),
+        [`${USER_PREFERENCE_PREFIXES.editorMode}${fileId}`]: mode,
       });
     },
 
     setLanguageOverride: (fileId, language) => {
-      const existing = selectLanguageOverrides(get());
-      const next = { ...existing, [fileId]: language };
       void get().updatePreferences({
-        [USER_PREFERENCE_KEYS.languageOverrides]: JSON.stringify(next),
+        [`${USER_PREFERENCE_PREFIXES.languageOverride}${fileId}`]: language,
       });
     },
 
     removeLanguageOverride: (fileId) => {
-      const existing = selectLanguageOverrides(get());
-      if (!existing[fileId]) return;
-      const { [fileId]: _removed, ...rest } = existing;
       void get().updatePreferences({
-        [USER_PREFERENCE_KEYS.languageOverrides]: JSON.stringify(rest),
+        // Backend patch doesn't support deletes (Dictionary<string,string>).
+        // Use empty string as a tombstone; selectors treat it as "no override".
+        [`${USER_PREFERENCE_PREFIXES.languageOverride}${fileId}`]: "",
       });
     },
 
@@ -241,6 +259,12 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
 
 export const selectThemeMode = (state: UserPreferencesState): ThemeMode => {
   return parseThemeModePreference(state.preferences[USER_PREFERENCE_KEYS.themeMode]);
+};
+
+export const selectUiLanguage = (
+  state: UserPreferencesState,
+): SupportedLanguage | null => {
+  return parseUiLanguagePreference(state.preferences[USER_PREFERENCE_KEYS.uiLanguage]);
 };
 
 export const selectFilesLayoutType = (
@@ -257,6 +281,70 @@ export const selectTrashLayoutType = (
   const raw = state.preferences[USER_PREFERENCE_KEYS.trashLayoutType];
   const parsed = parseIntPreference(raw);
   return parsed === null ? null : (parsed as InterfaceLayoutType);
+};
+
+const selectPrefixedStringValues = (
+  preferences: UserPreferences,
+  prefix: string,
+): Record<string, string | undefined> => {
+  const out: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(preferences)) {
+    if (!key.startsWith(prefix)) continue;
+    const id = key.slice(prefix.length);
+    if (!id) continue;
+    out[id] = value;
+  }
+  return out;
+};
+
+export const selectEditorModes = (
+  state: UserPreferencesState,
+): Record<string, string> => {
+  // Legacy JSON map
+  const out: Record<string, string> = tryParseStringRecord(
+    state.preferences[USER_PREFERENCE_KEYS.editorModes],
+  );
+
+  // Per-file overrides
+  const perFile = selectPrefixedStringValues(
+    state.preferences,
+    USER_PREFERENCE_PREFIXES.editorMode,
+  );
+
+  for (const [fileId, value] of Object.entries(perFile)) {
+    if (!value || value.trim().length === 0) {
+      delete out[fileId];
+      continue;
+    }
+    out[fileId] = value;
+  }
+
+  return out;
+};
+
+export const selectLanguageOverrides = (
+  state: UserPreferencesState,
+): Record<string, string> => {
+  // Legacy JSON map
+  const out: Record<string, string> = tryParseStringRecord(
+    state.preferences[USER_PREFERENCE_KEYS.languageOverrides],
+  );
+
+  // Per-file overrides
+  const perFile = selectPrefixedStringValues(
+    state.preferences,
+    USER_PREFERENCE_PREFIXES.languageOverride,
+  );
+
+  for (const [fileId, value] of Object.entries(perFile)) {
+    if (!value || value.trim().length === 0) {
+      delete out[fileId];
+      continue;
+    }
+    out[fileId] = value;
+  }
+
+  return out;
 };
 
 export const selectFilesTilesSize = (state: UserPreferencesState): TilesSize => {
@@ -285,20 +373,6 @@ export const selectNotificationsShowOnlyUnread = (
   return (
     parseBoolPreference(raw) ?? DEFAULT_NOTIFICATIONS_SHOW_ONLY_UNREAD
   );
-};
-
-export const selectEditorModes = (
-  state: UserPreferencesState,
-): Record<string, string> => {
-  const raw = state.preferences[USER_PREFERENCE_KEYS.editorModes];
-  return tryParseStringRecord(raw);
-};
-
-export const selectLanguageOverrides = (
-  state: UserPreferencesState,
-): Record<string, string> => {
-  const raw = state.preferences[USER_PREFERENCE_KEYS.languageOverrides];
-  return tryParseStringRecord(raw);
 };
 
 export const selectFileListColumnWidths = (

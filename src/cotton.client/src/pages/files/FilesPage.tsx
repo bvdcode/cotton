@@ -17,6 +17,7 @@ import { useFilePreview } from "./hooks/useFilePreview";
 import { useMediaLightbox } from "./hooks/useMediaLightbox";
 import { useFilesLayout } from "./hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
+import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
@@ -85,6 +86,10 @@ export const FilesPage: React.FC = () => {
     layoutType,
     loadNode,
     refreshNodeContent,
+  });
+
+  useFilesRealtimeEvents({
+    onInvalidate: reloadCurrentNode,
   });
 
   const isHugeFolder =
