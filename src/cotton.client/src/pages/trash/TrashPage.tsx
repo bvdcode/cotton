@@ -41,7 +41,11 @@ import {
 import { shareFile } from "../../shared/utils/shareFile";
 import { filesApi } from "../../shared/api/filesApi";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
-import { usePreferencesStore } from "../../shared/store/preferencesStore";
+import {
+  selectTrashLayoutType,
+  selectTrashTilesSize,
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import type { TilesSize } from "../files/types/FileListViewTypes";
 import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
 
@@ -64,24 +68,11 @@ export const TrashPage: React.FC = () => {
 
   const routeNodeId = params.nodeId;
 
-  const { layoutPreferences, setTrashLayoutType, setTrashTilesSize } =
-    usePreferencesStore();
-  const initialLayoutType =
-    layoutPreferences.trashLayoutType ?? InterfaceLayoutType.Tiles;
-  const [layoutType, setLayoutType] =
-    React.useState<InterfaceLayoutType>(initialLayoutType);
-
-  const initialTilesSize: TilesSize =
-    layoutPreferences.trashTilesSize ?? "medium";
-  const [tilesSize, setTilesSize] = React.useState<TilesSize>(initialTilesSize);
-
-  React.useEffect(() => {
-    setTrashLayoutType(layoutType);
-  }, [layoutType, setTrashLayoutType]);
-
-  React.useEffect(() => {
-    setTrashTilesSize(tilesSize);
-  }, [tilesSize, setTrashTilesSize]);
+  const storedLayoutType = useUserPreferencesStore(selectTrashLayoutType);
+  const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
+  const tilesSize = useUserPreferencesStore(selectTrashTilesSize) as TilesSize;
+  const setLayoutType = useUserPreferencesStore((s) => s.setTrashLayoutType);
+  const setTilesSize = useUserPreferencesStore((s) => s.setTrashTilesSize);
 
   const viewMode: FileBrowserViewMode =
     layoutType === InterfaceLayoutType.List
@@ -199,10 +190,6 @@ export const TrashPage: React.FC = () => {
     if (!nodeId) return;
     void refreshNodeContent(nodeId);
   }, [nodeId, refreshNodeContent]);
-
-  useEffect(() => {
-    setTrashLayoutType(layoutType);
-  }, [layoutType, setTrashLayoutType]);
 
   useEffect(() => {
     const folderName = currentNode?.name;
