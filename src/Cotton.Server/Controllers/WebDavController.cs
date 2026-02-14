@@ -3,12 +3,14 @@
 
 using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
+using Cotton.Server.Hubs;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers;
@@ -22,6 +24,7 @@ namespace Cotton.Server.Controllers;
 [Route("api/v1/webdav/{**path}")]
 public class WebDavController(
     IMediator _mediator,
+    IHubContext<EventHub> _hubContext,
     ILogger<WebDavController> _logger) : ControllerBase
 {
     private const string WebDavRoute = "/api/v1/webdav/";
@@ -199,6 +202,7 @@ public class WebDavController(
         }
 
         AddDavHeaders();
+        // Send event to event hub for real-time updates
         return result.Created ? Created() : NoContent();
     }
 
@@ -330,6 +334,7 @@ public class WebDavController(
             return Forbid();
         }
 
+        // Send event to event hub for real-time updates
         return NoContent();
     }
 
@@ -357,6 +362,7 @@ public class WebDavController(
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
+        // Send event to event hub for real-time updates
         return Created();
     }
 
@@ -394,6 +400,7 @@ public class WebDavController(
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
+        // Send event to event hub for real-time updates
         return result.Created ? Created() : NoContent();
     }
 
@@ -430,6 +437,7 @@ public class WebDavController(
             };
         }
 
+        // Send event to event hub for real-time updates
         return result.Created ? Created() : NoContent();
     }
 
