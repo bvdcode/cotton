@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 import { eventHub } from "../../../shared/signalr";
-import type { JsonValue } from "../../../shared/types/json";
 import { useAuth } from "../../../features/auth";
 
 interface UseFilesRealtimeEventsOptions {
@@ -55,7 +54,7 @@ export function useFilesRealtimeEvents({
     });
 
     const unsubscribes = FILES_HUB_METHODS.map((method) =>
-      eventHub.on(method, (..._args: JsonValue[]) => {
+      eventHub.on(method, () => {
         scheduleInvalidate();
       }),
     );
