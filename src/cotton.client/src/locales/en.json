@@ -142,7 +142,10 @@
       "presets": {
         "week": "Week",
         "month": "Month",
-        "year": "Year"
+        "year": "Year",
+        "threeMonths": "3 months",
+        "tenYears": "10 years",
+        "oneDay": "One day"
       }
     },
     "totp": {

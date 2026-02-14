@@ -12,7 +12,7 @@ import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
 const MINUTES_IN_DAY = 60 * 24;
 
-type PresetKey = "week" | "month" | "year";
+type PresetKey = "oneDay" | "week" | "month" | "threeMonths" | "year";
 
 type Preset = {
   key: PresetKey;
@@ -20,8 +20,10 @@ type Preset = {
 };
 
 const presets: Preset[] = [
+  { key: "oneDay", minutes: MINUTES_IN_DAY },
   { key: "week", minutes: MINUTES_IN_DAY * 7 },
   { key: "month", minutes: MINUTES_IN_DAY * 30 },
+  { key: "threeMonths", minutes: MINUTES_IN_DAY * 90 },
   { key: "year", minutes: MINUTES_IN_DAY * 365 },
 ];
 
@@ -45,7 +47,10 @@ export const ShareLinkSettingsCard = () => {
     [expireAfterMinutes],
   );
 
-  const currentDays = Math.max(1, Math.round(expireAfterMinutes / MINUTES_IN_DAY));
+  const currentDays = Math.max(
+    1,
+    Math.round(expireAfterMinutes / MINUTES_IN_DAY),
+  );
 
   return (
     <ProfileAccordionCard
@@ -71,9 +76,21 @@ export const ShareLinkSettingsCard = () => {
             setExpireAfterMinutes(preset.minutes);
           }}
         >
-          <ToggleButton value="week">{t("shareLinks.presets.week")}</ToggleButton>
-          <ToggleButton value="month">{t("shareLinks.presets.month")}</ToggleButton>
-          <ToggleButton value="year">{t("shareLinks.presets.year")}</ToggleButton>
+          <ToggleButton value="oneDay">
+            {t("shareLinks.presets.oneDay")}
+          </ToggleButton>
+          <ToggleButton value="week">
+            {t("shareLinks.presets.week")}
+          </ToggleButton>
+          <ToggleButton value="month">
+            {t("shareLinks.presets.month")}
+          </ToggleButton>
+          <ToggleButton value="threeMonths">
+            {t("shareLinks.presets.threeMonths")}
+          </ToggleButton>
+          <ToggleButton value="year">
+            {t("shareLinks.presets.year")}
+          </ToggleButton>
         </ToggleButtonGroup>
       </Box>
     </ProfileAccordionCard>
