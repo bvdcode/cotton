@@ -337,16 +337,15 @@ export const SharePage: React.FC = () => {
   const handleShareLink = React.useCallback(async () => {
     const url = shareUrl ?? window.location.href;
     const name = fileName ?? undefined;
-    const shareText = name
-      ? `${t("message", { ns: "share", name })}\n\n${url}`
-      : url;
+    const message = name ? t("message", { ns: "share", name }) : "";
+    const clipboardText = name ? `${message}\n\n${url}` : url;
 
     if (
       typeof navigator !== "undefined" &&
       typeof navigator.share === "function"
     ) {
       try {
-        await navigator.share({ title: name, text: shareText, url });
+        await navigator.share({ title: name, text: message || undefined, url });
         setShareToast({
           open: true,
           message: t("toasts.shared", { ns: "share" }),
@@ -360,7 +359,7 @@ export const SharePage: React.FC = () => {
     }
 
     try {
-      await navigator.clipboard.writeText(shareText);
+      await navigator.clipboard.writeText(clipboardText);
       markCopied();
       setShareToast({
         open: true,

@@ -215,6 +215,7 @@ export const TilesView: React.FC<IFileListView> = ({
                   display: "grid",
                   gap: `${gapPx}px`,
                   gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                  pb: `${gapPx}px`,
                 }}
               >
                 {rowTiles.map((tile: FileSystemTile) => (
