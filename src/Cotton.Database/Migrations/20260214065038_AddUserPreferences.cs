@@ -15,7 +15,7 @@ namespace Cotton.Database.Migrations
                 name: "preferences",
                 table: "users",
                 type: "hstore",
-                defaultValue: new Dictionary<string, string>(),
+                defaultValueSql: "''::hstore",
                 nullable: false);
         }
 
