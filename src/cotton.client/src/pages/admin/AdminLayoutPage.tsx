@@ -43,13 +43,13 @@ export const AdminLayoutPage = () => {
 
   return (
     <Box
+      pt={{
+        xs: 1,
+        md: 3,
+      }}
       width="100%"
       display="flex"
       flexDirection="column"
-      flex={1}
-      minHeight={0}
-      pt={3}
-      pb={4}
     >
       <Paper sx={{ display: { xs: "block", md: "none" }, p: 2, mb: 2 }}>
         <FormControl fullWidth size="small">

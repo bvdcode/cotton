@@ -30,7 +30,13 @@ export const HomePage: React.FC = () => {
   }
 
   return (
-    <Box py={3} width="100%">
+    <Box
+      pt={{
+        xs: 1,
+        md: 3,
+      }}
+      width="100%"
+    >
       {error && (
         <Box mb={2}>
           <Alert severity="error">{error}</Alert>
