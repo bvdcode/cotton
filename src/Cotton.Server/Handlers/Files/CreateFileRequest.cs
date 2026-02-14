@@ -19,7 +19,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Files
 {
-    public class CreateFileRequest : IRequest<FileManifestDto>
+    public class CreateFileRequest : IRequest<NodeFileManifestDto>
     {
         public Guid NodeId { get; set; }
         public string[] ChunkHashes { get; set; } = [];
@@ -36,9 +36,9 @@ namespace Cotton.Server.Handlers.Files
         IStoragePipeline _storage,
         ILogger<CreateFileRequestHandler> _logger,
         ILayoutService _layouts,
-        FileManifestService _fileManifestService) : IRequestHandler<CreateFileRequest, FileManifestDto>
+        FileManifestService _fileManifestService) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
-        public async Task<FileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
+        public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
             var node = await GetTargetNodeAsync(request, cancellationToken);
             string nameKey = ValidateNameAndGetKey(request.Name);
@@ -179,9 +179,9 @@ namespace Cotton.Server.Handlers.Files
             return newNodeFile;
         }
 
-        private static FileManifestDto MapToDto(NodeFile nodeFile, FileManifest fileManifest)
+        private static NodeFileManifestDto MapToDto(NodeFile nodeFile, FileManifest fileManifest)
         {
-            return new FileManifestDto()
+            return new NodeFileManifestDto()
             {
                 ContentType = fileManifest.ContentType,
                 CreatedAt = fileManifest.CreatedAt,
