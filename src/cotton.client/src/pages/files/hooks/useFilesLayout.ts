@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
-import { usePreferencesStore } from "../../../shared/store/preferencesStore";
+import {
+  selectFilesLayoutType,
+  selectFilesTilesSize,
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 import type { TilesSize } from "../types/FileListViewTypes";
 
 export type FileBrowserViewMode =
@@ -10,28 +14,12 @@ export type FileBrowserViewMode =
   | "tiles-large";
 
 export const useFilesLayout = () => {
-  const {
-    layoutPreferences,
-    setFilesLayoutType,
-    setFilesTilesSize,
-  } = usePreferencesStore();
-  
-  const initialLayoutType =
-    layoutPreferences.filesLayoutType ?? InterfaceLayoutType.Tiles;
+  const storedLayoutType = useUserPreferencesStore(selectFilesLayoutType);
+  const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
+  const tilesSize = useUserPreferencesStore(selectFilesTilesSize) as TilesSize;
 
-  const initialTilesSize: TilesSize =
-    layoutPreferences.filesTilesSize ?? "medium";
-
-  const [layoutType, setLayoutType] = useState<InterfaceLayoutType>(initialLayoutType);
-  const [tilesSize, setTilesSize] = useState<TilesSize>(initialTilesSize);
-
-  useEffect(() => {
-    setFilesLayoutType(layoutType);
-  }, [layoutType, setFilesLayoutType]);
-
-  useEffect(() => {
-    setFilesTilesSize(tilesSize);
-  }, [tilesSize, setFilesTilesSize]);
+  const setLayoutType = useUserPreferencesStore((s) => s.setFilesLayoutType);
+  const setTilesSize = useUserPreferencesStore((s) => s.setFilesTilesSize);
 
   const viewMode: FileBrowserViewMode = useMemo(() => {
     if (layoutType === InterfaceLayoutType.List) return "table";
