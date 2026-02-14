@@ -7,7 +7,11 @@ import {
 } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { usePreferencesStore } from "../../../shared/store/preferencesStore";
+import {
+  selectShareLinkExpireAfterMinutes,
+  useUserPreferencesStore,
+  USER_PREFERENCE_KEYS,
+} from "../../../shared/store/userPreferencesStore";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 
 const MINUTES_IN_DAY = 60 * 24;
@@ -35,12 +39,8 @@ const findPreset = (minutes: number): PresetKey | null => {
 export const ShareLinkSettingsCard = () => {
   const { t } = useTranslation("profile");
 
-  const expireAfterMinutes = usePreferencesStore(
-    (s) => s.shareLinkPreferences.expireAfterMinutes,
-  );
-  const setExpireAfterMinutes = usePreferencesStore(
-    (s) => s.setShareLinkExpireAfterMinutes,
-  );
+  const expireAfterMinutes = useUserPreferencesStore(selectShareLinkExpireAfterMinutes);
+  const updatePreferences = useUserPreferencesStore((s) => s.updatePreferences);
 
   const selectedPreset = useMemo(
     () => findPreset(expireAfterMinutes),
@@ -73,7 +73,9 @@ export const ShareLinkSettingsCard = () => {
             if (!value) return;
             const preset = presets.find((p) => p.key === value);
             if (!preset) return;
-            setExpireAfterMinutes(preset.minutes);
+            void updatePreferences({
+              [USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes]: `${preset.minutes}`,
+            });
           }}
         >
           <ToggleButton value="oneDay">
