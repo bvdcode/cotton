@@ -14,8 +14,17 @@ type SetShareToast = (toast: ShareToast) => void;
  * Builds a formatted share text for a file.
  * Uses a localized invitation message followed by the URL.
  */
-const buildShareText = (fileName: string, url: string, t: TFunction): string => {
-  const message = t("share.message", { ns: "files", name: fileName });
+const buildShareMessage = (
+  fileName: string,
+  t: TFunction,
+): string => t("share.message", { ns: "files", name: fileName });
+
+const buildClipboardShareText = (
+  fileName: string,
+  url: string,
+  t: TFunction,
+): string => {
+  const message = buildShareMessage(fileName, t);
   return `${message}\n\n${url}`;
 };
 
@@ -52,7 +61,8 @@ export const shareFile = async (
     }
 
     const url = shareLinks.buildShareUrl(token);
-    const shareText = buildShareText(fileName, url, t);
+    const message = buildShareMessage(fileName, t);
+    const clipboardText = buildClipboardShareText(fileName, url, t);
 
     if (
       typeof navigator !== "undefined" &&
@@ -61,7 +71,7 @@ export const shareFile = async (
       try {
         await navigator.share({
           title: fileName,
-          text: shareText,
+          text: message,
           url,
         });
         setShareToast({
@@ -77,7 +87,7 @@ export const shareFile = async (
     }
 
     try {
-      await navigator.clipboard.writeText(shareText);
+      await navigator.clipboard.writeText(clipboardText);
       setShareToast({
         open: true,
         message: t("share.copied", { ns: "files", name: fileName }),

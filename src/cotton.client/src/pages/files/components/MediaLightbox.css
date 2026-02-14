@@ -50,3 +50,20 @@
 .lightbox-autohide--idle {
   cursor: none;
 }
+
+/* Move media metadata (size • name) to the top-left and hide the bottom caption line. */
+.lightbox-autohide .yarl__slide_title_container {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: auto;
+  max-width: calc(100% - 24px);
+  pointer-events: none;
+  z-index: 1;
+  text-align: left;
+}
+
+.lightbox-autohide .yarl__slide_description_container {
+  display: none;
+}

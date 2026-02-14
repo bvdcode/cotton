@@ -232,7 +232,7 @@ function buildSlidesFromItems(
   return items.map<Slide>((item) => {
     const maybeOriginal = originalUrls[item.id];
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
-    const description = sizeStr ? `${item.name} | ${sizeStr}` : item.name;
+    const title = sizeStr ? `${sizeStr} • ${item.name}` : item.name;
 
     if (item.kind === "image") {
       const isLoading = !maybeOriginal && !item.previewUrl;
@@ -242,7 +242,7 @@ function buildSlidesFromItems(
         src,
         width: isLoading ? 120 : item.width,
         height: isLoading ? 120 : item.height,
-        description,
+        title,
         download: maybeOriginal
           ? { url: maybeOriginal, filename: item.name }
           : undefined,
@@ -264,7 +264,7 @@ function buildSlidesFromItems(
         poster,
         width: item.width,
         height: item.height,
-        description,
+        title,
         share: undefined,
       } as Slide;
     }
@@ -274,7 +274,7 @@ function buildSlidesFromItems(
       poster,
       width: item.width,
       height: item.height,
-      description,
+      title,
       download: { url: src, filename: item.name },
       share: src
         ? {
