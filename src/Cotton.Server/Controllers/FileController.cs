@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
+using Cotton.Server.Hubs;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
@@ -24,6 +25,7 @@ using EasyExtensions.Quartz.Extensions;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Quartz;
@@ -36,6 +38,7 @@ namespace Cotton.Server.Controllers
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ISchedulerFactory _scheduler,
+        IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
         NodeFileHistoryService _history) : ControllerBase
     {
@@ -112,6 +115,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             DeleteFileQuery query = new(userId, nodeFileId, skipTrash);
             await _mediator.Send(query);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileDeleted", nodeFileId);
             return NoContent();
         }
 
@@ -168,7 +172,8 @@ namespace Cotton.Server.Controllers
             nodeFile.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
 
-            var mapped = nodeFile.Adapt<FileManifestDto>();
+            var mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
             return Ok(mapped);
         }
 
@@ -317,9 +322,10 @@ namespace Cotton.Server.Controllers
         {
             Guid userId = User.GetUserId();
             request.UserId = userId;
-            await _mediator.Send(request);
+            NodeFileManifestDto manifest = await _mediator.Send(request);
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok();
         }
     }
