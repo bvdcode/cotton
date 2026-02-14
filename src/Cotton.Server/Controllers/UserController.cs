@@ -31,6 +31,7 @@ namespace Cotton.Server.Controllers
         [HttpPatch("me/preferences")]
         public async Task<IActionResult> UpdatePreferences(
             [FromBody] Dictionary<string, string> request,
+            [FromQuery]
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
@@ -41,6 +42,7 @@ namespace Cotton.Server.Controllers
                 foundUser.Preferences[kvp.Key] = kvp.Value;
             }
             await _dbContext.SaveChangesAsync(cancellationToken);
+
             return Ok(foundUser.Preferences);
         }
 
