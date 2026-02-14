@@ -7,6 +7,7 @@ import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
   getDocument,
   GlobalWorkerOptions,
+  TextLayer,
 } from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 
@@ -19,37 +20,20 @@ interface PdfPreviewProps {
 // Blob URL cache for PDFs
 const blobUrlCache = new Map<string, string>();
 
-export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps) => {
+export const PdfPreview = ({
+  fileId,
+  fileName,
+  fileSizeBytes,
+}: PdfPreviewProps) => {
   const { t } = useTranslation(["files", "common"]);
   const isMobile =
     typeof navigator !== "undefined" &&
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  if (fileSizeBytes && fileSizeBytes > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES) {
-    const maxMB = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES / (1024 * 1024);
-    return (
-      <Box
-        sx={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 2,
-          p: 3,
-        }}
-      >
-        <Typography variant="body1" color="text.secondary" align="center">
-          {t("preview.errors.pdfTooLarge", {
-            ns: "files",
-            size: formatBytes(fileSizeBytes),
-            maxSize: `${Math.round(maxMB)} MB`,
-          })}
-        </Typography>
-      </Box>
-    );
-  }
+  const isTooLarge =
+    typeof fileSizeBytes === "number" &&
+    fileSizeBytes > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES;
+  const maxMB = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES / (1024 * 1024);
 
   const cachedBlobUrl = blobUrlCache.get(fileId);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
@@ -66,6 +50,7 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
 
   // Load PDF as blob on mount
   useEffect(() => {
+    if (isTooLarge) return;
     if (blobUrl && !shouldUsePdfJs) return;
     if (pdfBlob) return;
 
@@ -118,12 +103,13 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
     return () => {
       cancelled = true;
     };
-  }, [fileId, blobUrl, pdfBlob, shouldUsePdfJs, t]);
+  }, [blobUrl, fileId, isTooLarge, pdfBlob, shouldUsePdfJs, t]);
 
   // Cleanup blob URLs when component unmounts (but keep in cache for re-opening)
   // Note: We don't revoke cached URLs to allow reopening without re-download
 
   useEffect(() => {
+    if (isTooLarge) return;
     if (!shouldUsePdfJs || !pdfBlob) return;
 
     let cancelled = false;
@@ -141,11 +127,21 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
         if (cancelled) return;
 
         const container = renderContainerRef.current;
-        if (!container) return;
+        if (!container) {
+          setRendering(false);
+          return;
+        }
 
         container.innerHTML = "";
-        const containerWidth = container.clientWidth || window.innerWidth;
+        const measuredWidth = Math.floor(
+          container.getBoundingClientRect().width,
+        );
+        const containerWidth =
+          measuredWidth > 0 ? measuredWidth : Math.floor(window.innerWidth);
 
+        if (containerWidth <= 0) {
+          throw new Error("container width is 0");
+        }
         const outputScale = window.devicePixelRatio || 1;
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
@@ -159,6 +155,11 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
             scale: scale * outputScale,
           });
 
+          const pageWrapper = document.createElement("div");
+          pageWrapper.className = "pdf-page";
+          pageWrapper.style.width = `${Math.floor(scaledViewport.width)}px`;
+          pageWrapper.style.height = `${Math.floor(scaledViewport.height)}px`;
+
           const canvas = document.createElement("canvas");
           canvas.className = "pdf-page-canvas";
           const context = canvas.getContext("2d");
@@ -170,8 +171,15 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
 
           canvas.width = Math.floor(renderViewport.width);
           canvas.height = Math.floor(renderViewport.height);
-          canvas.style.width = `${scaledViewport.width}px`;
-          canvas.style.height = `${scaledViewport.height}px`;
+          canvas.style.width = `${Math.floor(scaledViewport.width)}px`;
+          canvas.style.height = `${Math.floor(scaledViewport.height)}px`;
+
+          const textLayerDiv = document.createElement("div");
+          textLayerDiv.className = "textLayer";
+
+          pageWrapper.appendChild(canvas);
+          pageWrapper.appendChild(textLayerDiv);
+          container.appendChild(pageWrapper);
 
           const renderTask = page.render({
             canvasContext: context,
@@ -181,7 +189,17 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
 
           if (cancelled) return;
 
-          container.appendChild(canvas);
+          // Text layer enables selection/copy.
+          const textContent = await page.getTextContent();
+          if (cancelled) return;
+          const textLayer = new TextLayer({
+            textContentSource: textContent,
+            container: textLayerDiv,
+            viewport: scaledViewport,
+          });
+          await textLayer.render();
+
+          if (cancelled) return;
         }
 
         setRendering(false);
@@ -198,7 +216,7 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
     return () => {
       cancelled = true;
     };
-  }, [pdfBlob, shouldUsePdfJs, t]);
+  }, [isTooLarge, pdfBlob, shouldUsePdfJs, t]);
 
   const handleLoad = () => {
     setLoading(false);
@@ -221,6 +239,29 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
         pt: 1,
       }}
     >
+      {isTooLarge && (
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+            p: 3,
+          }}
+        >
+          <Typography variant="body1" color="text.secondary" align="center">
+            {t("preview.errors.pdfTooLarge", {
+              ns: "files",
+              size: formatBytes(fileSizeBytes ?? 0),
+              maxSize: `${Math.round(maxMB)} MB`,
+            })}
+          </Typography>
+        </Box>
+      )}
+
       {(loading || rendering) && (
         <Box
           sx={{
@@ -283,15 +324,35 @@ export const PdfPreview = ({ fileId, fileName, fileSizeBytes }: PdfPreviewProps)
           sx={{
             width: "100%",
             height: "100%",
-            overflow: "auto",
+            overflowY: "auto",
+            overflowX: "hidden",
+            display: "block",
             px: 1,
-            display: loading || rendering ? "none" : "block",
-            "& .pdf-page-canvas": {
-              width: "100%",
-              height: "auto",
-              display: "block",
-              borderRadius: 1,
+            "& .pdf-page": {
+              position: "relative",
+              mx: "auto",
               mb: 1.5,
+              maxWidth: "100%",
+            },
+            "& .pdf-page-canvas": {
+              display: "block",
+              borderRadius: 0.4,
+              pointerEvents: "none",
+              maxWidth: "100%",
+            },
+            "& .textLayer": {
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              opacity: 1,
+              color: "transparent",
+              userSelect: "text",
+            },
+            "& .textLayer span": {
+              position: "absolute",
+              whiteSpace: "pre",
+              cursor: "text",
+              transformOrigin: "0% 0%",
             },
           }}
         />
