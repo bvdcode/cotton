@@ -2,16 +2,19 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Server.Handlers.Users;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Shared;
 using EasyExtensions;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
 {
@@ -19,6 +22,23 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Users)]
     public class UserController(CottonDbContext _dbContext, IMediator _mediator) : ControllerBase
     {
+        [Authorize]
+        [HttpPatch("preferences")]
+        public async Task<IActionResult> UpdatePreferences(
+            [FromBody] Dictionary<string, string> request,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            var foundUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken)
+                ?? throw new EntityNotFoundException<User>();
+            foreach (var kvp in request)
+            {
+                foundUser.Preferences[kvp.Key] = kvp.Value;
+            }
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return Ok(foundUser.Preferences);
+        }
+
         [Authorize]
         [HttpGet("me")]
         public IActionResult GetCurrentUser()

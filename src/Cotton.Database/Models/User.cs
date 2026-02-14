@@ -63,6 +63,9 @@ namespace Cotton.Database.Models
         [Column("totp_failed_attempts")]
         public int TotpFailedAttempts { get; set; }
 
+        [Column("preferences")]
+        public Dictionary<string, string> Preferences { get; set; } = [];
+
         public virtual ICollection<ChunkOwnership> ChunkOwnerships { get; set; } = [];
         public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
         public virtual ICollection<Notification> Notifications { get; set; } = [];
