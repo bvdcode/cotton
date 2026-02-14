@@ -3,14 +3,12 @@ import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import "./MediaLightbox.css";
 import Video from "yet-another-react-lightbox/plugins/video";
-import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import Share from "yet-another-react-lightbox/plugins/share";
-import "yet-another-react-lightbox/plugins/counter.css";
 import "yet-another-react-lightbox/plugins/captions.css";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
 import type { Slide } from "yet-another-react-lightbox";
@@ -157,7 +155,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         Thumbnails,
         Download,
         Share,
-        Counter,
         Captions,
       ]}
       slides={slides}
@@ -229,10 +226,16 @@ function buildSlidesFromItems(
   items: MediaItem[],
   originalUrls: Record<string, string>,
 ): Slide[] {
-  return items.map<Slide>((item) => {
+  const total = items.length;
+
+  return items.map<Slide>((item, idx) => {
+    const position = idx + 1;
     const maybeOriginal = originalUrls[item.id];
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
-    const title = sizeStr ? `${sizeStr} • ${item.name}` : item.name;
+    const prefix = total > 0 ? `${position}/${total}` : "";
+    const title = sizeStr
+      ? `${prefix} • ${sizeStr} • ${item.name}`
+      : `${prefix} • ${item.name}`;
 
     if (item.kind === "image") {
       const isLoading = !maybeOriginal && !item.previewUrl;

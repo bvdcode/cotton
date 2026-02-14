@@ -17,8 +17,7 @@
 .lightbox-autohide .yarl__navigation_prev,
 .lightbox-autohide .yarl__navigation_next,
 .lightbox-autohide .yarl__slide_title_container,
-.lightbox-autohide .yarl__slide_description_container,
-.lightbox-autohide .yarl__counter {
+.lightbox-autohide .yarl__slide_description_container {
   opacity: 1;
   pointer-events: auto;
   transition: opacity 0.3s ease-in-out;
@@ -35,8 +34,7 @@
 .lightbox-autohide--idle .yarl__navigation_prev,
 .lightbox-autohide--idle .yarl__navigation_next,
 .lightbox-autohide--idle .yarl__slide_title_container,
-.lightbox-autohide--idle .yarl__slide_description_container,
-.lightbox-autohide--idle .yarl__counter {
+.lightbox-autohide--idle .yarl__slide_description_container {
   opacity: 0;
   pointer-events: none;
 }
@@ -51,7 +49,7 @@
   cursor: none;
 }
 
-/* Move media metadata (size • name) to the top-left and hide the bottom caption line. */
+/* Move media metadata (counter • size • name) to the top-left and hide the bottom caption line. */
 .lightbox-autohide .yarl__slide_title_container {
   position: absolute;
   top: 12px;
@@ -62,6 +60,25 @@
   pointer-events: none;
   z-index: 1;
   text-align: left;
+
+  /* Keep title on a single line and truncate if too long */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure inner title text truncates cleanly (selector tolerant if class exists) */
+.lightbox-autohide .yarl__slide_title_container .yarl__slide_title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile: reduce padding and gap so title appears more compact */
+@media (max-width: 600px) {
+  .lightbox-autohide .yarl__slide_title_container {
+    font-size: 0.95rem;
+  }
 }
 
 .lightbox-autohide .yarl__slide_description_container {
