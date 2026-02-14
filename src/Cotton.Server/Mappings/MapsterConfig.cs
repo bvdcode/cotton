@@ -18,7 +18,7 @@ namespace Cotton.Server.Mappings
                 return;
             }
 
-            TypeAdapterConfig<NodeFile, FileManifestDto>
+            TypeAdapterConfig<NodeFile, NodeFileManifestDto>
                 .NewConfig()
                 .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.Name, src => src.Name)

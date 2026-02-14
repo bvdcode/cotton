@@ -5,7 +5,7 @@ using EasyExtensions.Models.Dto;
 
 namespace Cotton.Server.Models.Dto
 {
-    public class FileManifestDto : BaseDto<Guid>
+    public class NodeFileManifestDto : BaseDto<Guid>
     {
         public Guid OwnerId { get; set; }
         public string Name { get; set; } = null!;
