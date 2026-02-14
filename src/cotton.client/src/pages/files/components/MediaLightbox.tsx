@@ -83,16 +83,17 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(2500);
 
-  const [originalUrls, setOriginalUrls] = React.useState<
-    Record<string, string>
-  >({});
+  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>({});
+  const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
+    {},
+  );
 
   const loadingRef = React.useRef<Set<string>>(new Set());
 
   // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, originalUrls);
-  }, [items, originalUrls]);
+    return buildSlidesFromItems(items, displayUrls, signedUrls);
+  }, [items, displayUrls, signedUrls]);
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -101,20 +102,22 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
       if (loadingRef.current.has(item.id)) return;
 
-      setOriginalUrls((prev) => {
+      setSignedUrls((prev) => {
         if (prev[item.id]) return prev;
 
         loadingRef.current.add(item.id);
 
         (async () => {
           try {
-            let url = await getSignedMediaUrl(item.id);
+            const url = await getSignedMediaUrl(item.id);
+            setSignedUrls((p) => ({ ...p, [item.id]: url }));
 
             if (item.kind === "image" && isHeicFile(item.name)) {
-              url = await convertHeicToJpeg(url);
+              const convertedUrl = await convertHeicToJpeg(url);
+              setDisplayUrls((p) => ({ ...p, [item.id]: convertedUrl }));
+            } else {
+              setDisplayUrls((p) => ({ ...p, [item.id]: url }));
             }
-
-            setOriginalUrls((p) => ({ ...p, [item.id]: url }));
           } catch (e) {
             console.error("Failed to load media original URL", e);
           } finally {
@@ -224,13 +227,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
 function buildSlidesFromItems(
   items: MediaItem[],
-  originalUrls: Record<string, string>,
+  displayUrls: Record<string, string>,
+  signedUrls: Record<string, string>,
 ): Slide[] {
   const total = items.length;
 
   return items.map<Slide>((item, idx) => {
     const position = idx + 1;
-    const maybeOriginal = originalUrls[item.id];
+    const maybeSigned = signedUrls[item.id];
+    const maybeDisplay = displayUrls[item.id];
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
     const prefix = total > 0 ? `${position}/${total}` : "";
     const title = sizeStr
@@ -238,20 +243,20 @@ function buildSlidesFromItems(
       : `${prefix} • ${item.name}`;
 
     if (item.kind === "image") {
-      const isLoading = !maybeOriginal && !item.previewUrl;
-      const src = maybeOriginal || item.previewUrl || LOADING_PLACEHOLDER;
+      const isLoading = !maybeDisplay && !item.previewUrl;
+      const src = maybeDisplay || item.previewUrl || LOADING_PLACEHOLDER;
       return {
         type: "image",
         src,
         width: isLoading ? 120 : item.width,
         height: isLoading ? 120 : item.height,
         title,
-        download: maybeOriginal
-          ? { url: maybeOriginal, filename: item.name }
+        download: maybeSigned
+          ? { url: maybeSigned, filename: item.name }
           : undefined,
-        share: maybeOriginal
+        share: maybeSigned
           ? {
-              url: maybeOriginal,
+              url: maybeSigned,
               title: item.name,
             }
           : undefined,
@@ -259,7 +264,7 @@ function buildSlidesFromItems(
     }
 
     const poster = item.previewUrl || undefined;
-    const src = maybeOriginal;
+    const src = maybeSigned;
 
     if (!src) {
       return {
