@@ -12,9 +12,6 @@ export const USER_PREFERENCE_KEYS = {
   themeMode: "themeMode",
   uiLanguage: "uiLanguage",
 
-  // Legacy keys (kept for backward compatibility)
-  editorModes: "editorModes",
-  languageOverrides: "languageOverrides",
 
   filesLayoutType: "filesLayoutType",
   trashLayoutType: "trashLayoutType",
@@ -70,28 +67,7 @@ const parseTilesSizePreference = (value: string | undefined): TilesSize => {
   return DEFAULT_FILES_TILES_SIZE;
 };
 
-const isRecordStringString = (value: object): value is Record<string, string> => {
-  return !Array.isArray(value);
-};
 
-const tryParseStringRecord = (value: string | undefined): Record<string, string> => {
-  if (!value) return {};
-  try {
-    const parsed = JSON.parse(value) as object;
-    if (!parsed || typeof parsed !== "object") return {};
-    if (!isRecordStringString(parsed)) return {};
-
-    const out: Record<string, string> = {};
-    for (const [key, raw] of Object.entries(parsed)) {
-      if (typeof raw === "string") {
-        out[key] = raw;
-      }
-    }
-    return out;
-  } catch {
-    return {};
-  }
-};
 
 const tryParseNumberRecord = (value: string | undefined): Record<string, number> => {
   if (!value) return {};
@@ -300,22 +276,15 @@ const selectPrefixedStringValues = (
 export const selectEditorModes = (
   state: UserPreferencesState,
 ): Record<string, string> => {
-  // Legacy JSON map
-  const out: Record<string, string> = tryParseStringRecord(
-    state.preferences[USER_PREFERENCE_KEYS.editorModes],
-  );
-
-  // Per-file overrides
+  // Only per-file editorMode.<fileId> keys are supported now.
   const perFile = selectPrefixedStringValues(
     state.preferences,
     USER_PREFERENCE_PREFIXES.editorMode,
   );
 
+  const out: Record<string, string> = {};
   for (const [fileId, value] of Object.entries(perFile)) {
-    if (!value || value.trim().length === 0) {
-      delete out[fileId];
-      continue;
-    }
+    if (!value || value.trim().length === 0) continue;
     out[fileId] = value;
   }
 
@@ -325,22 +294,15 @@ export const selectEditorModes = (
 export const selectLanguageOverrides = (
   state: UserPreferencesState,
 ): Record<string, string> => {
-  // Legacy JSON map
-  const out: Record<string, string> = tryParseStringRecord(
-    state.preferences[USER_PREFERENCE_KEYS.languageOverrides],
-  );
-
-  // Per-file overrides
+  // Only per-file languageOverride.<fileId> keys are supported now.
   const perFile = selectPrefixedStringValues(
     state.preferences,
     USER_PREFERENCE_PREFIXES.languageOverride,
   );
 
+  const out: Record<string, string> = {};
   for (const [fileId, value] of Object.entries(perFile)) {
-    if (!value || value.trim().length === 0) {
-      delete out[fileId];
-      continue;
-    }
+    if (!value || value.trim().length === 0) continue;
     out[fileId] = value;
   }
 
