@@ -26,6 +26,7 @@ import {
   convertHeicToJpeg,
 } from "../../../shared/utils/heicConverter";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { shareLinks } from "../../../shared/utils/shareLinks";
 
 const LOADING_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
@@ -236,6 +237,12 @@ function buildSlidesFromItems(
     const position = idx + 1;
     const maybeSigned = signedUrls[item.id];
     const maybeDisplay = displayUrls[item.id];
+    const shareUrl = maybeSigned
+      ? (() => {
+          const token = shareLinks.tryExtractTokenFromDownloadUrl(maybeSigned);
+          return token ? shareLinks.buildShareUrl(token) : null;
+        })()
+      : null;
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
     const prefix = total > 0 ? `${position}/${total}` : "";
     const title = sizeStr
@@ -254,9 +261,9 @@ function buildSlidesFromItems(
         download: maybeSigned
           ? { url: maybeSigned, filename: item.name }
           : undefined,
-        share: maybeSigned
+        share: shareUrl
           ? {
-              url: maybeSigned,
+              url: shareUrl,
               title: item.name,
             }
           : undefined,
@@ -284,9 +291,9 @@ function buildSlidesFromItems(
       height: item.height,
       title,
       download: { url: src, filename: item.name },
-      share: src
+      share: shareUrl
         ? {
-            url: src,
+            url: shareUrl,
             title: item.name,
           }
         : undefined,
