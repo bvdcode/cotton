@@ -8,6 +8,7 @@ export interface User {
   email?: string | null;
   pictureUrl?: string;
   displayName?: string;
+  preferences?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
   /** 2FA (TOTP) */
