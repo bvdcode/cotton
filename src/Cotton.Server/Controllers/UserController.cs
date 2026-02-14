@@ -42,7 +42,7 @@ namespace Cotton.Server.Controllers
                 foundUser.Preferences[kvp.Key] = kvp.Value;
             }
             await _dbContext.SaveChangesAsync(cancellationToken);
-
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("PreferencesUpdated", foundUser.Preferences, cancellationToken);
             return Ok(foundUser.Preferences);
         }
 
