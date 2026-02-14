@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
@@ -24,7 +25,8 @@ public record WebDavMkColCommand(
 /// </summary>
 public record WebDavMkColResult(
     bool Success,
-    WebDavMkColError? Error = null);
+    WebDavMkColError? Error = null,
+    Guid? NodeId = null);
 
 public enum WebDavMkColError
 {
@@ -41,6 +43,7 @@ public class WebDavMkColCommandHandler(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
     IWebDavPathResolver _pathResolver,
+    IEventNotificationService _eventNotification,
     ILogger<WebDavMkColCommandHandler> _logger)
     : IRequestHandler<WebDavMkColCommand, WebDavMkColResult>
 {
@@ -98,6 +101,9 @@ public class WebDavMkColCommandHandler(
         await _dbContext.SaveChangesAsync(ct);
 
         _logger.LogInformation("WebDAV MKCOL: Created directory {Path} for user {UserId}", request.Path, request.UserId);
-        return new WebDavMkColResult(true);
+
+        await _eventNotification.NotifyNodeCreatedAsync(newNode.Id, ct);
+
+        return new WebDavMkColResult(true, null, newNode.Id);
     }
 }

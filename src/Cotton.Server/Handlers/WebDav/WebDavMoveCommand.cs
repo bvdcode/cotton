@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
@@ -27,7 +28,9 @@ public record WebDavMoveCommand(
 public record WebDavMoveResult(
     bool Success,
     bool Created,
-    WebDavMoveError? Error = null);
+    WebDavMoveError? Error = null,
+    Guid? MovedNodeId = null,
+    Guid? MovedNodeFileId = null);
 
 public enum WebDavMoveError
 {
@@ -46,6 +49,7 @@ public class WebDavMoveCommandHandler(
     CottonDbContext _dbContext,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
+    IEventNotificationService _eventNotification,
     ILogger<WebDavMoveCommandHandler> _logger)
     : IRequestHandler<WebDavMoveCommand, WebDavMoveResult>
 {
@@ -86,7 +90,19 @@ public class WebDavMoveCommandHandler(
         _logger.LogInformation("WebDAV MOVE: Moved {Source} to {Dest} for user {UserId}",
             request.SourcePath, request.DestinationPath, request.UserId);
 
-        return new WebDavMoveResult(true, created);
+        var movedNodeId = sourceResult.IsCollection && sourceResult.Node is not null ? sourceResult.Node.Id : (Guid?)null;
+        var movedNodeFileId = sourceResult.NodeFile?.Id;
+
+        if (movedNodeId.HasValue)
+        {
+            await _eventNotification.NotifyNodeMovedAsync(movedNodeId.Value, ct);
+        }
+        else if (movedNodeFileId.HasValue)
+        {
+            await _eventNotification.NotifyFileMovedAsync(movedNodeFileId.Value, ct);
+        }
+
+        return new WebDavMoveResult(true, created, null, movedNodeId, movedNodeFileId);
     }
 
     private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavMoveCommand request, CancellationToken ct)
