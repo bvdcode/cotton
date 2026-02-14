@@ -31,7 +31,13 @@ export const ProfilePage = () => {
 
   return (
     <Box
-      sx={{ p: { xs: 2, sm: 3 }, display: "flex", justifyContent: "center" }}
+      pt={{
+        xs: 1,
+        md: 3,
+      }}
+      width="100%"
+      display="flex"
+      justifyContent="center"
     >
       <Stack spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%", maxWidth: 800 }}>
         <Stack
