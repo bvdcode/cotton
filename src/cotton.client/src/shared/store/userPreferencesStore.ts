@@ -12,7 +12,6 @@ export const USER_PREFERENCE_KEYS = {
   themeMode: "themeMode",
   uiLanguage: "uiLanguage",
 
-
   filesLayoutType: "filesLayoutType",
   trashLayoutType: "trashLayoutType",
   filesTilesSize: "filesTilesSize",
@@ -57,7 +56,9 @@ const parseUiLanguagePreference = (
   value: string | undefined,
 ): SupportedLanguage | null => {
   if (!value) return null;
-  return supportedLanguages.includes(value) ? (value as SupportedLanguage) : null;
+  return supportedLanguages.includes(value)
+    ? (value as SupportedLanguage)
+    : null;
 };
 
 const parseTilesSizePreference = (value: string | undefined): TilesSize => {
@@ -67,9 +68,9 @@ const parseTilesSizePreference = (value: string | undefined): TilesSize => {
   return DEFAULT_FILES_TILES_SIZE;
 };
 
-
-
-const tryParseNumberRecord = (value: string | undefined): Record<string, number> => {
+const tryParseNumberRecord = (
+  value: string | undefined,
+): Record<string, number> => {
   if (!value) return {};
   try {
     const parsed = JSON.parse(value) as object;
@@ -191,15 +192,17 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
 
     setNotificationSoundEnabled: (enabled) => {
       void get().updatePreferences({
-        [USER_PREFERENCE_KEYS.notificationSoundEnabled]:
-          enabled ? "true" : "false",
+        [USER_PREFERENCE_KEYS.notificationSoundEnabled]: enabled
+          ? "true"
+          : "false",
       });
     },
 
     setNotificationsShowOnlyUnread: (showOnlyUnread) => {
       void get().updatePreferences({
-        [USER_PREFERENCE_KEYS.notificationsShowOnlyUnread]:
-          showOnlyUnread ? "true" : "false",
+        [USER_PREFERENCE_KEYS.notificationsShowOnlyUnread]: showOnlyUnread
+          ? "true"
+          : "false",
       });
     },
 
@@ -234,13 +237,17 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
 );
 
 export const selectThemeMode = (state: UserPreferencesState): ThemeMode => {
-  return parseThemeModePreference(state.preferences[USER_PREFERENCE_KEYS.themeMode]);
+  return parseThemeModePreference(
+    state.preferences[USER_PREFERENCE_KEYS.themeMode],
+  );
 };
 
 export const selectUiLanguage = (
   state: UserPreferencesState,
 ): SupportedLanguage | null => {
-  return parseUiLanguagePreference(state.preferences[USER_PREFERENCE_KEYS.uiLanguage]);
+  return parseUiLanguagePreference(
+    state.preferences[USER_PREFERENCE_KEYS.uiLanguage],
+  );
 };
 
 export const selectFilesLayoutType = (
@@ -309,13 +316,17 @@ export const selectLanguageOverrides = (
   return out;
 };
 
-export const selectFilesTilesSize = (state: UserPreferencesState): TilesSize => {
+export const selectFilesTilesSize = (
+  state: UserPreferencesState,
+): TilesSize => {
   const raw = state.preferences[USER_PREFERENCE_KEYS.filesTilesSize];
   const parsed = parseTilesSizePreference(raw);
   return parsed ?? DEFAULT_FILES_TILES_SIZE;
 };
 
-export const selectTrashTilesSize = (state: UserPreferencesState): TilesSize => {
+export const selectTrashTilesSize = (
+  state: UserPreferencesState,
+): TilesSize => {
   const raw = state.preferences[USER_PREFERENCE_KEYS.trashTilesSize];
   const parsed = parseTilesSizePreference(raw);
   return parsed ?? DEFAULT_TRASH_TILES_SIZE;
@@ -331,10 +342,9 @@ export const selectNotificationSoundEnabled = (
 export const selectNotificationsShowOnlyUnread = (
   state: UserPreferencesState,
 ): boolean => {
-  const raw = state.preferences[USER_PREFERENCE_KEYS.notificationsShowOnlyUnread];
-  return (
-    parseBoolPreference(raw) ?? DEFAULT_NOTIFICATIONS_SHOW_ONLY_UNREAD
-  );
+  const raw =
+    state.preferences[USER_PREFERENCE_KEYS.notificationsShowOnlyUnread];
+  return parseBoolPreference(raw) ?? DEFAULT_NOTIFICATIONS_SHOW_ONLY_UNREAD;
 };
 
 export const selectFileListColumnWidths = (
@@ -347,8 +357,7 @@ export const selectFileListColumnWidths = (
 export const selectShareLinkExpireAfterMinutes = (
   state: UserPreferencesState,
 ): number => {
-  const raw = state.preferences[USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes];
-  return (
-    parseIntPreference(raw) ?? DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES
-  );
+  const raw =
+    state.preferences[USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes];
+  return parseIntPreference(raw) ?? DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES;
 };
