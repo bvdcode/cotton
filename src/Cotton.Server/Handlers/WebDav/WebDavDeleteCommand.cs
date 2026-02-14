@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -24,7 +25,9 @@ public record WebDavDeleteCommand(
 /// </summary>
 public record WebDavDeleteResult(
     bool Success,
-    bool NotFound = false);
+    bool NotFound = false,
+    Guid? DeletedNodeId = null,
+    Guid? DeletedNodeFileId = null);
 
 /// <summary>
 /// Handler for WebDAV DELETE operation
@@ -33,6 +36,7 @@ public class WebDavDeleteCommandHandler(
     CottonDbContext _dbContext,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
+    IEventNotificationService _eventNotification,
     ILogger<WebDavDeleteCommandHandler> _logger)
     : IRequestHandler<WebDavDeleteCommand, WebDavDeleteResult>
 {
@@ -69,6 +73,10 @@ public class WebDavDeleteCommandHandler(
             await _mediator.Send(deleteQuery, ct);
 
             _logger.LogInformation("WebDAV DELETE: Deleted directory {Path} for user {UserId}", request.Path, request.UserId);
+
+            await _eventNotification.NotifyNodeDeletedAsync(request.UserId, node.Id, ct);
+
+            return new WebDavDeleteResult(true, false, node.Id, null);
         }
         else if (resolveResult.NodeFile is not null)
         {
@@ -86,6 +94,10 @@ public class WebDavDeleteCommandHandler(
             await _mediator.Send(deleteQuery, ct);
 
             _logger.LogInformation("WebDAV DELETE: Deleted file {Path} for user {UserId}", request.Path, request.UserId);
+
+            await _eventNotification.NotifyFileDeletedAsync(request.UserId, nodeFile.Id, ct);
+
+            return new WebDavDeleteResult(true, false, null, nodeFile.Id);
         }
 
         return new WebDavDeleteResult(true);

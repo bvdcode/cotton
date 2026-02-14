@@ -37,7 +37,8 @@ public record WebDavPutFileCommand(
 public record WebDavPutFileResult(
     bool Success,
     bool Created,
-    WebDavPutFileError? Error = null);
+    WebDavPutFileError? Error = null,
+    Guid? NodeFileId = null);
 
 public enum WebDavPutFileError
 {
@@ -62,6 +63,7 @@ public class WebDavPutFileCommandHandler(
     IChunkIngestService _chunkIngest,
     IWebDavPathResolver _pathResolver,
     FileManifestService _fileManifestService,
+    IEventNotificationService _eventNotification,
     ILogger<WebDavPutFileCommandHandler> _logger)
     : IRequestHandler<WebDavPutFileCommand, WebDavPutFileResult>
 {
@@ -208,11 +210,30 @@ public class WebDavPutFileCommandHandler(
 
         await _dbContext.SaveChangesAsync(ct);
 
+        var resultNodeFile = existing.Found && existing.NodeFile is not null
+            ? await _dbContext.NodeFiles.FirstAsync(f => f.Id == existing.NodeFile.Id, ct)
+            : await _dbContext.NodeFiles
+                .Where(f => f.NodeId == parentResult.ParentNode.Id
+                    && f.OwnerId == request.UserId
+                    && f.NameKey == nameKey)
+                .OrderByDescending(f => f.CreatedAt)
+                .FirstAsync(ct);
+
         _logger.LogInformation("WebDAV PUT: {Action} file {Path} ({ChunkCount} chunks) for user {UserId}",
             created ? "Created" : "Updated", request.Path, chunks.Count, request.UserId);
 
         await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-        return new WebDavPutFileResult(true, created);
+
+        if (created)
+        {
+            await _eventNotification.NotifyFileCreatedAsync(resultNodeFile.Id, ct);
+        }
+        else
+        {
+            await _eventNotification.NotifyFileUpdatedAsync(resultNodeFile.Id, ct);
+        }
+
+        return new WebDavPutFileResult(true, created, null, resultNodeFile.Id);
     }
 
     /// <summary>
