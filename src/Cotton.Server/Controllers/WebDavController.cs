@@ -24,7 +24,6 @@ namespace Cotton.Server.Controllers;
 [Route("api/v1/webdav/{**path}")]
 public class WebDavController(
     IMediator _mediator,
-    IHubContext<EventHub> _hubContext,
     ILogger<WebDavController> _logger) : ControllerBase
 {
     private const string WebDavRoute = "/api/v1/webdav/";
