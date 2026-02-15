@@ -34,11 +34,12 @@ COPY . .
 
 WORKDIR "/src/Cotton.Server"
 
-RUN dotnet publish "./Cotton.Server.csproj" \
-    -c $BUILD_CONFIGURATION \
-    -o /app/publish \
-    /p:UseAppHost=false \
-    --no-restore
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet publish "./Cotton.Server.csproj" \
+      -c $BUILD_CONFIGURATION \
+      -o /app/publish \
+      /p:UseAppHost=false \
+      --no-restore
 
 FROM base AS final
 WORKDIR /app
