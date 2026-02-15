@@ -1,6 +1,7 @@
 ﻿using Cotton.Database;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
+using Cotton.Server.Hubs;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -8,6 +9,7 @@ using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using EasyExtensions.Quartz.Attributes;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 
@@ -19,6 +21,7 @@ namespace Cotton.Server.Jobs
         IStreamCipher _crypto,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
+        IHubContext<EventHub> _hubContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
         private const int MaxItemsPerRun = 1000;
@@ -29,6 +32,7 @@ namespace Cotton.Server.Jobs
             var itemsToProcess = _dbContext.FileManifests
                 .Where(fm => fm.EncryptedFilePreviewHash == null && fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
+                .Include(fm => fm.NodeFiles)
                 .Include(fm => fm.FileManifestChunks)
                 .ThenInclude(fmc => fmc.Chunk)
                 .OrderBy(fm => fm.CreatedAt)
@@ -79,8 +83,14 @@ namespace Cotton.Server.Jobs
                     item.EncryptedFilePreviewHash = _crypto.Encrypt(hashStr);
                     await _dbContext.SaveChangesAsync();
 
-                    _logger.LogInformation("Generated preview for file manifest {FileManifestId}", item.Id);
-
+                    _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
+                    string hex = Convert.ToHexString(item.EncryptedFilePreviewHash);
+                    foreach (var nodeFile in item.NodeFiles)
+                    {
+                        await _hubContext.Clients
+                            .User(nodeFile.Node.OwnerId.ToString())
+                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, hex);
+                    }
                     // TODO: Move to settings or autoconfig
                     await Task.Delay(250);
                 }
