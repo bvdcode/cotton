@@ -153,7 +153,8 @@ public sealed class WebDavBasicAuthenticationHandler(
 
     private static (string username, string token)? ParseBasicCredentials(string authorizationHeader)
     {
-        var encoded = authorizationHeader[(authorizationHeader.IndexOf(' ') + 1)..].Trim();
+        const string basicPrefix = "Basic ";
+        var encoded = authorizationHeader[basicPrefix.Length..].Trim();
         if (string.IsNullOrWhiteSpace(encoded))
         {
             return null;
@@ -162,7 +163,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         var bytes = Convert.FromBase64String(encoded);
         var decoded = Encoding.UTF8.GetString(bytes);
         var idx = decoded.IndexOf(':');
-        if (idx <= 0 || idx == decoded.Length - 1)
+        if (idx <= 0)
         {
             return null;
         }
