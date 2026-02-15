@@ -30,7 +30,7 @@ namespace Cotton.Server.Handlers.Files
 
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
-        INotificationsProvider _notifications,
+        ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
@@ -143,11 +143,12 @@ namespace Cotton.Server.Handlers.Files
             string? downloadName = isInlineFile ? null : downloadToken.FileName;
             if (_httpContextAccessor.HttpContext != null)
             {
-                await _notifications.SendSharedFileDownloadedNotificationAsync(
+                await _sharedFileDownloadNotifier.NotifyOnceAsync(
                     downloadToken.NodeFile.OwnerId,
+                    downloadToken.Id,
                     downloadToken.FileName,
-                    _httpContextAccessor.HttpContext.Request.GetRemoteIPAddress(),
-                    _httpContextAccessor.HttpContext.Request.Headers.UserAgent);
+                    _httpContextAccessor.HttpContext,
+                    ct);
             }
             return ShareFileResult.AsStream(
                 stream: stream,
