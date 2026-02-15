@@ -31,6 +31,10 @@ export const useFilesData = ({
   const cachedContent = useNodesStore(
     (s) => (nodeId ? s.contentByNodeId[nodeId] : undefined),
   );
+
+  const optimisticSetFilePreviewHash = useNodesStore(
+    (s) => s.optimisticSetFilePreviewHash,
+  );
   const childrenTotalCount = cachedContent
     ? cachedContent.nodes.length + cachedContent.files.length
     : null;
@@ -123,6 +127,42 @@ export const useFilesData = ({
     void loadNode(nodeId, { loadChildren: true });
   }, [nodeId, loadNode, layoutType, currentPagination, fetchListPage]);
 
+  const optimisticUpdateCurrentNodeFilePreviewHash = useCallback(
+    (nodeFileId: string, encryptedFilePreviewHashHex: string) => {
+      if (!nodeId) {
+        return;
+      }
+
+      optimisticSetFilePreviewHash(
+        nodeId,
+        nodeFileId,
+        encryptedFilePreviewHashHex,
+      );
+
+      if (layoutType !== InterfaceLayoutType.List) {
+        return;
+      }
+
+      setListContent((prev) => {
+        if (!prev) return prev;
+        const existing = prev.files.find((f) => f.id === nodeFileId);
+        if (!existing) return prev;
+        if (existing.encryptedFilePreviewHashHex === encryptedFilePreviewHashHex) {
+          return prev;
+        }
+        return {
+          ...prev,
+          files: prev.files.map((f) =>
+            f.id === nodeFileId
+              ? { ...f, encryptedFilePreviewHashHex }
+              : f,
+          ),
+        };
+      });
+    },
+    [nodeId, optimisticSetFilePreviewHash, layoutType],
+  );
+
   return {
     childrenTotalCount,
     listTotalCount,
@@ -132,5 +172,6 @@ export const useFilesData = ({
     handlePaginationChange,
     handleFolderChanged,
     reloadCurrentNode,
+    optimisticUpdateCurrentNodeFilePreviewHash,
   };
 };
