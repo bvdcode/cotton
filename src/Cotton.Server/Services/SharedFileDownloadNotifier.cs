@@ -4,7 +4,6 @@
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using EasyExtensions.AspNetCore.Extensions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services
