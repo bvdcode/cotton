@@ -3,14 +3,12 @@
 
 using Cotton.Server.Auth;
 using Cotton.Server.Handlers.WebDav;
-using Cotton.Server.Hubs;
 using Cotton.Server.Services.WebDav;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers;
