@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../../shared/api/filesApi";
 import { previewConfig } from "../../../../shared/config/previewConfig";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
+import "pdfjs-dist/web/pdf_viewer.css";
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -157,6 +158,8 @@ export const PdfPreview = ({
 
           const pageWrapper = document.createElement("div");
           pageWrapper.className = "pdf-page";
+          // pdf.js viewer CSS relies on this variable for proper text-layer sizing.
+          pageWrapper.style.setProperty("--scale-factor", String(scale));
           pageWrapper.style.width = `${Math.floor(scaledViewport.width)}px`;
           pageWrapper.style.height = `${Math.floor(scaledViewport.height)}px`;
 
