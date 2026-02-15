@@ -134,13 +134,16 @@ export const PdfPreview = ({
         }
 
         container.innerHTML = "";
-        const measuredWidth = Math.floor(
-          container.getBoundingClientRect().width,
-        );
-        const containerWidth =
-          measuredWidth > 0 ? measuredWidth : Math.floor(window.innerWidth);
+        const style = window.getComputedStyle(container);
+        const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+        const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+        const measuredWidth = container.clientWidth;
+        const availableWidth =
+          (measuredWidth > 0 ? measuredWidth : window.innerWidth) -
+          paddingLeft -
+          paddingRight;
 
-        if (containerWidth <= 0) {
+        if (availableWidth <= 0) {
           throw new Error("container width is 0");
         }
         const outputScale = window.devicePixelRatio || 1;
@@ -150,7 +153,7 @@ export const PdfPreview = ({
           if (cancelled) return;
 
           const viewport = page.getViewport({ scale: 1 });
-          const scale = containerWidth / viewport.width;
+          const scale = availableWidth / viewport.width;
           const scaledViewport = page.getViewport({ scale });
           const renderViewport = page.getViewport({
             scale: scale * outputScale,
@@ -160,8 +163,8 @@ export const PdfPreview = ({
           pageWrapper.className = "pdf-page";
           // pdf.js viewer CSS relies on this variable for proper text-layer sizing.
           pageWrapper.style.setProperty("--scale-factor", String(scale));
-          pageWrapper.style.width = `${Math.floor(scaledViewport.width)}px`;
-          pageWrapper.style.height = `${Math.floor(scaledViewport.height)}px`;
+          pageWrapper.style.width = `${scaledViewport.width}px`;
+          pageWrapper.style.height = `${scaledViewport.height}px`;
 
           const canvas = document.createElement("canvas");
           canvas.className = "pdf-page-canvas";
@@ -172,13 +175,15 @@ export const PdfPreview = ({
             );
           }
 
-          canvas.width = Math.floor(renderViewport.width);
-          canvas.height = Math.floor(renderViewport.height);
-          canvas.style.width = `${Math.floor(scaledViewport.width)}px`;
-          canvas.style.height = `${Math.floor(scaledViewport.height)}px`;
+          canvas.width = Math.ceil(renderViewport.width);
+          canvas.height = Math.ceil(renderViewport.height);
+          canvas.style.width = `${scaledViewport.width}px`;
+          canvas.style.height = `${scaledViewport.height}px`;
 
           const textLayerDiv = document.createElement("div");
           textLayerDiv.className = "textLayer";
+          textLayerDiv.style.width = `${scaledViewport.width}px`;
+          textLayerDiv.style.height = `${scaledViewport.height}px`;
 
           pageWrapper.appendChild(canvas);
           pageWrapper.appendChild(textLayerDiv);
@@ -335,13 +340,11 @@ export const PdfPreview = ({
               position: "relative",
               mx: "auto",
               mb: 1.5,
-              maxWidth: "100%",
             },
             "& .pdf-page-canvas": {
               display: "block",
               borderRadius: 0.4,
               pointerEvents: "none",
-              maxWidth: "100%",
             },
             "& .textLayer": {
               position: "absolute",
