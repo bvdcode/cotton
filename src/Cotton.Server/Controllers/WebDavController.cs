@@ -40,7 +40,7 @@ public class WebDavController(
     private static string GetLockKey(Guid userId, string path) => $"{userId:N}:{path}";
 
     [HttpOptions]
-    [AllowAnonymous]
+    [Authorize(Policy = WebDavBasicAuthenticationHandler.PolicyName)]
     public IActionResult HandleOptions()
     {
         AddDavHeaders();
