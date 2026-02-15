@@ -86,7 +86,8 @@ public sealed class WebDavBasicAuthenticationHandler(
 
         Logger.LogDebug("WebDAV auth: cache miss for username '{Username}'.", username);
 
-        var user = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Username == username);
+        var user = await dbContext.Users.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Username == username || x.Email == username);
         if (user is null)
         {
             Logger.LogInformation("WebDAV auth: user '{Username}' not found.", username);

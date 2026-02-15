@@ -169,7 +169,8 @@ namespace Cotton.Server.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(x => x.Username == request.Username || x.Email == request.Username);
             if (user == null)
             {
                 user = await TryGetNewUserAsync(request);
