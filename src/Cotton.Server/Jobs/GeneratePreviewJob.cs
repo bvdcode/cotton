@@ -88,7 +88,7 @@ namespace Cotton.Server.Jobs
                     foreach (var nodeFile in item.NodeFiles)
                     {
                         await _hubContext.Clients
-                            .User(nodeFile.Node.OwnerId.ToString())
+                            .User(nodeFile.OwnerId.ToString())
                             .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, hex);
                     }
                     // TODO: Move to settings or autoconfig
