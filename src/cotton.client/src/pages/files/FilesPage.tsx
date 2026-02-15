@@ -81,6 +81,7 @@ export const FilesPage: React.FC = () => {
     handlePaginationChange,
     handleFolderChanged,
     reloadCurrentNode,
+    optimisticUpdateCurrentNodeFilePreviewHash,
   } = useFilesData({
     nodeId,
     layoutType,
@@ -89,7 +90,9 @@ export const FilesPage: React.FC = () => {
   });
 
   useFilesRealtimeEvents({
+    nodeId,
     onInvalidate: reloadCurrentNode,
+    onPreviewGenerated: optimisticUpdateCurrentNodeFilePreviewHash,
   });
 
   const isHugeFolder =

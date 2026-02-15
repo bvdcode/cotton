@@ -34,6 +34,11 @@ type NodesState = {
     parentNodeId?: string,
   ) => Promise<boolean>;
   optimisticRenameFile: (parentNodeId: string, fileId: string, newName: string) => void;
+  optimisticSetFilePreviewHash: (
+    parentNodeId: string,
+    fileId: string,
+    encryptedFilePreviewHashHex: string,
+  ) => void;
   optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
   reset: () => void;
 };
@@ -484,6 +489,37 @@ export const useNodesStore = create<NodesState>()(
             ...existing,
             files: existing.files.map((f) =>
               f.id === fileId ? { ...f, name: newName } : f,
+            ),
+          },
+        },
+      };
+    });
+  },
+
+  optimisticSetFilePreviewHash: (
+    parentNodeId,
+    fileId,
+    encryptedFilePreviewHashHex,
+  ) => {
+    set((prev) => {
+      const existing = prev.contentByNodeId[parentNodeId];
+      if (!existing) return {};
+
+      const current = existing.files.find((f) => f.id === fileId);
+      if (!current) return {};
+      if (current.encryptedFilePreviewHashHex === encryptedFilePreviewHashHex) {
+        return {};
+      }
+
+      return {
+        contentByNodeId: {
+          ...prev.contentByNodeId,
+          [parentNodeId]: {
+            ...existing,
+            files: existing.files.map((f) =>
+              f.id === fileId
+                ? { ...f, encryptedFilePreviewHashHex }
+                : f,
             ),
           },
         },
