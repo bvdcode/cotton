@@ -103,7 +103,8 @@ public sealed class WebDavBasicAuthenticationHandler(
         if (!hasher.Verify(token, user.WebDavTokenPhc))
         {
             Logger.LogWarning(
-                "WebDAV auth: invalid token for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
+                "WebDAV auth: invalid token '{token}' for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
+                token,
                 user.Username,
                 user.Id,
                 Request.GetRemoteIPAddress());
