@@ -55,6 +55,7 @@ namespace Cotton.Server
                 .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
+                .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()
