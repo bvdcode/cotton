@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using EasyExtensions.Abstractions;
+using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -105,14 +106,14 @@ public sealed class WebDavBasicAuthenticationHandler(
                 "WebDAV auth: invalid token for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
                 user.Username,
                 user.Id,
-                Request.HttpContext.Connection.RemoteIpAddress);
+                Request.GetRemoteIPAddress());
 
             try
             {
                 await notifications.SendFailedLoginAttemptAsync(
                     user.Id,
                     username,
-                    Request.HttpContext.Connection.RemoteIpAddress ?? System.Net.IPAddress.None,
+                    Request.GetRemoteIPAddress(),
                     Request.Headers.UserAgent);
             }
             catch (Exception ex)
