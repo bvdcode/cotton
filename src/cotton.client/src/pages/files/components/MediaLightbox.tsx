@@ -239,6 +239,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         finite: true,
         preload: 2,
         imageFit: "contain",
+        padding: 0,
       }}
     />
   );
