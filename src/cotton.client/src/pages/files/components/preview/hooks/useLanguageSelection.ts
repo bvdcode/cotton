@@ -7,9 +7,8 @@
 
 import { useCallback, useMemo } from "react";
 import {
-  USER_PREFERENCE_PREFIXES,
-  useUserPreferencesStore,
-} from "../../../../../shared/store/userPreferencesStore";
+  useLocalPreferencesStore,
+} from "../../../../../shared/store/localPreferencesStore";
 import { detectMonacoLanguageFromFileName } from "../../../../../shared/utils/languageDetection";
 
 interface UseLanguageSelectionOptions {
@@ -30,18 +29,16 @@ export function useLanguageSelection({
   fileName,
   fileId,
 }: UseLanguageSelectionOptions): UseLanguageSelectionResult {
-  const setLanguageOverride = useUserPreferencesStore((s) => s.setLanguageOverride);
-  const removeLanguageOverride = useUserPreferencesStore(
+  const setLanguageOverride = useLocalPreferencesStore((s) => s.setLanguageOverride);
+  const removeLanguageOverride = useLocalPreferencesStore(
     (s) => s.removeLanguageOverride,
   );
 
-  const storedOverride = useUserPreferencesStore(
+  const storedOverride = useLocalPreferencesStore(
     useMemo(
       () =>
         (s) =>
-          s.preferences[
-            `${USER_PREFERENCE_PREFIXES.languageOverride}${fileId}`
-          ] ?? null,
+          s.languageOverrides[fileId] ?? null,
       [fileId],
     ),
   );

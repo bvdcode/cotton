@@ -44,8 +44,8 @@ import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
   selectTrashLayoutType,
   selectTrashTilesSize,
-  useUserPreferencesStore,
-} from "../../shared/store/userPreferencesStore";
+  useLocalPreferencesStore,
+} from "../../shared/store/localPreferencesStore";
 import type { TilesSize } from "../files/types/FileListViewTypes";
 import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
 
@@ -68,11 +68,11 @@ export const TrashPage: React.FC = () => {
 
   const routeNodeId = params.nodeId;
 
-  const storedLayoutType = useUserPreferencesStore(selectTrashLayoutType);
+  const storedLayoutType = useLocalPreferencesStore(selectTrashLayoutType);
   const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
-  const tilesSize = useUserPreferencesStore(selectTrashTilesSize) as TilesSize;
-  const setLayoutType = useUserPreferencesStore((s) => s.setTrashLayoutType);
-  const setTilesSize = useUserPreferencesStore((s) => s.setTrashTilesSize);
+  const tilesSize = useLocalPreferencesStore(selectTrashTilesSize) as TilesSize;
+  const setLayoutType = useLocalPreferencesStore((s) => s.setTrashLayoutType);
+  const setTilesSize = useLocalPreferencesStore((s) => s.setTrashTilesSize);
 
   const viewMode: FileBrowserViewMode =
     layoutType === InterfaceLayoutType.List

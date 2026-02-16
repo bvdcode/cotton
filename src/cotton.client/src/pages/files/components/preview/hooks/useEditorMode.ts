@@ -8,9 +8,8 @@
 import { useCallback, useMemo } from 'react';
 import { EditorMode } from '../editors/types';
 import {
-  USER_PREFERENCE_PREFIXES,
-  useUserPreferencesStore,
-} from '../../../../../shared/store/userPreferencesStore';
+  useLocalPreferencesStore,
+} from '../../../../../shared/store/localPreferencesStore';
 import { previewConfig } from '../../../../../shared/config/previewConfig';
 
 /**
@@ -194,14 +193,13 @@ export function useEditorMode({
   fileId,
   fileSize,
 }: UseEditorModeOptions): UseEditorModeResult {
-  const setEditorMode = useUserPreferencesStore((s) => s.setEditorMode);
+  const setEditorMode = useLocalPreferencesStore((s) => s.setEditorMode);
 
-  const storedMode = useUserPreferencesStore(
+  const storedMode = useLocalPreferencesStore(
     useMemo(
       () =>
         (s) =>
-          s.preferences[`${USER_PREFERENCE_PREFIXES.editorMode}${fileId}`] ??
-          null,
+          s.editorModes[fileId] ?? null,
       [fileId],
     ),
   );
