@@ -16,9 +16,15 @@
 
 # Cotton Cloud — self-hosted storage engine with real crypto
 
-</div>
 
 **All managed .NET/C#** core — crypto and storage engine are pure managed code.
+
+
+</div>
+
+
+<img width="1379" height="846" alt="image" src="https://github.com/user-attachments/assets/99f9c587-7ac6-43a4-9c33-50bdafd136d9" />
+
 
 ---
 
