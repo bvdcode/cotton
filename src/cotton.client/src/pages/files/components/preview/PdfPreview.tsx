@@ -12,8 +12,27 @@ import {
 } from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 
+type PdfPreviewSource =
+  | {
+      kind: "fileId";
+      fileId: string;
+    }
+  | {
+      kind: "url";
+      /**
+       * Cache key for blob URLs.
+       * Use a stable, unique id (e.g. share token) to avoid re-downloading on reopen.
+       */
+      cacheKey: string;
+      /**
+       * Returns a URL that can be fetched as a PDF for preview (should be inline-capable).
+       * For share links it should usually be `/s/:token?view=inline`.
+       */
+      getPreviewUrl: () => Promise<string>;
+    };
+
 interface PdfPreviewProps {
-  fileId: string;
+  source: PdfPreviewSource;
   fileName: string;
   fileSizeBytes?: number | null;
 }
@@ -21,11 +40,26 @@ interface PdfPreviewProps {
 // Blob URL cache for PDFs
 const blobUrlCache = new Map<string, string>();
 
-export const PdfPreview = ({
-  fileId,
-  fileName,
-  fileSizeBytes,
-}: PdfPreviewProps) => {
+function getCacheKey(source: PdfPreviewSource): string {
+  return source.kind === "fileId" ? source.fileId : source.cacheKey;
+}
+
+async function resolvePdfPreviewUrl(source: PdfPreviewSource): Promise<string> {
+  if (source.kind === "url") {
+    return source.getPreviewUrl();
+  }
+
+  const downloadUrl = await filesApi.getDownloadLink(source.fileId, 60 * 24);
+
+  const fullUrl = downloadUrl.startsWith("http")
+    ? downloadUrl
+    : `${window.location.origin}${downloadUrl}`;
+
+  // Backend supports inline PDF rendering with `download=false`.
+  return fullUrl + (fullUrl.includes("?") ? "&" : "?") + "download=false";
+}
+
+export const PdfPreview = ({ source, fileName, fileSizeBytes }: PdfPreviewProps) => {
   const { t } = useTranslation(["files", "common"]);
   const isMobile =
     typeof navigator !== "undefined" &&
@@ -36,7 +70,8 @@ export const PdfPreview = ({
     fileSizeBytes > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES;
   const maxMB = previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES / (1024 * 1024);
 
-  const cachedBlobUrl = blobUrlCache.get(fileId);
+  const cacheKey = getCacheKey(source);
+  const cachedBlobUrl = blobUrlCache.get(cacheKey);
   const [blobUrl, setBlobUrl] = useState<string | null>(cachedBlobUrl ?? null);
   const [loading, setLoading] = useState(!cachedBlobUrl);
   const [loadingStage, setLoadingStage] = useState<
@@ -59,21 +94,13 @@ export const PdfPreview = ({
 
     const loadPdf = async () => {
       try {
-        // Step 1: Get download link with download=false for inline
         setLoadingStage("link");
-        const downloadUrl = await filesApi.getDownloadLink(fileId, 60 * 24);
+        const previewUrl = await resolvePdfPreviewUrl(source);
 
         if (cancelled) return;
 
-        // Step 2: Fetch as blob to avoid React Router intercepting the URL
-        // This is important for production builds where /api/* might be caught by routing
+        // Step 2: Fetch as blob to avoid SPA routing intercept.
         setLoadingStage("download");
-        const fullUrl = downloadUrl.startsWith("http")
-          ? downloadUrl
-          : `${window.location.origin}${downloadUrl}`;
-        const previewUrl =
-          fullUrl + (fullUrl.includes("?") ? "&" : "?") + "download=false";
-
         const response = await fetch(previewUrl);
 
         if (cancelled) return;
@@ -87,7 +114,7 @@ export const PdfPreview = ({
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
 
-        blobUrlCache.set(fileId, url);
+        blobUrlCache.set(cacheKey, url);
         setBlobUrl(url);
         setPdfBlob(blob);
         setLoading(false);
@@ -104,7 +131,7 @@ export const PdfPreview = ({
     return () => {
       cancelled = true;
     };
-  }, [blobUrl, fileId, isTooLarge, pdfBlob, shouldUsePdfJs, t]);
+  }, [blobUrl, cacheKey, isTooLarge, pdfBlob, shouldUsePdfJs, source, t]);
 
   // Cleanup blob URLs when component unmounts (but keep in cache for re-opening)
   // Note: We don't revoke cached URLs to allow reopening without re-download
