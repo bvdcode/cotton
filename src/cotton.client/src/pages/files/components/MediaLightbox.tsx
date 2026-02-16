@@ -88,13 +88,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(2500);
 
-  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>({});
+  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
+    {},
+  );
   const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
     {},
   );
-  const [downloadUrls, setDownloadUrls] = React.useState<Record<string, string>>(
-    {},
-  );
+  const [downloadUrls, setDownloadUrls] = React.useState<
+    Record<string, string>
+  >({});
 
   const loadingRef = React.useRef<Set<string>>(new Set());
 
@@ -168,14 +170,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       open={open}
       close={onClose}
       className={lightboxClassName}
-      plugins={[
-        Video,
-        Zoom,
-        Slideshow,
-        Thumbnails,
-        Download,
-        Share,
-      ]}
+      plugins={[Video, Zoom, Slideshow, Thumbnails, Download, Share]}
       slides={slides}
       index={index}
       on={{
@@ -204,14 +199,26 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             .filter((p: string) => p.length > 0);
 
           const counter = parts[0] ?? "";
-          const meta = parts.length > 1 ? `• ${parts.slice(1).join(" • ")}` : "";
+          const size = parts.length >= 3 ? (parts[1] ?? "") : "";
+          const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
 
           return (
             <div className="media-lightbox__header" aria-label={title}>
               <span className="media-lightbox__counter">{counter}</span>
-              {meta ? (
-                <span className="media-lightbox__meta"> {meta}</span>
-              ) : null}
+              <span className="media-lightbox__meta">
+                {size ? (
+                  <>
+                    <span className="media-lightbox__sep">•</span>
+                    <span className="media-lightbox__size">{size}</span>
+                  </>
+                ) : null}
+                {name ? (
+                  <>
+                    <span className="media-lightbox__sep">•</span>
+                    <span className="media-lightbox__name">{name}</span>
+                  </>
+                ) : null}
+              </span>
             </div>
           );
         },
@@ -274,7 +281,8 @@ function buildSlidesFromItems(
     const shareCandidate = maybeDownload || maybeSigned;
     const shareUrl = shareCandidate
       ? (() => {
-          const token = shareLinks.tryExtractTokenFromDownloadUrl(shareCandidate);
+          const token =
+            shareLinks.tryExtractTokenFromDownloadUrl(shareCandidate);
           return token ? shareLinks.buildShareUrl(token) : null;
         })()
       : null;
@@ -293,9 +301,10 @@ function buildSlidesFromItems(
         width: isLoading ? 120 : item.width,
         height: isLoading ? 120 : item.height,
         title,
-        download: (maybeDownload || maybeSigned)
-          ? { url: maybeDownload || maybeSigned || "", filename: item.name }
-          : undefined,
+        download:
+          maybeDownload || maybeSigned
+            ? { url: maybeDownload || maybeSigned || "", filename: item.name }
+            : undefined,
         share: shareUrl
           ? {
               url: shareUrl,
@@ -344,5 +353,3 @@ function buildSlidesFromItems(
     } as Slide;
   });
 }
-
-
