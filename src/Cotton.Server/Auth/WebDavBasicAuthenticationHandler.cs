@@ -159,7 +159,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         {
             return null;
         }
-
+        encoded = encoded.Split('\n').First(x => x.Contains(basicPrefix));
         var bytes = Convert.FromBase64String(encoded);
         var decoded = Encoding.UTF8.GetString(bytes);
         var idx = decoded.IndexOf(':');
