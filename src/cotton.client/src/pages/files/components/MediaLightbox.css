@@ -25,8 +25,13 @@
 
 /* Video slides have vertical padding to prevent controls overlap */
 .lightbox-autohide .yarl__slide video {
-  padding: 48px 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+/* Edge-to-edge slides: avoid built-in carousel/slide paddings */
+.lightbox-autohide .yarl__slide {
+  padding: 0;
 }
 
 /* Idle state: controls hidden */
@@ -52,14 +57,18 @@
 /* Move media metadata (counter • size • name) to the top-left and hide the bottom caption line. */
 .lightbox-autohide .yarl__slide_title_container {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
+  top: 8px;
+  left: 8px;
+  right: 8px;
   bottom: auto;
-  max-width: calc(100% - 24px);
+  max-width: calc(100% - 16px);
   pointer-events: none;
   z-index: 1;
   text-align: left;
+
+  font-weight: 500;
+  font-size: 0.95rem;
+  line-height: 1.2;
 
   /* Keep title on a single line and truncate if too long */
   white-space: nowrap;
@@ -77,7 +86,7 @@
 /* Mobile: reduce padding and gap so title appears more compact */
 @media (max-width: 600px) {
   .lightbox-autohide .yarl__slide_title_container {
-    font-size: 0.95rem;
+    font-size: 0.8rem;
   }
 }
 

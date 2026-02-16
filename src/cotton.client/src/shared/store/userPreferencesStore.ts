@@ -23,7 +23,7 @@ export const USER_PREFERENCE_KEYS = {
   shareLinkExpireAfterMinutes: "shareLinkExpireAfterMinutes",
 } as const;
 
-const USER_PREFERENCE_PREFIXES = {
+export const USER_PREFERENCE_PREFIXES = {
   editorMode: "editorMode.",
   languageOverride: "languageOverride.",
 } as const;
