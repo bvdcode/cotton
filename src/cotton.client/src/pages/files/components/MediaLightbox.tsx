@@ -289,7 +289,7 @@ function buildSlidesFromItems(
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
     const prefix = total > 0 ? `${position}/${total}` : "";
     const title = sizeStr
-      ? `${prefix} • ${sizeStr} • ${item.name}`
+      ? `${prefix} • ${item.name} • ${sizeStr}`
       : `${prefix} • ${item.name}`;
 
     if (item.kind === "image") {
