@@ -305,12 +305,7 @@ function buildSlidesFromItems(
           maybeDownload || maybeSigned
             ? { url: maybeDownload || maybeSigned || "", filename: item.name }
             : undefined,
-        share: shareUrl
-          ? {
-              url: shareUrl,
-              title: item.name,
-            }
-          : undefined,
+        share: shareUrl || undefined,
       };
     }
 
@@ -338,12 +333,7 @@ function buildSlidesFromItems(
         url: maybeDownload || src,
         filename: item.name,
       },
-      share: shareUrl
-        ? {
-            url: shareUrl,
-            title: item.name,
-          }
-        : undefined,
+      share: shareUrl || undefined,
       sources: [
         {
           src,
