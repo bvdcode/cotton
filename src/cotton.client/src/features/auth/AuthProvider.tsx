@@ -8,6 +8,7 @@ import { authApi } from "../../shared/api/authApi";
 import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
 import { useSettingsStore } from "../../shared/store/settingsStore";
+import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const handleLogout = () => {
       setUnauthenticated();
       useSettingsStore.getState().reset();
+      useUserPreferencesStore.getState().reset();
     };
     window.addEventListener("auth:logout", handleLogout);
 
@@ -40,6 +42,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener("auth:logout", handleLogout);
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      useUserPreferencesStore.getState().reset();
+      return;
+    }
+    useUserPreferencesStore.getState().hydrateFromUser(user);
+  }, [user]);
 
   const ensureAuth = useCallback(async () => {
     if (isAuthenticated || isInitializing) return;
@@ -83,6 +93,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     logoutLocal();
     useSettingsStore.getState().reset();
+    useUserPreferencesStore.getState().reset();
   }, [logoutLocal]);
 
   const value: AuthContextValue = {

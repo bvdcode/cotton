@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { eventHub } from "../../shared/signalr";
 import { useNotificationsStore } from "../../shared/store/notificationsStore";
-import { usePreferencesStore } from "../../shared/store/preferencesStore";
+import { selectNotificationSoundEnabled, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
 import type { NotificationDto } from "../../shared/types/notification";
 import { isJsonObject, type JsonValue } from "../../shared/types/json";
 import { useAuth } from "../auth";
@@ -56,9 +56,7 @@ export function useEventHub() {
     (s) => s.prependNotification,
   );
   const fetchUnreadCount = useNotificationsStore((s) => s.fetchUnreadCount);
-  const soundEnabled = usePreferencesStore(
-    (s) => s.notificationPreferences.soundEnabled,
-  );
+  const soundEnabled = useUserPreferencesStore(selectNotificationSoundEnabled);
 
   useEffect(() => {
     if (!isAuthenticated) {

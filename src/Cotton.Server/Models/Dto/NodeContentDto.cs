@@ -9,6 +9,6 @@ namespace Cotton.Server.Models.Dto
     {
         public int TotalCount { get; set; }
         public IEnumerable<NodeDto> Nodes { get; set; } = [];
-        public IEnumerable<FileManifestDto> Files { get; set; } = [];
+        public IEnumerable<NodeFileManifestDto> Files { get; set; } = [];
     }
 }

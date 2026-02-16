@@ -5,87 +5,11 @@
  * Encapsulates language detection and override logic
  */
 
-import { useState, useCallback } from "react";
-import { usePreferencesStore } from "../../../../../shared/store/preferencesStore";
+import { useCallback, useMemo } from "react";
+import {
+  useLocalPreferencesStore,
+} from "../../../../../shared/store/localPreferencesStore";
 import { detectMonacoLanguageFromFileName } from "../../../../../shared/utils/languageDetection";
-
-/**
- * Detect programming language from file extension
- * Same logic as in CodeEditor.tsx
- */
-function detectLanguageFromFileName(fileName: string): string {
-  const name = fileName.toLowerCase();
-  const ext = name.split('.').pop() || '';
-  
-  // Special case: Dockerfile
-  if (name === 'dockerfile' || name.startsWith('dockerfile.')) {
-    return 'dockerfile';
-  }
-  
-  const languageMap: Record<string, string> = {
-    // Rich IntelliSense languages
-    'ts': 'typescript',
-    'tsx': 'typescript',
-    'js': 'javascript',
-    'jsx': 'javascript',
-    'mjs': 'javascript',
-    'cjs': 'javascript',
-    'json': 'json',
-    'jsonc': 'json',
-    'html': 'html',
-    'htm': 'html',
-    'css': 'css',
-    'less': 'less',
-    'scss': 'scss',
-    'sass': 'scss',
-    
-    // Basic syntax colorization
-    'xml': 'xml',
-    'svg': 'xml',
-    'php': 'php',
-    'phtml': 'php',
-    'cs': 'csharp',
-    'csx': 'csharp',
-    'cpp': 'cpp',
-    'cc': 'cpp',
-    'cxx': 'cpp',
-    'c': 'c',
-    'h': 'c',
-    'hpp': 'cpp',
-    'md': 'markdown',
-    'markdown': 'markdown',
-    'diff': 'diff',
-    'patch': 'diff',
-    'java': 'java',
-    'coffee': 'coffeescript',
-    'lua': 'lua',
-    'ps1': 'powershell',
-    'psm1': 'powershell',
-    'psd1': 'powershell',
-    'py': 'python',
-    'pyw': 'python',
-    'pyi': 'python',
-    'rb': 'ruby',
-    'rbw': 'ruby',
-    'r': 'r',
-    'go': 'go',
-    'rs': 'rust',
-    'swift': 'swift',
-    'sh': 'shell',
-    'bash': 'shell',
-    'zsh': 'shell',
-    'yaml': 'yaml',
-    'yml': 'yaml',
-    'sql': 'sql',
-    'dockerfile': 'dockerfile',
-    'bat': 'bat',
-    'cmd': 'bat',
-    'fs': 'fsharp',
-    'fsi': 'fsharp',
-  };
-
-  return languageMap[ext] || 'plaintext';
-}
 
 interface UseLanguageSelectionOptions {
   fileName: string;
@@ -99,41 +23,38 @@ interface UseLanguageSelectionResult {
 }
 
 /**
- * Hook for managing language selection with localStorage persistence
- * 
- * @param options - Configuration options
- * @returns Current language, setter, and reset function
+ * Hook for managing language selection with server-backed preferences.
  */
 export function useLanguageSelection({
   fileName,
   fileId,
 }: UseLanguageSelectionOptions): UseLanguageSelectionResult {
-  const {
-    editorPreferences,
-    setLanguageOverride: persistLanguage,
-    removeLanguageOverride,
-  } = usePreferencesStore();
+  const setLanguageOverride = useLocalPreferencesStore((s) => s.setLanguageOverride);
+  const removeLanguageOverride = useLocalPreferencesStore(
+    (s) => s.removeLanguageOverride,
+  );
 
-  const [language, setLanguageState] = useState<string>(() => {
-    const stored = editorPreferences.languageOverrides[fileId];
-    
-    if (stored) {
-      return stored;
-    }
-    
+  const storedOverride = useLocalPreferencesStore(
+    useMemo(
+      () =>
+        (s) =>
+          s.languageOverrides[fileId] ?? null,
+      [fileId],
+    ),
+  );
+
+  const language = useMemo(() => {
+    if (storedOverride && storedOverride.trim().length > 0) return storedOverride;
     return detectMonacoLanguageFromFileName(fileName);
-  });
+  }, [fileName, storedOverride]);
 
   const setLanguage = useCallback((newLanguage: string) => {
-    setLanguageState(newLanguage);
-    persistLanguage(fileId, newLanguage);
-  }, [fileId, persistLanguage]);
+    setLanguageOverride(fileId, newLanguage);
+  }, [fileId, setLanguageOverride]);
 
   const resetLanguage = useCallback(() => {
-    const detected = detectLanguageFromFileName(fileName);
-    setLanguageState(detected);
     removeLanguageOverride(fileId);
-  }, [fileName, fileId, removeLanguageOverride]);
+  }, [fileId, removeLanguageOverride]);
 
   return { language, setLanguage, resetLanguage };
 }

@@ -33,6 +33,8 @@ interface UserInfoResponse extends BaseDto<string> {
   displayName?: string;
   pictureUrl?: string;
 
+  preferences?: Record<string, string>;
+
   // 2FA (TOTP)
   isTotpEnabled?: boolean;
   totpEnabledAt?: string | null;
@@ -74,6 +76,7 @@ export const authApi = {
       email: response.data.email ?? null,
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
+      preferences: response.data.preferences,
       createdAt: response.data.createdAt,
       updatedAt: response.data.updatedAt,
 

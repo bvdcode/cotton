@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../app/providers";
 import { supportedLanguages } from "../../../locales";
+import { useUserPreferencesStore } from "../../../shared/store/userPreferencesStore";
 import {
   Brightness4 as DarkIcon,
   Brightness7 as LightIcon,
@@ -19,12 +20,13 @@ export function WizardHeader() {
   const { i18n, t: tCommon } = useTranslation("common");
   const { t } = useTranslation("setup");
   const { mode, setTheme } = useTheme();
+  const setUiLanguage = useUserPreferencesStore((s) => s.setUiLanguage);
 
   const toggleLanguage = () => {
     const currentLang = i18n.language;
     const currentIndex = supportedLanguages.indexOf(currentLang);
     const nextIndex = (currentIndex + 1) % supportedLanguages.length;
-    i18n.changeLanguage(supportedLanguages[nextIndex]);
+    setUiLanguage(supportedLanguages[nextIndex]);
   };
 
   const toggleTheme = () => {

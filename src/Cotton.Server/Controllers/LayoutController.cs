@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Handlers.Nodes;
+using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
@@ -18,6 +19,7 @@ using EasyExtensions.Mediator;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Controllers
@@ -28,6 +30,7 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         CottonDbContext _dbContext,
         ILayoutService _layouts,
+        IHubContext<EventHub> _hubContext,
         ILayoutNavigator _navigator) : ControllerBase
     {
         [Authorize]
@@ -138,7 +141,7 @@ namespace Cotton.Server.Controllers
 
             node.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
-
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", node.Id, node.Name, node.NameKey);
             var mapped = node.Adapt<NodeDto>();
             return Ok(mapped);
         }
@@ -169,6 +172,7 @@ namespace Cotton.Server.Controllers
             Guid userId = User.GetUserId();
             DeleteNodeQuery query = new(userId, nodeId, skipTrash);
             await _mediator.Send(query);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", nodeId);
             return Ok();
         }
 
@@ -233,6 +237,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.Nodes.AddAsync(newNode);
             await _dbContext.SaveChangesAsync();
             var mapped = newNode.Adapt<NodeDto>();
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
             return Ok(mapped);
         }
 

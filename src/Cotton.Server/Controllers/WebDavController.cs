@@ -199,6 +199,7 @@ public class WebDavController(
         }
 
         AddDavHeaders();
+        // Send event to event hub for real-time updates
         return result.Created ? Created() : NoContent();
     }
 
@@ -330,6 +331,7 @@ public class WebDavController(
             return Forbid();
         }
 
+        // Send event to event hub for real-time updates
         return NoContent();
     }
 
@@ -357,6 +359,7 @@ public class WebDavController(
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
+        // Send event to event hub for real-time updates
         return Created();
     }
 
@@ -394,6 +397,7 @@ public class WebDavController(
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
+        // Send event to event hub for real-time updates
         return result.Created ? Created() : NoContent();
     }
 
@@ -430,6 +434,7 @@ public class WebDavController(
             };
         }
 
+        // Send event to event hub for real-time updates
         return result.Created ? Created() : NoContent();
     }
 

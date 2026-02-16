@@ -245,6 +245,13 @@
       "errors": {
         "failed": "Не удалось сгенерировать токен WebDAV."
       }
+    },
+    "shareLinks": {
+      "presets": {
+        "threeMonths": "3 месяца",
+        "tenYears": "10 лет",
+        "oneDay": "Сутки"
+      }
     }
   },
   "setup": {
@@ -524,16 +531,16 @@
           "title": "Создание папок…"
         },
         "conflicts": {
-        "shareLinks": {
-          "title": "Ссылки для шаринга",
-          "description": "Настройте срок действия создаваемых ссылок.",
-          "current": "Сейчас: {{days}} дн.",
-          "presets": {
-            "week": "Неделя",
-            "month": "Месяц",
-            "year": "Год"
-          }
-        },
+          "shareLinks": {
+            "title": "Ссылки для шаринга",
+            "description": "Настройте срок действия создаваемых ссылок.",
+            "current": "Сейчас: {{days}} дн.",
+            "presets": {
+              "week": "Неделя",
+              "month": "Месяц",
+              "year": "Год"
+            }
+          },
           "title": "Проверка конфликтов…"
         },
         "enqueue": {
