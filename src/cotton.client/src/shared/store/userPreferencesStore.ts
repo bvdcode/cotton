@@ -8,6 +8,46 @@ import {
   type UserPreferences,
 } from "../api/userPreferencesApi";
 
+const SELF_UPDATE_TOKEN_TTL_MS = 30_000;
+const selfUpdateTokens = new Map<string, number>();
+
+const pruneSelfUpdateTokens = (nowMs: number): void => {
+  for (const [token, expiresAtMs] of selfUpdateTokens) {
+    if (expiresAtMs <= nowMs) {
+      selfUpdateTokens.delete(token);
+    }
+  }
+};
+
+const registerSelfUpdateToken = (token: string): void => {
+  const nowMs = Date.now();
+  pruneSelfUpdateTokens(nowMs);
+  selfUpdateTokens.set(token, nowMs + SELF_UPDATE_TOKEN_TTL_MS);
+};
+
+export const isSelfUpdateToken = (token: string): boolean => {
+  const nowMs = Date.now();
+  pruneSelfUpdateTokens(nowMs);
+
+  const expiresAtMs = selfUpdateTokens.get(token);
+  if (!expiresAtMs) return false;
+  if (expiresAtMs <= nowMs) {
+    selfUpdateTokens.delete(token);
+    return false;
+  }
+  return true;
+};
+
+const createSelfUpdateToken = (): string => {
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj && "randomUUID" in cryptoObj) {
+    return cryptoObj.randomUUID();
+  }
+
+  // Fallback: good enough for correlating request/echo within a single session.
+  return `pref_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+};
+
 export const USER_PREFERENCE_KEYS = {
   themeMode: "themeMode",
   uiLanguage: "uiLanguage",
@@ -147,7 +187,9 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       set({ preferences: optimistic, syncing: true });
 
       try {
-        const next = await userPreferencesApi.update(patch);
+        const token = createSelfUpdateToken();
+        registerSelfUpdateToken(token);
+        const next = await userPreferencesApi.update(patch, { token });
         set({ preferences: next, loaded: true, syncing: false });
       } catch {
         set({ preferences: previous, syncing: false });
