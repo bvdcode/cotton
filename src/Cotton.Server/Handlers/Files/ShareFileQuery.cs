@@ -84,10 +84,13 @@ namespace Cotton.Server.Handlers.Files
                     ? null
                     : Convert.ToHexString(file.EncryptedFilePreviewHash);
 
-                string previewTag = hex == null
-                    ? string.Empty
-                    : ($"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />\n" +
-                       $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />");
+                string previewUrl = hex is null
+                    ? $"{baseAppUrl}/assets/images/social-preview.jpg"
+                    : $"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp";
+
+                string previewTag =
+                    $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />\n" +
+                    $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />";
 
                 string html = $"""
                 <!doctype html>
