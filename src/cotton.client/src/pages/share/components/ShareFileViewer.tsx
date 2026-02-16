@@ -11,6 +11,20 @@ import { useTranslation } from "react-i18next";
 import { getFileTypeInfo, type FileType } from "../../files/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { MediaLightbox, type MediaItem, PdfPreview } from "../../files/components";
+import { CodeEditor } from "../../files/components/preview/editors/CodeEditor";
+
+function detectMonacoLanguageFromContentType(
+  contentType: string | null,
+): string | null {
+  if (!contentType) return null;
+  const normalized = contentType.toLowerCase();
+
+  if (normalized.includes("json")) return "json";
+  if (normalized.includes("xml")) return "xml";
+  if (normalized.includes("yaml") || normalized.includes("yml")) return "yaml";
+
+  return null;
+}
 
 interface ShareFileViewerProps {
   token: string;
@@ -49,6 +63,10 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
   textContent,
 }) => {
   const { t } = useTranslation(["share"]);
+
+  const handleReadOnlyChange = React.useCallback((_nextValue: string) => {
+    void _nextValue;
+  }, []);
 
   const fileTypeInfo = React.useMemo(() => {
     const name = fileName ?? "";
@@ -156,19 +174,20 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
   }
 
   if (fileTypeInfo.type === "text" && textContent !== null) {
+    const languageOverride =
+      fileName === null
+        ? detectMonacoLanguageFromContentType(contentType)
+        : null;
+
     return (
-      <Box
-        width="100%"
-        height="100%"
-        overflow="auto"
-        display="flex"
-        justifyContent="center"
-      >
-        <Container maxWidth="md" sx={{ py: { xs: 2, sm: 3 } }}>
-          <Typography component="pre" sx={{ m: 0, whiteSpace: "pre-wrap" }}>
-            {textContent}
-          </Typography>
-        </Container>
+      <Box width="100%" height="100%" minHeight={0} minWidth={0}>
+        <CodeEditor
+          value={textContent}
+          onChange={handleReadOnlyChange}
+          isEditing={false}
+          fileName={fileName ?? title}
+          language={languageOverride ?? undefined}
+        />
       </Box>
     );
   }
