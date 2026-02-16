@@ -74,7 +74,7 @@ export const SharePage: React.FC = () => {
   const handleShareLink = React.useCallback(async () => {
     if (!shareUrl) return;
 
-    const clipboardText = fileName ? `${fileName}\n${shareUrl}` : shareUrl;
+    const clipboardText = shareUrl;
 
     try {
       await navigator.clipboard.writeText(clipboardText);
@@ -89,7 +89,7 @@ export const SharePage: React.FC = () => {
         message: t("errors.copyLink", { ns: "share" }),
       });
     }
-  }, [fileName, markCopied, shareUrl, t]);
+  }, [markCopied, shareUrl, t]);
 
   return (
     <Box
