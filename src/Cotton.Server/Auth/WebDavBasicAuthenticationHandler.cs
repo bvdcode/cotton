@@ -14,6 +14,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
+using ZstdSharp.Unsafe;
 
 namespace Cotton.Server.Auth;
 
@@ -128,6 +129,7 @@ public sealed class WebDavBasicAuthenticationHandler(
 
     private static (string username, string token)? ParseBasicCredentials(string authorizationHeader)
     {
+        Console.WriteLine("[AUTH]" + authorizationHeader + "[AUTH]");
         const string basicPrefix = "Basic ";
         var encoded = authorizationHeader[basicPrefix.Length..].Trim();
         if (encoded.Length == 0)
@@ -155,8 +157,8 @@ public sealed class WebDavBasicAuthenticationHandler(
         var usernameRaw = decoded[..idx];
         var tokenRaw = decoded[(idx + 1)..];
 
-        var username = new string(usernameRaw.Where(ch => !char.IsControl(ch)).ToArray()).Trim();
-        var token = new string(tokenRaw.Where(ch => !char.IsControl(ch)).ToArray()).Trim();
+        var username = new string([.. usernameRaw.Where(ch => !char.IsControl(ch))]).Trim();
+        var token = new string([.. tokenRaw.Where(ch => !char.IsControl(ch))]).Trim();
 
         if (username.Length == 0 || token.Length == 0)
         {
@@ -168,6 +170,6 @@ public sealed class WebDavBasicAuthenticationHandler(
 
     private static string SanitizeForLog(string value)
     {
-        return new string(value.Where(ch => !char.IsControl(ch)).ToArray());
+        return new string([.. value.Where(ch => !char.IsControl(ch))]);
     }
 }
