@@ -5,6 +5,7 @@ import {
   useUserPreferencesStore,
 } from "../store/userPreferencesStore";
 import { shareLinks } from "./shareLinks";
+import { shareLinkAction } from "./shareLinkAction";
 
 interface ShareToast {
   open: boolean;
@@ -21,15 +22,6 @@ const buildShareMessage = (
   fileName: string,
   t: TFunction,
 ): string => t("share.message", { ns: "files", name: fileName });
-
-const buildClipboardShareText = (
-  fileName: string,
-  url: string,
-  t: TFunction,
-): string => {
-  const message = buildShareMessage(fileName, t);
-  return `${message}\n\n${url}`;
-};
 
 /**
  * Shared logic for sharing a file link.
@@ -65,41 +57,34 @@ export const shareFile = async (
 
     const url = shareLinks.buildShareUrl(token);
     const message = buildShareMessage(fileName, t);
-    const clipboardText = buildClipboardShareText(fileName, url, t);
 
-    if (
-      typeof navigator !== "undefined" &&
-      typeof navigator.share === "function"
-    ) {
-      try {
-        await navigator.share({
-          title: fileName,
-          text: message,
-          url,
-        });
+    const outcome = await shareLinkAction({
+      title: fileName,
+      text: message,
+      url,
+    });
+
+    switch (outcome.kind) {
+      case "shared":
         setShareToast({
           open: true,
           message: t("share.shared", { ns: "files", name: fileName }),
         });
         return;
-      } catch (e) {
-        if (e instanceof Error && e.name === "AbortError") {
-          return;
-        }
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(clipboardText);
-      setShareToast({
-        open: true,
-        message: t("share.copied", { ns: "files", name: fileName }),
-      });
-    } catch {
-      setShareToast({
-        open: true,
-        message: t("share.errors.copy", { ns: "files" }),
-      });
+      case "copied":
+        setShareToast({
+          open: true,
+          message: t("share.copied", { ns: "files", name: fileName }),
+        });
+        return;
+      case "aborted":
+        return;
+      case "error":
+      default:
+        setShareToast({
+          open: true,
+          message: t("share.errors.copy", { ns: "files" }),
+        });
     }
   } catch {
     setShareToast({
