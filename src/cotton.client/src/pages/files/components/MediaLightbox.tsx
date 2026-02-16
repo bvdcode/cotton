@@ -65,6 +65,11 @@ export interface MediaLightboxProps {
   initialIndex: number;
   onClose: () => void;
   getSignedMediaUrl: (id: string) => Promise<string>;
+  /**
+   * Optional separate download URL resolver.
+   * If not provided, the signed media URL is used for both viewing and downloading.
+   */
+  getDownloadUrl?: (id: string) => Promise<string>;
 }
 
 /**
@@ -77,6 +82,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   initialIndex,
   onClose,
   getSignedMediaUrl,
+  getDownloadUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
   const thumbnailsRef = React.useRef(null);
@@ -88,13 +94,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
     {},
   );
+  const [downloadUrls, setDownloadUrls] = React.useState<Record<string, string>>(
+    {},
+  );
 
   const loadingRef = React.useRef<Set<string>>(new Set());
 
   // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, displayUrls, signedUrls);
-  }, [items, displayUrls, signedUrls]);
+    return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
+  }, [items, displayUrls, signedUrls, downloadUrls]);
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -113,6 +122,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             const url = await getSignedMediaUrl(item.id);
             setSignedUrls((p) => ({ ...p, [item.id]: url }));
 
+            if (getDownloadUrl) {
+              try {
+                const dl = await getDownloadUrl(item.id);
+                setDownloadUrls((p) => ({ ...p, [item.id]: dl }));
+              } catch (e) {
+                console.error("Failed to load media download URL", e);
+              }
+            }
+
             if (item.kind === "image" && isHeicFile(item.name)) {
               const convertedUrl = await convertHeicToJpeg(url);
               setDisplayUrls((p) => ({ ...p, [item.id]: convertedUrl }));
@@ -129,7 +147,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         return prev;
       });
     },
-    [items, getSignedMediaUrl],
+    [items, getSignedMediaUrl, getDownloadUrl],
   );
 
   React.useEffect(() => {
@@ -230,6 +248,7 @@ function buildSlidesFromItems(
   items: MediaItem[],
   displayUrls: Record<string, string>,
   signedUrls: Record<string, string>,
+  downloadUrls: Record<string, string>,
 ): Slide[] {
   const total = items.length;
 
@@ -237,9 +256,11 @@ function buildSlidesFromItems(
     const position = idx + 1;
     const maybeSigned = signedUrls[item.id];
     const maybeDisplay = displayUrls[item.id];
-    const shareUrl = maybeSigned
+    const maybeDownload = downloadUrls[item.id];
+    const shareCandidate = maybeDownload || maybeSigned;
+    const shareUrl = shareCandidate
       ? (() => {
-          const token = shareLinks.tryExtractTokenFromDownloadUrl(maybeSigned);
+          const token = shareLinks.tryExtractTokenFromDownloadUrl(shareCandidate);
           return token ? shareLinks.buildShareUrl(token) : null;
         })()
       : null;
@@ -258,8 +279,8 @@ function buildSlidesFromItems(
         width: isLoading ? 120 : item.width,
         height: isLoading ? 120 : item.height,
         title,
-        download: maybeSigned
-          ? { url: maybeSigned, filename: item.name }
+        download: (maybeDownload || maybeSigned)
+          ? { url: maybeDownload || maybeSigned || "", filename: item.name }
           : undefined,
         share: shareUrl
           ? {
@@ -290,7 +311,10 @@ function buildSlidesFromItems(
       width: item.width,
       height: item.height,
       title,
-      download: { url: src, filename: item.name },
+      download: {
+        url: maybeDownload || src,
+        filename: item.name,
+      },
       share: shareUrl
         ? {
             url: shareUrl,

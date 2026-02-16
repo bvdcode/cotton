@@ -41,56 +41,31 @@ public sealed class WebDavBasicAuthenticationHandler(
             return AuthenticateResult.NoResult();
         }
 
-        (string username, string token)? creds;
-        try
+        var creds = ParseBasicCredentials(authHeader);
+        if (creds is null)
         {
-            creds = ParseBasicCredentials(authHeader);
-        }
-        catch
-        {
-            Logger.LogInformation("WebDAV auth: invalid Basic Authorization header (base64 decode failed).");
-            return AuthenticateResult.Fail("Invalid Authorization header.");
-        }
-
-        if (creds is null || string.IsNullOrWhiteSpace(creds.Value.username) || string.IsNullOrWhiteSpace(creds.Value.token))
-        {
-            Logger.LogWarning(
-                "WebDAV auth: invalid Basic credentials (username empty: {UsernameEmpty}, token empty: {TokenEmpty}).",
-                creds is null || string.IsNullOrWhiteSpace(creds.Value.username),
-                creds is null || string.IsNullOrWhiteSpace(creds.Value.token));
+            Logger.LogInformation("WebDAV auth: invalid Basic Authorization header.");
             return AuthenticateResult.Fail("Invalid credentials.");
         }
 
-        var username = creds.Value.username.Trim();
+        var username = creds.Value.username;
         var token = creds.Value.token;
-
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            Logger.LogInformation("WebDAV auth: username is whitespace after trimming.");
-            return AuthenticateResult.Fail("Invalid credentials.");
-        }
-
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            Logger.LogInformation("WebDAV auth: empty token provided for username '{Username}'.", username);
-            return AuthenticateResult.Fail("Invalid credentials.");
-        }
 
         var cacheKey = authCache.GetCacheKey(username, token);
         if (cache.TryGetValue(cacheKey, out Guid cachedUserId) && cachedUserId != Guid.Empty)
         {
-            Logger.LogInformation("WebDAV auth: cache hit for username '{Username}'.", username);
+            Logger.LogInformation("WebDAV auth: cache hit for username '{Username}'.", SanitizeForLog(username));
             var principal = CreatePrincipal(cachedUserId, username);
             return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));
         }
 
-        Logger.LogDebug("WebDAV auth: cache miss for username '{Username}'.", username);
+        Logger.LogDebug("WebDAV auth: cache miss for username '{Username}'.", SanitizeForLog(username));
 
         var user = await dbContext.Users.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Username == username || x.Email == username);
         if (user is null)
         {
-            Logger.LogInformation("WebDAV auth: user '{Username}' not found.", username);
+            Logger.LogInformation("WebDAV auth: user '{Username}' not found.", SanitizeForLog(username));
             return AuthenticateResult.Fail("Invalid username or token.");
         }
 
@@ -103,8 +78,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         if (!hasher.Verify(token, user.WebDavTokenPhc))
         {
             Logger.LogWarning(
-                "WebDAV auth: invalid token '{token}' for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
-                token,
+                "WebDAV auth: invalid token for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
                 user.Username,
                 user.Id,
                 Request.GetRemoteIPAddress());
@@ -156,21 +130,44 @@ public sealed class WebDavBasicAuthenticationHandler(
     {
         const string basicPrefix = "Basic ";
         var encoded = authorizationHeader[basicPrefix.Length..].Trim();
-        if (string.IsNullOrWhiteSpace(encoded))
+        if (encoded.Length == 0)
         {
             return null;
         }
 
-        var bytes = Convert.FromBase64String(encoded);
-        var decoded = Encoding.UTF8.GetString(bytes);
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(encoded);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var decoded = Encoding.Latin1.GetString(bytes);
         var idx = decoded.IndexOf(':');
         if (idx <= 0)
         {
             return null;
         }
 
-        var username = decoded[..idx];
-        var token = decoded[(idx + 1)..];
+        var usernameRaw = decoded[..idx];
+        var tokenRaw = decoded[(idx + 1)..];
+
+        var username = new string(usernameRaw.Where(ch => !char.IsControl(ch)).ToArray()).Trim();
+        var token = new string(tokenRaw.Where(ch => !char.IsControl(ch)).ToArray()).Trim();
+
+        if (username.Length == 0 || token.Length == 0)
+        {
+            return null;
+        }
+
         return (username, token);
+    }
+
+    private static string SanitizeForLog(string value)
+    {
+        return new string(value.Where(ch => !char.IsControl(ch)).ToArray());
     }
 }
