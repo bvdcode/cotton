@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Auth;
+using Cotton.Server.Handlers.Users;
 using Cotton.Server.Helpers;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
@@ -290,6 +291,26 @@ namespace Cotton.Server.Controllers
                 await _dbContext.SaveChangesAsync();
             }
             Response.Cookies.Delete(CookieRefreshTokenKey);
+            return Ok();
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(
+            [FromBody] ForgotPasswordRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var command = new SendPasswordResetRequest(request.UsernameOrEmail, Request);
+            await _mediator.Send(command, cancellationToken);
+            return Ok();
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(
+            [FromBody] ResetPasswordRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var command = new ConfirmPasswordResetRequest(request.Token, request.NewPassword);
+            await _mediator.Send(command, cancellationToken);
             return Ok();
         }
 
