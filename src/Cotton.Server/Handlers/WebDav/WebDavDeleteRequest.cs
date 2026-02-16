@@ -15,7 +15,7 @@ namespace Cotton.Server.Handlers.WebDav;
 /// <summary>
 /// Command for WebDAV DELETE operation
 /// </summary>
-public record WebDavDeleteCommand(
+public record WebDavDeleteRequest(
     Guid UserId,
     string Path,
     bool SkipTrash = false) : IRequest<WebDavDeleteResult>;
@@ -32,15 +32,15 @@ public record WebDavDeleteResult(
 /// <summary>
 /// Handler for WebDAV DELETE operation
 /// </summary>
-public class WebDavDeleteCommandHandler(
+public class WebDavDeleteRequestHandler(
     CottonDbContext _dbContext,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
-    ILogger<WebDavDeleteCommandHandler> _logger)
-    : IRequestHandler<WebDavDeleteCommand, WebDavDeleteResult>
+    ILogger<WebDavDeleteRequestHandler> _logger)
+    : IRequestHandler<WebDavDeleteRequest, WebDavDeleteResult>
 {
-    public async Task<WebDavDeleteResult> Handle(WebDavDeleteCommand request, CancellationToken ct)
+    public async Task<WebDavDeleteResult> Handle(WebDavDeleteRequest request, CancellationToken ct)
     {
         var resolveResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
 

@@ -28,7 +28,17 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext) : ControllerBase
     {
         [Authorize]
-        [HttpPatch("me/preferences")]
+        [HttpPost("/me/send-email-verification")]
+        public async Task<IActionResult> SendEmailVerification(CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            var request = new SendEmailVerificationRequest(userId);
+            await _mediator.Send(request, cancellationToken);
+            return Ok();
+        }
+
+        [Authorize]
+        [HttpPatch("/me/preferences")]
         public async Task<IActionResult> UpdatePreferences(
             [FromBody] Dictionary<string, string> request,
             [FromQuery] string token,
@@ -47,7 +57,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet("me")]
+        [HttpGet("/me")]
         public IActionResult GetCurrentUser()
         {
             var userId = User.GetUserId();
@@ -73,7 +83,7 @@ namespace Cotton.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequestDto request, CancellationToken cancellationToken)
         {
-            AdminCreateUserCommand command = new(request.Username, request.Email, request.Password, request.Role);
+            AdminCreateUserRequest command = new(request.Username, request.Email, request.Password, request.Role);
             UserDto user = await _mediator.Send(command, cancellationToken);
             return Ok(user);
         }
@@ -85,7 +95,7 @@ namespace Cotton.Server.Controllers
             [FromBody] AdminUpdateUserRequestDto request,
             CancellationToken cancellationToken)
         {
-            AdminUpdateUserCommand command = new(
+            AdminUpdateUserRequest command = new(
                 User.GetUserId(),
                 userId,
                 request.Username,
@@ -100,13 +110,13 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPut("me/password")]
+        [HttpPut("/me/password")]
         public async Task<IActionResult> ChangePassword(
             [FromBody] ChangePasswordRequestDto request,
             CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            ChangePasswordCommand command = new(userId, request.OldPassword, request.NewPassword);
+            ChangePasswordRequest command = new(userId, request.OldPassword, request.NewPassword);
             await _mediator.Send(command, cancellationToken);
             return Ok();
         }
