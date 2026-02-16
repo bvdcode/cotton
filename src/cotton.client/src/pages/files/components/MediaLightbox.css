@@ -130,3 +130,62 @@
 .lightbox-autohide .yarl__slide_description_container {
   display: none;
 }
+
+/* ===== Hover-to-reveal thumbnail overlay ===== */
+
+/*
+ * Take thumbnails out of document flow so slides fill the full viewport.
+ * The strip floats on top of the photo near the bottom edge.
+ */
+.lightbox-autohide .yarl__thumbnails_container {
+  position: absolute !important;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: auto !important;
+  flex: none !important;
+  background: transparent;
+  transition: background 0.3s ease;
+}
+
+/* Extra hover trigger zone above the thumbnail strip */
+.lightbox-autohide .yarl__thumbnails_container::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  height: 40px;
+}
+
+/* Track hidden by default */
+.lightbox-autohide .yarl__thumbnails_track {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* Remove built-in vignette shadow, we apply our own gradient */
+.lightbox-autohide .yarl__thumbnails_vignette {
+  background: none !important;
+}
+
+/* Desktop with pointer: reveal on hover */
+@media (hover: hover) and (pointer: fine) {
+  .lightbox-autohide .yarl__thumbnails_container:hover {
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+  }
+
+  .lightbox-autohide .yarl__thumbnails_container:hover .yarl__thumbnails_track {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Touch / mobile: hide thumbnails entirely */
+@media (hover: none) {
+  .lightbox-autohide .yarl__thumbnails_container {
+    display: none !important;
+  }
+}
