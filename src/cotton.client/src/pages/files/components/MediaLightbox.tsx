@@ -16,7 +16,6 @@ import {
   Pause as PauseIcon,
   Download as DownloadIcon,
   Slideshow as SlideshowIcon,
-  ViewCarousel,
 } from "@mui/icons-material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
 import {
@@ -83,7 +82,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   getDownloadUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
-  const thumbnailsRef = React.useRef(null);
 
   // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(2500);
@@ -188,8 +186,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         iconDownload: () => <DownloadIcon />,
         iconSlideshowPause: () => <PauseIcon />,
         iconSlideshowPlay: () => <SlideshowIcon />,
-        iconThumbnailsVisible: () => <ViewCarousel />,
-        iconThumbnailsHidden: () => <ViewCarousel />,
         slideHeader: ({ slide }) => {
           const maybeTitle = (slide as { title?: string }).title;
           const title = typeof maybeTitle === "string" ? maybeTitle : "";
@@ -239,7 +235,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         delay: 5000,
       }}
       thumbnails={{
-        ref: thumbnailsRef,
         position: "bottom",
         width: 120,
         height: 80,
@@ -247,8 +242,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         borderRadius: 4,
         padding: 2,
         gap: 4,
-        showToggle: true,
-        hidden: true,
+        showToggle: false,
+        hidden: false,
       }}
       video={{
         controls: true,
