@@ -11,9 +11,11 @@ import {
   selectUiLanguage,
   useUserPreferencesStore,
 } from "./shared/store/userPreferencesStore";
+import { useUserPreferencesRealtimeEvents } from "./shared/store/useUserPreferencesRealtimeEvents";
 
 const EventHubBootstrap = () => {
   useEventHub();
+  useUserPreferencesRealtimeEvents();
   return null;
 };
 
