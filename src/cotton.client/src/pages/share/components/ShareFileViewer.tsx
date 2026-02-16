@@ -12,6 +12,9 @@ import { getFileTypeInfo, type FileType } from "../../files/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { MediaLightbox, type MediaItem, PdfPreview } from "../../files/components";
 import { CodeEditor } from "../../files/components/preview/editors/CodeEditor";
+import { MarkdownEditor } from "../../files/components/preview/editors/MarkdownEditor";
+import { PlainTextEditor } from "../../files/components/preview/editors/PlainTextEditor";
+import { detectMonacoLanguageFromFileName } from "../../../shared/utils/languageDetection";
 
 function detectMonacoLanguageFromContentType(
   contentType: string | null,
@@ -174,20 +177,47 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
   }
 
   if (fileTypeInfo.type === "text" && textContent !== null) {
+    const resolvedFileName = fileName ?? title;
+    const lowerName = resolvedFileName.toLowerCase();
+    const isMarkdown = lowerName.endsWith(".md") || lowerName.endsWith(".markdown");
+
+    if (isMarkdown) {
+      return (
+        <Box width="100%" height="100%" minHeight={0} minWidth={0}>
+          <MarkdownEditor
+            value={textContent}
+            onChange={handleReadOnlyChange}
+            isEditing={false}
+            fileName={resolvedFileName}
+          />
+        </Box>
+      );
+    }
+
     const languageOverride =
-      fileName === null
-        ? detectMonacoLanguageFromContentType(contentType)
-        : null;
+      fileName === null ? detectMonacoLanguageFromContentType(contentType) : null;
+    const detectedLanguage = detectMonacoLanguageFromFileName(resolvedFileName);
+    const monacoLanguage = languageOverride ?? detectedLanguage;
+    const shouldUseCodeEditor = monacoLanguage !== "plaintext";
 
     return (
       <Box width="100%" height="100%" minHeight={0} minWidth={0}>
-        <CodeEditor
-          value={textContent}
-          onChange={handleReadOnlyChange}
-          isEditing={false}
-          fileName={fileName ?? title}
-          language={languageOverride ?? undefined}
-        />
+        {shouldUseCodeEditor ? (
+          <CodeEditor
+            value={textContent}
+            onChange={handleReadOnlyChange}
+            isEditing={false}
+            fileName={resolvedFileName}
+            language={languageOverride ?? undefined}
+          />
+        ) : (
+          <PlainTextEditor
+            value={textContent}
+            onChange={handleReadOnlyChange}
+            isEditing={false}
+            fileName={resolvedFileName}
+          />
+        )}
       </Box>
     );
   }
