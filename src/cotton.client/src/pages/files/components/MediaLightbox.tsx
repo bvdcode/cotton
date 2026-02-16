@@ -3,13 +3,11 @@ import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import "./MediaLightbox.css";
 import Video from "yet-another-react-lightbox/plugins/video";
-import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import Share from "yet-another-react-lightbox/plugins/share";
-import "yet-another-react-lightbox/plugins/captions.css";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
 import type { Slide } from "yet-another-react-lightbox";
 import {
@@ -177,7 +175,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         Thumbnails,
         Download,
         Share,
-        Captions,
       ]}
       slides={slides}
       index={index}
@@ -198,10 +195,26 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         iconSlideshowPlay: () => <SlideshowIcon />,
         iconThumbnailsVisible: () => <ViewCarousel />,
         iconThumbnailsHidden: () => <ViewCarousel />,
-      }}
-      captions={{
-        descriptionTextAlign: "center",
-        descriptionMaxLines: 1,
+        slideHeader: ({ slide }) => {
+          const maybeTitle = (slide as { title?: string }).title;
+          const title = typeof maybeTitle === "string" ? maybeTitle : "";
+          const parts = title
+            .split("•")
+            .map((p: string) => p.trim())
+            .filter((p: string) => p.length > 0);
+
+          const counter = parts[0] ?? "";
+          const meta = parts.length > 1 ? `• ${parts.slice(1).join(" • ")}` : "";
+
+          return (
+            <div className="media-lightbox__header" aria-label={title}>
+              <span className="media-lightbox__counter">{counter}</span>
+              {meta ? (
+                <span className="media-lightbox__meta"> {meta}</span>
+              ) : null}
+            </div>
+          );
+        },
       }}
       zoom={{
         maxZoomPixelRatio: 8,
@@ -297,13 +310,13 @@ function buildSlidesFromItems(
 
     if (!src) {
       return {
-        type: "video",
-        poster,
+        type: "image",
+        src: poster || LOADING_PLACEHOLDER,
         width: item.width,
         height: item.height,
         title,
         share: undefined,
-      } as Slide;
+      };
     }
 
     return {

@@ -16,7 +16,7 @@
 .lightbox-autohide .yarl__toolbar,
 .lightbox-autohide .yarl__navigation_prev,
 .lightbox-autohide .yarl__navigation_next,
-.lightbox-autohide .yarl__slide_title_container,
+.lightbox-autohide .media-lightbox__header,
 .lightbox-autohide .yarl__slide_description_container {
   opacity: 1;
   pointer-events: auto;
@@ -38,7 +38,7 @@
 .lightbox-autohide--idle .yarl__toolbar,
 .lightbox-autohide--idle .yarl__navigation_prev,
 .lightbox-autohide--idle .yarl__navigation_next,
-.lightbox-autohide--idle .yarl__slide_title_container,
+.lightbox-autohide--idle .media-lightbox__header,
 .lightbox-autohide--idle .yarl__slide_description_container {
   opacity: 0;
   pointer-events: none;
@@ -54,14 +54,20 @@
   cursor: none;
 }
 
-/* Move media metadata (counter • size • name) to the top-left and hide the bottom caption line. */
-.lightbox-autohide .yarl__slide_title_container {
+/* Move media metadata (counter • size • name) to the top-left. */
+.lightbox-autohide .media-lightbox__header {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
+  top: 0;
+  left: 0;
+  right: 0;
   bottom: auto;
-  max-width: calc(100% - 16px);
+  padding: 8px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+
+  /* Leave space for the toolbar buttons on the right */
+  padding-right: 220px;
   pointer-events: none;
   z-index: 1;
   text-align: left;
@@ -76,6 +82,17 @@
   text-overflow: ellipsis;
 }
 
+.lightbox-autohide .media-lightbox__counter,
+.lightbox-autohide .media-lightbox__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lightbox-autohide .media-lightbox__meta {
+  min-width: 0;
+}
+
 /* Ensure inner title text truncates cleanly (selector tolerant if class exists) */
 .lightbox-autohide .yarl__slide_title_container .yarl__slide_title {
   overflow: hidden;
@@ -83,10 +100,16 @@
   white-space: nowrap;
 }
 
-/* Mobile: reduce padding and gap so title appears more compact */
+/* Mobile: keep only the counter */
 @media (max-width: 600px) {
-  .lightbox-autohide .yarl__slide_title_container {
-    font-size: 0.8rem;
+  .lightbox-autohide .media-lightbox__meta {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .lightbox-autohide .media-lightbox__header {
+    padding-right: 180px;
   }
 }
 
