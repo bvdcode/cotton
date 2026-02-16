@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { useCopyFeedback } from "../../shared/hooks/useCopyFeedback";
 import { shareLinks } from "../../shared/utils/shareLinks";
+import { shareLinkAction } from "../../shared/utils/shareLinkAction";
 import { ShareFileViewer } from "./components/ShareFileViewer";
 import { ShareHeaderBar } from "./components/ShareHeaderBar";
 import { useShareFileInfo } from "./hooks/useShareFileInfo";
@@ -74,22 +75,49 @@ export const SharePage: React.FC = () => {
   const handleShareLink = React.useCallback(async () => {
     if (!shareUrl) return;
 
-    const clipboardText = shareUrl;
+    const resolvedName = fileName ?? title;
+    const shareText = t("message", {
+      ns: "share",
+      name: resolvedName,
+    });
 
     try {
-      await navigator.clipboard.writeText(clipboardText);
-      markCopied();
-      setShareToast({
-        open: true,
-        message: t("toasts.copied", { ns: "share" }),
+      const outcome = await shareLinkAction({
+        title: resolvedName,
+        text: shareText,
+        url: shareUrl,
       });
+
+      switch (outcome.kind) {
+        case "shared":
+          setShareToast({
+            open: true,
+            message: t("toasts.shared", { ns: "share" }),
+          });
+          return;
+        case "copied":
+          markCopied();
+          setShareToast({
+            open: true,
+            message: t("toasts.copied", { ns: "share" }),
+          });
+          return;
+        case "aborted":
+          return;
+        case "error":
+        default:
+          setShareToast({
+            open: true,
+            message: t("errors.copyLink", { ns: "share" }),
+          });
+      }
     } catch {
       setShareToast({
         open: true,
         message: t("errors.copyLink", { ns: "share" }),
       });
     }
-  }, [markCopied, shareUrl, t]);
+  }, [fileName, markCopied, shareUrl, t, title]);
 
   return (
     <Box
