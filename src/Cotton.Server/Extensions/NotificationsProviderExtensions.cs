@@ -23,16 +23,26 @@ namespace Cotton.Server.Extensions
             GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
+            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
+                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+
             await notifications.SendNotificationAsync(
                 userId: userId,
                 title: NotificationTemplates.FailedLoginAttemptTitle,
-                content: NotificationTemplates.FailedLoginAttemptContent(
-                    username,
-                    ipAddress.ToString(),
-                    deviceName,
-                    ipInfo.Country,
-                    ipInfo.Region,
-                    ipInfo.City),
+                content: hasDevice
+                    ? NotificationTemplates.FailedLoginAttemptContent(
+                        username,
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City)
+                    : NotificationTemplates.FailedLoginAttemptContentNoDevice(
+                        username,
+                        ipAddress.ToString(),
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City),
                 priority: NotificationPriority.High,
                 metadata: new Dictionary<string, string>
                 {
@@ -58,15 +68,24 @@ namespace Cotton.Server.Extensions
             GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
+            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
+                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.OtpEnabledTitle,
-                content: NotificationTemplates.OtpEnabledContent(
-                    ipAddress.ToString(),
-                    deviceName,
-                    ipInfo.Country,
-                    ipInfo.Region,
-                    ipInfo.City),
+                content: hasDevice
+                    ? NotificationTemplates.OtpEnabledContent(
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City)
+                    : NotificationTemplates.OtpEnabledContentNoDevice(
+                        ipAddress.ToString(),
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City),
                 priority: NotificationPriority.Medium,
                 metadata: new Dictionary<string, string>
                 {
@@ -91,15 +110,24 @@ namespace Cotton.Server.Extensions
             GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
+            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
+                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.SuccessfulLoginTitle,
-                content: NotificationTemplates.SuccessfulLoginContent(
-                    ipAddress.ToString(),
-                    deviceName,
-                    ipInfo.Country,
-                    ipInfo.Region,
-                    ipInfo.City),
+                content: hasDevice
+                    ? NotificationTemplates.SuccessfulLoginContent(
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City)
+                    : NotificationTemplates.SuccessfulLoginContentNoDevice(
+                        ipAddress.ToString(),
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City),
                 priority: NotificationPriority.None,
                 metadata: new Dictionary<string, string>
                 {
@@ -125,16 +153,26 @@ namespace Cotton.Server.Extensions
             GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
+            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
+                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.TotpFailedAttemptTitle,
-                content: NotificationTemplates.TotpFailedAttemptContent(
-                    totpFailedAttempts,
-                    ipAddress.ToString(),
-                    deviceName,
-                    ipInfo.Country,
-                    ipInfo.Region,
-                    ipInfo.City),
+                content: hasDevice
+                    ? NotificationTemplates.TotpFailedAttemptContent(
+                        totpFailedAttempts,
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City)
+                    : NotificationTemplates.TotpFailedAttemptContentNoDevice(
+                        totpFailedAttempts,
+                        ipAddress.ToString(),
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City),
                 priority: NotificationPriority.Medium,
                 metadata: new Dictionary<string, string>
                 {
@@ -161,16 +199,26 @@ namespace Cotton.Server.Extensions
             GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
+            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
+                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.TotpLockoutTitle,
-                content: NotificationTemplates.TotpLockoutContent(
-                    maxFailedAttempts,
-                    ipAddress.ToString(),
-                    deviceName,
-                    ipInfo.Country,
-                    ipInfo.Region,
-                    ipInfo.City),
+                content: hasDevice
+                    ? NotificationTemplates.TotpLockoutContent(
+                        maxFailedAttempts,
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City)
+                    : NotificationTemplates.TotpLockoutContentNoDevice(
+                        maxFailedAttempts,
+                        ipAddress.ToString(),
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City),
                 priority: NotificationPriority.High,
                 metadata: new Dictionary<string, string>
                 {
@@ -196,15 +244,24 @@ namespace Cotton.Server.Extensions
             GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
+            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
+                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.WebDavTokenResetTitle,
-                content: NotificationTemplates.WebDavTokenResetContent(
-                    ipAddress.ToString(),
-                    deviceName,
-                    ipInfo.Country,
-                    ipInfo.Region,
-                    ipInfo.City),
+                content: hasDevice
+                    ? NotificationTemplates.WebDavTokenResetContent(
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City)
+                    : NotificationTemplates.WebDavTokenResetContentNoDevice(
+                        ipAddress.ToString(),
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City),
                 priority: NotificationPriority.Medium,
                 metadata: new Dictionary<string, string>
                 {
@@ -230,16 +287,26 @@ namespace Cotton.Server.Extensions
             GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
+            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
+                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.SharedFileDownloadedTitle,
-                content: NotificationTemplates.SharedFileDownloadedContent(
-                    fileName,
-                    ipAddress.ToString(),
-                    deviceName,
-                    ipInfo.Country,
-                    ipInfo.Region,
-                    ipInfo.City),
+                content: hasDevice
+                    ? NotificationTemplates.SharedFileDownloadedContent(
+                        fileName,
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City)
+                    : NotificationTemplates.SharedFileDownloadedContentNoDevice(
+                        fileName,
+                        ipAddress.ToString(),
+                        ipInfo.Country,
+                        ipInfo.Region,
+                        ipInfo.City),
                 priority: NotificationPriority.None,
                 metadata: new Dictionary<string, string>
                 {
