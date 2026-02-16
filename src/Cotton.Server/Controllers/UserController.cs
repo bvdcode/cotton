@@ -28,7 +28,18 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext) : ControllerBase
     {
         [Authorize]
-        [HttpPost("/me/send-email-verification")]
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> ConfirmEmailVerification(
+            [FromQuery] string token,
+            CancellationToken cancellationToken)
+        {
+            var command = new ConfirmEmailVerificationRequest(token);
+            await _mediator.Send(command, cancellationToken);
+            return Ok();
+        }
+
+        [Authorize]
+        [HttpPost("me/send-email-verification")]
         public async Task<IActionResult> SendEmailVerification(CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
@@ -38,7 +49,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPatch("/me/preferences")]
+        [HttpPatch("me/preferences")]
         public async Task<IActionResult> UpdatePreferences(
             [FromBody] Dictionary<string, string> request,
             [FromQuery] string token,
@@ -57,7 +68,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet("/me")]
+        [HttpGet("me")]
         public IActionResult GetCurrentUser()
         {
             var userId = User.GetUserId();
@@ -89,7 +100,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
-        [HttpPut("/{userId:guid}")]
+        [HttpPut("{userId:guid}")]
         public async Task<IActionResult> UpdateUser(
             [FromRoute] Guid userId,
             [FromBody] AdminUpdateUserRequestDto request,
@@ -110,7 +121,7 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpPut("/me/password")]
+        [HttpPut("me/password")]
         public async Task<IActionResult> ChangePassword(
             [FromBody] ChangePasswordRequestDto request,
             CancellationToken cancellationToken)

@@ -22,6 +22,7 @@ namespace Cotton.Server.Handlers.Users
         : IRequestHandler<SendEmailVerificationRequest>
     {
         private const int TokenLength = 32;
+        private static readonly TimeSpan CooldownPeriod = TimeSpan.FromMinutes(2);
 
         public async Task Handle(SendEmailVerificationRequest request, CancellationToken cancellationToken)
         {
@@ -35,6 +36,12 @@ namespace Cotton.Server.Handlers.Users
             }
 
             if (user.IsEmailVerified)
+            {
+                return;
+            }
+
+            if (user.EmailVerificationTokenSentAt != null &&
+                DateTime.UtcNow - user.EmailVerificationTokenSentAt.Value < CooldownPeriod)
             {
                 return;
             }
