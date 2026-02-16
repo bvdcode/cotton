@@ -8,7 +8,7 @@
 import { useCallback, useMemo } from 'react';
 import { EditorMode } from '../editors/types';
 import {
-  selectEditorModes,
+  USER_PREFERENCE_PREFIXES,
   useUserPreferencesStore,
 } from '../../../../../shared/store/userPreferencesStore';
 import { previewConfig } from '../../../../../shared/config/previewConfig';
@@ -194,16 +194,27 @@ export function useEditorMode({
   fileId,
   fileSize,
 }: UseEditorModeOptions): UseEditorModeResult {
-  const editorModes = useUserPreferencesStore(selectEditorModes);
   const setEditorMode = useUserPreferencesStore((s) => s.setEditorMode);
 
+  const storedMode = useUserPreferencesStore(
+    useMemo(
+      () =>
+        (s) =>
+          s.preferences[`${USER_PREFERENCE_PREFIXES.editorMode}${fileId}`] ??
+          null,
+      [fileId],
+    ),
+  );
+
   const mode = useMemo<EditorMode>(() => {
-    const stored = editorModes[fileId];
-    if (stored && Object.values(EditorMode).includes(stored as EditorMode)) {
-      return stored as EditorMode;
+    if (
+      storedMode &&
+      Object.values(EditorMode).includes(storedMode as EditorMode)
+    ) {
+      return storedMode as EditorMode;
     }
     return detectInitialMode(content, fileName, fileSize);
-  }, [content, editorModes, fileId, fileName, fileSize]);
+  }, [content, fileName, fileSize, storedMode]);
 
   const setMode = useCallback((newMode: EditorMode) => {
     setEditorMode(fileId, newMode);
