@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
@@ -29,7 +30,9 @@ public record WebDavCopyCommand(
 public record WebDavCopyResult(
     bool Success,
     bool Created,
-    WebDavCopyError? Error = null);
+    WebDavCopyError? Error = null,
+    Guid? CopiedNodeId = null,
+    Guid? CopiedNodeFileId = null);
 
 public enum WebDavCopyError
 {
@@ -48,6 +51,7 @@ public class WebDavCopyCommandHandler(
     ILayoutService _layouts,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
+    IEventNotificationService _eventNotification,
     ILogger<WebDavCopyCommandHandler> _logger)
     : IRequestHandler<WebDavCopyCommand, WebDavCopyResult>
 {
@@ -78,7 +82,7 @@ public class WebDavCopyCommandHandler(
             return new WebDavCopyResult(false, false, WebDavCopyError.DestinationExists);
         }
 
-        await PerformCopyAsync(request, sourceResult, destParentResult, layout.Id, ct);
+        var (copiedNodeId, copiedNodeFileId) = await PerformCopyAsync(request, sourceResult, destParentResult, layout.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
 
         if (sourceResult.NodeFile is not null)
@@ -89,7 +93,16 @@ public class WebDavCopyCommandHandler(
         _logger.LogInformation("WebDAV COPY: Copied {Source} to {Dest} for user {UserId}",
             request.SourcePath, request.DestinationPath, request.UserId);
 
-        return new WebDavCopyResult(true, created);
+        if (copiedNodeId.HasValue)
+        {
+            await _eventNotification.NotifyNodeCreatedAsync(copiedNodeId.Value, ct);
+        }
+        else if (copiedNodeFileId.HasValue)
+        {
+            await _eventNotification.NotifyFileCreatedAsync(copiedNodeFileId.Value, ct);
+        }
+
+        return new WebDavCopyResult(true, created, null, copiedNodeId, copiedNodeFileId);
     }
 
     private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyCommand request, CancellationToken ct)
@@ -152,7 +165,7 @@ public class WebDavCopyCommandHandler(
         }
     }
 
-    private async Task PerformCopyAsync(
+    private async Task<(Guid? NodeId, Guid? NodeFileId)> PerformCopyAsync(
         WebDavCopyCommand request,
         WebDavResolveResult sourceResult,
         WebDavParentResult destParentResult,
@@ -161,14 +174,14 @@ public class WebDavCopyCommandHandler(
     {
         if (sourceResult.IsCollection && sourceResult.Node is not null)
         {
-            await CopyNodeRecursivelyAsync(
+            var newNodeId = await CopyNodeRecursivelyAsync(
                 sourceResult.Node.Id,
                 destParentResult.ParentNode!.Id,
                 destParentResult.ResourceName!,
                 request.UserId,
                 layoutId,
                 ct);
-            return;
+            return (newNodeId, null);
         }
 
         if (sourceResult.NodeFile is not null)
@@ -182,7 +195,11 @@ public class WebDavCopyCommandHandler(
             newNodeFile.SetName(destParentResult.ResourceName!);
 
             await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
+            await _dbContext.SaveChangesAsync(ct);
+            return (null, newNodeFile.Id);
         }
+
+        return (null, null);
     }
 
     private async Task EnsureNewVersionFamilyAsync(Guid userId, Guid destParentNodeId, string resourceName, CancellationToken ct)
@@ -201,7 +218,7 @@ public class WebDavCopyCommandHandler(
         }
     }
 
-    private async Task CopyNodeRecursivelyAsync(
+    private async Task<Guid> CopyNodeRecursivelyAsync(
         Guid sourceNodeId,
         Guid destParentId,
         string newName,
@@ -259,5 +276,7 @@ public class WebDavCopyCommandHandler(
             await _dbContext.NodeFiles.AddAsync(newFile, ct);
             newFile.OriginalNodeFileId = newFile.Id;
         }
+
+        return newNode.Id;
     }
 }

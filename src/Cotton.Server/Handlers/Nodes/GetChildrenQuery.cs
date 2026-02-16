@@ -55,7 +55,7 @@ namespace Cotton.Server.Handlers.Nodes
                 .AsNoTracking()
                 .OrderBy(x => x.NameKey)
                 .Where(x => x.NodeId == parentNode.Id)
-                .ProjectToType<FileManifestDto>();
+                .ProjectToType<NodeFileManifestDto>();
 
             int nodesCount = await nodesQuery.CountAsync(cancellationToken: ct);
             int filesCount = await filesQuery.CountAsync(cancellationToken: ct);

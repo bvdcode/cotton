@@ -6,7 +6,7 @@ namespace Cotton.Server.Models.Dto
     public class SearchResultDto
     {
         public IEnumerable<NodeDto> Nodes { get; set; } = [];
-        public IEnumerable<FileManifestDto> Files { get; set; } = [];
+        public IEnumerable<NodeFileManifestDto> Files { get; set; } = [];
 
         /// <summary>
         /// Maps node id to its resolved absolute path (within the layout).

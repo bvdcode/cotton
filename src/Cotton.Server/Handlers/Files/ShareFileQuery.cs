@@ -11,7 +11,6 @@ using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
-using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +29,7 @@ namespace Cotton.Server.Handlers.Files
 
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
-        INotificationsProvider _notifications,
+        ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage) : IRequestHandler<ShareFileQuery, ShareFileResult>
     {
@@ -85,10 +84,13 @@ namespace Cotton.Server.Handlers.Files
                     ? null
                     : Convert.ToHexString(file.EncryptedFilePreviewHash);
 
-                string previewTag = hex == null
-                    ? string.Empty
-                    : ($"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />\n" +
-                       $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode($"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp")}\" />");
+                string previewUrl = hex is null
+                    ? $"{baseAppUrl}/assets/images/social-preview.jpg"
+                    : $"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp";
+
+                string previewTag =
+                    $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />\n" +
+                    $"<meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />";
 
                 string html = $"""
                 <!doctype html>
@@ -143,11 +145,12 @@ namespace Cotton.Server.Handlers.Files
             string? downloadName = isInlineFile ? null : downloadToken.FileName;
             if (_httpContextAccessor.HttpContext != null)
             {
-                await _notifications.SendSharedFileDownloadedNotificationAsync(
+                await _sharedFileDownloadNotifier.NotifyOnceAsync(
                     downloadToken.NodeFile.OwnerId,
+                    downloadToken.Id,
                     downloadToken.FileName,
-                    _httpContextAccessor.HttpContext.Request.GetRemoteIPAddress(),
-                    _httpContextAccessor.HttpContext.Request.Headers.UserAgent);
+                    _httpContextAccessor.HttpContext,
+                    ct);
             }
             return ShareFileResult.AsStream(
                 stream: stream,

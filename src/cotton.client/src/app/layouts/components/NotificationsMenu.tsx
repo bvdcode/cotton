@@ -22,7 +22,11 @@ import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNotificationsStore } from "../../../shared/store/notificationsStore";
-import { usePreferencesStore } from "../../../shared/store/preferencesStore";
+import {
+  selectNotificationSoundEnabled,
+  selectNotificationsShowOnlyUnread,
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 
 export const NotificationsMenu = () => {
@@ -37,17 +41,13 @@ export const NotificationsMenu = () => {
     Array.isArray(s.notifications) ? s.notifications : [],
   );
   const setUnreadOnlyFilter = useNotificationsStore((s) => s.setUnreadOnlyFilter);
-  const soundEnabled = usePreferencesStore(
-    (s) => s.notificationPreferences.soundEnabled,
-  );
-  const showOnlyUnread = usePreferencesStore(
-    (s) => s.notificationPreferences.showOnlyUnread,
-  );
-  const setSoundEnabled = usePreferencesStore(
+  const soundEnabled = useUserPreferencesStore(selectNotificationSoundEnabled);
+  const showOnlyUnread = useUserPreferencesStore(selectNotificationsShowOnlyUnread);
+  const setSoundEnabled = useUserPreferencesStore(
     (s) => s.setNotificationSoundEnabled,
   );
-  const setShowOnlyUnread = usePreferencesStore(
-    (s) => s.setShowOnlyUnreadNotifications,
+  const setShowOnlyUnread = useUserPreferencesStore(
+    (s) => s.setNotificationsShowOnlyUnread,
   );
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const hasMore = useNotificationsStore((s) => s.hasMore);
