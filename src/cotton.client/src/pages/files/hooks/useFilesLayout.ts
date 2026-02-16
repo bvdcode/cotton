@@ -3,8 +3,8 @@ import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import {
   selectFilesLayoutType,
   selectFilesTilesSize,
-  useUserPreferencesStore,
-} from "../../../shared/store/userPreferencesStore";
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
 import type { TilesSize } from "../types/FileListViewTypes";
 
 export type FileBrowserViewMode =
@@ -14,12 +14,12 @@ export type FileBrowserViewMode =
   | "tiles-large";
 
 export const useFilesLayout = () => {
-  const storedLayoutType = useUserPreferencesStore(selectFilesLayoutType);
+  const storedLayoutType = useLocalPreferencesStore(selectFilesLayoutType);
   const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
-  const tilesSize = useUserPreferencesStore(selectFilesTilesSize) as TilesSize;
+  const tilesSize = useLocalPreferencesStore(selectFilesTilesSize) as TilesSize;
 
-  const setLayoutType = useUserPreferencesStore((s) => s.setFilesLayoutType);
-  const setTilesSize = useUserPreferencesStore((s) => s.setFilesTilesSize);
+  const setLayoutType = useLocalPreferencesStore((s) => s.setFilesLayoutType);
+  const setTilesSize = useLocalPreferencesStore((s) => s.setFilesTilesSize);
 
   const viewMode: FileBrowserViewMode = useMemo(() => {
     if (layoutType === InterfaceLayoutType.List) return "table";
