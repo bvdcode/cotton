@@ -649,6 +649,11 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("password_reset_token_sent_at");
 
+                    b.Property<Dictionary<string, string>>("Preferences")
+                        .IsRequired()
+                        .HasColumnType("hstore")
+                        .HasColumnName("preferences");
+
                     b.Property<int>("Role")
                         .HasColumnType("integer")
                         .HasColumnName("role");

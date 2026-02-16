@@ -3,15 +3,11 @@ import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import "./MediaLightbox.css";
 import Video from "yet-another-react-lightbox/plugins/video";
-import Counter from "yet-another-react-lightbox/plugins/counter";
-import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import Share from "yet-another-react-lightbox/plugins/share";
-import "yet-another-react-lightbox/plugins/counter.css";
-import "yet-another-react-lightbox/plugins/captions.css";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
 import type { Slide } from "yet-another-react-lightbox";
 import {
@@ -28,6 +24,7 @@ import {
   convertHeicToJpeg,
 } from "../../../shared/utils/heicConverter";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { shareLinks } from "../../../shared/utils/shareLinks";
 
 const LOADING_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
@@ -66,6 +63,11 @@ export interface MediaLightboxProps {
   initialIndex: number;
   onClose: () => void;
   getSignedMediaUrl: (id: string) => Promise<string>;
+  /**
+   * Optional separate download URL resolver.
+   * If not provided, the signed media URL is used for both viewing and downloading.
+   */
+  getDownloadUrl?: (id: string) => Promise<string>;
 }
 
 /**
@@ -78,6 +80,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   initialIndex,
   onClose,
   getSignedMediaUrl,
+  getDownloadUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
   const thumbnailsRef = React.useRef(null);
@@ -85,7 +88,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(2500);
 
-  const [originalUrls, setOriginalUrls] = React.useState<
+  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
+    {},
+  );
+  const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
+    {},
+  );
+  const [downloadUrls, setDownloadUrls] = React.useState<
     Record<string, string>
   >({});
 
@@ -93,8 +102,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, originalUrls);
-  }, [items, originalUrls]);
+    return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
+  }, [items, displayUrls, signedUrls, downloadUrls]);
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -103,20 +112,31 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
       if (loadingRef.current.has(item.id)) return;
 
-      setOriginalUrls((prev) => {
+      setSignedUrls((prev) => {
         if (prev[item.id]) return prev;
 
         loadingRef.current.add(item.id);
 
         (async () => {
           try {
-            let url = await getSignedMediaUrl(item.id);
+            const url = await getSignedMediaUrl(item.id);
+            setSignedUrls((p) => ({ ...p, [item.id]: url }));
 
-            if (item.kind === "image" && isHeicFile(item.name)) {
-              url = await convertHeicToJpeg(url);
+            if (getDownloadUrl) {
+              try {
+                const dl = await getDownloadUrl(item.id);
+                setDownloadUrls((p) => ({ ...p, [item.id]: dl }));
+              } catch (e) {
+                console.error("Failed to load media download URL", e);
+              }
             }
 
-            setOriginalUrls((p) => ({ ...p, [item.id]: url }));
+            if (item.kind === "image" && isHeicFile(item.name)) {
+              const convertedUrl = await convertHeicToJpeg(url);
+              setDisplayUrls((p) => ({ ...p, [item.id]: convertedUrl }));
+            } else {
+              setDisplayUrls((p) => ({ ...p, [item.id]: url }));
+            }
           } catch (e) {
             console.error("Failed to load media original URL", e);
           } finally {
@@ -127,7 +147,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         return prev;
       });
     },
-    [items, getSignedMediaUrl],
+    [items, getSignedMediaUrl, getDownloadUrl],
   );
 
   React.useEffect(() => {
@@ -150,16 +170,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       open={open}
       close={onClose}
       className={lightboxClassName}
-      plugins={[
-        Video,
-        Zoom,
-        Slideshow,
-        Thumbnails,
-        Download,
-        Share,
-        Counter,
-        Captions,
-      ]}
+      plugins={[Video, Zoom, Slideshow, Thumbnails, Download, Share]}
       slides={slides}
       index={index}
       on={{
@@ -179,10 +190,38 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         iconSlideshowPlay: () => <SlideshowIcon />,
         iconThumbnailsVisible: () => <ViewCarousel />,
         iconThumbnailsHidden: () => <ViewCarousel />,
-      }}
-      captions={{
-        descriptionTextAlign: "center",
-        descriptionMaxLines: 1,
+        slideHeader: ({ slide }) => {
+          const maybeTitle = (slide as { title?: string }).title;
+          const title = typeof maybeTitle === "string" ? maybeTitle : "";
+          const parts = title
+            .split("•")
+            .map((p: string) => p.trim())
+            .filter((p: string) => p.length > 0);
+
+          const counter = parts[0] ?? "";
+          const size = parts.length >= 3 ? (parts[1] ?? "") : "";
+          const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
+
+          return (
+            <div className="media-lightbox__header" aria-label={title}>
+              <span className="media-lightbox__counter">{counter}</span>
+              <span className="media-lightbox__meta">
+                {size ? (
+                  <>
+                    <span className="media-lightbox__sep">•</span>
+                    <span className="media-lightbox__size">{size}</span>
+                  </>
+                ) : null}
+                {name ? (
+                  <>
+                    <span className="media-lightbox__sep">•</span>
+                    <span className="media-lightbox__name">{name}</span>
+                  </>
+                ) : null}
+              </span>
+            </div>
+          );
+        },
       }}
       zoom={{
         maxZoomPixelRatio: 8,
@@ -220,6 +259,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         finite: true,
         preload: 2,
         imageFit: "contain",
+        padding: 0,
       }}
     />
   );
@@ -227,46 +267,60 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
 function buildSlidesFromItems(
   items: MediaItem[],
-  originalUrls: Record<string, string>,
+  displayUrls: Record<string, string>,
+  signedUrls: Record<string, string>,
+  downloadUrls: Record<string, string>,
 ): Slide[] {
-  return items.map<Slide>((item) => {
-    const maybeOriginal = originalUrls[item.id];
+  const total = items.length;
+
+  return items.map<Slide>((item, idx) => {
+    const position = idx + 1;
+    const maybeSigned = signedUrls[item.id];
+    const maybeDisplay = displayUrls[item.id];
+    const maybeDownload = downloadUrls[item.id];
+    const shareCandidate = maybeDownload || maybeSigned;
+    const shareUrl = shareCandidate
+      ? (() => {
+          const token =
+            shareLinks.tryExtractTokenFromDownloadUrl(shareCandidate);
+          return token ? shareLinks.buildShareUrl(token) : null;
+        })()
+      : null;
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
-    const title = sizeStr ? `${sizeStr} • ${item.name}` : item.name;
+    const prefix = total > 0 ? `${position}/${total}` : "";
+    const title = sizeStr
+      ? `${prefix} • ${item.name} • ${sizeStr}`
+      : `${prefix} • ${item.name}`;
 
     if (item.kind === "image") {
-      const isLoading = !maybeOriginal && !item.previewUrl;
-      const src = maybeOriginal || item.previewUrl || LOADING_PLACEHOLDER;
+      const isLoading = !maybeDisplay && !item.previewUrl;
+      const src = maybeDisplay || item.previewUrl || LOADING_PLACEHOLDER;
       return {
         type: "image",
         src,
         width: isLoading ? 120 : item.width,
         height: isLoading ? 120 : item.height,
         title,
-        download: maybeOriginal
-          ? { url: maybeOriginal, filename: item.name }
-          : undefined,
-        share: maybeOriginal
-          ? {
-              url: maybeOriginal,
-              title: item.name,
-            }
-          : undefined,
+        download:
+          maybeDownload || maybeSigned
+            ? { url: maybeDownload || maybeSigned || "", filename: item.name }
+            : undefined,
+        share: shareUrl || undefined,
       };
     }
 
     const poster = item.previewUrl || undefined;
-    const src = maybeOriginal;
+    const src = maybeSigned;
 
     if (!src) {
       return {
-        type: "video",
-        poster,
+        type: "image",
+        src: poster || LOADING_PLACEHOLDER,
         width: item.width,
         height: item.height,
         title,
         share: undefined,
-      } as Slide;
+      };
     }
 
     return {
@@ -275,13 +329,11 @@ function buildSlidesFromItems(
       width: item.width,
       height: item.height,
       title,
-      download: { url: src, filename: item.name },
-      share: src
-        ? {
-            url: src,
-            title: item.name,
-          }
-        : undefined,
+      download: {
+        url: maybeDownload || src,
+        filename: item.name,
+      },
+      share: shareUrl || undefined,
       sources: [
         {
           src,
@@ -291,5 +343,3 @@ function buildSlidesFromItems(
     } as Slide;
   });
 }
-
-

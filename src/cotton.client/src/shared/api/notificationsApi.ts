@@ -60,8 +60,15 @@ const extractNotifications = (payload: JsonValue): NotificationDto[] => {
 
 export const notificationsApi = {
   list: async (page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationsPage> => {
+    // Gridify: when value is omitted for '=' it matches null/default values.
+    // We want unread => readAt is null.
+    const filter = unreadOnly ? "readAt=" : undefined;
     const response = await httpClient.get<JsonValue>("/notifications", {
-      params: { page, pageSize, unreadOnly },
+      params: {
+        page,
+        pageSize,
+        ...(filter ? { filter } : {}),
+      },
     });
     const headerRaw = response.headers["x-total-count"];
     const totalCount = headerRaw ? parseInt(headerRaw, 10) : 0;

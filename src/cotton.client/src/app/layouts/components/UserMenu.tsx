@@ -19,11 +19,13 @@ import { useAuth } from "../../../features/auth";
 import { useTheme } from "../../providers";
 import { useTranslation } from "react-i18next";
 import { useState, type MouseEvent, useMemo } from "react";
+import { useUserPreferencesStore } from "../../../shared/store/userPreferencesStore";
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
   const { resolvedMode, setTheme } = useTheme();
   const { i18n, t } = useTranslation("common");
+  const setUiLanguage = useUserPreferencesStore((s) => s.setUiLanguage);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isOpen = Boolean(anchorEl);
 
@@ -48,7 +50,7 @@ export const UserMenu = () => {
 
   const handleToggleLanguage = () => {
     const next = i18n.language === "ru" ? "en" : "ru";
-    i18n.changeLanguage(next);
+    setUiLanguage(next);
   };
 
   const displayName = user?.displayName || user?.username || "User";

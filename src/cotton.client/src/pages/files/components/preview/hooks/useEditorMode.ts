@@ -5,9 +5,11 @@
  * Encapsulates mode detection and storage logic
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { EditorMode } from '../editors/types';
-import { usePreferencesStore } from '../../../../../shared/store/preferencesStore';
+import {
+  useLocalPreferencesStore,
+} from '../../../../../shared/store/localPreferencesStore';
 import { previewConfig } from '../../../../../shared/config/previewConfig';
 
 /**
@@ -191,22 +193,30 @@ export function useEditorMode({
   fileId,
   fileSize,
 }: UseEditorModeOptions): UseEditorModeResult {
-  const { editorPreferences, setEditorMode: persistEditorMode } = usePreferencesStore();
+  const setEditorMode = useLocalPreferencesStore((s) => s.setEditorMode);
 
-  const [mode, setModeState] = useState<EditorMode>(() => {
-    const stored = editorPreferences.editorModes[fileId];
-    
-    if (stored && Object.values(EditorMode).includes(stored as EditorMode)) {
-      return stored as EditorMode;
+  const storedMode = useLocalPreferencesStore(
+    useMemo(
+      () =>
+        (s) =>
+          s.editorModes[fileId] ?? null,
+      [fileId],
+    ),
+  );
+
+  const mode = useMemo<EditorMode>(() => {
+    if (
+      storedMode &&
+      Object.values(EditorMode).includes(storedMode as EditorMode)
+    ) {
+      return storedMode as EditorMode;
     }
-    
     return detectInitialMode(content, fileName, fileSize);
-  });
+  }, [content, fileName, fileSize, storedMode]);
 
   const setMode = useCallback((newMode: EditorMode) => {
-    setModeState(newMode);
-    persistEditorMode(fileId, newMode);
-  }, [fileId, persistEditorMode]);
+    setEditorMode(fileId, newMode);
+  }, [fileId, setEditorMode]);
 
   return { mode, setMode };
 }

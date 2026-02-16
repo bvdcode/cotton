@@ -16,9 +16,8 @@
 .lightbox-autohide .yarl__toolbar,
 .lightbox-autohide .yarl__navigation_prev,
 .lightbox-autohide .yarl__navigation_next,
-.lightbox-autohide .yarl__slide_title_container,
-.lightbox-autohide .yarl__slide_description_container,
-.lightbox-autohide .yarl__counter {
+.lightbox-autohide .media-lightbox__header,
+.lightbox-autohide .yarl__slide_description_container {
   opacity: 1;
   pointer-events: auto;
   transition: opacity 0.3s ease-in-out;
@@ -26,17 +25,21 @@
 
 /* Video slides have vertical padding to prevent controls overlap */
 .lightbox-autohide .yarl__slide video {
-  padding: 48px 0;
+  padding: 0;
   box-sizing: border-box;
+}
+
+/* Edge-to-edge slides: avoid built-in carousel/slide paddings */
+.lightbox-autohide .yarl__slide {
+  padding: 0;
 }
 
 /* Idle state: controls hidden */
 .lightbox-autohide--idle .yarl__toolbar,
 .lightbox-autohide--idle .yarl__navigation_prev,
 .lightbox-autohide--idle .yarl__navigation_next,
-.lightbox-autohide--idle .yarl__slide_title_container,
-.lightbox-autohide--idle .yarl__slide_description_container,
-.lightbox-autohide--idle .yarl__counter {
+.lightbox-autohide--idle .media-lightbox__header,
+.lightbox-autohide--idle .yarl__slide_description_container {
   opacity: 0;
   pointer-events: none;
 }
@@ -51,17 +54,77 @@
   cursor: none;
 }
 
-/* Move media metadata (size • name) to the top-left and hide the bottom caption line. */
-.lightbox-autohide .yarl__slide_title_container {
+/* Move media metadata (counter • size • name) to the top-left. */
+.lightbox-autohide .media-lightbox__header {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
+  top: 0;
+  left: 0;
+  right: 0;
   bottom: auto;
-  max-width: calc(100% - 24px);
+
+  /* Match YARL toolbar placement (top-right) */
+  padding: var(--yarl__toolbar_padding, 16px);
+  height: calc(
+    var(--yarl__icon_size, 32px) + 2 * var(--yarl__toolbar_padding, 8px)
+  );
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+
+  /* Leave space for the toolbar buttons on the right */
+  padding-right: calc(var(--yarl__toolbar_padding, 8px) + 111);
   pointer-events: none;
   z-index: 1;
   text-align: left;
+
+  font-weight: 500;
+  font-size: 0.95rem;
+  line-height: 1.2;
+
+  /* Keep title on a single line and truncate if too long */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lightbox-autohide .media-lightbox__counter,
+.lightbox-autohide .media-lightbox__meta,
+.lightbox-autohide .media-lightbox__name,
+.lightbox-autohide .media-lightbox__size {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lightbox-autohide .media-lightbox__meta {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lightbox-autohide .media-lightbox__sep {
+  margin: 0 8px;
+  flex: 0 0 auto;
+}
+
+/* Ensure inner title text truncates cleanly (selector tolerant if class exists) */
+.lightbox-autohide .yarl__slide_title_container .yarl__slide_title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile: keep only the counter */
+@media (max-width: 600px) {
+  .lightbox-autohide .media-lightbox__meta {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .lightbox-autohide .media-lightbox__header {
+    padding-right: calc(var(--yarl__toolbar_padding, 8px) + 180px);
+  }
 }
 
 .lightbox-autohide .yarl__slide_description_container {
