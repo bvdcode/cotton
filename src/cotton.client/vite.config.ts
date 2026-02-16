@@ -41,6 +41,12 @@ export default defineConfig(({ mode }) => {
           clientsClaim: true,
           sourcemap: true,
           cleanupOutdatedCaches: true,
+          // Important: share links (/s/:token) are served by the backend and may
+          // respond with a file (e.g. ?view=download). In some browsers (Firefox)
+          // a download click is a navigation request, and Workbox's default
+          // navigate fallback can incorrectly serve index.html instead of the file.
+          // Denylist /s/* from navigate fallback so it always hits the network.
+          navigateFallbackDenylist: [/^\/s\//],
           // Allow larger bundles to be precached in CI (default is 2 MiB)
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         },
