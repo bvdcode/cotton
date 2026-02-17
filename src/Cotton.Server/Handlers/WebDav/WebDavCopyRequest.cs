@@ -18,7 +18,7 @@ namespace Cotton.Server.Handlers.WebDav;
 /// <summary>
 /// Command for WebDAV COPY operation
 /// </summary>
-public record WebDavCopyCommand(
+public record WebDavCopyRequest(
     Guid UserId,
     string SourcePath,
     string DestinationPath,
@@ -46,16 +46,16 @@ public enum WebDavCopyError
 /// <summary>
 /// Handler for WebDAV COPY operation
 /// </summary>
-public class WebDavCopyCommandHandler(
+public class WebDavCopyRequestHandler(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
-    ILogger<WebDavCopyCommandHandler> _logger)
-    : IRequestHandler<WebDavCopyCommand, WebDavCopyResult>
+    ILogger<WebDavCopyRequestHandler> _logger)
+    : IRequestHandler<WebDavCopyRequest, WebDavCopyResult>
 {
-    public async Task<WebDavCopyResult> Handle(WebDavCopyCommand request, CancellationToken ct)
+    public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
     {
         var sourceResult = await ResolveSourceAsync(request, ct);
         if (!sourceResult.Found)
@@ -105,7 +105,7 @@ public class WebDavCopyCommandHandler(
         return new WebDavCopyResult(true, created, null, copiedNodeId, copiedNodeFileId);
     }
 
-    private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyCommand request, CancellationToken ct)
+    private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyRequest request, CancellationToken ct)
     {
         var sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
         if (!sourceResult.Found)
@@ -115,7 +115,7 @@ public class WebDavCopyCommandHandler(
         return sourceResult;
     }
 
-    private async Task<WebDavParentResult> GetAndValidateDestinationParentAsync(WebDavCopyCommand request, CancellationToken ct)
+    private async Task<WebDavParentResult> GetAndValidateDestinationParentAsync(WebDavCopyRequest request, CancellationToken ct)
     {
         var destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
         if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
@@ -133,7 +133,7 @@ public class WebDavCopyCommandHandler(
         return destParentResult;
     }
 
-    private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavCopyCommand request, CancellationToken ct)
+    private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavCopyRequest request, CancellationToken ct)
     {
         var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
         if (destExists.Found && !request.Overwrite)
@@ -166,7 +166,7 @@ public class WebDavCopyCommandHandler(
     }
 
     private async Task<(Guid? NodeId, Guid? NodeFileId)> PerformCopyAsync(
-        WebDavCopyCommand request,
+        WebDavCopyRequest request,
         WebDavResolveResult sourceResult,
         WebDavParentResult destParentResult,
         Guid layoutId,
