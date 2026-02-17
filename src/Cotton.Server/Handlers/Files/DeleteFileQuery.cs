@@ -41,6 +41,9 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task DeletePermanentlyAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
         {
+            await _dbContext.DownloadTokens
+                .Where(t => t.CreatedByUserId == command.UserId && t.NodeFileId == nodeFile.Id)
+                .ExecuteDeleteAsync(ct);
             _dbContext.NodeFiles.Remove(nodeFile);
             await _dbContext.SaveChangesAsync(ct);
             _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",
