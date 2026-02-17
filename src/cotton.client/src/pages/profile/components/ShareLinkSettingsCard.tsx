@@ -1,18 +1,23 @@
 import { Link as LinkIcon } from "@mui/icons-material";
 import {
+  Alert,
   Box,
+  Button,
+  Divider,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "material-ui-confirm";
 import {
   selectShareLinkExpireAfterMinutes,
   useUserPreferencesStore,
   USER_PREFERENCE_KEYS,
 } from "../../../shared/store/userPreferencesStore";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
+import { authApi } from "../../../shared/api/authApi";
 
 const MINUTES_IN_DAY = 60 * 24;
 
@@ -38,9 +43,14 @@ const findPreset = (minutes: number): PresetKey | null => {
 
 export const ShareLinkSettingsCard = () => {
   const { t } = useTranslation("profile");
+  const confirm = useConfirm();
 
   const expireAfterMinutes = useUserPreferencesStore(selectShareLinkExpireAfterMinutes);
   const updatePreferences = useUserPreferencesStore((s) => s.updatePreferences);
+
+  const [invalidating, setInvalidating] = useState(false);
+  const [invalidated, setInvalidated] = useState(false);
+  const [invalidateError, setInvalidateError] = useState("");
 
   const selectedPreset = useMemo(
     () => findPreset(expireAfterMinutes),
@@ -51,6 +61,30 @@ export const ShareLinkSettingsCard = () => {
     1,
     Math.round(expireAfterMinutes / MINUTES_IN_DAY),
   );
+
+  const handleInvalidateAll = useCallback(async () => {
+    try {
+      await confirm({
+        title: t("shareLinks.invalidateConfirmTitle"),
+        description: t("shareLinks.invalidateConfirmDescription"),
+        confirmationText: t("shareLinks.invalidateAll"),
+      });
+    } catch {
+      return;
+    }
+
+    setInvalidateError("");
+    setInvalidated(false);
+    setInvalidating(true);
+    try {
+      await authApi.invalidateShareLinks();
+      setInvalidated(true);
+    } catch {
+      setInvalidateError(t("shareLinks.errors.invalidateFailed"));
+    } finally {
+      setInvalidating(false);
+    }
+  }, [confirm, t]);
 
   return (
     <ProfileAccordionCard
@@ -94,6 +128,27 @@ export const ShareLinkSettingsCard = () => {
             {t("shareLinks.presets.year")}
           </ToggleButton>
         </ToggleButtonGroup>
+
+        <Divider />
+
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={handleInvalidateAll}
+          disabled={invalidating}
+        >
+          {invalidating
+            ? t("shareLinks.invalidating")
+            : t("shareLinks.invalidateAll")}
+        </Button>
+
+        {invalidated && (
+          <Alert severity="success">{t("shareLinks.invalidated")}</Alert>
+        )}
+        {invalidateError && (
+          <Alert severity="error">{invalidateError}</Alert>
+        )}
       </Box>
     </ProfileAccordionCard>
   );
