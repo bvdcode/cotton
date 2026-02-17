@@ -87,6 +87,12 @@ namespace Cotton.Server.Handlers.Nodes
                 .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.Type, NodeType.Trash), ct);
+
+            await _dbContext.DownloadTokens
+                .Where(t => t.CreatedByUserId == userId && ids.Contains(t.NodeFile.NodeId)
+                    && (!t.ExpiresAt.HasValue || t.ExpiresAt.Value > DateTime.UtcNow))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(t => t.ExpiresAt, DateTime.UtcNow), ct);
         }
 
         private async Task DeletePermanentlyAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
@@ -121,6 +127,10 @@ namespace Cotton.Server.Handlers.Nodes
             }
 
             await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+
+            await _dbContext.DownloadTokens
+                .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
+                .ExecuteDeleteAsync(ct);
 
             var nodeFiles = await _dbContext.NodeFiles
                 .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
