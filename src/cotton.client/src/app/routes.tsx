@@ -18,6 +18,8 @@ import {
   SharePage,
   AdminLayoutPage,
   AdminUsersPage,
+  ResetPasswordPage,
+  VerifyEmailPage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Person, Delete, Search, AdminPanelSettings } from "@mui/icons-material";
@@ -36,6 +38,14 @@ const publicRoutes: RouteConfig[] = [
   {
     path: "/share/:token",
     element: <SharePage />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPasswordPage />,
+  },
+  {
+    path: "/verify-email",
+    element: <VerifyEmailPage />,
   },
 ];
 

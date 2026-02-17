@@ -29,6 +29,7 @@ interface ChangePasswordRequest {
 interface UserInfoResponse extends BaseDto<string> {
   username: string;
   email?: string | null;
+  isEmailVerified?: boolean;
   role: UserRole;
   displayName?: string;
   pictureUrl?: string;
@@ -74,6 +75,7 @@ export const authApi = {
       role: response.data.role,
       username: response.data.username,
       email: response.data.email ?? null,
+      isEmailVerified: response.data.isEmailVerified ?? false,
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
       preferences: response.data.preferences,
@@ -110,5 +112,21 @@ export const authApi = {
 
   changePassword: async (request: ChangePasswordRequest): Promise<void> => {
     await httpClient.put("users/me/password", request);
+  },
+
+  forgotPassword: async (usernameOrEmail: string): Promise<void> => {
+    await httpClient.post("auth/forgot-password", { usernameOrEmail });
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
+    await httpClient.post("auth/reset-password", { token, newPassword });
+  },
+
+  sendEmailVerification: async (): Promise<void> => {
+    await httpClient.post("users/me/send-email-verification");
+  },
+
+  confirmEmailVerification: async (token: string): Promise<void> => {
+    await httpClient.post(`users/verify-email?token=${encodeURIComponent(token)}`);
   },
 };
