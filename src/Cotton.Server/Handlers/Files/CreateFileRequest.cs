@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -36,6 +37,7 @@ namespace Cotton.Server.Handlers.Files
         IStoragePipeline _storage,
         ILogger<CreateFileRequestHandler> _logger,
         ILayoutService _layouts,
+        SettingsProvider _settingsProvider,
         FileManifestService _fileManifestService) : IRequestHandler<CreateFileRequest, NodeFileManifestDto>
     {
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
@@ -112,6 +114,14 @@ namespace Cotton.Server.Handlers.Files
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash, ct);
             if (fileManifest is not null)
             {
+                var settings = _settingsProvider.GetServerSettings();
+                if (!settings.AllowCrossUserDeduplication
+                    && (fileManifest.EncryptedFilePreviewHash is not null || fileManifest.PreviewGenerationError is not null))
+                {
+                    fileManifest.EncryptedFilePreviewHash = null;
+                    fileManifest.PreviewGenerationError = null;
+                    await _dbContext.SaveChangesAsync(ct);
+                }
                 return fileManifest;
             }
 
