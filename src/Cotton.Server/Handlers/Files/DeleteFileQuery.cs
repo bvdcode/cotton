@@ -41,6 +41,9 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task DeletePermanentlyAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
         {
+            await _dbContext.DownloadTokens
+                .Where(t => t.CreatedByUserId == command.UserId && t.NodeFileId == nodeFile.Id)
+                .ExecuteDeleteAsync(ct);
             _dbContext.NodeFiles.Remove(nodeFile);
             await _dbContext.SaveChangesAsync(ct);
             _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",
@@ -55,6 +58,20 @@ namespace Cotton.Server.Handlers.Files
             }
             var trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
             nodeFile.NodeId = trashItem.Id;
+            foreach (var share in nodeFile.DownloadTokens)
+            {
+                if (!share.ExpiresAt.HasValue)
+                {
+                    share.ExpiresAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    if (share.ExpiresAt.Value > DateTime.UtcNow)
+                    {
+                        share.ExpiresAt = DateTime.UtcNow;
+                    }
+                }
+            }
             await _dbContext.SaveChangesAsync(ct);
             _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.",
                 command.UserId, command.NodeFileId);
