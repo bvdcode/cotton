@@ -23,7 +23,7 @@ namespace Cotton.Server.Handlers.WebDav;
 /// <summary>
 /// Command for WebDAV PUT operation (upload file)
 /// </summary>
-public record WebDavPutFileCommand(
+public record WebDavPutFileRequest(
     Guid UserId,
     string Path,
     Stream Content,
@@ -54,7 +54,7 @@ public enum WebDavPutFileError
 /// Handler for WebDAV PUT operation with streaming chunk processing.
 /// Processes large files without loading them entirely into memory.
 /// </summary>
-public class WebDavPutFileCommandHandler(
+public class WebDavPutFileRequestHandler(
     ILayoutService _layouts,
     CottonDbContext _dbContext,
     SettingsProvider _settings,
@@ -64,10 +64,10 @@ public class WebDavPutFileCommandHandler(
     IWebDavPathResolver _pathResolver,
     FileManifestService _fileManifestService,
     IEventNotificationService _eventNotification,
-    ILogger<WebDavPutFileCommandHandler> _logger)
-    : IRequestHandler<WebDavPutFileCommand, WebDavPutFileResult>
+    ILogger<WebDavPutFileRequestHandler> _logger)
+    : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
 {
-    public async Task<WebDavPutFileResult> Handle(WebDavPutFileCommand request, CancellationToken ct)
+    public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
     {
         // Check if path points to existing collection
         var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);

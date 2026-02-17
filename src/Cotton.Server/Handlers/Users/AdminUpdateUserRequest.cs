@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    public class AdminUpdateUserCommand(
+    public class AdminUpdateUserRequest(
         Guid initiatorUserId,
         Guid userId,
         string username,
@@ -33,9 +33,9 @@ namespace Cotton.Server.Handlers.Users
         public DateOnly? BirthDate { get; } = birthDate;
     }
 
-    public class AdminUpdateUserCommandHandler(CottonDbContext _dbContext) : IRequestHandler<AdminUpdateUserCommand, AdminUserDto>
+    public class AdminUpdateUserRequestHandler(CottonDbContext _dbContext) : IRequestHandler<AdminUpdateUserRequest, AdminUserDto>
     {
-        public async Task<AdminUserDto> Handle(AdminUpdateUserCommand request, CancellationToken cancellationToken)
+        public async Task<AdminUserDto> Handle(AdminUpdateUserRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Username))
             {

@@ -10,16 +10,16 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Users
 {
-    public class ChangePasswordCommand(Guid userId, string oldPassword, string newPassword) : IRequest
+    public class ChangePasswordRequest(Guid userId, string oldPassword, string newPassword) : IRequest
     {
         public Guid UserId { get; } = userId;
         public string OldPassword { get; } = oldPassword;
         public string NewPassword { get; } = newPassword;
     }
 
-    public class ChangePasswordCommandHandler(CottonDbContext _dbContext, IPasswordHashService _hasher) : IRequestHandler<ChangePasswordCommand>
+    public class ChangePasswordRequestHandler(CottonDbContext _dbContext, IPasswordHashService _hasher) : IRequestHandler<ChangePasswordRequest>
     {
-        public async Task Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
+        public async Task Handle(ChangePasswordRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.OldPassword))
             {

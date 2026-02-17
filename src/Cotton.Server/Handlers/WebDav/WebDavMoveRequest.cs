@@ -16,7 +16,7 @@ namespace Cotton.Server.Handlers.WebDav;
 /// <summary>
 /// Command for WebDAV MOVE/COPY operation
 /// </summary>
-public record WebDavMoveCommand(
+public record WebDavMoveRequest(
     Guid UserId,
     string SourcePath,
     string DestinationPath,
@@ -45,15 +45,15 @@ public enum WebDavMoveError
 /// <summary>
 /// Handler for WebDAV MOVE operation
 /// </summary>
-public class WebDavMoveCommandHandler(
+public class WebDavMoveRequestHandler(
     CottonDbContext _dbContext,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
-    ILogger<WebDavMoveCommandHandler> _logger)
-    : IRequestHandler<WebDavMoveCommand, WebDavMoveResult>
+    ILogger<WebDavMoveRequestHandler> _logger)
+    : IRequestHandler<WebDavMoveRequest, WebDavMoveResult>
 {
-    public async Task<WebDavMoveResult> Handle(WebDavMoveCommand request, CancellationToken ct)
+    public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
     {
         var sourceResult = await ResolveSourceAsync(request, ct);
         if (!sourceResult.Found)
@@ -105,7 +105,7 @@ public class WebDavMoveCommandHandler(
         return new WebDavMoveResult(true, created, null, movedNodeId, movedNodeFileId);
     }
 
-    private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavMoveCommand request, CancellationToken ct)
+    private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavMoveRequest request, CancellationToken ct)
     {
         var sourceResult = await _pathResolver.ResolveMetadataAsync(request.UserId, request.SourcePath, ct);
         if (!sourceResult.Found)
@@ -115,7 +115,7 @@ public class WebDavMoveCommandHandler(
         return sourceResult;
     }
 
-    private async Task<WebDavParentResult> GetAndValidateDestinationParentAsync(WebDavMoveCommand request, CancellationToken ct)
+    private async Task<WebDavParentResult> GetAndValidateDestinationParentAsync(WebDavMoveRequest request, CancellationToken ct)
     {
         var destParentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.DestinationPath, ct);
         if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
@@ -133,7 +133,7 @@ public class WebDavMoveCommandHandler(
         return destParentResult;
     }
 
-    private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavMoveCommand request, CancellationToken ct)
+    private async Task<(bool Created, bool Allowed)> HandleDestinationOverwriteAsync(WebDavMoveRequest request, CancellationToken ct)
     {
         var destExists = await _pathResolver.ResolveMetadataAsync(request.UserId, request.DestinationPath, ct);
         if (destExists.Found && !request.Overwrite)
@@ -166,7 +166,7 @@ public class WebDavMoveCommandHandler(
     }
 
     private async Task<bool> PerformMoveAsync(
-        WebDavMoveCommand request,
+        WebDavMoveRequest request,
         WebDavResolveResult sourceResult,
         WebDavParentResult destParentResult,
         CancellationToken ct)

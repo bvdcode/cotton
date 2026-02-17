@@ -16,7 +16,7 @@ namespace Cotton.Server.Handlers.WebDav;
 /// <summary>
 /// Command for WebDAV MKCOL operation (create directory)
 /// </summary>
-public record WebDavMkColCommand(
+public record WebDavMkColRequest(
     Guid UserId,
     string Path) : IRequest<WebDavMkColResult>;
 
@@ -39,15 +39,15 @@ public enum WebDavMkColError
 /// <summary>
 /// Handler for WebDAV MKCOL operation
 /// </summary>
-public class WebDavMkColCommandHandler(
+public class WebDavMkColRequestHandler(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
-    ILogger<WebDavMkColCommandHandler> _logger)
-    : IRequestHandler<WebDavMkColCommand, WebDavMkColResult>
+    ILogger<WebDavMkColRequestHandler> _logger)
+    : IRequestHandler<WebDavMkColRequest, WebDavMkColResult>
 {
-    public async Task<WebDavMkColResult> Handle(WebDavMkColCommand request, CancellationToken ct)
+    public async Task<WebDavMkColResult> Handle(WebDavMkColRequest request, CancellationToken ct)
     {
         // Check if path already exists
         var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
