@@ -128,6 +128,10 @@ namespace Cotton.Server.Handlers.Nodes
 
             await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
 
+            await _dbContext.DownloadTokens
+                .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
+                .ExecuteDeleteAsync(ct);
+
             var nodeFiles = await _dbContext.NodeFiles
                 .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
                 .ToListAsync(ct);
