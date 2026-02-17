@@ -79,6 +79,7 @@
       "hideDetails": "Hide details"
     },
     "userMenu": {
+      "profile": "Profile",
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
@@ -153,6 +154,14 @@
         "threeMonths": "3 months",
         "tenYears": "10 years",
         "oneDay": "One day"
+      },
+      "invalidateAll": "Invalidate all share links",
+      "invalidating": "Invalidating...",
+      "invalidated": "All share links have been invalidated.",
+      "invalidateConfirmTitle": "Invalidate all share links?",
+      "invalidateConfirmDescription": "All active share links will stop working immediately. This cannot be undone.",
+      "errors": {
+        "invalidateFailed": "Failed to invalidate share links."
       }
     },
     "totp": {

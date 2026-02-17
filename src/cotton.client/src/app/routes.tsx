@@ -22,7 +22,7 @@ import {
   VerifyEmailPage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Folder, Home, Person, Delete, Search, AdminPanelSettings } from "@mui/icons-material";
+import { Folder, Home, Delete, Search, AdminPanelSettings } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
 
@@ -82,13 +82,6 @@ export function AppRoutes() {
       translationKey: "search",
       element: <SearchPage />,
     },
-    {
-      path: "/profile",
-      icon: <Person />,
-      protected: true,
-      translationKey: "profile",
-      element: <ProfilePage />,
-    },
   ];
 
   if (isAdmin) {
@@ -137,6 +130,9 @@ export function AppRoutes() {
           <Route index element={<Navigate to="users" replace />} />
           <Route path="users" element={<AdminUsersPage />} />
         </Route>
+
+        {/* Profile page (accessible from avatar menu) */}
+        <Route path="/profile" element={<ProfilePage />} />
 
         {/* Deep link into a specific folder by node id */}
         <Route path="/files/:nodeId" element={<FilesPage />} />

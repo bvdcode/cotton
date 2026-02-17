@@ -314,6 +314,20 @@ namespace Cotton.Server.Controllers
             return Ok();
         }
 
+        [Authorize]
+        [HttpPost("invalidate-share-links")]
+        public async Task<IActionResult> InvalidateShareLinks(CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
+            await _dbContext.DownloadTokens
+                .Where(dt => dt.CreatedByUserId == userId
+                    && (dt.ExpiresAt == null || dt.ExpiresAt > DateTime.UtcNow))
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(dt => dt.ExpiresAt, DateTime.UtcNow),
+                    cancellationToken);
+            return Ok();
+        }
+
         private string CreateAccessToken(User user, string sessionId)
         {
             return _tokens.CreateToken(x =>
