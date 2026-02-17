@@ -14,15 +14,18 @@ import {
   Language,
   Brightness4,
   Brightness7,
+  Person,
 } from "@mui/icons-material";
 import { useAuth } from "../../../features/auth";
 import { useTheme } from "../../providers";
 import { useTranslation } from "react-i18next";
 import { useState, type MouseEvent, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useUserPreferencesStore } from "../../../shared/store/userPreferencesStore";
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { resolvedMode, setTheme } = useTheme();
   const { i18n, t } = useTranslation("common");
   const setUiLanguage = useUserPreferencesStore((s) => s.setUiLanguage);
@@ -118,6 +121,18 @@ export const UserMenu = () => {
         </Box>
 
         <Divider />
+
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            navigate("/profile");
+          }}
+        >
+          <ListItemIcon>
+            <Person fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("userMenu.profile")}</ListItemText>
+        </MenuItem>
 
         <MenuItem onClick={handleToggleTheme}>
           <ListItemIcon>
