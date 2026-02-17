@@ -171,7 +171,7 @@ public class WebDavController(
         var overwrite = GetOverwriteHeader();
         var contentType = Request.ContentType;
 
-        var command = new WebDavPutFileCommand(
+        var command = new WebDavPutFileRequest(
             userId,
             path ?? string.Empty,
             Request.Body,
@@ -316,7 +316,7 @@ public class WebDavController(
             AddDavHeaders();
             return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
         }
-        var command = new WebDavDeleteCommand(userId, path ?? string.Empty);
+        var command = new WebDavDeleteRequest(userId, path ?? string.Empty);
         var result = await _mediator.Send(command, HttpContext.RequestAborted);
 
         AddDavHeaders();
@@ -345,7 +345,7 @@ public class WebDavController(
             AddDavHeaders();
             return StatusCode(StatusCodes.Status423Locked, "Resource is locked");
         }
-        var command = new WebDavMkColCommand(userId, path ?? string.Empty);
+        var command = new WebDavMkColRequest(userId, path ?? string.Empty);
         var result = await _mediator.Send(command, HttpContext.RequestAborted);
         AddDavHeaders();
         if (!result.Success)
@@ -381,7 +381,7 @@ public class WebDavController(
             return BadRequest("Destination header is required");
         }
 
-        var command = new WebDavMoveCommand(userId, path ?? string.Empty, destination, overwrite);
+        var command = new WebDavMoveRequest(userId, path ?? string.Empty, destination, overwrite);
         var result = await _mediator.Send(command, HttpContext.RequestAborted);
         AddDavHeaders();
         if (!result.Success)
@@ -418,7 +418,7 @@ public class WebDavController(
         {
             return BadRequest("Destination header is required");
         }
-        var command = new WebDavCopyCommand(userId, path ?? string.Empty, destination, overwrite);
+        var command = new WebDavCopyRequest(userId, path ?? string.Empty, destination, overwrite);
         var result = await _mediator.Send(command, HttpContext.RequestAborted);
         AddDavHeaders();
         if (!result.Success)

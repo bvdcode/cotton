@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    public class AdminCreateUserCommand(string username, string? email, string password, UserRole role) : IRequest<UserDto>
+    public class AdminCreateUserRequest(string username, string? email, string password, UserRole role) : IRequest<UserDto>
     {
         public string Username { get; } = username;
         public string? Email { get; } = email;
@@ -22,9 +22,9 @@ namespace Cotton.Server.Handlers.Users
         public UserRole Role { get; } = role;
     }
 
-    public class AdminCreateUserCommandHandler(CottonDbContext _dbContext, IPasswordHashService _hasher) : IRequestHandler<AdminCreateUserCommand, UserDto>
+    public class AdminCreateUserRequestHandler(CottonDbContext _dbContext, IPasswordHashService _hasher) : IRequestHandler<AdminCreateUserRequest, UserDto>
     {
-        public async Task<UserDto> Handle(AdminCreateUserCommand request, CancellationToken cancellationToken)
+        public async Task<UserDto> Handle(AdminCreateUserRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Username))
             {
