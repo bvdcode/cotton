@@ -6,6 +6,7 @@ export interface User {
   role: UserRole;
   username: string;
   email?: string | null;
+  isEmailVerified?: boolean;
   pictureUrl?: string;
   displayName?: string;
   preferences?: Record<string, string>;

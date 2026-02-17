@@ -27,7 +27,6 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext) : ControllerBase
     {
-        [Authorize]
         [HttpPost("verify-email")]
         public async Task<IActionResult> ConfirmEmailVerification(
             [FromQuery] string token,

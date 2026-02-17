@@ -48,6 +48,12 @@ namespace Cotton.Server.Handlers.Users
             user.PasswordPhc = _hasher.Hash(request.NewPassword);
             user.PasswordResetToken = null;
             user.PasswordResetTokenSentAt = null;
+
+            user.IsTotpEnabled = false;
+            user.TotpSecretEncrypted = null;
+            user.TotpEnabledAt = null;
+            user.TotpFailedAttempts = 0;
+
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
