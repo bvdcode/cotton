@@ -7,7 +7,6 @@ using Cotton.Server.Handlers.Users;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;

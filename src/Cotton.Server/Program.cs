@@ -9,7 +9,6 @@ using Cotton.Server.Hubs;
 using Cotton.Server.Mappings;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;

@@ -15,7 +15,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Cotton.Shared\Cotton.Shared.csproj" />
+	  <ProjectReference Include="..\Cotton.Shared\Cotton.csproj" />
 	</ItemGroup>
 
 </Project>
