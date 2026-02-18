@@ -10,7 +10,6 @@ using Cotton.Server.Hubs;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Shared;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;

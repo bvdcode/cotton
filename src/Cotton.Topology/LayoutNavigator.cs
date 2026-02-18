@@ -4,7 +4,6 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
-using Cotton.Shared;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using Microsoft.EntityFrameworkCore;
