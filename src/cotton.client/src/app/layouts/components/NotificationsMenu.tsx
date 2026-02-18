@@ -40,9 +40,13 @@ export const NotificationsMenu = () => {
   const notifications = useNotificationsStore((s) =>
     Array.isArray(s.notifications) ? s.notifications : [],
   );
-  const setUnreadOnlyFilter = useNotificationsStore((s) => s.setUnreadOnlyFilter);
+  const setUnreadOnlyFilter = useNotificationsStore(
+    (s) => s.setUnreadOnlyFilter,
+  );
   const soundEnabled = useUserPreferencesStore(selectNotificationSoundEnabled);
-  const showOnlyUnread = useUserPreferencesStore(selectNotificationsShowOnlyUnread);
+  const showOnlyUnread = useUserPreferencesStore(
+    selectNotificationsShowOnlyUnread,
+  );
   const setSoundEnabled = useUserPreferencesStore(
     (s) => s.setNotificationSoundEnabled,
   );
@@ -142,11 +146,7 @@ export const NotificationsMenu = () => {
           </Typography>
           <Box display="flex" gap={0.5}>
             <Tooltip
-              title={
-                showOnlyUnread
-                  ? t("showAll")
-                  : t("showOnlyUnread")
-              }
+              title={showOnlyUnread ? t("showAll") : t("showOnlyUnread")}
             >
               <IconButton
                 size="small"
@@ -163,13 +163,7 @@ export const NotificationsMenu = () => {
                 )}
               </IconButton>
             </Tooltip>
-            <Tooltip
-              title={
-                soundEnabled
-                  ? t("muteSound")
-                  : t("unmuteSound")
-              }
-            >
+            <Tooltip title={soundEnabled ? t("muteSound") : t("unmuteSound")}>
               <IconButton
                 size="small"
                 onClick={() => setSoundEnabled(!soundEnabled)}

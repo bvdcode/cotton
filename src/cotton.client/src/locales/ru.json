@@ -833,7 +833,10 @@
     "showOnlyUnread": "Только непрочитанные",
     "showAll": "Показать все",
     "muteSound": "Отключить звук",
-    "unmuteSound": "Включить звук"
+    "unmuteSound": "Включить звук",
+    "notifications": {
+      "empty": "Нет уведомлений"
+    }
   },
   "routes": {
     "login": "Вход",
