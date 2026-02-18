@@ -14,7 +14,10 @@
     "showOnlyUnread": "Show only unread",
     "showAll": "Show all",
     "muteSound": "Mute sound",
-    "unmuteSound": "Unmute sound"
+    "unmuteSound": "Unmute sound",
+    "notifications": {
+      "empty": "No notifications"
+    }
   },
   "common": {
     "languageName": "English",
