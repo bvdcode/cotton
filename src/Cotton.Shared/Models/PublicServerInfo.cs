@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Cotton.Shared.Models
+namespace Cotton.Models
 {
     public class PublicServerInfo
     {

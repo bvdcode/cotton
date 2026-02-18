@@ -7,7 +7,6 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
-using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;

@@ -2,7 +2,6 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Autoconfig.Extensions;
-using Cotton.Shared;
 using EasyExtensions.Crypto;
 using Microsoft.Extensions.Configuration;
 

@@ -13,7 +13,6 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.WebDav;
-using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;

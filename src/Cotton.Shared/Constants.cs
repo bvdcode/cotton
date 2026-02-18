@@ -1,4 +1,4 @@
-﻿namespace Cotton.Shared
+﻿namespace Cotton
 {
     public static class Constants
     {

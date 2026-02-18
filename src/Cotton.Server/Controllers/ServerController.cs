@@ -4,8 +4,7 @@
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Shared;
-using Cotton.Shared.Models;
+using Cotton.Models;
 using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
