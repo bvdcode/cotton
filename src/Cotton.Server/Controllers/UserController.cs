@@ -7,7 +7,6 @@ using Cotton.Server.Handlers.Users;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -27,7 +26,6 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext) : ControllerBase
     {
-        [Authorize]
         [HttpPost("verify-email")]
         public async Task<IActionResult> ConfirmEmailVerification(
             [FromQuery] string token,

@@ -6,7 +6,6 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.Crypto;
 using Microsoft.AspNetCore.Authorization;

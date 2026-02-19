@@ -9,6 +9,7 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  Link,
 } from "@mui/material";
 import { Shield, ShieldOutlined } from "@mui/icons-material";
 import { useAuth } from "../../features/auth";
@@ -47,6 +48,8 @@ export const LoginPage = () => {
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [loading, setLoading] = useState(false);
   const autoSubmitTriggeredRef = useRef(false);
+  const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
@@ -133,6 +136,30 @@ export const LoginPage = () => {
       navigate,
     ],
   );
+
+  const isEmail = (value: string): boolean =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const handleForgotPassword = useCallback(async () => {
+    setError("");
+    setForgotPasswordMessage("");
+
+    const trimmed = username.trim();
+    if (!trimmed || !isEmail(trimmed)) {
+      setError(t("forgotPassword.enterEmail"));
+      return;
+    }
+
+    setForgotPasswordSending(true);
+    try {
+      await authApi.forgotPassword(trimmed);
+      setForgotPasswordMessage(t("forgotPassword.sent"));
+    } catch {
+      setForgotPasswordMessage(t("forgotPassword.sent"));
+    } finally {
+      setForgotPasswordSending(false);
+    }
+  }, [username, t]);
 
   useEffect(() => {
     // If we can silently restore a session, do it and keep loader overlay while it runs.
@@ -267,6 +294,11 @@ export const LoginPage = () => {
                 {error}
               </Alert>
             )}
+            {forgotPasswordMessage && (
+              <Alert color="success" sx={{ mt: 2 }}>
+                {forgotPasswordMessage}
+              </Alert>
+            )}
             <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
               <Button
                 type="submit"
@@ -293,6 +325,27 @@ export const LoginPage = () => {
                 </Tooltip>
               )}
             </Box>
+            {!requiresTwoFactor && (
+              <Box sx={{ mt: 1.5, textAlign: "center" }}>
+                <Link
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  onClick={handleForgotPassword}
+                  underline="hover"
+                  color="text.secondary"
+                  sx={{
+                    pointerEvents:
+                      loading || forgotPasswordSending ? "none" : "auto",
+                    opacity: loading || forgotPasswordSending ? 0.5 : 1,
+                  }}
+                >
+                  {forgotPasswordSending
+                    ? t("forgotPassword.sending")
+                    : t("forgotPassword.link")}
+                </Link>
+              </Box>
+            )}
           </Box>
         </Paper>
       </Container>

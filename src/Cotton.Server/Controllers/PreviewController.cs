@@ -1,5 +1,4 @@
 ﻿using Cotton.Server.Services;
-using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;

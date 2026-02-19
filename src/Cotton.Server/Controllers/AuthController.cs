@@ -13,7 +13,6 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.WebDav;
-using Cotton.Shared;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
@@ -311,6 +310,20 @@ namespace Cotton.Server.Controllers
         {
             var command = new ConfirmPasswordResetRequest(request.Token, request.NewPassword);
             await _mediator.Send(command, cancellationToken);
+            return Ok();
+        }
+
+        [Authorize]
+        [HttpPost("invalidate-share-links")]
+        public async Task<IActionResult> InvalidateShareLinks(CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
+            await _dbContext.DownloadTokens
+                .Where(dt => dt.CreatedByUserId == userId
+                    && (dt.ExpiresAt == null || dt.ExpiresAt > DateTime.UtcNow))
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(dt => dt.ExpiresAt, DateTime.UtcNow),
+                    cancellationToken);
             return Ok();
         }
 

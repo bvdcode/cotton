@@ -6,6 +6,7 @@ import {
   SessionsCard,
   WebDavTokenCard,
   ShareLinkSettingsCard,
+  EmailVerificationCard,
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { useEffect } from "react";
@@ -53,6 +54,9 @@ export const ProfilePage = () => {
         </Stack>
         <SessionsCard />
         <ShareLinkSettingsCard />
+        {user.email && !user.isEmailVerified && (
+          <EmailVerificationCard user={user} />
+        )}
         <ChangePasswordCard />
         <WebDavTokenCard />
       </Stack>

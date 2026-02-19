@@ -1,4 +1,4 @@
-﻿namespace Cotton.Localization
+﻿namespace Cotton.Models.Enums
 {
     public enum Language
     {
