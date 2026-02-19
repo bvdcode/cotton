@@ -89,6 +89,18 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
           variant="filled"
           label={totpEnabled ? t("totp.enabled") : t("totp.disabled")}
         />
+        {user.email && (
+          <Chip
+            size="small"
+            color={user.isEmailVerified ? "success" : "warning"}
+            variant="filled"
+            label={
+              user.isEmailVerified
+                ? t("fields.emailVerified")
+                : t("fields.emailNotVerified")
+            }
+          />
+        )}
       </Stack>
 
       <Divider sx={{ mb: 2 }} />

@@ -1,7 +1,6 @@
 ﻿using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
-using Cotton.Shared;
 using EasyExtensions;
 using Gridify;
 using Gridify.EntityFramework;

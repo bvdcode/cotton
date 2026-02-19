@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -105,7 +106,7 @@ namespace Cotton.Server.Providers
                 return telemetryError;
             }
 
-            var emailError = ValidateEmailConstraints(request);
+            var emailError = ValidateEmailConstraints(request, this);
             if (emailError is not null)
             {
                 return emailError;
@@ -151,16 +152,38 @@ namespace Cotton.Server.Providers
             return null;
         }
 
-        private static string? ValidateEmailConstraints(ServerSettingsRequestDto request)
+        private static string? ValidateEmailConstraints(
+            ServerSettingsRequestDto request,
+            SettingsProvider settingsProvider)
         {
-            if (request.Email != EmailMode.Custom)
+            if (request.Email == EmailMode.Cloud)
+            {
+                if (request.Telemetry == false)
+                {
+                    return "Telemetry must be enabled to use cloud email service.";
+                }
+                using CottonPublicEmailProvider provider = new(settingsProvider);
+                bool isHealthy = provider.CheckHealthAsync().GetAwaiter().GetResult();
+                if (!isHealthy)
+                {
+                    return "Cloud email service is currently unavailable. Please try again later or switch to Custom email service.";
+                }
+                return null;
+            }
+
+            if (request.Email == EmailMode.Custom)
+            {
+                return request.EmailConfig is null
+                    ? "EmailConfig must be provided when using Custom email service."
+                    : null;
+            }
+
+            if (request.Email == EmailMode.None)
             {
                 return null;
             }
 
-            return request.EmailConfig is null
-                ? "EmailConfig must be provided when using Custom email service."
-                : null;
+            return "Invalid email mode: " + request.Email;
         }
 
         private static string? ValidateImportConstraints(ServerSettingsRequestDto request)

@@ -18,9 +18,11 @@ import {
   SharePage,
   AdminLayoutPage,
   AdminUsersPage,
+  ResetPasswordPage,
+  VerifyEmailPage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Folder, Home, Person, Delete, Search, AdminPanelSettings } from "@mui/icons-material";
+import { Folder, Home, Delete, Search, AdminPanelSettings } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
 
@@ -36,6 +38,14 @@ const publicRoutes: RouteConfig[] = [
   {
     path: "/share/:token",
     element: <SharePage />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPasswordPage />,
+  },
+  {
+    path: "/verify-email",
+    element: <VerifyEmailPage />,
   },
 ];
 
@@ -71,13 +81,6 @@ export function AppRoutes() {
       protected: true,
       translationKey: "search",
       element: <SearchPage />,
-    },
-    {
-      path: "/profile",
-      icon: <Person />,
-      protected: true,
-      translationKey: "profile",
-      element: <ProfilePage />,
     },
   ];
 
@@ -127,6 +130,9 @@ export function AppRoutes() {
           <Route index element={<Navigate to="users" replace />} />
           <Route path="users" element={<AdminUsersPage />} />
         </Route>
+
+        {/* Profile page (accessible from avatar menu) */}
+        <Route path="/profile" element={<ProfilePage />} />
 
         {/* Deep link into a specific folder by node id */}
         <Route path="/files/:nodeId" element={<FilesPage />} />
