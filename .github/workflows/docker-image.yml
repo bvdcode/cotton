@@ -9,7 +9,8 @@ on:
   push:
     paths:
       - "src/**"
-      - ".github/workflows/**"
+      - "GitVersion.yml"
+      - ".github/workflows/docker-image.yml"
     branches:
       - main
       - develop
