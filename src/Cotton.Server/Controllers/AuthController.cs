@@ -142,7 +142,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiConflict("TOTP is already enabled for this user");
             }
-            string issuer = "Cotton Cloud";
+            string issuer = Constants.ShortProductName;
             string account = string.IsNullOrWhiteSpace(Request.Host.Host)
                 ? user.Username
                 : $"{user.Username}@{Request.Host.Host}";
