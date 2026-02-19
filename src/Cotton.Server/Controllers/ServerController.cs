@@ -1,10 +1,10 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Models;
 using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
