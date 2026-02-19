@@ -25,7 +25,7 @@ WORKDIR /src
 ENV APP_VERSION=$BUILD_VERSION
 COPY ["Cotton.Server/Cotton.Server.csproj", "Cotton.Server/"]
 COPY ["cotton.client/cotton.client.esproj", "cotton.client/"]
-COPY ["Cotton.Shared/Cotton.Shared.csproj", "Cotton.Shared/"]
+COPY ["Cotton.Shared/Cotton.csproj", "Cotton.Shared/"]
 COPY ["Cotton.Storage/Cotton.Storage.csproj", "Cotton.Storage/"]
 COPY ["Cotton.Topology/Cotton.Topology.csproj", "Cotton.Topology/"]
 COPY ["Cotton.Database/Cotton.Database.csproj", "Cotton.Database/"]
