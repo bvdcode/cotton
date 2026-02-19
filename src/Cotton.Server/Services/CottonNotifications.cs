@@ -61,7 +61,7 @@ namespace Cotton.Server.Services
             };
             using MailMessage mailMessage = new()
             {
-                From = new MailAddress(senderEmail, "Cotton Cloud"),
+                From = new MailAddress(senderEmail, Constants.ProductName),
                 Subject = subject,
             };
             var recipient = new MailAddress(foundUser.Email, foundUser.Username);
