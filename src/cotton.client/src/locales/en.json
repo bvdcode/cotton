@@ -14,7 +14,10 @@
     "showOnlyUnread": "Show only unread",
     "showAll": "Show all",
     "muteSound": "Mute sound",
-    "unmuteSound": "Unmute sound"
+    "unmuteSound": "Unmute sound",
+    "notifications": {
+      "empty": "No notifications"
+    }
   },
   "common": {
     "languageName": "English",
@@ -79,6 +82,7 @@
       "hideDetails": "Hide details"
     },
     "userMenu": {
+      "profile": "Profile",
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
@@ -120,7 +124,14 @@
     },
     "loginButton": "Login",
     "loggingIn": "Logging in...",
-    "errorMessage": "Login failed. Check your credentials."
+    "errorMessage": "Login failed. Check your credentials.",
+    "forgotPassword": {
+      "link": "Forgot password?",
+      "enterEmail": "Please enter your email as the username to reset your password.",
+      "sent": "If an account with that email exists, a password reset link has been sent.",
+      "sending": "Sending...",
+      "error": "Failed to send reset link. Please try again later."
+    }
   },
   "notFound": {
     "title": "Page Not Found",
@@ -146,6 +157,14 @@
         "threeMonths": "3 months",
         "tenYears": "10 years",
         "oneDay": "One day"
+      },
+      "invalidateAll": "Invalidate all share links",
+      "invalidating": "Invalidating...",
+      "invalidated": "All share links have been invalidated.",
+      "invalidateConfirmTitle": "Invalidate all share links?",
+      "invalidateConfirmDescription": "All active share links will stop working immediately. This cannot be undone.",
+      "errors": {
+        "invalidateFailed": "Failed to invalidate share links."
       }
     },
     "totp": {
@@ -187,7 +206,22 @@
       "totpEnabledAt": "Enabled at",
       "totpFailedAttempts": "2FA Failed attempts",
       "email": "E-mail",
+      "emailVerified": "Verified",
+      "emailNotVerified": "Not verified",
       "createdAt": "Created at"
+    },
+    "emailVerification": {
+      "title": "Email verification",
+      "description": "Verify your email address to enable password recovery and notifications.",
+      "verified": "Email verified",
+      "notVerified": "Email not verified",
+      "sendButton": "Send verification email",
+      "sending": "Sending...",
+      "sent": "Verification email sent. Please check your inbox.",
+      "noEmail": "No email address is set for your account.",
+      "errors": {
+        "failed": "Failed to send verification email. Please try again later."
+      }
     },
     "password": {
       "title": "Change password",
@@ -807,5 +841,30 @@
     "trash": "Trash",
     "profile": "Profile",
     "admin": "Admin"
+  },
+  "resetPassword": {
+    "title": "Reset password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "submit": "Reset password",
+    "submitting": "Resetting...",
+    "success": "Password has been reset successfully. You can now sign in with your new password.",
+    "goToLogin": "Go to login",
+    "errors": {
+      "mismatch": "Passwords do not match.",
+      "invalidToken": "The reset link is invalid or has expired.",
+      "failed": "Failed to reset password. Please try again."
+    }
+  },
+  "verifyEmail": {
+    "title": "Email verification",
+    "verifying": "Verifying your email...",
+    "success": "Your email has been verified successfully!",
+    "goToLogin": "Go to login",
+    "goToProfile": "Go to profile",
+    "errors": {
+      "invalidToken": "The verification link is invalid or has expired.",
+      "failed": "Failed to verify email. Please try again."
+    }
   }
 }

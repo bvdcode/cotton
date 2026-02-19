@@ -9,7 +9,6 @@ using Cotton.Server.Hubs;
 using Cotton.Server.Mappings;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Shared;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
@@ -51,6 +50,7 @@ namespace Cotton.Server
                 .AddHttpContextAccessor()
                 .AddSingleton<PerfTracker>()
                 .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
+                .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
