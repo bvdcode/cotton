@@ -15,7 +15,7 @@
 		<PackageTags>Cloud,Storage,SDK,ASP.NET,Database</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageIcon>packageIcon.png</PackageIcon>
-		<PackageIconUrl>https://raw.githubusercontent.com/bvdcode/cotton/main/src/cotton/packageIcon.png</PackageIconUrl>
+		<PackageIconUrl>https://raw.githubusercontent.com/bvdcode/cotton/main/src/Cotton.Shared/packageIcon.png</PackageIconUrl>
 		<PackageProjectUrl>https://github.com/bvdcode/cotton</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/bvdcode/cotton</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
