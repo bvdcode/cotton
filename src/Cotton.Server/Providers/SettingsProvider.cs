@@ -10,6 +10,7 @@ using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Json;
 
 namespace Cotton.Server.Providers
 {
@@ -106,7 +107,7 @@ namespace Cotton.Server.Providers
                 return telemetryError;
             }
 
-            var emailError = ValidateEmailConstraints(request, this);
+            var emailError = await ValidateEmailConstraintsAsync(request);
             if (emailError is not null)
             {
                 return emailError;
@@ -152,22 +153,21 @@ namespace Cotton.Server.Providers
             return null;
         }
 
-        private static string? ValidateEmailConstraints(
-            ServerSettingsRequestDto request,
-            SettingsProvider settingsProvider)
+        private static async Task<string?> ValidateEmailConstraintsAsync(ServerSettingsRequestDto request)
         {
             if (request.Email == EmailMode.Cloud)
             {
-                if (request.Telemetry == false)
+                if (!request.Telemetry)
                 {
                     return "Telemetry must be enabled to use cloud email service.";
                 }
-                using CottonPublicEmailProvider provider = new(settingsProvider);
-                bool isHealthy = provider.CheckHealthAsync().GetAwaiter().GetResult();
+
+                bool isHealthy = await CheckGatewayHealthAsync();
                 if (!isHealthy)
                 {
                     return "Cloud email service is currently unavailable. Please try again later or switch to Custom email service.";
                 }
+
                 return null;
             }
 
@@ -184,6 +184,21 @@ namespace Cotton.Server.Providers
             }
 
             return "Invalid email mode: " + request.Email;
+        }
+
+        private static async Task<bool> CheckGatewayHealthAsync()
+        {
+            try
+            {
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                var response = await client.GetFromJsonAsync<HealthResponse>(
+                    "https://cotton-gateway.splidex.com/api/v1/health");
+                return response != null && response.Status == "Healthy";
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static string? ValidateImportConstraints(ServerSettingsRequestDto request)

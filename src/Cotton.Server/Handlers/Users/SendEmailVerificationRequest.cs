@@ -1,6 +1,6 @@
 ﻿using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Localization;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Helpers;
@@ -51,11 +51,16 @@ namespace Cotton.Server.Handlers.Users
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             string baseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
-            string verifyUrl = $"{baseUrl}/verify-email?token={Uri.EscapeDataString(user.EmailVerificationToken)}";
-            string subject = EmailTemplates.EmailVerificationSubject;
-            string body = EmailTemplates.EmailVerificationBodyHtml(user.Username, verifyUrl);
+            var parameters = new Dictionary<string, string>
+            {
+                ["token"] = user.EmailVerificationToken,
+            };
 
-            await _notifications.SendEmailAsync(user.Id, subject, body);
+            await _notifications.SendEmailAsync(
+                user.Id,
+                EmailTemplate.EmailConfirmation,
+                parameters,
+                baseUrl);
         }
     }
 }
