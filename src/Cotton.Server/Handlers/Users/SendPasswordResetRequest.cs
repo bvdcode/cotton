@@ -1,6 +1,6 @@
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Localization;
+using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
@@ -51,11 +51,16 @@ namespace Cotton.Server.Handlers.Users
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             string baseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
-            string resetUrl = $"{baseUrl}/reset-password?token={Uri.EscapeDataString(user.PasswordResetToken)}";
-            string subject = EmailTemplates.PasswordResetSubject;
-            string body = EmailTemplates.PasswordResetBodyHtml(user.Username, resetUrl);
+            var parameters = new Dictionary<string, string>
+            {
+                ["token"] = user.PasswordResetToken,
+            };
 
-            await _notifications.SendEmailAsync(user.Id, subject, body);
+            await _notifications.SendEmailAsync(
+                user.Id,
+                EmailTemplate.PasswordReset,
+                parameters,
+                baseUrl);
         }
     }
 }

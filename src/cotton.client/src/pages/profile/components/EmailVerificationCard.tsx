@@ -37,7 +37,13 @@ export const EmailVerificationCard = ({ user }: EmailVerificationCardProps) => {
     <ProfileAccordionCard
       id="email-verification-header"
       ariaControls="email-verification-content"
-      icon={isVerified ? <MarkEmailRead /> : <MarkEmailUnread />}
+      icon={
+        isVerified ? (
+          <MarkEmailRead color="success" />
+        ) : (
+          <MarkEmailUnread color="warning" />
+        )
+      }
       title={t("emailVerification.title")}
       description={t("emailVerification.description")}
     >
