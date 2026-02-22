@@ -61,6 +61,8 @@ namespace Cotton.Server.Handlers.Users
                 EmailTemplate.PasswordReset,
                 parameters,
                 baseUrl);
+
+            // Intentionally silent: do not reveal whether user exists or email was sent.
         }
     }
 }

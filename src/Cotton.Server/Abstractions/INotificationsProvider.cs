@@ -5,7 +5,11 @@ namespace Cotton.Server.Abstractions
 {
     public interface INotificationsProvider
     {
-        Task SendEmailAsync(
+        /// <summary>
+        /// Sends an email to the specified user. Returns true if the email was
+        /// actually dispatched, false if it was skipped or delivery failed.
+        /// </summary>
+        Task<bool> SendEmailAsync(
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
