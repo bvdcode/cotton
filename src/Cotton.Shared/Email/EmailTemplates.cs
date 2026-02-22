@@ -141,7 +141,7 @@ namespace Cotton.Email
 </html>";
 
         /// <summary>
-        /// 
+        /// Contains the HTML template for the password reset email in English.
         /// </summary>
         public const string PasswordResetEn = @"<!DOCTYPE html>
 <html lang=""en"">
