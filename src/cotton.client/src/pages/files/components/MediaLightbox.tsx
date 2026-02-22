@@ -43,6 +43,10 @@ const LOADING_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
 </svg>
 `)}`;
 
+type SlideWithTitle = Slide & {
+  title?: string;
+};
+
 type MediaKind = "image" | "video";
 
 export interface MediaItem {
@@ -265,7 +269,7 @@ function buildSlidesFromItems(
   displayUrls: Record<string, string>,
   signedUrls: Record<string, string>,
   downloadUrls: Record<string, string>,
-): Slide[] {
+): SlideWithTitle[] {
   const total = items.length;
 
   const buildShareUrl = (candidateUrl: string | null): string | null => {
@@ -287,7 +291,7 @@ function buildSlidesFromItems(
     signedUrl: string | null;
     downloadUrl: string | null;
     shareUrl: string | null;
-  }): Slide => {
+  }): SlideWithTitle => {
     const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl } = args;
     const isLoading = !displayUrl && !item.previewUrl;
     const src = displayUrl || item.previewUrl || LOADING_PLACEHOLDER;
@@ -312,7 +316,7 @@ function buildSlidesFromItems(
     signedUrl: string | null;
     downloadUrl: string | null;
     shareUrl: string | null;
-  }): Slide => {
+  }): SlideWithTitle => {
     const { item, title, signedUrl, downloadUrl, shareUrl } = args;
     const poster = item.previewUrl || undefined;
 
@@ -344,10 +348,10 @@ function buildSlidesFromItems(
           type: item.mimeType,
         },
       ],
-    } as Slide;
+    } as SlideWithTitle;
   };
 
-  return items.map<Slide>((item, idx) => {
+  return items.map<SlideWithTitle>((item, idx) => {
     const position = idx + 1;
     const title = buildTitle(position, item);
 
