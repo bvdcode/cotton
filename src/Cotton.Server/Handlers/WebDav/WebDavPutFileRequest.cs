@@ -67,32 +67,67 @@ public class WebDavPutFileRequestHandler(
     ILogger<WebDavPutFileRequestHandler> _logger)
     : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
 {
+    private sealed record PutTarget(
+        WebDavResolveResult Existing,
+        WebDavParentResult Parent,
+        string ResourceName,
+        string NameKey,
+        bool Created);
+
+    private sealed record PutContent(List<Chunk> Chunks, byte[] FileHash, long TotalBytes);
+
     public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
     {
-        // Check if path points to existing collection
+        var (target, targetError) = await TryResolveAndValidateTargetAsync(request, ct);
+        if (targetError != null)
+        {
+            return targetError;
+        }
+
+        var (content, contentError) = await TryReadAndValidateContentAsync(request, ct);
+        if (contentError != null)
+        {
+            return contentError;
+        }
+
+        string contentType = ResolveContentType(request.ContentType, target!.ResourceName);
+        var fileManifest = await GetOrCreateFileManifestAsync(
+            chunks: content!.Chunks,
+            fileHash: content.FileHash,
+            resourceName: target.ResourceName,
+            contentType: contentType,
+            ct);
+
+        await UpsertNodeFileAsync(request, target, fileManifest.Id, ct);
+        await _dbContext.SaveChangesAsync(ct);
+
+        var resultNodeFile = await LoadResultNodeFileAsync(request, target, ct);
+        await NotifyPutCompletedAsync(request, created: target.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
+        return new WebDavPutFileResult(true, target.Created, null, resultNodeFile.Id);
+    }
+
+    private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
+    {
         var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
         if (existing.Found && existing.IsCollection)
         {
-            return new WebDavPutFileResult(false, false, WebDavPutFileError.IsCollection);
+            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.IsCollection));
         }
 
-        // Get parent node
         var parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
         if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
         {
-            return new WebDavPutFileResult(false, false, WebDavPutFileError.ParentNotFound);
+            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.ParentNotFound));
         }
 
-        // Validate name
-        if (!NameValidator.TryNormalizeAndValidate(parentResult.ResourceName, out _, out var errorMessage))
+        if (!NameValidator.TryNormalizeAndValidate(parentResult.ResourceName, out _, out _))
         {
-            return new WebDavPutFileResult(false, false, WebDavPutFileError.InvalidName);
+            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.InvalidName));
         }
 
         var nameKey = NameValidator.NormalizeAndGetNameKey(parentResult.ResourceName);
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
 
-        // Check for conflict with folder
         var folderExists = await _dbContext.Nodes
             .AnyAsync(n => n.ParentId == parentResult.ParentNode.Id
                 && n.OwnerId == request.UserId
@@ -102,18 +137,22 @@ public class WebDavPutFileRequestHandler(
 
         if (folderExists)
         {
-            return new WebDavPutFileResult(false, false, WebDavPutFileError.Conflict);
+            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.Conflict));
         }
 
-        // If file exists and overwrite is false then fail per WebDAV semantics.
         if (existing.Found && existing.NodeFile is not null && !request.Overwrite)
         {
-            return new WebDavPutFileResult(false, false, WebDavPutFileError.PreconditionFailed);
+            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.PreconditionFailed));
         }
 
         bool created = !existing.Found;
-        // Process stream in chunks without loading entire file into memory
+        return (new PutTarget(existing, parentResult, parentResult.ResourceName, nameKey, created), null);
+    }
+
+    private async Task<(PutContent? Content, WebDavPutFileResult? Error)> TryReadAndValidateContentAsync(WebDavPutFileRequest request, CancellationToken ct)
+    {
         var (chunks, fileHash) = await ProcessStreamInChunksAndHashAsync(request.Content, request.UserId, ct);
+
         long totalBytes = 0;
         for (int i = 0; i < chunks.Count; i++)
         {
@@ -126,114 +165,143 @@ public class WebDavPutFileRequestHandler(
             {
                 _logger.LogWarning(
                     "WebDAV PUT aborted/truncated: expected length {Expected}, got {Actual} bytes. Path: {Path}, User: {UserId}",
-                    request.ContentLength.Value, totalBytes, request.Path, request.UserId);
+                    request.ContentLength.Value,
+                    totalBytes,
+                    request.Path,
+                    request.UserId);
 
-                return new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted);
+                return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
             }
         }
 
         if (totalBytes == 0)
         {
-            // Allow empty file only when client explicitly indicates Content-Length: 0.
-            // Otherwise this is likely an aborted upload (e.g. client closed connection early).
             if (request.ContentLength.HasValue && request.ContentLength.Value == 0)
             {
                 chunks = await CreateEmptyChunkAsync(request.UserId, ct);
                 fileHash = Hasher.HashData([]);
+                totalBytes = 0;
             }
             else
             {
                 _logger.LogWarning(
                     "WebDAV PUT got 0 bytes but Content-Length was {CL}. Treating as aborted. Path: {Path}, User: {UserId}",
-                    request.ContentLength, request.Path, request.UserId);
+                    request.ContentLength,
+                    request.Path,
+                    request.UserId);
 
-                return new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted);
+                return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.UploadAborted));
             }
         }
 
-        // Determine content type
+        return (new PutContent(chunks, fileHash, totalBytes), null);
+    }
+
+    private static string ResolveContentType(string? contentType, string resourceName)
+    {
         FileExtensionContentTypeProvider contentTypeProvider = new();
-        var contentType = request.ContentType ??
-            (contentTypeProvider.TryGetContentType(parentResult.ResourceName, out var detectedType)
+        return contentType ??
+            (contentTypeProvider.TryGetContentType(resourceName, out var detectedType)
                 ? detectedType
                 : "application/octet-stream");
+    }
 
-        // Find or create file manifest
+    private async Task<FileManifest> GetOrCreateFileManifestAsync(
+        List<Chunk> chunks,
+        byte[] fileHash,
+        string resourceName,
+        string contentType,
+        CancellationToken ct)
+    {
         var fileManifest = await _dbContext.FileManifests
             .FirstOrDefaultAsync(f => f.ProposedContentHash == fileHash || f.ComputedContentHash == fileHash, ct);
 
         fileManifest ??= await _fileManifestService.CreateNewFileManifestAsync(
             chunks,
-            parentResult.ResourceName,
+            resourceName,
             contentType,
             fileHash,
             ct);
 
-        // Update or create node file
-        if (existing.Found && existing.NodeFile is not null)
-        {
-            // Update existing file
-            var nodeFile = await _dbContext.NodeFiles
-                .FirstAsync(f => f.Id == existing.NodeFile.Id, ct);
+        return fileManifest;
+    }
 
-            // If previous version is an empty file, don't create a version entry in trash.
-            // Treat it as a simple overwrite by replacing the manifest.
+    private async Task UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
+    {
+        if (target.Existing.Found && target.Existing.NodeFile is not null)
+        {
+            var nodeFile = await _dbContext.NodeFiles
+                .FirstAsync(f => f.Id == target.Existing.NodeFile.Id, ct);
+
             var previousManifest = await _dbContext.FileManifests
                 .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Id == nodeFile.FileManifestId, ct);
 
             if (previousManifest?.SizeBytes == 0)
             {
-                nodeFile.FileManifestId = fileManifest.Id;
+                nodeFile.FileManifestId = fileManifestId;
             }
             else
             {
-                await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifest.Id, request.UserId, ct);
+                await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifestId, request.UserId, ct);
             }
+
+            return;
         }
-        else
+
+        var createdNodeFile = new NodeFile
         {
-            // Create new file
-            var nodeFile = new NodeFile
-            {
-                OwnerId = request.UserId,
-                NodeId = parentResult.ParentNode.Id,
-                FileManifestId = fileManifest.Id,
-            };
-            nodeFile.SetName(parentResult.ResourceName);
+            OwnerId = request.UserId,
+            NodeId = target.Parent.ParentNode!.Id,
+            FileManifestId = fileManifestId,
+        };
+        createdNodeFile.SetName(target.ResourceName);
 
-            await _dbContext.NodeFiles.AddAsync(nodeFile, ct);
-            await _dbContext.SaveChangesAsync(ct);
-
-            nodeFile.OriginalNodeFileId = nodeFile.Id;
-        }
-
+        await _dbContext.NodeFiles.AddAsync(createdNodeFile, ct);
         await _dbContext.SaveChangesAsync(ct);
 
-        var resultNodeFile = existing.Found && existing.NodeFile is not null
-            ? await _dbContext.NodeFiles.FirstAsync(f => f.Id == existing.NodeFile.Id, ct)
-            : await _dbContext.NodeFiles
-                .Where(f => f.NodeId == parentResult.ParentNode.Id
-                    && f.OwnerId == request.UserId
-                    && f.NameKey == nameKey)
-                .OrderByDescending(f => f.CreatedAt)
-                .FirstAsync(ct);
+        createdNodeFile.OriginalNodeFileId = createdNodeFile.Id;
+    }
 
-        _logger.LogInformation("WebDAV PUT: {Action} file {Path} ({ChunkCount} chunks) for user {UserId}",
-            created ? "Created" : "Updated", request.Path, chunks.Count, request.UserId);
+    private async Task<NodeFile> LoadResultNodeFileAsync(WebDavPutFileRequest request, PutTarget target, CancellationToken ct)
+    {
+        if (target.Existing.Found && target.Existing.NodeFile is not null)
+        {
+            return await _dbContext.NodeFiles.FirstAsync(f => f.Id == target.Existing.NodeFile.Id, ct);
+        }
+
+        return await _dbContext.NodeFiles
+            .Where(f => f.NodeId == target.Parent.ParentNode!.Id
+                && f.OwnerId == request.UserId
+                && f.NameKey == target.NameKey)
+            .OrderByDescending(f => f.CreatedAt)
+            .FirstAsync(ct);
+    }
+
+    private async Task NotifyPutCompletedAsync(
+        WebDavPutFileRequest request,
+        bool created,
+        int chunkCount,
+        Guid nodeFileId,
+        CancellationToken ct)
+    {
+        _logger.LogInformation(
+            "WebDAV PUT: {Action} file {Path} ({ChunkCount} chunks) for user {UserId}",
+            created ? "Created" : "Updated",
+            request.Path,
+            chunkCount,
+            request.UserId);
 
         await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
 
         if (created)
         {
-            await _eventNotification.NotifyFileCreatedAsync(resultNodeFile.Id, ct);
+            await _eventNotification.NotifyFileCreatedAsync(nodeFileId, ct);
         }
         else
         {
-            await _eventNotification.NotifyFileUpdatedAsync(resultNodeFile.Id, ct);
+            await _eventNotification.NotifyFileUpdatedAsync(nodeFileId, ct);
         }
-
-        return new WebDavPutFileResult(true, created, null, resultNodeFile.Id);
     }
 
     /// <summary>
