@@ -208,10 +208,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         </Stack>
 
         <Stack spacing={1.25} flex={1}>
-          <InfoRow
-            label={t("fields.birthDate")}
-            value={birthDateValue}
-          />
+          <InfoRow label={t("fields.birthDate")} value={birthDateValue} />
           <InfoRow
             label={t("fields.createdAt")}
             value={formatDateTime(user.createdAt)}
