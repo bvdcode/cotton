@@ -268,46 +268,55 @@ function buildSlidesFromItems(
 ): Slide[] {
   const total = items.length;
 
-  return items.map<Slide>((item, idx) => {
-    const position = idx + 1;
-    const maybeSigned = signedUrls[item.id];
-    const maybeDisplay = displayUrls[item.id];
-    const maybeDownload = downloadUrls[item.id];
-    const shareCandidate = maybeDownload || maybeSigned;
-    const shareUrl = shareCandidate
-      ? (() => {
-          const token =
-            shareLinks.tryExtractTokenFromDownloadUrl(shareCandidate);
-          return token ? shareLinks.buildShareUrl(token) : null;
-        })()
-      : null;
-    const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
+  const buildShareUrl = (candidateUrl: string | null): string | null => {
+    if (!candidateUrl) return null;
+    const token = shareLinks.tryExtractTokenFromDownloadUrl(candidateUrl);
+    return token ? shareLinks.buildShareUrl(token) : null;
+  };
+
+  const buildTitle = (position: number, item: MediaItem): string => {
     const prefix = total > 0 ? `${position}/${total}` : "";
-    const title = sizeStr
-      ? `${prefix} • ${item.name} • ${sizeStr}`
-      : `${prefix} • ${item.name}`;
+    const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
+    return sizeStr ? `${prefix} • ${item.name} • ${sizeStr}` : `${prefix} • ${item.name}`;
+  };
 
-    if (item.kind === "image") {
-      const isLoading = !maybeDisplay && !item.previewUrl;
-      const src = maybeDisplay || item.previewUrl || LOADING_PLACEHOLDER;
-      return {
-        type: "image",
-        src,
-        width: isLoading ? 120 : item.width,
-        height: isLoading ? 120 : item.height,
-        title,
-        download:
-          maybeDownload || maybeSigned
-            ? { url: maybeDownload || maybeSigned || "", filename: item.name }
-            : undefined,
-        share: shareUrl || undefined,
-      };
-    }
+  const buildImageSlide = (args: {
+    item: MediaItem;
+    title: string;
+    displayUrl: string | null;
+    signedUrl: string | null;
+    downloadUrl: string | null;
+    shareUrl: string | null;
+  }): Slide => {
+    const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl } = args;
+    const isLoading = !displayUrl && !item.previewUrl;
+    const src = displayUrl || item.previewUrl || LOADING_PLACEHOLDER;
 
+    return {
+      type: "image",
+      src,
+      width: isLoading ? 120 : item.width,
+      height: isLoading ? 120 : item.height,
+      title,
+      download:
+        downloadUrl || signedUrl
+          ? { url: downloadUrl || signedUrl || "", filename: item.name }
+          : undefined,
+      share: shareUrl || undefined,
+    };
+  };
+
+  const buildVideoSlide = (args: {
+    item: MediaItem;
+    title: string;
+    signedUrl: string | null;
+    downloadUrl: string | null;
+    shareUrl: string | null;
+  }): Slide => {
+    const { item, title, signedUrl, downloadUrl, shareUrl } = args;
     const poster = item.previewUrl || undefined;
-    const src = maybeSigned;
 
-    if (!src) {
+    if (!signedUrl) {
       return {
         type: "image",
         src: poster || LOADING_PLACEHOLDER,
@@ -325,16 +334,46 @@ function buildSlidesFromItems(
       height: item.height,
       title,
       download: {
-        url: maybeDownload || src,
+        url: downloadUrl || signedUrl,
         filename: item.name,
       },
       share: shareUrl || undefined,
       sources: [
         {
-          src,
+          src: signedUrl,
           type: item.mimeType,
         },
       ],
     } as Slide;
+  };
+
+  return items.map<Slide>((item, idx) => {
+    const position = idx + 1;
+    const title = buildTitle(position, item);
+
+    const signedUrl = signedUrls[item.id] ?? null;
+    const displayUrl = displayUrls[item.id] ?? null;
+    const downloadUrl = downloadUrls[item.id] ?? null;
+    const shareCandidate = downloadUrl || signedUrl;
+    const shareUrl = buildShareUrl(shareCandidate);
+
+    if (item.kind === "image") {
+      return buildImageSlide({
+        item,
+        title,
+        displayUrl,
+        signedUrl,
+        downloadUrl,
+        shareUrl,
+      });
+    }
+
+    return buildVideoSlide({
+      item,
+      title,
+      signedUrl,
+      downloadUrl,
+      shareUrl,
+    });
   });
 }
