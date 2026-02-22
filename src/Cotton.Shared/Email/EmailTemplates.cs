@@ -208,6 +208,12 @@ namespace Cotton.Email
 </body>
 </html>";
 
+        /// <summary>
+        /// Contains the HTML template for the password reset email in Russian.
+        /// </summary>
+        /// <remarks>This constant string is used to generate a password reset email, which includes a
+        /// link for the user to reset their password. The placeholders {{recipient_name}} and {{reset_url}} should be
+        /// replaced with the actual recipient's name and the password reset link, respectively.</remarks>
         public const string PasswordResetRu = @"<!DOCTYPE html>
 <html lang=""ru"">
 <head>
