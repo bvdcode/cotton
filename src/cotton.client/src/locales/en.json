@@ -125,6 +125,10 @@
     "loginButton": "Login",
     "loggingIn": "Logging in...",
     "errorMessage": "Login failed. Check your credentials.",
+    "restoring": {
+      "title": "Restoring session...",
+      "caption": "Please, wait"
+    },
     "forgotPassword": {
       "link": "Forgot password?",
       "enterEmail": "Please enter your email as the username to reset your password.",
