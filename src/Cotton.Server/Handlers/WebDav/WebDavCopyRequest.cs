@@ -65,9 +65,10 @@ public class WebDavCopyRequestHandler(
         }
 
         var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
-        if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
+        var destParentFailure = TryGetDestinationParentFailure(destParentResult);
+        if (destParentFailure is not null)
         {
-            return Fail(WebDavCopyError.DestinationParentNotFound);
+            return destParentFailure;
         }
 
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
@@ -78,25 +79,13 @@ public class WebDavCopyRequestHandler(
         }
 
         var (copiedNodeId, copiedNodeFileId) = await PerformCopyAsync(request, sourceResult, destParentResult, layout.Id, ct);
-        await _dbContext.SaveChangesAsync(ct);
-
-        if (sourceResult.NodeFile is not null)
-        {
-            await EnsureNewVersionFamilyAsync(request.UserId, destParentResult.ParentNode.Id, destParentResult.ResourceName, ct);
-        }
-
-        _logger.LogInformation("WebDAV COPY: Copied {Source} to {Dest} for user {UserId}",
-            request.SourcePath, request.DestinationPath, request.UserId);
-
-        if (copiedNodeId.HasValue)
-        {
-            await _eventNotification.NotifyNodeCreatedAsync(copiedNodeId.Value, ct);
-        }
-        else if (copiedNodeFileId.HasValue)
-        {
-            await _eventNotification.NotifyFileCreatedAsync(copiedNodeFileId.Value, ct);
-        }
-
+        await PersistAndNotifyAsync(
+            request,
+            sourceResult,
+            destParentResult,
+            copiedNodeId,
+            copiedNodeFileId,
+            ct);
         return Ok(created, copiedNodeId, copiedNodeFileId);
     }
 
@@ -108,6 +97,51 @@ public class WebDavCopyRequestHandler(
     private static WebDavCopyResult Ok(bool created, Guid? copiedNodeId, Guid? copiedNodeFileId)
     {
         return new WebDavCopyResult(true, created, null, copiedNodeId, copiedNodeFileId);
+    }
+
+    private static WebDavCopyResult? TryGetDestinationParentFailure(WebDavParentResult destParentResult)
+    {
+        if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
+        {
+            return Fail(WebDavCopyError.DestinationParentNotFound);
+        }
+
+        return null;
+    }
+
+    private async Task PersistAndNotifyAsync(
+        WebDavCopyRequest request,
+        WebDavResolveResult sourceResult,
+        WebDavParentResult destParentResult,
+        Guid? copiedNodeId,
+        Guid? copiedNodeFileId,
+        CancellationToken ct)
+    {
+        await _dbContext.SaveChangesAsync(ct);
+
+        if (sourceResult.NodeFile is not null)
+        {
+            await EnsureNewVersionFamilyAsync(
+                request.UserId,
+                destParentResult.ParentNode!.Id,
+                destParentResult.ResourceName!,
+                ct);
+        }
+
+        _logger.LogInformation(
+            "WebDAV COPY: Copied {Source} to {Dest} for user {UserId}",
+            request.SourcePath,
+            request.DestinationPath,
+            request.UserId);
+
+        if (copiedNodeId.HasValue)
+        {
+            await _eventNotification.NotifyNodeCreatedAsync(copiedNodeId.Value, ct);
+        }
+        else if (copiedNodeFileId.HasValue)
+        {
+            await _eventNotification.NotifyFileCreatedAsync(copiedNodeFileId.Value, ct);
+        }
     }
 
     private WebDavCopyResult? ValidateSourceOrGetFailure(WebDavCopyRequest request, WebDavResolveResult sourceResult)
