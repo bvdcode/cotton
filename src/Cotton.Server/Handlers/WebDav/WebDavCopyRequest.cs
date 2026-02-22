@@ -58,28 +58,23 @@ public class WebDavCopyRequestHandler(
     public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
     {
         var sourceResult = await ResolveSourceAsync(request, ct);
-        if (!sourceResult.Found)
+        var sourceValidation = ValidateSourceOrGetFailure(request, sourceResult);
+        if (sourceValidation is not null)
         {
-            return new WebDavCopyResult(false, false, WebDavCopyError.SourceNotFound);
-        }
-
-        if (sourceResult.IsCollection && sourceResult.Node?.ParentId is null)
-        {
-            _logger.LogWarning("WebDAV COPY: Attempted to copy root node for user {UserId}", request.UserId);
-            return new WebDavCopyResult(false, false, WebDavCopyError.CannotCopyRoot);
+            return sourceValidation;
         }
 
         var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
         if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
         {
-            return new WebDavCopyResult(false, false, WebDavCopyError.DestinationParentNotFound);
+            return Fail(WebDavCopyError.DestinationParentNotFound);
         }
 
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
         var (created, allowed) = await HandleDestinationOverwriteAsync(request, ct);
         if (!allowed)
         {
-            return new WebDavCopyResult(false, false, WebDavCopyError.DestinationExists);
+            return Fail(WebDavCopyError.DestinationExists);
         }
 
         var (copiedNodeId, copiedNodeFileId) = await PerformCopyAsync(request, sourceResult, destParentResult, layout.Id, ct);
@@ -102,7 +97,33 @@ public class WebDavCopyRequestHandler(
             await _eventNotification.NotifyFileCreatedAsync(copiedNodeFileId.Value, ct);
         }
 
+        return Ok(created, copiedNodeId, copiedNodeFileId);
+    }
+
+    private static WebDavCopyResult Fail(WebDavCopyError error)
+    {
+        return new WebDavCopyResult(false, false, error);
+    }
+
+    private static WebDavCopyResult Ok(bool created, Guid? copiedNodeId, Guid? copiedNodeFileId)
+    {
         return new WebDavCopyResult(true, created, null, copiedNodeId, copiedNodeFileId);
+    }
+
+    private WebDavCopyResult? ValidateSourceOrGetFailure(WebDavCopyRequest request, WebDavResolveResult sourceResult)
+    {
+        if (!sourceResult.Found)
+        {
+            return Fail(WebDavCopyError.SourceNotFound);
+        }
+
+        if (sourceResult.IsCollection && sourceResult.Node?.ParentId is null)
+        {
+            _logger.LogWarning("WebDAV COPY: Attempted to copy root node for user {UserId}", request.UserId);
+            return Fail(WebDavCopyError.CannotCopyRoot);
+        }
+
+        return null;
     }
 
     private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyRequest request, CancellationToken ct)
