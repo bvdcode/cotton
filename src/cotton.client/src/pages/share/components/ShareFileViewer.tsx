@@ -55,7 +55,17 @@ function getFallbackIcon(fileType: FileType) {
   }
 }
 
-export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
+interface ShareMediaViewerProps {
+  token: string;
+  title: string;
+  inlineUrl: string;
+  downloadUrl: string | null;
+  fileName: string | null;
+  contentType: string | null;
+  contentLength: number | null;
+}
+
+const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   token,
   title,
   inlineUrl,
@@ -63,164 +73,171 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
   fileName,
   contentType,
   contentLength,
-  textContent,
 }) => {
-  const { t } = useTranslation(["share"]);
-
-  const handleReadOnlyChange = React.useCallback((_nextValue: string) => {
-    void _nextValue;
-  }, []);
+  const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
 
   const fileTypeInfo = React.useMemo(() => {
     const name = fileName ?? "";
     return getFileTypeInfo(name, contentType);
   }, [contentType, fileName]);
 
-  const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
-
   React.useEffect(() => {
     if (fileTypeInfo.type === "image" || fileTypeInfo.type === "video") {
       setLightboxOpen(true);
-    } else {
-      setLightboxOpen(false);
+      return;
     }
+    setLightboxOpen(false);
   }, [fileTypeInfo.type]);
 
-  if (fileTypeInfo.type === "image" || fileTypeInfo.type === "video") {
-    const item: MediaItem = {
-      id: token,
-      kind: fileTypeInfo.type,
-      name: fileName ?? title,
-      previewUrl: inlineUrl,
-      mimeType: contentType ?? "application/octet-stream",
-      sizeBytes: contentLength ?? undefined,
-    };
+  if (fileTypeInfo.type !== "image" && fileTypeInfo.type !== "video") {
+    return null;
+  }
 
-    return (
-      <Box width="100%" height="100%">
-        <MediaLightbox
-          items={[item]}
-          open={lightboxOpen}
-          initialIndex={0}
-          onClose={() => setLightboxOpen(false)}
-          getSignedMediaUrl={async () => inlineUrl}
-          getDownloadUrl={
-            downloadUrl
-              ? async () => downloadUrl
-              : undefined
-          }
-        />
+  const item: MediaItem = {
+    id: token,
+    kind: fileTypeInfo.type,
+    name: fileName ?? title,
+    previewUrl: inlineUrl,
+    mimeType: contentType ?? "application/octet-stream",
+    sizeBytes: contentLength ?? undefined,
+  };
 
-        {!lightboxOpen && (
-          <Box
-            width="100%"
-            height="100%"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
+  return (
+    <Box width="100%" height="100%">
+      <MediaLightbox
+        items={[item]}
+        open={lightboxOpen}
+        initialIndex={0}
+        onClose={() => setLightboxOpen(false)}
+        getSignedMediaUrl={async () => inlineUrl}
+        getDownloadUrl={downloadUrl ? async () => downloadUrl : undefined}
+      />
+
+      {!lightboxOpen && (
+        <Box
+          width="100%"
+          height="100%"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Container
+            maxWidth="lg"
+            disableGutters
+            sx={{
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              px: { xs: 2, sm: 3 },
+            }}
           >
-            <Container
-              maxWidth="lg"
-              disableGutters
-              sx={{
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                px: { xs: 2, sm: 3 },
-              }}
-            >
-              {fileTypeInfo.type === "image" ? (
-                <Box
-                  component="img"
-                  src={inlineUrl}
-                  alt={fileName ?? ""}
-                  onClick={() => setLightboxOpen(true)}
-                  sx={{
-                    width: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
-                    display: "block",
-                    cursor: "pointer",
-                  }}
-                />
-              ) : (
-                <Box
-                  component="video"
-                  src={inlineUrl}
-                  controls
-                  onPlay={() => setLightboxOpen(true)}
-                  sx={{ width: "100%", maxHeight: "100%", display: "block" }}
-                />
-              )}
-            </Container>
-          </Box>
-        )}
-      </Box>
-    );
-  }
-
-  if (fileTypeInfo.type === "pdf") {
-    return (
-      <Box width="100%" height="100%">
-        <PdfPreview
-          source={{
-            kind: "url",
-            cacheKey: `share:${token}`,
-            getPreviewUrl: async () => inlineUrl,
-          }}
-          fileName={fileName ?? title}
-          fileSizeBytes={contentLength}
-        />
-      </Box>
-    );
-  }
-
-  if (fileTypeInfo.type === "text" && textContent !== null) {
-    const resolvedFileName = fileName ?? title;
-    const lowerName = resolvedFileName.toLowerCase();
-    const isMarkdown = lowerName.endsWith(".md") || lowerName.endsWith(".markdown");
-
-    if (isMarkdown) {
-      return (
-        <Box width="100%" height="100%" minHeight={0} minWidth={0}>
-          <MarkdownEditor
-            value={textContent}
-            onChange={handleReadOnlyChange}
-            isEditing={false}
-            fileName={resolvedFileName}
-          />
+            {fileTypeInfo.type === "image" ? (
+              <Box
+                component="img"
+                src={inlineUrl}
+                alt={fileName ?? ""}
+                onClick={() => setLightboxOpen(true)}
+                sx={{
+                  width: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                  display: "block",
+                  cursor: "pointer",
+                }}
+              />
+            ) : (
+              <Box
+                component="video"
+                src={inlineUrl}
+                controls
+                onPlay={() => setLightboxOpen(true)}
+                sx={{ width: "100%", maxHeight: "100%", display: "block" }}
+              />
+            )}
+          </Container>
         </Box>
-      );
-    }
+      )}
+    </Box>
+  );
+};
 
-    const languageOverride =
-      fileName === null ? detectMonacoLanguageFromContentType(contentType) : null;
-    const detectedLanguage = detectMonacoLanguageFromFileName(resolvedFileName);
-    const monacoLanguage = languageOverride ?? detectedLanguage;
-    const shouldUseCodeEditor = monacoLanguage !== "plaintext";
+interface ShareTextViewerProps {
+  title: string;
+  fileName: string | null;
+  contentType: string | null;
+  textContent: string;
+}
 
+const ShareTextViewer: React.FC<ShareTextViewerProps> = ({
+  title,
+  fileName,
+  contentType,
+  textContent,
+}) => {
+  const handleReadOnlyChange = React.useCallback((_nextValue: string) => {
+    void _nextValue;
+  }, []);
+
+  const resolvedFileName = fileName ?? title;
+  const lowerName = resolvedFileName.toLowerCase();
+  const isMarkdown = lowerName.endsWith(".md") || lowerName.endsWith(".markdown");
+
+  if (isMarkdown) {
     return (
       <Box width="100%" height="100%" minHeight={0} minWidth={0}>
-        {shouldUseCodeEditor ? (
-          <CodeEditor
-            value={textContent}
-            onChange={handleReadOnlyChange}
-            isEditing={false}
-            fileName={resolvedFileName}
-            language={languageOverride ?? undefined}
-          />
-        ) : (
-          <PlainTextEditor
-            value={textContent}
-            onChange={handleReadOnlyChange}
-            isEditing={false}
-            fileName={resolvedFileName}
-          />
-        )}
+        <MarkdownEditor
+          value={textContent}
+          onChange={handleReadOnlyChange}
+          isEditing={false}
+          fileName={resolvedFileName}
+        />
       </Box>
     );
   }
+
+  const languageOverride =
+    fileName === null ? detectMonacoLanguageFromContentType(contentType) : null;
+  const detectedLanguage = detectMonacoLanguageFromFileName(resolvedFileName);
+  const monacoLanguage = languageOverride ?? detectedLanguage;
+  const shouldUseCodeEditor = monacoLanguage !== "plaintext";
+
+  return (
+    <Box width="100%" height="100%" minHeight={0} minWidth={0}>
+      {shouldUseCodeEditor ? (
+        <CodeEditor
+          value={textContent}
+          onChange={handleReadOnlyChange}
+          isEditing={false}
+          fileName={resolvedFileName}
+          language={languageOverride ?? undefined}
+        />
+      ) : (
+        <PlainTextEditor
+          value={textContent}
+          onChange={handleReadOnlyChange}
+          isEditing={false}
+          fileName={resolvedFileName}
+        />
+      )}
+    </Box>
+  );
+};
+
+interface ShareUnsupportedViewerProps {
+  fileType: FileType;
+  fileName: string | null;
+  contentType: string | null;
+  contentLength: number | null;
+}
+
+const ShareUnsupportedViewer: React.FC<ShareUnsupportedViewerProps> = ({
+  fileType,
+  fileName,
+  contentType,
+  contentLength,
+}) => {
+  const { t } = useTranslation(["share"]);
 
   return (
     <Box
@@ -242,7 +259,7 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
           color: "text.secondary",
         }}
       >
-        {getFallbackIcon(fileTypeInfo.type)}
+        {getFallbackIcon(fileType)}
       </Box>
 
       {fileName && (
@@ -272,5 +289,71 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
         {t("unsupported", { ns: "share" })}
       </Typography>
     </Box>
+  );
+};
+
+export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
+  token,
+  title,
+  inlineUrl,
+  downloadUrl,
+  fileName,
+  contentType,
+  contentLength,
+  textContent,
+}) => {
+  const fileTypeInfo = React.useMemo(() => {
+    const name = fileName ?? "";
+    return getFileTypeInfo(name, contentType);
+  }, [contentType, fileName]);
+
+  if (fileTypeInfo.type === "image" || fileTypeInfo.type === "video") {
+    return (
+      <ShareMediaViewer
+        token={token}
+        title={title}
+        inlineUrl={inlineUrl}
+        downloadUrl={downloadUrl}
+        fileName={fileName}
+        contentType={contentType}
+        contentLength={contentLength}
+      />
+    );
+  }
+
+  if (fileTypeInfo.type === "pdf") {
+    return (
+      <Box width="100%" height="100%">
+        <PdfPreview
+          source={{
+            kind: "url",
+            cacheKey: `share:${token}`,
+            getPreviewUrl: async () => inlineUrl,
+          }}
+          fileName={fileName ?? title}
+          fileSizeBytes={contentLength}
+        />
+      </Box>
+    );
+  }
+
+  if (fileTypeInfo.type === "text" && textContent !== null) {
+    return (
+      <ShareTextViewer
+        title={title}
+        fileName={fileName}
+        contentType={contentType}
+        textContent={textContent}
+      />
+    );
+  }
+
+  return (
+    <ShareUnsupportedViewer
+      fileType={fileTypeInfo.type}
+      fileName={fileName}
+      contentType={contentType}
+      contentLength={contentLength}
+    />
   );
 };
