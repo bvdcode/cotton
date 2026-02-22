@@ -24,7 +24,7 @@ namespace Cotton.Server.Services
         ILogger<CottonNotifications> _logger,
         IHubContext<EventHub> _hubContext) : INotificationsProvider
     {
-        public async Task SendEmailAsync(
+        public async Task<bool> SendEmailAsync(
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
@@ -34,23 +34,22 @@ namespace Cotton.Server.Services
             switch (settings.EmailMode)
             {
                 case EmailMode.None:
-                    return;
+                    _logger.LogInformation("Email mode is None — skipping {Template} for user {UserId}.", template, userId);
+                    return false;
 
                 case EmailMode.Cloud:
-                    await SendViaCloudAsync(userId, template, parameters, serverBaseUrl, settings);
-                    return;
+                    return await SendViaCloudAsync(userId, template, parameters, serverBaseUrl, settings);
 
                 case EmailMode.Custom:
-                    await SendViaSmtpAsync(userId, template, parameters, serverBaseUrl, settings);
-                    return;
+                    return await SendViaSmtpAsync(userId, template, parameters, serverBaseUrl, settings);
 
                 default:
                     _logger.LogError("Invalid email mode configured: {EmailMode}.", settings.EmailMode);
-                    return;
+                    return false;
             }
         }
 
-        private async Task SendViaCloudAsync(
+        private async Task<bool> SendViaCloudAsync(
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
@@ -60,7 +59,7 @@ namespace Cotton.Server.Services
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null || string.IsNullOrWhiteSpace(user.Email))
             {
-                return;
+                return false;
             }
 
             bool sent = await _publicEmailProvider.SendEmailAsync(
@@ -78,9 +77,11 @@ namespace Cotton.Server.Services
                     template,
                     userId);
             }
+
+            return sent;
         }
 
-        private async Task SendViaSmtpAsync(
+        private async Task<bool> SendViaSmtpAsync(
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
@@ -90,7 +91,7 @@ namespace Cotton.Server.Services
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null || string.IsNullOrWhiteSpace(user.Email))
             {
-                return;
+                return false;
             }
 
             string token = parameters.GetValueOrDefault("token") ?? string.Empty;
@@ -112,7 +113,16 @@ namespace Cotton.Server.Services
             string subject = EmailTemplateRenderer.GetSubject(template, languageCode);
             string body = EmailTemplateRenderer.Render(template, languageCode, variables);
 
-            SendSmtpEmail(user.Email, user.Username, subject, body, settings);
+            try
+            {
+                SendSmtpEmail(user.Email, user.Username, subject, body, settings);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send {Template} email via SMTP to {Email}.", template, user.Email);
+                return false;
+            }
         }
 
         private void SendSmtpEmail(
