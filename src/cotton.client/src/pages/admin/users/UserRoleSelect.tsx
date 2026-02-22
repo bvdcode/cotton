@@ -9,6 +9,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { UserRole } from "../../../features/auth/types";
 
+function isUserRole(value: number): value is UserRole {
+  return value === UserRole.User || value === UserRole.Admin;
+}
+
 interface UserRoleSelectProps {
   labelId: string;
   value: UserRole;
@@ -34,8 +38,15 @@ export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
   );
 
   const handleChange = React.useCallback(
-    (e: SelectChangeEvent) => {
-      onChange(e.target.value as UserRole);
+    (e: SelectChangeEvent<UserRole>, _child: React.ReactNode) => {
+      const rawValue = e.target.value;
+      const numericValue =
+        typeof rawValue === "number" ? rawValue : Number(rawValue);
+
+      if (!Number.isFinite(numericValue)) return;
+      if (!isUserRole(numericValue)) return;
+
+      onChange(numericValue);
     },
     [onChange],
   );
@@ -43,7 +54,7 @@ export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
   return (
     <FormControl fullWidth>
       <InputLabel id={labelId}>{t("users.create.role")}</InputLabel>
-      <Select
+      <Select<UserRole>
         labelId={labelId}
         label={t("users.create.role")}
         value={value}
