@@ -45,7 +45,9 @@ export const ShareLinkSettingsCard = () => {
   const { t } = useTranslation("profile");
   const confirm = useConfirm();
 
-  const expireAfterMinutes = useUserPreferencesStore(selectShareLinkExpireAfterMinutes);
+  const expireAfterMinutes = useUserPreferencesStore(
+    selectShareLinkExpireAfterMinutes,
+  );
   const updatePreferences = useUserPreferencesStore((s) => s.updatePreferences);
 
   const [invalidating, setInvalidating] = useState(false);
@@ -63,27 +65,25 @@ export const ShareLinkSettingsCard = () => {
   );
 
   const handleInvalidateAll = useCallback(async () => {
-    try {
-      await confirm({
-        title: t("shareLinks.invalidateConfirmTitle"),
-        description: t("shareLinks.invalidateConfirmDescription"),
-        confirmationText: t("shareLinks.invalidateAll"),
-      });
-    } catch {
-      return;
-    }
-
-    setInvalidateError("");
-    setInvalidated(false);
-    setInvalidating(true);
-    try {
-      await authApi.invalidateShareLinks();
-      setInvalidated(true);
-    } catch {
-      setInvalidateError(t("shareLinks.errors.invalidateFailed"));
-    } finally {
-      setInvalidating(false);
-    }
+    await confirm({
+      title: t("shareLinks.invalidateConfirmTitle"),
+      description: t("shareLinks.invalidateConfirmDescription"),
+      confirmationText: t("shareLinks.invalidateAll"),
+    }).then(async (result) => {
+      if (result.confirmed) {
+        setInvalidateError("");
+        setInvalidated(false);
+        setInvalidating(true);
+        try {
+          await authApi.invalidateShareLinks();
+          setInvalidated(true);
+        } catch {
+          setInvalidateError(t("shareLinks.errors.invalidateFailed"));
+        } finally {
+          setInvalidating(false);
+        }
+      }
+    });
   }, [confirm, t]);
 
   return (
@@ -146,9 +146,7 @@ export const ShareLinkSettingsCard = () => {
         {invalidated && (
           <Alert severity="success">{t("shareLinks.invalidated")}</Alert>
         )}
-        {invalidateError && (
-          <Alert severity="error">{invalidateError}</Alert>
-        )}
+        {invalidateError && <Alert severity="error">{invalidateError}</Alert>}
       </Box>
     </ProfileAccordionCard>
   );

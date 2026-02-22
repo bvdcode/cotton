@@ -78,12 +78,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
 
   const title = fullName || displayName;
 
-  const subtitleParts: string[] = [];
-  if (title !== displayName) {
-    subtitleParts.push(displayName);
-  }
-  subtitleParts.push(`@${user.username}`);
-  const subtitle = subtitleParts.join(" · ");
+  const usernameLine = `@${user.username}`;
 
   const formatDate = (iso: string): string => {
     const date = new Date(iso);
@@ -105,21 +100,26 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         p: { xs: 2, sm: 3 },
       }}
     >
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 3 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2.5}
+        alignItems={{ xs: "center", sm: "flex-start" }}
+        sx={{ mb: 3 }}
+      >
         <Avatar
           alt={displayName}
           src={user.pictureUrl}
-          sx={{ width: 64, height: 64, bgcolor: "primary.main" }}
+          sx={{ width: { xs: 84, sm: 104 }, height: { xs: 84, sm: 104 }, bgcolor: "primary.main" }}
         >
           {!user.pictureUrl && avatarLetter}
         </Avatar>
 
-        <Box minWidth={0} flex={1}>
-          <Typography variant="h6" fontWeight={700} noWrap>
+        <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>
+          <Typography variant="h5" fontWeight={800}>
             {title}
           </Typography>
           <Typography variant="body2" color="text.secondary" noWrap>
-            {subtitle}
+            {usernameLine}
           </Typography>
           {user.email && (
             <Typography variant="body2" color="text.secondary" noWrap>
@@ -129,7 +129,13 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         </Box>
       </Stack>
 
-      <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 3, gap: 1 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        flexWrap="wrap"
+        justifyContent={{ xs: "center", sm: "flex-start" }}
+        sx={{ mb: 3, gap: 1 }}
+      >
         <Chip
           size="small"
           color={user.role === UserRole.Admin ? "warning" : "default"}
