@@ -79,6 +79,24 @@ namespace Cotton.Server.Controllers
             return Ok(userDto);
         }
 
+        [Authorize]
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateCurrentUser(
+            [FromBody] UpdateCurrentUserRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            var command = new UpdateCurrentUserRequest(
+                userId,
+                request.Email,
+                request.FirstName,
+                request.LastName,
+                request.BirthDate);
+
+            UserDto updated = await _mediator.Send(command, cancellationToken);
+            return Ok(updated);
+        }
+
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet]
         public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
