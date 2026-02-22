@@ -179,6 +179,7 @@ export const TotpSettingsCard = ({
           <>
             <Box>
               <Button
+                fullWidth
                 variant="contained"
                 onClick={handleSetupTotp}
                 disabled={totpLoading}

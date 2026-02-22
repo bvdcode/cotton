@@ -55,12 +55,14 @@ export const TotpSetupForm = ({
               width="100%"
             >
               <Box
+                width="100%"
                 p={2}
                 borderRadius={2}
                 display="inline-flex"
                 bgcolor={theme.palette.common.white}
                 border="1px solid"
                 borderColor="divider"
+                sx={{ justifyContent: "center" }}
               >
                 <QRCode
                   value={totpSetup.otpAuthUri}
@@ -68,6 +70,7 @@ export const TotpSetupForm = ({
                   level="M"
                   fgColor={theme.palette.common.black}
                   bgColor={theme.palette.common.white}
+                  style={{ width: "100%", height: "auto" }}
                 />
               </Box>
             </Box>
@@ -77,11 +80,21 @@ export const TotpSetupForm = ({
               display="flex"
               flexDirection="row"
               alignItems="center"
-              gap={2}
-              border="1px solid"
               justifyContent="space-between"
+              gap={1}
+              border="1px solid"
+              borderColor="divider"
+              borderRadius={1}
+              bgcolor="background.default"
+              p={1}
             >
-              <Typography variant="body2">{totpSetup.secretBase32}</Typography>
+              <Typography
+                component="code"
+                variant="body2"
+                sx={{ fontFamily: "monospace", wordBreak: "break-all" }}
+              >
+                {totpSetup.secretBase32}
+              </Typography>
               <IconButton
                 onClick={onCopySecret}
                 size="small"
@@ -126,6 +139,7 @@ export const TotpSetupForm = ({
               justifyContent={{ xs: "center", md: "flex-start" }}
             >
               <Button
+                fullWidth
                 variant="contained"
                 onClick={onConfirm}
                 disabled={totpConfirmLoading}
