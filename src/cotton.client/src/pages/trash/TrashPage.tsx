@@ -344,7 +344,7 @@ export const TrashPage: React.FC = () => {
     }
   };
 
-  const handleEmptyTrash = async () => {
+  const handleEmptyTrash = React.useCallback(async () => {
     if (!content) return;
 
     const totalItems =
@@ -376,7 +376,7 @@ export const TrashPage: React.FC = () => {
     } catch {
       setEmptyingTrash(false);
     }
-  };
+  }, [confirm, content, refreshContent, t]);
 
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
     await downloadFile(nodeFileId, fileName);
