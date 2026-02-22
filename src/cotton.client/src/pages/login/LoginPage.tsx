@@ -38,6 +38,10 @@ function normalizeTwoFactorCode(value: string): string {
   return value.replace(/\D/g, "").slice(0, 6);
 }
 
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 function tryGetTwoFactorHint(args: {
   status: number | undefined;
   serverMessage: string | undefined;
@@ -66,6 +70,176 @@ function tryGetTwoFactorHint(args: {
 
   return null;
 }
+
+type LoginAlertsProps = {
+  error: string;
+  forgotPasswordMessage: string;
+};
+
+const LoginAlerts: React.FC<LoginAlertsProps> = ({
+  error,
+  forgotPasswordMessage,
+}) => {
+  if (!error && !forgotPasswordMessage) return null;
+
+  return (
+    <>
+      {error && (
+        <Alert color="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      )}
+      {forgotPasswordMessage && (
+        <Alert color="success" sx={{ mt: 2 }}>
+          {forgotPasswordMessage}
+        </Alert>
+      )}
+    </>
+  );
+};
+
+type CredentialsFieldsProps = {
+  username: string;
+  password: string;
+  onUsernameChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  disabled: boolean;
+  usernameLabel: string;
+  passwordLabel: string;
+};
+
+const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
+  username,
+  password,
+  onUsernameChange,
+  onPasswordChange,
+  disabled,
+  usernameLabel,
+  passwordLabel,
+}) => {
+  return (
+    <>
+      <TextField
+        fullWidth
+        label={usernameLabel}
+        margin="normal"
+        variant="outlined"
+        value={username}
+        onChange={(e) => onUsernameChange(e.target.value)}
+        disabled={disabled}
+      />
+      <TextField
+        fullWidth
+        label={passwordLabel}
+        type="password"
+        margin="normal"
+        variant="outlined"
+        value={password}
+        onChange={(e) => onPasswordChange(e.target.value)}
+        disabled={disabled}
+      />
+    </>
+  );
+};
+
+type TwoFactorFieldsProps = {
+  caption: string;
+  digitAriaLabel: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+};
+
+const TwoFactorFields: React.FC<TwoFactorFieldsProps> = ({
+  caption,
+  digitAriaLabel,
+  value,
+  onChange,
+  disabled,
+}) => {
+  return (
+    <Box sx={{ mt: 3 }}>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ mb: 3 }}
+        align="center"
+      >
+        {caption}
+      </Typography>
+      <Box sx={{ mb: 2 }}>
+        <OneTimeCodeInput
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          autoFocus={true}
+          inputAriaLabel={digitAriaLabel}
+        />
+      </Box>
+    </Box>
+  );
+};
+
+type TrustDeviceToggleProps = {
+  active: boolean;
+  onToggle: () => void;
+  disabled: boolean;
+  tooltip: string;
+};
+
+const TrustDeviceToggle: React.FC<TrustDeviceToggleProps> = ({
+  active,
+  onToggle,
+  disabled,
+  tooltip,
+}) => {
+  return (
+    <Tooltip title={tooltip}>
+      <IconButton
+        color={active ? "primary" : "default"}
+        onClick={onToggle}
+        disabled={disabled}
+        sx={{
+          border: 1,
+          borderColor: active ? "primary.main" : "divider",
+        }}
+      >
+        {active ? <Shield /> : <ShieldOutlined />}
+      </IconButton>
+    </Tooltip>
+  );
+};
+
+type ForgotPasswordLinkProps = {
+  onClick: () => void;
+  disabled: boolean;
+  label: string;
+};
+
+const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({
+  onClick,
+  disabled,
+  label,
+}) => {
+  return (
+    <Box sx={{ mt: 1.5, textAlign: "center" }}>
+      <Link
+        component="button"
+        type="button"
+        variant="body2"
+        onClick={onClick}
+        underline="hover"
+        color="text.secondary"
+        sx={{
+          pointerEvents: disabled ? "none" : "auto",
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        {label}
+      </Link>
+    </Box>
+  );
+};
 
 export const LoginPage = () => {
   const location = useLocation();
@@ -166,9 +340,6 @@ export const LoginPage = () => {
     [submitLogin],
   );
 
-  const isEmail = (value: string): boolean =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-
   const handleForgotPassword = useCallback(async () => {
     setError("");
     setForgotPasswordMessage("");
@@ -265,61 +436,30 @@ export const LoginPage = () => {
             noValidate
             autoComplete="off"
           >
-            {!requiresTwoFactor && (
-              <>
-                <TextField
-                  fullWidth
-                  label={t("usernameLabel")}
-                  margin="normal"
-                  variant="outlined"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
-                />
-                <TextField
-                  fullWidth
-                  label={t("passwordLabel")}
-                  type="password"
-                  margin="normal"
-                  variant="outlined"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </>
+            {!requiresTwoFactor ? (
+              <CredentialsFields
+                username={username}
+                password={password}
+                onUsernameChange={setUsername}
+                onPasswordChange={setPassword}
+                disabled={loading}
+                usernameLabel={t("usernameLabel")}
+                passwordLabel={t("passwordLabel")}
+              />
+            ) : (
+              <TwoFactorFields
+                caption={t("twoFactor.caption")}
+                digitAriaLabel={t("twoFactor.digit")}
+                value={twoFactorCode}
+                onChange={setTwoFactorCode}
+                disabled={loading}
+              />
             )}
 
-            {requiresTwoFactor && (
-              <Box sx={{ mt: 3 }}>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 3 }}
-                  align="center"
-                >
-                  {t("twoFactor.caption")}
-                </Typography>
-                <Box sx={{ mb: 2 }}>
-                  <OneTimeCodeInput
-                    value={twoFactorCode}
-                    onChange={setTwoFactorCode}
-                    disabled={loading}
-                    autoFocus={true}
-                    inputAriaLabel={t("twoFactor.digit")}
-                  />
-                </Box>
-              </Box>
-            )}
-            {error && (
-              <Alert color="error" sx={{ mt: 2 }}>
-                {error}
-              </Alert>
-            )}
-            {forgotPasswordMessage && (
-              <Alert color="success" sx={{ mt: 2 }}>
-                {forgotPasswordMessage}
-              </Alert>
-            )}
+            <LoginAlerts
+              error={error}
+              forgotPasswordMessage={forgotPasswordMessage}
+            />
             <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
               <Button
                 type="submit"
@@ -331,41 +471,24 @@ export const LoginPage = () => {
                 {loading ? t("loggingIn") : t("loginButton")}
               </Button>
               {!requiresTwoFactor && (
-                <Tooltip title={t("rememberMe")}>
-                  <IconButton
-                    color={trustDevice ? "primary" : "default"}
-                    onClick={() => setTrustDevice(!trustDevice)}
-                    disabled={loading}
-                    sx={{
-                      border: 1,
-                      borderColor: trustDevice ? "primary.main" : "divider",
-                    }}
-                  >
-                    {trustDevice ? <Shield /> : <ShieldOutlined />}
-                  </IconButton>
-                </Tooltip>
+                <TrustDeviceToggle
+                  active={trustDevice}
+                  onToggle={() => setTrustDevice((v) => !v)}
+                  disabled={loading}
+                  tooltip={t("rememberMe")}
+                />
               )}
             </Box>
             {!requiresTwoFactor && (
-              <Box sx={{ mt: 1.5, textAlign: "center" }}>
-                <Link
-                  component="button"
-                  type="button"
-                  variant="body2"
-                  onClick={handleForgotPassword}
-                  underline="hover"
-                  color="text.secondary"
-                  sx={{
-                    pointerEvents:
-                      loading || forgotPasswordSending ? "none" : "auto",
-                    opacity: loading || forgotPasswordSending ? 0.5 : 1,
-                  }}
-                >
-                  {forgotPasswordSending
+              <ForgotPasswordLink
+                onClick={handleForgotPassword}
+                disabled={loading || forgotPasswordSending}
+                label={
+                  forgotPasswordSending
                     ? t("forgotPassword.sending")
-                    : t("forgotPassword.link")}
-                </Link>
-              </Box>
+                    : t("forgotPassword.link")
+                }
+              />
             )}
           </Box>
         </Paper>
