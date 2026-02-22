@@ -220,6 +220,11 @@
       }
     },
     "fields": {
+      "id": "User ID",
+      "username": "Username",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "birthDate": "Date of birth",
       "role": "Role",
       "twoFactor": "Two-factor authentication",
       "totpEnabledAt": "Enabled at",
@@ -227,7 +232,8 @@
       "email": "E-mail",
       "emailVerified": "Verified",
       "emailNotVerified": "Not verified",
-      "createdAt": "Created at"
+      "createdAt": "Created at",
+      "updatedAt": "Updated at"
     },
     "emailVerification": {
       "title": "Email verification",

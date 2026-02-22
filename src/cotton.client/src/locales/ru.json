@@ -185,6 +185,11 @@
       }
     },
     "fields": {
+      "id": "ID пользователя",
+      "username": "Имя пользователя",
+      "firstName": "Имя",
+      "lastName": "Фамилия",
+      "birthDate": "Дата рождения",
       "role": "Роль",
       "twoFactor": "Двухфакторная аутентификация",
       "totpEnabledAt": "Включена",
@@ -192,7 +197,8 @@
       "email": "E-mail",
       "emailVerified": "Подтверждена",
       "emailNotVerified": "Не подтверждена",
-      "createdAt": "Создан"
+      "createdAt": "Создан",
+      "updatedAt": "Обновлён"
     },
     "emailVerification": {
       "title": "Подтверждение почты",
