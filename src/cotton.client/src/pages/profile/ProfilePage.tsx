@@ -7,6 +7,7 @@ import {
   WebDavTokenCard,
   ShareLinkSettingsCard,
   EmailVerificationCard,
+  EditProfileCard,
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { useEffect } from "react";
@@ -41,6 +42,7 @@ export const ProfilePage = () => {
       justifyContent="center"
     >
       <Stack spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%", maxWidth: 800 }}>
+        <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={{ xs: 2, sm: 3 }}

@@ -23,6 +23,13 @@ interface ChangePasswordRequest {
   newPassword: string;
 }
 
+interface UpdateProfileRequest {
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  birthDate?: string | null;
+}
+
 /**
  * User info response matching backend UserDto : BaseDto<Guid>
  */
@@ -35,6 +42,10 @@ interface UserInfoResponse extends BaseDto<string> {
   pictureUrl?: string;
 
   preferences?: Record<string, string>;
+
+  firstName?: string | null;
+  lastName?: string | null;
+  birthDate?: string | null;
 
   // 2FA (TOTP)
   isTotpEnabled?: boolean;
@@ -79,6 +90,9 @@ export const authApi = {
       displayName: response.data.displayName ?? response.data.username,
       pictureUrl: response.data.pictureUrl,
       preferences: response.data.preferences,
+      firstName: response.data.firstName ?? null,
+      lastName: response.data.lastName ?? null,
+      birthDate: response.data.birthDate ?? null,
       createdAt: response.data.createdAt,
       updatedAt: response.data.updatedAt,
 
@@ -112,6 +126,31 @@ export const authApi = {
 
   changePassword: async (request: ChangePasswordRequest): Promise<void> => {
     await httpClient.put("users/me/password", request);
+  },
+
+  updateProfile: async (request: UpdateProfileRequest): Promise<User> => {
+    const response = await httpClient.put<UserInfoResponse>(
+      "users/me",
+      request,
+    );
+    return {
+      id: response.data.id,
+      role: response.data.role,
+      username: response.data.username,
+      email: response.data.email ?? null,
+      isEmailVerified: response.data.isEmailVerified ?? false,
+      displayName: response.data.displayName ?? response.data.username,
+      pictureUrl: response.data.pictureUrl,
+      preferences: response.data.preferences,
+      firstName: response.data.firstName ?? null,
+      lastName: response.data.lastName ?? null,
+      birthDate: response.data.birthDate ?? null,
+      createdAt: response.data.createdAt,
+      updatedAt: response.data.updatedAt,
+      isTotpEnabled: response.data.isTotpEnabled,
+      totpEnabledAt: response.data.totpEnabledAt ?? null,
+      totpFailedAttempts: response.data.totpFailedAttempts ?? 0,
+    };
   },
 
   forgotPassword: async (usernameOrEmail: string): Promise<void> => {
