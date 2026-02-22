@@ -42,6 +42,10 @@ namespace Cotton.Server.Controllers
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> CreateSettings(ServerSettingsRequestDto request)
         {
+            if (string.IsNullOrWhiteSpace(request.PublicBaseUrl))
+            {
+                request.PublicBaseUrl = $"{Request.Scheme}://{Request.Host.Value}";
+            }
             string? error = await _settings.ValidateServerSettingsAsync(request);
             if (error is not null)
             {
