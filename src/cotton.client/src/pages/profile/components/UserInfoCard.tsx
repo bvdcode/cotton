@@ -119,9 +119,52 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         </Avatar>
 
         <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>
-          <Typography variant="h5" fontWeight={800}>
-            {title}
-          </Typography>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            justifyContent={{ xs: "center", sm: "space-between" }}
+            flexWrap="wrap"
+            useFlexGap
+          >
+            <Box flexGrow={1} minWidth={0}>
+              <Typography variant="h5" fontWeight={800}>
+                {title}
+              </Typography>
+            </Box>
+
+            <Stack
+              direction="row"
+              spacing={1}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ xs: "center", sm: "flex-end" }}
+            >
+              <Chip
+                size="small"
+                color={user.role === UserRole.Admin ? "warning" : "default"}
+                label={t(getRoleTranslationKey(user.role))}
+              />
+              <Chip
+                size="small"
+                color={totpEnabled ? "success" : "warning"}
+                variant="filled"
+                label={totpEnabled ? t("totp.enabled") : t("totp.disabled")}
+              />
+              {user.email && (
+                <Chip
+                  size="small"
+                  color={user.isEmailVerified ? "success" : "warning"}
+                  variant="filled"
+                  label={
+                    user.isEmailVerified
+                      ? t("fields.emailVerified")
+                      : t("fields.emailNotVerified")
+                  }
+                />
+              )}
+            </Stack>
+          </Stack>
           <Typography variant="body2" color="text.secondary" noWrap>
             {usernameLine}
           </Typography>
@@ -131,38 +174,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             </Typography>
           )}
         </Box>
-      </Stack>
-
-      <Stack
-        direction="row"
-        spacing={1}
-        flexWrap="wrap"
-        justifyContent={{ xs: "center", sm: "flex-start" }}
-        sx={{ mb: 3, gap: 1 }}
-      >
-        <Chip
-          size="small"
-          color={user.role === UserRole.Admin ? "warning" : "default"}
-          label={t(getRoleTranslationKey(user.role))}
-        />
-        <Chip
-          size="small"
-          color={totpEnabled ? "success" : "warning"}
-          variant="filled"
-          label={totpEnabled ? t("totp.enabled") : t("totp.disabled")}
-        />
-        {user.email && (
-          <Chip
-            size="small"
-            color={user.isEmailVerified ? "success" : "warning"}
-            variant="filled"
-            label={
-              user.isEmailVerified
-                ? t("fields.emailVerified")
-                : t("fields.emailNotVerified")
-            }
-          />
-        )}
       </Stack>
 
       <Divider sx={{ mb: 2 }} />
@@ -204,8 +215,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             label={t("fields.birthDate")}
             value={
               user.birthDate && user.birthDate.trim().length > 0
-                ? formatDate(user.birthDate) +
-                  ` (${formatDateTime(user.birthDate)})`
+                ? formatDate(user.birthDate)
                 : placeholder
             }
           />
