@@ -236,7 +236,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 whiteSpace: "nowrap",
               }}
             >
-              <Typography color="secondary" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
+              <Typography color="text.secondary" sx={{ fontSize: "0.875rem" }}>
                 {t("selection.count", { count: selectedCount })}
               </Typography>
             </Box>
