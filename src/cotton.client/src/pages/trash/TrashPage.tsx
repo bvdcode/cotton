@@ -49,6 +49,50 @@ import {
 import type { TilesSize } from "../files/types/FileListViewTypes";
 import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
 
+function getTrashViewMode(args: {
+  layoutType: InterfaceLayoutType;
+  tilesSize: TilesSize;
+}): FileBrowserViewMode {
+  const { layoutType, tilesSize } = args;
+
+  if (layoutType === InterfaceLayoutType.List) return "table";
+
+  if (tilesSize === "small") return "tiles-small";
+  if (tilesSize === "large") return "tiles-large";
+  return "tiles-medium";
+}
+
+async function deleteAllTrashItems(args: {
+  content: NodeContentDto;
+  onProgress: (current: number, total: number) => void;
+}): Promise<void> {
+  const { content, onProgress } = args;
+  const totalItems =
+    (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+
+  let deleted = 0;
+
+  for (const folder of content.nodes ?? []) {
+    try {
+      await nodesApi.deleteNode(folder.id, true);
+      deleted += 1;
+      onProgress(deleted, totalItems);
+    } catch (err) {
+      console.error(`Failed to delete folder ${folder.id}:`, err);
+    }
+  }
+
+  for (const file of content.files ?? []) {
+    try {
+      await filesApi.deleteFile(file.id, true);
+      deleted += 1;
+      onProgress(deleted, totalItems);
+    } catch (err) {
+      console.error(`Failed to delete file ${file.id}:`, err);
+    }
+  }
+}
+
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common"]);
   const navigate = useNavigate();
@@ -74,14 +118,7 @@ export const TrashPage: React.FC = () => {
   const setLayoutType = useLocalPreferencesStore((s) => s.setTrashLayoutType);
   const setTilesSize = useLocalPreferencesStore((s) => s.setTrashTilesSize);
 
-  const viewMode: FileBrowserViewMode =
-    layoutType === InterfaceLayoutType.List
-      ? "table"
-      : tilesSize === "small"
-        ? "tiles-small"
-        : tilesSize === "large"
-          ? "tiles-large"
-          : "tiles-medium";
+  const viewMode = getTrashViewMode({ layoutType, tilesSize });
 
   const cycleViewMode = React.useCallback(() => {
     switch (viewMode) {
@@ -288,27 +325,11 @@ export const TrashPage: React.FC = () => {
       setEmptyingTrash(true);
       setEmptyTrashProgress({ current: 0, total: totalItems });
 
-      let deleted = 0;
-
-      for (const folder of content.nodes ?? []) {
-        try {
-          await nodesApi.deleteNode(folder.id, true);
-          deleted++;
-          setEmptyTrashProgress({ current: deleted, total: totalItems });
-        } catch (err) {
-          console.error(`Failed to delete folder ${folder.id}:`, err);
-        }
-      }
-
-      for (const file of content.files ?? []) {
-        try {
-          await filesApi.deleteFile(file.id, true);
-          deleted++;
-          setEmptyTrashProgress({ current: deleted, total: totalItems });
-        } catch (err) {
-          console.error(`Failed to delete file ${file.id}:`, err);
-        }
-      }
+      await deleteAllTrashItems({
+        content,
+        onProgress: (current, total) =>
+          setEmptyTrashProgress({ current, total }),
+      });
 
       setEmptyingTrash(false);
       await refreshContent();
