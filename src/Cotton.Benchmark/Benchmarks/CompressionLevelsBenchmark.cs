@@ -72,7 +72,7 @@ namespace Cotton.Benchmark.Benchmarks
                 var throughput = PerformanceMetrics.Create(_testData.Length, sw.Elapsed).MegabytesPerSecond;
                 var compressedSize = (int)outputStream.Length;
                 var ratio = (double)_testData.Length / Math.Max(1, compressedSize);
-                var reductionPercent = (1 - (double)compressedSize / _testData.Length) * 100;
+                var reductionPercent = (1 - ((double)compressedSize / _testData.Length)) * 100;
 
                 resultsByLevel[level] = new LevelResult
                 {
