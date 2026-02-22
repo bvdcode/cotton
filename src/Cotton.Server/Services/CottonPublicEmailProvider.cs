@@ -6,7 +6,7 @@ namespace Cotton.Server.Services
 {
     public class CottonPublicEmailProvider : IDisposable
     {
-        private const string GatewayBaseUrl = "https://cotton-gateway.splidex.com/api/v1/";
+        public const string GatewayBaseUrl = "https://cotton-gateway.splidex.com/api/v1/";
         private readonly HttpClient _httpClient;
         private readonly Guid _instanceId;
         private readonly ILogger<CottonPublicEmailProvider> _logger;

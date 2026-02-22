@@ -38,7 +38,7 @@ namespace Cotton.Database.Models
         public Guid InstanceId { get; init; }
 
         [Column("public_base_url")]
-        public string? PublicBaseUrl { get; set; }
+        public string PublicBaseUrl { get; set; } = null!;
 
         [Column("smtp_server_address")]
         public string? SmtpServerAddress { get; init; }

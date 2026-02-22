@@ -76,83 +76,6 @@ namespace Cotton.Server.Providers
             }
         }
 
-        public async Task<string?> EnsurePublicBaseUrlAsync(HttpRequest request, CancellationToken cancellationToken = default)
-        {
-            var cached = GetServerSettings();
-            if (!string.IsNullOrWhiteSpace(cached.PublicBaseUrl))
-            {
-                return cached.PublicBaseUrl;
-            }
-
-            string? incoming = TryBuildBaseUrl(request);
-            if (string.IsNullOrWhiteSpace(incoming))
-            {
-                return null;
-            }
-
-            // Capture in cache first (covers pre-initialization requests).
-            lock (_cacheLock)
-            {
-                _cache ??= cached;
-                if (string.IsNullOrWhiteSpace(_cache.PublicBaseUrl))
-                {
-                    _cache.PublicBaseUrl = incoming;
-                }
-            }
-
-            // Persist to DB if server settings already exist.
-            var lastSettings = await _dbContext.ServerSettings
-                .OrderByDescending(s => s.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (lastSettings is not null && string.IsNullOrWhiteSpace(lastSettings.PublicBaseUrl))
-            {
-                lastSettings.PublicBaseUrl = incoming;
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                InvalidateCache();
-            }
-
-            return incoming;
-        }
-
-        private static string? TryBuildBaseUrl(HttpRequest request)
-        {
-            var host = request.Host;
-            if (!host.HasValue)
-            {
-                return null;
-            }
-
-            string scheme = string.IsNullOrWhiteSpace(request.Scheme) ? "https" : request.Scheme;
-            string candidate = $"{scheme}://{host.Value}";
-
-            if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
-            {
-                return null;
-            }
-
-            // Avoid capturing obvious local dev/loopback addresses.
-            if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            if (System.Net.IPAddress.TryParse(uri.Host, out var ip) && System.Net.IPAddress.IsLoopback(ip))
-            {
-                return null;
-            }
-
-            return uri.GetLeftPart(UriPartial.Authority);
-        }
-
-        public static void InvalidateCache()
-        {
-            lock (_cacheLock)
-            {
-                _cache = null;
-            }
-        }
-
         public Task<bool> IsServerInitializedAsync()
         {
             return _dbContext.ServerSettings.AnyAsync();
@@ -260,8 +183,7 @@ namespace Cotton.Server.Providers
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                var response = await client.GetFromJsonAsync<HealthResponse>(
-                    "https://cotton-gateway.splidex.com/api/v1/health");
+                var response = await client.GetFromJsonAsync<HealthResponse>(CottonPublicEmailProvider.GatewayBaseUrl + "health");
                 return response != null && response.Status == "Healthy";
             }
             catch
