@@ -7,6 +7,7 @@ using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
@@ -39,8 +40,18 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Old password is incorrect");
             }
 
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             user.PasswordPhc = _hasher.Hash(request.NewPassword);
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            await _dbContext.RefreshTokens
+                .Where(x => x.UserId == user.Id && x.RevokedAt == null)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(t => t.RevokedAt, _ => DateTime.UtcNow),
+                    cancellationToken);
+
+            await tx.CommitAsync(cancellationToken);
         }
     }
 }
