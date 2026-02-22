@@ -46,18 +46,9 @@ export const ProfilePage = () => {
       justifyContent="center"
     >
       <Stack spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%", maxWidth: 800 }}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={{ xs: 2, sm: 3 }}
-        >
-          <Box sx={{ flex: 1 }}>
-            <UserInfoCard user={user} />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
-          </Box>
-        </Stack>
+        <UserInfoCard user={user} />
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
+        <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />
         <ShareLinkSettingsCard />
         {user.email && !user.isEmailVerified && (

@@ -10,8 +10,9 @@ import {
   IconButton,
   Tooltip,
   Link,
+  Divider,
 } from "@mui/material";
-import { Shield, ShieldOutlined } from "@mui/icons-material";
+import { GitHub, Shield, ShieldOutlined } from "@mui/icons-material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
 import {
@@ -223,10 +224,14 @@ const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({
 }) => {
   return (
     <Box sx={{ mt: 1.5, textAlign: "center" }}>
+      <Link>
+        <GitHub fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+      </Link>
+      <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
       <Link
         component="button"
         type="button"
-        variant="body2"
+        variant="caption"
         onClick={onClick}
         underline="hover"
         color="text.secondary"
@@ -265,72 +270,72 @@ export const LoginPage = () => {
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
 
-  const submitLogin = useCallback(
-    async () => {
-      setError("");
-      setLoading(true);
+  const submitLogin = useCallback(async () => {
+    setError("");
+    setLoading(true);
 
-      try {
-        if (requiresTwoFactor && normalizeTwoFactorCode(twoFactorCode).length < 6) {
-          setError(t("twoFactor.required"));
+    try {
+      if (
+        requiresTwoFactor &&
+        normalizeTwoFactorCode(twoFactorCode).length < 6
+      ) {
+        setError(t("twoFactor.required"));
+        return;
+      }
+
+      await authApi.login({
+        username,
+        password,
+        twoFactorCode: requiresTwoFactor
+          ? normalizeTwoFactorCode(twoFactorCode)
+          : undefined,
+        trustDevice,
+      });
+
+      const user = await authApi.me();
+      setAuthenticated(true, user);
+      navigate("/");
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        const status = e.response?.status;
+        const data = e.response?.data as LoginErrorData | undefined;
+        const serverMessage = data?.detail ?? data?.message;
+        const hint = tryGetTwoFactorHint({ status, serverMessage });
+
+        if (hint === "required") {
+          setRequiresTwoFactor(true);
+          setTwoFactorCode("");
+          setError("");
           return;
         }
 
-        await authApi.login({
-          username,
-          password,
-          twoFactorCode: requiresTwoFactor
-            ? normalizeTwoFactorCode(twoFactorCode)
-            : undefined,
-          trustDevice,
-        });
-
-        const user = await authApi.me();
-        setAuthenticated(true, user);
-        navigate("/");
-      } catch (e) {
-        if (axios.isAxiosError(e)) {
-          const status = e.response?.status;
-          const data = e.response?.data as LoginErrorData | undefined;
-          const serverMessage = data?.detail ?? data?.message;
-          const hint = tryGetTwoFactorHint({ status, serverMessage });
-
-          if (hint === "required") {
-            setRequiresTwoFactor(true);
-            setTwoFactorCode("");
-            setError("");
-            return;
-          }
-
-          if (hint === "invalid") {
-            setRequiresTwoFactor(true);
-            setError(t("twoFactor.invalid"));
-            return;
-          }
-
-          if (hint === "locked") {
-            setRequiresTwoFactor(true);
-            setError(t("twoFactor.locked"));
-            return;
-          }
+        if (hint === "invalid") {
+          setRequiresTwoFactor(true);
+          setError(t("twoFactor.invalid"));
+          return;
         }
 
-        setError(t("errorMessage"));
-      } finally {
-        setLoading(false);
+        if (hint === "locked") {
+          setRequiresTwoFactor(true);
+          setError(t("twoFactor.locked"));
+          return;
+        }
       }
-    },
-    [
-      requiresTwoFactor,
-      twoFactorCode,
-      username,
-      password,
-      trustDevice,
-      t,
-      setAuthenticated,
-      navigate,
-    ],
-  );
+
+      setError(t("errorMessage"));
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    requiresTwoFactor,
+    twoFactorCode,
+    username,
+    password,
+    trustDevice,
+    t,
+    setAuthenticated,
+    navigate,
+  ]);
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
@@ -479,19 +484,19 @@ export const LoginPage = () => {
                 />
               )}
             </Box>
-            {!requiresTwoFactor && (
-              <ForgotPasswordLink
-                onClick={handleForgotPassword}
-                disabled={loading || forgotPasswordSending}
-                label={
-                  forgotPasswordSending
-                    ? t("forgotPassword.sending")
-                    : t("forgotPassword.link")
-                }
-              />
-            )}
           </Box>
         </Paper>
+        {!requiresTwoFactor && (
+          <ForgotPasswordLink
+            onClick={handleForgotPassword}
+            disabled={loading || forgotPasswordSending}
+            label={
+              forgotPasswordSending
+                ? t("forgotPassword.sending")
+                : t("forgotPassword.link")
+            }
+          />
+        )}
       </Container>
     </>
   );

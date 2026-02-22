@@ -1,10 +1,10 @@
 import {
   Box,
-  Paper,
   Button,
   Alert,
   CircularProgress,
   Typography,
+  Stack,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -13,6 +13,9 @@ import { totpApi, type TotpSetup } from "../../../shared/api/totpApi";
 import { authApi } from "../../../shared/api/authApi";
 import type { User } from "../../../features/auth/types";
 import { TotpSetupForm } from "./TotpSetupForm";
+import { ProfileAccordionCard } from "./ProfileAccordionCard";
+import SecurityIcon from "@mui/icons-material/Security";
+import SecurityOutlinedIcon from "@mui/icons-material/SecurityOutlined";
 
 const formatDateTime = (iso: string): string => {
   const date = new Date(iso);
@@ -130,98 +133,85 @@ export const TotpSettingsCard = ({
     }
   };
 
+  const description = totpEnabled
+    ? t("totp.enabledMessage")
+    : t("totp.setup.caption");
+
   return (
-    <Paper
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        p: { xs: 2, sm: 3 },
-        minHeight: 250,
-        justifyContent: "space-around",
-      }}
+    <ProfileAccordionCard
+      id="totp-settings-header"
+      ariaControls="totp-settings-content"
+      icon={
+        totpEnabled ? (
+          <SecurityIcon color="success" />
+        ) : (
+          <SecurityOutlinedIcon color="warning" />
+        )
+      }
+      title={t("totp.sectionTitle")}
+      description={description}
     >
-      <Typography variant="h6" fontWeight={700} gutterBottom>
-        {t("totp.sectionTitle")}
-      </Typography>
+      <Stack spacing={2} paddingY={2}>
+        {totpEnabled ? (
+          <>
+            {totpEnabledAt && (
+              <Box display="flex" justifyContent="space-between" gap={2}>
+                <Typography variant="body2" color="text.secondary">
+                  {t("fields.totpEnabledAt")}
+                </Typography>
+                <Typography variant="body2" fontWeight={600} textAlign="right">
+                  {formatDateTime(totpEnabledAt)}
+                </Typography>
+              </Box>
+            )}
 
-      {totpEnabled ? (
-        <Box>
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {t("totp.enabledMessage")}
-          </Alert>
+            {totpFailedAttempts > 0 && (
+              <Alert severity="error">
+                {t("fields.totpFailedAttempts")}: {totpFailedAttempts}
+              </Alert>
+            )}
 
-          {totpEnabledAt && (
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              gap={2}
-              sx={{ mb: 2 }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                {t("fields.totpEnabledAt")}
-              </Typography>
-              <Typography variant="body2" fontWeight={600} textAlign="right">
-                {formatDateTime(totpEnabledAt)}
-              </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t("totp.enabledDescription")}
+            </Typography>
+          </>
+        ) : (
+          <>
+            <Box>
+              <Button
+                variant="contained"
+                onClick={handleSetupTotp}
+                disabled={totpLoading}
+              >
+                {totpLoading ? (
+                  <>
+                    <CircularProgress size={16} sx={{ mr: 1 }} />
+                    {t("totp.setup.loading")}
+                  </>
+                ) : (
+                  t("totp.setup.button")
+                )}
+              </Button>
             </Box>
-          )}
 
-          {totpFailedAttempts > 0 && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {t("fields.totpFailedAttempts")}: {totpFailedAttempts}
-            </Alert>
-          )}
+            {totpError && <Alert severity="error">{totpError}</Alert>}
+            {totpSuccess && (
+              <Alert severity="success">{t("totp.setup.success")}</Alert>
+            )}
 
-          <Typography variant="body2" color="text.secondary">
-            {t("totp.enabledDescription")}
-          </Typography>
-        </Box>
-      ) : (
-        <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {t("totp.setup.caption")}
-          </Typography>
-
-          <Box sx={{ mb: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleSetupTotp}
-              disabled={totpLoading}
-            >
-              {totpLoading ? (
-                <>
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                  {t("totp.setup.loading")}
-                </>
-              ) : (
-                t("totp.setup.button")
-              )}
-            </Button>
-          </Box>
-
-          {totpError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {totpError}
-            </Alert>
-          )}
-          {totpSuccess && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {t("totp.setup.success")}
-            </Alert>
-          )}
-
-          {totpSetup && (
-            <TotpSetupForm
-              totpSetup={totpSetup}
-              totpCode={totpCode}
-              totpConfirmLoading={totpConfirmLoading}
-              onTotpCodeChange={setTotpCode}
-              onConfirm={handleConfirmTotp}
-              onCopySecret={handleCopySecret}
-            />
-          )}
-        </Box>
-      )}
-    </Paper>
+            {totpSetup && (
+              <TotpSetupForm
+                totpSetup={totpSetup}
+                totpCode={totpCode}
+                totpConfirmLoading={totpConfirmLoading}
+                onTotpCodeChange={setTotpCode}
+                onConfirm={handleConfirmTotp}
+                onCopySecret={handleCopySecret}
+              />
+            )}
+          </>
+        )}
+      </Stack>
+    </ProfileAccordionCard>
   );
 };
