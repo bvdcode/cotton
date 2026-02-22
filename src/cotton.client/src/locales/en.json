@@ -202,7 +202,7 @@
         "button": "Generate QR code",
         "loading": "Generating...",
         "qrTitle": "Scan this QR code",
-        "secretLabel": "Secret key",
+        "secretLabel": "Secret key:",
         "copySecret": "Copy secret",
         "success": "Two-factor authentication is enabled."
       },
