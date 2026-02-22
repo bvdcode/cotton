@@ -3,6 +3,7 @@ import {
   Button,
   CircularProgress,
   Divider,
+  Stack,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -20,6 +21,7 @@ interface TotpSetupFormProps {
   onCopySecret: () => void;
 }
 
+
 export const TotpSetupForm = ({
   totpSetup,
   totpCode,
@@ -32,97 +34,122 @@ export const TotpSetupForm = ({
   const theme = useTheme();
 
   return (
-    <Box sx={{ mt: 3 }}>
+    <Box mt={3}>
       <Divider sx={{ mb: 3 }} />
 
-      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-        {t("totp.setup.qrTitle")}
-      </Typography>
+      <Stack spacing={2.5}>
+        <Typography variant="subtitle2" fontWeight={600}>
+          {t("totp.setup.qrTitle")}
+        </Typography>
 
-      <Box
-        sx={{
-          mt: 2,
-          mb: 3,
-          p: 2,
-          borderRadius: 2,
-          display: "inline-flex",
-          bgcolor: theme.palette.common.white,
-          border: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        <QRCode
-          value={totpSetup.otpAuthUri}
-          size={200}
-          level="M"
-          fgColor={theme.palette.common.black}
-          bgColor={theme.palette.common.white}
-        />
-      </Box>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={{ xs: 3, md: 4 }}
+          alignItems={{ xs: "stretch", md: "flex-start" }}
+        >
+          <Stack
+            spacing={2}
+            alignItems={{ xs: "center", md: "flex-start" }}
+            flex={1}
+          >
+            <Box
+              display="flex"
+              justifyContent={{ xs: "center", md: "flex-start" }}
+              width="100%"
+            >
+              <Box
+                p={2}
+                borderRadius={2}
+                display="inline-flex"
+                bgcolor={theme.palette.common.white}
+                border="1px solid"
+                borderColor="divider"
+              >
+                <QRCode
+                  value={totpSetup.otpAuthUri}
+                  size={200}
+                  level="M"
+                  fgColor={theme.palette.common.black}
+                  bgColor={theme.palette.common.white}
+                />
+              </Box>
+            </Box>
 
-      <Box sx={{ mb: 2 }}>
-        <Button variant="outlined" onClick={onCopySecret} size="small">
-          {t("totp.setup.copySecret")}
-        </Button>
-      </Box>
+            <Button variant="outlined" onClick={onCopySecret} size="small">
+              {t("totp.setup.copySecret")}
+            </Button>
 
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{
-          display: "block",
-          mb: 3,
-          wordBreak: "break-all",
-          fontFamily: "monospace",
-          bgcolor: "action.hover",
-          p: 1.5,
-          borderRadius: 1,
-        }}
-      >
-        {t("totp.setup.secretLabel")}:{" "}
-        <Box component="strong" sx={{ color: "text.primary" }}>
-          {totpSetup.secretBase32}
-        </Box>
-      </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                display: "block",
+                wordBreak: "break-all",
+                fontFamily: "monospace",
+                bgcolor: "action.hover",
+                p: 1.5,
+                borderRadius: 1,
+                width: "100%",
+              }}
+            >
+              {t("totp.setup.secretLabel")}: {" "}
+              <Box component="strong" sx={{ color: "text.primary" }}>
+                {totpSetup.secretBase32}
+              </Box>
+            </Typography>
+          </Stack>
 
-      <Divider sx={{ mb: 3 }} />
+          <Stack
+            spacing={2}
+            flex={1}
+            alignItems={{ xs: "center", md: "flex-start" }}
+          >
+            <Box width="100%">
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                {t("totp.confirm.title")}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t("totp.confirm.caption")}
+              </Typography>
+            </Box>
 
-      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-        {t("totp.confirm.title")}
-      </Typography>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: "block", mb: 2 }}
-      >
-        {t("totp.confirm.caption")}
-      </Typography>
+            <Box
+              width="100%"
+              display="flex"
+              justifyContent={{ xs: "center", md: "flex-start" }}
+            >
+              <OneTimeCodeInput
+                value={totpCode}
+                onChange={onTotpCodeChange}
+                disabled={totpConfirmLoading}
+                autoFocus={false}
+                inputAriaLabel={t("totp.confirm.digit")}
+              />
+            </Box>
 
-      <Box sx={{ mb: 3 }}>
-        <OneTimeCodeInput
-          value={totpCode}
-          onChange={onTotpCodeChange}
-          disabled={totpConfirmLoading}
-          autoFocus={false}
-          inputAriaLabel={t("totp.confirm.digit")}
-        />
-      </Box>
-
-      <Button
-        variant="contained"
-        onClick={onConfirm}
-        disabled={totpConfirmLoading}
-        fullWidth={false}
-      >
-        {totpConfirmLoading ? (
-          <>
-            <CircularProgress size={16} sx={{ mr: 1 }} />
-            {t("totp.confirm.loading")}
-          </>
-        ) : (
-          t("totp.confirm.button")
-        )}
-      </Button>
+            <Box
+              width="100%"
+              display="flex"
+              justifyContent={{ xs: "center", md: "flex-start" }}
+            >
+              <Button
+                variant="contained"
+                onClick={onConfirm}
+                disabled={totpConfirmLoading}
+              >
+                {totpConfirmLoading ? (
+                  <>
+                    <CircularProgress size={16} sx={{ mr: 1 }} />
+                    {t("totp.confirm.loading")}
+                  </>
+                ) : (
+                  t("totp.confirm.button")
+                )}
+              </Button>
+            </Box>
+          </Stack>
+        </Stack>
+      </Stack>
     </Box>
   );
 };
