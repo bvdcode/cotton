@@ -647,6 +647,14 @@
     "empty": {
       "all": "This folder is empty"
     },
+    "selection": {
+      "enter": "Selection mode",
+      "exit": "Exit selection",
+      "selectAll": "Select all",
+      "deselectAll": "Deselect all",
+      "count_one": "{{count}} item selected",
+      "count_other": "{{count}} items selected"
+    },
     "conflicts": {
       "title": "File already exists",
       "description": "A file with this name already exists in this folder. Upload as {{newName}}?",

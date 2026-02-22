@@ -3,8 +3,12 @@ import type { ReactNode } from "react";
 import { Box, Divider, IconButton, Typography } from "@mui/material";
 import {
   ArrowUpward,
+  CheckBox,
+  CheckBoxOutlineBlank,
   CreateNewFolder,
+  Deselect,
   Home,
+  SelectAll,
   UploadFile,
   ViewModule,
   ViewList,
@@ -33,6 +37,13 @@ export interface PageHeaderProps {
   onNewFolderClick?: () => void;
   isCreatingFolder?: boolean;
 
+  // Selection mode
+  selectionMode?: boolean;
+  selectedCount?: number;
+  onToggleSelectionMode?: () => void;
+  onSelectAll?: () => void;
+  onDeselectAll?: () => void;
+
   // Custom actions slot
   customActions?: ReactNode;
 }
@@ -56,6 +67,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onUploadClick,
   onNewFolderClick,
   isCreatingFolder = false,
+  selectionMode = false,
+  selectedCount = 0,
+  onToggleSelectionMode,
+  onSelectAll,
+  onDeselectAll,
   customActions,
 }) => {
   const { t } = useTranslation(["files", "trash", "common"]);
@@ -175,10 +191,57 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 {viewIcon}
               </IconButton>
             )}
+            {onToggleSelectionMode && (
+              <IconButton
+                color={selectionMode ? "secondary" : "primary"}
+                onClick={onToggleSelectionMode}
+                title={t(selectionMode ? "selection.exit" : "selection.enter")}
+              >
+                {selectionMode ? <CheckBox /> : <CheckBoxOutlineBlank />}
+              </IconButton>
+            )}
+            {selectionMode && onSelectAll && (
+              <IconButton
+                color="primary"
+                onClick={onSelectAll}
+                title={t("selection.selectAll")}
+              >
+                <SelectAll />
+              </IconButton>
+            )}
+            {selectionMode && selectedCount > 0 && onDeselectAll && (
+              <IconButton
+                color="primary"
+                onClick={onDeselectAll}
+                title={t("selection.deselectAll")}
+              >
+                <Deselect />
+              </IconButton>
+            )}
           </Box>
         </Box>
 
         <FileBreadcrumbs breadcrumbs={breadcrumbs} />
+
+        {selectionMode && selectedCount > 0 && (
+          <>
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ mx: 1 }}
+            />
+            <Box
+              sx={{
+                flexShrink: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <Typography color="secondary" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
+                {t("selection.count", { count: selectedCount })}
+              </Typography>
+            </Box>
+          </>
+        )}
 
         <Divider
           orientation="vertical"
