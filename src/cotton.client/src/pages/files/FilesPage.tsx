@@ -31,6 +31,71 @@ import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
 import Loader from "../../shared/ui/Loader";
 
+const HUGE_FOLDER_THRESHOLD = 10_000;
+
+type TranslationFn = (
+  key: string,
+  options?: {
+    ns?: string;
+    count?: number;
+    processed?: number;
+    total?: number;
+  },
+) => string;
+
+type DropPreparationInfo = {
+  phase: "idle" | "scanning" | "preparing";
+  step: "idle" | "scanning" | "mapping" | "folders" | "conflicts" | "enqueue";
+  filesFound: number;
+  processed: number;
+};
+
+function getDropPreparationTitle(t: TranslationFn, info: DropPreparationInfo): string {
+  const { phase, step } = info;
+
+  if (phase === "scanning") {
+    return t("uploadDrop.scanning.title", { ns: "files" });
+  }
+
+  if (step === "mapping") {
+    return t("uploadDrop.preparing.mapping.title", { ns: "files" });
+  }
+  if (step === "folders") {
+    return t("uploadDrop.preparing.folders.title", { ns: "files" });
+  }
+  if (step === "conflicts") {
+    return t("uploadDrop.preparing.conflicts.title", { ns: "files" });
+  }
+  if (step === "enqueue") {
+    return t("uploadDrop.preparing.enqueue.title", { ns: "files" });
+  }
+
+  return t("uploadDrop.preparing.title", { ns: "files" });
+}
+
+function getDropPreparationCaption(
+  t: TranslationFn,
+  info: DropPreparationInfo,
+): string {
+  const { phase, filesFound, processed } = info;
+
+  const found = t("uploadDrop.captionFound", {
+    ns: "files",
+    count: filesFound,
+  });
+
+  if (phase === "scanning") return found;
+  if (filesFound <= 0) return found;
+
+  const progress = t("uploadDrop.captionProgress", {
+    ns: "files",
+    processed: Math.max(0, Math.min(filesFound, processed)),
+    total: filesFound,
+  });
+
+  return `${found} • ${progress}`;
+}
+
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const navigate = useNavigate();
@@ -70,8 +135,6 @@ export const FilesPage: React.FC = () => {
 
   const nodeId = routeNodeId ?? rootNodeId ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
-
-  const HUGE_FOLDER_THRESHOLD = 10_000;
 
   const {
     childrenTotalCount,
@@ -238,40 +301,8 @@ export const FilesPage: React.FC = () => {
       {fileUpload.dropPreparation.active && (
         <Loader
           overlay
-          title={(() => {
-            const { phase, step } = fileUpload.dropPreparation;
-            if (phase === "scanning") {
-              return t("uploadDrop.scanning.title", { ns: "files" });
-            }
-            if (step === "mapping") {
-              return t("uploadDrop.preparing.mapping.title", { ns: "files" });
-            }
-            if (step === "folders") {
-              return t("uploadDrop.preparing.folders.title", { ns: "files" });
-            }
-            if (step === "conflicts") {
-              return t("uploadDrop.preparing.conflicts.title", { ns: "files" });
-            }
-            if (step === "enqueue") {
-              return t("uploadDrop.preparing.enqueue.title", { ns: "files" });
-            }
-            return t("uploadDrop.preparing.title", { ns: "files" });
-          })()}
-          caption={(() => {
-            const { phase, filesFound, processed } = fileUpload.dropPreparation;
-            const found = t("uploadDrop.captionFound", {
-              ns: "files",
-              count: filesFound,
-            });
-            if (phase === "scanning") return found;
-            if (filesFound <= 0) return found;
-            const progress = t("uploadDrop.captionProgress", {
-              ns: "files",
-              processed: Math.max(0, Math.min(filesFound, processed)),
-              total: filesFound,
-            });
-            return `${found} • ${progress}`;
-          })()}
+          title={getDropPreparationTitle(t, fileUpload.dropPreparation)}
+          caption={getDropPreparationCaption(t, fileUpload.dropPreparation)}
         />
       )}
       <Snackbar

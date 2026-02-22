@@ -169,61 +169,24 @@ namespace Cotton.Server.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
-            var user = await _dbContext.Users
-                .FirstOrDefaultAsync(x => x.Username == request.Username || x.Email == request.Username);
+            var user = await GetUserOrTryGetNewAsync(request);
             if (user == null)
             {
-                user = await TryGetNewUserAsync(request);
-                if (user == null)
-                {
-                    return this.ApiUnauthorized("Invalid username or password");
-                }
-            }
-            if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
-            {
-                await _notifications.SendFailedLoginAttemptAsync(
-                    user.Id,
-                    request.Username,
-                    Request.GetRemoteIPAddress(),
-                    Request.Headers.UserAgent);
                 return this.ApiUnauthorized("Invalid username or password");
             }
-            if (user.IsTotpEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
+
+            bool passwordOk = await VerifyPasswordOrNotifyAsync(user, request);
+            if (!passwordOk)
             {
-                return this.ApiForbidden("Two-factor authentication code is required");
+                return this.ApiUnauthorized("Invalid username or password");
             }
-            if (user.IsTotpEnabled && user.TotpSecretEncrypted == null)
+
+            var totpFailure = await ValidateTotpOrGetFailureAsync(user, request);
+            if (totpFailure != null)
             {
-                throw new InvalidOperationException("TOTP is enabled but secret is missing");
+                return totpFailure;
             }
-            if (user.IsTotpEnabled && user.TotpSecretEncrypted != null)
-            {
-                int maxFailedAttempts = _settings.GetServerSettings().TotpMaxFailedAttempts;
-                if (user.TotpFailedAttempts >= maxFailedAttempts)
-                {
-                    await _notifications.SendTotpLockoutAsync(user.Id,
-                        maxFailedAttempts,
-                        Request.GetRemoteIPAddress(),
-                        Request.Headers.UserAgent);
-                    return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
-                }
-                string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
-                bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode!);
-                if (!isValid)
-                {
-                    user.TotpFailedAttempts += 1;
-                    await _dbContext.SaveChangesAsync();
-                    await _notifications.SendTotpFailedAttemptAsync(user.Id,
-                        user.TotpFailedAttempts,
-                        Request.GetRemoteIPAddress(),
-                        Request.Headers.UserAgent);
-                    return this.ApiForbidden("Invalid two-factor authentication code");
-                }
-                else
-                {
-                    user.TotpFailedAttempts = 0;
-                }
-            }
+
             ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user, request.TrustDevice);
             string accessToken = CreateAccessToken(user, dbToken.SessionId!);
             await _dbContext.RefreshTokens.AddAsync(dbToken);
@@ -237,6 +200,79 @@ namespace Cotton.Server.Controllers
                 AccessToken = accessToken,
                 RefreshToken = dbToken.Token
             });
+        }
+
+        private async Task<User?> GetUserOrTryGetNewAsync(LoginRequest request)
+        {
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(x => x.Username == request.Username || x.Email == request.Username);
+            if (user != null)
+            {
+                return user;
+            }
+
+            return await TryGetNewUserAsync(request);
+        }
+
+        private async Task<bool> VerifyPasswordOrNotifyAsync(User user, LoginRequest request)
+        {
+            if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
+            {
+                await _notifications.SendFailedLoginAttemptAsync(
+                    user.Id,
+                    request.Username,
+                    Request.GetRemoteIPAddress(),
+                    Request.Headers.UserAgent);
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task<IActionResult?> ValidateTotpOrGetFailureAsync(User user, LoginRequest request)
+        {
+            if (!user.IsTotpEnabled)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
+            {
+                return this.ApiForbidden("Two-factor authentication code is required");
+            }
+
+            if (user.TotpSecretEncrypted == null)
+            {
+                throw new InvalidOperationException("TOTP is enabled but secret is missing");
+            }
+
+            int maxFailedAttempts = _settings.GetServerSettings().TotpMaxFailedAttempts;
+            if (user.TotpFailedAttempts >= maxFailedAttempts)
+            {
+                await _notifications.SendTotpLockoutAsync(
+                    user.Id,
+                    maxFailedAttempts,
+                    Request.GetRemoteIPAddress(),
+                    Request.Headers.UserAgent);
+                return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
+            }
+
+            string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
+            bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode);
+            if (!isValid)
+            {
+                user.TotpFailedAttempts += 1;
+                await _dbContext.SaveChangesAsync();
+                await _notifications.SendTotpFailedAttemptAsync(
+                    user.Id,
+                    user.TotpFailedAttempts,
+                    Request.GetRemoteIPAddress(),
+                    Request.Headers.UserAgent);
+                return this.ApiForbidden("Invalid two-factor authentication code");
+            }
+
+            user.TotpFailedAttempts = 0;
+            return null;
         }
 
         [HttpPost("refresh")]
