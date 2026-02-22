@@ -17,6 +17,11 @@ import {
 import { UserRole } from "../../../features/auth/types";
 import { UserRoleSelect } from "./UserRoleSelect";
 import { UserPersonalInfoFields } from "./UserPersonalInfoFields";
+import {
+  getUsernameError,
+  isValidUsername,
+  normalizeUsername,
+} from "../../../shared/validation/username";
 
 interface CreateUserFormProps {
   onUserCreated: () => Promise<void>;
@@ -38,15 +43,18 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState(false);
 
+  const usernameError = getUsernameError(username);
+  const usernameValid = isValidUsername(username);
+
   const canCreate =
-    username.trim().length > 0 && password.length > 0 && !createLoading;
+    usernameValid && password.length > 0 && !createLoading;
 
   const handleCreate = async () => {
     setCreateError(null);
     setCreateSuccess(false);
 
     const request: AdminCreateUserRequestDto = {
-      username: username.trim(),
+      username: normalizeUsername(username),
       email: email.trim().length > 0 ? email.trim() : null,
       password,
       role,
@@ -112,6 +120,8 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({
             onChange={(e) => setUsername(e.target.value)}
             fullWidth
             autoComplete="off"
+            error={Boolean(usernameError)}
+            helperText={usernameError ?? ""}
           />
           <TextField
             label={t("users.create.email")}

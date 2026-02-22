@@ -111,17 +111,13 @@ public class WebDavPutFileRequestHandler(
     private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
     {
         var existing = await ResolveExistingAsync(request, ct);
-        var existingFailure = TryGetExistingValidationFailure(existing);
-        if (existingFailure is not null)
-        {
-            return (null, existingFailure);
-        }
-
         var parentResult = await ResolveParentAsync(request, ct);
-        var parentFailure = TryGetParentValidationFailure(parentResult);
-        if (parentFailure is not null)
+
+        var preValidationFailure = TryGetExistingValidationFailure(existing)
+            ?? TryGetParentValidationFailure(parentResult);
+        if (preValidationFailure is not null)
         {
-            return (null, parentFailure);
+            return (null, preValidationFailure);
         }
 
         string resourceName = parentResult.ResourceName!;
@@ -131,28 +127,23 @@ public class WebDavPutFileRequestHandler(
             return (null, nameFailure);
         }
 
-        var nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
+        string nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
         var layoutId = await GetLayoutIdAsync(request.UserId);
 
-        var conflictFailure = await TryGetFolderConflictFailureAsync(
-            userId: request.UserId,
-            parentNodeId: parentResult.ParentNode!.Id,
-            nameKey: nameKey,
-            layoutId: layoutId,
-            ct);
-        if (conflictFailure is not null)
+        var validationFailure = await TryGetFolderConflictFailureAsync(
+                userId: request.UserId,
+                parentNodeId: parentResult.ParentNode!.Id,
+                nameKey: nameKey,
+                layoutId: layoutId,
+                ct)
+            ?? TryGetOverwriteValidationFailure(existing, request.Overwrite);
+
+        if (validationFailure is not null)
         {
-            return (null, conflictFailure);
+            return (null, validationFailure);
         }
 
-        var overwriteFailure = TryGetOverwriteValidationFailure(existing, request.Overwrite);
-        if (overwriteFailure is not null)
-        {
-            return (null, overwriteFailure);
-        }
-
-        bool created = !existing.Found;
-        return (new PutTarget(existing, parentResult, resourceName, nameKey, created), null);
+        return (new PutTarget(existing, parentResult, resourceName, nameKey, Created: !existing.Found), null);
     }
 
     private Task<WebDavResolveResult> ResolveExistingAsync(WebDavPutFileRequest request, CancellationToken ct)

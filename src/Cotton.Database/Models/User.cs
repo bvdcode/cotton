@@ -4,6 +4,7 @@
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
@@ -13,6 +14,9 @@ namespace Cotton.Database.Models
     public class User : BaseEntity<Guid>
     {
         [Column("username", TypeName = "citext")]
+        [MinLength(2)]
+        [MaxLength(32)]
+        [RegularExpression("^[a-z][a-z0-9]{1,31}$")]
         public string Username { get; set; } = null!;
 
         [Column("first_name")]

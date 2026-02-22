@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -42,6 +43,11 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Username is required");
             }
 
+            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out var newUsername, out var usernameError))
+            {
+                throw new BadRequestException<User>(usernameError);
+            }
+
             var foundAdmin = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.AdminUserId, cancellationToken)
                 ?? throw new EntityNotFoundException<User>();
 
@@ -53,7 +59,6 @@ namespace Cotton.Server.Handlers.Users
                 throw new AccessDeniedException<User>("User role cannot be changed to a different role by an admin with lower role");
             }
 
-            var newUsername = request.Username.Trim();
             bool usernameTaken = await _dbContext.Users.AnyAsync(
                 x => x.Id != request.UserId && x.Username == newUsername,
                 cancellationToken);
