@@ -12,6 +12,16 @@ namespace Cotton.Email
     /// </summary>
     public static class EmailTemplateRenderer
     {
+        /// <summary>
+        /// Content-ID used for the inline logo attachment in email templates.
+        /// Templates reference this as <c>cid:cotton-logo</c>.
+        /// </summary>
+        public const string IconContentId = "cotton-logo";
+
+        /// <summary>
+        /// MIME type of the inline logo attachment.
+        /// </summary>
+        public const string IconContentType = "image/png";
         private static readonly Regex PlaceholderRegex = new Regex(@"\{\{[a-z_]+\}\}", RegexOptions.Compiled);
 
         private static readonly Dictionary<string, string> Templates = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -107,7 +117,6 @@ namespace Cotton.Email
                 ["confirmation_url"] = baseUrl + "/verify-email?token=" + escapedToken,
                 ["reset_url"] = baseUrl + "/reset-password?token=" + escapedToken,
                 ["year"] = DateTime.UtcNow.Year.ToString(),
-                ["icon_data_uri"] = IconDataUri,
             };
         }
 
@@ -132,7 +141,26 @@ namespace Cotton.Email
             return template.ToString() + "." + languageCode;
         }
 
-        private const string IconDataUri = "data:image/png;base64," + IconBase64;
+        /// <summary>
+        /// Returns the raw PNG bytes of the inline logo icon.
+        /// Used by email senders to attach the logo as a CID-referenced inline image.
+        /// </summary>
+        public static byte[] GetIconBytes()
+        {
+            return Convert.FromBase64String(IconBase64);
+        }
+
+        /// <summary>
+        /// Creates the standard inline attachments list containing the Cotton logo.
+        /// Used by both SMTP and cloud (Mailjet) email senders.
+        /// </summary>
+        public static IReadOnlyList<InlineAttachment> GetInlineAttachments()
+        {
+            return new[]
+            {
+                new InlineAttachment(IconContentId, IconContentType, "cotton-logo.png", GetIconBytes()),
+            };
+        }
 
         #region Icon Base64
 

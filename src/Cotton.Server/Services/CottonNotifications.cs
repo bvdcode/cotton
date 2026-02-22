@@ -170,6 +170,16 @@ namespace Cotton.Server.Services
             {
                 var htmlView = AlternateView.CreateAlternateViewFromString(
                     body, Encoding.UTF8, MediaTypeNames.Text.Html);
+
+                var iconBytes = EmailTemplateRenderer.GetIconBytes();
+                var iconStream = new MemoryStream(iconBytes);
+                var iconResource = new LinkedResource(iconStream, EmailTemplateRenderer.IconContentType)
+                {
+                    ContentId = EmailTemplateRenderer.IconContentId,
+                    TransferEncoding = System.Net.Mime.TransferEncoding.Base64,
+                };
+                htmlView.LinkedResources.Add(iconResource);
+
                 mailMessage.AlternateViews.Add(htmlView);
                 mailMessage.IsBodyHtml = true;
             }
