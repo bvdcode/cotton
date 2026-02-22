@@ -72,27 +72,24 @@ export const TotpSetupForm = ({
               </Box>
             </Box>
 
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                display: "block",
-                wordBreak: "break-all",
-                fontFamily: "monospace",
-                bgcolor: "action.hover",
-                p: 1.5,
-                borderRadius: 1,
-                width: "100%",
-              }}
+            <Box
+              width="100%"
+              display="flex"
+              flexDirection="row"
+              alignItems="center"
+              gap={2}
+              border="1px solid"
+              justifyContent="space-between"
             >
-              {t("totp.setup.secretLabel")}:{" "}
-              <Box component="strong" sx={{ color: "text.primary" }}>
-                {totpSetup.secretBase32}
-              </Box>
-              <IconButton onClick={onCopySecret} size="small">
+              <Typography variant="body2">{totpSetup.secretBase32}</Typography>
+              <IconButton
+                onClick={onCopySecret}
+                size="small"
+                aria-label={t("totp.setup.copySecret")}
+              >
                 <ContentCopy fontSize="small" />
               </IconButton>
-            </Typography>
+            </Box>
           </Stack>
 
           <Stack
