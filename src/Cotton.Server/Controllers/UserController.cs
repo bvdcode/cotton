@@ -41,7 +41,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SendEmailVerification(CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            var request = new SendEmailVerificationRequest(userId, Request);
+            var request = new SendEmailVerificationRequest(userId);
             await _mediator.Send(request, cancellationToken);
             return Ok();
         }

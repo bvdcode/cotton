@@ -52,9 +52,7 @@ namespace Cotton.Server.Handlers.Users
             user.PasswordResetTokenSentAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            string fallbackBaseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
-            string baseUrl = await _settingsProvider.EnsurePublicBaseUrlAsync(request.HttpRequest, cancellationToken)
-                ?? fallbackBaseUrl;
+            string baseUrl = _settingsProvider.GetServerSettings().PublicBaseUrl;
             var parameters = new Dictionary<string, string>
             {
                 ["token"] = user.PasswordResetToken,
