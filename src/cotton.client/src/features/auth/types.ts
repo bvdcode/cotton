@@ -12,6 +12,9 @@ export interface User {
   preferences?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  birthDate?: string | null;
   /** 2FA (TOTP) */
   isTotpEnabled?: boolean;
   /** ISO string from backend (DateTime) */
