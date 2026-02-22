@@ -56,53 +56,100 @@ public class WebDavMoveRequestHandler(
     public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
     {
         var sourceResult = await ResolveSourceAsync(request, ct);
+        var sourceValidationFailure = TryGetSourceValidationFailure(request, sourceResult);
+        if (sourceValidationFailure is not null)
+        {
+            return sourceValidationFailure;
+        }
+
+        var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
+        var destParentFailure = TryGetDestinationParentFailure(destParentResult);
+        if (destParentFailure is not null)
+        {
+            return destParentFailure;
+        }
+
+        var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
+        if (!overwriteResult.Allowed)
+        {
+            return Fail(WebDavMoveError.DestinationExists);
+        }
+
+        var moveFailure = await TryPerformMoveAsync(request, sourceResult, destParentResult, ct);
+        if (moveFailure is not null)
+        {
+            return moveFailure;
+        }
+
+        await PersistAndNotifyAsync(request, sourceResult, ct);
+
+        var movedIds = GetMovedIds(sourceResult);
+        return Ok(overwriteResult.Created, movedIds.NodeId, movedIds.NodeFileId);
+    }
+
+    private static WebDavMoveResult Ok(bool created, Guid? movedNodeId, Guid? movedNodeFileId) =>
+        new(true, created, null, movedNodeId, movedNodeFileId);
+
+    private static WebDavMoveResult Fail(WebDavMoveError error) =>
+        new(false, false, error);
+
+    private WebDavMoveResult? TryGetSourceValidationFailure(WebDavMoveRequest request, WebDavResolveResult sourceResult)
+    {
         if (!sourceResult.Found)
         {
-            return new WebDavMoveResult(false, false, WebDavMoveError.SourceNotFound);
+            return Fail(WebDavMoveError.SourceNotFound);
         }
 
         if (sourceResult.IsCollection && sourceResult.Node?.ParentId is null)
         {
             _logger.LogWarning("WebDAV MOVE: Attempted to move root node for user {UserId}", request.UserId);
-            return new WebDavMoveResult(false, false, WebDavMoveError.CannotMoveRoot);
+            return Fail(WebDavMoveError.CannotMoveRoot);
         }
 
-        var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
+        return null;
+    }
+
+    private static WebDavMoveResult? TryGetDestinationParentFailure(WebDavParentResult destParentResult)
+    {
         if (!destParentResult.Found || destParentResult.ParentNode is null || destParentResult.ResourceName is null)
         {
-            return new WebDavMoveResult(false, false, WebDavMoveError.DestinationParentNotFound);
+            return Fail(WebDavMoveError.DestinationParentNotFound);
         }
 
-        var (created, allowed) = await HandleDestinationOverwriteAsync(request, ct);
-        if (!allowed)
-        {
-            return new WebDavMoveResult(false, false, WebDavMoveError.DestinationExists);
-        }
+        return null;
+    }
 
-        var moved = await PerformMoveAsync(request, sourceResult, destParentResult, ct);
-        if (!moved)
-        {
-            return new WebDavMoveResult(false, false, WebDavMoveError.CannotMoveIntoDescendant);
-        }
+    private static (Guid? NodeId, Guid? NodeFileId) GetMovedIds(WebDavResolveResult sourceResult)
+    {
+        var movedNodeId = sourceResult.IsCollection && sourceResult.Node is not null
+            ? sourceResult.Node.Id
+            : (Guid?)null;
 
+        return (movedNodeId, sourceResult.NodeFile?.Id);
+    }
+
+    private async Task PersistAndNotifyAsync(
+        WebDavMoveRequest request,
+        WebDavResolveResult sourceResult,
+        CancellationToken ct)
+    {
         await _dbContext.SaveChangesAsync(ct);
 
-        _logger.LogInformation("WebDAV MOVE: Moved {Source} to {Dest} for user {UserId}",
-            request.SourcePath, request.DestinationPath, request.UserId);
+        _logger.LogInformation(
+            "WebDAV MOVE: Moved {Source} to {Dest} for user {UserId}",
+            request.SourcePath,
+            request.DestinationPath,
+            request.UserId);
 
-        var movedNodeId = sourceResult.IsCollection && sourceResult.Node is not null ? sourceResult.Node.Id : (Guid?)null;
-        var movedNodeFileId = sourceResult.NodeFile?.Id;
-
-        if (movedNodeId.HasValue)
+        var movedIds = GetMovedIds(sourceResult);
+        if (movedIds.NodeId.HasValue)
         {
-            await _eventNotification.NotifyNodeMovedAsync(movedNodeId.Value, ct);
+            await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, ct);
         }
-        else if (movedNodeFileId.HasValue)
+        else if (movedIds.NodeFileId.HasValue)
         {
-            await _eventNotification.NotifyFileMovedAsync(movedNodeFileId.Value, ct);
+            await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, ct);
         }
-
-        return new WebDavMoveResult(true, created, null, movedNodeId, movedNodeFileId);
     }
 
     private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavMoveRequest request, CancellationToken ct)
@@ -165,7 +212,7 @@ public class WebDavMoveRequestHandler(
         }
     }
 
-    private async Task<bool> PerformMoveAsync(
+    private async Task<WebDavMoveResult?> TryPerformMoveAsync(
         WebDavMoveRequest request,
         WebDavResolveResult sourceResult,
         WebDavParentResult destParentResult,
@@ -177,7 +224,7 @@ public class WebDavMoveRequestHandler(
             {
                 _logger.LogWarning("WebDAV MOVE: Attempted to move node {NodeId} into its descendant {DestParentId} for user {UserId}",
                     sourceResult.Node.Id, destParentResult.ParentNode.Id, request.UserId);
-                return false;
+                return Fail(WebDavMoveError.CannotMoveIntoDescendant);
             }
 
             var node = await _dbContext.Nodes
@@ -185,7 +232,7 @@ public class WebDavMoveRequestHandler(
 
             node.ParentId = destParentResult.ParentNode!.Id;
             node.SetName(destParentResult.ResourceName!);
-            return true;
+            return null;
         }
 
         if (sourceResult.NodeFile is not null)
@@ -197,7 +244,7 @@ public class WebDavMoveRequestHandler(
             nodeFile.SetName(destParentResult.ResourceName!);
         }
 
-        return true;
+        return null;
     }
 
     private async Task<bool> IsDescendantAsync(Guid destParentId, Guid sourceNodeId, CancellationToken ct)

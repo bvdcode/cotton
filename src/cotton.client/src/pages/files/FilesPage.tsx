@@ -96,6 +96,86 @@ function getDropPreparationCaption(
   return `${found} • ${progress}`;
 }
 
+type ShareToastState = {
+  open: boolean;
+  message: string;
+};
+
+type ShareToastSnackbarProps = {
+  toast: ShareToastState;
+  onClose: () => void;
+};
+
+const ShareToastSnackbar: React.FC<ShareToastSnackbarProps> = ({
+  toast,
+  onClose,
+}) => {
+  return (
+    <Snackbar
+      open={toast.open}
+      autoHideDuration={2500}
+      onClose={onClose}
+      message={toast.message}
+    />
+  );
+};
+
+type DraggingOverlayProps = {
+  open: boolean;
+  onDragEnter: React.DragEventHandler<HTMLDivElement>;
+  onDragOver: React.DragEventHandler<HTMLDivElement>;
+  onDragLeave: React.DragEventHandler<HTMLDivElement>;
+  onDrop: React.DragEventHandler<HTMLDivElement>;
+  label: string;
+};
+
+const DraggingOverlay: React.FC<DraggingOverlayProps> = ({
+  open,
+  onDragEnter,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  label,
+}) => {
+  if (!open) return null;
+
+  return (
+    <Box
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      sx={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        bgcolor: "primary.main",
+        opacity: 0.15,
+        border: "4px dashed",
+        borderColor: "primary.main",
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Typography
+        variant="h3"
+        sx={{
+          color: "primary.main",
+          fontWeight: "bold",
+          textShadow: "0 0 10px rgba(255,255,255,0.8)",
+          pointerEvents: "none",
+        }}
+      >
+        {label}
+      </Typography>
+    </Box>
+  );
+};
+
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const navigate = useNavigate();
@@ -205,10 +285,10 @@ export const FilesPage: React.FC = () => {
 
   const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
 
-  const [shareToast, setShareToast] = React.useState<{
-    open: boolean;
-    message: string;
-  }>({ open: false, message: "" });
+  const [shareToast, setShareToast] = React.useState<ShareToastState>({
+    open: false,
+    message: "",
+  });
 
   const showToast = React.useCallback(
     (message: string) => setShareToast({ open: true, message }),
@@ -296,6 +376,109 @@ export const FilesPage: React.FC = () => {
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
 
+  const pageHeaderProps = useMemo(
+    (): React.ComponentProps<typeof PageHeader> => ({
+      loading,
+      breadcrumbs,
+      stats,
+      viewMode,
+      canGoUp: ancestors.length > 0,
+      onGoUp: handleGoUp,
+      onHomeClick: goHome,
+      onViewModeCycle: cycleViewMode,
+      showViewModeToggle: !isHugeFolder,
+      showUpload: !!nodeId,
+      showNewFolder: !!nodeId,
+      onUploadClick: fileUpload.handleUploadClick,
+      onNewFolderClick: folderOps.handleNewFolder,
+      isCreatingFolder: folderOps.isCreatingFolder,
+      selectionMode: fileSelection.selectionMode,
+      selectedCount: fileSelection.selectedCount,
+      onToggleSelectionMode: fileSelection.toggleSelectionMode,
+      onSelectAll: () => fileSelection.selectAll(tiles),
+      onDeselectAll: fileSelection.deselectAll,
+    }),
+    [
+      ancestors.length,
+      breadcrumbs,
+      cycleViewMode,
+      fileSelection,
+      fileUpload.handleUploadClick,
+      folderOps.handleNewFolder,
+      folderOps.isCreatingFolder,
+      goHome,
+      handleGoUp,
+      isHugeFolder,
+      loading,
+      nodeId,
+      stats,
+      tiles,
+      viewMode,
+    ],
+  );
+
+  const fileListViewProps = useMemo(
+    (): React.ComponentProps<typeof FileListViewFactory> => ({
+      layoutType,
+      tiles,
+      folderOperations,
+      fileOperations,
+      isCreatingFolder: isCreatingInThisFolder,
+      tileSize: tilesSize,
+      loading:
+        layoutType === InterfaceLayoutType.List
+          ? !listContent && !listError
+          : (!content && !error) || isContentTransitioning,
+      loadingTitle: t("loading.title"),
+      loadingCaption: t("loading.caption"),
+      emptyStateText:
+        layoutType === InterfaceLayoutType.Tiles ? t("empty.all") : undefined,
+      newFolderName: folderOps.newFolderName,
+      onNewFolderNameChange: folderOps.setNewFolderName,
+      onConfirmNewFolder: folderOps.handleConfirmNewFolder,
+      onCancelNewFolder: folderOps.handleCancelNewFolder,
+      folderNamePlaceholder: t("actions.folderNamePlaceholder"),
+      fileNamePlaceholder: t("rename.fileNamePlaceholder", {
+        ns: "files",
+      }),
+      selectionMode: fileSelection.selectionMode,
+      selectedIds: fileSelection.selectedIds,
+      onToggleItem: fileSelection.toggleItem,
+      pagination:
+        layoutType === InterfaceLayoutType.List
+          ? {
+              totalCount: listTotalCount,
+              loading: listLoading,
+              onPaginationModelChange,
+            }
+          : undefined,
+    }),
+    [
+      content,
+      error,
+      fileOperations,
+      fileSelection.selectionMode,
+      fileSelection.selectedIds,
+      fileSelection.toggleItem,
+      folderOperations,
+      folderOps.handleCancelNewFolder,
+      folderOps.handleConfirmNewFolder,
+      folderOps.newFolderName,
+      folderOps.setNewFolderName,
+      isContentTransitioning,
+      isCreatingInThisFolder,
+      layoutType,
+      listContent,
+      listError,
+      listLoading,
+      listTotalCount,
+      onPaginationModelChange,
+      t,
+      tiles,
+      tilesSize,
+    ],
+  );
+
   return (
     <>
       {fileUpload.dropPreparation.active && (
@@ -305,47 +488,20 @@ export const FilesPage: React.FC = () => {
           caption={getDropPreparationCaption(t, fileUpload.dropPreparation)}
         />
       )}
-      <Snackbar
-        open={shareToast.open}
-        autoHideDuration={2500}
+
+      <ShareToastSnackbar
+        toast={shareToast}
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-        message={shareToast.message}
       />
-      {fileUpload.isDragging && (
-        <Box
-          onDragEnter={fileUpload.handleDragEnter}
-          onDragOver={fileUpload.handleDragOver}
-          onDragLeave={fileUpload.handleDragLeave}
-          onDrop={fileUpload.handleDrop}
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bgcolor: "primary.main",
-            opacity: 0.15,
-            border: "4px dashed",
-            borderColor: "primary.main",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Typography
-            variant="h3"
-            sx={{
-              color: "primary.main",
-              fontWeight: "bold",
-              textShadow: "0 0 10px rgba(255,255,255,0.8)",
-              pointerEvents: "none",
-            }}
-          >
-            {t("actions.dropFiles")}
-          </Typography>
-        </Box>
-      )}
+
+      <DraggingOverlay
+        open={fileUpload.isDragging}
+        onDragEnter={fileUpload.handleDragEnter}
+        onDragOver={fileUpload.handleDragOver}
+        onDragLeave={fileUpload.handleDragLeave}
+        onDrop={fileUpload.handleDrop}
+        label={t("actions.dropFiles")}
+      />
       <Box
         width="100%"
         onDragEnter={fileUpload.handleDragEnter}
@@ -364,25 +520,7 @@ export const FilesPage: React.FC = () => {
         }}
       >
         <PageHeader
-          loading={loading}
-          breadcrumbs={breadcrumbs}
-          stats={stats}
-          viewMode={viewMode}
-          canGoUp={ancestors.length > 0}
-          onGoUp={handleGoUp}
-          onHomeClick={goHome}
-          onViewModeCycle={cycleViewMode}
-          showViewModeToggle={!isHugeFolder}
-          showUpload={!!nodeId}
-          showNewFolder={!!nodeId}
-          onUploadClick={fileUpload.handleUploadClick}
-          onNewFolderClick={folderOps.handleNewFolder}
-          isCreatingFolder={folderOps.isCreatingFolder}
-          selectionMode={fileSelection.selectionMode}
-          selectedCount={fileSelection.selectedCount}
-          onToggleSelectionMode={fileSelection.toggleSelectionMode}
-          onSelectAll={() => fileSelection.selectAll(tiles)}
-          onDeselectAll={fileSelection.deselectAll}
+          {...pageHeaderProps}
         />
         {(error || listError) && (
           <Box mb={1} px={1}>
@@ -397,46 +535,7 @@ export const FilesPage: React.FC = () => {
               : {}
           }
         >
-          <FileListViewFactory
-            layoutType={layoutType}
-            tiles={tiles}
-            folderOperations={folderOperations}
-            fileOperations={fileOperations}
-            isCreatingFolder={isCreatingInThisFolder}
-            tileSize={tilesSize}
-            loading={
-              layoutType === InterfaceLayoutType.List
-                ? !listContent && !listError
-                : (!content && !error) || isContentTransitioning
-            }
-            loadingTitle={t("loading.title")}
-            loadingCaption={t("loading.caption")}
-            emptyStateText={
-              layoutType === InterfaceLayoutType.Tiles
-                ? t("empty.all")
-                : undefined
-            }
-            newFolderName={folderOps.newFolderName}
-            onNewFolderNameChange={folderOps.setNewFolderName}
-            onConfirmNewFolder={folderOps.handleConfirmNewFolder}
-            onCancelNewFolder={folderOps.handleCancelNewFolder}
-            folderNamePlaceholder={t("actions.folderNamePlaceholder")}
-            fileNamePlaceholder={t("rename.fileNamePlaceholder", {
-              ns: "files",
-            })}
-            selectionMode={fileSelection.selectionMode}
-            selectedIds={fileSelection.selectedIds}
-            onToggleItem={fileSelection.toggleItem}
-            pagination={
-              layoutType === InterfaceLayoutType.List
-                ? {
-                    totalCount: listTotalCount,
-                    loading: listLoading,
-                    onPaginationModelChange,
-                  }
-                : undefined
-            }
-          />
+          <FileListViewFactory {...fileListViewProps} />
         </Box>
       </Box>
 
