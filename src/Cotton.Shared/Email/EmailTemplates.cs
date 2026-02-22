@@ -7,6 +7,12 @@ namespace Cotton.Email
     /// </summary>
     public static class EmailTemplates
     {
+        /// <summary>
+        /// Represents the HTML template for the email confirmation message sent to users upon registration.
+        /// </summary>
+        /// <remarks>This template includes placeholders for the recipient's name and confirmation URL,
+        /// which should be replaced with actual values when sending the email. The design is responsive and styled for
+        /// a clean presentation across devices.</remarks>
         public const string EmailConfirmationEn = @"<!DOCTYPE html>
 <html lang=""en"">
 <head>
@@ -66,6 +72,14 @@ namespace Cotton.Email
 </body>
 </html>";
 
+        /// <summary>
+        /// Represents the HTML template for the Russian-language email confirmation message sent to users after
+        /// registration.
+        /// </summary>
+        /// <remarks>This template includes placeholders for the recipient's name and confirmation URL,
+        /// which must be replaced with actual values before sending. The message provides instructions for confirming
+        /// the email address and includes a fallback link for manual copying. Intended for use in automated email
+        /// workflows.</remarks>
         public const string EmailConfirmationRu = @"<!DOCTYPE html>
 <html lang=""ru"">
 <head>
@@ -126,6 +140,9 @@ namespace Cotton.Email
 </body>
 </html>";
 
+        /// <summary>
+        /// 
+        /// </summary>
         public const string PasswordResetEn = @"<!DOCTYPE html>
 <html lang=""en"">
 <head>

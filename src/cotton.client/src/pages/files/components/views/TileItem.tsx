@@ -133,9 +133,6 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
                 top: 4,
                 left: 4,
                 zIndex: 5,
-                bgcolor: "background.paper",
-                borderRadius: 1,
-                p: 0.25,
               }}
               size="small"
             />
@@ -333,9 +330,6 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               top: 4,
               left: 4,
               zIndex: 5,
-              bgcolor: "background.paper",
-              borderRadius: 1,
-              p: 0.25,
             }}
             size="small"
           />

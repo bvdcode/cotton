@@ -26,6 +26,13 @@ namespace Cotton.Email
         /// </summary>
         public byte[] Content { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InlineAttachment"/> class with the specified content ID, content type, file name, and content bytes.
+        /// </summary>
+        /// <param name="contentId">The content ID to reference in the HTML body (without angle brackets).</param>
+        /// <param name="contentType">The MIME content type of the attachment (e.g., "image/png").</param>
+        /// <param name="fileName">The file name for the attachment.</param>
+        /// <param name="content">The raw bytes of the attachment content.</param>
         public InlineAttachment(string contentId, string contentType, string fileName, byte[] content)
         {
             ContentId = contentId;
