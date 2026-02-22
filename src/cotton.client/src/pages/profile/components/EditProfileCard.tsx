@@ -1,4 +1,11 @@
-import { Alert, Button, CircularProgress, Stack, TextField } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Stack,
+  TextField,
+} from "@mui/material";
 import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "../../../shared/api/httpClient";
@@ -17,7 +24,10 @@ interface EditProfileCardProps {
   onUserUpdate: (updatedUser: User) => void;
 }
 
-export const EditProfileCard = ({ user, onUserUpdate }: EditProfileCardProps) => {
+export const EditProfileCard = ({
+  user,
+  onUserUpdate,
+}: EditProfileCardProps) => {
   const { t } = useTranslation("profile");
 
   const [email, setEmail] = useState(user.email ?? "");
@@ -39,7 +49,7 @@ export const EditProfileCard = ({ user, onUserUpdate }: EditProfileCardProps) =>
       (lastName || null) !== (user.lastName || null) ||
       (birthDate || null) !== (user.birthDate || null)
     );
-  }, [email, firstName, lastName, birthDate, user, emailChanged]);
+  }, [firstName, lastName, birthDate, user, emailChanged]);
 
   const canSubmit = hasChanges && !loading;
 
@@ -80,7 +90,6 @@ export const EditProfileCard = ({ user, onUserUpdate }: EditProfileCardProps) =>
       icon={<EditIcon color="primary" />}
       title={t("editProfile.title")}
       description={t("editProfile.description")}
-      defaultExpanded
     >
       <Stack spacing={2} paddingY={2}>
         {status.kind === "success" && (
@@ -94,38 +103,47 @@ export const EditProfileCard = ({ user, onUserUpdate }: EditProfileCardProps) =>
           <Alert severity="warning">{t("editProfile.emailWarning")}</Alert>
         )}
 
-        <TextField
-          label={t("editProfile.firstName")}
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          fullWidth
-        />
+        <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2}>
+          <TextField
+            label={t("editProfile.firstName")}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            fullWidth
+          />
 
-        <TextField
-          label={t("editProfile.lastName")}
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          fullWidth
-        />
+          <TextField
+            label={t("editProfile.lastName")}
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            fullWidth
+          />
+        </Box>
 
-        <TextField
-          label={t("editProfile.email")}
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          fullWidth
-        />
+        <Box
+          display="flex"
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={2}
+          alignItems="center"
+        >
+          <TextField
+            label={t("editProfile.email")}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            fullWidth
+          />
 
-        <TextField
-          label={t("editProfile.birthDate")}
-          type="date"
-          value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
-          fullWidth
-          slotProps={{
-            inputLabel: { shrink: true },
-          }}
-        />
+          <TextField
+            label={t("editProfile.birthDate")}
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            fullWidth
+            slotProps={{
+              inputLabel: { shrink: true },
+            }}
+          />
+        </Box>
 
         <Button
           variant="contained"

@@ -37,12 +37,15 @@ export const ProfilePage = () => {
         xs: 1,
         md: 3,
       }}
+      pb={{
+        xs: 2,
+        md: 3,
+      }}
       width="100%"
       display="flex"
       justifyContent="center"
     >
       <Stack spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%", maxWidth: 800 }}>
-        <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={{ xs: 2, sm: 3 }}
@@ -54,6 +57,7 @@ export const ProfilePage = () => {
             <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
           </Box>
         </Stack>
+        <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />
         <ShareLinkSettingsCard />
         {user.email && !user.isEmailVerified && (
