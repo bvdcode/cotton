@@ -7,7 +7,8 @@ namespace Cotton.Email
     /// </summary>
     public static class EmailTemplates
     {
-        private const string CommonHeader = @"          <!-- Header -->
+        private const string CommonHeader =
+            @"          <!-- Header -->
           <tr>
             <td style=""background:linear-gradient(135deg,#1bcea7,#96be02);padding:36px 40px;text-align:center;"">
               <img src=""cid:cotton-logo"" alt=""Cotton Cloud"" width=""48"" height=""48"" style=""display:block;margin:0 auto 12px;"" />
@@ -16,30 +17,34 @@ namespace Cotton.Email
           </tr>
 ";
 
-        private const string CommonFooterEn = @"          <!-- Footer -->
+        private const string CommonFooterEn =
+            @"          <!-- Footer -->
           <tr>
             <td style=""padding:24px 40px;border-top:1px solid #eaeaec;text-align:center;"">
-              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; {{year}} Cotton Cloud &middot; <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;"">GitHub</a> &middot; All rights reserved</p>
+              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;"">{{year}} Cotton Cloud </a> &middot; &middot; All rights reserved</p>
             </td>
           </tr>
 ";
 
-        private const string CommonFooterRu = @"          <!-- Footer -->
+        private const string CommonFooterRu =
+            @"          <!-- Footer -->
           <tr>
             <td style=""padding:24px 40px;border-top:1px solid #eaeaec;text-align:center;"">
-              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; {{year}} Cotton Cloud &middot; <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;"">GitHub</a> &middot; Все права защищены</p>
+              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;""> {{year}} Cotton Cloud </a> &middot; &middot; Все права защищены</p>
             </td>
           </tr>
 ";
 
-        private const string CommonShellClose = @"        </table>
+        private const string CommonShellClose =
+            @"        </table>
       </td>
     </tr>
   </table>
 </body>
 </html>";
 
-        private const string ShellOpenEmailConfirmationEn = @"<!DOCTYPE html
+        private const string ShellOpenEmailConfirmationEn =
+            @"<!DOCTYPE html
 <html lang=""en"">
 <head>
   <meta charset=""utf-8"" />
@@ -53,7 +58,8 @@ namespace Cotton.Email
         <table role=""presentation"" width=""560"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);"">
 ";
 
-        private const string BodyEmailConfirmationEn = @"          <!-- Body -->
+        private const string BodyEmailConfirmationEn =
+            @"          <!-- Body -->
           <tr>
             <td style=""padding:40px 40px 32px;"">
               <h2 style=""margin:0 0 16px;color:#1a1a2e;font-size:20px;font-weight:600;"">Hello, {{recipient_name}}!</h2>
@@ -82,7 +88,8 @@ namespace Cotton.Email
           </tr>
 ";
 
-        private const string ShellOpenEmailConfirmationRu = @"<!DOCTYPE html
+        private const string ShellOpenEmailConfirmationRu =
+            @"<!DOCTYPE html
 <html lang=""ru"">
 <head>
   <meta charset=""utf-8"" />
@@ -97,7 +104,8 @@ namespace Cotton.Email
         <table role=""presentation"" width=""560"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);"">
 ";
 
-        private const string BodyEmailConfirmationRu = @"          <!-- Body -->
+        private const string BodyEmailConfirmationRu =
+            @"          <!-- Body -->
           <tr>
             <td style=""padding:40px 40px 32px;"">
               <h2 style=""margin:0 0 16px;color:#1a1a2e;font-size:20px;font-weight:600;"">Здравствуйте, {{recipient_name}}!</h2>
@@ -126,7 +134,8 @@ namespace Cotton.Email
           </tr>
 ";
 
-        private const string ShellOpenPasswordResetEn = @"<!DOCTYPE html
+        private const string ShellOpenPasswordResetEn =
+            @"<!DOCTYPE html
 <html lang=""en"">
 <head>
   <meta charset=""utf-8"" />
@@ -140,7 +149,8 @@ namespace Cotton.Email
         <table role=""presentation"" width=""560"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);"">
 ";
 
-        private const string BodyPasswordResetEn = @"          <!-- Body -->
+        private const string BodyPasswordResetEn =
+            @"          <!-- Body -->
           <tr>
             <td style=""padding:40px 40px 32px;"">
               <h2 style=""margin:0 0 16px;color:#1a1a2e;font-size:20px;font-weight:600;"">Hello, {{recipient_name}}!</h2>
@@ -175,7 +185,8 @@ namespace Cotton.Email
           </tr>
 ";
 
-        private const string ShellOpenPasswordResetRu = @"<!DOCTYPE html
+        private const string ShellOpenPasswordResetRu =
+            @"<!DOCTYPE html
 <html lang=""ru"">
 <head>
   <meta charset=""utf-8"" />
@@ -190,7 +201,8 @@ namespace Cotton.Email
         <table role=""presentation"" width=""560"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);"">
 ";
 
-        private const string BodyPasswordResetRu = @"          <!-- Body -->
+        private const string BodyPasswordResetRu =
+            @"          <!-- Body -->
           <tr>
             <td style=""padding:40px 40px 32px;"">
               <h2 style=""margin:0 0 16px;color:#1a1a2e;font-size:20px;font-weight:600;"">Здравствуйте, {{recipient_name}}!</h2>
@@ -231,7 +243,12 @@ namespace Cotton.Email
         /// <remarks>This template includes placeholders for the recipient's name and confirmation URL,
         /// which should be replaced with actual values when sending the email. The design is responsive and styled for
         /// a clean presentation across devices.</remarks>
-        public const string EmailConfirmationEn = ShellOpenEmailConfirmationEn + CommonHeader + BodyEmailConfirmationEn + CommonFooterEn + CommonShellClose;
+        public const string EmailConfirmationEn =
+            ShellOpenEmailConfirmationEn
+            + CommonHeader
+            + BodyEmailConfirmationEn
+            + CommonFooterEn
+            + CommonShellClose;
 
         /// <summary>
         /// Represents the HTML template for the Russian-language email confirmation message sent to users after
@@ -241,12 +258,22 @@ namespace Cotton.Email
         /// which must be replaced with actual values before sending. The message provides instructions for confirming
         /// the email address and includes a fallback link for manual copying. Intended for use in automated email
         /// workflows.</remarks>
-        public const string EmailConfirmationRu = ShellOpenEmailConfirmationRu + CommonHeader + BodyEmailConfirmationRu + CommonFooterRu + CommonShellClose;
+        public const string EmailConfirmationRu =
+            ShellOpenEmailConfirmationRu
+            + CommonHeader
+            + BodyEmailConfirmationRu
+            + CommonFooterRu
+            + CommonShellClose;
 
         /// <summary>
         /// Contains the HTML template for the password reset email in English.
         /// </summary>
-        public const string PasswordResetEn = ShellOpenPasswordResetEn + CommonHeader + BodyPasswordResetEn + CommonFooterEn + CommonShellClose;
+        public const string PasswordResetEn =
+            ShellOpenPasswordResetEn
+            + CommonHeader
+            + BodyPasswordResetEn
+            + CommonFooterEn
+            + CommonShellClose;
 
         /// <summary>
         /// Contains the HTML template for the password reset email in Russian.
@@ -254,6 +281,11 @@ namespace Cotton.Email
         /// <remarks>This constant string is used to generate a password reset email, which includes a
         /// link for the user to reset their password. The placeholders {{recipient_name}} and {{reset_url}} should be
         /// replaced with the actual recipient's name and the password reset link, respectively.</remarks>
-        public const string PasswordResetRu = ShellOpenPasswordResetRu + CommonHeader + BodyPasswordResetRu + CommonFooterRu + CommonShellClose;
+        public const string PasswordResetRu =
+            ShellOpenPasswordResetRu
+            + CommonHeader
+            + BodyPasswordResetRu
+            + CommonFooterRu
+            + CommonShellClose;
     }
 }

@@ -57,6 +57,62 @@ function extractApiErrorMessage(data?: ApiErrorResponse): string | null {
   return null;
 }
 
+type PasswordInputFieldProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  visible: boolean;
+  onToggleVisibility: () => void;
+  showLabel: string;
+  hideLabel: string;
+  disabled: boolean;
+};
+
+const PasswordInputField: React.FC<PasswordInputFieldProps> = ({
+  label,
+  value,
+  onChange,
+  autoComplete,
+  visible,
+  onToggleVisibility,
+  showLabel,
+  hideLabel,
+  disabled,
+}) => {
+  const tooltipTitle = visible ? hideLabel : showLabel;
+
+  return (
+    <TextField
+      label={label}
+      type={visible ? "text" : "password"}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      autoComplete={autoComplete}
+      fullWidth
+      disabled={disabled}
+      slotProps={{
+        input: {
+          endAdornment: (
+            <InputAdornment position="end">
+              <Tooltip title={tooltipTitle}>
+                <IconButton
+                  edge="end"
+                  onClick={onToggleVisibility}
+                  aria-label={tooltipTitle}
+                  disabled={disabled}
+                >
+                  {visible ? <VisibilityIcon /> : <VisibilityOffIcon />}
+                </IconButton>
+              </Tooltip>
+            </InputAdornment>
+          ),
+        },
+      }}
+    />
+  );
+};
+
 export const ChangePasswordCard = () => {
   const { t } = useTranslation("profile");
 
@@ -124,121 +180,40 @@ export const ChangePasswordCard = () => {
         {status.kind === "error" && (
           <Alert severity="error">{status.message}</Alert>
         )}
-
-        <TextField
+        <PasswordInputField
           label={t("password.old")}
-          type={showOldPassword ? "text" : "password"}
           value={oldPassword}
-          onChange={(e) => setOldPassword(e.target.value)}
+          onChange={setOldPassword}
           autoComplete="current-password"
-          fullWidth
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Tooltip
-                    title={
-                      showOldPassword ? t("password.hide") : t("password.show")
-                    }
-                  >
-                    <IconButton
-                      edge="end"
-                      onClick={() => setShowOldPassword((v) => !v)}
-                      aria-label={
-                        showOldPassword
-                          ? t("password.hide")
-                          : t("password.show")
-                      }
-                    >
-                      {showOldPassword ? (
-                        <VisibilityIcon />
-                      ) : (
-                        <VisibilityOffIcon />
-                      )}
-                    </IconButton>
-                  </Tooltip>
-                </InputAdornment>
-              ),
-            },
-          }}
+          visible={showOldPassword}
+          onToggleVisibility={() => setShowOldPassword((v) => !v)}
+          showLabel={t("password.show")}
+          hideLabel={t("password.hide")}
+          disabled={loading}
         />
 
-        <TextField
+        <PasswordInputField
           label={t("password.new")}
-          type={showNewPassword ? "text" : "password"}
           value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          onChange={setNewPassword}
           autoComplete="new-password"
-          fullWidth
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Tooltip
-                    title={
-                      showNewPassword ? t("password.hide") : t("password.show")
-                    }
-                  >
-                    <IconButton
-                      edge="end"
-                      onClick={() => setShowNewPassword((v) => !v)}
-                      aria-label={
-                        showNewPassword
-                          ? t("password.hide")
-                          : t("password.show")
-                      }
-                    >
-                      {showNewPassword ? (
-                        <VisibilityIcon />
-                      ) : (
-                        <VisibilityOffIcon />
-                      )}
-                    </IconButton>
-                  </Tooltip>
-                </InputAdornment>
-              ),
-            },
-          }}
+          visible={showNewPassword}
+          onToggleVisibility={() => setShowNewPassword((v) => !v)}
+          showLabel={t("password.show")}
+          hideLabel={t("password.hide")}
+          disabled={loading}
         />
 
-        <TextField
+        <PasswordInputField
           label={t("password.confirm")}
-          type={showConfirmNewPassword ? "text" : "password"}
           value={confirmNewPassword}
-          onChange={(e) => setConfirmNewPassword(e.target.value)}
+          onChange={setConfirmNewPassword}
           autoComplete="new-password"
-          fullWidth
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Tooltip
-                    title={
-                      showConfirmNewPassword
-                        ? t("password.hide")
-                        : t("password.show")
-                    }
-                  >
-                    <IconButton
-                      edge="end"
-                      onClick={() => setShowConfirmNewPassword((v) => !v)}
-                      aria-label={
-                        showConfirmNewPassword
-                          ? t("password.hide")
-                          : t("password.show")
-                      }
-                    >
-                      {showConfirmNewPassword ? (
-                        <VisibilityIcon />
-                      ) : (
-                        <VisibilityOffIcon />
-                      )}
-                    </IconButton>
-                  </Tooltip>
-                </InputAdornment>
-              ),
-            },
-          }}
+          visible={showConfirmNewPassword}
+          onToggleVisibility={() => setShowConfirmNewPassword((v) => !v)}
+          showLabel={t("password.show")}
+          hideLabel={t("password.hide")}
+          disabled={loading}
         />
 
         <Stack direction="row" justifyContent="flex-end" spacing={1}>
