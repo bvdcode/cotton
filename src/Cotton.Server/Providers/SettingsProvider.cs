@@ -313,7 +313,7 @@ namespace Cotton.Server.Providers
                 S3Region = request.S3Config?.Region,
                 S3EndpointUrl = request.S3Config?.Endpoint,
                 InstanceId = instanceId,
-                PublicBaseUrl = lastSettings?.PublicBaseUrl ?? GetServerSettings().PublicBaseUrl,
+                PublicBaseUrl = request.PublicBaseUrl.TrimEnd('/'),
                 ServerUsage = request.Usage,
                 StorageSpaceMode = request.StorageSpace,
                 WebdavHost = request.WebdavConfig?.ServerUrl,
