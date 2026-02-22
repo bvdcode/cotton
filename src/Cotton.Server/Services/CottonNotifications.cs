@@ -62,11 +62,13 @@ namespace Cotton.Server.Services
                 return false;
             }
 
+            string recipientName = GetRecipientDisplayName(user);
+
             bool sent = await _publicEmailProvider.SendEmailAsync(
                 template,
                 serverBaseUrl,
                 user.Email,
-                user.Username,
+                recipientName,
                 "en",
                 parameters);
 
@@ -95,8 +97,9 @@ namespace Cotton.Server.Services
             }
 
             string token = parameters.GetValueOrDefault("token") ?? string.Empty;
+            string recipientName = GetRecipientDisplayName(user);
             var variables = EmailTemplateRenderer.BuildVariables(
-                user.Username,
+                recipientName,
                 user.Email,
                 token,
                 serverBaseUrl);
@@ -115,7 +118,7 @@ namespace Cotton.Server.Services
 
             try
             {
-                SendSmtpEmail(user.Email, user.Username, subject, body, settings);
+                SendSmtpEmail(user.Email, recipientName, subject, body, settings);
                 return true;
             }
             catch (Exception ex)
@@ -123,6 +126,29 @@ namespace Cotton.Server.Services
                 _logger.LogError(ex, "Failed to send {Template} email via SMTP to {Email}.", template, user.Email);
                 return false;
             }
+        }
+
+        private static string GetRecipientDisplayName(User user)
+        {
+            string? firstName = string.IsNullOrWhiteSpace(user.FirstName) ? null : user.FirstName.Trim();
+            string? lastName = string.IsNullOrWhiteSpace(user.LastName) ? null : user.LastName.Trim();
+
+            if (firstName is null && lastName is null)
+            {
+                return user.Username;
+            }
+
+            if (firstName is null)
+            {
+                return lastName!;
+            }
+
+            if (lastName is null)
+            {
+                return firstName;
+            }
+
+            return firstName + " " + lastName;
         }
 
         private void SendSmtpEmail(
