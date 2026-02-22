@@ -2,6 +2,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Providers;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -17,7 +18,8 @@ namespace Cotton.Server.Handlers.Users
 
     public class SendPasswordResetRequestHandler(
         CottonDbContext _dbContext,
-        INotificationsProvider _notifications) : IRequestHandler<SendPasswordResetRequest>
+        INotificationsProvider _notifications,
+        SettingsProvider _settingsProvider) : IRequestHandler<SendPasswordResetRequest>
     {
         private const int TokenLength = 32;
         private static readonly TimeSpan CooldownPeriod = TimeSpan.FromMinutes(2);
@@ -50,7 +52,9 @@ namespace Cotton.Server.Handlers.Users
             user.PasswordResetTokenSentAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            string baseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
+            string fallbackBaseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
+            string baseUrl = await _settingsProvider.EnsurePublicBaseUrlAsync(request.HttpRequest, cancellationToken)
+                ?? fallbackBaseUrl;
             var parameters = new Dictionary<string, string>
             {
                 ["token"] = user.PasswordResetToken,
