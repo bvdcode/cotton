@@ -56,6 +56,11 @@ namespace Cotton.Server.Services
             string serverBaseUrl,
             CottonServerSettings settings)
         {
+            if (!settings.TelemetryEnabled)
+            {
+                _logger.LogInformation("Telemetry is disabled — skipping {Template} for user {UserId}.", template, userId);
+                return false;
+            }
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null || string.IsNullOrWhiteSpace(user.Email))
             {
