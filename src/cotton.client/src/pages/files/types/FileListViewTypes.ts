@@ -196,4 +196,20 @@ export interface IFileListView {
    * Loading caption text
    */
   loadingCaption?: string;
+
+  /**
+   * Whether multi-select mode is active.
+   * When true, views show selection checkboxes.
+   */
+  selectionMode?: boolean;
+
+  /**
+   * Set of currently selected tile IDs
+   */
+  selectedIds?: ReadonlySet<string>;
+
+  /**
+   * Handler to toggle selection of a single item
+   */
+  onToggleItem?: (id: string) => void;
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, TextField } from "@mui/material";
+import { Box, Checkbox, TextField } from "@mui/material";
 import { Folder, Download, Edit, Delete, Share } from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
@@ -87,6 +87,9 @@ interface TileItemProps {
   folderOperations: FolderOperations;
   fileOperations: FileOperations;
   fileNamePlaceholder: string;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggle?: () => void;
 }
 
 /**
@@ -94,13 +97,13 @@ interface TileItemProps {
  * Extracted for reuse by both plain and virtualized grid.
  */
 export const TileItem: React.FC<TileItemProps> = React.memo(
-  ({ tile, folderOperations, fileOperations, fileNamePlaceholder }) => {
+  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, selectionMode = false, selected = false, onToggle }) => {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
 
     if (tile.kind === "folder") {
-      return (
+      const folderContent = (
         <FolderCard
           folder={tile.node}
           isRenaming={folderOperations.isRenaming(tile.node.id)}
@@ -114,10 +117,34 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onDelete={() =>
             folderOperations.onDelete(tile.node.id, tile.node.name)
           }
-          onClick={() => folderOperations.onClick(tile.node.id)}
+          onClick={selectionMode ? () => onToggle?.() : () => folderOperations.onClick(tile.node.id)}
           variant="squareTile"
         />
       );
+
+      if (selectionMode) {
+        return (
+          <Box position="relative">
+            <Checkbox
+              checked={selected}
+              onChange={() => onToggle?.()}
+              sx={{
+                position: "absolute",
+                top: 4,
+                left: 4,
+                zIndex: 5,
+                bgcolor: "background.paper",
+                borderRadius: 1,
+                p: 0.25,
+              }}
+              size="small"
+            />
+            {folderContent}
+          </Box>
+        );
+      }
+
+      return folderContent;
     }
 
     const isImage = isImageFile(tile.file.name);
@@ -239,22 +266,24 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return preview;
     })();
 
-    return (
+    const fileClick = selectionMode
+      ? () => onToggle?.()
+      : isImage || isVideo
+        ? () => fileOperations.onMediaClick?.(tile.file.id)
+        : () =>
+            fileOperations.onClick(
+              tile.file.id,
+              tile.file.name,
+              tile.file.sizeBytes,
+            );
+
+    const fileContent = (
       <RenamableItemCard
         variant="squareTile"
         icon={icon}
         title={tile.file.name}
         subtitle={formatBytes(tile.file.sizeBytes)}
-        onClick={
-          isImage || isVideo
-            ? () => fileOperations.onMediaClick?.(tile.file.id)
-            : () =>
-                fileOperations.onClick(
-                  tile.file.id,
-                  tile.file.name,
-                  tile.file.sizeBytes,
-                )
-        }
+        onClick={fileClick}
         iconContainerSx={iconContainerSx}
         actions={[
           {
@@ -292,5 +321,29 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         placeholder={fileNamePlaceholder}
       />
     );
+
+    if (selectionMode) {
+      return (
+        <Box position="relative">
+          <Checkbox
+            checked={selected}
+            onChange={() => onToggle?.()}
+            sx={{
+              position: "absolute",
+              top: 4,
+              left: 4,
+              zIndex: 5,
+              bgcolor: "background.paper",
+              borderRadius: 1,
+              p: 0.25,
+            }}
+            size="small"
+          />
+          {fileContent}
+        </Box>
+      );
+    }
+
+    return fileContent;
   },
 );
