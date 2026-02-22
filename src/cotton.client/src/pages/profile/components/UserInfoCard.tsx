@@ -109,7 +109,11 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         <Avatar
           alt={displayName}
           src={user.pictureUrl}
-          sx={{ width: { xs: 84, sm: 104 }, height: { xs: 84, sm: 104 }, bgcolor: "primary.main" }}
+          sx={{
+            width: { xs: 84, sm: 104 },
+            height: { xs: 84, sm: 104 },
+            bgcolor: "primary.main",
+          }}
         >
           {!user.pictureUrl && avatarLetter}
         </Avatar>
@@ -163,12 +167,19 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
 
       <Divider sx={{ mb: 2 }} />
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 1.5, sm: 3 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={{ xs: 1.5, sm: 3 }}
+      >
         <Stack spacing={1.25} flex={1}>
           <InfoRow label={t("fields.username")} value={user.username} />
           <InfoRow
             label={t("fields.email")}
-            value={user.email && user.email.trim().length > 0 ? user.email : placeholder}
+            value={
+              user.email && user.email.trim().length > 0
+                ? user.email
+                : placeholder
+            }
           />
           <InfoRow
             label={t("fields.firstName")}
@@ -193,12 +204,19 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             label={t("fields.birthDate")}
             value={
               user.birthDate && user.birthDate.trim().length > 0
-                ? formatDate(user.birthDate)
+                ? formatDate(user.birthDate) +
+                  ` (${formatDateTime(user.birthDate)})`
                 : placeholder
             }
           />
-          <InfoRow label={t("fields.createdAt")} value={formatDateTime(user.createdAt)} />
-          <InfoRow label={t("fields.updatedAt")} value={formatDateTime(user.updatedAt)} />
+          <InfoRow
+            label={t("fields.createdAt")}
+            value={formatDateTime(user.createdAt)}
+          />
+          <InfoRow
+            label={t("fields.updatedAt")}
+            value={formatDateTime(user.updatedAt)}
+          />
           <InfoRow label={t("fields.id")} value={user.id} />
         </Stack>
       </Stack>
