@@ -21,6 +21,11 @@ import { UserRole } from "../../../features/auth/types";
 import { UserRoleSelect } from "./UserRoleSelect";
 import { UserPersonalInfoFields } from "./UserPersonalInfoFields";
 import { toDateInputValue } from "../../../shared/utils/dateOnly";
+import {
+  getUsernameError,
+  isValidUsername,
+  normalizeUsername,
+} from "../../../shared/validation/username";
 
 interface EditUserDialogProps {
   open: boolean;
@@ -49,6 +54,9 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const usernameError = getUsernameError(username);
+  const usernameValid = isValidUsername(username);
+
   useEffect(() => {
     if (!user) return;
     setUsername(user.username);
@@ -60,14 +68,14 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
     setError(null);
   }, [user]);
 
-  const canSave = username.trim().length > 0 && !saving;
+  const canSave = usernameValid && !saving;
 
   const handleSave = async () => {
     if (!user) return;
     setError(null);
 
     const request: AdminUpdateUserRequestDto = {
-      username: username.trim(),
+      username: normalizeUsername(username),
       email: email.trim().length > 0 ? email.trim() : null,
       role,
       firstName: firstName.trim().length > 0 ? firstName.trim() : null,
@@ -108,6 +116,8 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
             onChange={(e) => setUsername(e.target.value)}
             fullWidth
             autoComplete="off"
+            error={Boolean(usernameError)}
+            helperText={usernameError ?? ""}
           />
           <TextField
             label={t("users.create.email")}

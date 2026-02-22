@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Validators;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -31,12 +32,16 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Username is required");
             }
 
+            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out var username, out var usernameError))
+            {
+                throw new BadRequestException<User>(usernameError);
+            }
+
             if (string.IsNullOrWhiteSpace(request.Password))
             {
                 throw new BadRequestException<User>("Password is required");
             }
 
-            var username = request.Username.Trim();
             bool exists = await _dbContext.Users.AnyAsync(x => x.Username == username, cancellationToken);
             if (exists)
             {

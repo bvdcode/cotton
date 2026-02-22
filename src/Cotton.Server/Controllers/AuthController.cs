@@ -13,6 +13,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
 using Cotton.Server.Services.WebDav;
+using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Abstractions;
@@ -390,13 +391,18 @@ namespace Cotton.Server.Controllers
 
         private async Task<User?> TryGetNewUserAsync(LoginRequest request)
         {
+            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out var username, out _))
+            {
+                return null;
+            }
+
             bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
             if (isPublicInstance)
             {
                 User guest = new()
                 {
                     Role = UserRole.User,
-                    Username = request.Username.Trim(),
+                    Username = username,
                     PasswordPhc = _hasher.Hash(request.Password),
                     WebDavTokenPhc = _hasher.Hash(request.Password),
                 };
@@ -422,7 +428,7 @@ namespace Cotton.Server.Controllers
             User user = new()
             {
                 Role = UserRole.Admin,
-                Username = request.Username.Trim(),
+                Username = username,
                 PasswordPhc = _hasher.Hash(request.Password),
                 WebDavTokenPhc = _hasher.Hash(request.Password),
             };
