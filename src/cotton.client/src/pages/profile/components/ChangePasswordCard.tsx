@@ -22,45 +22,43 @@ type ChangePasswordStatus =
   | { kind: "success" }
   | { kind: "error"; message: string };
 
-export const ChangePasswordCard = () => {
-  const { t } = useTranslation("profile");
+type ApiErrorResponse = {
+  message?: string;
+  title?: string;
+  errors?: Record<string, string | string[]>;
+};
 
-  type ApiErrorResponse = {
-    message?: string;
-    title?: string;
-    errors?: Record<string, string | string[]>;
-  };
+function extractApiErrorMessage(data?: ApiErrorResponse): string | null {
+  if (!data) return null;
+  if (typeof data.message === "string" && data.message.length > 0) {
+    return data.message;
+  }
 
-  const extractApiErrorMessage = (data?: ApiErrorResponse): string | null => {
-    if (!data) return null;
-    if (typeof data.message === "string" && data.message.length > 0) {
-      return data.message;
-    }
-
-    const errors = data.errors;
-    if (errors && typeof errors === "object") {
-      const values = Object.values(errors);
-      for (const value of values) {
-        if (typeof value === "string" && value.length > 0) {
-          return value;
-        }
-        if (Array.isArray(value)) {
-          const first = value.find(
-            (v) => typeof v === "string" && v.length > 0,
-          );
-          if (first) {
-            return first;
-          }
+  const errors = data.errors;
+  if (errors && typeof errors === "object") {
+    const values = Object.values(errors);
+    for (const value of values) {
+      if (typeof value === "string" && value.length > 0) {
+        return value;
+      }
+      if (Array.isArray(value)) {
+        const first = value.find((v) => typeof v === "string" && v.length > 0);
+        if (first) {
+          return first;
         }
       }
     }
+  }
 
-    if (typeof data.title === "string" && data.title.length > 0) {
-      return data.title;
-    }
+  if (typeof data.title === "string" && data.title.length > 0) {
+    return data.title;
+  }
 
-    return null;
-  };
+  return null;
+}
+
+export const ChangePasswordCard = () => {
+  const { t } = useTranslation("profile");
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
