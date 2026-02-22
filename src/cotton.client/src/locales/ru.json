@@ -132,6 +132,10 @@
     "title": "Профиль",
     "subtitle": "Информация об аккаунте и статус безопасности.",
     "notAuthenticated": "Вы не авторизованы.",
+    "ageYears_one": "{{count}} год",
+    "ageYears_few": "{{count}} года",
+    "ageYears_many": "{{count}} лет",
+    "ageYears_other": "{{count}} лет",
     "roles": {
       "user": "Пользователь",
       "admin": "Администратор"
@@ -825,6 +829,7 @@
         "role": "Роль",
         "firstName": "Имя",
         "lastName": "Фамилия",
+        "birthDate": "Дата рождения",
         "totp": "2FA",
         "sessions": "Сессии",
         "lastActivity": "Последняя активность",

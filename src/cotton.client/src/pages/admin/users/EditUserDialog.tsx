@@ -20,6 +20,7 @@ import {
 import { UserRole } from "../../../features/auth/types";
 import { UserRoleSelect } from "./UserRoleSelect";
 import { UserPersonalInfoFields } from "./UserPersonalInfoFields";
+import { toDateInputValue } from "../../../shared/utils/dateOnly";
 
 interface EditUserDialogProps {
   open: boolean;
@@ -55,7 +56,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
     setRole(user.role);
     setFirstName(user.firstName ?? "");
     setLastName(user.lastName ?? "");
-    setBirthDate(user.birthDate ?? "");
+    setBirthDate(toDateInputValue(user.birthDate));
     setError(null);
   }, [user]);
 

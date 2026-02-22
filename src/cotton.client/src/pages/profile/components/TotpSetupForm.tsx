@@ -3,6 +3,7 @@ import {
   Button,
   CircularProgress,
   Divider,
+  IconButton,
   Stack,
   Typography,
   useTheme,
@@ -11,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import QRCode from "react-qr-code";
 import { OneTimeCodeInput } from "../../../shared/ui/OneTimeCodeInput";
 import type { TotpSetup } from "../../../shared/api/totpApi";
+import { ContentCopy } from "@mui/icons-material";
 
 interface TotpSetupFormProps {
   totpSetup: TotpSetup;
@@ -20,7 +22,6 @@ interface TotpSetupFormProps {
   onConfirm: () => void;
   onCopySecret: () => void;
 }
-
 
 export const TotpSetupForm = ({
   totpSetup,
@@ -38,10 +39,6 @@ export const TotpSetupForm = ({
       <Divider sx={{ mb: 3 }} />
 
       <Stack spacing={2.5}>
-        <Typography variant="subtitle2" fontWeight={600}>
-          {t("totp.setup.qrTitle")}
-        </Typography>
-
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={{ xs: 3, md: 4 }}
@@ -75,10 +72,6 @@ export const TotpSetupForm = ({
               </Box>
             </Box>
 
-            <Button variant="outlined" onClick={onCopySecret} size="small">
-              {t("totp.setup.copySecret")}
-            </Button>
-
             <Typography
               variant="caption"
               color="text.secondary"
@@ -92,10 +85,13 @@ export const TotpSetupForm = ({
                 width: "100%",
               }}
             >
-              {t("totp.setup.secretLabel")}: {" "}
+              {t("totp.setup.secretLabel")}:{" "}
               <Box component="strong" sx={{ color: "text.primary" }}>
                 {totpSetup.secretBase32}
               </Box>
+              <IconButton onClick={onCopySecret} size="small">
+                <ContentCopy fontSize="small" />
+              </IconButton>
             </Typography>
           </Stack>
 

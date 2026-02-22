@@ -9,6 +9,11 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { UserRole, type User } from "../../../features/auth/types";
+import {
+  formatDateOnly,
+  getAgeYears,
+  tryParseDateOnly,
+} from "../../../shared/utils/dateOnly";
 
 const formatDateTime = (iso: string): string => {
   const date = new Date(iso);
@@ -80,17 +85,24 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
 
   const usernameLine = `@${user.username}`;
 
-  const formatDate = (iso: string): string => {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) {
-      return iso;
+  const birthDateValue = (() => {
+    if (!user.birthDate || user.birthDate.trim().length === 0) {
+      return placeholder;
     }
-    return new Intl.DateTimeFormat(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-    }).format(date);
-  };
+
+    const formatted = formatDateOnly(user.birthDate);
+    const parsed = tryParseDateOnly(user.birthDate);
+    if (!parsed) {
+      return formatted;
+    }
+
+    const ageYears = getAgeYears(parsed);
+    if (ageYears < 0 || ageYears > 150) {
+      return formatted;
+    }
+
+    return `${formatted} (${t("ageYears", { count: ageYears })})`;
+  })();
 
   return (
     <Paper
@@ -198,11 +210,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         <Stack spacing={1.25} flex={1}>
           <InfoRow
             label={t("fields.birthDate")}
-            value={
-              user.birthDate && user.birthDate.trim().length > 0
-                ? formatDate(user.birthDate)
-                : placeholder
-            }
+            value={birthDateValue}
           />
           <InfoRow
             label={t("fields.createdAt")}
