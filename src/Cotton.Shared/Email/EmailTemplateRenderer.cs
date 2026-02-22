@@ -125,16 +125,12 @@ namespace Cotton.Email
         /// </summary>
         /// <param name="language">The language enum value.</param>
         /// <returns>The corresponding ISO 639-1 code.</returns>
-        public static string GetLanguageCode(Language language)
-        {
-            switch (language)
+        public static string GetLanguageCode(Language language) =>
+            language switch
             {
-                case Language.Russian:
-                    return "ru";
-                default:
-                    return "en";
-            }
-        }
+                Language.Russian => "ru",
+                _ => "en",
+            };
 
         private static string BuildKey(EmailTemplate template, string languageCode)
         {
