@@ -229,7 +229,14 @@ const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({
       alignItems="center"
       sx={{ mt: 1.5, textAlign: "center" }}
     >
-      <Link>
+      <Link
+        href="https://github.com/bvdcode/cotton"
+        target="_blank"
+        rel="noopener"
+        underline="hover"
+        color="text.secondary"
+        sx={{ display: "flex", alignItems: "center" }}
+      >
         <GitHub fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
       </Link>
       <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
