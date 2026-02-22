@@ -41,6 +41,29 @@ interface UserInfoCardProps {
   user: User;
 }
 
+type InfoRowProps = {
+  label: string;
+  value: string;
+};
+
+const InfoRow = ({ label, value }: InfoRowProps) => {
+  return (
+    <Box display="flex" justifyContent="space-between" gap={2}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography
+        variant="body2"
+        fontWeight={600}
+        textAlign="right"
+        sx={{ wordBreak: "break-word" }}
+      >
+        {value}
+      </Typography>
+    </Box>
+  );
+};
+
 export const UserInfoCard = ({ user }: UserInfoCardProps) => {
   const { t } = useTranslation(["profile", "common"]);
 
@@ -49,12 +72,18 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
   const totpEnabled = Boolean(user.isTotpEnabled);
   const placeholder = t("common:placeholder");
 
-  const showUsernameAsSubtitle = displayName !== user.username;
   const fullName = [user.firstName, user.lastName]
     .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
     .join(" ");
 
   const title = fullName || displayName;
+
+  const subtitleParts: string[] = [];
+  if (title !== displayName) {
+    subtitleParts.push(displayName);
+  }
+  subtitleParts.push(`@${user.username}`);
+  const subtitle = subtitleParts.join(" · ");
 
   const formatDate = (iso: string): string => {
     const date = new Date(iso);
@@ -76,7 +105,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         p: { xs: 2, sm: 3 },
       }}
     >
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 3 }}>
         <Avatar
           alt={displayName}
           src={user.pictureUrl}
@@ -89,16 +118,13 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
           <Typography variant="h6" fontWeight={700} noWrap>
             {title}
           </Typography>
-          {showUsernameAsSubtitle ? (
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {subtitle}
+          </Typography>
+          {user.email && (
             <Typography variant="body2" color="text.secondary" noWrap>
-              @{user.username}
+              {user.email}
             </Typography>
-          ) : (
-            user.email && (
-              <Typography variant="body2" color="text.secondary" noWrap>
-                {user.email}
-              </Typography>
-            )
           )}
         </Box>
       </Stack>
@@ -131,60 +157,44 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
 
       <Divider sx={{ mb: 2 }} />
 
-      <Stack spacing={1.5}>
-        <Box display="flex" justifyContent="space-between" gap={2}>
-          <Typography variant="body2" color="text.secondary">
-            {t("fields.username")}
-          </Typography>
-          <Typography variant="body2" fontWeight={600} textAlign="right" noWrap>
-            {user.username}
-          </Typography>
-        </Box>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 1.5, sm: 3 }}>
+        <Stack spacing={1.25} flex={1}>
+          <InfoRow label={t("fields.username")} value={user.username} />
+          <InfoRow
+            label={t("fields.email")}
+            value={user.email && user.email.trim().length > 0 ? user.email : placeholder}
+          />
+          <InfoRow
+            label={t("fields.firstName")}
+            value={
+              user.firstName && user.firstName.trim().length > 0
+                ? user.firstName
+                : placeholder
+            }
+          />
+          <InfoRow
+            label={t("fields.lastName")}
+            value={
+              user.lastName && user.lastName.trim().length > 0
+                ? user.lastName
+                : placeholder
+            }
+          />
+        </Stack>
 
-        {user.email && (
-          <Box display="flex" justifyContent="space-between" gap={2}>
-            <Typography variant="body2" color="text.secondary">
-              {t("fields.email")}
-            </Typography>
-            <Typography
-              variant="body2"
-              fontWeight={600}
-              textAlign="right"
-              noWrap
-            >
-              {user.email}
-            </Typography>
-          </Box>
-        )}
-
-        <Box display="flex" justifyContent="space-between" gap={2}>
-          <Typography variant="body2" color="text.secondary">
-            {t("fields.birthDate")}
-          </Typography>
-          <Typography variant="body2" fontWeight={600} textAlign="right" noWrap>
-            {user.birthDate && user.birthDate.trim().length > 0
-              ? formatDate(user.birthDate)
-              : placeholder}
-          </Typography>
-        </Box>
-
-        <Box display="flex" justifyContent="space-between" gap={2}>
-          <Typography variant="body2" color="text.secondary">
-            {t("fields.createdAt")}
-          </Typography>
-          <Typography variant="body2" fontWeight={600} textAlign="right">
-            {formatDateTime(user.createdAt)}
-          </Typography>
-        </Box>
-
-        <Box display="flex" justifyContent="space-between" gap={2}>
-          <Typography variant="body2" color="text.secondary">
-            {t("fields.id")}
-          </Typography>
-          <Typography variant="body2" fontWeight={600} textAlign="right" noWrap>
-            {user.id}
-          </Typography>
-        </Box>
+        <Stack spacing={1.25} flex={1}>
+          <InfoRow
+            label={t("fields.birthDate")}
+            value={
+              user.birthDate && user.birthDate.trim().length > 0
+                ? formatDate(user.birthDate)
+                : placeholder
+            }
+          />
+          <InfoRow label={t("fields.createdAt")} value={formatDateTime(user.createdAt)} />
+          <InfoRow label={t("fields.updatedAt")} value={formatDateTime(user.updatedAt)} />
+          <InfoRow label={t("fields.id")} value={user.id} />
+        </Stack>
       </Stack>
     </Paper>
   );
