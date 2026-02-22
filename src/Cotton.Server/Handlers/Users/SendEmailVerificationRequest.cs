@@ -32,18 +32,18 @@ namespace Cotton.Server.Handlers.Users
 
             if (string.IsNullOrWhiteSpace(user.Email))
             {
-                return;
+                throw new BadRequestException<User>("No email address is set for this account.");
             }
 
             if (user.IsEmailVerified)
             {
-                return;
+                throw new BadRequestException<User>("Email is already verified.");
             }
 
             if (user.EmailVerificationTokenSentAt != null &&
                 DateTime.UtcNow - user.EmailVerificationTokenSentAt.Value < CooldownPeriod)
             {
-                return;
+                throw new BadRequestException<User>("Verification email was already sent. Please wait before requesting again.");
             }
 
             user.EmailVerificationToken = StringHelpers.CreateRandomString(TokenLength);
@@ -56,11 +56,16 @@ namespace Cotton.Server.Handlers.Users
                 ["token"] = user.EmailVerificationToken,
             };
 
-            await _notifications.SendEmailAsync(
+            bool sent = await _notifications.SendEmailAsync(
                 user.Id,
                 EmailTemplate.EmailConfirmation,
                 parameters,
                 baseUrl);
+
+            if (!sent)
+            {
+                throw new BadRequestException<User>("Failed to send verification email. Please try again later.");
+            }
         }
     }
 }
