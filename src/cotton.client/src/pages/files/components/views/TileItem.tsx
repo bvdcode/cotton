@@ -19,6 +19,72 @@ import type {
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 
+interface BlurredPreviewImageProps {
+  previewUrl: string;
+  alt: string;
+  blurOpacity: number;
+  cursor: "pointer" | "default";
+  shouldLightenBackdrop: boolean;
+  invertInDark: boolean;
+}
+
+const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
+  previewUrl,
+  alt,
+  blurOpacity,
+  cursor,
+  shouldLightenBackdrop,
+  invertInDark,
+}) => (
+  <Box
+    sx={{
+      width: "100%",
+      height: "100%",
+      position: "relative",
+    }}
+  >
+    <Box
+      component="img"
+      src={previewUrl}
+      alt=""
+      aria-hidden
+      sx={{
+        position: "absolute",
+        inset: 0,
+        display: "block",
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        filter: "blur(24px)",
+        transform: "scale(1.15)",
+        opacity: blurOpacity,
+      }}
+    />
+    <Box
+      component="img"
+      src={previewUrl}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      sx={(theme) => ({
+        position: "relative",
+        display: "block",
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+        cursor,
+        ...(shouldLightenBackdrop && {
+          backgroundColor: alpha(theme.palette.common.white, 0.75),
+        }),
+        ...(invertInDark &&
+          theme.palette.mode === "dark" && {
+            filter: "invert(1)",
+          }),
+      })}
+    />
+  </Box>
+);
+
 interface NewFolderCardProps {
   newFolderName: string;
   onNewFolderNameChange: (name: string) => void;
@@ -165,99 +231,19 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       : undefined;
 
     const icon = (() => {
-      if (previewUrl && (isImage || isVideo)) {
-        return (
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              position: "relative",
-            }}
-          >
-            <Box
-              component="img"
-              src={previewUrl}
-              alt=""
-              aria-hidden
-              sx={{
-                position: "absolute",
-                inset: 0,
-                display: "block",
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                filter: "blur(24px)",
-                transform: "scale(1.15)",
-                opacity: 0.6,
-              }}
-            />
-            <Box
-              component="img"
-              src={previewUrl}
-              alt={tile.file.name}
-              loading="lazy"
-              decoding="async"
-              sx={{
-                position: "relative",
-                display: "block",
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                cursor: isImage || isVideo ? "pointer" : "default",
-              }}
-            />
-          </Box>
-        );
-      }
       if (previewUrl) {
         const isTextPreview = isTextFile(tile.file.name);
+        const cursor: "pointer" | "default" =
+          isImage || isVideo ? "pointer" : "default";
         return (
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              position: "relative",
-            }}
-          >
-            <Box
-              component="img"
-              src={previewUrl}
-              alt=""
-              aria-hidden
-              sx={{
-                position: "absolute",
-                inset: 0,
-                display: "block",
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                filter: "blur(24px)",
-                transform: "scale(1.15)",
-                opacity: 0.5,
-              }}
-            />
-            <Box
-              component="img"
-              src={previewUrl}
-              alt={tile.file.name}
-              loading="lazy"
-              decoding="async"
-              sx={(t) => ({
-                position: "relative",
-                display: "block",
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                ...(shouldLightenPreviewBackdrop && {
-                  backgroundColor: alpha(t.palette.common.white, 0.75),
-                }),
-                ...(isTextPreview &&
-                  t.palette.mode === "dark" && {
-                    filter: "invert(1)",
-                  }),
-              })}
-            />
-          </Box>
+          <BlurredPreviewImage
+            previewUrl={previewUrl}
+            alt={tile.file.name}
+            blurOpacity={isImage || isVideo ? 0.6 : 0.5}
+            cursor={cursor}
+            shouldLightenBackdrop={shouldLightenPreviewBackdrop}
+            invertInDark={isTextPreview}
+          />
         );
       }
       return preview;

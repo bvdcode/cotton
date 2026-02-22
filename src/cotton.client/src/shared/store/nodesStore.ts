@@ -47,51 +47,68 @@ async function resolveNodeAndAncestors(
   nodeId: string,
   state: Pick<NodesState, "currentNode" | "ancestors" | "ancestorsByNodeId" | "contentByNodeId">,
 ): Promise<{ node: NodeDto; ancestors: NodeDto[] }> {
-  let node: NodeDto | null = null;
-  let ancestors = state.ancestorsByNodeId[nodeId];
+  type LocalResolution = {
+    node: NodeDto | null;
+    ancestors: NodeDto[] | null;
+  };
 
-  // Direct match: resolving the currently persisted node (e.g. home after refresh)
-  if (state.currentNode?.id === nodeId) {
-    node = state.currentNode;
-    if (!ancestors) {
-      ancestors = state.ancestors;
-    }
-  }
+  const getCachedAncestors = (): NodeDto[] | null =>
+    state.ancestorsByNodeId[nodeId] ?? null;
 
-  // Check in-memory ancestors (back navigation)
-  if (!node) {
-    const ancestorIndex = state.ancestors.findIndex((item) => item.id === nodeId);
-    if (ancestorIndex >= 0) {
-      node = state.ancestors[ancestorIndex];
-      if (!ancestors) {
-        ancestors = state.ancestors.slice(0, ancestorIndex);
-      }
-    }
-  }
+  const tryResolveFromCurrentNode = (): LocalResolution | null => {
+    if (state.currentNode?.id !== nodeId) return null;
+    return {
+      node: state.currentNode,
+      ancestors: getCachedAncestors() ?? state.ancestors,
+    };
+  };
 
-  // Check current node's children (forward navigation)
-  if (!node && state.currentNode) {
+  const tryResolveFromAncestors = (): LocalResolution | null => {
+    const index = state.ancestors.findIndex((item) => item.id === nodeId);
+    if (index < 0) return null;
+    return {
+      node: state.ancestors[index],
+      ancestors: getCachedAncestors() ?? state.ancestors.slice(0, index),
+    };
+  };
+
+  const tryResolveFromCurrentChildren = (): LocalResolution | null => {
+    if (!state.currentNode) return null;
     const parentContent = state.contentByNodeId[state.currentNode.id];
-    node = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
-    if (!ancestors && node && node.parentId === state.currentNode.id) {
-      ancestors = [...state.ancestors, state.currentNode];
-    }
-  }
+    const found = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
+    if (!found) return null;
 
-  // Search all cached content (previously visited node after persistence reload)
-  if (!node) {
+    const ancestors = getCachedAncestors();
+    if (ancestors) {
+      return { node: found, ancestors };
+    }
+
+    if (found.parentId === state.currentNode.id) {
+      return { node: found, ancestors: [...state.ancestors, state.currentNode] };
+    }
+
+    return { node: found, ancestors: null };
+  };
+
+  const tryResolveFromAnyCachedContent = (): LocalResolution | null => {
     for (const content of Object.values(state.contentByNodeId)) {
       if (!content) continue;
       const found = content.nodes.find((n) => n.id === nodeId);
       if (found) {
-        node = found;
-        break;
+        return { node: found, ancestors: getCachedAncestors() };
       }
     }
-  }
+    return null;
+  };
 
-  node ??= await nodesApi.getNode(nodeId);
-  ancestors ??= await nodesApi.getAncestors(nodeId);
+  const local =
+    tryResolveFromCurrentNode() ??
+    tryResolveFromAncestors() ??
+    tryResolveFromCurrentChildren() ??
+    tryResolveFromAnyCachedContent();
+
+  const node = local?.node ?? (await nodesApi.getNode(nodeId));
+  const ancestors = local?.ancestors ?? (await nodesApi.getAncestors(nodeId));
 
   return { node, ancestors };
 }
@@ -191,6 +208,59 @@ export const useNodesStore = create<NodesState>()(
       set({ loading: true, error: null });
     }
 
+    const refreshChildrenInBackground = (): void => {
+      if (!loadChildren || !cachedContent) return;
+
+      void (async () => {
+        try {
+          const fresh = await nodesApi.getChildren(nodeId);
+          set((prev) => ({
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [nodeId]: fresh.content,
+            },
+            lastUpdatedByNodeId: {
+              ...prev.lastUpdatedByNodeId,
+              [nodeId]: Date.now(),
+            },
+          }));
+        } catch {
+          // Silent: background refresh failure is non-critical
+        }
+      })();
+    };
+
+    const tryRecoverRootNodeAsync = async (statusCode?: number): Promise<boolean> => {
+      if (!allowRootRecovery) return false;
+      if (statusCode !== 404) return false;
+      if (get().rootNodeId !== nodeId) return false;
+
+      try {
+        // Persisted root can become stale after backend data reset.
+        // Recover by clearing cached root and resolving a fresh one.
+        set({
+          rootNodeId: null,
+          currentNode: null,
+          ancestors: [],
+          contentByNodeId: {},
+          ancestorsByNodeId: {},
+          lastUpdatedByNodeId: {},
+        });
+
+        const root = await layoutsApi.resolve();
+        set({ rootNodeId: root.id });
+        await get().loadNode(root.id, {
+          loadChildren,
+          allowRootRecovery: false,
+        });
+        return true;
+      } catch (recoveryError) {
+        console.error("Failed to recover root node", recoveryError);
+        set({ loading: false, error: "Failed to resolve root node" });
+        return true;
+      }
+    };
+
     try {
       const resolved = await resolveNodeAndAncestors(nodeId, state);
       const content = loadChildren
@@ -219,25 +289,7 @@ export const useNodesStore = create<NodesState>()(
       }));
 
       // Background refresh when cached content was used
-      if (loadChildren && cachedContent) {
-        void (async () => {
-          try {
-            const fresh = await nodesApi.getChildren(nodeId);
-            set((prev) => ({
-              contentByNodeId: {
-                ...prev.contentByNodeId,
-                [nodeId]: fresh.content,
-              },
-              lastUpdatedByNodeId: {
-                ...prev.lastUpdatedByNodeId,
-                [nodeId]: Date.now(),
-              },
-            }));
-          } catch {
-            // Silent: background refresh failure is non-critical
-          }
-        })();
-      }
+      refreshChildrenInBackground();
 
       // If we're loading the current root, keep it synced in background.
       if (allowRootRecovery && get().rootNodeId === nodeId) {
@@ -246,36 +298,8 @@ export const useNodesStore = create<NodesState>()(
     } catch (error) {
       const statusCode = isAxiosError(error) ? error.response?.status : undefined;
 
-      if (
-        allowRootRecovery &&
-        statusCode === 404 &&
-        get().rootNodeId === nodeId
-      ) {
-        try {
-          // Persisted root can become stale after backend data reset.
-          // Recover by clearing cached root and resolving a fresh one.
-          set({
-            rootNodeId: null,
-            currentNode: null,
-            ancestors: [],
-            contentByNodeId: {},
-            ancestorsByNodeId: {},
-            lastUpdatedByNodeId: {},
-          });
-
-          const root = await layoutsApi.resolve();
-          set({ rootNodeId: root.id });
-          await get().loadNode(root.id, {
-            loadChildren,
-            allowRootRecovery: false,
-          });
-          return;
-        } catch (recoveryError) {
-          console.error("Failed to recover root node", recoveryError);
-          set({ loading: false, error: "Failed to resolve root node" });
-          return;
-        }
-      }
+      const recovered = await tryRecoverRootNodeAsync(statusCode);
+      if (recovered) return;
 
       console.error("Failed to load node view", error);
       set({ loading: false, error: "Failed to load folder contents" });
