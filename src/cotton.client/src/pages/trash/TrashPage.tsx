@@ -93,6 +93,53 @@ async function deleteAllTrashItems(args: {
   }
 }
 
+type ShareToastState = {
+  open: boolean;
+  message: string;
+};
+
+type ShareToastSnackbarProps = {
+  toast: ShareToastState;
+  onClose: () => void;
+};
+
+const ShareToastSnackbar: React.FC<ShareToastSnackbarProps> = ({
+  toast,
+  onClose,
+}) => {
+  return (
+    <Snackbar
+      open={toast.open}
+      autoHideDuration={2500}
+      onClose={onClose}
+      message={toast.message}
+    />
+  );
+};
+
+type EmptyTrashProgressDialogProps = {
+  open: boolean;
+  title: string;
+  progressPercent: number;
+};
+
+const EmptyTrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
+  open,
+  title,
+  progressPercent,
+}) => {
+  if (!open) return null;
+
+  return (
+    <Dialog open={open} disableEscapeKeyDown>
+      <DialogTitle sx={{ fontFamily: "monospace" }}>{title}</DialogTitle>
+      <DialogContent>
+        <LinearProgress variant="determinate" value={progressPercent} />
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const TrashPage: React.FC = () => {
   const { t } = useTranslation(["trash", "common"]);
   const navigate = useNavigate();
@@ -138,7 +185,7 @@ export const TrashPage: React.FC = () => {
       default:
         setLayoutType(InterfaceLayoutType.List);
     }
-  }, [viewMode]);
+  }, [setLayoutType, setTilesSize, viewMode]);
 
   const [listTotalCount, setListTotalCount] = React.useState(0);
   const [, setListLoading] = React.useState(false);
@@ -288,13 +335,6 @@ export const TrashPage: React.FC = () => {
 
   const goHome = useMemo(() => () => navigate("/trash"), [navigate]);
 
-  const onPaginationModelChange = useMemo(
-    () => (model: { page: number; pageSize: number }) => {
-      handlePaginationChange(model.page, model.pageSize);
-    },
-    [handlePaginationChange],
-  );
-
   const handleGoUp = () => {
     if (ancestors.length > 0) {
       const parent = ancestors[ancestors.length - 1];
@@ -342,10 +382,10 @@ export const TrashPage: React.FC = () => {
     await downloadFile(nodeFileId, fileName);
   };
 
-  const [shareToast, setShareToast] = React.useState<{
-    open: boolean;
-    message: string;
-  }>({ open: false, message: "" });
+  const [shareToast, setShareToast] = React.useState<ShareToastState>({
+    open: false,
+    message: "",
+  });
 
   const handleShareFile = React.useCallback(
     async (nodeFileId: string, fileName: string) => {
@@ -376,17 +416,110 @@ export const TrashPage: React.FC = () => {
 
   const isCreatingInThisFolder = false;
 
+  const pageHeaderProps = useMemo(
+    (): React.ComponentProps<typeof PageHeader> => ({
+      loading: layoutType !== InterfaceLayoutType.List && loading,
+      breadcrumbs,
+      stats,
+      viewMode,
+      canGoUp: ancestors.length > 0,
+      onGoUp: handleGoUp,
+      onHomeClick: goHome,
+      onViewModeCycle: cycleViewMode,
+      statsNamespace: "trash",
+      customActions:
+        ancestors.length === 0 ? (
+          <IconButton
+            onClick={handleEmptyTrash}
+            color="error"
+            disabled={
+              loading || emptyingTrash || stats.folders + stats.files === 0
+            }
+            title={t("actions.emptyTrash")}
+          >
+            <Delete />
+          </IconButton>
+        ) : null,
+    }),
+    [
+      ancestors.length,
+      breadcrumbs,
+      cycleViewMode,
+      emptyingTrash,
+      goHome,
+      handleEmptyTrash,
+      handleGoUp,
+      layoutType,
+      loading,
+      stats,
+      t,
+      viewMode,
+    ],
+  );
+
+  const onPaginationModelChange = useMemo(
+    () => (model: { page: number; pageSize: number }) => {
+      handlePaginationChange(model.page, model.pageSize);
+    },
+    [handlePaginationChange],
+  );
+
+  const fileListViewProps = useMemo(
+    (): React.ComponentProps<typeof FileListViewFactory> => ({
+      layoutType,
+      tiles,
+      folderOperations,
+      fileOperations,
+      isCreatingFolder: isCreatingInThisFolder,
+      tileSize: tilesSize,
+      loading:
+        layoutType === InterfaceLayoutType.List
+          ? !listContent && !listError
+          : !content && !error,
+      loadingTitle: t("loading.title"),
+      loadingCaption: t("loading.caption"),
+      emptyStateText: layoutType === InterfaceLayoutType.Tiles ? t("empty") : undefined,
+      newFolderName: "",
+      onNewFolderNameChange: () => {},
+      onConfirmNewFolder: () => Promise.resolve(),
+      onCancelNewFolder: () => {},
+      folderNamePlaceholder: "",
+      fileNamePlaceholder: "File name",
+      pagination:
+        layoutType === InterfaceLayoutType.List
+          ? {
+              totalCount: listTotalCount,
+              loading: !listContent && !listError,
+              onPaginationModelChange,
+            }
+          : undefined,
+    }),
+    [
+      content,
+      error,
+      fileOperations,
+      folderOperations,
+      isCreatingInThisFolder,
+      layoutType,
+      listContent,
+      listError,
+      listTotalCount,
+      onPaginationModelChange,
+      t,
+      tiles,
+      tilesSize,
+    ],
+  );
+
   if (!content && !error && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
   return (
     <>
-      <Snackbar
-        open={shareToast.open}
-        autoHideDuration={2500}
+      <ShareToastSnackbar
+        toast={shareToast}
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-        message={shareToast.message}
       />
       <Box
         width="100%"
@@ -398,31 +531,7 @@ export const TrashPage: React.FC = () => {
           minHeight: 0,
         }}
       >
-        <PageHeader
-          loading={layoutType !== InterfaceLayoutType.List && loading}
-          breadcrumbs={breadcrumbs}
-          stats={stats}
-          viewMode={viewMode}
-          canGoUp={ancestors.length > 0}
-          onGoUp={handleGoUp}
-          onHomeClick={goHome}
-          onViewModeCycle={cycleViewMode}
-          statsNamespace="trash"
-          customActions={
-            ancestors.length === 0 ? (
-              <IconButton
-                onClick={handleEmptyTrash}
-                color="error"
-                disabled={
-                  loading || emptyingTrash || stats.folders + stats.files === 0
-                }
-                title={t("actions.emptyTrash")}
-              >
-                <Delete />
-              </IconButton>
-            ) : null
-          }
-        />
+        <PageHeader {...pageHeaderProps} />
         {(error || listError) && (
           <Box mb={1} px={1}>
             <Alert severity="error">{error ?? listError}</Alert>
@@ -436,39 +545,7 @@ export const TrashPage: React.FC = () => {
               : { pb: { xs: 1, sm: 2 } }
           }
         >
-          <FileListViewFactory
-            layoutType={layoutType}
-            tiles={tiles}
-            folderOperations={folderOperations}
-            fileOperations={fileOperations}
-            isCreatingFolder={isCreatingInThisFolder}
-            tileSize={tilesSize}
-            loading={
-              layoutType === InterfaceLayoutType.List
-                ? !listContent && !listError
-                : !content && !error
-            }
-            loadingTitle={t("loading.title")}
-            loadingCaption={t("loading.caption")}
-            emptyStateText={
-              layoutType === InterfaceLayoutType.Tiles ? t("empty") : undefined
-            }
-            newFolderName=""
-            onNewFolderNameChange={() => {}}
-            onConfirmNewFolder={() => Promise.resolve()}
-            onCancelNewFolder={() => {}}
-            folderNamePlaceholder=""
-            fileNamePlaceholder="File name"
-            pagination={
-              layoutType === InterfaceLayoutType.List
-                ? {
-                    totalCount: listTotalCount,
-                    loading: !listContent && !listError,
-                    onPaginationModelChange,
-                  }
-                : undefined
-            }
-          />
+          <FileListViewFactory {...fileListViewProps} />
         </Box>
       </Box>
 
@@ -491,24 +568,18 @@ export const TrashPage: React.FC = () => {
         />
       )}
 
-      {emptyingTrash && (
-        <Dialog open={emptyingTrash} disableEscapeKeyDown>
-          <DialogTitle sx={{ fontFamily: "monospace" }}>
-            {t("emptyTrash.inProgress", {
-              current: emptyTrashProgress.current,
-              total: emptyTrashProgress.total,
-            })}
-          </DialogTitle>
-          <DialogContent>
-            <LinearProgress
-              variant="determinate"
-              value={
-                (emptyTrashProgress.current / emptyTrashProgress.total) * 100
-              }
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <EmptyTrashProgressDialog
+        open={emptyingTrash}
+        title={t("emptyTrash.inProgress", {
+          current: emptyTrashProgress.current,
+          total: emptyTrashProgress.total,
+        })}
+        progressPercent={
+          emptyTrashProgress.total > 0
+            ? (emptyTrashProgress.current / emptyTrashProgress.total) * 100
+            : 0
+        }
+      />
     </>
   );
 };
