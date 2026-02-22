@@ -2,6 +2,7 @@
 using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Providers;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
@@ -18,7 +19,8 @@ namespace Cotton.Server.Handlers.Users
 
     public class SendEmailVerificationRequestHandler(
         CottonDbContext _dbContext,
-        INotificationsProvider _notifications)
+        INotificationsProvider _notifications,
+        SettingsProvider _settingsProvider)
         : IRequestHandler<SendEmailVerificationRequest>
     {
         private const int TokenLength = 32;
@@ -50,7 +52,9 @@ namespace Cotton.Server.Handlers.Users
             user.EmailVerificationTokenSentAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            string baseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
+            string fallbackBaseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
+            string baseUrl = await _settingsProvider.EnsurePublicBaseUrlAsync(request.HttpRequest, cancellationToken)
+                ?? fallbackBaseUrl;
             var parameters = new Dictionary<string, string>
             {
                 ["token"] = user.EmailVerificationToken,

@@ -6,6 +6,7 @@ using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
+using Cotton.Server.Middleware;
 using Cotton.Server.Mappings;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -74,6 +75,7 @@ namespace Cotton.Server
 
             var app = builder.Build();
             app.UseForwardedHeaders();
+            app.UseMiddleware<PublicBaseUrlCaptureMiddleware>();
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()
