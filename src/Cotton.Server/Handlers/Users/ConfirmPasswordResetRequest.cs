@@ -45,6 +45,8 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>("Token has expired");
             }
 
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             user.PasswordPhc = _hasher.Hash(request.NewPassword);
             user.PasswordResetToken = null;
             user.PasswordResetTokenSentAt = null;
@@ -55,6 +57,14 @@ namespace Cotton.Server.Handlers.Users
             user.TotpFailedAttempts = 0;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            await _dbContext.RefreshTokens
+                .Where(x => x.UserId == user.Id && x.RevokedAt == null)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(t => t.RevokedAt, _ => DateTime.UtcNow),
+                    cancellationToken);
+
+            await tx.CommitAsync(cancellationToken);
         }
     }
 }
