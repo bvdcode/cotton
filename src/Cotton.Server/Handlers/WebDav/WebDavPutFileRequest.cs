@@ -76,6 +76,8 @@ public class WebDavPutFileRequestHandler(
 
     private sealed record PutContent(List<Chunk> Chunks, byte[] FileHash, long TotalBytes);
 
+    private static WebDavPutFileResult Fail(WebDavPutFileError error) => new(false, false, error);
+
     public async Task<WebDavPutFileResult> Handle(WebDavPutFileRequest request, CancellationToken ct)
     {
         var (target, targetError) = await TryResolveAndValidateTargetAsync(request, ct);
@@ -108,45 +110,122 @@ public class WebDavPutFileRequestHandler(
 
     private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
     {
-        var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
-        if (existing.Found && existing.IsCollection)
+        var existing = await ResolveExistingAsync(request, ct);
+        var existingFailure = TryGetExistingValidationFailure(existing);
+        if (existingFailure is not null)
         {
-            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.IsCollection));
+            return (null, existingFailure);
         }
 
-        var parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
-        if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
+        var parentResult = await ResolveParentAsync(request, ct);
+        var parentFailure = TryGetParentValidationFailure(parentResult);
+        if (parentFailure is not null)
         {
-            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.ParentNotFound));
+            return (null, parentFailure);
         }
 
-        if (!NameValidator.TryNormalizeAndValidate(parentResult.ResourceName, out _, out _))
+        string resourceName = parentResult.ResourceName!;
+        var nameFailure = TryGetNameValidationFailure(resourceName);
+        if (nameFailure is not null)
         {
-            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.InvalidName));
+            return (null, nameFailure);
         }
 
-        var nameKey = NameValidator.NormalizeAndGetNameKey(parentResult.ResourceName);
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
+        var nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
+        var layoutId = await GetLayoutIdAsync(request.UserId);
 
-        var folderExists = await _dbContext.Nodes
-            .AnyAsync(n => n.ParentId == parentResult.ParentNode.Id
-                && n.OwnerId == request.UserId
-                && n.NameKey == nameKey
-                && n.LayoutId == layout.Id
-                && n.Type == WebDavPathResolver.DefaultNodeType, ct);
-
-        if (folderExists)
+        var conflictFailure = await TryGetFolderConflictFailureAsync(
+            userId: request.UserId,
+            parentNodeId: parentResult.ParentNode!.Id,
+            nameKey: nameKey,
+            layoutId: layoutId,
+            ct);
+        if (conflictFailure is not null)
         {
-            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.Conflict));
+            return (null, conflictFailure);
         }
 
-        if (existing.Found && existing.NodeFile is not null && !request.Overwrite)
+        var overwriteFailure = TryGetOverwriteValidationFailure(existing, request.Overwrite);
+        if (overwriteFailure is not null)
         {
-            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.PreconditionFailed));
+            return (null, overwriteFailure);
         }
 
         bool created = !existing.Found;
-        return (new PutTarget(existing, parentResult, parentResult.ResourceName, nameKey, created), null);
+        return (new PutTarget(existing, parentResult, resourceName, nameKey, created), null);
+    }
+
+    private Task<WebDavResolveResult> ResolveExistingAsync(WebDavPutFileRequest request, CancellationToken ct)
+    {
+        return _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+    }
+
+    private Task<WebDavParentResult> ResolveParentAsync(WebDavPutFileRequest request, CancellationToken ct)
+    {
+        return _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
+    }
+
+    private static WebDavPutFileResult? TryGetExistingValidationFailure(WebDavResolveResult existing)
+    {
+        if (existing.Found && existing.IsCollection)
+        {
+            return Fail(WebDavPutFileError.IsCollection);
+        }
+
+        return null;
+    }
+
+    private static WebDavPutFileResult? TryGetParentValidationFailure(WebDavParentResult parentResult)
+    {
+        if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
+        {
+            return Fail(WebDavPutFileError.ParentNotFound);
+        }
+
+        return null;
+    }
+
+    private static WebDavPutFileResult? TryGetNameValidationFailure(string resourceName)
+    {
+        if (!NameValidator.TryNormalizeAndValidate(resourceName, out _, out _))
+        {
+            return Fail(WebDavPutFileError.InvalidName);
+        }
+
+        return null;
+    }
+
+    private async Task<Guid> GetLayoutIdAsync(Guid userId)
+    {
+        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+        return layout.Id;
+    }
+
+    private async Task<WebDavPutFileResult?> TryGetFolderConflictFailureAsync(
+        Guid userId,
+        Guid parentNodeId,
+        string nameKey,
+        Guid layoutId,
+        CancellationToken ct)
+    {
+        var folderExists = await _dbContext.Nodes
+            .AnyAsync(n => n.ParentId == parentNodeId
+                && n.OwnerId == userId
+                && n.NameKey == nameKey
+                && n.LayoutId == layoutId
+                && n.Type == WebDavPathResolver.DefaultNodeType, ct);
+
+        return folderExists ? Fail(WebDavPutFileError.Conflict) : null;
+    }
+
+    private static WebDavPutFileResult? TryGetOverwriteValidationFailure(WebDavResolveResult existing, bool overwrite)
+    {
+        if (existing.Found && existing.NodeFile is not null && !overwrite)
+        {
+            return Fail(WebDavPutFileError.PreconditionFailed);
+        }
+
+        return null;
     }
 
     private async Task<(PutContent? Content, WebDavPutFileResult? Error)> TryReadAndValidateContentAsync(WebDavPutFileRequest request, CancellationToken ct)
