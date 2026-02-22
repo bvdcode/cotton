@@ -1,13 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Button,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -19,6 +15,7 @@ import {
   type AdminCreateUserRequestDto,
 } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
+import { UserRoleSelect } from "./UserRoleSelect";
 
 interface CreateUserFormProps {
   onUserCreated: () => Promise<void>;
@@ -42,14 +39,6 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({
 
   const canCreate =
     username.trim().length > 0 && password.length > 0 && !createLoading;
-
-  const roleLabel = useMemo(() => {
-    return (r: UserRole) => {
-      if (r === UserRole.Admin) return t("roles.admin");
-      if (r === UserRole.User) return t("roles.user");
-      return t("roles.unknown");
-    };
-  }, [t]);
 
   const handleCreate = async () => {
     setCreateError(null);
@@ -139,24 +128,12 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({
             fullWidth
             autoComplete="new-password"
           />
-          <FormControl fullWidth>
-            <InputLabel id="admin-create-user-role-label">
-              {t("users.create.role")}
-            </InputLabel>
-            <Select
-              labelId="admin-create-user-role-label"
-              label={t("users.create.role")}
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-            >
-              <MenuItem value={UserRole.User}>
-                {roleLabel(UserRole.User)}
-              </MenuItem>
-              <MenuItem value={UserRole.Admin}>
-                {roleLabel(UserRole.Admin)}
-              </MenuItem>
-            </Select>
-          </FormControl>
+          <UserRoleSelect
+            labelId="admin-create-user-role-label"
+            value={role}
+            onChange={setRole}
+            disabled={createLoading}
+          />
           <TextField
             label={t("users.create.firstName")}
             value={firstName}
