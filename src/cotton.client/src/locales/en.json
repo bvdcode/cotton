@@ -146,6 +146,10 @@
     "title": "Profile",
     "subtitle": "Your account information and security status.",
     "notAuthenticated": "You are not signed in.",
+    "ageYears_one": "{{count}} year",
+    "ageYears_few": "{{count}} years",
+    "ageYears_many": "{{count}} years",
+    "ageYears_other": "{{count}} years",
     "roles": {
       "user": "User",
       "admin": "Admin"
@@ -833,6 +837,7 @@
         "role": "Role",
         "firstName": "First name",
         "lastName": "Last name",
+        "birthDate": "Date of birth",
         "totp": "2FA",
         "sessions": "Sessions",
         "lastActivity": "Last activity",

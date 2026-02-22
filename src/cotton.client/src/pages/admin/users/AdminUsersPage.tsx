@@ -21,6 +21,7 @@ import {
 import { UserRole } from "../../../features/auth/types";
 import { CreateUserForm } from "./CreateUserForm";
 import { EditUserDialog } from "./EditUserDialog";
+import { formatDateOnly } from "../../../shared/utils/dateOnly";
 
 type LoadState =
   | { kind: "idle" }
@@ -113,6 +114,15 @@ export const AdminUsersPage = () => {
         flex: 1,
         minWidth: 100,
         valueGetter: (_, row) => row.lastName ?? "",
+        sortable: false,
+      },
+      {
+        field: "birthDate",
+        headerName: t("users.columns.birthDate"),
+        flex: 1,
+        minWidth: 130,
+        valueGetter: (_, row) =>
+          row.birthDate ? formatDateOnly(row.birthDate) : "",
         sortable: false,
       },
       {
