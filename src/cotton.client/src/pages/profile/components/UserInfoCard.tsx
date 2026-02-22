@@ -192,22 +192,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
                 : placeholder
             }
           />
-          <InfoRow
-            label={t("fields.firstName")}
-            value={
-              user.firstName && user.firstName.trim().length > 0
-                ? user.firstName
-                : placeholder
-            }
-          />
-          <InfoRow
-            label={t("fields.lastName")}
-            value={
-              user.lastName && user.lastName.trim().length > 0
-                ? user.lastName
-                : placeholder
-            }
-          />
+          <InfoRow label={t("fields.id")} value={user.id} />
         </Stack>
 
         <Stack spacing={1.25} flex={1}>
@@ -227,7 +212,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             label={t("fields.updatedAt")}
             value={formatDateTime(user.updatedAt)}
           />
-          <InfoRow label={t("fields.id")} value={user.id} />
         </Stack>
       </Stack>
     </Paper>
