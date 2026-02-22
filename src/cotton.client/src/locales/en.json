@@ -578,17 +578,17 @@
     "cards": {
       "folders": {
         "title": "Folders",
-        "caption": "Total nodes in the layout",
+        "caption": "Total folders in your cloud",
         "layoutTitle": "Layout",
         "layoutCaption": "Current default layout"
       },
       "files": {
         "title": "Files",
-        "caption": "Total files across all nodes"
+        "caption": "Total files across all folders"
       },
       "data": {
         "title": "Data",
-        "caption": "Sum of file sizes"
+        "caption": "Total size of all your files"
       }
     }
   },
