@@ -223,7 +223,12 @@ const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({
   label,
 }) => {
   return (
-    <Box sx={{ mt: 1.5, textAlign: "center" }}>
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      sx={{ mt: 1.5, textAlign: "center" }}
+    >
       <Link>
         <GitHub fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
       </Link>
