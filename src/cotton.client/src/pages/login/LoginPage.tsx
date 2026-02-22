@@ -27,6 +27,46 @@ import Loader from "../../shared/ui/Loader";
 import axios from "axios";
 import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
 
+type LoginErrorData = {
+  message?: string;
+  detail?: string;
+};
+
+type TwoFactorServerHint = "required" | "invalid" | "locked";
+
+function normalizeTwoFactorCode(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 6);
+}
+
+function tryGetTwoFactorHint(args: {
+  status: number | undefined;
+  serverMessage: string | undefined;
+}): TwoFactorServerHint | null {
+  const { status, serverMessage } = args;
+  if (status !== 403) return null;
+  if (typeof serverMessage !== "string") return null;
+
+  const msgLower = serverMessage.toLowerCase();
+
+  if (msgLower.includes("two-factor") && msgLower.includes("required")) {
+    return "required";
+  }
+
+  if (msgLower.includes("invalid") && msgLower.includes("two-factor")) {
+    return "invalid";
+  }
+
+  if (
+    msgLower.includes("maximum") ||
+    msgLower.includes("locked") ||
+    msgLower.includes("attempts")
+  ) {
+    return "locked";
+  }
+
+  return null;
+}
+
 export const LoginPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -51,14 +91,13 @@ export const LoginPage = () => {
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
 
-  const handleSubmit = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault();
+  const submitLogin = useCallback(
+    async () => {
       setError("");
       setLoading(true);
 
       try {
-        if (requiresTwoFactor && twoFactorCode.replace(/\D/g, "").length < 6) {
+        if (requiresTwoFactor && normalizeTwoFactorCode(twoFactorCode).length < 6) {
           setError(t("twoFactor.required"));
           return;
         }
@@ -67,56 +106,38 @@ export const LoginPage = () => {
           username,
           password,
           twoFactorCode: requiresTwoFactor
-            ? twoFactorCode.replace(/\D/g, "").slice(0, 6)
+            ? normalizeTwoFactorCode(twoFactorCode)
             : undefined,
           trustDevice,
         });
+
         const user = await authApi.me();
         setAuthenticated(true, user);
         navigate("/");
       } catch (e) {
         if (axios.isAxiosError(e)) {
           const status = e.response?.status;
-          const data = e.response?.data as {
-            message?: string;
-            detail?: string;
-          };
+          const data = e.response?.data as LoginErrorData | undefined;
           const serverMessage = data?.detail ?? data?.message;
+          const hint = tryGetTwoFactorHint({ status, serverMessage });
 
-          if (status === 403 && typeof serverMessage === "string") {
-            const msgLower = serverMessage.toLowerCase();
+          if (hint === "required") {
+            setRequiresTwoFactor(true);
+            setTwoFactorCode("");
+            setError("");
+            return;
+          }
 
-            // Check if 2FA code is required
-            if (
-              msgLower.includes("two-factor") &&
-              msgLower.includes("required")
-            ) {
-              setRequiresTwoFactor(true);
-              setTwoFactorCode("");
-              setError("");
-              return;
-            }
+          if (hint === "invalid") {
+            setRequiresTwoFactor(true);
+            setError(t("twoFactor.invalid"));
+            return;
+          }
 
-            // Check if 2FA code is invalid
-            if (
-              msgLower.includes("invalid") &&
-              msgLower.includes("two-factor")
-            ) {
-              setRequiresTwoFactor(true);
-              setError(t("twoFactor.invalid"));
-              return;
-            }
-
-            // Check if locked due to too many attempts
-            if (
-              msgLower.includes("maximum") ||
-              msgLower.includes("locked") ||
-              msgLower.includes("attempts")
-            ) {
-              setRequiresTwoFactor(true);
-              setError(t("twoFactor.locked"));
-              return;
-            }
+          if (hint === "locked") {
+            setRequiresTwoFactor(true);
+            setError(t("twoFactor.locked"));
+            return;
           }
         }
 
@@ -135,6 +156,14 @@ export const LoginPage = () => {
       setAuthenticated,
       navigate,
     ],
+  );
+
+  const handleSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      await submitLogin();
+    },
+    [submitLogin],
   );
 
   const isEmail = (value: string): boolean =>
@@ -177,21 +206,13 @@ export const LoginPage = () => {
       return;
     }
 
-    const cleanCode = twoFactorCode.replace(/\D/g, "");
+    const cleanCode = normalizeTwoFactorCode(twoFactorCode);
     if (cleanCode.length === 6 && !loading && !autoSubmitTriggeredRef.current) {
       autoSubmitTriggeredRef.current = true;
 
       // Small delay to ensure state is stable
       const timer = setTimeout(() => {
-        const submitEvent = new Event("submit", {
-          bubbles: true,
-          cancelable: true,
-        });
-        Object.defineProperty(submitEvent, "preventDefault", {
-          value: () => {},
-          writable: false,
-        });
-        handleSubmit(submitEvent as unknown as FormEvent);
+        void submitLogin();
       }, 100);
 
       return () => clearTimeout(timer);
@@ -201,7 +222,7 @@ export const LoginPage = () => {
     if (cleanCode.length < 6) {
       autoSubmitTriggeredRef.current = false;
     }
-  }, [twoFactorCode, requiresTwoFactor, loading, handleSubmit]);
+  }, [twoFactorCode, requiresTwoFactor, loading, submitLogin]);
 
   // Redirect to home if already authenticated
   if (!isInitializing && isAuthenticated) {
@@ -217,8 +238,8 @@ export const LoginPage = () => {
       {(isInitializing || showRestoreOverlay) && (
         <Loader
           overlay={true}
-          title="Restoring session..."
-          caption="Please, wait"
+          title={t("restoring.title")}
+          caption={t("restoring.caption")}
         />
       )}
       <Container maxWidth="sm">
