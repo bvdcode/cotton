@@ -16,6 +16,7 @@ import {
 } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
 import { UserRoleSelect } from "./UserRoleSelect";
+import { UserPersonalInfoFields } from "./UserPersonalInfoFields";
 
 interface CreateUserFormProps {
   onUserCreated: () => Promise<void>;
@@ -134,27 +135,14 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({
             onChange={setRole}
             disabled={createLoading}
           />
-          <TextField
-            label={t("users.create.firstName")}
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            fullWidth
-            autoComplete="given-name"
-          />
-          <TextField
-            label={t("users.create.lastName")}
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            fullWidth
-            autoComplete="family-name"
-          />
-          <TextField
-            label={t("users.create.birthDate")}
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
+          <UserPersonalInfoFields
+            firstName={firstName}
+            lastName={lastName}
+            birthDate={birthDate}
+            onFirstNameChange={setFirstName}
+            onLastNameChange={setLastName}
+            onBirthDateChange={setBirthDate}
+            disabled={createLoading}
           />
         </Stack>
 
@@ -178,3 +166,4 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({
     </Paper>
   );
 };
+

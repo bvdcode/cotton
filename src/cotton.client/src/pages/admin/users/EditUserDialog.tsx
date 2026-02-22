@@ -19,6 +19,7 @@ import {
 } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
 import { UserRoleSelect } from "./UserRoleSelect";
+import { UserPersonalInfoFields } from "./UserPersonalInfoFields";
 
 interface EditUserDialogProps {
   open: boolean;
@@ -121,27 +122,14 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
             onChange={setRole}
             disabled={saving}
           />
-          <TextField
-            label={t("users.create.firstName")}
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            fullWidth
-            autoComplete="given-name"
-          />
-          <TextField
-            label={t("users.create.lastName")}
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            fullWidth
-            autoComplete="family-name"
-          />
-          <TextField
-            label={t("users.create.birthDate")}
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
+          <UserPersonalInfoFields
+            firstName={firstName}
+            lastName={lastName}
+            birthDate={birthDate}
+            onFirstNameChange={setFirstName}
+            onLastNameChange={setLastName}
+            onBirthDateChange={setBirthDate}
+            disabled={saving}
           />
         </Stack>
       </DialogContent>
