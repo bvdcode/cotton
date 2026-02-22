@@ -42,11 +42,31 @@ interface UserInfoCardProps {
 }
 
 export const UserInfoCard = ({ user }: UserInfoCardProps) => {
-  const { t } = useTranslation("profile");
+  const { t } = useTranslation(["profile", "common"]);
 
   const displayName = user.displayName ?? user.username;
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const totpEnabled = Boolean(user.isTotpEnabled);
+  const placeholder = t("common:placeholder");
+
+  const showUsernameAsSubtitle = displayName !== user.username;
+  const fullName = [user.firstName, user.lastName]
+    .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+    .join(" ");
+
+  const title = fullName || displayName;
+
+  const formatDate = (iso: string): string => {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+      return iso;
+    }
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    }).format(date);
+  };
 
   return (
     <Paper
@@ -54,8 +74,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         display: "flex",
         flexDirection: "column",
         p: { xs: 2, sm: 3 },
-        minHeight: 250,
-        justifyContent: "space-around",
       }}
     >
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
@@ -67,13 +85,21 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
           {!user.pictureUrl && avatarLetter}
         </Avatar>
 
-        <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Box minWidth={0} flex={1}>
           <Typography variant="h6" fontWeight={700} noWrap>
-            {displayName}
+            {title}
           </Typography>
-          <Typography variant="body2" color="text.secondary" noWrap>
-            @{user.username}
-          </Typography>
+          {showUsernameAsSubtitle ? (
+            <Typography variant="body2" color="text.secondary" noWrap>
+              @{user.username}
+            </Typography>
+          ) : (
+            user.email && (
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {user.email}
+              </Typography>
+            )
+          )}
         </Box>
       </Stack>
 
@@ -106,6 +132,15 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
       <Divider sx={{ mb: 2 }} />
 
       <Stack spacing={1.5}>
+        <Box display="flex" justifyContent="space-between" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            {t("fields.username")}
+          </Typography>
+          <Typography variant="body2" fontWeight={600} textAlign="right" noWrap>
+            {user.username}
+          </Typography>
+        </Box>
+
         {user.email && (
           <Box display="flex" justifyContent="space-between" gap={2}>
             <Typography variant="body2" color="text.secondary">
@@ -121,12 +156,33 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             </Typography>
           </Box>
         )}
+
+        <Box display="flex" justifyContent="space-between" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            {t("fields.birthDate")}
+          </Typography>
+          <Typography variant="body2" fontWeight={600} textAlign="right" noWrap>
+            {user.birthDate && user.birthDate.trim().length > 0
+              ? formatDate(user.birthDate)
+              : placeholder}
+          </Typography>
+        </Box>
+
         <Box display="flex" justifyContent="space-between" gap={2}>
           <Typography variant="body2" color="text.secondary">
             {t("fields.createdAt")}
           </Typography>
           <Typography variant="body2" fontWeight={600} textAlign="right">
             {formatDateTime(user.createdAt)}
+          </Typography>
+        </Box>
+
+        <Box display="flex" justifyContent="space-between" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            {t("fields.id")}
+          </Typography>
+          <Typography variant="body2" fontWeight={600} textAlign="right" noWrap>
+            {user.id}
           </Typography>
         </Box>
       </Stack>

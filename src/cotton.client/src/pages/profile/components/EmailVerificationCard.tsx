@@ -5,6 +5,36 @@ import { useTranslation } from "react-i18next";
 import type { User } from "../../../features/auth/types";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import { authApi } from "../../../shared/api/authApi";
+import { isAxiosError } from "../../../shared/api/httpClient";
+
+type ProblemDetails = {
+  title?: string;
+  detail?: string;
+  message?: string;
+  errors?: Record<string, string | string[]>;
+};
+
+const tryGetProblemDetailsMessage = (data: ProblemDetails | undefined): string | null => {
+  const direct = data?.message ?? data?.detail ?? data?.title;
+  if (typeof direct === "string" && direct.trim().length > 0) {
+    return direct;
+  }
+
+  const errors = data?.errors;
+  if (!errors) return null;
+
+  for (const value of Object.values(errors)) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      const first = value.find((x) => typeof x === "string" && x.trim().length > 0);
+      if (first) return first;
+    }
+  }
+
+  return null;
+};
 
 interface EmailVerificationCardProps {
   user: User;
@@ -26,7 +56,15 @@ export const EmailVerificationCard = ({ user }: EmailVerificationCardProps) => {
     try {
       await authApi.sendEmailVerification();
       setSent(true);
-    } catch {
+    } catch (e) {
+      if (isAxiosError(e)) {
+        const data = e.response?.data as ProblemDetails | undefined;
+        const message = tryGetProblemDetailsMessage(data);
+        if (message) {
+          setError(message);
+          return;
+        }
+      }
       setError(t("emailVerification.errors.failed"));
     } finally {
       setSending(false);
