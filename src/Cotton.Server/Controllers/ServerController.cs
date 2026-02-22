@@ -5,6 +5,7 @@ using Cotton.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Extensions;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -49,7 +50,7 @@ namespace Cotton.Server.Controllers
             string? error = await _settings.ValidateServerSettingsAsync(request);
             if (error is not null)
             {
-                return BadRequest(new { error });
+                return this.ApiBadRequest(error);
             }
             await _settings.SaveServerSettingsAsync(request);
             return Ok();
