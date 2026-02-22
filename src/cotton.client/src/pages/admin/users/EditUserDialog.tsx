@@ -7,10 +7,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   TextField,
 } from "@mui/material";
@@ -22,6 +18,7 @@ import {
   type AdminUpdateUserRequestDto,
 } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
+import { UserRoleSelect } from "./UserRoleSelect";
 
 interface EditUserDialogProps {
   open: boolean;
@@ -96,12 +93,6 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
     }
   };
 
-  const roleLabel = (r: UserRole) => {
-    if (r === UserRole.Admin) return t("roles.admin");
-    if (r === UserRole.User) return t("roles.user");
-    return t("roles.unknown");
-  };
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t("users.edit.title")}</DialogTitle>
@@ -124,24 +115,12 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
             fullWidth
             autoComplete="email"
           />
-          <FormControl fullWidth>
-            <InputLabel id="admin-edit-user-role-label">
-              {t("users.create.role")}
-            </InputLabel>
-            <Select
-              labelId="admin-edit-user-role-label"
-              label={t("users.create.role")}
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-            >
-              <MenuItem value={UserRole.User}>
-                {roleLabel(UserRole.User)}
-              </MenuItem>
-              <MenuItem value={UserRole.Admin}>
-                {roleLabel(UserRole.Admin)}
-              </MenuItem>
-            </Select>
-          </FormControl>
+          <UserRoleSelect
+            labelId="admin-edit-user-role-label"
+            value={role}
+            onChange={setRole}
+            disabled={saving}
+          />
           <TextField
             label={t("users.create.firstName")}
             value={firstName}

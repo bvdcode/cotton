@@ -2,8 +2,8 @@ import { useEffect } from "react";
 import { eventHub } from "../../shared/signalr";
 import { useNotificationsStore } from "../../shared/store/notificationsStore";
 import { selectNotificationSoundEnabled, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
-import type { NotificationDto } from "../../shared/types/notification";
-import { isJsonObject, type JsonValue } from "../../shared/types/json";
+import type { JsonValue } from "../../shared/types/json";
+import { isNotificationDto } from "../../shared/types/notificationGuards";
 import { useAuth } from "../auth";
 
 const playNotificationSound = () => {
@@ -19,36 +19,6 @@ const playNotificationSound = () => {
 };
 
 const HUB_METHOD = "OnNotificationReceived";
-
-const isRecord = (value: JsonValue) => isJsonObject(value);
-
-const isNotificationDto = (
-  value: JsonValue,
-): value is NotificationDto & Record<string, JsonValue> => {
-  if (!isRecord(value)) return false;
-
-  const id = value.id;
-  const createdAt = value.createdAt;
-  const updatedAt = value.updatedAt;
-  const userId = value.userId;
-  const title = value.title;
-  const content = value.content;
-  const readAt = value.readAt;
-
-  const hasBase =
-    typeof id === "string" &&
-    typeof createdAt === "string" &&
-    typeof updatedAt === "string";
-  if (!hasBase) return false;
-
-  if (typeof userId !== "string") return false;
-  if (typeof title !== "string") return false;
-
-  const contentOk = content === null || typeof content === "string";
-  const readAtOk = readAt === null || typeof readAt === "string";
-
-  return contentOk && readAtOk;
-};
 
 export function useEventHub() {
   const { isAuthenticated } = useAuth();
