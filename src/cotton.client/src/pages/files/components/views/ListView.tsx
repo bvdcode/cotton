@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Box } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import type { GridRowParams, GridRowsProp } from "@mui/x-data-grid";
+import type { GridRowParams, GridRowsProp, GridRowSelectionModel } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
 import { isImageFile, isVideoFile } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
@@ -24,6 +24,9 @@ export const ListView: React.FC<IFileListView> = ({
   pagination,
   autoHeight = false,
   loading = false,
+  selectionMode = false,
+  selectedIds,
+  onToggleItem,
 }) => {
   const { t } = useTranslation("files");
   const [failedPreviews, setFailedPreviews] = React.useState<Set<string>>(
@@ -115,6 +118,11 @@ export const ListView: React.FC<IFileListView> = ({
     const row = params.row;
     if (row.type === "new-folder") return;
 
+    if (selectionMode) {
+      onToggleItem?.(row.id);
+      return;
+    }
+
     if (row.type === "folder") {
       if (!folderOperations.isRenaming(row.id)) {
         folderOperations.onClick(row.id);
@@ -130,6 +138,27 @@ export const ListView: React.FC<IFileListView> = ({
       } else {
         fileOperations.onClick(row.id, row.name, row.sizeBytes ?? undefined);
       }
+    }
+  };
+
+  const rowSelectionModel: GridRowSelectionModel = useMemo(
+    () => ({
+      type: "include" as const,
+      ids: selectedIds ? new Set<string>(selectedIds) : new Set<string>(),
+    }),
+    [selectedIds],
+  );
+
+  const handleRowSelectionModelChange = (model: GridRowSelectionModel) => {
+    if (!onToggleItem) return;
+    const newIds = model.ids;
+    const oldSet = selectedIds ?? new Set<string>();
+
+    for (const id of newIds) {
+      if (!oldSet.has(String(id))) onToggleItem(String(id));
+    }
+    for (const id of oldSet) {
+      if (!newIds.has(id)) onToggleItem(id);
     }
   };
 
@@ -164,6 +193,9 @@ export const ListView: React.FC<IFileListView> = ({
         sx={{ height: autoHeight ? "auto" : "100%" }}
         rows={rows}
         columns={columns}
+        checkboxSelection={selectionMode}
+        rowSelectionModel={selectionMode ? rowSelectionModel : { type: "include", ids: new Set() }}
+        onRowSelectionModelChange={selectionMode ? handleRowSelectionModelChange : undefined}
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
         hideFooter={!pagination}

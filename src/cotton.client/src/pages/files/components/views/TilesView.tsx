@@ -99,6 +99,9 @@ export const TilesView: React.FC<IFileListView> = ({
   loadingTitle,
   loadingCaption,
   tileSize = "medium",
+  selectionMode = false,
+  selectedIds,
+  onToggleItem,
 }) => {
   const layout = useTileLayout(tileSize);
   const theme = useTheme();
@@ -218,30 +221,42 @@ export const TilesView: React.FC<IFileListView> = ({
                   pb: `${gapPx}px`,
                 }}
               >
-                {rowTiles.map((tile: FileSystemTile) => (
-                  <TileItem
-                    key={tile.kind === "folder" ? tile.node.id : tile.file.id}
-                    tile={tile}
-                    folderOperations={folderOperations}
-                    fileOperations={fileOperations}
-                    fileNamePlaceholder={fileNamePlaceholder}
-                  />
-                ))}
+                {rowTiles.map((tile: FileSystemTile) => {
+                  const tileId = tile.kind === "folder" ? tile.node.id : tile.file.id;
+                  return (
+                    <TileItem
+                      key={tileId}
+                      tile={tile}
+                      folderOperations={folderOperations}
+                      fileOperations={fileOperations}
+                      fileNamePlaceholder={fileNamePlaceholder}
+                      selectionMode={selectionMode}
+                      selected={selectedIds?.has(tileId)}
+                      onToggle={onToggleItem ? () => onToggleItem(tileId) : undefined}
+                    />
+                  );
+                })}
               </Box>
             );
           }}
         />
       ) : (
         <Box sx={gridStyles}>
-          {tiles.map((tile: FileSystemTile) => (
-            <TileItem
-              key={tile.kind === "folder" ? tile.node.id : tile.file.id}
-              tile={tile}
-              folderOperations={folderOperations}
-              fileOperations={fileOperations}
-              fileNamePlaceholder={fileNamePlaceholder}
-            />
-          ))}
+          {tiles.map((tile: FileSystemTile) => {
+            const tileId = tile.kind === "folder" ? tile.node.id : tile.file.id;
+            return (
+              <TileItem
+                key={tileId}
+                tile={tile}
+                folderOperations={folderOperations}
+                fileOperations={fileOperations}
+                fileNamePlaceholder={fileNamePlaceholder}
+                selectionMode={selectionMode}
+                selected={selectedIds?.has(tileId)}
+                onToggle={onToggleItem ? () => onToggleItem(tileId) : undefined}
+              />
+            );
+          })}
         </Box>
       )}
     </Box>

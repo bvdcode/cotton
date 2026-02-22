@@ -18,6 +18,7 @@ import { useMediaLightbox } from "./hooks/useMediaLightbox";
 import { useFilesLayout } from "./hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
+import { useFileSelection } from "./hooks/useFileSelection";
 import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
@@ -157,6 +158,7 @@ export const FilesPage: React.FC = () => {
   });
   const fileOps = useFileOperations(reloadCurrentNode);
   const { previewState, openPreview, closePreview } = useFilePreview();
+  const fileSelection = useFileSelection();
 
   const {
     lightboxOpen,
@@ -345,6 +347,11 @@ export const FilesPage: React.FC = () => {
           onUploadClick={fileUpload.handleUploadClick}
           onNewFolderClick={folderOps.handleNewFolder}
           isCreatingFolder={folderOps.isCreatingFolder}
+          selectionMode={fileSelection.selectionMode}
+          selectedCount={fileSelection.selectedCount}
+          onToggleSelectionMode={fileSelection.toggleSelectionMode}
+          onSelectAll={() => fileSelection.selectAll(tiles)}
+          onDeselectAll={fileSelection.deselectAll}
         />
         {(error || listError) && (
           <Box mb={1} px={1}>
@@ -386,6 +393,9 @@ export const FilesPage: React.FC = () => {
             fileNamePlaceholder={t("rename.fileNamePlaceholder", {
               ns: "files",
             })}
+            selectionMode={fileSelection.selectionMode}
+            selectedIds={fileSelection.selectedIds}
+            onToggleItem={fileSelection.toggleItem}
             pagination={
               layoutType === InterfaceLayoutType.List
                 ? {

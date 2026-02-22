@@ -107,6 +107,7 @@ namespace Cotton.Email
                 ["confirmation_url"] = baseUrl + "/verify-email?token=" + escapedToken,
                 ["reset_url"] = baseUrl + "/reset-password?token=" + escapedToken,
                 ["year"] = DateTime.UtcNow.Year.ToString(),
+                ["icon_data_uri"] = IconDataUri,
             };
         }
 
@@ -130,6 +131,8 @@ namespace Cotton.Email
         {
             return template.ToString() + "." + languageCode;
         }
+
+        private const string IconDataUri = "data:image/png;base64," + IconBase64;
 
         #region Icon Base64
 
