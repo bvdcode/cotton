@@ -82,7 +82,7 @@ namespace Cotton.Email
           <!-- Header -->
           <tr>
             <td style=""background:linear-gradient(135deg,#1bcea7,#96be02);padding:36px 40px;text-align:center;"">
-              <img src=""{{icon_data_uri}}"" alt=""Cotton Cloud"" width=""48"" height=""48"" style=""display:block;margin:0 auto 12px;"" />
+              <img src=""cid:cotton-logo"" alt=""Cotton Cloud"" width=""48"" height=""48"" style=""display:block;margin:0 auto 12px;"" />
               <h1 style=""margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;"">Cotton Cloud</h1>
             </td>
           </tr>
@@ -141,7 +141,7 @@ namespace Cotton.Email
           <!-- Header -->
           <tr>
             <td style=""background:linear-gradient(135deg,#1bcea7,#96be02);padding:36px 40px;text-align:center;"">
-              <img src=""{{icon_data_uri}}"" alt=""Cotton Cloud"" width=""48"" height=""48"" style=""display:block;margin:0 auto 12px;"" />
+              <img src=""cid:cotton-logo"" alt=""Cotton Cloud"" width=""48"" height=""48"" style=""display:block;margin:0 auto 12px;"" />
               <h1 style=""margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;"">Cotton Cloud</h1>
             </td>
           </tr>
@@ -207,7 +207,7 @@ namespace Cotton.Email
           <!-- Header -->
           <tr>
             <td style=""background:linear-gradient(135deg,#1bcea7,#96be02);padding:36px 40px;text-align:center;"">
-              <img src=""{{icon_data_uri}}"" alt=""Cotton Cloud"" width=""48"" height=""48"" style=""display:block;margin:0 auto 12px;"" />
+              <img src=""cid:cotton-logo"" alt=""Cotton Cloud"" width=""48"" height=""48"" style=""display:block;margin:0 auto 12px;"" />
               <h1 style=""margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;"">Cotton Cloud</h1>
             </td>
           </tr>
