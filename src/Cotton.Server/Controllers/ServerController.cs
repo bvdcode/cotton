@@ -6,6 +6,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.Extensions;
+using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,8 +16,8 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Server)]
     public class ServerController(SettingsProvider _settings) : ControllerBase
     {
-        [Authorize(Roles = "Admin")]
         [HttpPost("emergency-shutdown")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
         public IActionResult EmergencyShutdown()
         {
             Environment.Exit(1);
@@ -37,8 +38,8 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPost("settings")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> CreateSettings(ServerSettingsRequestDto request)
         {
             string? error = await _settings.ValidateServerSettingsAsync(request);
@@ -54,6 +55,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("settings")]
         public async Task<IActionResult> GetSettings()
         {
+            bool isAdmin = User.IsInRole(nameof(UserRole.Admin));
             bool serverHasUsers = await _settings.ServerHasUsersAsync();
             bool isServerInitialized = await _settings.IsServerInitializedAsync();
             int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
@@ -63,6 +65,7 @@ namespace Cotton.Server.Controllers
                 maxChunkSizeBytes,
                 isServerInitialized,
                 Hasher.SupportedHashAlgorithm,
+                settings = isAdmin ? _settings.GetServerSettings() : null,
             };
             return Ok(settings);
         }
