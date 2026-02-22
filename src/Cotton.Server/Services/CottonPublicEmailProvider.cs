@@ -12,10 +12,12 @@ namespace Cotton.Server.Services
         private readonly ILogger<CottonPublicEmailProvider> _logger;
 
         public CottonPublicEmailProvider(
-            SettingsProvider settingsProvider,
+            IServiceProvider serviceProvider,
             ILogger<CottonPublicEmailProvider> logger)
         {
             _logger = logger;
+            using var scope = serviceProvider.CreateScope();
+            var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
             var settings = settingsProvider.GetServerSettings();
             _instanceId = settings.InstanceId;
             _httpClient = new HttpClient

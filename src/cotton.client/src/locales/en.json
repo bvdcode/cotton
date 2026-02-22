@@ -146,6 +146,21 @@
       "user": "User",
       "admin": "Admin"
     },
+    "editProfile": {
+      "title": "Edit profile",
+      "description": "Update your personal information.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "E-mail",
+      "birthDate": "Date of birth",
+      "save": "Save",
+      "saving": "Saving...",
+      "success": "Profile updated.",
+      "emailWarning": "Changing your email will reset verification status.",
+      "errors": {
+        "failed": "Failed to update profile."
+      }
+    },
     "shareLinks": {
       "title": "Share links",
       "description": "Control how long generated share links stay valid.",
