@@ -11,7 +11,7 @@ namespace Cotton.Previews
         public IEnumerable<string> SupportedContentTypes => ["application/pdf"];
         private static readonly DocLib _docLib = DocLib.Instance;
 
-        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
+        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
