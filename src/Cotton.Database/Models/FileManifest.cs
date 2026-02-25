@@ -27,6 +27,9 @@ namespace Cotton.Database.Models
         [Column("encrypted_file_preview_hash")]
         public byte[]? EncryptedFilePreviewHash { get; set; }
 
+        [Column("encrypted_file_large_preview_hash")]
+        public byte[]? EncryptedFileLargePreviewHash { get; set; }
+
         [Column("preview_generation_error")]
         public string? PreviewGenerationError { get; set; }
 
