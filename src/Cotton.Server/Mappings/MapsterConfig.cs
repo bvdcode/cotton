@@ -24,9 +24,7 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.Name, src => src.Name)
                 .Map(dest => dest.OwnerId, src => src.OwnerId)
                 .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
-                .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
-                .Map(dest => dest.EncryptedFilePreviewHashHex,
-                    src => src.FileManifest.EncryptedFilePreviewHash == null ? null : Convert.ToHexString(src.FileManifest.EncryptedFilePreviewHash));
+                .Map(dest => dest.ContentType, src => src.FileManifest.ContentType);
 
             _isConfigured = true;
         }

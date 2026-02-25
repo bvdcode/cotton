@@ -24,11 +24,9 @@ namespace Cotton.Database.Models
         [Column("size_bytes")]
         public long SizeBytes { get; set; }
 
-        [NotMapped]
         [Column("small_file_preview_hash")]
         public byte[]? SmallFilePreviewHash { get; set; }
 
-        [NotMapped]
         [Column("large_file_preview_hash")]
         public byte[]? LargeFilePreviewHash { get; set; }
 

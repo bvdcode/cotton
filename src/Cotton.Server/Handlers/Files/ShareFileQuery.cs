@@ -10,6 +10,7 @@ using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using EasyExtensions.Abstractions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ namespace Cotton.Server.Handlers.Files
     }
 
     public class ShareFileQueryHandler(
+        IStreamCipher _crypto,
         CottonDbContext _dbContext,
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
@@ -59,11 +61,12 @@ namespace Cotton.Server.Handlers.Files
             var file = downloadToken.NodeFile.FileManifest;
             if (isHtml)
             {
+                string? presignedUrl = file.SmallFilePreviewHash is null ? null : _crypto.GetPresignedToken(file.SmallFilePreviewHash);
                 string html = BuildRedirectHtml(
                     baseAppUrl: baseAppUrl,
                     token: request.Token,
                     fileName: downloadToken.FileName,
-                    encryptedPreviewHash: file.EncryptedFilePreviewHash);
+                    encryptedPresignedToken: presignedUrl);
                 return ShareFileResult.AsHtml(html);
             }
 
@@ -128,18 +131,15 @@ namespace Cotton.Server.Handlers.Files
             return EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(file.ProposedContentHash)}\"");
         }
 
-        private static string BuildRedirectHtml(string baseAppUrl, string token, string fileName, byte[]? encryptedPreviewHash)
+        private static string BuildRedirectHtml(string baseAppUrl,
+            string token, string fileName, string? encryptedPresignedToken)
         {
             string canonicalUrl = $"{baseAppUrl}/s/{token}";
             string appShareUrl = $"{baseAppUrl}/share/{token}";
 
-            string? hex = (encryptedPreviewHash == null || encryptedPreviewHash.Length == 0)
-                ? null
-                : Convert.ToHexString(encryptedPreviewHash);
-
-            string previewUrl = hex is null
+            string previewUrl = encryptedPresignedToken is null
                 ? $"{baseAppUrl}/assets/images/social-preview.jpg"
-                : $"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp";
+                : $"{baseAppUrl}{Routes.V1.Previews}/{encryptedPresignedToken}.webp";
 
             string previewTag =
                 $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />\n" +

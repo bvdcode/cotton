@@ -15,7 +15,7 @@ namespace Cotton.Previews
             "image/heif-sequence"
         ];
 
-        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
+        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             var options = new HeifDecoderOptions();
             using Image<Rgba32> image = HeifDecoder.Instance.Decode<Rgba32>(options, stream);
