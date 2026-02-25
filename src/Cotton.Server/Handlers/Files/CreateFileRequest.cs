@@ -116,9 +116,9 @@ namespace Cotton.Server.Handlers.Files
             {
                 var settings = _settingsProvider.GetServerSettings();
                 if (!settings.AllowCrossUserDeduplication
-                    && (fileManifest.EncryptedFilePreviewHash is not null || fileManifest.PreviewGenerationError is not null))
+                    && (fileManifest.SmallFilePreviewHash is not null || fileManifest.PreviewGenerationError is not null))
                 {
-                    fileManifest.EncryptedFilePreviewHash = null;
+                    fileManifest.SmallFilePreviewHash = null;
                     fileManifest.PreviewGenerationError = null;
                     await _dbContext.SaveChangesAsync(ct);
                 }

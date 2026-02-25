@@ -18,7 +18,6 @@ namespace Cotton.Server.Jobs
     [JobTrigger(hours: 1)]
     public class GeneratePreviewJob(
         PerfTracker _perf,
-        IStreamCipher _crypto,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext,
@@ -30,7 +29,7 @@ namespace Cotton.Server.Jobs
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             var itemsToProcess = _dbContext.FileManifests
-                .Where(fm => fm.EncryptedFilePreviewHash == null && fm.PreviewGenerationError == null)
+                .Where(fm => (fm.SmallFilePreviewHash == null || fm.LargeFilePreviewHash == null) && fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.NodeFiles)
                 .Include(fm => fm.FileManifestChunks)
@@ -67,24 +66,29 @@ namespace Cotton.Server.Jobs
 
                 try
                 {
-                    _logger.LogInformation("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
+                    _logger.LogDebug("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
                     await using var fs = _storage.GetBlobStream(uids, pipelineContext);
 
-                    _logger.LogInformation("Calling GeneratePreviewWebPAsync for FileManifest {FileManifestId}...", item.Id);
-                    var previewImage = await generator.GeneratePreviewWebPAsync(fs);
-
+                    byte[] previewImage = await generator.GeneratePreviewWebPAsync(fs, PreviewGeneratorProvider.DefaultSmallPreviewSize);
                     byte[] hash = Hasher.HashData(previewImage);
                     string hashStr = Hasher.ToHexStringHash(hash);
-
-                    _logger.LogInformation("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
+                    _logger.LogDebug("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
+                    item.SmallFilePreviewHash = hash;
 
-                    item.EncryptedFilePreviewHash = _crypto.Encrypt(hashStr);
+                    byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fs, PreviewGeneratorProvider.DefaultLargePreviewSize);
+                    byte[] hashLarge = Hasher.HashData(previewImageLarge);
+                    string hashLargeStr = Hasher.ToHexStringHash(hashLarge);
+                    _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
+                    using var resultStreamLarge = new MemoryStream(previewImageLarge);
+                    await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
+                    item.LargeFilePreviewHash = hashLarge;
+
                     await _dbContext.SaveChangesAsync();
 
                     _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
-                    string hex = Convert.ToHexString(item.EncryptedFilePreviewHash);
+                    string hex = Convert.ToHexString(item.SmallFilePreviewHash);
                     foreach (var nodeFile in item.NodeFiles)
                     {
                         // Minor vulnerability:
