@@ -1,4 +1,5 @@
-﻿using Cotton.Server.Services;
+﻿using Cotton.Server.Extensions;
+using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;
@@ -17,9 +18,9 @@ namespace Cotton.Server.Controllers
     {
         private static readonly SemaphoreSlim _previewGate = new(8);
 
-        [HttpGet("{encryptedFilePreviewHashHex}")]
-        [HttpGet("{encryptedFilePreviewHashHex}.webp")]
-        public async Task<IActionResult> GetFilePreview([FromRoute] string encryptedFilePreviewHashHex)
+        [HttpGet("{filePreviewPresignedToken}")]
+        [HttpGet("{filePreviewPresignedToken}.webp")]
+        public async Task<IActionResult> GetFilePreview([FromRoute] string filePreviewPresignedToken)
         {
             await _previewGate.WaitAsync(HttpContext.RequestAborted);
             try
@@ -27,8 +28,7 @@ namespace Cotton.Server.Controllers
                 string? decryptedPreviewHash;
                 try
                 {
-                    byte[] encryptedPreviewHash = Convert.FromHexString(encryptedFilePreviewHashHex);
-                    decryptedPreviewHash = _crypto.Decrypt(encryptedPreviewHash);
+                    decryptedPreviewHash = _crypto.DecryptPresignedToken(filePreviewPresignedToken);
                 }
                 catch (Exception)
                 {
