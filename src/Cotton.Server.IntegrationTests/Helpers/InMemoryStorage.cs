@@ -55,4 +55,13 @@ public sealed class InMemoryStorage : IStoragePipeline
         await stream.CopyToAsync(ms).ConfigureAwait(false);
         _blobs[uid] = ms.ToArray();
     }
+
+    public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        foreach (var key in _blobs.Keys)
+        {
+            yield return key;
+        }
+        await Task.CompletedTask;
+    }
 }

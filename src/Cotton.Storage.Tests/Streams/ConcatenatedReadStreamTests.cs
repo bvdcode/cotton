@@ -44,6 +44,15 @@ namespace Cotton.Storage.Tests.Streams
             {
                 throw new NotImplementedException();
             }
+
+            public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            {
+                foreach (var key in _data.Keys)
+                {
+                    yield return key;
+                }
+                await Task.CompletedTask;
+            }
         }
 
         [Test]
