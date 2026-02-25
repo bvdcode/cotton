@@ -47,6 +47,15 @@ namespace Cotton.Storage.Tests.Pipelines
                 _storage[uid] = ms.ToArray();
                 return Task.CompletedTask;
             }
+
+            public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            {
+                foreach (var key in _storage.Keys)
+                {
+                    yield return key;
+                }
+                await Task.CompletedTask;
+            }
         }
 
         private class FakeBackendProvider(IStorageBackend backend) : IStorageBackendProvider

@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
@@ -6,6 +7,7 @@ using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using Cotton.Storage.Processors;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using EasyExtensions.Quartz.Attributes;
@@ -75,6 +77,7 @@ namespace Cotton.Server.Jobs
                     _logger.LogDebug("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
+                    await EnsureChunkExistsAsync(hash, previewImage.Length);
                     item.SmallFilePreviewHash = hash;
 
                     byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fs, PreviewGeneratorProvider.DefaultLargePreviewSize);
@@ -83,6 +86,7 @@ namespace Cotton.Server.Jobs
                     _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
                     using var resultStreamLarge = new MemoryStream(previewImageLarge);
                     await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
+                    await EnsureChunkExistsAsync(hashLarge, previewImageLarge.Length);
                     item.LargeFilePreviewHash = hashLarge;
 
                     await _dbContext.SaveChangesAsync();
@@ -119,6 +123,21 @@ namespace Cotton.Server.Jobs
             if (processed > 0)
             {
                 _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
+            }
+        }
+
+        private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
+        {
+            bool exists = await _dbContext.Chunks.AnyAsync(c => c.Hash == hash);
+            if (!exists)
+            {
+                _dbContext.Chunks.Add(new Chunk
+                {
+                    Hash = hash,
+                    SizeBytes = sizeBytes,
+                    CompressionAlgorithm = CompressionProcessor.Algorithm
+                });
+                await _dbContext.SaveChangesAsync();
             }
         }
     }

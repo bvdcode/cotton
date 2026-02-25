@@ -188,5 +188,33 @@ namespace Cotton.Storage.Backends
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
             return Task.FromResult(File.Exists(filePath));
         }
+
+        public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            if (!Directory.Exists(_basePath))
+            {
+                yield break;
+            }
+
+            foreach (string filePath in Directory.EnumerateFiles(_basePath, "*" + ChunkFileExtension, SearchOption.AllDirectories))
+            {
+                ct.ThrowIfCancellationRequested();
+
+                string relativePath = Path.GetRelativePath(_basePath, filePath);
+                string[] parts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (parts.Length != 3)
+                {
+                    continue;
+                }
+
+                string p1 = parts[0];
+                string p2 = parts[1];
+                string fileName = Path.GetFileNameWithoutExtension(parts[2]);
+                string uid = p1 + p2 + fileName;
+
+                yield return uid;
+                await Task.CompletedTask;
+            }
+        }
     }
 }
