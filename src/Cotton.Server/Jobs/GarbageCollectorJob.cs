@@ -77,7 +77,9 @@ namespace Cotton.Server.Jobs
             };
 
             int orphanedChunks = await _dbContext.Chunks
-                .Where(c => !c.FileManifestChunks.Any() && c.GCScheduledAfter == null)
+                .Where(c => !c.FileManifestChunks.Any()
+                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
+                    && c.GCScheduledAfter == null)
                 .OrderBy(c => c.Hash)
                 .Take(BatchSize)
                 .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
@@ -156,7 +158,8 @@ namespace Cotton.Server.Jobs
                 return false;
             }
 
-            bool stillOrphaned = !await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunkHash, ct);
+            bool stillOrphaned = !await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunkHash, ct)
+                && !await _dbContext.FileManifests.AnyAsync(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash, ct);
             if (!stillOrphaned)
             {
                 var tracked = await _dbContext.Chunks.FindAsync([chunkHash], ct);

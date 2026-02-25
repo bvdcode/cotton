@@ -74,5 +74,10 @@ namespace Cotton.Storage.Pipelines
                 _maxParallel.Release();
             }
         }
+
+        public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default)
+        {
+            return _backendProvider.GetBackend().ListAllKeysAsync(ct);
+        }
     }
 }

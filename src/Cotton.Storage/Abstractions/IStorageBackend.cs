@@ -8,5 +8,6 @@ namespace Cotton.Storage.Abstractions
         Task<bool> ExistsAsync(string uid);
         Task<Stream> ReadAsync(string uid);
         Task WriteAsync(string uid, Stream stream);
+        IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default);
     }
 }

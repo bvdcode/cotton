@@ -344,5 +344,23 @@ namespace Cotton.Server.Extensions
                     ["computedHash"] = computedHash
                 });
         }
+
+        public static async Task SendStorageChunkMissingNotificationAsync(
+            this INotificationsProvider notifications,
+            Guid userId,
+            string fileName)
+        {
+            ArgumentNullException.ThrowIfNull(notifications);
+
+            await notifications.SendNotificationAsync(
+                userId,
+                title: NotificationTemplates.StorageChunkMissingTitle,
+                content: NotificationTemplates.StorageChunkMissingContent(fileName),
+                priority: NotificationPriority.High,
+                metadata: new Dictionary<string, string>
+                {
+                    ["fileName"] = fileName
+                });
+        }
     }
 }
