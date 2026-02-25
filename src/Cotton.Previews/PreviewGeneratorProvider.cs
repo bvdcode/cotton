@@ -2,7 +2,8 @@
 {
     public static class PreviewGeneratorProvider
     {
-        public const int DefaultPreviewSize = 200;
+        public const int DefaultSmallPreviewSize = 200;
+        public const int DefaultLargePreviewSize = 1600;
 
         private static readonly IPreviewGenerator[] Generators =
         [
