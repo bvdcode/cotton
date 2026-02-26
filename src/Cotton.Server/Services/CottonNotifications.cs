@@ -7,7 +7,6 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
-using EasyExtensions.AspNetCore.Exceptions;
 using Mapster;
 using Microsoft.AspNetCore.SignalR;
 using System.Net;

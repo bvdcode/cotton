@@ -1,5 +1,4 @@
 using Cotton.Database;
-using Cotton.Database.Models;
 using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;

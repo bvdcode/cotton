@@ -1,6 +1,5 @@
 ﻿using Cotton.Models.Enums;
 using Cotton.Server.Providers;
-using System.Net.Http.Json;
 
 namespace Cotton.Server.Services
 {
