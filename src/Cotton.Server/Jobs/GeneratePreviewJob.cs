@@ -8,8 +8,6 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
-using EasyExtensions.Abstractions;
-using EasyExtensions.Extensions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +15,7 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    [JobTrigger(hours: 1)]
+    [JobTrigger(minutes: 15)]
     public class GeneratePreviewJob(
         PerfTracker _perf,
         IStoragePipeline _storage,
@@ -115,7 +113,6 @@ namespace Cotton.Server.Jobs
                 {
                     _logger.LogInformation("Upload in progress, pausing preview generation job...");
                     await Task.Delay(5000);
-                    break;
                 }
             }
 
