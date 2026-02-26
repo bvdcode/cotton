@@ -4,7 +4,6 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 
@@ -28,7 +27,8 @@ namespace Cotton.Server.Controllers
                 string? decryptedPreviewHash;
                 try
                 {
-                    decryptedPreviewHash = _crypto.DecryptPresignedToken(filePreviewPresignedToken);
+                    var hashBytes = _crypto.DecryptPresignedToken(filePreviewPresignedToken);
+                    decryptedPreviewHash = Hasher.ToHexStringHash(hashBytes);
                 }
                 catch (Exception)
                 {
