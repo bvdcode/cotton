@@ -247,7 +247,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         padding: 2,
         gap: 4,
         showToggle: false,
-        hidden: false,
+        hidden: items[index]?.kind === "video",
       }}
       video={{
         controls: true,

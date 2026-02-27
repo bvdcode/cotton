@@ -135,6 +135,10 @@
       "sent": "If an account with that email exists, a password reset link has been sent.",
       "sending": "Sending...",
       "error": "Failed to send reset link. Please try again later."
+    },
+    "firstRun": {
+      "title": "Initial Setup",
+      "message": "This server has no users yet. The credentials you enter will be used to create the first administrator account. This is only possible during the first few minutes after the instance starts. Server uptime: {{uptime}}. If the time window has passed, restart the server and try again."
     }
   },
   "notFound": {
