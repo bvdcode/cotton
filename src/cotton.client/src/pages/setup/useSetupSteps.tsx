@@ -16,7 +16,7 @@ type BuiltStep = {
   isValid: () => boolean;
 };
 
-const skippedStepKeys = new Set<string>(["importSource"]);
+const skippedStepKeys = new Set<string>();
 
 export function useSetupSteps(
   answers: Record<string, JsonValue>,
