@@ -97,21 +97,39 @@ namespace Cotton.Server.Jobs
 
         private async Task HandleMissingChunkAsync(byte[] chunkHash, CancellationToken ct)
         {
+            // 1) If the missing chunk is used by previews only, silently clear preview references.
+            bool referencedByFileData = await _dbContext.FileManifestChunks
+                .AnyAsync(fmc => fmc.ChunkHash == chunkHash, ct);
+
+            bool referencedByPreview = await _dbContext.FileManifests
+                .AnyAsync(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash, ct);
+
+            if (referencedByPreview)
+            {
+                await _dbContext.FileManifests
+                    .Where(fm => fm.SmallFilePreviewHash == chunkHash)
+                    .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.SmallFilePreviewHash, (byte[]?)null), ct);
+
+                await _dbContext.FileManifests
+                    .Where(fm => fm.LargeFilePreviewHash == chunkHash)
+                    .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.LargeFilePreviewHash, (byte[]?)null), ct);
+
+                // If this chunk was preview-only, we don't care: no notifications, no DB cleanups.
+                if (!referencedByFileData)
+                {
+                    return;
+                }
+            }
+
+            // 2) For actual file data chunks: notify affected users, but do not delete anything.
             var affectedManifestIds = await _dbContext.FileManifestChunks
                 .Where(fmc => fmc.ChunkHash == chunkHash)
                 .Select(fmc => fmc.FileManifestId)
                 .Distinct()
                 .ToListAsync(ct);
 
-            var affectedPreviewManifestIds = await _dbContext.FileManifests
-                .Where(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash)
-                .Select(fm => fm.Id)
-                .ToListAsync(ct);
-
-            var allManifestIds = affectedManifestIds.Union(affectedPreviewManifestIds).Distinct().ToList();
-
             var affectedNodeFiles = await _dbContext.NodeFiles
-                .Where(nf => allManifestIds.Contains(nf.FileManifestId))
+                .Where(nf => affectedManifestIds.Contains(nf.FileManifestId))
                 .ToListAsync(ct);
 
             HashSet<(Guid OwnerId, string FileName)> notified = [];
@@ -132,27 +150,6 @@ namespace Cotton.Server.Jobs
                     }
                 }
             }
-
-            // Clear preview references pointing to this missing chunk
-            await _dbContext.FileManifests
-                .Where(fm => fm.SmallFilePreviewHash == chunkHash)
-                .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.SmallFilePreviewHash, (byte[]?)null), ct);
-
-            await _dbContext.FileManifests
-                .Where(fm => fm.LargeFilePreviewHash == chunkHash)
-                .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.LargeFilePreviewHash, (byte[]?)null), ct);
-
-            await _dbContext.FileManifestChunks
-                .Where(fmc => fmc.ChunkHash == chunkHash)
-                .ExecuteDeleteAsync(ct);
-
-            await _dbContext.ChunkOwnerships
-                .Where(o => o.ChunkHash == chunkHash)
-                .ExecuteDeleteAsync(ct);
-
-            await _dbContext.Chunks
-                .Where(c => c.Hash == chunkHash)
-                .ExecuteDeleteAsync(ct);
         }
 
         private async Task RegisterOrphanedStorageKeysAsync(HashSet<string> remainingStorageKeys, CancellationToken ct)
