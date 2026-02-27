@@ -37,7 +37,9 @@ public class ChunkIngestService(
         var settings = _settingsProvider.GetServerSettings();
 
         var chunk = await _layouts.FindChunkAsync(chunkHash);
-        if (chunk is not null && settings.AllowCrossUserDeduplication)
+        bool existsInStorage = await _storage.ExistsAsync(storageKey);
+
+        if (chunk is not null && settings.AllowCrossUserDeduplication && existsInStorage)
         {
             if (chunk.GCScheduledAfter.HasValue)
             {
@@ -50,11 +52,14 @@ public class ChunkIngestService(
             return chunk;
         }
 
-        if (chunk is null)
+        if (!existsInStorage)
         {
             using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
             await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
+        }
 
+        if (chunk is null)
+        {
             chunk = new Chunk
             {
                 Hash = chunkHash,
