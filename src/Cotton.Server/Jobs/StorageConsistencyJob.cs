@@ -1,4 +1,4 @@
-using Cotton.Database;
+﻿using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
@@ -70,6 +70,14 @@ namespace Cotton.Server.Jobs
 
                     if (storageKeys.Remove(uid))
                     {
+                        continue;
+                    }
+
+                    // double-check storage in case of race condition
+                    var stillExists = await _storage.ExistsAsync(uid);
+                    if (stillExists)
+                    {
+                        _logger.LogWarning("Chunk {Uid} not found in initial storage key scan, but exists on direct check. Skipping as missing.", uid);
                         continue;
                     }
 
