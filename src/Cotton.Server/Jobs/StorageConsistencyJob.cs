@@ -4,6 +4,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Extensions;
 using Cotton.Storage.Processors;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
@@ -186,10 +187,11 @@ namespace Cotton.Server.Jobs
                     continue;
                 }
 
+                long sizeBytes = await _storage.GetSizeAsync(uid);
                 _dbContext.Chunks.Add(new Chunk
                 {
                     Hash = hash,
-                    SizeBytes = 0,
+                    SizeBytes = sizeBytes,
                     CompressionAlgorithm = CompressionProcessor.Algorithm,
                     GCScheduledAfter = deleteAfter
                 });
