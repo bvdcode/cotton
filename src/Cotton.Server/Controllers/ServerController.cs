@@ -30,6 +30,7 @@ namespace Cotton.Server.Controllers
         {
             string instanceIdHash = _settings.GetServerSettings().InstanceId.ToString().Sha256();
             string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
+            bool isServerInitialized = await _settings.IsServerInitializedAsync();
             return Ok(new PublicServerInfo()
             {
                 Version = version,
