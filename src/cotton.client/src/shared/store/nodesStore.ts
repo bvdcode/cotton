@@ -8,6 +8,7 @@ import { isAxiosError } from "../api/httpClient";
 let rootResolvePromise: Promise<void> | null = null;
 
 type NodesState = {
+  cacheOwnerUserId: string | null;
   currentNode: NodeDto | null;
   ancestors: NodeDto[];
   contentByNodeId: Record<string, NodeContentDto | undefined>;
@@ -40,7 +41,7 @@ type NodesState = {
     encryptedFilePreviewHashHex: string,
   ) => void;
   optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
-  reset: () => void;
+  reset: (cacheOwnerUserId?: string | null) => void;
 };
 
 async function resolveNodeAndAncestors(
@@ -156,6 +157,7 @@ export const useNodesStore = create<NodesState>()(
       };
 
       return {
+  cacheOwnerUserId: null,
   currentNode: null,
   ancestors: [],
   contentByNodeId: {},
@@ -567,8 +569,10 @@ export const useNodesStore = create<NodesState>()(
     });
   },
 
-  reset: () => {
-    set({
+  reset: (cacheOwnerUserId) => {
+    rootResolvePromise = null;
+    set((prev) => ({
+      cacheOwnerUserId: cacheOwnerUserId ?? prev.cacheOwnerUserId,
       currentNode: null,
       ancestors: [],
       contentByNodeId: {},
@@ -577,13 +581,14 @@ export const useNodesStore = create<NodesState>()(
       loading: false,
       error: null,
       lastUpdatedByNodeId: {},
-    });
+    }));
   },
       };
     },
     {
       name: NODES_STORAGE_KEY,
       partialize: (state) => ({
+        cacheOwnerUserId: state.cacheOwnerUserId,
         currentNode: state.currentNode,
         ancestors: state.ancestors,
         rootNodeId: state.rootNodeId,

@@ -4,6 +4,7 @@ import { layoutsApi, type LayoutStatsDto, type NodeDto } from "../api/layoutsApi
 import { LAYOUTS_STORAGE_KEY } from "../config/storageKeys";
 
 type LayoutsState = {
+  cacheOwnerUserId: string | null;
   rootNode: NodeDto | null;
   statsByLayoutId: Record<string, LayoutStatsDto | undefined>;
   loadingRoot: boolean;
@@ -25,12 +26,13 @@ type LayoutsState = {
    */
   ensureHomeData: () => Promise<void>;
 
-  reset: () => void;
+  reset: (cacheOwnerUserId?: string | null) => void;
 };
 
 export const useLayoutsStore = create<LayoutsState>()(
   persist(
     (set, get) => ({
+      cacheOwnerUserId: null,
       rootNode: null,
       statsByLayoutId: {},
       loadingRoot: false,
@@ -116,8 +118,9 @@ export const useLayoutsStore = create<LayoutsState>()(
         })();
       },
 
-      reset: () => {
-        set({
+      reset: (cacheOwnerUserId) => {
+        set((prev) => ({
+          cacheOwnerUserId: cacheOwnerUserId ?? prev.cacheOwnerUserId,
           rootNode: null,
           statsByLayoutId: {},
           loadingRoot: false,
@@ -125,12 +128,13 @@ export const useLayoutsStore = create<LayoutsState>()(
           error: null,
           lastUpdatedRoot: null,
           lastUpdatedStatsByLayoutId: {},
-        });
+        }));
       },
     }),
     {
       name: LAYOUTS_STORAGE_KEY,
       partialize: (state) => ({
+        cacheOwnerUserId: state.cacheOwnerUserId,
         rootNode: state.rootNode,
         statsByLayoutId: state.statsByLayoutId,
         lastUpdatedRoot: state.lastUpdatedRoot,
