@@ -31,6 +31,11 @@ namespace Cotton.Storage.Tests.Streams
                 return Task.FromResult(_data.ContainsKey(uid));
             }
 
+            public Task<long> GetSizeAsync(string uid)
+            {
+                return Task.FromResult(_data.TryGetValue(uid, out var data) ? (long)data.Length : 0L);
+            }
+
             public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
             {
                 if (!_data.TryGetValue(uid, out var data))

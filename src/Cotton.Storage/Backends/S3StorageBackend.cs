@@ -73,6 +73,31 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        public async Task<long> GetSizeAsync(string uid)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(uid);
+
+            IAmazonS3 s3 = _s3Provider.GetS3Client();
+            string bucket = _s3Provider.GetBucketName();
+            string key = GetS3Key(uid);
+
+            var req = new GetObjectMetadataRequest
+            {
+                Key = key,
+                BucketName = bucket,
+            };
+
+            try
+            {
+                var res = await s3.GetObjectMetadataAsync(req).ConfigureAwait(false);
+                return res.ContentLength;
+            }
+            catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                return 0;
+            }
+        }
+
         public async Task WriteAsync(string uid, Stream source)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);

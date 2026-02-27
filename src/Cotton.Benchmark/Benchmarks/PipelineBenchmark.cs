@@ -124,6 +124,11 @@ namespace Cotton.Benchmark.Benchmarks
                 return Task.FromResult(_storage.ContainsKey(uid));
             }
 
+            public Task<long> GetSizeAsync(string uid)
+            {
+                return Task.FromResult(_storage.TryGetValue(uid, out var data) ? (long)data.Length : 0L);
+            }
+
             public Task<Stream> ReadAsync(string uid)
             {
                 if (!_storage.TryGetValue(uid, out var data))
