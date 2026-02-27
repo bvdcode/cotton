@@ -189,6 +189,23 @@ namespace Cotton.Storage.Backends
             return Task.FromResult(File.Exists(filePath));
         }
 
+        public Task<long> GetSizeAsync(string uid)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(uid);
+
+            var (_, _, fileName) = StorageKeyHelper.GetSegments(uid);
+            string dirPath = GetFolderByUid(uid);
+            string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
+
+            if (!File.Exists(filePath))
+            {
+                return Task.FromResult(0L);
+            }
+
+            var info = new FileInfo(filePath);
+            return Task.FromResult(info.Length);
+        }
+
         public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             if (!Directory.Exists(_basePath))
