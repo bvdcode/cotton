@@ -26,17 +26,22 @@ namespace Cotton.Server.Controllers
         }
 
         [HttpGet("info")]
-        public IActionResult GetServerInfo()
+        public async Task<IActionResult> GetServerInfo()
         {
             string instanceIdHash = _settings.GetServerSettings().InstanceId.ToString().Sha256();
             string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
+            bool serverHasUsers = await _settings.ServerHasUsersAsync();
             bool isServerInitialized = await _settings.IsServerInitializedAsync();
+            TimeSpan uptime = DateTime.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
             return Ok(new PublicServerInfo()
             {
+                Uptime = uptime,
                 Version = version,
                 CurrentTime = DateTime.UtcNow,
+                ServerHasUsers = serverHasUsers,
                 Product = Constants.ProductName,
                 InstanceIdHash = instanceIdHash,
+                IsServerInitialized = isServerInitialized,
             });
         }
 
@@ -62,14 +67,10 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetSettings()
         {
             bool isAdmin = User.IsInRole(nameof(UserRole.Admin));
-            bool serverHasUsers = await _settings.ServerHasUsersAsync();
-            bool isServerInitialized = await _settings.IsServerInitializedAsync();
             int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
             var settings = new
             {
-                serverHasUsers,
                 maxChunkSizeBytes,
-                isServerInitialized,
                 Hasher.SupportedHashAlgorithm,
                 settings = isAdmin ? _settings.GetServerSettings() : null,
             };
