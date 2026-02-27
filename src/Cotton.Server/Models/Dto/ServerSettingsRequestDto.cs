@@ -30,9 +30,6 @@ namespace Cotton.Server.Models.Dto
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public StorageSpaceMode StorageSpace { get; init; }
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ImportSource ImportSource { get; init; }
-
         public string PublicBaseUrl { get; set; } = null!;
 
         public S3Config? S3Config { get; init; }
