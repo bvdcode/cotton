@@ -104,12 +104,6 @@ namespace Cotton.Server.Providers
                 return emailError;
             }
 
-            var importError = ValidateImportConstraints(request);
-            if (importError is not null)
-            {
-                return importError;
-            }
-
             var storageError = await ValidateStorageConstraintsAsync(request);
             if (storageError is not null)
             {
@@ -189,18 +183,6 @@ namespace Cotton.Server.Providers
             {
                 return false;
             }
-        }
-
-        private static string? ValidateImportConstraints(ServerSettingsRequestDto request)
-        {
-            if (request.ImportSource != ImportSource.Webdav)
-            {
-                return null;
-            }
-
-            return request.WebdavConfig is null
-                ? "WebdavConfig must be provided when using Webdav import source."
-                : null;
         }
 
         private static async Task<string?> ValidateStorageConstraintsAsync(ServerSettingsRequestDto request)
@@ -291,7 +273,6 @@ namespace Cotton.Server.Providers
                 EmailMode = request.Email,
                 ComputionMode = request.ComputionMode,
                 StorageType = request.Storage,
-                ImportSource = request.ImportSource,
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
@@ -315,9 +296,6 @@ namespace Cotton.Server.Providers
                 PublicBaseUrl = request.PublicBaseUrl.TrimEnd('/'),
                 ServerUsage = request.Usage,
                 StorageSpaceMode = request.StorageSpace,
-                WebdavHost = request.WebdavConfig?.ServerUrl,
-                WebdavUsername = request.WebdavConfig?.Username,
-                WebdavPasswordEncrypted = TryEncrypt(request.WebdavConfig?.Password),
                 TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
             };
             await _dbContext.ServerSettings.AddAsync(newSettings);
