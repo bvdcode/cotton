@@ -6,6 +6,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using Cotton.Storage.Abstractions;
 using EasyExtensions;
 using EasyExtensions.Crypto;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +20,8 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         SettingsProvider _settings,
         ILogger<ChunkController> _logger,
-        IChunkIngestService _chunkIngest) : ControllerBase
+        IChunkIngestService _chunkIngest,
+        IStoragePipeline _storage) : ControllerBase
     {
         [Authorize]
         [HttpGet(Routes.V1.Chunks + "/{hash}/exists")]
@@ -43,7 +45,9 @@ namespace Cotton.Server.Controllers
             {
                 return Ok(false);
             }
-            return Ok(true);
+
+            bool existsInStorage = await _storage.ExistsAsync(hash);
+            return Ok(existsInStorage);
         }
 
         [Authorize]
