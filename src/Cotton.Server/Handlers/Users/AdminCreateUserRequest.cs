@@ -12,15 +12,24 @@ using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace Cotton.Server.Handlers.Users
 {
     public class AdminCreateUserRequest(string username, string? email, string password, UserRole role) : IRequest<UserDto>
     {
+        [Required]
+        [MinLength(2)]
+        [MaxLength(32)]
+        [RegularExpression("^[a-z][a-z0-9]{1,31}$")]
         public string Username { get; } = username;
         public string? Email { get; } = email;
+        [Required]
         public string Password { get; } = password;
         public UserRole Role { get; } = role;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public DateOnly? BirthDate { get; set; }
     }
 
     public class AdminCreateUserRequestHandler(CottonDbContext _dbContext, IPasswordHashService _hasher) : IRequestHandler<AdminCreateUserRequest, UserDto>
@@ -55,6 +64,9 @@ namespace Cotton.Server.Handlers.Users
                 Role = request.Role,
                 PasswordPhc = _hasher.Hash(request.Password),
                 WebDavTokenPhc = _hasher.Hash(request.Password),
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                BirthDate = request.BirthDate,
             };
 
             await _dbContext.Users.AddAsync(user, cancellationToken);
