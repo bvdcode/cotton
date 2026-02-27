@@ -17,7 +17,8 @@ namespace Cotton.Server.Jobs
         SettingsProvider _settingsProvider,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
-        private const int BatchSize = 10000;
+        private const int ManifestBatchSize = 1000;
+        private const int ChunkBatchSize = 1000;
         private const int ChunkGcDelayDays = 7;
         private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
@@ -39,7 +40,7 @@ namespace Cotton.Server.Jobs
                 .Where(fm => !fm.NodeFiles.Any())
                 .OrderBy(fm => fm.Id)
                 .Select(fm => fm.Id)
-                .Take(BatchSize)
+                .Take(ManifestBatchSize)
                 .ToListAsync(ct);
 
             if (manifestIds.Count == 0)
@@ -77,12 +78,11 @@ namespace Cotton.Server.Jobs
             };
 
             int orphanedChunks = await _dbContext.Chunks
-                .Where(c => !c.FileManifestChunks.Any()
-                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
-                    && c.GCScheduledAfter == null)
-                .OrderBy(c => c.Hash)
-                .Take(BatchSize)
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
+                    .Where(c => !c.FileManifestChunks.Any()
+                        && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
+                        && c.GCScheduledAfter == null)
+                    .Take(ChunkBatchSize)
+                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
 
             if (orphanedChunks != 0)
             {
@@ -94,8 +94,7 @@ namespace Cotton.Server.Jobs
         {
             var chunksToDelete = await _dbContext.Chunks
                 .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now && !c.FileManifestChunks.Any())
-                .OrderBy(c => c.Hash)
-                .Take(BatchSize)
+                .Take(ChunkBatchSize)
                 .ToListAsync(ct);
 
             if (chunksToDelete.Count == 0)
