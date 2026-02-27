@@ -18,7 +18,7 @@ import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
-import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
 
 export const SearchPage: React.FC = () => {
@@ -116,6 +116,7 @@ export const SearchPage: React.FC = () => {
     error: error ?? null,
     totalCount,
     hasQuery: !!query.trim(),
+    rootNodeName: rootNode?.name,
   });
 
   const {
@@ -191,6 +192,15 @@ export const SearchPage: React.FC = () => {
             tiles={results ? tiles : []}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
+            onGoToFileLocation={(containerPath) => {
+              const normalized = containerPath.trim();
+              const resolvePath = normalized === "/" ? null : normalized;
+              void layoutsApi
+                .resolve({ path: resolvePath })
+                .then((node) => {
+                  navigate(`/files/${node.id}`);
+                });
+            }}
             isCreatingFolder={false}
             newFolderName=""
             onNewFolderNameChange={() => {}}
