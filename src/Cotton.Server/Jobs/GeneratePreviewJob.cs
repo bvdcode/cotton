@@ -67,9 +67,9 @@ namespace Cotton.Server.Jobs
                 try
                 {
                     _logger.LogDebug("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
-                    await using var fs = _storage.GetBlobStream(uids, pipelineContext);
 
-                    byte[] previewImage = await generator.GeneratePreviewWebPAsync(fs, PreviewGeneratorProvider.DefaultSmallPreviewSize);
+                    await using var fsSmall = _storage.GetBlobStream(uids, pipelineContext);
+                    byte[] previewImage = await generator.GeneratePreviewWebPAsync(fsSmall, PreviewGeneratorProvider.DefaultSmallPreviewSize);
                     byte[] hash = Hasher.HashData(previewImage);
                     string hashStr = Hasher.ToHexStringHash(hash);
                     _logger.LogDebug("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
@@ -78,7 +78,8 @@ namespace Cotton.Server.Jobs
                     await EnsureChunkExistsAsync(hash, previewImage.Length);
                     item.SmallFilePreviewHash = hash;
 
-                    byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fs, PreviewGeneratorProvider.DefaultLargePreviewSize);
+                    await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
+                    byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
                     byte[] hashLarge = Hasher.HashData(previewImageLarge);
                     string hashLargeStr = Hasher.ToHexStringHash(hashLarge);
                     _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);

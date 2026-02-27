@@ -11,6 +11,11 @@ namespace Cotton.Previews
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
+
             using Image<Rgba32> image = Image.Load<Rgba32>(stream);
             image.Mutate(x => x.AutoOrient());
             if (image.Width > size || image.Height > size)
