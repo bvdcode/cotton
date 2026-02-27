@@ -15,7 +15,6 @@ import {
   Diversity3,
   Folder,
   FolderCopy,
-  Language,
   Memory,
   PrivacyTip,
   PsychologyAlt,
@@ -384,86 +383,6 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
           t("setup:questions.storageSpace.descriptions.economical"),
         value: "limited",
         icon: <Save />,
-      },
-    ],
-  },
-  {
-    key: "importSource",
-    type: "single",
-    title: () => t("setup:questions.importSources.title"),
-    subtitle: () => t("setup:questions.importSources.subtitle"),
-    options: [
-      {
-        key: "webdav",
-        label: () => t("setup:questions.importSources.options.webdav"),
-        icon: <Cloud />,
-        value: "webdav",
-      },
-      {
-        key: "none",
-        label: () => t("setup:questions.importSources.options.none"),
-        icon: <Language />,
-        value: "none",
-      },
-    ],
-  },
-  {
-    key: "nextcloudConfig",
-    type: "form",
-    requires: "importSource:nextcloud",
-    title: () => t("setup:questions.nextcloudConfig.title"),
-    subtitle: () => t("setup:questions.nextcloudConfig.subtitle"),
-    fields: [
-      {
-        key: "serverUrl",
-        label: () => t("setup:questions.nextcloudConfig.fields.serverUrl"),
-        placeholder: () =>
-          t("setup:questions.nextcloudConfig.placeholders.serverUrl"),
-        type: "url",
-      },
-      {
-        key: "username",
-        label: () => t("setup:questions.nextcloudConfig.fields.username"),
-        placeholder: () =>
-          t("setup:questions.nextcloudConfig.placeholders.username"),
-        type: "text",
-      },
-      {
-        key: "password",
-        label: () => t("setup:questions.nextcloudConfig.fields.password"),
-        placeholder: () =>
-          t("setup:questions.nextcloudConfig.placeholders.password"),
-        type: "password",
-      },
-    ],
-  },
-  {
-    key: "webdavConfig",
-    type: "form",
-    requires: "importSource:webdav",
-    title: () => t("setup:questions.webdavConfig.title"),
-    subtitle: () => t("setup:questions.webdavConfig.subtitle"),
-    fields: [
-      {
-        key: "serverUrl",
-        label: () => t("setup:questions.webdavConfig.fields.serverUrl"),
-        placeholder: () =>
-          t("setup:questions.webdavConfig.placeholders.serverUrl"),
-        type: "url",
-      },
-      {
-        key: "username",
-        label: () => t("setup:questions.webdavConfig.fields.username"),
-        placeholder: () =>
-          t("setup:questions.webdavConfig.placeholders.username"),
-        type: "text",
-      },
-      {
-        key: "password",
-        label: () => t("setup:questions.webdavConfig.fields.password"),
-        placeholder: () =>
-          t("setup:questions.webdavConfig.placeholders.password"),
-        type: "password",
       },
     ],
   },
