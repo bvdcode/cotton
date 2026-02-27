@@ -59,8 +59,9 @@ export const useSearchFileList = ({
       return sorted;
     };
 
-    // filePaths keys are node-file association IDs, not file manifest IDs.
-    // Build a reverse map: fileName → [fullPath, ...] to match by name.
+    // Some backend versions return filePaths keyed by file manifest IDs.
+    // Others may return node-file association IDs. Prefer direct lookup by file.id,
+    // but keep a best-effort fallback to match by file name.
     const filePathsByName = new Map<string, string[]>();
     for (const fullPath of Object.values(filePaths)) {
       const segments = fullPath.split("/");
@@ -80,6 +81,12 @@ export const useSearchFileList = ({
       return paths[idx];
     };
 
+    const getFullPathForFile = (file: NodeFileManifestDto): string | undefined => {
+      const byId = filePaths[file.id];
+      if (byId) return byId;
+      return consumeNextPath(file.name);
+    };
+
     const sortedFolders = sortByName(results.nodes ?? []);
     const sortedFiles = sortByName(results.files ?? []);
 
@@ -95,16 +102,17 @@ export const useSearchFileList = ({
           }) as const,
       ),
       ...sortedFiles.map((file) => {
-        const fullPath = consumeNextPath(file.name);
+        const fullPath = getFullPathForFile(file);
+
         // containerPath stays as the full original path for backend resolution
         const containerPath = fullPath ? getContainerPath(fullPath) : undefined;
-        const displayContainerPath = containerPath
-          ? stripRootPrefix(containerPath)
-          : undefined;
+
+        // Display the full file path (including file name) as returned by backend.
+        const displayFullPath = fullPath ? stripRootPrefix(fullPath) : undefined;
         return {
           kind: "file",
           file,
-          path: displayContainerPath,
+          path: displayFullPath,
           containerPath,
         } as const;
       }),
