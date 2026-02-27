@@ -188,6 +188,11 @@ namespace Cotton.Server.Jobs
                 }
 
                 long sizeBytes = await _storage.GetSizeAsync(uid);
+                if (sizeBytes == 0 && uid != Hasher.ZeroHashHexString)
+                {
+                    throw new InvalidOperationException(
+                        $"Storage key {uid} has size 0, which is unexpected for non-empty content. Aborting consistency job to avoid data loss.");
+                }
                 _dbContext.Chunks.Add(new Chunk
                 {
                     Hash = hash,

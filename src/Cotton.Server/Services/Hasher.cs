@@ -28,6 +28,14 @@ namespace Cotton.Server.Services
         public const int HashSizeInBytes = 32;
 
         /// <summary>
+        /// Represents the hexadecimal string of the SHA-256 hash for an empty input, commonly used as a baseline value
+        /// in cryptographic operations.
+        /// </summary>
+        /// <remarks>This constant is typically used to indicate a zero or empty hash value in hashing
+        /// algorithms and protocols, ensuring consistency across different implementations.</remarks>
+        public const string ZeroHashHexString = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+        /// <summary>
         /// Computes the SHA-256 hash value for the specified byte array.
         /// </summary>
         /// <param name="content">The input data to compute the hash for. Cannot be null.</param>
