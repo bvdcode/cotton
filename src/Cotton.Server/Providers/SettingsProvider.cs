@@ -19,6 +19,9 @@ namespace Cotton.Server.Providers
     {
         private static readonly Lock _cacheLock = new();
         private static CottonServerSettings? _cache;
+        private static readonly TimeSpan _boolCacheTtl = TimeSpan.FromMinutes(1);
+        private static (bool Value, DateTimeOffset CachedAt)? _isServerInitializedCache;
+        private static (bool Value, DateTimeOffset CachedAt)? _serverHasUsersCache;
         private const int defaultSessionTimeoutHours = 24 * 30;
         private const int defaultTotpMaxFailedAttempts = 64;
         private const int defaultEncryptionThreads = 2;
@@ -75,14 +78,42 @@ namespace Cotton.Server.Providers
             }
         }
 
-        public Task<bool> IsServerInitializedAsync()
+        public async Task<bool> IsServerInitializedAsync()
         {
-            return _dbContext.ServerSettings.AnyAsync();
+            var now = DateTimeOffset.UtcNow;
+            lock (_cacheLock)
+            {
+                if (_isServerInitializedCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
+                {
+                    return cached.Value;
+                }
+            }
+
+            bool value = await _dbContext.ServerSettings.AsNoTracking().AnyAsync();
+            lock (_cacheLock)
+            {
+                _isServerInitializedCache = (value, DateTimeOffset.UtcNow);
+            }
+            return value;
         }
 
-        public Task<bool> ServerHasUsersAsync()
+        public async Task<bool> ServerHasUsersAsync()
         {
-            return _dbContext.Users.AnyAsync();
+            var now = DateTimeOffset.UtcNow;
+            lock (_cacheLock)
+            {
+                if (_serverHasUsersCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
+                {
+                    return cached.Value;
+                }
+            }
+
+            bool value = await _dbContext.Users.AsNoTracking().AnyAsync();
+            lock (_cacheLock)
+            {
+                _serverHasUsersCache = (value, DateTimeOffset.UtcNow);
+            }
+            return value;
         }
 
         public async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
@@ -301,6 +332,10 @@ namespace Cotton.Server.Providers
             await _dbContext.ServerSettings.AddAsync(newSettings);
             await _dbContext.SaveChangesAsync();
             _cache = null;
+            lock (_cacheLock)
+            {
+                _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
+            }
         }
 
         private static int? TryParseInt(string? value)
