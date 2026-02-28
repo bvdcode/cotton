@@ -67,7 +67,6 @@ namespace Cotton.Server.Jobs
                 try
                 {
                     _logger.LogDebug("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
-
                     await using var fsSmall = _storage.GetBlobStream(uids, pipelineContext);
                     byte[] previewImage = await generator.GeneratePreviewWebPAsync(fsSmall, PreviewGeneratorProvider.DefaultSmallPreviewSize);
                     byte[] hash = Hasher.HashData(previewImage);
@@ -78,18 +77,20 @@ namespace Cotton.Server.Jobs
                     await EnsureChunkExistsAsync(hash, previewImage.Length);
                     item.SmallFilePreviewHash = hash;
 
-                    await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
-                    byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
-                    byte[] hashLarge = Hasher.HashData(previewImageLarge);
-                    string hashLargeStr = Hasher.ToHexStringHash(hashLarge);
-                    _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
-                    using var resultStreamLarge = new MemoryStream(previewImageLarge);
-                    await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
-                    await EnsureChunkExistsAsync(hashLarge, previewImageLarge.Length);
-                    item.LargeFilePreviewHash = hashLarge;
+                    if (generator is ImagePreviewGenerator)
+                    {
+                        await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
+                        byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
+                        byte[] hashLarge = Hasher.HashData(previewImageLarge);
+                        string hashLargeStr = Hasher.ToHexStringHash(hashLarge);
+                        _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
+                        using var resultStreamLarge = new MemoryStream(previewImageLarge);
+                        await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
+                        await EnsureChunkExistsAsync(hashLarge, previewImageLarge.Length);
+                        item.LargeFilePreviewHash = hashLarge;
+                    }
 
                     await _dbContext.SaveChangesAsync();
-
                     _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
                     string hex = Convert.ToHexString(item.SmallFilePreviewHash);
                     foreach (var nodeFile in item.NodeFiles)
