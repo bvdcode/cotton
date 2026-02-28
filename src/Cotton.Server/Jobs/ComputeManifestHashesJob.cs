@@ -47,14 +47,14 @@ namespace Cotton.Server.Jobs
                     manifest.ComputedContentHash = computedContentHash;
                     await _dbContext.SaveChangesAsync();
                     _logger.LogInformation("Hash match for manifest {ManifestId}: {Hash}",
-                        manifest.Id, Hasher.ToHexStringHash(manifest.ComputedContentHash));
+                        manifest.Id, Hasher.ToHexString(manifest.ComputedContentHash));
                 }
                 else
                 {
                     _logger.LogWarning("Hash mismatch for manifest {ManifestId}: computed {ComputedHash}, proposed {ProposedHash}",
                         manifest.Id,
-                        Hasher.ToHexStringHash(computedContentHash),
-                        Hasher.ToHexStringHash(manifest.ProposedContentHash));
+                        Hasher.ToHexString(computedContentHash),
+                        Hasher.ToHexString(manifest.ProposedContentHash));
                     var relatedFiles = await _dbContext.NodeFiles
                         .Where(nf => nf.FileManifestId == manifest.Id)
                         .ToListAsync();
@@ -65,8 +65,8 @@ namespace Cotton.Server.Jobs
                         await _notifications.SendUploadHashMismatchNotificationAsync(
                             file.OwnerId,
                             file.Name,
-                            Hasher.ToHexStringHash(manifest.ProposedContentHash),
-                            Hasher.ToHexStringHash(computedContentHash));
+                            Hasher.ToHexString(manifest.ProposedContentHash),
+                            Hasher.ToHexString(computedContentHash));
                     }
                 }
             }

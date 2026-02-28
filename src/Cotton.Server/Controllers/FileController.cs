@@ -241,7 +241,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiNotFound("Node file not found.");
             }
-            byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
+            byte[] proposedHash = Hasher.FromHexString(request.Hash);
             if (nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
             {
                 return Ok();
@@ -294,7 +294,7 @@ namespace Cotton.Server.Controllers
             Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
+            var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexString(nodeFile.FileManifest.ProposedContentHash)}\"");
 
             if (downloadToken.DeleteAfterUse)
             {

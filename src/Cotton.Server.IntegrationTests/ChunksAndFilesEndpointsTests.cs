@@ -80,7 +80,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         // upload chunk
         var content = Encoding.UTF8.GetBytes("hello world");
-        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        var chunkHashLower = Hasher.ToHexString(Hasher.HashData(content));
         using var form = new MultipartFormDataContent
         {
             {
@@ -121,7 +121,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 
         // upload chunk
         var content = Encoding.UTF8.GetBytes("download me");
-        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        var chunkHashLower = Hasher.ToHexString(Hasher.HashData(content));
         using var form = new MultipartFormDataContent
         {
             {

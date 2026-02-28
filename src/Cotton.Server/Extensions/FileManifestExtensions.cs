@@ -7,7 +7,7 @@ namespace Cotton.Server.Extensions
     {
         public static Dictionary<string, long> GetChunkLengths(this IEnumerable<FileManifestChunk> fileManifestChunks)
         {
-            return fileManifestChunks.ToDictionary(x => Hasher.ToHexStringHash(x.ChunkHash), x => x.Chunk.SizeBytes);
+            return fileManifestChunks.ToDictionary(x => Hasher.ToHexString(x.ChunkHash), x => x.Chunk.SizeBytes);
         }
 
         public static string[] GetChunkHashes(this IEnumerable<FileManifestChunk> chunks)
@@ -19,7 +19,7 @@ namespace Cotton.Server.Extensions
             {
                 lastOrder ??= chunk.ChunkOrder - 1;
                 ArgumentNullException.ThrowIfNull(chunk.ChunkHash);
-                string hashString = Hasher.ToHexStringHash(chunk.ChunkHash);
+                string hashString = Hasher.ToHexString(chunk.ChunkHash);
                 ArgumentException.ThrowIfNullOrWhiteSpace(hashString);
                 if (lastOrder + 1 != chunk.ChunkOrder)
                 {

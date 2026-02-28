@@ -72,12 +72,12 @@ namespace Cotton.Server.Services
             return await SHA256.HashDataAsync(stream);
         }
 
-        public static string ToHexStringHash(byte[] hash)
+        public static string ToHexString(byte[] hash)
         {
             return Convert.ToHexString(hash).ToLowerInvariant();
         }
 
-        public static byte[] FromHexStringHash(string hexString)
+        public static byte[] FromHexString(string hexString)
         {
             if (string.IsNullOrWhiteSpace(hexString))
             {

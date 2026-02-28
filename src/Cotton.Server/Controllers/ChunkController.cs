@@ -31,7 +31,7 @@ namespace Cotton.Server.Controllers
             {
                 return CottonResult.BadRequest("Invalid hash format.");
             }
-            byte[] hashBytes = Hasher.FromHexStringHash(hash);
+            byte[] hashBytes = Hasher.FromHexString(hash);
             if (hashBytes.Length != Hasher.HashSizeInBytes)
             {
                 return CottonResult.BadRequest("Invalid hash format.");
@@ -76,7 +76,7 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Invalid hash format.");
             }
 
-            byte[] hashBytes = Hasher.FromHexStringHash(hash);
+            byte[] hashBytes = Hasher.FromHexString(hash);
             if (hashBytes.Length != Hasher.HashSizeInBytes)
             {
                 return CottonResult.BadRequest("Invalid hash format.");

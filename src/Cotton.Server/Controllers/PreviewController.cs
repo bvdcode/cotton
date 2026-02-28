@@ -28,7 +28,7 @@ namespace Cotton.Server.Controllers
                 try
                 {
                     var hashBytes = _crypto.DecryptPresignedToken(filePreviewPresignedToken);
-                    decryptedPreviewHash = Hasher.ToHexStringHash(hashBytes);
+                    decryptedPreviewHash = Hasher.ToHexString(hashBytes);
                 }
                 catch (Exception)
                 {
