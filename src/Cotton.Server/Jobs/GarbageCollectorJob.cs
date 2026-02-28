@@ -77,60 +77,17 @@ namespace Cotton.Server.Jobs
                 _ => now.AddDays(ChunkGcDelayDays),
             };
 
-            // Step 1: Get candidate orphaned chunk hashes (not in FileManifestChunks, not yet scheduled)
-            var candidateHashes = await _dbContext.Chunks
-                .Where(c => !c.FileManifestChunks.Any() && c.GCScheduledAfter == null)
-                .OrderBy(c => c.CreatedAt)
-                .Take(ChunkBatchSize)
-                .Select(c => c.Hash)
-                .ToListAsync(ct);
-
-            if (candidateHashes.Count == 0)
-            {
-                return;
-            }
-
-            // Step 2: Get preview hashes that are in use (without OR in subquery for better performance)
-            var usedSmallPreviewHashes = await _dbContext.FileManifests
-                .Where(fm => fm.SmallFilePreviewHash != null && candidateHashes.Contains(fm.SmallFilePreviewHash))
-                .Select(fm => fm.SmallFilePreviewHash!)
-                .ToListAsync(ct);
-
-            var usedLargePreviewHashes = await _dbContext.FileManifests
-                .Where(fm => fm.LargeFilePreviewHash != null && candidateHashes.Contains(fm.LargeFilePreviewHash))
-                .Select(fm => fm.LargeFilePreviewHash!)
-                .ToListAsync(ct);
-
-            var usedPreviewHashes = usedSmallPreviewHashes
-                .Concat(usedLargePreviewHashes)
-                .ToHashSet(ByteArrayComparer.Instance);
-
-            // Step 3: Filter out chunks used as previews
-            var orphanedHashes = candidateHashes
-                .Where(h => !usedPreviewHashes.Contains(h))
-                .ToList();
-
-            if (orphanedHashes.Count == 0)
-            {
-                return;
-            }
-
-            // Step 4: Schedule orphaned chunks for deletion
             int orphanedChunks = await _dbContext.Chunks
-                .Where(c => orphanedHashes.Contains(c.Hash))
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
+                    .Where(c => !c.FileManifestChunks.Any()
+                        && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
+                        && c.GCScheduledAfter == null)
+                    .Take(ChunkBatchSize)
+                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
 
             if (orphanedChunks != 0)
             {
                 _logger.LogInformation("Scheduled {Count} orphaned chunks for garbage collection.", orphanedChunks);
             }
-        }
-
-        private sealed class ByteArrayComparer : IEqualityComparer<byte[]>
-        {
-            public static readonly ByteArrayComparer Instance = new();
-            public bool Equals(byte[]? x, byte[]? y) => x is not null && y is not null && x.SequenceEqual(y);
-            public int GetHashCode(byte[] obj) => obj.Length > 0 ? obj[0] ^ obj[^1] ^ obj.Length : 0;
         }
 
         private async Task DeleteScheduledChunksAsync(DateTime now, CancellationToken ct)
