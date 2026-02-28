@@ -104,7 +104,7 @@ namespace Cotton.Server.Jobs
 
             foreach (var chunkToDelete in chunksToDelete)
             {
-                string uid = Hasher.ToHexStringHash(chunkToDelete.Hash);
+                string uid = Hasher.ToHexString(chunkToDelete.Hash);
                 CurrentlyDeletingChunks.TryAdd(uid, 0);
             }
 
@@ -121,7 +121,7 @@ namespace Cotton.Server.Jobs
                         continue;
                     }
 
-                    string uid = Hasher.ToHexStringHash(chunk.Hash);
+                    string uid = Hasher.ToHexString(chunk.Hash);
                     await _dbContext.ChunkOwnerships
                         .Where(o => o.ChunkHash == chunk.Hash)
                         .ExecuteDeleteAsync(ct);

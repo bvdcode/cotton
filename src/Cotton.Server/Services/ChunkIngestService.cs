@@ -26,7 +26,7 @@ public class ChunkIngestService(
     public async Task<Chunk> UpsertChunkAsync(Guid userId, byte[] buffer, int length, CancellationToken ct = default)
     {
         byte[] chunkHash = SHA256.HashData(buffer.AsSpan(0, length));
-        string storageKey = Hasher.ToHexStringHash(chunkHash);
+        string storageKey = Hasher.ToHexString(chunkHash);
 
         if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
         {
