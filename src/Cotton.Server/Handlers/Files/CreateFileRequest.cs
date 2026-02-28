@@ -13,6 +13,7 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
+using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -34,6 +35,7 @@ namespace Cotton.Server.Handlers.Files
 
     public class CreateFileRequestHandler(
         CottonDbContext _dbContext,
+        IStreamCipher _crypto,
         IStoragePipeline _storage,
         ILogger<CreateFileRequestHandler> _logger,
         ILayoutService _layouts,
@@ -189,9 +191,9 @@ namespace Cotton.Server.Handlers.Files
             return newNodeFile;
         }
 
-        private static NodeFileManifestDto MapToDto(NodeFile nodeFile, FileManifest fileManifest)
+        private NodeFileManifestDto MapToDto(NodeFile nodeFile, FileManifest fileManifest)
         {
-            return new NodeFileManifestDto()
+            var dto = new NodeFileManifestDto()
             {
                 ContentType = fileManifest.ContentType,
                 CreatedAt = fileManifest.CreatedAt,
@@ -201,6 +203,15 @@ namespace Cotton.Server.Handlers.Files
                 UpdatedAt = fileManifest.UpdatedAt,
                 Id = fileManifest.Id,
             };
+            if (fileManifest.SmallFilePreviewHash is not null)
+            {
+                dto.SmallFilePreviewPresignedToken = _crypto.GetPresignedToken(fileManifest.SmallFilePreviewHash);
+            }
+            if (fileManifest.LargeFilePreviewHash is not null)
+            {
+                dto.LargeFilePreviewPresignedToken = _crypto.GetPresignedToken(fileManifest.LargeFilePreviewHash);
+            }
+            return dto;
         }
     }
 }

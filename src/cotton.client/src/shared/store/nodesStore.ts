@@ -38,7 +38,7 @@ type NodesState = {
   optimisticSetFilePreviewHash: (
     parentNodeId: string,
     fileId: string,
-    encryptedFilePreviewHashHex: string,
+    smallFilePreviewPresignedToken: string,
   ) => void;
   optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
   reset: (cacheOwnerUserId?: string | null) => void;
@@ -525,7 +525,7 @@ export const useNodesStore = create<NodesState>()(
   optimisticSetFilePreviewHash: (
     parentNodeId,
     fileId,
-    encryptedFilePreviewHashHex,
+    smallFilePreviewPresignedToken,
   ) => {
     set((prev) => {
       const existing = prev.contentByNodeId[parentNodeId];
@@ -533,7 +533,7 @@ export const useNodesStore = create<NodesState>()(
 
       const current = existing.files.find((f) => f.id === fileId);
       if (!current) return {};
-      if (current.encryptedFilePreviewHashHex === encryptedFilePreviewHashHex) {
+      if (current.smallFilePreviewPresignedToken === smallFilePreviewPresignedToken) {
         return {};
       }
 
@@ -544,7 +544,7 @@ export const useNodesStore = create<NodesState>()(
             ...existing,
             files: existing.files.map((f) =>
               f.id === fileId
-                ? { ...f, encryptedFilePreviewHashHex }
+                ? { ...f, smallFilePreviewPresignedToken }
                 : f,
             ),
           },

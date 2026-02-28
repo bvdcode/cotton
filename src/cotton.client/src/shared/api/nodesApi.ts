@@ -6,7 +6,8 @@ export interface NodeFileManifestDto extends BaseDto {
   name: string;
   contentType: string;
   sizeBytes: number;
-  encryptedFilePreviewHashHex?: string | null;
+  smallFilePreviewPresignedToken?: string | null;
+  largeFilePreviewPresignedToken?: string | null;
 }
 export interface NodeResponse {
   content: NodeContentDto;

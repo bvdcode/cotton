@@ -2,8 +2,10 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
 using Cotton.Validators;
+using EasyExtensions.Abstractions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
@@ -25,7 +27,7 @@ public class SearchLayoutsQuery(
     public int PageSize { get; } = pageSize;
 }
 
-public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
+public class SearchLayoutsQueryHandler(IStreamCipher _crypto, CottonDbContext _dbContext)
     : IRequestHandler<SearchLayoutsQuery, SearchLayoutsResultDto>
 {
     public async Task<SearchLayoutsResultDto> Handle(SearchLayoutsQuery request, CancellationToken ct)
@@ -67,10 +69,24 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
                 .ProjectToType<NodeDto>()
                 .ToListAsync(ct);
 
-        var files = filesToTake == 0 ? []
+        var rawFiles = filesToTake == 0 ? []
             : await filesQuery.Skip(filesSkip).Take(filesToTake)
-                .ProjectToType<NodeFileManifestDto>()
+                .Include(x => x.FileManifest)
                 .ToListAsync(ct);
+
+        var files = rawFiles.Select(nf =>
+        {
+            var dto = nf.Adapt<NodeFileManifestDto>();
+            if (nf.FileManifest.SmallFilePreviewHash is not null)
+            {
+                dto.SmallFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.SmallFilePreviewHash);
+            }
+            if (nf.FileManifest.LargeFilePreviewHash is not null)
+            {
+                dto.LargeFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.LargeFilePreviewHash);
+            }
+            return dto;
+        }).ToList();
 
         var nodePaths = await ResolveNodePathsAsync(request.UserId, request.LayoutId, nodes.Select(x => x.Id), ct);
         var filePaths = filesToTake == 0
