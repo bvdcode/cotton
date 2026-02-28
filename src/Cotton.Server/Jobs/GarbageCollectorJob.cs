@@ -10,7 +10,9 @@ using System.Collections.Concurrent;
 
 namespace Cotton.Server.Jobs
 {
-    [JobTrigger(days: 1)]
+    // TODO: Refactor to use a more robust approach for scheduling and deleting orphaned chunks, e.g. by using a separate table to track scheduled deletions and a background worker that processes that table at a configurable interval. The current approach has potential
+    // issues with concurrency and reliability, e.g. if the job is triggered multiple times in quick succession or if the job fails after scheduling chunks for deletion but before actually deleting them.
+    //[JobTrigger(days: 1)]
     public class GarbageCollectorJob(
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
