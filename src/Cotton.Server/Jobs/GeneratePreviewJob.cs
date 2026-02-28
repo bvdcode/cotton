@@ -72,7 +72,7 @@ namespace Cotton.Server.Jobs
                     await using var fsSmall = _storage.GetBlobStream(uids, pipelineContext);
                     byte[] previewImage = await generator.GeneratePreviewWebPAsync(fsSmall, PreviewGeneratorProvider.DefaultSmallPreviewSize);
                     byte[] hash = Hasher.HashData(previewImage);
-                    string hashStr = Hasher.ToHexStringHash(hash);
+                    string hashStr = Hasher.ToHexString(hash);
                     _logger.LogDebug("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
@@ -84,7 +84,7 @@ namespace Cotton.Server.Jobs
                         await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
                         byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
                         byte[] hashLarge = Hasher.HashData(previewImageLarge);
-                        string hashLargeStr = Hasher.ToHexStringHash(hashLarge);
+                        string hashLargeStr = Hasher.ToHexString(hashLarge);
                         _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
                         using var resultStreamLarge = new MemoryStream(previewImageLarge);
                         await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
