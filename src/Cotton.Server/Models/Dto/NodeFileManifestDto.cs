@@ -12,10 +12,7 @@ namespace Cotton.Server.Models.Dto
         public string ContentType { get; set; } = null!;
         public long SizeBytes { get; set; }
 
-        // TODO: Encrypt and map
         public string? SmallFilePreviewPresignedToken { get; set; }
-
-        // TODO: Encrypt and map
         public string? LargeFilePreviewPresignedToken { get; set; }
     }
 }

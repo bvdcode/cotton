@@ -1,8 +1,10 @@
 ﻿using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
 using Cotton.Topology.Abstractions;
+using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -23,6 +25,7 @@ namespace Cotton.Server.Handlers.Nodes
     }
 
     public class GetChildrenQueryHandler(
+        IStreamCipher _crypto,
         ILayoutService _layouts,
         CottonDbContext _dbContext)
             : IRequestHandler<GetChildrenQuery, NodeContentDto>
@@ -51,14 +54,12 @@ namespace Cotton.Server.Handlers.Nodes
                     && x.Type == request.NodeType)
                 .ProjectToType<NodeDto>();
 
-            var filesQuery = _dbContext.NodeFiles
+            var filesBaseQuery = _dbContext.NodeFiles
                 .AsNoTracking()
-                .OrderBy(x => x.NameKey)
-                .Where(x => x.NodeId == parentNode.Id)
-                .ProjectToType<NodeFileManifestDto>();
+                .Where(x => x.NodeId == parentNode.Id);
 
             int nodesCount = await nodesQuery.CountAsync(cancellationToken: ct);
-            int filesCount = await filesQuery.CountAsync(cancellationToken: ct);
+            int filesCount = await filesBaseQuery.CountAsync(cancellationToken: ct);
 
             var nodesToTake = Math.Max(0, Math.Min(request.PageSize, nodesCount - skip));
             int filesSkip = Math.Max(0, skip - nodesCount);
@@ -67,8 +68,27 @@ namespace Cotton.Server.Handlers.Nodes
             var nodes = nodesToTake == 0 ? []
                 : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync(cancellationToken: ct);
 
-            var files = filesToTake == 0 ? []
-                : await filesQuery.Skip(filesSkip).Take(filesToTake).ToListAsync(cancellationToken: ct);
+            var rawFiles = filesToTake == 0 ? []
+                : await filesBaseQuery
+                    .OrderBy(x => x.NameKey)
+                    .Include(x => x.FileManifest)
+                    .Skip(filesSkip)
+                    .Take(filesToTake)
+                    .ToListAsync(cancellationToken: ct);
+
+            var files = rawFiles.Select(nf =>
+            {
+                var dto = nf.Adapt<NodeFileManifestDto>();
+                if (nf.FileManifest.SmallFilePreviewHash is not null)
+                {
+                    dto.SmallFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.SmallFilePreviewHash);
+                }
+                if (nf.FileManifest.LargeFilePreviewHash is not null)
+                {
+                    dto.LargeFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.LargeFilePreviewHash);
+                }
+                return dto;
+            }).ToList();
 
             return new()
             {
