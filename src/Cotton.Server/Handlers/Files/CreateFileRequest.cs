@@ -49,7 +49,7 @@ namespace Cotton.Server.Handlers.Files
             await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
 
             List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, request.UserId, cancellationToken);
-            byte[] proposedHash = Hasher.FromHexString(request.Hash);
+            byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
             var fileManifest = await GetOrCreateFileManifestAsync(chunks, request, proposedHash, cancellationToken);
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);

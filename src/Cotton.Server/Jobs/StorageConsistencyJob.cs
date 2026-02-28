@@ -67,7 +67,7 @@ namespace Cotton.Server.Jobs
 
                 foreach (byte[] chunkHash in batch)
                 {
-                    string uid = Hasher.ToHexString(chunkHash);
+                    string uid = Hasher.ToHexStringHash(chunkHash);
 
                     if (storageKeys.Remove(uid))
                     {
@@ -173,7 +173,7 @@ namespace Cotton.Server.Jobs
                 byte[] hash;
                 try
                 {
-                    hash = Hasher.FromHexString(uid);
+                    hash = Hasher.FromHexStringHash(uid);
                 }
                 catch (ArgumentException)
                 {
