@@ -8,7 +8,7 @@ namespace Cotton.Server.Extensions
     {
         public static byte[] DecryptPresignedToken(this IStreamCipher crypto, string token)
         {
-            byte[] encrypted = Hasher.FromHexString(token);
+            byte[] encrypted = Hasher.FromHexStringHash(token);
             string decrypted = crypto.Decrypt(encrypted);
             string[] parts = decrypted.Split('|');
             if (parts.Length != 2)
@@ -22,17 +22,17 @@ namespace Cotton.Server.Extensions
             {
                 throw new Exception("Token has expired.");
             }
-            return Hasher.FromHexString(hashStr);
+            return Convert.FromHexString(hashStr);
         }
 
         public static string GetPresignedToken(this IStreamCipher crypto, byte[] hash, TimeSpan? expiration = null)
         {
             expiration ??= TimeSpan.FromDays(1);
             DateTime expireAt = DateTime.UtcNow.Add(expiration.Value);
-            string hashStr = Hasher.ToHexString(hash);
+            string hashStr = Hasher.ToHexStringHash(hash);
             string container = $"{hashStr}|{expireAt:R}";
             byte[] encrypted = crypto.Encrypt(container);
-            return Hasher.ToHexString(encrypted);
+            return Convert.ToHexString(encrypted).ToLower();
         }
     }
 }

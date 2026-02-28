@@ -128,7 +128,7 @@ namespace Cotton.Server.Handlers.Files
 
         private static EntityTagHeaderValue CreateEntityTag(FileManifest file)
         {
-            return EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexString(file.ProposedContentHash)}\"");
+            return EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(file.ProposedContentHash)}\"");
         }
 
         private static string BuildRedirectHtml(string baseAppUrl,

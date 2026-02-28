@@ -15,13 +15,13 @@ namespace Cotton.Server.Services
 
         public async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes, Guid userId, CancellationToken cancellationToken = default)
         {
-            List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexString)];
+            List<byte[]> normalizedHashes = [.. chunkHashes.Select(Hasher.FromHexStringHash)];
             List<Chunk> ownedChunks = await _dbContext.Chunks
                 .Where(c => normalizedHashes.Contains(c.Hash))
                 .Where(c => _dbContext.ChunkOwnerships.Any(co => co.ChunkHash == c.Hash && co.OwnerId == userId))
                 .ToListAsync(cancellationToken);
 
-            var chunkMap = ownedChunks.ToDictionary(c => Hasher.ToHexString(c.Hash), StringComparer.OrdinalIgnoreCase);
+            var chunkMap = ownedChunks.ToDictionary(c => Hasher.ToHexStringHash(c.Hash), StringComparer.OrdinalIgnoreCase);
             List<Chunk> result = [];
             foreach (var hash in chunkHashes)
             {
