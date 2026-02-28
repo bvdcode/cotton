@@ -8,6 +8,7 @@ using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
+using EasyExtensions.Abstractions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ namespace Cotton.Server.Jobs
     [JobTrigger(minutes: 15)]
     public class GeneratePreviewJob(
         PerfTracker _perf,
+        IStreamCipher _crypto,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext,
@@ -92,7 +94,7 @@ namespace Cotton.Server.Jobs
 
                     await _dbContext.SaveChangesAsync();
                     _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
-                    string hex = Convert.ToHexString(item.SmallFilePreviewHash);
+                    string encrypted = _crypto.GetPresignedToken(item.SmallFilePreviewHash, TimeSpan.FromHours(1));
                     foreach (var nodeFile in item.NodeFiles)
                     {
                         // Minor vulnerability:
@@ -100,7 +102,7 @@ namespace Cotton.Server.Jobs
                         // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
                         await _hubContext.Clients
                             .User(nodeFile.OwnerId.ToString())
-                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, hex);
+                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, encrypted);
                     }
                     // TODO: Move to settings or autoconfig
                     await Task.Delay(500);

@@ -6,7 +6,7 @@ import type { JsonValue } from "../../../shared/types/json";
 interface UseFilesRealtimeEventsOptions {
   nodeId: string | null;
   onInvalidate: () => void;
-  onPreviewGenerated?: (nodeFileId: string, encryptedFilePreviewHashHex: string) => void;
+  onPreviewGenerated?: (nodeFileId: string, smallFilePreviewPresignedToken: string) => void;
 }
 
 const FILES_HUB_METHODS = [
