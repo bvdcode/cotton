@@ -27,7 +27,7 @@ public class SearchLayoutsQuery(
     public int PageSize { get; } = pageSize;
 }
 
-public class SearchLayoutsQueryHandler(IStreamCipher _crypto, CottonDbContext _dbContext)
+public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
     : IRequestHandler<SearchLayoutsQuery, SearchLayoutsResultDto>
 {
     public async Task<SearchLayoutsResultDto> Handle(SearchLayoutsQuery request, CancellationToken ct)
@@ -69,24 +69,11 @@ public class SearchLayoutsQueryHandler(IStreamCipher _crypto, CottonDbContext _d
                 .ProjectToType<NodeDto>()
                 .ToListAsync(ct);
 
-        var rawFiles = filesToTake == 0 ? []
+        var files = filesToTake == 0 ? []
             : await filesQuery.Skip(filesSkip).Take(filesToTake)
                 .Include(x => x.FileManifest)
+                .ProjectToType<NodeFileManifestDto>()
                 .ToListAsync(ct);
-
-        var files = rawFiles.Select(nf =>
-        {
-            var dto = nf.Adapt<NodeFileManifestDto>();
-            if (nf.FileManifest.SmallFilePreviewHash is not null)
-            {
-                dto.SmallFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.SmallFilePreviewHash);
-            }
-            if (nf.FileManifest.LargeFilePreviewHash is not null)
-            {
-                dto.LargeFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.LargeFilePreviewHash);
-            }
-            return dto;
-        }).ToList();
 
         var nodePaths = await ResolveNodePathsAsync(request.UserId, request.LayoutId, nodes.Select(x => x.Id), ct);
         var filePaths = filesToTake == 0

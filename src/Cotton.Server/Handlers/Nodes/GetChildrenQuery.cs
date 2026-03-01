@@ -3,6 +3,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -25,7 +26,6 @@ namespace Cotton.Server.Handlers.Nodes
     }
 
     public class GetChildrenQueryHandler(
-        IStreamCipher _crypto,
         ILayoutService _layouts,
         CottonDbContext _dbContext)
             : IRequestHandler<GetChildrenQuery, NodeContentDto>
@@ -68,27 +68,14 @@ namespace Cotton.Server.Handlers.Nodes
             var nodes = nodesToTake == 0 ? []
                 : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync(cancellationToken: ct);
 
-            var rawFiles = filesToTake == 0 ? []
+            var files = filesToTake == 0 ? []
                 : await filesBaseQuery
                     .OrderBy(x => x.NameKey)
                     .Include(x => x.FileManifest)
                     .Skip(filesSkip)
                     .Take(filesToTake)
+                    .ProjectToType<NodeFileManifestDto>()
                     .ToListAsync(cancellationToken: ct);
-
-            var files = rawFiles.Select(nf =>
-            {
-                var dto = nf.Adapt<NodeFileManifestDto>();
-                if (nf.FileManifest.SmallFilePreviewHash is not null)
-                {
-                    dto.SmallFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.SmallFilePreviewHash);
-                }
-                if (nf.FileManifest.LargeFilePreviewHash is not null)
-                {
-                    dto.LargeFilePreviewPresignedToken = _crypto.GetPresignedToken(nf.FileManifest.LargeFilePreviewHash);
-                }
-                return dto;
-            }).ToList();
 
             return new()
             {
