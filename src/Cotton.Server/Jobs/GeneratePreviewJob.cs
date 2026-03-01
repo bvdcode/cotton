@@ -9,10 +9,12 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Storage.Processors;
 using EasyExtensions.Abstractions;
+using EasyExtensions.Extensions;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Text;
 
 namespace Cotton.Server.Jobs
 {
@@ -77,7 +79,7 @@ namespace Cotton.Server.Jobs
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
                     await EnsureChunkExistsAsync(hash, previewImage.Length);
-                    item.SmallFilePreviewHash = hash;
+                    item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
 
                     if (generator is ImagePreviewGenerator)
                     {
@@ -94,7 +96,6 @@ namespace Cotton.Server.Jobs
 
                     await _dbContext.SaveChangesAsync();
                     _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
-                    string encrypted = _crypto.GetPresignedToken(item.SmallFilePreviewHash, TimeSpan.FromHours(1));
                     foreach (var nodeFile in item.NodeFiles)
                     {
                         // Minor vulnerability:
@@ -102,7 +103,7 @@ namespace Cotton.Server.Jobs
                         // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
                         await _hubContext.Clients
                             .User(nodeFile.OwnerId.ToString())
-                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, encrypted);
+                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex());
                     }
                     // TODO: Move to settings or autoconfig
                     await Task.Delay(500);

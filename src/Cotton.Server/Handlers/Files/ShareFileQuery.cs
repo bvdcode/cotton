@@ -28,7 +28,6 @@ namespace Cotton.Server.Handlers.Files
     }
 
     public class ShareFileQueryHandler(
-        IStreamCipher _crypto,
         CottonDbContext _dbContext,
         ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
         IHttpContextAccessor _httpContextAccessor,
@@ -61,12 +60,12 @@ namespace Cotton.Server.Handlers.Files
             var file = downloadToken.NodeFile.FileManifest;
             if (isHtml)
             {
-                string? presignedUrl = file.SmallFilePreviewHash is null ? null : _crypto.GetPresignedToken(file.SmallFilePreviewHash);
+                string? previewHashEncryptedHex = file.GetPreviewHashEncryptedHex();
                 string html = BuildRedirectHtml(
                     baseAppUrl: baseAppUrl,
                     token: request.Token,
                     fileName: downloadToken.FileName,
-                    encryptedPresignedToken: presignedUrl);
+                    previewHashEncryptedHex: previewHashEncryptedHex);
                 return ShareFileResult.AsHtml(html);
             }
 
@@ -132,14 +131,14 @@ namespace Cotton.Server.Handlers.Files
         }
 
         private static string BuildRedirectHtml(string baseAppUrl,
-            string token, string fileName, string? encryptedPresignedToken)
+            string token, string fileName, string? previewHashEncryptedHex)
         {
             string canonicalUrl = $"{baseAppUrl}/s/{token}";
             string appShareUrl = $"{baseAppUrl}/share/{token}";
 
-            string previewUrl = encryptedPresignedToken is null
+            string previewUrl = previewHashEncryptedHex is null
                 ? $"{baseAppUrl}/assets/images/social-preview.jpg"
-                : $"{baseAppUrl}{Routes.V1.Previews}/{encryptedPresignedToken}.webp";
+                : $"{baseAppUrl}{Routes.V1.Previews}/{previewHashEncryptedHex}.webp";
 
             string previewTag =
                 $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />\n" +
