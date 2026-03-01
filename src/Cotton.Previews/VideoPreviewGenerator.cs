@@ -14,6 +14,7 @@ namespace Cotton.Previews
             "video/avi",
             "video/mov",
             "video/mkv",
+            "video/x-msvideo",
             "video/x-matroska",
         ];
 
