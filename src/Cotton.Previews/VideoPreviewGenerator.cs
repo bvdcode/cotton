@@ -14,6 +14,7 @@ namespace Cotton.Previews
             "video/avi",
             "video/mov",
             "video/mkv",
+            "video/x-matroska",
         ];
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 150)
@@ -29,17 +30,25 @@ namespace Cotton.Previews
 
             try { stream.Seek(0, SeekOrigin.Begin); } catch { }
 
-            byte[] pngFrame;
+            byte[] imageBytes;
             await using (var server = new RangeStreamServer(stream))
             {
-                double? durationSeconds = await TryGetDurationSecondsAsync(server.Url).ConfigureAwait(false);
-                double seekSeconds = ComputeSeekSeconds(durationSeconds);
-                pngFrame = await RunFfmpegHttpPngAsync(server.Url, seekSeconds).ConfigureAwait(false);
+                var coverArt = await TryExtractCoverArtAsync(server.Url).ConfigureAwait(false);
+                if (coverArt is not null)
+                {
+                    imageBytes = coverArt;
+                }
+                else
+                {
+                    double? durationSeconds = await TryGetDurationSecondsAsync(server.Url).ConfigureAwait(false);
+                    double seekSeconds = ComputeSeekSeconds(durationSeconds);
+                    imageBytes = await RunFfmpegHttpPngAsync(server.Url, seekSeconds).ConfigureAwait(false);
+                }
             }
 
             ImagePreviewGenerator imagePreviewGenerator = new();
-            await using var pngStream = new MemoryStream(pngFrame);
-            var result = await imagePreviewGenerator.GeneratePreviewWebPAsync(pngStream, size);
+            await using var imageStream = new MemoryStream(imageBytes);
+            var result = await imagePreviewGenerator.GeneratePreviewWebPAsync(imageStream, size);
             return result;
         }
 
@@ -102,6 +111,64 @@ namespace Cotton.Previews
             }
 
             return null;
+        }
+
+        private static async Task<byte[]?> TryExtractCoverArtAsync(Uri url)
+        {
+            var tempFile = Path.Combine(Path.GetTempPath(), $"cotton_cover_{Guid.NewGuid():N}");
+            try
+            {
+                var args =
+                    "-hide_banner -loglevel error " +
+                    $"-dump_attachment:t:0 \"{tempFile}\" " +
+                    $"-i \"{url}\" -y";
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = GetFfmpegPath(),
+                    Arguments = args,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = new Process { StartInfo = startInfo };
+                if (!process.Start())
+                {
+                    return null;
+                }
+
+                var stderrTask = process.StandardError.ReadToEndAsync();
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                try
+                {
+                    await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                }
+                catch
+                {
+                    try { process.Kill(true); } catch { }
+                    return null;
+                }
+
+                await stderrTask.ConfigureAwait(false);
+
+                if (File.Exists(tempFile))
+                {
+                    var data = await File.ReadAllBytesAsync(tempFile).ConfigureAwait(false);
+                    if (data.Length > 0)
+                    {
+                        return data;
+                    }
+                }
+
+                return null;
+            }
+            finally
+            {
+                try { File.Delete(tempFile); } catch { }
+            }
         }
 
         private static async Task<byte[]> RunFfmpegHttpPngAsync(Uri url, double seekSeconds)
