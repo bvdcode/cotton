@@ -138,7 +138,7 @@ namespace Cotton.Storage.Backends
             string filePath = Path.Combine(dirPath, fileName + ChunkFileExtension);
             if (File.Exists(filePath))
             {
-                _logger.LogInformation("File {Uid} deduplicated, skipping write", uid);
+                _logger.LogDebug("File {Uid} deduplicated, skipping write", uid);
                 return;
             }
 
