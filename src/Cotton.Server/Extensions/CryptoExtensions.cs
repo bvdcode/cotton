@@ -9,7 +9,7 @@ namespace Cotton.Server.Extensions
         public static byte[] DecryptPresignedToken(this IStreamCipher crypto, string token)
         {
             byte[] encrypted = Hasher.FromHexStringHash(token);
-            string decrypted = crypto.Decrypt(encrypted);
+            string decrypted = crypto.DecryptString(encrypted);
             string[] parts = decrypted.Split('|');
             if (parts.Length != 2)
             {
@@ -31,7 +31,7 @@ namespace Cotton.Server.Extensions
             DateTime expireAt = DateTime.UtcNow.Add(expiration.Value);
             string hashStr = Hasher.ToHexStringHash(hash);
             string container = $"{hashStr}|{expireAt:R}";
-            byte[] encrypted = crypto.Encrypt(container);
+            byte[] encrypted = crypto.EncryptString(container);
             return Convert.ToHexString(encrypted).ToLower();
         }
     }

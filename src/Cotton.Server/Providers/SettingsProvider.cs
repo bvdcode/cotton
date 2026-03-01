@@ -35,7 +35,7 @@ namespace Cotton.Server.Providers
                 return null;
             }
             byte[] encryptedBytes = Convert.FromBase64String(encryptedValue);
-            return _crypto.Decrypt(encryptedBytes);
+            return _crypto.DecryptString(encryptedBytes);
         }
 
         public CottonServerSettings GetServerSettings()
@@ -349,7 +349,7 @@ namespace Cotton.Server.Providers
             {
                 return null;
             }
-            byte[] passwordBytes = _crypto.Encrypt(password);
+            byte[] passwordBytes = _crypto.EncryptString(password);
             return Convert.ToBase64String(passwordBytes);
         }
     }

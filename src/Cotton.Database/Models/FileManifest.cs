@@ -24,6 +24,11 @@ namespace Cotton.Database.Models
         [Column("size_bytes")]
         public long SizeBytes { get; set; }
 
+        [NotMapped]
+        [Column("small_file_preview_hash_encrypted")]
+        public byte[]? SmallFilePreviewHashEncrypted { get; set; }
+
+        [NotMapped]
         [Column("small_file_preview_hash")]
         public byte[]? SmallFilePreviewHash { get; set; }
 
@@ -32,6 +37,15 @@ namespace Cotton.Database.Models
 
         [Column("preview_generation_error")]
         public string? PreviewGenerationError { get; set; }
+
+        public string? GetPreviewHashEncryptedHex()
+        {
+            if (SmallFilePreviewHashEncrypted is null)
+            {
+                return null;
+            }
+            return Convert.ToHexStringLower(SmallFilePreviewHashEncrypted);
+        }
 
         public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
         public virtual ICollection<FileManifestChunk> FileManifestChunks { get; set; } = [];

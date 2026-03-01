@@ -35,7 +35,6 @@ namespace Cotton.Server.Handlers.Files
 
     public class CreateFileRequestHandler(
         CottonDbContext _dbContext,
-        IStreamCipher _crypto,
         IStoragePipeline _storage,
         ILogger<CreateFileRequestHandler> _logger,
         ILayoutService _layouts,
@@ -118,9 +117,9 @@ namespace Cotton.Server.Handlers.Files
             {
                 var settings = _settingsProvider.GetServerSettings();
                 if (!settings.AllowCrossUserDeduplication
-                    && (fileManifest.SmallFilePreviewHash is not null || fileManifest.PreviewGenerationError is not null))
+                    && (fileManifest.SmallFilePreviewHashEncrypted is not null || fileManifest.PreviewGenerationError is not null))
                 {
-                    fileManifest.SmallFilePreviewHash = null;
+                    fileManifest.SmallFilePreviewHashEncrypted = null;
                     fileManifest.PreviewGenerationError = null;
                     await _dbContext.SaveChangesAsync(ct);
                 }
@@ -191,9 +190,9 @@ namespace Cotton.Server.Handlers.Files
             return newNodeFile;
         }
 
-        private NodeFileManifestDto MapToDto(NodeFile nodeFile, FileManifest fileManifest)
+        private static NodeFileManifestDto MapToDto(NodeFile nodeFile, FileManifest fileManifest)
         {
-            var dto = new NodeFileManifestDto()
+            return new NodeFileManifestDto()
             {
                 ContentType = fileManifest.ContentType,
                 CreatedAt = fileManifest.CreatedAt,
@@ -203,15 +202,6 @@ namespace Cotton.Server.Handlers.Files
                 UpdatedAt = fileManifest.UpdatedAt,
                 Id = fileManifest.Id,
             };
-            if (fileManifest.SmallFilePreviewHash is not null)
-            {
-                dto.SmallFilePreviewPresignedToken = _crypto.GetPresignedToken(fileManifest.SmallFilePreviewHash);
-            }
-            if (fileManifest.LargeFilePreviewHash is not null)
-            {
-                dto.LargeFilePreviewPresignedToken = _crypto.GetPresignedToken(fileManifest.LargeFilePreviewHash);
-            }
-            return dto;
         }
     }
 }
