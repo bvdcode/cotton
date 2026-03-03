@@ -79,6 +79,7 @@ namespace Cotton.Server.Jobs
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
                     await EnsureChunkExistsAsync(hash, previewImage.Length);
+                    item.SmallFilePreviewHash = hash;
                     item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
 
                     if (generator is ImagePreviewGenerator)
