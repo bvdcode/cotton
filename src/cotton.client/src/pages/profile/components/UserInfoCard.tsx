@@ -72,6 +72,23 @@ const InfoRow = ({ label, value }: InfoRowProps) => {
 export const UserInfoCard = ({ user }: UserInfoCardProps) => {
   const { t } = useTranslation(["profile", "common"]);
 
+  const getAvatarInitials = (args: {
+    firstName?: string | null;
+    lastName?: string | null;
+    username?: string | null;
+    email?: string | null;
+  }): string => {
+    const first = (args.firstName ?? "").trim();
+    const last = (args.lastName ?? "").trim();
+    if (first && last) {
+      return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+    }
+
+    const fallback = (args.username ?? args.email ?? "").trim();
+    if (!fallback) return "";
+    return fallback.slice(0, 2).toUpperCase();
+  };
+
   const totpEnabled = Boolean(user.isTotpEnabled);
   const placeholder = t("common:placeholder");
 
@@ -82,7 +99,12 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
   // title is full name if present, otherwise username
   const title = fullName || user.username;
   const displayName = title; // for avatar alt
-  const avatarLetter = displayName.charAt(0).toUpperCase();
+  const avatarInitials = getAvatarInitials({
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    email: user.email,
+  });
 
   const birthDateValue = (() => {
     if (!user.birthDate || user.birthDate.trim().length === 0) {
@@ -126,7 +148,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             bgcolor: "primary.main",
           }}
         >
-          {!user.pictureUrl && avatarLetter}
+          {!user.pictureUrl && avatarInitials}
         </Avatar>
 
         <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>

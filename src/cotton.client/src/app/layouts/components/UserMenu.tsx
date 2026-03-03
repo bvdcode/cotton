@@ -22,6 +22,30 @@ export const UserMenu = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isOpen = Boolean(anchorEl);
 
+  const getAvatarInitials = (args: {
+    firstName?: string | null;
+    lastName?: string | null;
+    username?: string | null;
+    email?: string | null;
+    displayName?: string | null;
+  }): string => {
+    const first = (args.firstName ?? "").trim();
+    const last = (args.lastName ?? "").trim();
+    if (first && last) {
+      return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+    }
+
+    const fallback = (args.displayName ?? args.username ?? args.email ?? "").trim();
+    if (!fallback) return "";
+
+    const parts = fallback.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+    }
+
+    return fallback.slice(0, 2).toUpperCase();
+  };
+
   const handleOpen = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -46,7 +70,13 @@ export const UserMenu = () => {
     user?.email ||
     t("userMenu.user");
   const caption = user?.username ? `@${user.username}` : user?.email || "";
-  const avatarLetter = displayName.charAt(0).toUpperCase();
+  const avatarInitials = getAvatarInitials({
+    firstName: user?.firstName,
+    lastName: user?.lastName,
+    username: user?.username,
+    email: user?.email,
+    displayName,
+  });
   const isAdmin = user?.role === UserRole.Admin;
 
   return (
@@ -70,7 +100,7 @@ export const UserMenu = () => {
             bgcolor: "primary.main",
           }}
         >
-          {displayName}
+          {!user?.pictureUrl && avatarInitials}
         </Avatar>
       </IconButton>
 
