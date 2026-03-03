@@ -338,6 +338,11 @@
           "copy": "Copy",
           "caption": "Run in an elevated Command Prompt or use mapped drive in Explorer."
         },
+        "windowsRegistry": {
+          "title": "Windows (Registry tweak)",
+          "copy": "Copy",
+          "caption": "Apply a registry change to raise the WebDAV file size limit."
+        },
         "powershell": {
           "title": "Windows (PowerShell escape)",
           "copy": "Copy",
