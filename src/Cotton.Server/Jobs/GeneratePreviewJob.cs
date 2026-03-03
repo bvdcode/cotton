@@ -33,7 +33,7 @@ namespace Cotton.Server.Jobs
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
             var itemsToProcess = _dbContext.FileManifests
-                .Where(fm => (fm.SmallFilePreviewHash == null || fm.LargeFilePreviewHash == null) && fm.PreviewGenerationError == null)
+                .Where(fm => fm.SmallFilePreviewHash == null && fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.NodeFiles)
                 .Include(fm => fm.FileManifestChunks)
