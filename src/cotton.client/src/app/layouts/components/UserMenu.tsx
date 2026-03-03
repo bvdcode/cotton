@@ -9,11 +9,7 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import {
-  Logout,
-  Person,
-  AdminPanelSettings,
-} from "@mui/icons-material";
+import { Logout, Person, AdminPanelSettings } from "@mui/icons-material";
 import { UserRole, useAuth } from "../../../features/auth";
 import { useTranslation } from "react-i18next";
 import { useState, type MouseEvent } from "react";
@@ -71,9 +67,10 @@ export const UserMenu = () => {
           sx={{
             width: 40,
             height: 40,
+            bgcolor: "primary.main",
           }}
         >
-          {!user?.pictureUrl && avatarLetter}
+          {displayName}
         </Avatar>
       </IconButton>
 
@@ -99,7 +96,7 @@ export const UserMenu = () => {
             {displayName}
           </Typography>
           {caption && caption !== displayName && (
-            <Typography variant="body2" color="text.secondary" noWrap>
+            <Typography variant="body2" color="text.primary" noWrap>
               {caption}
             </Typography>
           )}
