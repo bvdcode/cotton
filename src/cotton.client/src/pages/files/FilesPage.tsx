@@ -30,6 +30,10 @@ import {
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
 import Loader from "../../shared/ui/Loader";
+import {
+  selectGallerySmoothTransitions,
+  useLocalPreferencesStore,
+} from "../../shared/store/localPreferencesStore";
 
 const HUGE_FOLDER_THRESHOLD = 10_000;
 
@@ -303,6 +307,10 @@ export const FilesPage: React.FC = () => {
   const { previewState, openPreview, closePreview } = useFilePreview();
   const fileSelection = useFileSelection();
 
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
+
   const {
     lightboxOpen,
     lightboxIndex,
@@ -562,6 +570,7 @@ export const FilesPage: React.FC = () => {
           onClose={() => setLightboxOpen(false)}
           getSignedMediaUrl={getSignedMediaUrl}
           getDownloadUrl={getDownloadUrl}
+          smoothTransitions={smoothGalleryTransitions}
         />
       )}
 

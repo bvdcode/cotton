@@ -173,6 +173,22 @@
         "failed": "Failed to update profile."
       }
     },
+    "appearance": {
+      "title": "Appearance",
+      "description": "UI preferences and personalization.",
+      "gallerySmoothTransitions": "Smooth transitions in gallery",
+      "themeMode": {
+        "label": "Theme",
+        "light": "Light",
+        "system": "System",
+        "dark": "Dark"
+      },
+      "language": {
+        "label": "Language",
+        "en": "English",
+        "ru": "Russian"
+      }
+    },
     "shareLinks": {
       "title": "Share links",
       "description": "Control how long generated share links stay valid.",
