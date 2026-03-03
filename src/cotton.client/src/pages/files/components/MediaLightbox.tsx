@@ -17,6 +17,7 @@ import {
   Download as DownloadIcon,
   Slideshow as SlideshowIcon,
 } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
 import {
   isHeicFile,
@@ -25,23 +26,8 @@ import {
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { shareLinks } from "../../../shared/utils/shareLinks";
 
-const LOADING_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <style>
-    .spinner { animation: spin 1s linear infinite; transform-origin: 60px 60px; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-  </style>
-  <circle class="spinner" cx="60" cy="20" r="8" fill="#888"/>
-  <circle class="spinner" cx="60" cy="20" r="8" fill="#666" style="animation-delay: -0.875s"/>
-  <circle class="spinner" cx="88.3" cy="31.7" r="8" fill="#888" style="animation-delay: -0.75s"/>
-  <circle class="spinner" cx="100" cy="60" r="8" fill="#888" style="animation-delay: -0.625s"/>
-  <circle class="spinner" cx="88.3" cy="88.3" r="8" fill="#888" style="animation-delay: -0.5s"/>
-  <circle class="spinner" cx="60" cy="100" r="8" fill="#888" style="animation-delay: -0.375s"/>
-  <circle class="spinner" cx="31.7" cy="88.3" r="8" fill="#888" style="animation-delay: -0.25s"/>
-  <circle class="spinner" cx="20" cy="60" r="8" fill="#888" style="animation-delay: -0.125s"/>
-  <circle class="spinner" cx="31.7" cy="31.7" r="8" fill="#888" style="animation-delay: 0s"/>
-</svg>
-`)}`;
+const TRANSPARENT_PLACEHOLDER =
+  "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
 type SlideWithTitle = Slide & {
   title?: string;
@@ -196,6 +182,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         buttonZoom: () => null,
         iconZoomIn: () => null,
         iconZoomOut: () => null,
+        iconLoading: () => <CircularProgress size={28} />,
         iconClose: () => <Close />,
         iconShare: () => <ShareIcon />,
         iconDownload: () => <DownloadIcon />,
@@ -305,7 +292,7 @@ function buildSlidesFromItems(
   }): SlideWithTitle => {
     const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl } = args;
     const isLoading = !displayUrl && !item.previewUrl;
-    const src = displayUrl || item.previewUrl || LOADING_PLACEHOLDER;
+    const src = displayUrl || item.previewUrl || TRANSPARENT_PLACEHOLDER;
 
     return {
       type: "image",
@@ -334,7 +321,7 @@ function buildSlidesFromItems(
     if (!signedUrl) {
       return {
         type: "image",
-        src: poster || LOADING_PLACEHOLDER,
+        src: poster || TRANSPARENT_PLACEHOLDER,
         width: item.width,
         height: item.height,
         title,

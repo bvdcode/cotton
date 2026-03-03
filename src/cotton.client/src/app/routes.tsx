@@ -1,5 +1,5 @@
 import type { RouteConfig } from "./types";
-import { RequireAdmin, RequireAuth, UserRole, useAuth } from "../features/auth";
+import { RequireAdmin, RequireAuth } from "../features/auth";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
 const RedirectSToShare = () => {
@@ -12,7 +12,7 @@ import {
   LoginPage,
   NotFoundPage,
   OnboardingPage,
-  ProfilePage,
+  SettingsPage,
   TrashPage,
   SearchPage,
   SharePage,
@@ -22,7 +22,7 @@ import {
   VerifyEmailPage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Folder, Home, Delete, Search, AdminPanelSettings } from "@mui/icons-material";
+import { Folder, Home, Delete, Search } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
 
@@ -50,9 +50,6 @@ const publicRoutes: RouteConfig[] = [
 ];
 
 export function AppRoutes() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === UserRole.Admin;
-
   const appRoutes: RouteConfig[] = [
     {
       path: "/",
@@ -83,16 +80,6 @@ export function AppRoutes() {
       element: <SearchPage />,
     },
   ];
-
-  if (isAdmin) {
-    appRoutes.push({
-      path: "/admin",
-      icon: <AdminPanelSettings />,
-      protected: true,
-      translationKey: "admin",
-      element: <Navigate to="/admin/users" replace />,
-    });
-  }
 
   return (
     <Routes>
@@ -131,8 +118,9 @@ export function AppRoutes() {
           <Route path="users" element={<AdminUsersPage />} />
         </Route>
 
-        {/* Profile page (accessible from avatar menu) */}
-        <Route path="/profile" element={<ProfilePage />} />
+        {/* Settings page (accessible from avatar menu) */}
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/profile" element={<Navigate to="/settings" replace />} />
 
         {/* Deep link into a specific folder by node id */}
         <Route path="/files/:nodeId" element={<FilesPage />} />
