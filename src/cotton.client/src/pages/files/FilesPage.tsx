@@ -308,6 +308,7 @@ export const FilesPage: React.FC = () => {
     lightboxIndex,
     mediaItems,
     getSignedMediaUrl,
+    getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
   } = useMediaLightbox(sortedFiles);
@@ -324,14 +325,14 @@ export const FilesPage: React.FC = () => {
 
   const goHome = useMemo(() => () => navigate("/files"), [navigate]);
 
-  const handleGoUp = () => {
+  const handleGoUp = React.useCallback(() => {
     if (ancestors.length > 0) {
       const parent = ancestors[ancestors.length - 1];
       navigate(`/files/${parent.id}`);
     } else {
       navigate("/files");
     }
-  };
+  }, [ancestors, navigate]);
 
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
     await downloadFile(nodeFileId, fileName);
@@ -560,6 +561,7 @@ export const FilesPage: React.FC = () => {
           initialIndex={lightboxIndex}
           onClose={() => setLightboxOpen(false)}
           getSignedMediaUrl={getSignedMediaUrl}
+          getDownloadUrl={getDownloadUrl}
         />
       )}
 

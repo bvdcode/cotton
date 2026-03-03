@@ -319,6 +319,7 @@ export const TrashPage: React.FC = () => {
     lightboxIndex,
     mediaItems,
     getSignedMediaUrl,
+    getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
   } = useMediaLightbox(sortedFiles);
@@ -335,14 +336,14 @@ export const TrashPage: React.FC = () => {
 
   const goHome = useMemo(() => () => navigate("/trash"), [navigate]);
 
-  const handleGoUp = () => {
+  const handleGoUp = React.useCallback(() => {
     if (ancestors.length > 0) {
       const parent = ancestors[ancestors.length - 1];
       navigate(`/trash/${parent.id}`);
     } else {
       navigate("/trash");
     }
-  };
+  }, [ancestors, navigate]);
 
   const handleEmptyTrash = React.useCallback(async () => {
     if (!content) return;
@@ -565,6 +566,7 @@ export const TrashPage: React.FC = () => {
           initialIndex={lightboxIndex}
           onClose={() => setLightboxOpen(false)}
           getSignedMediaUrl={getSignedMediaUrl}
+          getDownloadUrl={getDownloadUrl}
         />
       )}
 
