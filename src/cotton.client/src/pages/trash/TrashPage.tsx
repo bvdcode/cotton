@@ -44,6 +44,7 @@ import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
   selectTrashLayoutType,
   selectTrashTilesSize,
+  selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import type { TilesSize } from "../files/types/FileListViewTypes";
@@ -162,6 +163,9 @@ export const TrashPage: React.FC = () => {
   const storedLayoutType = useLocalPreferencesStore(selectTrashLayoutType);
   const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
   const tilesSize = useLocalPreferencesStore(selectTrashTilesSize) as TilesSize;
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
   const setLayoutType = useLocalPreferencesStore((s) => s.setTrashLayoutType);
   const setTilesSize = useLocalPreferencesStore((s) => s.setTrashTilesSize);
 
@@ -567,6 +571,7 @@ export const TrashPage: React.FC = () => {
           onClose={() => setLightboxOpen(false)}
           getSignedMediaUrl={getSignedMediaUrl}
           getDownloadUrl={getDownloadUrl}
+          smoothTransitions={smoothGalleryTransitions}
         />
       )}
 

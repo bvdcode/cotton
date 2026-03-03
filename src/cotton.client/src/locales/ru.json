@@ -159,6 +159,22 @@
         "failed": "Не удалось обновить профиль."
       }
     },
+    "appearance": {
+      "title": "Интерфейс",
+      "description": "Настройки отображения и поведения интерфейса.",
+      "gallerySmoothTransitions": "Плавная прокрутка в галерее",
+      "themeMode": {
+        "label": "Тема",
+        "light": "Светлая",
+        "system": "Системная",
+        "dark": "Тёмная"
+      },
+      "language": {
+        "label": "Язык",
+        "en": "English",
+        "ru": "Русский"
+      }
+    },
     "totp": {
       "enabled": "2FA включена",
       "disabled": "2FA выключена",

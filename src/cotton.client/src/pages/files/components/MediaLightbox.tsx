@@ -67,6 +67,11 @@ export interface MediaLightboxProps {
   onClose: () => void;
   getSignedMediaUrl: (id: string) => Promise<string>;
   /**
+   * If false, disables swipe/fade animations.
+   * Defaults to true.
+   */
+  smoothTransitions?: boolean;
+  /**
    * Optional separate download URL resolver.
    * If not provided, the signed media URL is used for both viewing and downloading.
    */
@@ -83,6 +88,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   initialIndex,
   onClose,
   getSignedMediaUrl,
+  smoothTransitions = true,
   getDownloadUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
@@ -175,6 +181,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       plugins={[Video, Zoom, Slideshow, Thumbnails, Download, Share]}
       slides={slides}
       index={index}
+      animation={{
+        swipe: smoothTransitions ? 120 : 0,
+        fade: smoothTransitions ? 120 : 0,
+        navigation: smoothTransitions ? 120 : 0,
+      }}
       on={{
         view: ({ index: currentIndex }) => {
           setIndex(currentIndex);

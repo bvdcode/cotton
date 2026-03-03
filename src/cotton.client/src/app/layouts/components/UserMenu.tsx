@@ -11,24 +11,17 @@ import {
 } from "@mui/material";
 import {
   Logout,
-  Language,
-  Brightness4,
-  Brightness7,
   Person,
 } from "@mui/icons-material";
 import { useAuth } from "../../../features/auth";
-import { useTheme } from "../../providers";
 import { useTranslation } from "react-i18next";
-import { useState, type MouseEvent, useMemo } from "react";
+import { useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserPreferencesStore } from "../../../shared/store/userPreferencesStore";
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { resolvedMode, setTheme } = useTheme();
-  const { i18n, t } = useTranslation("common");
-  const setUiLanguage = useUserPreferencesStore((s) => s.setUiLanguage);
+  const { t } = useTranslation("common");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isOpen = Boolean(anchorEl);
 
@@ -45,27 +38,8 @@ export const UserMenu = () => {
     await logout();
   };
 
-  const handleToggleTheme = () => {
-    // Toggle based on effective theme, not raw mode, so system works intuitively
-    const next = resolvedMode === "dark" ? "light" : "dark";
-    setTheme(next);
-  };
-
-  const handleToggleLanguage = () => {
-    const next = i18n.language === "ru" ? "en" : "ru";
-    setUiLanguage(next);
-  };
-
   const displayName = user?.displayName || user?.username || "User";
   const avatarLetter = displayName.charAt(0).toUpperCase();
-  const themeLabel = useMemo(
-    () =>
-      resolvedMode === "dark"
-        ? t("userMenu.darkMode")
-        : t("userMenu.lightMode"),
-    [resolvedMode, t],
-  );
-  const ThemeIcon = resolvedMode === "dark" ? Brightness7 : Brightness4;
 
   return (
     <>
@@ -132,20 +106,6 @@ export const UserMenu = () => {
             <Person fontSize="small" />
           </ListItemIcon>
           <ListItemText>{t("userMenu.profile")}</ListItemText>
-        </MenuItem>
-
-        <MenuItem onClick={handleToggleTheme}>
-          <ListItemIcon>
-            <ThemeIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>{themeLabel}</ListItemText>
-        </MenuItem>
-
-        <MenuItem onClick={handleToggleLanguage}>
-          <ListItemIcon>
-            <Language fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>{t("userMenu.changeLanguage")}</ListItemText>
         </MenuItem>
 
         <MenuItem onClick={handleLogout}>
