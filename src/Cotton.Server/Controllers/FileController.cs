@@ -262,7 +262,8 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,
             [FromQuery] string token,
-            [FromQuery] bool download = true)
+            [FromQuery] bool download = true,
+            [FromQuery] bool preview = false)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -285,13 +286,22 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found");
             }
 
-            string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
-            PipelineContext context = new()
+            Stream stream;
+            if (preview && nodeFile.FileManifest.LargeFilePreviewHash != null)
             {
-                FileSizeBytes = nodeFile.FileManifest.SizeBytes,
-                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths()
-            };
-            Stream stream = _storage.GetBlobStream(uids, context);
+                stream = _storage.GetBlobStream([Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash)]);
+            }
+            else
+            {
+                string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
+                PipelineContext context = new()
+                {
+                    FileSizeBytes = nodeFile.FileManifest.SizeBytes,
+                    ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths()
+                };
+                stream = _storage.GetBlobStream(uids, context);
+            }
+
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
             var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");
