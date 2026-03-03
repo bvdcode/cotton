@@ -72,8 +72,6 @@ const InfoRow = ({ label, value }: InfoRowProps) => {
 export const UserInfoCard = ({ user }: UserInfoCardProps) => {
   const { t } = useTranslation(["profile", "common"]);
 
-  const displayName = user.displayName ?? user.username;
-  const avatarLetter = displayName.charAt(0).toUpperCase();
   const totpEnabled = Boolean(user.isTotpEnabled);
   const placeholder = t("common:placeholder");
 
@@ -81,9 +79,10 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
     .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
     .join(" ");
 
-  const title = fullName || displayName;
-
-  const usernameLine = `@${user.username}`;
+  // title is full name if present, otherwise username
+  const title = fullName || user.username;
+  const displayName = title; // for avatar alt
+  const avatarLetter = displayName.charAt(0).toUpperCase();
 
   const birthDateValue = (() => {
     if (!user.birthDate || user.birthDate.trim().length === 0) {
@@ -140,9 +139,11 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             useFlexGap
           >
             <Box flexGrow={1} minWidth={0}>
-              <Typography variant="h5" fontWeight={800}>
-                {title}
-              </Typography>
+              <Box display="flex" alignItems="center" flexWrap="wrap" gap={1}>
+                <Typography variant="h5" fontWeight={800} height="100%">
+                  {title}
+                </Typography>
+              </Box>
             </Box>
 
             <Stack
@@ -177,9 +178,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
               )}
             </Stack>
           </Stack>
-          <Typography variant="body2" color="text.secondary" noWrap>
-            {usernameLine}
-          </Typography>
           {user.email && (
             <Typography variant="body2" color="text.secondary" noWrap>
               {user.email}
