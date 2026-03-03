@@ -32,7 +32,7 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
-            var itemsToProcess = _dbContext.FileManifests
+            var itemsToProcess = await _dbContext.FileManifests
                 .Where(fm => fm.SmallFilePreviewHash == null && fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.NodeFiles)
@@ -40,7 +40,7 @@ namespace Cotton.Server.Jobs
                 .ThenInclude(fmc => fmc.Chunk)
                 .OrderBy(fm => fm.CreatedAt)
                 .Take(MaxItemsPerRun)
-                .ToList();
+                .ToListAsync();
 
             if (itemsToProcess.Count > 0)
             {
@@ -113,6 +113,7 @@ namespace Cotton.Server.Jobs
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
                     item.PreviewGenerationError = ex.Message;
+                    await _dbContext.SaveChangesAsync();
                 }
 
                 if (_perf.IsUploading())
@@ -140,7 +141,6 @@ namespace Cotton.Server.Jobs
                     SizeBytes = sizeBytes,
                     CompressionAlgorithm = CompressionProcessor.Algorithm
                 });
-                await _dbContext.SaveChangesAsync();
             }
         }
     }
