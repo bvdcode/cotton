@@ -9,6 +9,7 @@ export interface MediaHandlers {
   lightboxIndex: number;
   mediaItems: MediaItem[];
   getSignedMediaUrl: (fileId: string) => Promise<string>;
+  getDownloadUrl: (fileId: string) => Promise<string>;
   handleMediaClick: (fileId: string) => void;
   setLightboxOpen: (open: boolean) => void;
   setLightboxIndex: (index: number) => void;
@@ -89,8 +90,14 @@ export const useMediaLightbox = (
       });
   }, [sortedFiles]);
 
-  // Get signed media URL for original file
+  // Get signed media URL for gallery viewing - uses lightweight server-side preview
   const getSignedMediaUrl = async (fileId: string): Promise<string> => {
+    const url = await filesApi.getDownloadLink(fileId, 60 * 24);
+    return `${url}&preview=true`;
+  };
+
+  // Get download URL for the actual download button - full original file
+  const getDownloadUrl = async (fileId: string): Promise<string> => {
     return await filesApi.getDownloadLink(fileId, 60 * 24);
   };
 
@@ -122,6 +129,7 @@ export const useMediaLightbox = (
     lightboxIndex,
     mediaItems,
     getSignedMediaUrl,
+    getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
     setLightboxIndex,
