@@ -20,6 +20,10 @@ import {
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
+import {
+  selectGallerySmoothTransitions,
+  useLocalPreferencesStore,
+} from "../../shared/store/localPreferencesStore";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -40,6 +44,10 @@ export const SearchPage: React.FC = () => {
   }, [ensureHomeData]);
 
   const layoutId = rootNode?.layoutId;
+
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
 
   const searchState = useLayoutSearch({
     layoutId,
@@ -241,6 +249,7 @@ export const SearchPage: React.FC = () => {
           items={mediaItems}
           getSignedMediaUrl={getSignedMediaUrl}
           getDownloadUrl={getDownloadUrl}
+          smoothTransitions={smoothGalleryTransitions}
           onClose={() => setLightboxOpen(false)}
         />
       )}

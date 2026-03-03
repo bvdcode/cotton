@@ -2,6 +2,7 @@ import { Box, Stack } from "@mui/material";
 import { useAuth } from "../../features/auth";
 import {
   UserInfoCard,
+  AppearanceSettingsCard,
   TotpSettingsCard,
   SessionsCard,
   WebDavTokenCard,
@@ -47,6 +48,7 @@ export const ProfilePage = () => {
     >
       <Stack spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%", maxWidth: 800 }}>
         <UserInfoCard user={user} />
+        <AppearanceSettingsCard />
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
         <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />

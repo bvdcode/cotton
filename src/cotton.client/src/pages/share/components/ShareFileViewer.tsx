@@ -15,6 +15,10 @@ import { CodeEditor } from "../../files/components/preview/editors/CodeEditor";
 import { MarkdownEditor } from "../../files/components/preview/editors/MarkdownEditor";
 import { PlainTextEditor } from "../../files/components/preview/editors/PlainTextEditor";
 import { detectMonacoLanguageFromFileName } from "../../../shared/utils/languageDetection";
+import {
+  selectGallerySmoothTransitions,
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
 
 function detectMonacoLanguageFromContentType(
   contentType: string | null,
@@ -75,6 +79,9 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   contentLength,
 }) => {
   const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
 
   const fileTypeInfo = React.useMemo(() => {
     const name = fileName ?? "";
@@ -111,6 +118,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
         onClose={() => setLightboxOpen(false)}
         getSignedMediaUrl={async () => inlineUrl}
         getDownloadUrl={downloadUrl ? async () => downloadUrl : undefined}
+        smoothTransitions={smoothGalleryTransitions}
       />
 
       {!lightboxOpen && (
