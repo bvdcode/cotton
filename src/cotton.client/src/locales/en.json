@@ -83,10 +83,16 @@
     },
     "userMenu": {
       "profile": "Profile",
+      "settings": "Settings",
+      "admin": "Admin",
+      "user": "User",
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
       "logout": "Logout"
+    },
+    "app": {
+      "logoAlt": "Cotton logo"
     },
     "title": "Cotton Cloud",
     "subtitle": "Setup Wizard",
@@ -898,6 +904,7 @@
     "files": "Files",
     "trash": "Trash",
     "profile": "Profile",
+    "settings": "Settings",
     "admin": "Admin"
   },
   "resetPassword": {
@@ -919,7 +926,7 @@
     "verifying": "Verifying your email...",
     "success": "Your email has been verified successfully!",
     "goToLogin": "Go to login",
-    "goToProfile": "Go to profile",
+    "goToSettings": "Go to settings",
     "errors": {
       "invalidToken": "The verification link is invalid or has expired.",
       "failed": "Failed to verify email. Please try again."

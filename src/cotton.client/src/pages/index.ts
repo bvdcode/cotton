@@ -3,7 +3,7 @@ export { NotFoundPage } from "./not-found/NotFoundPage";
 export { OnboardingPage } from "./onboarding/OnboardingPage";
 export { HomePage } from "./home";
 export { FilesPage } from "./files";
-export { ProfilePage } from "./profile";
+export { SettingsPage } from "./profile";
 export { TrashPage } from "./trash";
 export { SearchPage } from "./search/SearchPage";
 export { SharePage } from "./share/SharePage";

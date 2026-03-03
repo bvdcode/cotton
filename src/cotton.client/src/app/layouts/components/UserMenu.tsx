@@ -12,8 +12,9 @@ import {
 import {
   Logout,
   Person,
+  AdminPanelSettings,
 } from "@mui/icons-material";
-import { useAuth } from "../../../features/auth";
+import { UserRole, useAuth } from "../../../features/auth";
 import { useTranslation } from "react-i18next";
 import { useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -38,8 +39,19 @@ export const UserMenu = () => {
     await logout();
   };
 
-  const displayName = user?.displayName || user?.username || "User";
+  const fullName = [user?.firstName, user?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const displayName =
+    fullName ||
+    user?.displayName ||
+    user?.username ||
+    user?.email ||
+    t("userMenu.user");
+  const caption = user?.username ? `@${user.username}` : user?.email || "";
   const avatarLetter = displayName.charAt(0).toUpperCase();
+  const isAdmin = user?.role === UserRole.Admin;
 
   return (
     <>
@@ -59,7 +71,6 @@ export const UserMenu = () => {
           sx={{
             width: 40,
             height: 40,
-            bgcolor: "primary.main",
           }}
         >
           {!user?.pictureUrl && avatarLetter}
@@ -83,13 +94,13 @@ export const UserMenu = () => {
           },
         }}
       >
-        <Box sx={{ px: 2, py: 1.5 }}>
+        <Box px={2} py={1.5}>
           <Typography variant="subtitle2" noWrap>
             {displayName}
           </Typography>
-          {user?.username && user.username !== displayName && (
+          {caption && caption !== displayName && (
             <Typography variant="body2" color="text.secondary" noWrap>
-              @{user.username}
+              {caption}
             </Typography>
           )}
         </Box>
@@ -99,14 +110,28 @@ export const UserMenu = () => {
         <MenuItem
           onClick={() => {
             handleClose();
-            navigate("/profile");
+            navigate("/settings");
           }}
         >
           <ListItemIcon>
             <Person fontSize="small" />
           </ListItemIcon>
-          <ListItemText>{t("userMenu.profile")}</ListItemText>
+          <ListItemText>{t("userMenu.settings")}</ListItemText>
         </MenuItem>
+
+        {isAdmin && (
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              navigate("/admin/users");
+            }}
+          >
+            <ListItemIcon>
+              <AdminPanelSettings fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t("userMenu.admin")}</ListItemText>
+          </MenuItem>
+        )}
 
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>

@@ -12,17 +12,20 @@ import {
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
-export const ProfilePage = () => {
+export const SettingsPage = () => {
   const { user, setAuthenticated } = useAuth();
+  const { t: tCommon } = useTranslation("common");
+  const { t: tRoutes } = useTranslation("routes");
 
   useEffect(() => {
-    document.title = "Cotton - Profile";
+    document.title = `${tCommon("title")} - ${tRoutes("settings")}`;
 
     return () => {
-      document.title = "Cotton";
+      document.title = tCommon("title");
     };
-  }, []);
+  }, [tCommon, tRoutes]);
 
   if (!user) {
     return null;
@@ -46,7 +49,7 @@ export const ProfilePage = () => {
       display="flex"
       justifyContent="center"
     >
-      <Stack spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%", maxWidth: 800 }}>
+      <Stack spacing={{ xs: 2, sm: 3 }} width="100%" maxWidth={800}>
         <UserInfoCard user={user} />
         <AppearanceSettingsCard />
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
