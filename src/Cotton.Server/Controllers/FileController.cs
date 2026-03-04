@@ -286,22 +286,34 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("File not found");
             }
 
-            Stream stream;
             if (preview && nodeFile.FileManifest.LargeFilePreviewHash != null)
             {
-                stream = _storage.GetBlobStream([Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash)]);
-            }
-            else
-            {
-                string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
-                PipelineContext context = new()
+                string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash);
+                var previewStream = _storage.GetBlobStream([previewHashHex]);
+                string etag = $"\"sha256-{previewHashHex}\"";
+                var etagHeader = new EntityTagHeaderValue(etag);
+                if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var inmValues))
                 {
-                    FileSizeBytes = nodeFile.FileManifest.SizeBytes,
-                    ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths()
-                };
-                stream = _storage.GetBlobStream(uids, context);
+                    var clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
+                    if (clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true)))
+                    {
+                        Response.Headers.ETag = etagHeader.ToString();
+                        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                        return StatusCode(StatusCodes.Status304NotModified);
+                    }
+                }
+                Response.Headers.ETag = etag;
+                Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                return File(previewStream, "image/webp");
             }
 
+            string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();
+            PipelineContext context = new()
+            {
+                FileSizeBytes = nodeFile.FileManifest.SizeBytes,
+                ChunkLengths = nodeFile.FileManifest.FileManifestChunks.GetChunkLengths()
+            };
+            Stream stream = _storage.GetBlobStream(uids, context);
             Response.Headers.ContentEncoding = "identity";
             Response.Headers.CacheControl = "private, no-store, no-transform";
             var entityTag = EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(nodeFile.FileManifest.ProposedContentHash)}\"");

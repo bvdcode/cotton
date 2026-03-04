@@ -687,10 +687,18 @@
       "exit": "Выйти из выделения",
       "selectAll": "Выделить все",
       "deselectAll": "Снять выделение",
+      "deleteSelected": "Удалить выбранные",
       "count_one": "{{count}} элемент выбран",
       "count_few": "{{count}} элемента выбрано",
       "count_many": "{{count}} элементов выбрано",
       "count_other": "{{count}} элементов выбрано"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "Удалить {{count}} элемент?",
+      "confirmTitle_few": "Удалить {{count}} элемента?",
+      "confirmTitle_many": "Удалить {{count}} элементов?",
+      "confirmTitle_other": "Удалить {{count}} элементов?",
+      "confirmDescription": "Выбранные элементы будут перемещены в корзину, и их можно будет восстановить позже."
     },
     "conflicts": {
       "title": "Файл уже существует",
