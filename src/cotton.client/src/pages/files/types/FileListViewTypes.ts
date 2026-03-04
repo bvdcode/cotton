@@ -20,6 +20,11 @@ export interface FileTile {
   containerPath?: string;
 }
 
+export interface GoToFileLocationTarget {
+  nodeId?: string;
+  containerPath?: string;
+}
+
 /**
  * Union type for all tile types
  */
@@ -116,7 +121,7 @@ export interface IFileListView {
    * Optional handler for navigating to a file's containing folder.
    * Used by Search results to jump to the node where a file is located.
    */
-  onGoToFileLocation?: (containerPath: string) => void;
+  onGoToFileLocation?: (target: GoToFileLocationTarget) => void;
 
   /**
    * Optional list-view column flex configuration.
