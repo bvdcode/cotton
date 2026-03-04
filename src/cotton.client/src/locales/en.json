@@ -697,8 +697,14 @@
       "exit": "Exit selection",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
+      "deleteSelected": "Delete selected",
       "count_one": "{{count}} item selected",
       "count_other": "{{count}} items selected"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "Delete {{count}} item?",
+      "confirmTitle_other": "Delete {{count}} items?",
+      "confirmDescription": "Selected items will be moved to Trash and can be restored later."
     },
     "conflicts": {
       "title": "File already exists",
