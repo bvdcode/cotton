@@ -10,7 +10,6 @@ using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
-using EasyExtensions.Abstractions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -198,14 +197,14 @@ namespace Cotton.Server.Handlers.Files
                 """;
         }
 
-                private static string BuildFolderRedirectHtml(string baseAppUrl, string token, string folderName)
-                {
-                        string canonicalUrl = $"{baseAppUrl}/s/{token}";
-                        string appShareUrl = $"{baseAppUrl}/share/{token}";
-                        string previewUrl = $"{baseAppUrl}/assets/images/social-preview.jpg";
-                    const string description = "Shared folder via Cotton Cloud";
+        private static string BuildFolderRedirectHtml(string baseAppUrl, string token, string folderName)
+        {
+            string canonicalUrl = $"{baseAppUrl}/s/{token}";
+            string appShareUrl = $"{baseAppUrl}/share/{token}";
+            string previewUrl = $"{baseAppUrl}/assets/images/social-preview.jpg";
+            const string description = "Shared folder via Cotton Cloud";
 
-                        return $"""
+            return $"""
                                 <!doctype html>
                                 <html lang=\"en\">
                                 <head>
@@ -235,7 +234,7 @@ namespace Cotton.Server.Handlers.Files
                                 </body>
                                 </html>
                                 """;
-                }
+        }
 
         private async Task<ShareFileResult> CreateStreamResultAsync(
             DownloadToken downloadToken,

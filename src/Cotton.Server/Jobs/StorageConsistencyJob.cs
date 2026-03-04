@@ -4,7 +4,6 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
-using Cotton.Storage.Extensions;
 using Cotton.Storage.Processors;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
@@ -78,11 +77,11 @@ namespace Cotton.Server.Jobs
                     var stillExists = await _storage.ExistsAsync(uid);
                     if (stillExists)
                     {
-                        _logger.LogWarning("Chunk {Uid} not found in initial storage key scan, but exists on direct check. Skipping as missing.", uid);
+                        _logger.LogWarning("Chunk {Uid} was missing from initial storage listing but exists on double-check - skipping.", uid);
                         continue;
                     }
 
-                    _logger.LogWarning("Chunk {Uid} exists in DB but missing from storage.", uid);
+                    _logger.LogWarning("Chunk {Uid} exists in DB but missing from storage - handling as missing.", uid);
                     await HandleMissingChunkAsync(chunkHash, ct);
                     missingCount++;
                 }
