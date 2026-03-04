@@ -132,8 +132,8 @@ namespace Cotton.Server.Jobs
 
         private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
         {
-            bool exists = await _dbContext.Chunks.AnyAsync(c => c.Hash == hash);
-            if (!exists)
+            var existing = await _dbContext.Chunks.FindAsync([(object?)hash]);
+            if (existing == null)
             {
                 _dbContext.Chunks.Add(new Chunk
                 {
