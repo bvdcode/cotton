@@ -87,6 +87,7 @@ export const TilesView: React.FC<IFileListView> = ({
   tiles,
   folderOperations,
   fileOperations,
+  readOnly = false,
   isCreatingFolder,
   newFolderName,
   onNewFolderNameChange,
@@ -237,6 +238,7 @@ export const TilesView: React.FC<IFileListView> = ({
                       tile={tile}
                       folderOperations={folderOperations}
                       fileOperations={fileOperations}
+                      readOnly={readOnly}
                       fileNamePlaceholder={fileNamePlaceholder}
                       selectionMode={selectionMode}
                       selected={selectedIds?.has(tileId)}
@@ -266,6 +268,7 @@ export const TilesView: React.FC<IFileListView> = ({
                 tile={tile}
                 folderOperations={folderOperations}
                 fileOperations={fileOperations}
+                readOnly={readOnly}
                 fileNamePlaceholder={fileNamePlaceholder}
                 selectionMode={selectionMode}
                 selected={selectedIds?.has(tileId)}

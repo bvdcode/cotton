@@ -203,6 +203,7 @@ namespace Cotton.Server.Handlers.Files
                         string canonicalUrl = $"{baseAppUrl}/s/{token}";
                         string appShareUrl = $"{baseAppUrl}/share/{token}";
                         string previewUrl = $"{baseAppUrl}/assets/images/social-preview.jpg";
+                    const string description = "Shared folder via Cotton Cloud";
 
                         return $"""
                                 <!doctype html>
@@ -210,15 +211,18 @@ namespace Cotton.Server.Handlers.Files
                                 <head>
                                     <meta charset=\"utf-8\">
                                     <title>{WebUtility.HtmlEncode(folderName)} - Cotton Cloud</title>
+                                    <meta name=\"description\" content=\"{WebUtility.HtmlEncode(description)}\" />
                                     <meta http-equiv=\"refresh\" content=\"0;url={WebUtility.HtmlEncode(appShareUrl)}\" />
                                     <link rel=\"canonical\" href=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
                                     <meta property=\"og:site_name\" content=\"Cotton Cloud\" />
                                     <meta property=\"og:title\" content=\"{WebUtility.HtmlEncode(folderName)}\" />
-                                    <meta property=\"og:description\" content=\"Shared folder via Cotton Cloud\" />
+                                    <meta property=\"og:description\" content=\"{WebUtility.HtmlEncode(description)}\" />
                                     <meta property=\"og:type\" content=\"website\" />
                                     <meta property=\"og:url\" content=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
                                     <meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />
                                     <meta name=\"twitter:card\" content=\"summary_large_image\" />
+                                    <meta name=\"twitter:title\" content=\"{WebUtility.HtmlEncode(folderName)}\" />
+                                    <meta name=\"twitter:description\" content=\"{WebUtility.HtmlEncode(description)}\" />
                                     <meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />
                                 </head>
                                 <body>

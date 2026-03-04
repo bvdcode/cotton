@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Box, Button, Typography } from "@mui/material";
+import { Avatar, Box, Button, Typography } from "@mui/material";
 import { Check, Download, Share as ShareIcon } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
@@ -50,6 +50,11 @@ export const ShareHeaderBar: React.FC<ShareHeaderBarProps> = ({
         flex={1}
         overflow="hidden"
       >
+        <Avatar
+          src="/assets/icons/icon.svg"
+          alt={t("app.logoAlt", { ns: "common" })}
+          sx={{ width: 26, height: 26 }}
+        />
         <Typography variant="subtitle1" noWrap sx={{ minWidth: 0 }}>
           {fileName ?? title}
           {contentLength !== null && (
