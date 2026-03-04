@@ -49,10 +49,9 @@ namespace Cotton.Server.Handlers.Nodes
             // Resolve the set of parent IDs whose children should be returned.
             // depth == 0: direct children of parentNode (default).
             // depth == N: skip N intermediate levels and return their descendants.
-            // Materialize each level into a list to prevent EF Core from building a
-            // deeply nested IQueryable expression, which causes a stack overflow when
-            // the ExpressionTreeFuncletizer tries to inspect it.
-            List<Guid> currentParentIds = new() { parentNode.Id };
+            // We materialize each level into a list to avoid deeply nested IQueryable<T>
+            // expression trees that cause EF Core's ExpressionTreeFuncletizer to stack-overflow.
+            List<Guid> currentParentIds = [parentNode.Id];
 
             for (int i = 0; i < request.Depth; i++)
             {
@@ -68,7 +67,6 @@ namespace Cotton.Server.Handlers.Nodes
 
                 if (currentParentIds.Count == 0)
                 {
-                    // no descendants at this depth, return empty result early
                     return new()
                     {
                         Nodes = [],
