@@ -1,4 +1,4 @@
-import { Delete, Edit } from "@mui/icons-material";
+import { Delete, Edit, Share } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { RenamableItemCard } from "./RenamableItemCard";
@@ -13,6 +13,7 @@ interface FolderCardProps {
   onCancelRename: () => void;
   onStartRename: () => void;
   onDelete: () => void;
+  onShare: () => void;
   onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
 }
@@ -26,6 +27,7 @@ export const FolderCard = ({
   onCancelRename,
   onStartRename,
   onDelete,
+  onShare,
   onClick,
   variant = "default",
 }: FolderCardProps) => {
@@ -40,6 +42,11 @@ export const FolderCard = ({
       onClick={onClick}
       variant={variant}
       actions={[
+        {
+          icon: <Share />,
+          onClick: onShare,
+          tooltip: t("common:actions.share"),
+        },
         {
           icon: <Edit />,
           onClick: onStartRename,

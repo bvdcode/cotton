@@ -110,4 +110,15 @@ export const nodesApi = {
     );
     return response.data;
   },
+
+  getShareLink: async (
+    nodeId: Guid,
+    expireAfterMinutes = 1440,
+  ): Promise<string> => {
+    const response = await httpClient.get<string>(
+      `/layouts/nodes/${nodeId}/share-link`,
+      { params: { expireAfterMinutes } },
+    );
+    return response.data;
+  },
 };
