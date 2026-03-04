@@ -49,21 +49,36 @@ namespace Cotton.Server.Handlers.Nodes
             // Resolve the set of parent IDs whose children should be returned.
             // depth == 0: direct children of parentNode (default).
             // depth == N: skip N intermediate levels and return their descendants.
-            IQueryable<Guid> parentIds = _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == parentNode.Id)
-                .Select(x => x.Id);
+            // Materialize each level into a list to prevent EF Core from building a
+            // deeply nested IQueryable expression, which causes a stack overflow when
+            // the ExpressionTreeFuncletizer tries to inspect it.
+            List<Guid> currentParentIds = new() { parentNode.Id };
 
             for (int i = 0; i < request.Depth; i++)
             {
-                parentIds = _dbContext.Nodes
+                currentParentIds = await _dbContext.Nodes
                     .AsNoTracking()
                     .Where(x => x.ParentId != null
-                        && parentIds.Contains(x.ParentId.Value)
+                        && currentParentIds.Contains(x.ParentId.Value)
                         && x.OwnerId == request.UserId
                         && x.LayoutId == layout.Id
                         && x.Type == request.NodeType)
-                    .Select(x => x.Id);
+                    .Select(x => x.Id)
+                    .ToListAsync(cancellationToken: ct);
+
+                if (currentParentIds.Count == 0)
+                {
+                    // no descendants at this depth, return empty result early
+                    return new()
+                    {
+                        Nodes = [],
+                        Files = [],
+                        Id = request.NodeId,
+                        CreatedAt = parentNode.CreatedAt,
+                        UpdatedAt = parentNode.UpdatedAt,
+                        TotalCount = 0,
+                    };
+                }
             }
 
             int skip = (request.Page - 1) * request.PageSize;
@@ -71,7 +86,7 @@ namespace Cotton.Server.Handlers.Nodes
                 .AsNoTracking()
                 .OrderBy(x => x.NameKey)
                 .Where(x => x.ParentId != null
-                    && parentIds.Contains(x.ParentId.Value)
+                    && currentParentIds.Contains(x.ParentId.Value)
                     && x.OwnerId == request.UserId
                     && x.LayoutId == layout.Id
                     && x.Type == request.NodeType)
@@ -79,7 +94,7 @@ namespace Cotton.Server.Handlers.Nodes
 
             var filesBaseQuery = _dbContext.NodeFiles
                 .AsNoTracking()
-                .Where(x => parentIds.Contains(x.NodeId));
+                .Where(x => currentParentIds.Contains(x.NodeId));
 
             int nodesCount = await nodesQuery.CountAsync(cancellationToken: ct);
             int filesCount = await filesBaseQuery.CountAsync(cancellationToken: ct);
