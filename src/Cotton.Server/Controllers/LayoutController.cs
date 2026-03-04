@@ -297,10 +297,11 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromQuery] NodeType nodeType = NodeType.Default,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 100)
+            [FromQuery] int pageSize = 100,
+            [FromQuery] int depth = 0)
         {
             Guid userId = User.GetUserId();
-            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize);
+            GetChildrenQuery query = new(userId, nodeId, nodeType, page, pageSize, depth);
             var result = await _mediator.Send(query);
             Response.Headers.Append("X-Total-Count", result.TotalCount.ToString());
             return Ok(result);

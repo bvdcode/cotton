@@ -65,31 +65,58 @@ function getTrashViewMode(args: {
 
 async function deleteAllTrashItems(args: {
   content: NodeContentDto;
+  isTrashRoot: boolean;
   onProgress: (current: number, total: number) => void;
 }): Promise<void> {
-  const { content, onProgress } = args;
-  const totalItems =
-    (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+  const { content, isTrashRoot, onProgress } = args;
 
-  let deleted = 0;
-
-  for (const folder of content.nodes ?? []) {
-    try {
-      await nodesApi.deleteNode(folder.id, true);
-      deleted += 1;
-      onProgress(deleted, totalItems);
-    } catch (err) {
-      console.error(`Failed to delete folder ${folder.id}:`, err);
+  if (isTrashRoot) {
+    // Collect unique wrapper node IDs from the unwrapped content.
+    // For nodes: parentId is the wrapper; for files: nodeId is the wrapper.
+    const wrapperIds = new Set<string>();
+    for (const node of content.nodes ?? []) {
+      if (node.parentId) wrapperIds.add(node.parentId);
     }
-  }
+    for (const file of content.files ?? []) {
+      if (file.nodeId) wrapperIds.add(file.nodeId);
+    }
 
-  for (const file of content.files ?? []) {
-    try {
-      await filesApi.deleteFile(file.id, true);
-      deleted += 1;
-      onProgress(deleted, totalItems);
-    } catch (err) {
-      console.error(`Failed to delete file ${file.id}:`, err);
+    const wrapperArray = [...wrapperIds];
+    let deleted = 0;
+
+    for (const wrapperId of wrapperArray) {
+      try {
+        await nodesApi.deleteNode(wrapperId, true);
+        deleted += 1;
+        onProgress(deleted, wrapperArray.length);
+      } catch (err) {
+        console.error(`Failed to delete trash wrapper ${wrapperId}:`, err);
+      }
+    }
+  } else {
+    const totalItems =
+      (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+
+    let deleted = 0;
+
+    for (const folder of content.nodes ?? []) {
+      try {
+        await nodesApi.deleteNode(folder.id, true);
+        deleted += 1;
+        onProgress(deleted, totalItems);
+      } catch (err) {
+        console.error(`Failed to delete folder ${folder.id}:`, err);
+      }
+    }
+
+    for (const file of content.files ?? []) {
+      try {
+        await filesApi.deleteFile(file.id, true);
+        deleted += 1;
+        onProgress(deleted, totalItems);
+      } catch (err) {
+        console.error(`Failed to delete file ${file.id}:`, err);
+      }
     }
   }
 }
@@ -231,6 +258,7 @@ export const TrashPage: React.FC = () => {
           nodeType: "trash",
           page: page + 1,
           pageSize,
+          depth: !routeNodeId ? 1 : 0,
         });
         setListContent(response.content);
         setListTotalCount(response.totalCount);
@@ -241,7 +269,7 @@ export const TrashPage: React.FC = () => {
         setListLoading(false);
       }
     },
-    [nodeId, t],
+    [nodeId, routeNodeId, t],
   );
 
   useEffect(() => {
@@ -314,8 +342,29 @@ export const TrashPage: React.FC = () => {
 
   const { sortedFiles, tiles } = useContentTiles(effectiveContent);
 
-  const folderOps = useTrashFolderOperations(nodeId, refreshContent);
-  const fileOps = useTrashFileOperations(refreshContent);
+  const isTrashRoot = !routeNodeId;
+
+  const resolveWrapperNodeId = React.useCallback(
+    (itemId: string): string | null => {
+      if (!isTrashRoot || !effectiveContent) return null;
+      const node = effectiveContent.nodes?.find((n) => n.id === itemId);
+      if (node?.parentId) return node.parentId;
+      const file = effectiveContent.files?.find((f) => f.id === itemId);
+      if (file?.nodeId) return file.nodeId;
+      return null;
+    },
+    [isTrashRoot, effectiveContent],
+  );
+
+  const folderOps = useTrashFolderOperations(
+    nodeId,
+    refreshContent,
+    isTrashRoot ? resolveWrapperNodeId : undefined,
+  );
+  const fileOps = useTrashFileOperations(
+    refreshContent,
+    isTrashRoot ? resolveWrapperNodeId : undefined,
+  );
   const { previewState, openPreview, closePreview } = useFilePreview();
 
   const {
@@ -372,6 +421,7 @@ export const TrashPage: React.FC = () => {
 
       await deleteAllTrashItems({
         content,
+        isTrashRoot,
         onProgress: (current, total) =>
           setEmptyTrashProgress({ current, total }),
       });
@@ -381,7 +431,7 @@ export const TrashPage: React.FC = () => {
     } catch {
       setEmptyingTrash(false);
     }
-  }, [confirm, content, refreshContent, t]);
+  }, [confirm, content, isTrashRoot, refreshContent, t]);
 
   const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
     await downloadFile(nodeFileId, fileName);
