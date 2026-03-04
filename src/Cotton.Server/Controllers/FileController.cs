@@ -6,7 +6,6 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
-using Cotton.Server.Handlers.Folders;
 using Cotton.Server.Hubs;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
@@ -51,13 +50,6 @@ namespace Cotton.Server.Controllers
             [FromQuery] string? view = null)
         {
             var result = await _mediator.Send(new ShareFileQuery(token, view, Request));
-
-            // If the file share token was not found, try folder share tokens.
-            if (result.Kind == "notFound")
-            {
-                var folderResult = await _mediator.Send(new ShareFolderQuery(token, view, Request));
-                return HandleFolderShareResult(folderResult);
-            }
 
             switch (result.Kind)
             {
@@ -357,13 +349,5 @@ namespace Cotton.Server.Controllers
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
             return Ok();
         }
-
-        private IActionResult HandleFolderShareResult(ShareFolderResult result) => result.Kind switch
-        {
-            "badRequest" => this.ApiBadRequest(result.ErrorMessage ?? "Bad request"),
-            "notFound" => this.ApiNotFound(result.ErrorMessage ?? "Folder not found"),
-            "html" => Content(result.HtmlContent ?? string.Empty, "text/html; charset=utf-8"),
-            _ => this.ApiBadRequest("Invalid share response"),
-        };
     }
 }

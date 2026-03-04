@@ -71,7 +71,6 @@ interface ColumnOptions {
     onConfirmRename: () => void;
     onCancelRename: () => void;
     onStartRename: (id: string, name: string) => void;
-    onShare: (id: string, name: string) => void;
     onDelete: (id: string, name: string) => void;
   };
   fileOperations: {
@@ -387,16 +386,6 @@ export const createActionsColumn = (
             justifyContent: "flex-end",
           }}
         >
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              options.folderOperations.onShare(row.id, row.name);
-            }}
-            title={options.labels.share}
-          >
-            <Share fontSize="small" />
-          </IconButton>
           <IconButton
             size="small"
             onClick={(e) => {

@@ -86,12 +86,9 @@
   },
   "share": {
     "title": "Доступ по ссылке",
-    "folderTitle": "Общая папка",
     "loading": "Загрузка...",
     "unsupported": "Для этого типа файла предпросмотр недоступен.",
     "message": "Откройте \"{{name}}\" в Cotton Cloud",
-    "folderMessage": "Откройте папку \"{{name}}\" в Cotton Cloud",
-    "folderEmpty": "Эта папка пуста.",
     "toasts": {
       "copied": "Ссылка скопирована",
       "shared": "Ссылка отправлена"
@@ -727,7 +724,6 @@
       "copied": "Ссылка скопирована: {{name}}",
       "shared": "Поделиться: {{name}}",
       "message": "Посмотрите «{{name}}» на Cotton Cloud",
-      "folderMessage": "Откройте папку «{{name}}» в Cotton Cloud",
       "errors": {
         "link": "Не удалось создать ссылку.",
         "token": "Не удалось получить токен для ссылки.",

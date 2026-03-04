@@ -50,7 +50,6 @@ export interface FolderOperations {
   onCancelRename: () => void;
   onStartRename: (folderId: string, name: string) => void;
   onDelete: (folderId: string, name: string) => void;
-  onShare: (folderId: string, name: string) => void;
   onClick: (folderId: string) => void;
 }
 

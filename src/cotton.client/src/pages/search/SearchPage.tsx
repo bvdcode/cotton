@@ -20,7 +20,6 @@ import {
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
-import { shareFolder } from "../../shared/utils/shareFolder";
 import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
@@ -99,13 +98,6 @@ export const SearchPage: React.FC = () => {
     [t],
   );
 
-  const handleShareFolder = useCallback(
-    async (nodeId: string, folderName: string) => {
-      await shareFolder(nodeId, folderName, t, setShareToast);
-    },
-    [t],
-  );
-
   const handleFileClick = useCallback(
     (fileId: string, fileName: string, fileSizeBytes?: number) => {
       const opened = openPreview(fileId, fileName, fileSizeBytes);
@@ -152,13 +144,10 @@ export const SearchPage: React.FC = () => {
 
   const folderOperations = useMemo(
     () =>
-      buildFolderOperations(rawFolderOps, {
-        onFolderClick: (folderId) => {
-          handleFolderClick(folderId);
-        },
-        onShare: handleShareFolder,
+      buildFolderOperations(rawFolderOps, (folderId) => {
+        handleFolderClick(folderId);
       }),
-    [rawFolderOps, handleFolderClick, handleShareFolder],
+    [rawFolderOps, handleFolderClick],
   );
 
   const fileOperations = useMemo(

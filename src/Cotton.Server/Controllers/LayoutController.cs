@@ -14,7 +14,6 @@ using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
@@ -322,47 +321,6 @@ namespace Cotton.Server.Controllers
             }
 
             return Ok(currentNode.Adapt<NodeDto>());
-        }
-
-        private const int DefaultShareTokenLength = 16;
-
-        /// <summary>
-        /// Generate a share link for a folder (node).
-        /// </summary>
-        [Authorize]
-        [HttpGet("nodes/{nodeId:guid}/share-link")]
-        public async Task<IActionResult> GetNodeShareLink(
-            [FromRoute] Guid nodeId,
-            [FromQuery] int expireAfterMinutes = 1440)
-        {
-            const int maxExpireMinutes = 60 * 24 * 365; // 1 year
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
-
-            Guid userId = User.GetUserId();
-            var node = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
-                .SingleOrDefaultAsync();
-
-            if (node is null)
-            {
-                return CottonResult.NotFound("Node not found.");
-            }
-
-            NodeShareToken newToken = new()
-            {
-                Name = node.Name,
-                NodeId = node.Id,
-                CreatedByUserId = userId,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = StringHelpers.CreateRandomString(DefaultShareTokenLength),
-            };
-
-            await _dbContext.NodeShareTokens.AddAsync(newToken);
-            await _dbContext.SaveChangesAsync();
-
-            return Ok(newToken.Token);
         }
     }
 }
