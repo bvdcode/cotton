@@ -5,19 +5,26 @@ import {
   Breadcrumbs,
   IconButton,
   Link,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Typography,
 } from "@mui/material";
-import { Download, Folder, InsertDriveFile } from "@mui/icons-material";
+import { ViewList, ViewModule } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
+import { MediaLightbox } from "../../files/components";
+import { FileListViewFactory } from "../../files/components/views/FileListViewFactory";
+import type {
+  FileOperations,
+  FolderOperations,
+  TilesSize,
+} from "../../files/types/FileListViewTypes";
+import { getFileIcon } from "../../files/utils/icons";
+import { isImageFile, isVideoFile } from "../../files/utils/fileTypes";
+import { useContentTiles } from "../../../shared/hooks/useContentTiles";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
-import type { NodeContentDto } from "../../../shared/api/nodesApi";
 import type { Guid } from "../../../shared/api/layoutsApi";
+import type { SharedNodeContentDto } from "../../../shared/api/sharedFoldersApi";
+import type { MediaItem } from "../../files/components";
 
 interface BreadcrumbNode {
   id: Guid;
@@ -37,9 +44,13 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
 }) => {
   const { t } = useTranslation(["share", "common"]);
   const [breadcrumbs, setBreadcrumbs] = React.useState<BreadcrumbNode[]>([]);
-  const [content, setContent] = React.useState<NodeContentDto | null>(null);
+  const [content, setContent] = React.useState<SharedNodeContentDto | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [layoutType, setLayoutType] = React.useState<InterfaceLayoutType>(InterfaceLayoutType.Tiles);
+  const [tilesSize, setTilesSize] = React.useState<TilesSize>("medium");
+  const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
+  const [lightboxIndex, setLightboxIndex] = React.useState<number>(0);
 
   React.useEffect(() => {
     setBreadcrumbs([{ id: rootNodeId, name: rootName }]);
@@ -92,13 +103,132 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
   }, []);
 
-  const openInlineFile = React.useCallback(
-    (nodeFileId: Guid) => {
-      const inlineUrl = sharedFoldersApi.buildFileContentUrl(token, nodeFileId, "inline");
-      window.open(inlineUrl, "_blank", "noopener,noreferrer");
+  const viewMode: "table" | "tiles-small" | "tiles-medium" | "tiles-large" = React.useMemo(() => {
+    if (layoutType === InterfaceLayoutType.List) return "table";
+    if (tilesSize === "small") return "tiles-small";
+    if (tilesSize === "large") return "tiles-large";
+    return "tiles-medium";
+  }, [layoutType, tilesSize]);
+
+  const cycleViewMode = React.useCallback(() => {
+    switch (viewMode) {
+      case "table":
+        setLayoutType(InterfaceLayoutType.Tiles);
+        setTilesSize("small");
+        return;
+      case "tiles-small":
+        setTilesSize("medium");
+        return;
+      case "tiles-medium":
+        setTilesSize("large");
+        return;
+      case "tiles-large":
+        setLayoutType(InterfaceLayoutType.List);
+    }
+  }, [viewMode]);
+
+  const { sortedFiles, tiles } = useContentTiles(content ?? undefined);
+
+  const mediaItems = React.useMemo<MediaItem[]>(() => {
+    return sortedFiles
+      .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
+      .map((file) => {
+        const preview = getFileIcon(
+          file.previewHashEncryptedHex ?? null,
+          file.name,
+          file.contentType,
+        );
+        const previewUrl = typeof preview === "string" ? preview : "";
+
+        return {
+          id: file.id,
+          kind: isImageFile(file.name) ? "image" : "video",
+          name: file.name,
+          previewUrl,
+          mimeType: file.contentType,
+          sizeBytes: file.sizeBytes,
+        };
+      });
+  }, [sortedFiles]);
+
+  const handleMediaClick = React.useCallback((fileId: string) => {
+    const mediaIndex = mediaItems.findIndex((item) => item.id === fileId);
+    if (mediaIndex < 0) {
+      return;
+    }
+
+    setLightboxIndex(mediaIndex);
+    setLightboxOpen(true);
+  }, [mediaItems]);
+
+  const handleFileClick = React.useCallback(async (fileId: string) => {
+    try {
+      await sharedFoldersApi.openFileInline(token, fileId);
+    } catch {
+      // ignore
+    }
+  }, [token]);
+
+  const handleDownload = React.useCallback(async (fileId: string, fileName: string) => {
+    try {
+      await sharedFoldersApi.downloadFile(token, fileId, fileName);
+    } catch {
+      // ignore
+    }
+  }, [token]);
+
+  const fileOperations = React.useMemo<FileOperations>(() => ({
+    isRenaming: () => false,
+    getRenamingName: () => "",
+    onRenamingNameChange: () => {},
+    onConfirmRename: async () => {},
+    onCancelRename: () => {},
+    onStartRename: () => {},
+    onDelete: () => {},
+    onDownload: (fileId: string, fileName: string) => {
+      void handleDownload(fileId, fileName);
     },
-    [token],
-  );
+    onShare: () => {},
+    onClick: (fileId: string) => {
+      void handleFileClick(fileId);
+    },
+    onMediaClick: handleMediaClick,
+  }), [handleDownload, handleFileClick, handleMediaClick]);
+
+  const folderOperations = React.useMemo<FolderOperations>(() => ({
+    isRenaming: () => false,
+    getRenamingName: () => "",
+    onRenamingNameChange: () => {},
+    onConfirmRename: () => {},
+    onCancelRename: () => {},
+    onStartRename: () => {},
+    onDelete: () => {},
+    onClick: (folderId: string) => {
+      const folder = content?.nodes.find((x) => x.id === folderId);
+      if (!folder) return;
+      handleOpenFolder(folder.id, folder.name);
+    },
+  }), [content?.nodes, handleOpenFolder]);
+
+  const stats = React.useMemo(() => {
+    const foldersCount = content?.nodes.length ?? 0;
+    const filesCount = content?.files.length ?? 0;
+    const sizeBytes = (content?.files ?? []).reduce((acc, file) => acc + file.sizeBytes, 0);
+
+    return {
+      folders: foldersCount,
+      files: filesCount,
+      sizeBytes,
+    };
+  }, [content?.files, content?.nodes.length]);
+
+  const getSignedMediaUrl = React.useCallback(async (fileId: string): Promise<string> => {
+    return `${sharedFoldersApi.buildFileContentUrl(token, fileId, "inline")}&preview=true`;
+  }, [token]);
+
+  const getDownloadUrl = React.useCallback(async (fileId: string): Promise<string> => {
+    return sharedFoldersApi.buildFileContentUrl(token, fileId, "download");
+  }, [token]);
 
   if (loading) {
     return (
@@ -116,88 +246,111 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     );
   }
 
-  const folders = content?.nodes ?? [];
-  const files = content?.files ?? [];
+  const nextViewTitleKey: string = (() => {
+    switch (viewMode) {
+      case "table":
+        return "actions.switchToSmallTilesView";
+      case "tiles-small":
+        return "actions.switchToMediumTilesView";
+      case "tiles-medium":
+        return "actions.switchToLargeTilesView";
+      case "tiles-large":
+        return "actions.switchToTableView";
+      default:
+        return "actions.switchToTableView";
+    }
+  })();
+
+  const viewIcon =
+    viewMode === "table" ? (
+      <ViewList />
+    ) : (
+      <ViewModule
+        sx={{
+          transform:
+            viewMode === "tiles-small"
+              ? "scale(0.9)"
+              : viewMode === "tiles-large"
+                ? "scale(1.1)"
+                : "scale(1)",
+        }}
+      />
+    );
 
   return (
     <Box flex={1} minHeight={0} overflow="auto" px={{ xs: 2, sm: 3 }} py={2}>
-      <Breadcrumbs sx={{ mb: 1.5 }}>
-        {breadcrumbs.map((item, index) => {
-          const isLast = index === breadcrumbs.length - 1;
-          if (isLast) {
-            return (
-              <Typography key={item.id} color="text.primary" noWrap>
-                {item.name}
-              </Typography>
-            );
-          }
-
-          return (
-            <Link
-              key={item.id}
-              component="button"
-              type="button"
-              underline="hover"
-              color="inherit"
-              onClick={() => handleNavigateBreadcrumb(index)}
-            >
-              {item.name}
-            </Link>
-          );
-        })}
-      </Breadcrumbs>
-
-      {folders.length === 0 && files.length === 0 ? (
-        <Typography color="text.secondary">{t("folder.empty", { ns: "share" })}</Typography>
-      ) : (
-        <List disablePadding>
-          {folders.map((folder) => (
-            <ListItem key={folder.id} disablePadding>
-              <ListItemButton onClick={() => handleOpenFolder(folder.id, folder.name)}>
-                <ListItemIcon>
-                  <Folder color="primary" />
-                </ListItemIcon>
-                <ListItemText primary={folder.name} secondary={t("folder.kind", { ns: "share" })} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-
-          {files.map((file) => {
-            const downloadUrl = sharedFoldersApi.buildFileContentUrl(
-              token,
-              file.id,
-              "download",
-            );
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        gap={2}
+        mb={1.5}
+      >
+        <Breadcrumbs>
+          {breadcrumbs.map((item, index) => {
+            const isLast = index === breadcrumbs.length - 1;
+            if (isLast) {
+              return (
+                <Typography key={item.id} color="text.primary" noWrap>
+                  {item.name}
+                </Typography>
+              );
+            }
 
             return (
-              <ListItem
-                key={file.id}
-                disablePadding
-                secondaryAction={
-                  <IconButton
-                    edge="end"
-                    component="a"
-                    href={downloadUrl}
-                    title={t("actions.download", { ns: "common" })}
-                  >
-                    <Download />
-                  </IconButton>
-                }
+              <Link
+                key={item.id}
+                component="button"
+                type="button"
+                underline="hover"
+                color="inherit"
+                onClick={() => handleNavigateBreadcrumb(index)}
               >
-                <ListItemButton onClick={() => openInlineFile(file.id)}>
-                  <ListItemIcon>
-                    <InsertDriveFile />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={file.name}
-                    secondary={formatBytes(file.sizeBytes)}
-                  />
-                </ListItemButton>
-              </ListItem>
+                {item.name}
+              </Link>
             );
           })}
-        </List>
-      )}
+        </Breadcrumbs>
+
+        <IconButton color="primary" onClick={cycleViewMode} title={t(nextViewTitleKey, { ns: "files" })}>
+          {viewIcon}
+        </IconButton>
+      </Box>
+
+      <FileListViewFactory
+        layoutType={layoutType}
+        tiles={tiles}
+        folderOperations={folderOperations}
+        fileOperations={fileOperations}
+        isCreatingFolder={false}
+        newFolderName=""
+        onNewFolderNameChange={() => {}}
+        onConfirmNewFolder={async () => {}}
+        onCancelNewFolder={() => {}}
+        folderNamePlaceholder={t("actions.folderNamePlaceholder", { ns: "files" })}
+        fileNamePlaceholder={t("rename.fileNamePlaceholder", { ns: "files" })}
+        emptyStateText={t("folder.empty", { ns: "share" })}
+        tileSize={tilesSize}
+        loading={loading}
+      />
+
+      <MediaLightbox
+        items={mediaItems}
+        open={lightboxOpen}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+        getSignedMediaUrl={getSignedMediaUrl}
+        getDownloadUrl={getDownloadUrl}
+      />
+
+      <Typography color="text.secondary" sx={{ mt: 1 }}>
+        {t("stats.summary", {
+          ns: "files",
+          folders: stats.folders,
+          files: stats.files,
+          size: formatBytes(stats.sizeBytes),
+        })}
+      </Typography>
     </Box>
   );
 };

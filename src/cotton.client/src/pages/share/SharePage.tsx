@@ -240,7 +240,7 @@ export const SharePage: React.FC = () => {
         <>
           <ShareHeaderBar
             title={title}
-            fileName={sharedFolderInfo.name}
+            fileName={null}
             contentLength={null}
             isCopied={isCopied}
             onShareLink={handleShareLink}
