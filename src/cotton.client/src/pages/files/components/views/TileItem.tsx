@@ -185,6 +185,24 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
 
+    const checkbox = (
+      <Checkbox
+        checked={selected}
+        onChange={(e) => {
+          const nativeEvent = e.nativeEvent as MouseEvent;
+          onToggle?.(!!nativeEvent.shiftKey);
+        }}
+        sx={{
+          position: "absolute",
+          top: 4,
+          left: 4,
+          zIndex: 5,
+          display: selectionMode ? "inline-flex" : "none",
+        }}
+        size="small"
+      />
+    );
+
     if (tile.kind === "folder") {
       const folderContent = (
         <FolderCard
@@ -209,29 +227,12 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         />
       );
 
-      if (selectionMode) {
-        return (
-          <Box position="relative">
-            <Checkbox
-              checked={selected}
-              onChange={(e) => {
-                const nativeEvent = e.nativeEvent as MouseEvent;
-                onToggle?.(!!nativeEvent.shiftKey);
-              }}
-              sx={{
-                position: "absolute",
-                top: 4,
-                left: 4,
-                zIndex: 5,
-              }}
-              size="small"
-            />
-            {folderContent}
-          </Box>
-        );
-      }
-
-      return folderContent;
+      return (
+        <Box position="relative">
+          {checkbox}
+          {folderContent}
+        </Box>
+      );
     }
 
     const isImage = isImageFile(tile.file.name);
@@ -332,28 +333,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       />
     );
 
-    if (selectionMode) {
-      return (
-        <Box position="relative">
-          <Checkbox
-            checked={selected}
-            onChange={(e) => {
-              const nativeEvent = e.nativeEvent as MouseEvent;
-              onToggle?.(!!nativeEvent.shiftKey);
-            }}
-            sx={{
-              position: "absolute",
-              top: 4,
-              left: 4,
-              zIndex: 5,
-            }}
-            size="small"
-          />
-          {fileContent}
-        </Box>
-      );
-    }
-
-    return fileContent;
+    return (
+      <Box position="relative">
+        {checkbox}
+        {fileContent}
+      </Box>
+    );
   },
 );
