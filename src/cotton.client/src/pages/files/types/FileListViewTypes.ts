@@ -216,5 +216,8 @@ export interface IFileListView {
   /**
    * Handler to toggle selection of a single item
    */
-  onToggleItem?: (id: string) => void;
+  onToggleItem?: (
+    id: string,
+    options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
+  ) => void;
 }

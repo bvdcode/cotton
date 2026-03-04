@@ -13,7 +13,7 @@ interface FolderCardProps {
   onCancelRename: () => void;
   onStartRename: () => void;
   onDelete: () => void;
-  onClick: () => void;
+  onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
 }
 
