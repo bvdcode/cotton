@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { filesApi } from "../../../shared/api/filesApi";
-import { isImageFile, isVideoFile } from "../utils/fileTypes";
+import { getFileTypeInfo } from "../utils/fileTypes";
 import { getFileIcon } from "../utils/icons";
 import type { MediaItem } from "../components";
 
@@ -68,8 +68,12 @@ export const useMediaLightbox = (
   // Build media items for lightbox (images and videos only)
   const mediaItems = useMemo<MediaItem[]>(() => {
     return sortedFiles
-      .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
-      .map((file) => {
+      .map((file) => ({
+        file,
+        typeInfo: getFileTypeInfo(file.name, file.contentType ?? null),
+      }))
+      .filter(({ typeInfo }) => typeInfo.type === "image" || typeInfo.type === "video")
+      .map(({ file, typeInfo }) => {
         const preview = getFileIcon(
           file.largeFilePreviewPresignedToken ?? file.previewHashEncryptedHex ?? null,
           file.name,
@@ -79,14 +83,12 @@ export const useMediaLightbox = (
 
         return {
           id: file.id,
-          kind: isImageFile(file.name) ? "image" : "video",
+          kind: typeInfo.type === "image" ? "image" : "video",
           name: file.name,
           previewUrl,
-          mimeType: file.name.toLowerCase().endsWith(".mp4")
-            ? "video/mp4"
-            : undefined,
+          mimeType: file.contentType ?? "application/octet-stream",
           sizeBytes: file.sizeBytes,
-        } as MediaItem;
+        };
       });
   }, [sortedFiles]);
 
