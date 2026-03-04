@@ -1,7 +1,7 @@
-import { useMemo, useRef, useEffect, useLayoutEffect } from "react";
-import { Breadcrumbs, Link as MuiLink, Typography, Box } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { Box, Breadcrumbs, Link as MuiLink, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { Link as RouterLink } from "react-router-dom";
 
 interface Breadcrumb {
   id: string;
@@ -51,6 +51,7 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
 
   useEffect(() => {
     updateFade();
+
     const container = containerRef.current;
     const bc = breadcrumbsRef.current;
     if (!container || !bc) return;
@@ -62,8 +63,8 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
   }, []);
 
   return (
-        {filtered.map(({ crumb, idx }, filteredIndex) => {
-          const isLast = filteredIndex === filtered.length - 1;
+    <Box
+      ref={containerRef}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -76,6 +77,47 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
           content: '""',
           position: "absolute",
           top: 0,
+          left: 0,
+          width: "60px",
+          height: "100%",
+          background: (theme) =>
+            `linear-gradient(to right, ${theme.palette.background.default}, transparent)`,
+          pointerEvents: "none",
+          zIndex: 1,
+          opacity: "var(--ctn-bc-left-fade)",
+          transition: "opacity 200ms ease-out",
+        },
+      }}
+    >
+      <Breadcrumbs
+        ref={breadcrumbsRef}
+        aria-label={t("breadcrumbs.ariaLabel")}
+        sx={{
+          direction: "ltr",
+          display: "inline-flex",
+          whiteSpace: "nowrap",
+          "& .MuiBreadcrumbs-ol": {
+            flexWrap: "nowrap",
+          },
+          "& .MuiBreadcrumbs-li": {
+            whiteSpace: "nowrap",
+          },
+        }}
+      >
+        {filtered.map(({ crumb, idx }, filteredIndex) => {
+          const isLast = filteredIndex === filtered.length - 1;
+          if (isLast) {
+            return (
+              <Typography
+                key={crumb.id}
+                color="text.primary"
+                noWrap
+                title={crumb.name}
+              >
+                {crumb.name}
+              </Typography>
+            );
+          }
 
           if (onNavigateBreadcrumb) {
             return (
@@ -95,47 +137,6 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
             );
           }
 
-          return (
-            <MuiLink
-              key={crumb.id}
-              component={RouterLink}
-              underline="hover"
-              color="inherit"
-              to={`/files/${crumb.id}`}
-              sx={{ fontSize: "1.1rem" }}
-              noWrap
-              title={crumb.name}
-            >
-              {crumb.name}
-            </MuiLink>
-          );
-        aria-label={t("breadcrumbs.ariaLabel")}
-        sx={{
-          direction: "ltr",
-          display: "inline-flex",
-          whiteSpace: "nowrap",
-          "& .MuiBreadcrumbs-ol": {
-            flexWrap: "nowrap",
-          },
-          "& .MuiBreadcrumbs-li": {
-            whiteSpace: "nowrap",
-          },
-        }}
-      >
-        {filtered.map((crumb, idx) => {
-          const isLast = idx === filtered.length - 1;
-          if (isLast) {
-            return (
-              <Typography
-                key={crumb.id}
-                color="text.primary"
-                noWrap
-                title={crumb.name}
-              >
-                {crumb.name}
-              </Typography>
-            );
-          }
           return (
             <MuiLink
               key={crumb.id}
