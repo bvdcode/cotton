@@ -14,7 +14,6 @@ using EasyExtensions.Quartz.Attributes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
-using System.Text;
 
 namespace Cotton.Server.Jobs
 {
@@ -107,7 +106,7 @@ namespace Cotton.Server.Jobs
                             .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex());
                     }
                     // TODO: Move to settings or autoconfig
-                    await Task.Delay(500);
+                    await Task.Delay(100);
                 }
                 catch (Exception ex)
                 {
@@ -118,8 +117,9 @@ namespace Cotton.Server.Jobs
 
                 if (_perf.IsUploading())
                 {
-                    _logger.LogInformation("Upload in progress, pausing preview generation job...");
-                    await Task.Delay(5000);
+                    const int waitTimeSeconds = 5;
+                    _logger.LogInformation("Upload in progress, waiting {seconds}s before processing next item...", waitTimeSeconds);
+                    await Task.Delay(waitTimeSeconds * 1000);
                 }
             }
 

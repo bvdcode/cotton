@@ -3,7 +3,6 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
-using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System.Collections.Concurrent;

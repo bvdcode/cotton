@@ -13,7 +13,6 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using Cotton.Topology.Abstractions;
 using Cotton.Validators;
-using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
