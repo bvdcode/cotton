@@ -2,6 +2,11 @@ import { httpClient } from "./httpClient";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
 
 export interface NodeFileManifestDto extends BaseDto {
+  /**
+   * Container node id (folder) where this file is located.
+   * Present in search results; may be omitted in other endpoints.
+   */
+  nodeId?: Guid;
   ownerId: Guid;
   name: string;
   contentType: string;

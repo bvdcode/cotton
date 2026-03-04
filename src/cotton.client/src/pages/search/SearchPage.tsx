@@ -201,14 +201,17 @@ export const SearchPage: React.FC = () => {
             tiles={results ? tiles : []}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
-            onGoToFileLocation={(containerPath) => {
-              const normalized = containerPath.trim();
+            onGoToFileLocation={({ nodeId, containerPath }) => {
+              if (nodeId) {
+                navigate(`/files/${nodeId}`);
+                return;
+              }
+
+              const normalized = (containerPath ?? "/").trim();
               const resolvePath = normalized === "/" ? null : normalized;
-              void layoutsApi
-                .resolve({ path: resolvePath })
-                .then((node) => {
-                  navigate(`/files/${node.id}`);
-                });
+              void layoutsApi.resolve({ path: resolvePath }).then((node) => {
+                navigate(`/files/${node.id}`);
+              });
             }}
             isCreatingFolder={false}
             newFolderName=""

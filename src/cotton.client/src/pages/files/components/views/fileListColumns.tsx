@@ -6,7 +6,7 @@ import {
   Download,
   Edit,
   Folder,
-  FolderOpen,
+  OpenInNew,
   Image as ImageIcon,
   InsertDriveFile,
   TextSnippet,
@@ -28,6 +28,7 @@ export interface FileListRow {
   name: string;
   location?: string | null;
   containerPath?: string | null;
+  containerNodeId?: string | null;
   sizeBytes: number | null;
   tile?: {
     kind: "folder" | "file";
@@ -58,7 +59,7 @@ interface ColumnOptions {
   onCancelNewFolder: () => void;
   folderNamePlaceholder: string;
   fileNamePlaceholder: string;
-  onGoToFileLocation?: (containerPath: string) => void;
+  onGoToFileLocation?: (target: { nodeId?: string; containerPath?: string }) => void;
   columnFlex?: {
     name: number;
     location: number;
@@ -365,7 +366,7 @@ export const createActionsColumn = (
 ): GridColDef<FileListRow> => ({
   field: "actions",
   headerName: options.labels.actionsTitle,
-  minWidth: 110,
+  minWidth: 180,
   sortable: false,
   align: "right",
   headerAlign: "right",
@@ -420,16 +421,19 @@ export const createActionsColumn = (
           justifyContent: "flex-end",
         }}
       >
-        {options.onGoToFileLocation && row.containerPath && (
+        {options.onGoToFileLocation && (row.containerNodeId || row.containerPath) && (
           <IconButton
             size="small"
             onClick={(e) => {
               e.stopPropagation();
-              options.onGoToFileLocation?.(row.containerPath ?? "/");
+              options.onGoToFileLocation?.({
+                nodeId: row.containerNodeId ?? undefined,
+                containerPath: row.containerPath ?? undefined,
+              });
             }}
             title={options.labels.goToFolder}
           >
-            <FolderOpen fontSize="small" />
+            <OpenInNew fontSize="small" />
           </IconButton>
         )}
         <IconButton
