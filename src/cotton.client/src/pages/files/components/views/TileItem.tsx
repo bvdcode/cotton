@@ -35,55 +35,72 @@ const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
   cursor,
   shouldLightenBackdrop,
   invertInDark,
-}) => (
-  <Box
-    sx={{
-      width: "100%",
-      height: "100%",
-      position: "relative",
-    }}
-  >
+}) => {
+  const [imageFit, setImageFit] = React.useState<"contain" | "cover">(
+    "contain",
+  );
+
+  const handleLoad = React.useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = e.currentTarget;
+      const nextFit =
+        img.naturalWidth > img.naturalHeight ? "cover" : "contain";
+      setImageFit((prev) => (prev === nextFit ? prev : nextFit));
+    },
+    [],
+  );
+
+  return (
     <Box
-      component="img"
-      src={previewUrl}
-      alt=""
-      aria-hidden
       sx={{
-        position: "absolute",
-        inset: 0,
-        display: "block",
         width: "100%",
         height: "100%",
-        objectFit: "cover",
-        filter: "blur(24px)",
-        transform: "scale(1.15)",
-        opacity: blurOpacity,
-      }}
-    />
-    <Box
-      component="img"
-      src={previewUrl}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      sx={(theme) => ({
         position: "relative",
-        display: "block",
-        width: "100%",
-        height: "100%",
-        objectFit: "contain",
-        cursor,
-        ...(shouldLightenBackdrop && {
-          backgroundColor: alpha(theme.palette.common.white, 0.75),
-        }),
-        ...(invertInDark &&
-          theme.palette.mode === "dark" && {
-            filter: "invert(1)",
+      }}
+    >
+      <Box
+        component="img"
+        src={previewUrl}
+        alt=""
+        aria-hidden
+        sx={{
+          position: "absolute",
+          inset: 0,
+          display: "block",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          filter: "blur(24px)",
+          transform: "scale(1.15)",
+          opacity: blurOpacity,
+        }}
+      />
+      <Box
+        component="img"
+        src={previewUrl}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={handleLoad}
+        sx={(theme) => ({
+          position: "relative",
+          display: "block",
+          width: "100%",
+          height: "100%",
+          objectFit: imageFit,
+          cursor,
+          ...(shouldLightenBackdrop && {
+            backgroundColor: alpha(theme.palette.common.white, 0.75),
           }),
-      })}
-    />
-  </Box>
-);
+          ...(invertInDark &&
+            theme.palette.mode === "dark" && {
+              filter: "invert(1)",
+            }),
+        })}
+      />
+    </Box>
+  );
+};
 
 interface NewFolderCardProps {
   newFolderName: string;
