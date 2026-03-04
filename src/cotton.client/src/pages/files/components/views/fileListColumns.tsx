@@ -41,6 +41,7 @@ export interface FileListRow {
 }
 
 interface ColumnOptions {
+  readOnly?: boolean;
   labels: {
     name: string;
     size: string;
@@ -362,7 +363,7 @@ export const createLocationColumn = (
 export const createActionsColumn = (
   options: Pick<
     ColumnOptions,
-    "labels" | "folderOperations" | "fileOperations" | "onGoToFileLocation"
+    "labels" | "folderOperations" | "fileOperations" | "onGoToFileLocation" | "readOnly"
   >,
 ): GridColDef<FileListRow> => ({
   field: "actions",
@@ -387,38 +388,42 @@ export const createActionsColumn = (
             justifyContent: "flex-end",
           }}
         >
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              options.folderOperations.onStartRename(row.id, row.name);
-            }}
-            title={options.labels.rename}
-          >
-            <Edit fontSize="small" />
-          </IconButton>
-          {options.folderOperations.onShare && (
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                options.folderOperations.onShare?.(row.id, row.name);
-              }}
-              title={options.labels.share}
-            >
-              <Share fontSize="small" />
-            </IconButton>
+          {!options.readOnly && (
+            <>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.folderOperations.onStartRename(row.id, row.name);
+                }}
+                title={options.labels.rename}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+              {options.folderOperations.onShare && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onShare?.(row.id, row.name);
+                  }}
+                  title={options.labels.share}
+                >
+                  <Share fontSize="small" />
+                </IconButton>
+              )}
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.folderOperations.onDelete(row.id, row.name);
+                }}
+                title={options.labels.delete}
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+            </>
           )}
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              options.folderOperations.onDelete(row.id, row.name);
-            }}
-            title={options.labels.delete}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
         </Box>
       );
     }
@@ -459,36 +464,40 @@ export const createActionsColumn = (
         >
           <Download fontSize="small" />
         </IconButton>
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onShare(row.id, row.name);
-          }}
-          title={options.labels.share}
-        >
-          <Share fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onStartRename(row.id, row.name);
-          }}
-          title={options.labels.rename}
-        >
-          <Edit fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onDelete(row.id, row.name);
-          }}
-          title={options.labels.delete}
-        >
-          <Delete fontSize="small" />
-        </IconButton>
+        {!options.readOnly && (
+          <>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                options.fileOperations.onShare(row.id, row.name);
+              }}
+              title={options.labels.share}
+            >
+              <Share fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                options.fileOperations.onStartRename(row.id, row.name);
+              }}
+              title={options.labels.rename}
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                options.fileOperations.onDelete(row.id, row.name);
+              }}
+              title={options.labels.delete}
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+          </>
+        )}
       </Box>
     );
   },

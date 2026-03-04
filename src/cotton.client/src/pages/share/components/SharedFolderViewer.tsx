@@ -1,17 +1,8 @@
 import * as React from "react";
-import {
-  Alert,
-  Box,
-  Breadcrumbs,
-  IconButton,
-  Link,
-  Typography,
-} from "@mui/material";
-import { ViewList, ViewModule } from "@mui/icons-material";
+import { Alert, Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { formatBytes } from "../../../shared/utils/formatBytes";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
-import { MediaLightbox } from "../../files/components";
+import { MediaLightbox, PageHeader } from "../../files/components";
 import { FileListViewFactory } from "../../files/components/views/FileListViewFactory";
 import type {
   FileOperations,
@@ -25,6 +16,7 @@ import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import type { Guid } from "../../../shared/api/layoutsApi";
 import type { SharedNodeContentDto } from "../../../shared/api/sharedFoldersApi";
 import type { MediaItem } from "../../files/components";
+import type { FileBrowserViewMode } from "../../files/hooks/useFilesLayout";
 
 interface BreadcrumbNode {
   id: Guid;
@@ -246,82 +238,35 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     );
   }
 
-  const nextViewTitleKey: string = (() => {
-    switch (viewMode) {
-      case "table":
-        return "actions.switchToSmallTilesView";
-      case "tiles-small":
-        return "actions.switchToMediumTilesView";
-      case "tiles-medium":
-        return "actions.switchToLargeTilesView";
-      case "tiles-large":
-        return "actions.switchToTableView";
-      default:
-        return "actions.switchToTableView";
-    }
-  })();
-
-  const viewIcon =
-    viewMode === "table" ? (
-      <ViewList />
-    ) : (
-      <ViewModule
-        sx={{
-          transform:
-            viewMode === "tiles-small"
-              ? "scale(0.9)"
-              : viewMode === "tiles-large"
-                ? "scale(1.1)"
-                : "scale(1)",
-        }}
-      />
-    );
+  const canGoUp = breadcrumbs.length > 1;
 
   return (
     <Box flex={1} minHeight={0} overflow="auto" px={{ xs: 2, sm: 3 }} py={2}>
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        gap={2}
-        mb={1.5}
-      >
-        <Breadcrumbs>
-          {breadcrumbs.map((item, index) => {
-            const isLast = index === breadcrumbs.length - 1;
-            if (isLast) {
-              return (
-                <Typography key={item.id} color="text.primary" noWrap>
-                  {item.name}
-                </Typography>
-              );
-            }
-
-            return (
-              <Link
-                key={item.id}
-                component="button"
-                type="button"
-                underline="hover"
-                color="inherit"
-                onClick={() => handleNavigateBreadcrumb(index)}
-              >
-                {item.name}
-              </Link>
-            );
-          })}
-        </Breadcrumbs>
-
-        <IconButton color="primary" onClick={cycleViewMode} title={t(nextViewTitleKey, { ns: "files" })}>
-          {viewIcon}
-        </IconButton>
-      </Box>
+      <PageHeader
+        loading={loading}
+        breadcrumbs={breadcrumbs}
+        onNavigateBreadcrumb={(breadcrumbIndex) => {
+          handleNavigateBreadcrumb(breadcrumbIndex);
+        }}
+        stats={stats}
+        viewMode={viewMode as FileBrowserViewMode}
+        canGoUp={canGoUp}
+        onGoUp={() => {
+          if (!canGoUp) return;
+          handleNavigateBreadcrumb(breadcrumbs.length - 2);
+        }}
+        onHomeClick={() => handleNavigateBreadcrumb(0)}
+        onViewModeCycle={cycleViewMode}
+        showViewModeToggle
+        statsNamespace="files"
+      />
 
       <FileListViewFactory
         layoutType={layoutType}
         tiles={tiles}
         folderOperations={folderOperations}
         fileOperations={fileOperations}
+        readOnly
         isCreatingFolder={false}
         newFolderName=""
         onNewFolderNameChange={() => {}}
@@ -342,15 +287,6 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         getSignedMediaUrl={getSignedMediaUrl}
         getDownloadUrl={getDownloadUrl}
       />
-
-      <Typography color="text.secondary" sx={{ mt: 1 }}>
-        {t("stats.summary", {
-          ns: "files",
-          folders: stats.folders,
-          files: stats.files,
-          size: formatBytes(stats.sizeBytes),
-        })}
-      </Typography>
     </Box>
   );
 };

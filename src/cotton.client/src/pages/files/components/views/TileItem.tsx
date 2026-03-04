@@ -170,6 +170,7 @@ interface TileItemProps {
   folderOperations: FolderOperations;
   fileOperations: FileOperations;
   fileNamePlaceholder: string;
+  readOnly?: boolean;
   selectionMode?: boolean;
   selected?: boolean;
   onToggle?: (shiftKey: boolean) => void;
@@ -180,7 +181,7 @@ interface TileItemProps {
  * Extracted for reuse by both plain and virtualized grid.
  */
 export const TileItem: React.FC<TileItemProps> = React.memo(
-  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, selectionMode = false, selected = false, onToggle }) => {
+  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, readOnly = false, selectionMode = false, selected = false, onToggle }) => {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
@@ -229,6 +230,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               : folderOperations.onClick(tile.node.id)
           }
           variant="squareTile"
+          readOnly={readOnly}
         />
       );
 
@@ -308,24 +310,28 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               fileOperations.onDownload(tile.file.id, tile.file.name),
             tooltip: t("actions.download", { ns: "common" }),
           },
-          {
-            icon: <Share />,
-            onClick: () =>
-              fileOperations.onShare(tile.file.id, tile.file.name),
-            tooltip: t("actions.share", { ns: "common" }),
-          },
-          {
-            icon: <Edit />,
-            onClick: () =>
-              fileOperations.onStartRename(tile.file.id, tile.file.name),
-            tooltip: t("actions.rename", { ns: "common" }),
-          },
-          {
-            icon: <Delete />,
-            onClick: () =>
-              fileOperations.onDelete(tile.file.id, tile.file.name),
-            tooltip: t("actions.delete", { ns: "common" }),
-          },
+          ...(readOnly
+            ? []
+            : [
+                {
+                  icon: <Share />,
+                  onClick: () =>
+                    fileOperations.onShare(tile.file.id, tile.file.name),
+                  tooltip: t("actions.share", { ns: "common" }),
+                },
+                {
+                  icon: <Edit />,
+                  onClick: () =>
+                    fileOperations.onStartRename(tile.file.id, tile.file.name),
+                  tooltip: t("actions.rename", { ns: "common" }),
+                },
+                {
+                  icon: <Delete />,
+                  onClick: () =>
+                    fileOperations.onDelete(tile.file.id, tile.file.name),
+                  tooltip: t("actions.delete", { ns: "common" }),
+                },
+              ]),
         ]}
         isRenaming={fileOperations.isRenaming(tile.file.id)}
         renamingValue={fileOperations.getRenamingName()}
