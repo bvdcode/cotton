@@ -7,7 +7,7 @@ export interface NodeFileManifestDto extends BaseDto {
    * Present in search results; may be omitted in other endpoints.
    */
   nodeId?: Guid;
-  ownerId: Guid;
+  ownerId?: Guid;
   name: string;
   contentType: string;
   sizeBytes: number;

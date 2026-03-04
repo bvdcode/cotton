@@ -451,16 +451,9 @@ namespace Cotton.Server.Controllers
             var nodes = nodesToTake == 0 ? []
                 : await nodesQuery.Skip(skip).Take(nodesToTake).ToListAsync();
 
-            var files = filesToTake == 0 ? []
-                : await filesBaseQuery
-                    .OrderBy(x => x.NameKey)
-                    .Include(x => x.FileManifest)
-                    .Skip(filesSkip)
-                    .Take(filesToTake)
-                    .ProjectToType<NodeFileManifestDto>()
-                    .ToListAsync();
+            var files = filesToTake == 0 ? [] : await LoadSharedFilesAsync(filesBaseQuery, filesSkip, filesToTake);
 
-            NodeContentDto response = new()
+            SharedNodeContentDto response = new()
             {
                 Nodes = nodes,
                 Files = files,
@@ -747,6 +740,31 @@ namespace Cotton.Server.Controllers
             }
 
             throw new InvalidOperationException("Unable to generate a unique share token.");
+        }
+
+        private static async Task<List<SharedNodeFileDto>> LoadSharedFilesAsync(
+            IQueryable<NodeFile> filesBaseQuery,
+            int filesSkip,
+            int filesToTake)
+        {
+            var fileEntities = await filesBaseQuery
+                .OrderBy(x => x.NameKey)
+                .Include(x => x.FileManifest)
+                .Skip(filesSkip)
+                .Take(filesToTake)
+                .ToListAsync();
+
+            return [.. fileEntities.Select(x => new SharedNodeFileDto
+            {
+                Id = x.Id,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
+                NodeId = x.NodeId,
+                Name = x.Name,
+                ContentType = x.FileManifest.ContentType,
+                SizeBytes = x.FileManifest.SizeBytes,
+                PreviewHashEncryptedHex = x.FileManifest.GetPreviewHashEncryptedHex(),
+            })];
         }
     }
 }
