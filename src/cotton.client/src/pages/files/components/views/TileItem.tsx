@@ -6,10 +6,7 @@ import { RenamableItemCard } from "../RenamableItemCard";
 import { getFileIcon } from "../../utils/icons";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
-  isImageFile,
-  isPdfFile,
-  isTextFile,
-  isVideoFile,
+  getFileTypeInfo,
 } from "../../utils/fileTypes";
 import type {
   FileSystemTile,
@@ -23,7 +20,7 @@ interface BlurredPreviewImageProps {
   previewUrl: string;
   alt: string;
   blurOpacity: number;
-  cursor: "pointer" | "default";
+  cursor: React.CSSProperties["cursor"];
   shouldLightenBackdrop: boolean;
   invertInDark: boolean;
 }
@@ -242,11 +239,14 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       );
     }
 
-    const isImage = isImageFile(tile.file.name);
-    const isVideo = isVideoFile(tile.file.name);
+    const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType);
+    const isImage = typeInfo.type === "image";
+    const isVideo = typeInfo.type === "video";
+    const isPdf = typeInfo.type === "pdf";
+    const isText = typeInfo.type === "text";
     const shouldLightenPreviewBackdrop =
       isDarkMode &&
-      (isPdfFile(tile.file.name) || isTextFile(tile.file.name));
+      (isPdf || isText);
     const preview = getFileIcon(
       tile.file.previewHashEncryptedHex ?? null,
       tile.file.name,
@@ -264,9 +264,8 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
 
     const icon = (() => {
       if (previewUrl) {
-        const isTextPreview = isTextFile(tile.file.name);
-        const cursor: "pointer" | "default" =
-          isImage || isVideo ? "pointer" : "default";
+        const isTextPreview = isText;
+        const cursor: React.CSSProperties["cursor"] = "inherit";
         return (
           <BlurredPreviewImage
             previewUrl={previewUrl}

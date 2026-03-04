@@ -30,6 +30,7 @@ export interface FileListRow {
   containerPath?: string | null;
   containerNodeId?: string | null;
   sizeBytes: number | null;
+  contentType?: string | null;
   tile?: {
     kind: "folder" | "file";
     file?: {

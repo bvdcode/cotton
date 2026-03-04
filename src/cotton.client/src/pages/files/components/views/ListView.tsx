@@ -3,7 +3,7 @@ import { Box } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import type { GridRowParams, GridRowsProp, GridRowSelectionModel } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
-import { isImageFile, isVideoFile } from "../../utils/fileTypes";
+import { getFileTypeInfo } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
 import { createFileListColumns, type FileListRow } from "./fileListColumns";
 import Loader from "../../../../shared/ui/Loader";
@@ -55,6 +55,7 @@ export const ListView: React.FC<IFileListView> = ({
         containerPath: tile.containerPath ?? null,
         containerNodeId: tile.file.nodeId ?? null,
         sizeBytes: tile.file.sizeBytes,
+        contentType: tile.file.contentType ?? null,
         tile,
       };
     });
@@ -149,9 +150,8 @@ export const ListView: React.FC<IFileListView> = ({
     }
 
     if (!fileOperations.isRenaming(row.id)) {
-      const isImage = isImageFile(row.name);
-      const isVideo = isVideoFile(row.name);
-      if (isImage || isVideo) {
+      const typeInfo = getFileTypeInfo(row.name, row.contentType ?? null);
+      if (typeInfo.type === "image" || typeInfo.type === "video") {
         fileOperations.onMediaClick?.(row.id);
       } else {
         fileOperations.onClick(row.id, row.name, row.sizeBytes ?? undefined);
