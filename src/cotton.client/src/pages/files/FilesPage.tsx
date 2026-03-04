@@ -31,7 +31,6 @@ import {
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
-import { shareFolder } from "../../shared/utils/shareFolder";
 import { filesApi } from "../../shared/api/filesApi";
 import Loader from "../../shared/ui/Loader";
 import {
@@ -360,13 +359,6 @@ export const FilesPage: React.FC = () => {
     [t],
   );
 
-  const handleShareFolder = React.useCallback(
-    async (nodeId: string, folderName: string) => {
-      await shareFolder(nodeId, folderName, t, setShareToast);
-    },
-    [t],
-  );
-
   const handleFileClick = (
     fileId: string,
     fileName: string,
@@ -386,10 +378,7 @@ export const FilesPage: React.FC = () => {
   );
 
   // Build folder operations adapter
-  const folderOperations = buildFolderOperations(folderOps, {
-    onFolderClick: goToFolder,
-    onShare: handleShareFolder,
-  });
+  const folderOperations = buildFolderOperations(folderOps, goToFolder);
 
   // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {

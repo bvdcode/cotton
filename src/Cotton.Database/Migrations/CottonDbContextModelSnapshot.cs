@@ -543,55 +543,6 @@ namespace Cotton.Database.Migrations
                     b.ToTable("node_files");
                 });
 
-            modelBuilder.Entity("Cotton.Database.Models.NodeShareToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by_user_id");
-
-                    b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<Guid>("NodeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("node_id");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("token");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("NodeId");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.ToTable("node_share_tokens");
-                });
-
             modelBuilder.Entity("Cotton.Database.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -932,25 +883,6 @@ namespace Cotton.Database.Migrations
                     b.Navigation("Node");
 
                     b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("Cotton.Database.Models.NodeShareToken", b =>
-                {
-                    b.HasOne("Cotton.Database.Models.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Cotton.Database.Models.Node", "Node")
-                        .WithMany()
-                        .HasForeignKey("NodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("Node");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Notification", b =>
