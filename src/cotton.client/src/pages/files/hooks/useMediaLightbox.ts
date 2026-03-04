@@ -27,7 +27,7 @@ export const useMediaLightbox = (
     id: string;
     name: string;
     sizeBytes?: number;
-    smallFilePreviewPresignedToken?: string | null;
+    previewHashEncryptedHex?: string | null;
     largeFilePreviewPresignedToken?: string | null;
     contentType?: string | null;
   }>,
@@ -71,7 +71,7 @@ export const useMediaLightbox = (
       .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
       .map((file) => {
         const preview = getFileIcon(
-          file.largeFilePreviewPresignedToken ?? file.smallFilePreviewPresignedToken ?? null,
+          file.largeFilePreviewPresignedToken ?? file.previewHashEncryptedHex ?? null,
           file.name,
           file.contentType,
         );
