@@ -52,6 +52,7 @@ export const ListView: React.FC<IFileListView> = ({
         name: tile.file.name,
         location: tile.path ?? null,
         containerPath: tile.containerPath ?? null,
+        containerNodeId: tile.file.nodeId ?? null,
         sizeBytes: tile.file.sizeBytes,
         tile,
       };
