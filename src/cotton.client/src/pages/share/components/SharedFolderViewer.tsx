@@ -10,13 +10,15 @@ import type {
   TilesSize,
 } from "../../files/types/FileListViewTypes";
 import { getFileIcon } from "../../files/utils/icons";
-import { isImageFile, isVideoFile } from "../../files/utils/fileTypes";
+import { getFileTypeInfo } from "../../files/utils/fileTypes";
 import { useContentTiles } from "../../../shared/hooks/useContentTiles";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import type { Guid } from "../../../shared/api/layoutsApi";
 import type { SharedNodeContentDto } from "../../../shared/api/sharedFoldersApi";
 import type { MediaItem } from "../../files/components";
 import type { FileBrowserViewMode } from "../../files/hooks/useFilesLayout";
+import { useFilePreview } from "../../files/hooks/useFilePreview";
+import { SharedFilePreviewModal } from "./SharedFilePreviewModal";
 
 interface BreadcrumbNode {
   id: Guid;
@@ -43,6 +45,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   const [tilesSize, setTilesSize] = React.useState<TilesSize>("medium");
   const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
   const [lightboxIndex, setLightboxIndex] = React.useState<number>(0);
+  const { previewState, openPreview, closePreview } = useFilePreview();
 
   React.useEffect(() => {
     setBreadcrumbs([{ id: rootNodeId, name: rootName }]);
@@ -123,8 +126,14 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
 
   const mediaItems = React.useMemo<MediaItem[]>(() => {
     return sortedFiles
-      .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
-      .map((file) => {
+      .map((file) => ({
+        file,
+        typeInfo: getFileTypeInfo(file.name, file.contentType),
+      }))
+      .filter(
+        ({ typeInfo }) => typeInfo.type === "image" || typeInfo.type === "video",
+      )
+      .map(({ file, typeInfo }) => {
         const preview = getFileIcon(
           file.previewHashEncryptedHex ?? null,
           file.name,
@@ -134,7 +143,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
 
         return {
           id: file.id,
-          kind: isImageFile(file.name) ? "image" : "video",
+          kind: typeInfo.type === "image" ? "image" : "video",
           name: file.name,
           previewUrl,
           mimeType: file.contentType,
@@ -153,21 +162,41 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     setLightboxOpen(true);
   }, [mediaItems]);
 
-  const handleFileClick = React.useCallback(async (fileId: string) => {
-    try {
-      await sharedFoldersApi.openFileInline(token, fileId);
-    } catch {
-      // ignore
-    }
-  }, [token]);
+  const handleDownload = React.useCallback(
+    async (fileId: string, fileName: string) => {
+      try {
+        await sharedFoldersApi.downloadFile(token, fileId, fileName);
+      } catch {
+        // ignore
+      }
+    },
+    [token],
+  );
 
-  const handleDownload = React.useCallback(async (fileId: string, fileName: string) => {
-    try {
-      await sharedFoldersApi.downloadFile(token, fileId, fileName);
-    } catch {
-      // ignore
-    }
-  }, [token]);
+  const handleFileClick = React.useCallback(
+    (fileId: string, fileName: string, fileSizeBytes?: number) => {
+      const file = content?.files.find((x) => x.id === fileId) ?? null;
+      const typeInfo = getFileTypeInfo(fileName, file?.contentType ?? null);
+
+      if (typeInfo.type === "image" || typeInfo.type === "video") {
+        handleMediaClick(fileId);
+        return;
+      }
+
+      if (typeInfo.type === "pdf" || typeInfo.type === "text") {
+        const opened = openPreview(
+          fileId,
+          fileName,
+          fileSizeBytes,
+          file?.contentType ?? null,
+        );
+        if (opened) return;
+      }
+
+      void handleDownload(fileId, fileName);
+    },
+    [content?.files, handleDownload, handleMediaClick, openPreview],
+  );
 
   const fileOperations = React.useMemo<FileOperations>(() => ({
     isRenaming: () => false,
@@ -181,11 +210,17 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
       void handleDownload(fileId, fileName);
     },
     onShare: () => {},
-    onClick: (fileId: string) => {
-      void handleFileClick(fileId);
+    onClick: (fileId: string, fileName: string, fileSizeBytes?: number) => {
+      handleFileClick(fileId, fileName, fileSizeBytes);
     },
     onMediaClick: handleMediaClick,
   }), [handleDownload, handleFileClick, handleMediaClick]);
+
+  const previewContentType = React.useMemo(() => {
+    if (!previewState.fileId) return null;
+    const file = content?.files.find((x) => x.id === previewState.fileId) ?? null;
+    return file?.contentType ?? null;
+  }, [content?.files, previewState.fileId]);
 
   const folderOperations = React.useMemo<FolderOperations>(() => ({
     isRenaming: () => false,
@@ -286,6 +321,17 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         onClose={() => setLightboxOpen(false)}
         getSignedMediaUrl={getSignedMediaUrl}
         getDownloadUrl={getDownloadUrl}
+      />
+
+      <SharedFilePreviewModal
+        open={previewState.isOpen}
+        token={token}
+        fileId={previewState.fileId}
+        fileName={previewState.fileName}
+        fileType={previewState.fileType}
+        fileSizeBytes={previewState.fileSizeBytes}
+        contentType={previewContentType}
+        onClose={closePreview}
       />
     </Box>
   );
