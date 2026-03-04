@@ -2,10 +2,8 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
-using Cotton.Server.Extensions;
 using Cotton.Server.Models.Dto;
 using Cotton.Validators;
-using EasyExtensions.Abstractions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;

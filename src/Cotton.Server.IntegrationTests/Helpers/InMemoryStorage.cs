@@ -24,7 +24,7 @@ public sealed class InMemoryStorage : IStoragePipeline
     public Task<long> GetSizeAsync(string uid)
     {
         ArgumentNullException.ThrowIfNull(uid);
-        return Task.FromResult(_blobs.TryGetValue(uid, out var data) ? (long)data.Length : 0L);
+        return Task.FromResult(_blobs.TryGetValue(uid, out var data) ? data.Length : 0L);
     }
 
     public Task<bool> ExistsAsync(string uid)
