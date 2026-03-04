@@ -1,5 +1,6 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
-import { Alert, Box, Snackbar, Typography } from "@mui/material";
+import { Alert, Box, IconButton, Snackbar, Typography } from "@mui/material";
+import { Delete } from "@mui/icons-material";
 import {
   FileListViewFactory,
   PageHeader,
@@ -9,6 +10,7 @@ import {
 } from "./components";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../shared/store/nodesStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
@@ -29,6 +31,7 @@ import {
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
+import { filesApi } from "../../shared/api/filesApi";
 import Loader from "../../shared/ui/Loader";
 import {
   selectGallerySmoothTransitions,
@@ -182,6 +185,7 @@ const DraggingOverlay: React.FC<DraggingOverlayProps> = ({
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
 
@@ -196,6 +200,8 @@ export const FilesPage: React.FC = () => {
     loadNode,
     resolveRootInBackground,
     refreshNodeContent,
+    deleteFolder,
+    optimisticDeleteFile,
   } = useNodesStore();
 
   const routeNodeId = params.nodeId;
@@ -382,6 +388,71 @@ export const FilesPage: React.FC = () => {
     onMediaClick: handleMediaClick,
   });
 
+  const handleDeleteSelected = React.useCallback(async () => {
+    if (!nodeId) return;
+    if (!fileSelection.selectionMode) return;
+    if (fileSelection.selectedCount <= 0) return;
+
+    const selected = fileSelection.selectedIds;
+    const selectedTiles = tiles.filter((tile) => {
+      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      return selected.has(id);
+    });
+
+    if (selectedTiles.length === 0) return;
+
+    const result = await confirm({
+      title: t("deleteSelected.confirmTitle", {
+        ns: "files",
+        count: selectedTiles.length,
+      }),
+      description: t("deleteSelected.confirmDescription", { ns: "files" }),
+      confirmationText: t("common:actions.delete"),
+      cancellationText: t("common:actions.cancel"),
+      confirmationButtonProps: { color: "error" },
+    });
+
+    if (!result.confirmed) return;
+
+    let hadError = false;
+
+    for (const tile of selectedTiles) {
+      if (tile.kind === "folder") {
+        try {
+          await deleteFolder(tile.node.id, nodeId);
+        } catch (e) {
+          hadError = true;
+          console.error("Failed to delete selected folder", e);
+        }
+        continue;
+      }
+
+      try {
+        optimisticDeleteFile(nodeId, tile.file.id);
+        await filesApi.deleteFile(tile.file.id);
+      } catch (e) {
+        hadError = true;
+        console.error("Failed to delete selected file", e);
+      }
+    }
+
+    fileSelection.deselectAll();
+    if (hadError) {
+      reloadCurrentNode();
+      return;
+    }
+    reloadCurrentNode();
+  }, [
+    nodeId,
+    fileSelection,
+    tiles,
+    confirm,
+    t,
+    deleteFolder,
+    optimisticDeleteFile,
+    reloadCurrentNode,
+  ]);
+
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
 
@@ -406,11 +477,25 @@ export const FilesPage: React.FC = () => {
       onToggleSelectionMode: fileSelection.toggleSelectionMode,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
+      customActions:
+        fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
+          <IconButton
+            color="error"
+            onClick={() => {
+              void handleDeleteSelected();
+            }}
+            title={t("selection.deleteSelected", { ns: "files" })}
+            disabled={loading}
+          >
+            <Delete />
+          </IconButton>
+        ) : undefined,
     }),
     [
       ancestors.length,
       breadcrumbs,
       cycleViewMode,
+      handleDeleteSelected,
       fileSelection,
       fileUpload.handleUploadClick,
       folderOps.handleNewFolder,
@@ -421,6 +506,7 @@ export const FilesPage: React.FC = () => {
       loading,
       nodeId,
       stats,
+      t,
       tiles,
       viewMode,
     ],
