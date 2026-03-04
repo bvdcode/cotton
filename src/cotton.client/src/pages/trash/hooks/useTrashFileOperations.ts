@@ -1,13 +1,20 @@
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { filesApi } from "../../../shared/api/filesApi";
+import { nodesApi } from "../../../shared/api/nodesApi";
 import { useRenameState } from "../../../shared/hooks/useRenameState";
 
 /**
  * Hook for trash file operations - similar to useFileOperations
- * but uses skipTrash=true when deleting
+ * but uses skipTrash=true when deleting.
+ *
+ * @param resolveWrapperNodeId - When at the trash root, maps a displayed
+ *   file ID to the wrapper node ID that should actually be deleted.
  */
-export const useTrashFileOperations = (onFilesChanged?: () => void) => {
+export const useTrashFileOperations = (
+  onFilesChanged?: () => void,
+  resolveWrapperNodeId?: (itemId: string) => string | null,
+) => {
   const { t } = useTranslation(["trash", "common"]);
   const confirm = useConfirm();
 
@@ -49,8 +56,14 @@ export const useTrashFileOperations = (onFilesChanged?: () => void) => {
       return;
     }
 
-    // Pass skipTrash=true for permanent deletion
-    await filesApi.deleteFile(fileId, true);
+    const wrapperId = resolveWrapperNodeId?.(fileId);
+    if (wrapperId) {
+      // Delete the wrapper node (permanent), which cascades to its contents
+      await nodesApi.deleteNode(wrapperId, true);
+    } else {
+      // Pass skipTrash=true for permanent deletion
+      await filesApi.deleteFile(fileId, true);
+    }
 
     if (onFilesChanged) {
       onFilesChanged();

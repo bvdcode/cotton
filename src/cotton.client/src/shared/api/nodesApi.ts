@@ -54,7 +54,7 @@ export const nodesApi = {
 
   getChildren: async (
     nodeId: Guid,
-    options?: { nodeType?: string; page?: number; pageSize?: number },
+    options?: { nodeType?: string; page?: number; pageSize?: number; depth?: number },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000000;
@@ -65,6 +65,7 @@ export const nodesApi = {
           page: requestedPage,
           pageSize: requestedPageSize,
           nodeType: options?.nodeType,
+          depth: options?.depth,
         },
       },
     );
