@@ -486,7 +486,6 @@ export const FilesPage: React.FC = () => {
       isCreatingFolder: folderOps.isCreatingFolder,
       selectionMode: fileSelection.selectionMode,
       selectedCount: fileSelection.selectedCount,
-      onToggleSelectionMode: fileSelection.toggleSelectionMode,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
       customActions:
@@ -524,6 +523,19 @@ export const FilesPage: React.FC = () => {
     ],
   );
 
+  const handleToggleItem = React.useCallback(
+    (
+      id: string,
+      options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
+    ) => {
+      if (!fileSelection.selectionMode) {
+        fileSelection.toggleSelectionMode();
+      }
+      fileSelection.toggleItem(id, options);
+    },
+    [fileSelection],
+  );
+
   const fileListViewProps = useMemo(
     (): React.ComponentProps<typeof FileListViewFactory> => ({
       layoutType,
@@ -550,7 +562,7 @@ export const FilesPage: React.FC = () => {
       }),
       selectionMode: fileSelection.selectionMode,
       selectedIds: fileSelection.selectedIds,
-      onToggleItem: fileSelection.toggleItem,
+      onToggleItem: handleToggleItem,
       pagination:
         layoutType === InterfaceLayoutType.List
           ? {
@@ -566,7 +578,7 @@ export const FilesPage: React.FC = () => {
       fileOperations,
       fileSelection.selectionMode,
       fileSelection.selectedIds,
-      fileSelection.toggleItem,
+      handleToggleItem,
       folderOperations,
       folderOps.handleCancelNewFolder,
       folderOps.handleConfirmNewFolder,
