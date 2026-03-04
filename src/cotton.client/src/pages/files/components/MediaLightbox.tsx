@@ -92,61 +92,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     Record<string, string>
   >({});
 
-  const [imageFits, setImageFits] = React.useState<
-    Record<string, "cover">
-  >({});
-
-  const imageFitLoadingRef = React.useRef<Set<string>>(new Set());
-
   const loadingRef = React.useRef<Set<string>>(new Set());
 
   // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(
-      items,
-      displayUrls,
-      signedUrls,
-      downloadUrls,
-      imageFits,
-    );
-  }, [items, displayUrls, signedUrls, downloadUrls, imageFits]);
-
-  const ensureImageFit = React.useCallback(
-    async (itemId: string, url: string) => {
-      if (!url) return;
-      if (imageFits[itemId]) return;
-      if (imageFitLoadingRef.current.has(itemId)) return;
-
-      imageFitLoadingRef.current.add(itemId);
-
-      try {
-        const img = new Image();
-        img.src = url;
-
-        if (typeof img.decode === "function") {
-          await img.decode();
-        } else {
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error("Image load failed"));
-          });
-        }
-
-        const isLandscape = img.naturalWidth > img.naturalHeight;
-        if (!isLandscape) return;
-
-        setImageFits((prev) => {
-          if (prev[itemId]) return prev;
-          return { ...prev, [itemId]: "cover" };
-        });
-      } catch {
-        // Ignore fit detection failures; default imageFit remains "contain".
-      } finally {
-        imageFitLoadingRef.current.delete(itemId);
-      }
-    },
-    [imageFits],
-  );
+    return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
+  }, [items, displayUrls, signedUrls, downloadUrls]);
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -177,12 +128,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             if (item.kind === "image" && isHeicFile(item.name)) {
               const convertedUrl = await convertHeicToJpeg(url);
               setDisplayUrls((p) => ({ ...p, [item.id]: convertedUrl }));
-              void ensureImageFit(item.id, convertedUrl);
             } else {
               setDisplayUrls((p) => ({ ...p, [item.id]: url }));
-              if (item.kind === "image") {
-                void ensureImageFit(item.id, url);
-              }
             }
           } catch (e) {
             console.error("Failed to load media original URL", e);
@@ -194,7 +141,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         return prev;
       });
     },
-    [items, getSignedMediaUrl, getDownloadUrl, ensureImageFit],
+    [items, getSignedMediaUrl, getDownloadUrl],
   );
 
   React.useEffect(() => {
@@ -203,16 +150,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   React.useEffect(() => {
     if (!open) return;
-    const idxs = [index, index - 1, index + 1];
-
-    for (const i of idxs) {
-      const item = items[i];
-      if (item?.kind === "image" && item.previewUrl) {
-        void ensureImageFit(item.id, item.previewUrl);
-      }
-      void ensureSlideHasOriginal(i);
-    }
-  }, [open, index, items, ensureSlideHasOriginal, ensureImageFit]);
+    void ensureSlideHasOriginal(index);
+  }, [open, index, ensureSlideHasOriginal]);
 
   // Build className based on activity state
   const lightboxClassName = [
@@ -328,7 +267,6 @@ function buildSlidesFromItems(
   displayUrls: Record<string, string>,
   signedUrls: Record<string, string>,
   downloadUrls: Record<string, string>,
-  imageFits: Record<string, "cover">,
 ): SlideWithTitle[] {
   const total = items.length;
 
@@ -341,7 +279,9 @@ function buildSlidesFromItems(
   const buildTitle = (position: number, item: MediaItem): string => {
     const prefix = total > 0 ? `${position}/${total}` : "";
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
-    return sizeStr ? `${prefix} • ${item.name} • ${sizeStr}` : `${prefix} • ${item.name}`;
+    return sizeStr
+      ? `${prefix} • ${item.name} • ${sizeStr}`
+      : `${prefix} • ${item.name}`;
   };
 
   const buildImageSlide = (args: {
@@ -351,9 +291,8 @@ function buildSlidesFromItems(
     signedUrl: string | null;
     downloadUrl: string | null;
     shareUrl: string | null;
-    imageFit?: "cover";
   }): SlideWithTitle => {
-    const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl, imageFit } = args;
+    const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl } = args;
     const isLoading = !displayUrl && !item.previewUrl;
     const src = displayUrl || item.previewUrl || TRANSPARENT_PLACEHOLDER;
 
@@ -363,7 +302,6 @@ function buildSlidesFromItems(
       width: isLoading ? 120 : item.width,
       height: isLoading ? 120 : item.height,
       title,
-      imageFit,
       download:
         downloadUrl || signedUrl
           ? { url: downloadUrl || signedUrl || "", filename: item.name }
@@ -431,7 +369,6 @@ function buildSlidesFromItems(
         signedUrl,
         downloadUrl,
         shareUrl,
-        imageFit: imageFits[item.id],
       });
     }
 

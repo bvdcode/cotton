@@ -156,6 +156,14 @@ export const TilesView: React.FC<IFileListView> = ({
 
   const shouldVirtualize = tiles.length > VIRTUALIZATION_THRESHOLD;
 
+  const orderedIds = useMemo(
+    () =>
+      tiles.map((tile) =>
+        tile.kind === "folder" ? tile.node.id : tile.file.id,
+      ),
+    [tiles],
+  );
+
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
       <Box
@@ -232,7 +240,15 @@ export const TilesView: React.FC<IFileListView> = ({
                       fileNamePlaceholder={fileNamePlaceholder}
                       selectionMode={selectionMode}
                       selected={selectedIds?.has(tileId)}
-                      onToggle={onToggleItem ? () => onToggleItem(tileId) : undefined}
+                      onToggle={
+                        onToggleItem
+                          ? (shiftKey) =>
+                              onToggleItem(tileId, {
+                                shiftKey,
+                                orderedIds,
+                              })
+                          : undefined
+                      }
                     />
                   );
                 })}
@@ -253,7 +269,15 @@ export const TilesView: React.FC<IFileListView> = ({
                 fileNamePlaceholder={fileNamePlaceholder}
                 selectionMode={selectionMode}
                 selected={selectedIds?.has(tileId)}
-                onToggle={onToggleItem ? () => onToggleItem(tileId) : undefined}
+                onToggle={
+                  onToggleItem
+                    ? (shiftKey) =>
+                        onToggleItem(tileId, {
+                          shiftKey,
+                          orderedIds,
+                        })
+                    : undefined
+                }
               />
             );
           })}

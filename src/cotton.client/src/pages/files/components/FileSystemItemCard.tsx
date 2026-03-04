@@ -21,7 +21,7 @@ export interface FileSystemItemCardProps {
   icon: ReactNode;
   title: string;
   subtitle?: string;
-  onClick?: () => void;
+  onClick?: (event?: React.SyntheticEvent) => void;
   actions?: FileSystemItemCardAction[];
   iconContainerSx?: SxProps<Theme>;
   sx?: SxProps<Theme>;
@@ -205,7 +205,7 @@ export const FileSystemItemCard = ({
         if (!clickable) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onClick?.();
+          onClick?.(e);
         }
       }}
       sx={{
