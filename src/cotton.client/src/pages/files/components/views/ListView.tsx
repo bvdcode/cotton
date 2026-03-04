@@ -134,6 +134,14 @@ export const ListView: React.FC<IFileListView> = ({
     const row = params.row;
     if (row.type === "new-folder") return;
 
+    if (event.shiftKey && onToggleItem) {
+      onToggleItem(row.id, {
+        shiftKey: true,
+        orderedIds,
+      });
+      return;
+    }
+
     if (selectionMode) {
       onToggleItem?.(row.id, {
         shiftKey: event.shiftKey,

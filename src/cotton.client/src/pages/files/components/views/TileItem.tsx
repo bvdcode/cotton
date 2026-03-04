@@ -183,6 +183,77 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
 
+    const longPressTimerRef = React.useRef<number | null>(null);
+    const longPressTriggeredRef = React.useRef(false);
+    const longPressStartRef = React.useRef<{ x: number; y: number } | null>(null);
+
+    const clearLongPress = React.useCallback(() => {
+      if (longPressTimerRef.current !== null) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressStartRef.current = null;
+    }, []);
+
+    const shouldIgnoreLongPressTarget = React.useCallback((target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(
+        target.closest(
+          ".card-menu-slot, .card-menu-button, button, a, input, textarea, [role='menuitem']",
+        ),
+      );
+    }, []);
+
+    const handlePointerDownCapture = React.useCallback(
+      (e: React.PointerEvent) => {
+        if (!onToggle) return;
+        if (selectionMode) return;
+        if (readOnly) return;
+        if (e.button !== 0) return;
+        if (e.shiftKey) return;
+        if (shouldIgnoreLongPressTarget(e.target)) return;
+
+        longPressTriggeredRef.current = false;
+        longPressStartRef.current = { x: e.clientX, y: e.clientY };
+
+        clearLongPress();
+        longPressTimerRef.current = window.setTimeout(() => {
+          longPressTriggeredRef.current = true;
+          onToggle(false);
+        }, 450);
+      },
+      [clearLongPress, onToggle, readOnly, selectionMode, shouldIgnoreLongPressTarget],
+    );
+
+    const handlePointerMoveCapture = React.useCallback(
+      (e: React.PointerEvent) => {
+        if (longPressTimerRef.current === null) return;
+        const start = longPressStartRef.current;
+        if (!start) return;
+        const dx = Math.abs(e.clientX - start.x);
+        const dy = Math.abs(e.clientY - start.y);
+        if (dx > 8 || dy > 8) {
+          clearLongPress();
+        }
+      },
+      [clearLongPress],
+    );
+
+    const handlePointerUpCapture = React.useCallback(() => {
+      clearLongPress();
+    }, [clearLongPress]);
+
+    const handlePointerCancelCapture = React.useCallback(() => {
+      clearLongPress();
+    }, [clearLongPress]);
+
+    const handleClickCapture = React.useCallback((e: React.MouseEvent) => {
+      if (!longPressTriggeredRef.current) return;
+      longPressTriggeredRef.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }, []);
+
     const checkbox = (
       <Checkbox
         checked={selected}
@@ -221,18 +292,35 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ? () => folderOperations.onShare?.(tile.node.id, tile.node.name)
               : undefined
           }
-          onClick={(e) =>
-            selectionMode
-              ? onToggle?.(!!(e as React.MouseEvent).shiftKey)
-              : folderOperations.onClick(tile.node.id)
-          }
+          onClick={(e) => {
+            const shiftKey = !!(e as React.MouseEvent).shiftKey;
+
+            if (shiftKey && onToggle) {
+              onToggle(true);
+              return;
+            }
+
+            if (selectionMode) {
+              onToggle?.(shiftKey);
+              return;
+            }
+
+            folderOperations.onClick(tile.node.id);
+          }}
           variant="squareTile"
           readOnly={readOnly}
         />
       );
 
       return (
-        <Box position="relative">
+        <Box
+          position="relative"
+          onPointerDownCapture={handlePointerDownCapture}
+          onPointerMoveCapture={handlePointerMoveCapture}
+          onPointerUpCapture={handlePointerUpCapture}
+          onPointerCancelCapture={handlePointerCancelCapture}
+          onClickCapture={handleClickCapture}
+        >
           {checkbox}
           {folderContent}
         </Box>
@@ -281,8 +369,15 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     })();
 
     const fileClick = (e?: React.SyntheticEvent) => {
+      const shiftKey = !!(e as React.MouseEvent | undefined)?.shiftKey;
+
+      if (shiftKey && onToggle) {
+        onToggle(true);
+        return;
+      }
+
       if (selectionMode) {
-        onToggle?.(!!(e as React.MouseEvent | undefined)?.shiftKey);
+        onToggle?.(shiftKey);
         return;
       }
 
@@ -344,7 +439,14 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     );
 
     return (
-      <Box position="relative">
+      <Box
+        position="relative"
+        onPointerDownCapture={handlePointerDownCapture}
+        onPointerMoveCapture={handlePointerMoveCapture}
+        onPointerUpCapture={handlePointerUpCapture}
+        onPointerCancelCapture={handlePointerCancelCapture}
+        onClickCapture={handleClickCapture}
+      >
         {checkbox}
         {fileContent}
       </Box>
