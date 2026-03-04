@@ -103,6 +103,12 @@
     "loading": "Loading...",
     "unsupported": "Preview is not available for this file type.",
     "message": "Check out \"{{name}}\" on Cotton Cloud",
+    "folder": {
+      "title": "Shared folder",
+      "message": "Check out folder \"{{name}}\" on Cotton Cloud",
+      "empty": "This folder is empty.",
+      "kind": "Folder"
+    },
     "toasts": {
       "copied": "Link copied",
       "shared": "Link shared"
@@ -729,7 +735,10 @@
     "share": {
       "copied": "Share link copied: {{name}}",
       "shared": "Sharing: {{name}}",
+      "folderCopied": "Folder link copied: {{name}}",
+      "folderShared": "Sharing folder: {{name}}",
       "message": "Check out \"{{name}}\" on Cotton Cloud",
+      "folderMessage": "Check out folder \"{{name}}\" on Cotton Cloud",
       "errors": {
         "link": "Failed to generate share link.",
         "token": "Failed to extract share token.",

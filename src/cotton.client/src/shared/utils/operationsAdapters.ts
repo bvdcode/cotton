@@ -17,6 +17,7 @@ export const buildFolderOperations = (
     handleDeleteFolder: (folderId: string, folderName: string) => Promise<void>;
   },
   onFolderClick: (folderId: string) => void,
+  onFolderShare?: (folderId: string, folderName: string) => Promise<void>,
 ): FolderOperations => {
   return {
     isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
@@ -26,6 +27,11 @@ export const buildFolderOperations = (
     onCancelRename: folderOps.handleCancelRename,
     onStartRename: folderOps.handleRenameFolder,
     onDelete: folderOps.handleDeleteFolder,
+    onShare: onFolderShare
+      ? (folderId: string, folderName: string) => {
+          void onFolderShare(folderId, folderName);
+        }
+      : undefined,
     onClick: onFolderClick,
   };
 };
