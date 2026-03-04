@@ -218,6 +218,9 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onDelete={() =>
             folderOperations.onDelete(tile.node.id, tile.node.name)
           }
+          onShare={() =>
+            folderOperations.onShare(tile.node.id, tile.node.name)
+          }
           onClick={(e) =>
             selectionMode
               ? onToggle?.(!!(e as React.MouseEvent).shiftKey)

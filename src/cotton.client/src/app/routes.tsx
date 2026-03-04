@@ -16,6 +16,7 @@ import {
   TrashPage,
   SearchPage,
   SharePage,
+  ShareFolderPage,
   AdminLayoutPage,
   AdminUsersPage,
   ResetPasswordPage,
@@ -38,6 +39,10 @@ const publicRoutes: RouteConfig[] = [
   {
     path: "/share/:token",
     element: <SharePage />,
+  },
+  {
+    path: "/share/folder/:token",
+    element: <ShareFolderPage />,
   },
   {
     path: "/reset-password",

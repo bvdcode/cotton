@@ -7,6 +7,7 @@ export { SettingsPage } from "./profile";
 export { TrashPage } from "./trash";
 export { SearchPage } from "./search/SearchPage";
 export { SharePage } from "./share/SharePage";
+export { ShareFolderPage } from "./share-folder/ShareFolderPage";
 export { AdminLayoutPage, AdminUsersPage } from "./admin";
 export { ResetPasswordPage } from "./reset-password/ResetPasswordPage";
 export { VerifyEmailPage } from "./verify-email/VerifyEmailPage";
