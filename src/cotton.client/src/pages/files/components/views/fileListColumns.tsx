@@ -35,7 +35,7 @@ export interface FileListRow {
     file?: {
       id: string;
       name: string;
-      smallFilePreviewPresignedToken?: string | null;
+      previewHashEncryptedHex?: string | null;
     };
   };
 }
@@ -107,9 +107,9 @@ export const createIconColumn = (
   renderCell: (params) => {
     const previewUrl =
       params.row.type === "file" && params.row.tile?.kind === "file"
-        ? params.row.tile.file?.smallFilePreviewPresignedToken
+        ? params.row.tile.file?.previewHashEncryptedHex
           ? `/api/v1/preview/${encodeURIComponent(
-              params.row.tile.file.smallFilePreviewPresignedToken,
+              params.row.tile.file.previewHashEncryptedHex,
             )}.webp`
           : null
         : null;

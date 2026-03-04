@@ -11,7 +11,7 @@ export interface NodeFileManifestDto extends BaseDto {
   name: string;
   contentType: string;
   sizeBytes: number;
-  smallFilePreviewPresignedToken?: string | null;
+  previewHashEncryptedHex?: string | null;
   largeFilePreviewPresignedToken?: string | null;
 }
 export interface NodeResponse {

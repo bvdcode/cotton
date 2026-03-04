@@ -216,7 +216,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       isDarkMode &&
       (isPdfFile(tile.file.name) || isTextFile(tile.file.name));
     const preview = getFileIcon(
-      tile.file.smallFilePreviewPresignedToken ?? null,
+      tile.file.previewHashEncryptedHex ?? null,
       tile.file.name,
       tile.file.contentType,
     );
