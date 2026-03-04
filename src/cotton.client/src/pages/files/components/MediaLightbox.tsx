@@ -29,6 +29,9 @@ import { shareLinks } from "../../../shared/utils/shareLinks";
 const TRANSPARENT_PLACEHOLDER =
   "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
+const LIGHTBOX_ANIMATION_MS = 200;
+const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
+
 type SlideWithTitle = Slide & {
   title?: string;
 };
@@ -150,7 +153,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   React.useEffect(() => {
     if (!open) return;
-    void ensureSlideHasOriginal(index);
+    for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
+      void ensureSlideHasOriginal(index + offset);
+    }
   }, [open, index, ensureSlideHasOriginal]);
 
   // Build className based on activity state
@@ -168,14 +173,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       slides={slides}
       index={index}
       animation={{
-        swipe: smoothTransitions ? 120 : 0,
-        fade: smoothTransitions ? 120 : 0,
-        navigation: smoothTransitions ? 120 : 0,
+        swipe: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+        fade: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+        navigation: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
       }}
       on={{
         view: ({ index: currentIndex }) => {
           setIndex(currentIndex);
-          void ensureSlideHasOriginal(currentIndex);
+          for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
+            void ensureSlideHasOriginal(currentIndex + offset);
+          }
         },
       }}
       render={{
