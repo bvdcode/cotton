@@ -128,7 +128,7 @@ export const useFilesData = ({
   }, [nodeId, loadNode, layoutType, currentPagination, fetchListPage]);
 
   const optimisticUpdateCurrentNodeFilePreviewHash = useCallback(
-    (nodeFileId: string, smallFilePreviewPresignedToken: string) => {
+    (nodeFileId: string, previewHashEncryptedHex: string) => {
       if (!nodeId) {
         return;
       }
@@ -136,7 +136,7 @@ export const useFilesData = ({
       optimisticSetFilePreviewHash(
         nodeId,
         nodeFileId,
-        smallFilePreviewPresignedToken,
+        previewHashEncryptedHex,
       );
 
       if (layoutType !== InterfaceLayoutType.List) {
@@ -147,14 +147,14 @@ export const useFilesData = ({
         if (!prev) return prev;
         const existing = prev.files.find((f) => f.id === nodeFileId);
         if (!existing) return prev;
-        if (existing.smallFilePreviewPresignedToken === smallFilePreviewPresignedToken) {
+        if (existing.previewHashEncryptedHex === previewHashEncryptedHex) {
           return prev;
         }
         return {
           ...prev,
           files: prev.files.map((f) =>
             f.id === nodeFileId
-              ? { ...f, smallFilePreviewPresignedToken }
+              ? { ...f, previewHashEncryptedHex }
               : f,
           ),
         };
