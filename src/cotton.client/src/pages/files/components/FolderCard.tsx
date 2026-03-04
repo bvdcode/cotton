@@ -16,6 +16,7 @@ interface FolderCardProps {
   onShare?: () => void;
   onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
+  readOnly?: boolean;
 }
 
 export const FolderCard = ({
@@ -30,6 +31,7 @@ export const FolderCard = ({
   onShare,
   onClick,
   variant = "default",
+  readOnly = false,
 }: FolderCardProps) => {
   const { t } = useTranslation(["files", "common"]);
 
@@ -51,16 +53,20 @@ export const FolderCard = ({
               },
             ]
           : []),
-        {
-          icon: <Edit />,
-          onClick: onStartRename,
-          tooltip: t("common:actions.rename"),
-        },
-        {
-          icon: <Delete />,
-          onClick: onDelete,
-          tooltip: t("common:actions.delete"),
-        },
+        ...(readOnly
+          ? []
+          : [
+              {
+                icon: <Edit />,
+                onClick: onStartRename,
+                tooltip: t("common:actions.rename"),
+              },
+              {
+                icon: <Delete />,
+                onClick: onDelete,
+                tooltip: t("common:actions.delete"),
+              },
+            ]),
       ]}
       isRenaming={isRenaming}
       renamingValue={renamingName}

@@ -10,10 +10,12 @@ interface Breadcrumb {
 
 interface FileBreadcrumbsProps {
   breadcrumbs: Breadcrumb[];
+  onNavigateBreadcrumb?: (breadcrumbIndex: number) => void;
 }
 
 export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
   breadcrumbs,
+  onNavigateBreadcrumb,
 }) => {
   const { t } = useTranslation("files");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -21,7 +23,9 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
 
   const filtered = useMemo(
     () =>
-      breadcrumbs.filter((crumb, idx) => idx > 0 || crumb.name !== "Default"),
+      breadcrumbs
+        .map((crumb, idx) => ({ crumb, idx }))
+        .filter(({ crumb, idx }) => idx > 0 || crumb.name !== "Default"),
     [breadcrumbs],
   );
 
@@ -58,8 +62,8 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
   }, []);
 
   return (
-    <Box
-      ref={containerRef}
+        {filtered.map(({ crumb, idx }, filteredIndex) => {
+          const isLast = filteredIndex === filtered.length - 1;
       sx={{
         display: "flex",
         alignItems: "center",
@@ -72,20 +76,39 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
           content: '""',
           position: "absolute",
           top: 0,
-          left: 0,
-          width: "60px",
-          height: "100%",
-          background: (theme) =>
-            `linear-gradient(to right, ${theme.palette.background.default}, transparent)`,
-          pointerEvents: "none",
-          zIndex: 1,
-          opacity: "var(--ctn-bc-left-fade)",
-          transition: "opacity 200ms ease-out",
-        },
-      }}
-    >
-      <Breadcrumbs
-        ref={breadcrumbsRef}
+
+          if (onNavigateBreadcrumb) {
+            return (
+              <MuiLink
+                key={crumb.id}
+                component="button"
+                type="button"
+                underline="hover"
+                color="inherit"
+                onClick={() => onNavigateBreadcrumb(idx)}
+                sx={{ fontSize: "1.1rem" }}
+                noWrap
+                title={crumb.name}
+              >
+                {crumb.name}
+              </MuiLink>
+            );
+          }
+
+          return (
+            <MuiLink
+              key={crumb.id}
+              component={RouterLink}
+              underline="hover"
+              color="inherit"
+              to={`/files/${crumb.id}`}
+              sx={{ fontSize: "1.1rem" }}
+              noWrap
+              title={crumb.name}
+            >
+              {crumb.name}
+            </MuiLink>
+          );
         aria-label={t("breadcrumbs.ariaLabel")}
         sx={{
           direction: "ltr",

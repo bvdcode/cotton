@@ -119,6 +119,12 @@ export interface IFileListView {
   fileOperations: FileOperations;
 
   /**
+   * When true, the view must not expose write actions (rename/delete/share/create).
+   * Intended for public/shared browsing.
+   */
+  readOnly?: boolean;
+
+  /**
    * Optional handler for navigating to a file's containing folder.
    * Used by Search results to jump to the node where a file is located.
    */

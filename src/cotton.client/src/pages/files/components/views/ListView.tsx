@@ -12,6 +12,7 @@ export const ListView: React.FC<IFileListView> = ({
   tiles,
   folderOperations,
   fileOperations,
+  readOnly = false,
   onGoToFileLocation,
   listColumnFlex,
   isCreatingFolder,
@@ -82,6 +83,7 @@ export const ListView: React.FC<IFileListView> = ({
   const columns = useMemo(
     () =>
       createFileListColumns({
+        readOnly,
         labels: {
           name: t("name"),
           size: t("size"),
@@ -109,6 +111,7 @@ export const ListView: React.FC<IFileListView> = ({
       }),
     [
       t,
+      readOnly,
       newFolderName,
       onNewFolderNameChange,
       onConfirmNewFolder,
