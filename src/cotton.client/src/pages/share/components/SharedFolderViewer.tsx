@@ -276,7 +276,14 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   const canGoUp = breadcrumbs.length > 1;
 
   return (
-    <Box flex={1} minHeight={0} overflow="auto" px={{ xs: 2, sm: 3 }} py={2}>
+    <Box
+      flex={1}
+      minHeight={0}
+      overflow="auto"
+      px={{ xs: 2, sm: 3 }}
+      pt={0}
+      pb={2}
+    >
       <PageHeader
         loading={loading}
         breadcrumbs={breadcrumbs}
