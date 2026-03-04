@@ -7,6 +7,7 @@ namespace Cotton.Server.Models.Dto
 {
     public class NodeFileManifestDto : BaseDto<Guid>
     {
+        public Guid NodeId { get; set; }
         public Guid OwnerId { get; set; }
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
