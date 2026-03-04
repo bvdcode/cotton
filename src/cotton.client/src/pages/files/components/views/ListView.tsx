@@ -71,6 +71,14 @@ export const ListView: React.FC<IFileListView> = ({
     ];
   }, [tiles, isCreatingFolder, newFolderName]);
 
+  const orderedIds = useMemo(
+    () =>
+      rows
+        .filter((r) => r.type !== "new-folder")
+        .map((r) => String(r.id)),
+    [rows],
+  );
+
   const columns = useMemo(
     () =>
       createFileListColumns({
@@ -115,12 +123,18 @@ export const ListView: React.FC<IFileListView> = ({
     ],
   );
 
-  const handleRowClick = (params: GridRowParams<FileListRow>) => {
+  const handleRowClick = (
+    params: GridRowParams<FileListRow>,
+    event: React.MouseEvent,
+  ) => {
     const row = params.row;
     if (row.type === "new-folder") return;
 
     if (selectionMode) {
-      onToggleItem?.(row.id);
+      onToggleItem?.(row.id, {
+        shiftKey: event.shiftKey,
+        orderedIds,
+      });
       return;
     }
 

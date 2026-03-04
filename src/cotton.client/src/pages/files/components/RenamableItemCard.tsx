@@ -9,7 +9,7 @@ interface RenamableItemCardProps {
   renamingIcon?: ReactNode;
   title: string;
   subtitle?: string;
-  onClick?: () => void;
+  onClick?: (event?: React.SyntheticEvent) => void;
   actions?: FileSystemItemCardAction[];
   iconContainerSx?: SxProps<Theme>;
   sx?: SxProps<Theme>;

@@ -155,7 +155,7 @@ interface TileItemProps {
   fileNamePlaceholder: string;
   selectionMode?: boolean;
   selected?: boolean;
-  onToggle?: () => void;
+  onToggle?: (shiftKey: boolean) => void;
 }
 
 /**
@@ -183,7 +183,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onDelete={() =>
             folderOperations.onDelete(tile.node.id, tile.node.name)
           }
-          onClick={selectionMode ? () => onToggle?.() : () => folderOperations.onClick(tile.node.id)}
+          onClick={(e) =>
+            selectionMode
+              ? onToggle?.(!!(e as React.MouseEvent).shiftKey)
+              : folderOperations.onClick(tile.node.id)
+          }
           variant="squareTile"
         />
       );
@@ -193,7 +197,10 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           <Box position="relative">
             <Checkbox
               checked={selected}
-              onChange={() => onToggle?.()}
+              onChange={(e) => {
+                const nativeEvent = e.nativeEvent as MouseEvent;
+                onToggle?.(!!nativeEvent.shiftKey);
+              }}
               sx={{
                 position: "absolute",
                 top: 4,
@@ -249,16 +256,19 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return preview;
     })();
 
-    const fileClick = selectionMode
-      ? () => onToggle?.()
-      : isImage || isVideo
-        ? () => fileOperations.onMediaClick?.(tile.file.id)
-        : () =>
-            fileOperations.onClick(
-              tile.file.id,
-              tile.file.name,
-              tile.file.sizeBytes,
-            );
+    const fileClick = (e?: React.SyntheticEvent) => {
+      if (selectionMode) {
+        onToggle?.(!!(e as React.MouseEvent | undefined)?.shiftKey);
+        return;
+      }
+
+      if (isImage || isVideo) {
+        fileOperations.onMediaClick?.(tile.file.id);
+        return;
+      }
+
+      fileOperations.onClick(tile.file.id, tile.file.name, tile.file.sizeBytes);
+    };
 
     const fileContent = (
       <RenamableItemCard
@@ -310,7 +320,10 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         <Box position="relative">
           <Checkbox
             checked={selected}
-            onChange={() => onToggle?.()}
+            onChange={(e) => {
+              const nativeEvent = e.nativeEvent as MouseEvent;
+              onToggle?.(!!nativeEvent.shiftKey);
+            }}
             sx={{
               position: "absolute",
               top: 4,
