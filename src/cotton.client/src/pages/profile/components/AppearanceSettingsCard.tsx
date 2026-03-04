@@ -60,7 +60,6 @@ export const AppearanceSettingsCard = () => {
       icon={<PaletteOutlined color="primary" />}
       title={t("appearance.title")}
       description={t("appearance.description")}
-      defaultExpanded
     >
       <Stack spacing={2} paddingY={2}>
         <FormControlLabel

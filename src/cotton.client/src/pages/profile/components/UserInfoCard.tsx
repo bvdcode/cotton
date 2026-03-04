@@ -5,6 +5,7 @@ import {
   Chip,
   Divider,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -48,7 +49,7 @@ interface UserInfoCardProps {
 
 type InfoRowProps = {
   label: string;
-  value: string;
+  value: React.ReactNode;
 };
 
 const InfoRow = ({ label, value }: InfoRowProps) => {
@@ -106,6 +107,8 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
     email: user.email,
   });
 
+  const usernameCaption = fullName ? `@${user.username}` : "";
+
   const birthDateValue = (() => {
     if (!user.birthDate || user.birthDate.trim().length === 0) {
       return placeholder;
@@ -161,10 +164,26 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             useFlexGap
           >
             <Box flexGrow={1} minWidth={0}>
-              <Box display="flex" alignItems="center" flexWrap="wrap" gap={1}>
+              <Box
+                display="flex"
+                alignItems="center"
+                flexWrap="wrap"
+                gap={1}
+                width="100%"
+                justifyContent={{ xs: "center", sm: "flex-start" }}
+              >
                 <Typography variant="h5" fontWeight={800} height="100%">
                   {title}
                 </Typography>
+                {usernameCaption ? (
+                  <Tooltip title={user.id} arrow>
+                    <Box component="span">
+                      <Typography variant="body2" color="text.primary">
+                        {usernameCaption}
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                ) : null}
               </Box>
             </Box>
 
@@ -215,7 +234,14 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         spacing={{ xs: 1.5, sm: 3 }}
       >
         <Stack spacing={1.25} flex={1}>
-          <InfoRow label={t("fields.username")} value={user.username} />
+          <InfoRow
+            label={t("fields.username")}
+            value={
+              <Tooltip title={user.id} arrow>
+                <Box component="span">{user.username}</Box>
+              </Tooltip>
+            }
+          />
           <InfoRow
             label={t("fields.email")}
             value={
@@ -224,7 +250,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
                 : placeholder
             }
           />
-          <InfoRow label={t("fields.id")} value={user.id} />
         </Stack>
 
         <Stack spacing={1.25} flex={1}>
