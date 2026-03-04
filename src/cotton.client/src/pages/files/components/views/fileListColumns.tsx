@@ -72,6 +72,7 @@ interface ColumnOptions {
     onCancelRename: () => void;
     onStartRename: (id: string, name: string) => void;
     onDelete: (id: string, name: string) => void;
+    onShare?: (id: string, name: string) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
@@ -396,6 +397,18 @@ export const createActionsColumn = (
           >
             <Edit fontSize="small" />
           </IconButton>
+          {options.folderOperations.onShare && (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                options.folderOperations.onShare?.(row.id, row.name);
+              }}
+              title={options.labels.share}
+            >
+              <Share fontSize="small" />
+            </IconButton>
+          )}
           <IconButton
             size="small"
             onClick={(e) => {

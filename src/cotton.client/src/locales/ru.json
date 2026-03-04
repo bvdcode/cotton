@@ -89,6 +89,12 @@
     "loading": "Загрузка...",
     "unsupported": "Для этого типа файла предпросмотр недоступен.",
     "message": "Откройте \"{{name}}\" в Cotton Cloud",
+    "folder": {
+      "title": "Открытая папка",
+      "message": "Откройте папку \"{{name}}\" в Cotton Cloud",
+      "empty": "В этой папке пока нет файлов и подпапок.",
+      "kind": "Папка"
+    },
     "toasts": {
       "copied": "Ссылка скопирована",
       "shared": "Ссылка отправлена"
@@ -723,7 +729,10 @@
     "share": {
       "copied": "Ссылка скопирована: {{name}}",
       "shared": "Поделиться: {{name}}",
+      "folderCopied": "Ссылка на папку скопирована: {{name}}",
+      "folderShared": "Поделиться папкой: {{name}}",
       "message": "Посмотрите «{{name}}» на Cotton Cloud",
+      "folderMessage": "Посмотрите папку «{{name}}» на Cotton Cloud",
       "errors": {
         "link": "Не удалось создать ссылку.",
         "token": "Не удалось получить токен для ссылки.",
