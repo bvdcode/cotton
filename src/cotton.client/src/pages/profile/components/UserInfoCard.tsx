@@ -107,8 +107,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
     email: user.email,
   });
 
-  const usernameCaption = fullName ? `@${user.username}` : "";
-
   const birthDateValue = (() => {
     if (!user.birthDate || user.birthDate.trim().length === 0) {
       return placeholder;
@@ -164,27 +162,9 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             useFlexGap
           >
             <Box flexGrow={1} minWidth={0}>
-              <Box
-                display="flex"
-                alignItems="center"
-                flexWrap="wrap"
-                gap={1}
-                width="100%"
-                justifyContent={{ xs: "center", sm: "flex-start" }}
-              >
-                <Typography variant="h5" fontWeight={800} height="100%">
-                  {title}
-                </Typography>
-                {usernameCaption ? (
-                  <Tooltip title={user.id} arrow>
-                    <Box component="span">
-                      <Typography variant="body2" color="text.primary">
-                        {usernameCaption}
-                      </Typography>
-                    </Box>
-                  </Tooltip>
-                ) : null}
-              </Box>
+              <Typography variant="h5" fontWeight={800} height="100%">
+                {title}
+              </Typography>
             </Box>
 
             <Stack
