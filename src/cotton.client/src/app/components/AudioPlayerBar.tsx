@@ -119,7 +119,11 @@ export const AudioPlayerBar: React.FC = () => {
               <IconButton
                 size="small"
                 onClick={() => setQueueOpen((prev) => !prev)}
-                aria-label={t("audioPlayer:actions.showQueue")}
+                aria-label={
+                  queueOpen
+                    ? t("audioPlayer:actions.hideQueue")
+                    : t("audioPlayer:actions.showQueue")
+                }
               >
                 <QueueMusic fontSize="small" />
               </IconButton>
