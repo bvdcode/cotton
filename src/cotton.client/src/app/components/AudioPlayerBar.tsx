@@ -114,13 +114,11 @@ export const AudioPlayerBar: React.FC = () => {
                 src={currentPreviewUrl}
                 alt=""
                 onError={() => setCoverFailed(true)}
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 0.5,
-                  objectFit: "cover",
-                  flexShrink: 0,
-                }}
+                width={28}
+                height={28}
+                borderRadius={0.5}
+                flexShrink={0}
+                sx={{ objectFit: "cover" }}
               />
             ) : null}
 
