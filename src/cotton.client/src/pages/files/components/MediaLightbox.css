@@ -29,7 +29,7 @@
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* Edge-to-edge slides: avoid built-in carousel/slide paddings */
@@ -185,6 +185,13 @@
   flex: none !important;
   background: transparent;
   transition: background 0.3s ease;
+  /*
+   * Important for mobile/video:
+   * even when thumbnails are visually hidden by the plugin, the container can still
+   * sit on top of the slide and intercept touches (breaking native video controls).
+   * We only enable pointer events for hover-capable desktop pointers.
+   */
+  pointer-events: none;
 }
 
 /* Extra hover trigger zone above the thumbnail strip */
@@ -213,6 +220,10 @@
 @media (hover: hover) and (pointer: fine) {
   .lightbox-autohide .yarl__thumbnails_container:hover {
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+  }
+
+  .lightbox-autohide .yarl__thumbnails_container {
+    pointer-events: auto;
   }
 
   .lightbox-autohide .yarl__thumbnails_container:hover .yarl__thumbnails_track {
