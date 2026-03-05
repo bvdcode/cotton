@@ -98,6 +98,14 @@
     "subtitle": "Asistente de configuración",
     "ok": "Aceptar"
   },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "Buscar pistas en esta carpeta y subcarpetas",
+      "showQueue": "Mostrar cola",
+      "hideQueue": "Ocultar cola",
+      "close": "Cerrar reproductor"
+    }
+  },
   "share": {
     "title": "Archivo compartido",
     "loading": "Cargando...",

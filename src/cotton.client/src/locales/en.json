@@ -98,6 +98,14 @@
     "subtitle": "Setup Wizard",
     "ok": "OK"
   },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "Find tracks in this folder and subfolders",
+      "showQueue": "Show queue",
+      "hideQueue": "Hide queue",
+      "close": "Close player"
+    }
+  },
   "share": {
     "title": "Shared file",
     "loading": "Loading...",

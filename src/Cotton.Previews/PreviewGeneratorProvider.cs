@@ -10,6 +10,7 @@
             new PdfPreviewGenerator(),
             new HeicPreviewGenerator(),
             new TextPreviewGenerator(),
+            new AudioPreviewGenerator(),
             new VideoPreviewGenerator(),
             new ImagePreviewGenerator(),
         ];
