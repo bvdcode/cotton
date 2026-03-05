@@ -1,0 +1,955 @@
+{
+  "search": {
+    "searchPlaceholder": "Search files and folders...",
+    "error": "Search failed. Please try again.",
+    "enterQueryHint": "Start typing to search...",
+    "noResults": "No files or folders found"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "empty": "No notifications",
+    "viewAll": "View all",
+    "unreadCount": "{count} unread",
+    "showOnlyUnread": "Show only unread",
+    "showAll": "Show all",
+    "muteSound": "Mute sound",
+    "unmuteSound": "Unmute sound",
+    "notifications": {
+      "empty": "No notifications"
+    }
+  },
+  "common": {
+    "languageName": "English",
+    "switchToThisLanguage": "Switch to English",
+    "placeholder": "—",
+    "yes": "Yes",
+    "no": "No",
+    "time": {
+      "justNow": "just now",
+      "secondsAgo_one": "{{count}} second ago",
+      "secondsAgo_few": "{{count}} seconds ago",
+      "secondsAgo_many": "{{count}} seconds ago",
+      "secondsAgo_other": "{{count}} seconds ago",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_few": "{{count}} minutes ago",
+      "minutesAgo_many": "{{count}} minutes ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_few": "{{count}} hours ago",
+      "hoursAgo_many": "{{count}} hours ago",
+      "hoursAgo_other": "{{count}} hours ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_few": "{{count}} days ago",
+      "daysAgo_many": "{{count}} days ago",
+      "daysAgo_other": "{{count}} days ago",
+      "monthsAgo_one": "{{count}} month ago",
+      "monthsAgo_few": "{{count}} months ago",
+      "monthsAgo_many": "{{count}} months ago",
+      "monthsAgo_other": "{{count}} months ago",
+      "yearsAgo_one": "{{count}} year ago",
+      "yearsAgo_few": "{{count}} years ago",
+      "yearsAgo_many": "{{count}} years ago",
+      "yearsAgo_other": "{{count}} years ago",
+      "durationMinutes_one": "{{count}} min",
+      "durationMinutes_few": "{{count}} min",
+      "durationMinutes_many": "{{count}} min",
+      "durationMinutes_other": "{{count}} min",
+      "durationHours_one": "{{count}} hour",
+      "durationHours_few": "{{count}} hours",
+      "durationHours_many": "{{count}} hours",
+      "durationHours_other": "{{count}} hours",
+      "durationDays_one": "{{count}} day",
+      "durationDays_few": "{{count}} days",
+      "durationDays_many": "{{count}} days",
+      "durationDays_other": "{{count}} days",
+      "lessThanMinute": "less than a minute"
+    },
+    "actions": {
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "rename": "Rename",
+      "download": "Download",
+      "share": "Share",
+      "copied": "Copied!",
+      "reload": "Reload"
+    },
+    "errors": {
+      "unexpectedTitle": "Something went wrong",
+      "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
+      "showDetails": "Show details",
+      "hideDetails": "Hide details"
+    },
+    "userMenu": {
+      "profile": "Profile",
+      "settings": "Settings",
+      "admin": "Admin",
+      "user": "User",
+      "lightMode": "Light Mode",
+      "darkMode": "Dark Mode",
+      "changeLanguage": "Change language",
+      "logout": "Logout"
+    },
+    "app": {
+      "logoAlt": "Cotton logo"
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "Setup Wizard",
+    "ok": "OK"
+  },
+  "share": {
+    "title": "Shared file",
+    "loading": "Loading...",
+    "unsupported": "Preview is not available for this file type.",
+    "message": "Check out \"{{name}}\" on Cotton Cloud",
+    "folder": {
+      "title": "Shared folder",
+      "message": "Check out folder \"{{name}}\" on Cotton Cloud",
+      "empty": "This folder is empty.",
+      "kind": "Folder"
+    },
+    "toasts": {
+      "copied": "Link copied",
+      "shared": "Link shared"
+    },
+    "errors": {
+      "invalidLink": "Invalid share link.",
+      "notFound": "File not found or link expired.",
+      "loadFailed": "Failed to load the shared file.",
+      "copyLink": "Failed to copy link to clipboard.",
+      "fileTooLargePreview": "File is too large to preview ({{size}}). Please download the file to view it."
+    }
+  },
+  "login": {
+    "title": "Sign in to your account",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "rememberMe": "Trust this device",
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "caption": "Enter the 6-digit code from your authenticator app.",
+      "digit": "Digit",
+      "required": "Two-factor authentication code is required.",
+      "invalid": "Invalid two-factor authentication code.",
+      "locked": "Too many attempts. Please try again later."
+    },
+    "loginButton": "Login",
+    "loggingIn": "Logging in...",
+    "errorMessage": "Login failed. Check your credentials.",
+    "restoring": {
+      "title": "Restoring session...",
+      "caption": "Please, wait"
+    },
+    "forgotPassword": {
+      "link": "Forgot password?",
+      "enterEmail": "Please enter your email as the username to reset your password.",
+      "sent": "If an account with that email exists, a password reset link has been sent.",
+      "sending": "Sending...",
+      "error": "Failed to send reset link. Please try again later."
+    },
+    "firstRun": {
+      "title": "Initial Setup",
+      "message": "This server has no users yet. The credentials you enter will be used to create the first administrator account. This is only possible during the first few minutes after the instance starts. Server uptime: {{uptime}}. If the time window has passed, restart the server and try again."
+    }
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "message": "The page you are looking for does not exist.",
+    "backButton": "Go Back to Home"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account information and security status.",
+    "notAuthenticated": "You are not signed in.",
+    "ageYears_one": "{{count}} year",
+    "ageYears_few": "{{count}} years",
+    "ageYears_many": "{{count}} years",
+    "ageYears_other": "{{count}} years",
+    "roles": {
+      "user": "User",
+      "admin": "Admin"
+    },
+    "editProfile": {
+      "title": "Edit profile",
+      "description": "Update your personal information.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "E-mail",
+      "birthDate": "Date of birth",
+      "save": "Save",
+      "saving": "Saving...",
+      "success": "Profile updated.",
+      "emailWarning": "Changing your email will reset verification status.",
+      "errors": {
+        "failed": "Failed to update profile."
+      }
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "UI preferences and personalization.",
+      "gallerySmoothTransitions": "Smooth transitions in gallery",
+      "themeMode": {
+        "label": "Theme",
+        "light": "Light",
+        "system": "System",
+        "dark": "Dark"
+      },
+      "language": {
+        "label": "Language",
+        "en": "English",
+        "ru": "Russian"
+      }
+    },
+    "shareLinks": {
+      "title": "Share links",
+      "description": "Control how long generated share links stay valid.",
+      "current": "Current: {{days}} days",
+      "presets": {
+        "week": "Week",
+        "month": "Month",
+        "year": "Year",
+        "threeMonths": "3 months",
+        "tenYears": "10 years",
+        "oneDay": "One day"
+      },
+      "invalidateAll": "Invalidate all share links",
+      "invalidating": "Invalidating...",
+      "invalidated": "All share links have been invalidated.",
+      "invalidateConfirmTitle": "Invalidate all share links?",
+      "invalidateConfirmDescription": "All active share links will stop working immediately. This cannot be undone.",
+      "errors": {
+        "invalidateFailed": "Failed to invalidate share links."
+      }
+    },
+    "totp": {
+      "enabled": "2FA enabled",
+      "disabled": "2FA disabled",
+      "sectionTitle": "Two-factor authentication",
+      "enabledMessage": "Two-factor authentication is enabled.",
+      "enabledDescription": "Your account is protected with an additional security layer.",
+      "setup": {
+        "title": "Enable two-factor authentication (TOTP)",
+        "caption": "Use an authenticator app (Google Authenticator, Authy, etc.).",
+        "button": "Generate QR code",
+        "loading": "Generating...",
+        "qrTitle": "Scan this QR code",
+        "secretLabel": "Secret key:",
+        "copySecret": "Copy secret",
+        "success": "Two-factor authentication is enabled."
+      },
+      "confirm": {
+        "title": "Confirm setup",
+        "caption": "Enter the 6-digit code from your authenticator app.",
+        "digit": "Digit",
+        "button": "Confirm",
+        "loading": "Confirming..."
+      },
+      "errors": {
+        "setupFailed": "Failed to start 2FA setup.",
+        "confirmFailed": "Failed to confirm 2FA.",
+        "saveFailed": "Failed to save 2FA settings.",
+        "codeRequired": "Please enter the 6-digit code.",
+        "invalidCode": "Invalid two-factor authentication code.",
+        "alreadyEnabled": "2FA is already enabled.",
+        "setupNotInitiated": "2FA setup has not been initiated. Generate a QR code first."
+      }
+    },
+    "fields": {
+      "id": "User ID",
+      "username": "Username",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "birthDate": "Date of birth",
+      "role": "Role",
+      "twoFactor": "Two-factor authentication",
+      "totpEnabledAt": "Enabled at",
+      "totpFailedAttempts": "2FA Failed attempts",
+      "email": "E-mail",
+      "emailVerified": "Verified",
+      "emailNotVerified": "Not verified",
+      "createdAt": "Created at",
+      "updatedAt": "Updated at"
+    },
+    "emailVerification": {
+      "title": "Email verification",
+      "description": "Verify your email address to enable password recovery and notifications.",
+      "verified": "Email verified",
+      "notVerified": "Email not verified",
+      "sendButton": "Send verification email",
+      "sending": "Sending...",
+      "sent": "Verification email sent. Please check your inbox.",
+      "noEmail": "No email address is set for your account.",
+      "errors": {
+        "failed": "Failed to send verification email. Please try again later."
+      }
+    },
+    "password": {
+      "title": "Change password",
+      "description": "Update your account password.",
+      "old": "Old password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "show": "Show password",
+      "hide": "Hide password",
+      "save": "Save",
+      "saving": "Saving...",
+      "success": "Password changed.",
+      "errors": {
+        "mismatch": "Passwords do not match.",
+        "failed": "Failed to change password."
+      }
+    },
+    "sessions": {
+      "title": "Active Sessions",
+      "description": "Manage your active sessions across different devices",
+      "noActiveSessions": "No active sessions",
+      "currentSession": "Current",
+      "unknownDevice": "Unknown device",
+      "revokeSession": "End session",
+      "elapsed": "{{duration}} elapsed",
+      "revokeConfirmTitle": "End session?",
+      "revokeConfirmDescription": "Are you sure you want to end this session? This will sign out the device.",
+      "revokeConfirmButton": "End session",
+      "revokeCancelButton": "Cancel",
+      "errors": {
+        "loadFailed": "Failed to load sessions.",
+        "revokeFailed": "Failed to end session."
+      }
+    },
+    "webdav": {
+      "title": "WebDAV Access",
+      "description": "Generate a one-time token to connect via WebDAV.",
+      "confirmTitle": "Generate WebDAV token?",
+      "confirmDescription": "This will generate a new token and invalidate any previous one. The token will only be shown once.",
+      "confirmButton": "Generate",
+      "cancelButton": "Cancel",
+      "generateButton": "Generate token",
+      "generating": "Generating...",
+      "tokenLabel": "Token",
+      "usernameLabel": "Username",
+      "connectUrlLabel": "WebDAV endpoint",
+      "modalTitle": "WebDAV credentials (shown once)",
+      "closeButton": "Close",
+      "copyToken": "Copy token",
+      "copyUrl": "Copy URL",
+      "copyUsername": "Copy username",
+      "tokenWarning": "Copy this token now. It will not be shown again.",
+      "cardHelp": "Use these values to connect with a WebDAV client. Generate a token to obtain a one-time password.",
+      "examples": {
+        "title": "Examples",
+        "copy": "Copy",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Copy",
+          "caption": "Run in an elevated Command Prompt or use mapped drive in Explorer."
+        },
+        "windowsRegistry": {
+          "title": "Windows (Registry tweak)",
+          "copy": "Copy",
+          "caption": "Apply a registry change to raise the WebDAV file size limit."
+        },
+        "powershell": {
+          "title": "Windows (PowerShell escape)",
+          "copy": "Copy",
+          "caption": "Use when running from PowerShell; the command is escaped for convenience."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Copy",
+          "caption": "Mount via Finder & Terminal (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Copy",
+          "caption": "Use davfs2 or cadaver to mount the WebDAV endpoint."
+        }
+      },
+      "placeholderPassword": "<password>",
+      "errors": {
+        "failed": "Failed to generate WebDAV token."
+      }
+    }
+  },
+  "setup": {
+    "title": "Server setup wizard",
+    "subtitle": "Complete the initial server configuration to get started. This won't take long and will personalize the app for you.",
+    "repoLink": "Project on GitHub",
+    "errors": {
+      "saveFailed": "Failed to save settings. Please try again."
+    },
+    "status": {
+      "hasUsers": "Has users",
+      "maxChunk": "Max chunk size",
+      "hash": "Hash algorithm",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "actions": {
+      "start": "Let's go",
+      "later": "Do it later",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Done",
+      "cancel": "Cancel",
+      "toggleLanguage": "Change language",
+      "toggleTheme": "Toggle theme"
+    },
+    "intro": "You'll be asked simple questions about your Cotton Cloud usage preferences. If you're not sure, don't worry - many settings can be changed later.",
+    "onlyAdminCanSetup": "Only administrators can configure the application. Please ask an administrator to perform the initial setup.",
+    "questions": {
+      "requiresTooltip": "To enable this option, you need to select:",
+      "inQuestion": "in question",
+      "multiuser": {
+        "title": "You plan to use it:",
+        "subtitle": "This affects storage optimization and some security settings.",
+        "linkAria": "Open help in a new tab",
+        "options": {
+          "family": "For family",
+          "many": "With strangers",
+          "unknown": "Not sure yet"
+        },
+        "descriptions": {
+          "family": "File deduplication, shared search index, and pre-installed modules.",
+          "many": "Stricter mode for security between unknown users.",
+          "unknown": "Will set the best optimal defaults."
+        }
+      },
+      "usage": {
+        "title": "You plan to use the cloud for:",
+        "subtitle": "Select one or more options",
+        "options": {
+          "photos": "Photos",
+          "documents": "Documents",
+          "media": "Movies and series",
+          "other": "Other"
+        },
+        "descriptions": {
+          "photos": "Will install AI search and text recognition add-ons.",
+          "documents": "Optimization for office files and PDFs for home archive",
+          "media": "Optimization for video files and streaming, integration with movie database.",
+          "other": "General settings for mixed file types."
+        }
+      },
+      "storage": {
+        "title": "Where do you want to store your data?",
+        "subtitle": "Choose storage location for your files. Cotton Cloud will use server disk for hot cache regardless of your choice.",
+        "options": {
+          "local": "Server local disk",
+          "s3": "S3-compatible storage"
+        },
+        "descriptions": {
+          "local": "Store files on the server's local filesystem.",
+          "s3": "Store files in remote S3-compatible object storage."
+        }
+      },
+      "s3Config": {
+        "title": "Configure S3 storage",
+        "subtitle": "Enter your S3-compatible storage credentials.",
+        "fields": {
+          "endpoint": "Endpoint URL",
+          "region": "Region",
+          "bucket": "Bucket name",
+          "accessKey": "Access key",
+          "secretKey": "Secret key"
+        },
+        "placeholders": {
+          "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
+          "bucket": "my-bucket",
+          "accessKey": "Your access key",
+          "secretKey": "Your secret key"
+        }
+      },
+      "email": {
+        "title": "Email configuration",
+        "subtitle": "Choose where email notifications will be sent from.",
+        "options": {
+          "cloud": "Use cloud Cotton Mail",
+          "custom": "Use custom SMTP server",
+          "none": "No Email notifications"
+        },
+        "descriptions": {
+          "cloud": "Public Cotton Cloud SMTP server will be used. It's secure and free. Choose this if you're not sure.",
+          "custom": "Configure your own SMTP server for sending email notifications.",
+          "none": "The simplest option, but you won't even be able to recover your password."
+        }
+      },
+      "emailConfig": {
+        "title": "SMTP server configuration",
+        "subtitle": "Enter your SMTP server details.",
+        "fields": {
+          "smtpServer": "SMTP server",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "fromAddress": "From address",
+          "useSSL": "Use SSL/TLS"
+        },
+        "placeholders": {
+          "smtpServer": "smtp.example.com",
+          "port": "587",
+          "username": "your@email.com",
+          "password": "Your password",
+          "fromAddress": "noreply@example.com",
+          "useSSL": "Enable SSL/TLS encryption"
+        }
+      },
+      "telemetry": {
+        "title": "Allow sending statistics?",
+        "subtitle": "This information helps us improve products and does not reveal your identity in any way. It's one of the few ways to support the project by providing automatic feedback. This helps us understand how Cotton Cloud performs on different systems and configurations, not just in an ideal test environment.",
+        "options": {
+          "allow": "Yes, send",
+          "deny": "No, don't send"
+        },
+        "descriptions": {
+          "allow": "Send anonymous metrics that used for software feedback and bug fixes.",
+          "deny": "This is your choice."
+        },
+        "disabledTooltip": "To disable telemetry, you need to turn off the following services:"
+      },
+      "ai": {
+        "title": "AI and Computations",
+        "subtitle": "Choose where AI computations will be performed for search, recognition, and other features.",
+        "options": {
+          "local": "Local computations",
+          "runner": "Custom GPU runner",
+          "cloud": "Cotton Cloud computations"
+        },
+        "descriptions": {
+          "local": "Slow, most heavy features disabled and model quality is simplified. But the quality is still great - more than enough for any tasks.",
+          "runner": "Connect a separate GPU runner for computations. Fast, high quality - best models and support for all features.",
+          "cloud": "Optimal balance, but may have limitations. Incredible generosity for free. Requires internet connection."
+        }
+      },
+      "timezone": {
+        "title": "Time Zone",
+        "subtitle": "Select your time zone to avoid being disturbed by notifications and disk noise at night."
+      },
+      "storageSpace": {
+        "title": "How much space are you giving to the app?",
+        "subtitle": "This will help us optimize disk usage.",
+        "options": {
+          "all": "All you have",
+          "economical": "Space saving",
+          "unknown": "Don't know, let's move on",
+          "optimal": "Optimal"
+        },
+        "descriptions": {
+          "all": "Use all available space for maximum performance.",
+          "economical": "Aggressive space saving, compression and deduplication.",
+          "unknown": "It will choose optimal settings for you."
+        }
+      },
+      "importSources": {
+        "title": "Anything to import?",
+        "subtitle": "Select sources from which you want to migrate data.",
+        "options": {
+          "webdav": "WebDAV",
+          "none": "Nothing"
+        }
+      },
+      "nextcloudConfig": {
+        "title": "Nextcloud Import Setup",
+        "subtitle": "Enter credentials to connect to Nextcloud.",
+        "fields": {
+          "serverUrl": "Server URL",
+          "username": "Username",
+          "password": "Password"
+        },
+        "placeholders": {
+          "serverUrl": "https://nextcloud.example.com",
+          "username": "Your username",
+          "password": "Your password"
+        }
+      },
+      "webdavConfig": {
+        "title": "WebDAV Import Setup",
+        "subtitle": "Enter credentials to connect to WebDAV server.",
+        "fields": {
+          "serverUrl": "Server URL",
+          "username": "Username",
+          "password": "Password"
+        },
+        "placeholders": {
+          "serverUrl": "https://webdav.example.com",
+          "username": "Your username",
+          "password": "Your password"
+        }
+      }
+    },
+    "common": {
+      "author": "Vadim Belov"
+    }
+  },
+  "onboarding": {
+    "skip": "Get Started",
+    "features": {
+      "cloud": {
+        "title": "Your Personal Cloud",
+        "description": "Store and sync your files securely across all your devices"
+      },
+      "storage": {
+        "title": "Unlimited Storage",
+        "description": "Never worry about running out of space with flexible storage options"
+      },
+      "security": {
+        "title": "Bank-Level Security",
+        "description": "Your data is encrypted and protected with industry-leading security"
+      },
+      "speed": {
+        "title": "Lightning Fast",
+        "description": "Experience blazing-fast uploads and downloads with optimized performance"
+      }
+    }
+  },
+  "home": {
+    "title": "Home",
+    "layoutLabelWithValue": "Layout: {{name}}",
+    "layoutLabelEmpty": "Layout: —",
+    "loading": {
+      "title": "Loading",
+      "caption": "Fetching layout stats…"
+    },
+    "refreshing": "Refreshing…",
+    "cards": {
+      "folders": {
+        "title": "Folders",
+        "caption": "Total folders in your cloud",
+        "layoutTitle": "Layout",
+        "layoutCaption": "Current default layout"
+      },
+      "files": {
+        "title": "Files",
+        "caption": "Total files across all folders"
+      },
+      "data": {
+        "title": "Data",
+        "caption": "Total size of all your files"
+      }
+    }
+  },
+  "files": {
+    "title": "Files",
+    "loading": {
+      "title": "Loading",
+      "caption": "Fetching folder contents…"
+    },
+    "uploadDrop": {
+      "scanning": {
+        "title": "Scanning files…"
+      },
+      "preparing": {
+        "title": "Preparing upload…",
+        "mapping": {
+          "title": "Preparing upload…"
+        },
+        "folders": {
+          "title": "Creating folders…"
+        },
+        "conflicts": {
+          "title": "Checking conflicts…"
+        },
+        "enqueue": {
+          "title": "Starting upload…"
+        }
+      },
+      "caption": "{{count}} files found",
+      "captionFound": "{{count}} files found",
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "No files were uploaded (all were skipped).",
+        "someItemsSkipped_one": "Skipped {{count}} item that could not be read.",
+        "someItemsSkipped_few": "Skipped {{count}} items that could not be read.",
+        "someItemsSkipped_many": "Skipped {{count}} items that could not be read.",
+        "someItemsSkipped_other": "Skipped {{count}} items that could not be read.",
+        "someItemsSkippedWithExamples_one": "Skipped {{count}} item (e.g. {{examples}}).",
+        "someItemsSkippedWithExamples_few": "Skipped {{count}} items (e.g. {{examples}}).",
+        "someItemsSkippedWithExamples_many": "Skipped {{count}} items (e.g. {{examples}}).",
+        "someItemsSkippedWithExamples_other": "Skipped {{count}} items (e.g. {{examples}}).",
+        "more_one": " +{{count}} more",
+        "more_few": " +{{count}} more",
+        "more_many": " +{{count}} more",
+        "more_other": " +{{count}} more"
+      },
+      "errors": {
+        "dropFailed": "Failed to process dropped items. Please try again."
+      }
+    },
+    "refreshing": "Refreshing…",
+    "actions": {
+      "upload": "Upload",
+      "newFolder": "New folder",
+      "folderNamePlaceholder": "Folder name",
+      "goToFolder": "Go to folder",
+      "goUp": "Go up",
+      "dropFiles": "Drop files to upload",
+      "switchToTilesView": "Switch to tiles",
+      "switchToListView": "Switch to list view",
+      "switchToTableView": "Switch to table",
+      "switchToSmallTilesView": "Small tiles",
+      "switchToMediumTilesView": "Medium tiles",
+      "switchToLargeTilesView": "Large tiles"
+    },
+    "breadcrumbs": {
+      "ariaLabel": "Breadcrumbs",
+      "root": "Files"
+    },
+    "empty": {
+      "all": "This folder is empty"
+    },
+    "selection": {
+      "enter": "Selection mode",
+      "exit": "Exit selection",
+      "selectAll": "Select all",
+      "deselectAll": "Deselect all",
+      "deleteSelected": "Delete selected",
+      "count_one": "{{count}} item selected",
+      "count_other": "{{count}} items selected"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "Delete {{count}} item?",
+      "confirmTitle_other": "Delete {{count}} items?",
+      "confirmDescription": "Selected items will be moved to Trash and can be restored later."
+    },
+    "conflicts": {
+      "title": "File already exists",
+      "description": "A file with this name already exists in this folder. Upload as {{newName}}?",
+      "skip": "Skip",
+      "skipAll": "Skip all"
+    },
+    "deleteFolder": {
+      "confirmTitle": "Delete folder \"{{name}}\"?",
+      "confirmDescription": "The folder will be moved to Trash and can be restored later."
+    },
+    "deleteFile": {
+      "confirmTitle": "Delete file \"{{name}}\"?",
+      "confirmDescription": "It will be moved to Trash and can be restored later."
+    },
+    "stats": {
+      "summary": "{{folders}} folders • {{files}} files • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "File name"
+    },
+    "share": {
+      "copied": "Share link copied: {{name}}",
+      "shared": "Sharing: {{name}}",
+      "folderCopied": "Folder link copied: {{name}}",
+      "folderShared": "Sharing folder: {{name}}",
+      "message": "Check out \"{{name}}\" on Cotton Cloud",
+      "folderMessage": "Check out folder \"{{name}}\" on Cotton Cloud",
+      "errors": {
+        "link": "Failed to generate share link.",
+        "token": "Failed to extract share token.",
+        "copy": "Failed to copy link to clipboard."
+      }
+    },
+    "preview": {
+      "actions": {
+        "edit": "Edit",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "editorModes": {
+        "text": {
+          "label": "Text",
+          "description": "Plain text with preserved formatting"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Markdown with preview"
+        },
+        "code": {
+          "label": "Code",
+          "description": "Code editor with syntax highlighting"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "Getting link...",
+          "download": "Downloading PDF...",
+          "render": "Rendering PDF..."
+        }
+      },
+      "language": {
+        "label": "Language"
+      },
+      "errors": {
+        "loadFailed": "Failed to load file{{error}}",
+        "saveFailed": "Failed to save file content",
+        "downloadFailed": "Download failed",
+        "pdfLoadFailed": "Failed to load PDF",
+        "pdfDisplayFailed": "Failed to display PDF",
+        "pdfTooLarge": "PDF is too large to preview ({{size}}). Maximum size is {{maxSize}}. Please download the file to view it.",
+        "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for text preview is {{maxSize}}. Please download the file to view it."
+      }
+    },
+    "actionsTitle": "Actions",
+    "size": "Size",
+    "name": "Name",
+    "location": "Location",
+    "noFilesOrFolders": "No files or folders"
+  },
+  "upload": {
+    "title": "Uploads",
+    "error": "Error",
+    "errors": {
+      "serverSettingsNotLoaded": "Server settings are not loaded",
+      "uploadFailed": "Upload failed"
+    },
+    "titleWithTotal": "Uploads ({{total}})",
+    "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",
+    "titleWithErrors": "Uploads ({{total}} • {{failed}} failed)",
+    "actions": {
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "close": "Close",
+      "clearFinished": "Clear finished"
+    },
+    "status": {
+      "queued": "Queued",
+      "uploading": "Uploading",
+      "finalizing": "Finalizing",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
+  },
+  "trash": {
+    "title": "Trash",
+    "loading": {
+      "title": "Loading trash...",
+      "caption": "Please wait while we load the trash contents."
+    },
+    "error": "Failed to load trash contents",
+    "empty": "Trash is empty",
+    "actions": {
+      "goUp": "Go up",
+      "trashRoot": "Trash root",
+      "switchToList": "Switch to list view",
+      "switchToTiles": "Switch to tiles view",
+      "switchToListView": "Switch to list view",
+      "switchToTilesView": "Switch to tiles view",
+      "switchToTableView": "Switch to table",
+      "switchToSmallTilesView": "Small tiles",
+      "switchToMediumTilesView": "Medium tiles",
+      "switchToLargeTilesView": "Large tiles",
+      "emptyTrash": "Empty trash"
+    },
+    "breadcrumbs": {
+      "root": "Trash"
+    },
+    "stats": {
+      "summary": "{{folders}} folders, {{files}} files, {{size}}"
+    },
+    "deleteFolderForever": {
+      "confirmTitle": "Delete folder \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone. All contents of the folder will be deleted."
+    },
+    "deleteFile": {
+      "confirmTitle": "Delete file \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone."
+    },
+    "deleteFileForever": {
+      "confirmTitle": "Delete file \"{{name}}\"?",
+      "confirmDescription": "This action cannot be undone."
+    },
+    "emptyTrash": {
+      "confirmTitle": "Empty trash?",
+      "confirmDescription": "This action cannot be undone. All items in trash will be permanently deleted.",
+      "inProgress": "Deleting {{current}} of {{total}} items...",
+      "completed": "Trash emptied successfully"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "menu": {
+      "navigate": "Section",
+      "users": "Users"
+    },
+    "roles": {
+      "user": "User",
+      "admin": "Admin",
+      "unknown": "Unknown"
+    },
+    "users": {
+      "title": "Users",
+      "refresh": "Refresh",
+      "loading": "Loading users...",
+      "empty": "No users",
+      "columns": {
+        "username": "Username",
+        "email": "E-mail",
+        "role": "Role",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "birthDate": "Date of birth",
+        "totp": "2FA",
+        "sessions": "Sessions",
+        "lastActivity": "Last activity",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit"
+      },
+      "errors": {
+        "loadFailed": "Failed to load users.",
+        "createFailed": "Failed to create user.",
+        "updateFailed": "Failed to update user."
+      },
+      "create": {
+        "title": "Create user",
+        "username": "Username",
+        "email": "E-mail",
+        "password": "Password",
+        "role": "Role",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "birthDate": "Date of birth",
+        "button": "Create",
+        "creating": "Creating...",
+        "success": "User created."
+      },
+      "edit": {
+        "title": "Edit user",
+        "save": "Save",
+        "saving": "Saving...",
+        "success": "User updated."
+      }
+    }
+  },
+  "routes": {
+    "login": "Login",
+    "home": "Home",
+    "files": "Files",
+    "trash": "Trash",
+    "profile": "Profile",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "resetPassword": {
+    "title": "Reset password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "submit": "Reset password",
+    "submitting": "Resetting...",
+    "success": "Password has been reset successfully. You can now sign in with your new password.",
+    "goToLogin": "Go to login",
+    "errors": {
+      "mismatch": "Passwords do not match.",
+      "invalidToken": "The reset link is invalid or has expired.",
+      "failed": "Failed to reset password. Please try again."
+    }
+  },
+  "verifyEmail": {
+    "title": "Email verification",
+    "verifying": "Verifying your email...",
+    "success": "Your email has been verified successfully!",
+    "goToLogin": "Go to login",
+    "goToSettings": "Go to settings",
+    "errors": {
+      "invalidToken": "The verification link is invalid or has expired.",
+      "failed": "Failed to verify email. Please try again."
+    }
+  }
+}
