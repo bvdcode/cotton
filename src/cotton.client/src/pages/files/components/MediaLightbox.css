@@ -27,11 +27,20 @@
 .lightbox-autohide .yarl__slide video {
   padding: 0;
   box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Edge-to-edge slides: avoid built-in carousel/slide paddings */
 .lightbox-autohide .yarl__slide {
   padding: 0;
+}
+
+/* Full-size tap zone for toggling controls on touch */
+.lightbox-autohide .media-lightbox__tap-area {
+  width: 100%;
+  height: 100%;
 }
 
 /* Idle state: controls hidden */

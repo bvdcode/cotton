@@ -30,13 +30,9 @@ export function useActivityDetection(timeout: number = 2500): boolean {
 
     // Listen to user interaction events.
     // NOTE: Intentionally excludes `keydown` so keyboard navigation doesn't force-show UI.
-    const events: (keyof DocumentEventMap)[] = [
-      "mousemove",
-      "mousedown",
-      "wheel",
-      "touchstart",
-      "touchmove",
-    ];
+    // NOTE: Touch devices handle visibility via explicit tap toggle in the lightbox,
+    // so we avoid touch events to prevent controls flashing during swipe.
+    const events: (keyof DocumentEventMap)[] = ["mousemove", "mousedown", "wheel"];
 
     events.forEach((event) => {
       document.addEventListener(event, resetActivity, { passive: true });
