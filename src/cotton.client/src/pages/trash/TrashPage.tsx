@@ -50,6 +50,7 @@ import {
 import type { TilesSize } from "../files/types/FileListViewTypes";
 import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
 import { getFileTypeInfo } from "../files/utils/fileTypes";
+import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 
 function getTrashViewMode(args: {
   layoutType: InterfaceLayoutType;
@@ -355,6 +356,8 @@ export const TrashPage: React.FC = () => {
     [sortedFiles],
   );
 
+  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
+
   const isTrashRoot = !routeNodeId;
 
   const resolveWrapperNodeId = React.useCallback(
@@ -467,6 +470,10 @@ export const TrashPage: React.FC = () => {
     fileName: string,
     fileSizeBytes?: number,
   ) => {
+    if (getFileTypeInfo(fileName, null).type === "audio") {
+      openAudio({ fileId, fileName, playlist: audioPlaylist });
+      return;
+    }
     const opened = openPreview(fileId, fileName, fileSizeBytes);
     if (!opened) {
       void handleDownloadFile(fileId, fileName);
@@ -623,7 +630,6 @@ export const TrashPage: React.FC = () => {
         fileName={previewState.fileName}
         fileType={previewState.fileType}
         fileSizeBytes={previewState.fileSizeBytes}
-        audioPlaylist={audioPlaylist}
         onClose={closePreview}
       />
 
