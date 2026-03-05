@@ -1,5 +1,5 @@
 import { Box, TextField } from "@mui/material";
-import type React from "react";
+import React, { useEffect, useRef } from "react";
 
 export interface SearchBarProps {
   value: string;
@@ -16,6 +16,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   placeholder,
   ariaLabel,
 }) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (disabled) return;
+
+    const rafId = window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [disabled]);
+
   return (
     <Box
       role="search"
@@ -27,6 +39,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       <TextField
         fullWidth
         autoFocus
+        inputRef={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
