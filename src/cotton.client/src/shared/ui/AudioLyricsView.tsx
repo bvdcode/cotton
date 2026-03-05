@@ -5,7 +5,7 @@ import type { LrcLine } from "../utils/lrc";
 
 const DESKTOP_LINE_HEIGHT_PX = 32;
 const MOBILE_LINE_HEIGHT_PX = 44;
-const VISIBLE_LINES = 3;
+const VISIBLE_LINES = 2;
 
 const clamp = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max);
@@ -30,8 +30,8 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const lineHeightPx = isMobile ? MOBILE_LINE_HEIGHT_PX : DESKTOP_LINE_HEIGHT_PX;
 
-  const maxOffset = Math.max(-1, lines.length - 2);
-  const offsetLines = clamp(activeIndex - 1, -1, maxOffset);
+  const maxOffset = Math.max(0, lines.length - VISIBLE_LINES);
+  const offsetLines = clamp(activeIndex, 0, maxOffset);
   const translateY = offsetLines * lineHeightPx;
 
   return (
@@ -51,7 +51,7 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         {lines.map((line, idx) => {
           const isActive = idx === activeIndex;
           const distance = Math.abs(idx - activeIndex);
-          const baseOpacity = distance === 0 ? 1 : distance === 1 ? 0.35 : 0.2;
+          const baseOpacity = distance === 0 ? 1 : distance === 1 ? 0.45 : 0.1;
           return (
             <Box
               key={`${line.timeSeconds}-${idx}`}
