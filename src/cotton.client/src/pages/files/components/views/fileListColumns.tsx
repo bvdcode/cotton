@@ -1,12 +1,11 @@
 import React from "react";
-import { Box, IconButton, TextField, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, TextField, Typography } from "@mui/material";
 import {
   Article,
   Delete,
   Download,
   Edit,
   Folder,
-  OpenInNew,
   Image as ImageIcon,
   InsertDriveFile,
   TextSnippet,
@@ -320,14 +319,15 @@ export const createSizeColumn = (
 });
 
 export const createLocationColumn = (
-  options: Pick<ColumnOptions, "labels" | "columnFlex">,
+  options: Pick<ColumnOptions, "labels" | "columnFlex" | "onGoToFileLocation">,
 ): GridColDef<FileListRow> => ({
   field: "location",
   headerName: options.labels.location,
   flex: options.columnFlex?.location ?? 1,
   minWidth: 120,
   renderCell: (params) => {
-    const value = params.row.location;
+    const row = params.row;
+    const value = row.location;
     if (!value) {
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
@@ -338,6 +338,19 @@ export const createLocationColumn = (
       );
     }
 
+    const canNavigateToLocation =
+      row.type === "file" &&
+      !!options.onGoToFileLocation &&
+      !!(row.containerNodeId || row.containerPath);
+
+    const navigateToLocation = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      options.onGoToFileLocation?.({
+        nodeId: row.containerNodeId ?? undefined,
+        containerPath: row.containerPath ?? undefined,
+      });
+    };
+
     return (
       <Box
         sx={{
@@ -347,15 +360,37 @@ export const createLocationColumn = (
           width: "100%",
         }}
       >
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          noWrap
-          sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
-          title={value}
-        >
-          {value}
-        </Typography>
+        {canNavigateToLocation ? (
+          <ButtonBase
+            onClick={navigateToLocation}
+            sx={{
+              justifyContent: "flex-start",
+              width: "100%",
+              textAlign: "left",
+              borderRadius: 1,
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="primary"
+              noWrap
+              sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+              title={value}
+            >
+              {value}
+            </Typography>
+          </ButtonBase>
+        ) : (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            noWrap
+            sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+            title={value}
+          >
+            {value}
+          </Typography>
+        )}
       </Box>
     );
   },
@@ -364,7 +399,7 @@ export const createLocationColumn = (
 export const createActionsColumn = (
   options: Pick<
     ColumnOptions,
-    "labels" | "folderOperations" | "fileOperations" | "onGoToFileLocation" | "readOnly"
+    "labels" | "folderOperations" | "fileOperations" | "readOnly"
   >,
 ): GridColDef<FileListRow> => ({
   field: "actions",
@@ -440,21 +475,6 @@ export const createActionsColumn = (
           justifyContent: "flex-end",
         }}
       >
-        {options.onGoToFileLocation && (row.containerNodeId || row.containerPath) && (
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              options.onGoToFileLocation?.({
-                nodeId: row.containerNodeId ?? undefined,
-                containerPath: row.containerPath ?? undefined,
-              });
-            }}
-            title={options.labels.goToFolder}
-          >
-            <OpenInNew fontSize="small" />
-          </IconButton>
-        )}
         <IconButton
           size="small"
           onClick={(e) => {
