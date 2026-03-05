@@ -281,11 +281,15 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onRenamingNameChange={folderOperations.onRenamingNameChange}
           onConfirmRename={folderOperations.onConfirmRename}
           onCancelRename={folderOperations.onCancelRename}
-          onStartRename={() =>
-            folderOperations.onStartRename(tile.node.id, tile.node.name)
+          onStartRename={
+            folderOperations.onStartRename
+              ? () => folderOperations.onStartRename?.(tile.node.id, tile.node.name)
+              : undefined
           }
-          onDelete={() =>
-            folderOperations.onDelete(tile.node.id, tile.node.name)
+          onDelete={
+            folderOperations.onDelete
+              ? () => folderOperations.onDelete?.(tile.node.id, tile.node.name)
+              : undefined
           }
           onShare={
             folderOperations.onShare
@@ -382,8 +386,10 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       }
 
       if (isImage || isVideo) {
-        fileOperations.onMediaClick?.(tile.file.id);
-        return;
+        if (fileOperations.onMediaClick) {
+          fileOperations.onMediaClick(tile.file.id);
+          return;
+        }
       }
 
       fileOperations.onClick(tile.file.id, tile.file.name, tile.file.sizeBytes);
@@ -398,42 +404,54 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         onClick={fileClick}
         iconContainerSx={iconContainerSx}
         actions={[
-          {
-            icon: <Download />,
-            onClick: () =>
-              fileOperations.onDownload(tile.file.id, tile.file.name),
-            tooltip: t("actions.download", { ns: "common" }),
-          },
-          ...(readOnly
-            ? []
-            : [
+          ...(fileOperations.onDownload
+            ? [
+                {
+                  icon: <Download />,
+                  onClick: () =>
+                    fileOperations.onDownload?.(tile.file.id, tile.file.name),
+                  tooltip: t("actions.download", { ns: "common" }),
+                },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onShare
+            ? [
                 {
                   icon: <Share />,
                   onClick: () =>
-                    fileOperations.onShare(tile.file.id, tile.file.name),
+                    fileOperations.onShare?.(tile.file.id, tile.file.name),
                   tooltip: t("actions.share", { ns: "common" }),
                 },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onStartRename
+            ? [
                 {
                   icon: <Edit />,
                   onClick: () =>
-                    fileOperations.onStartRename(tile.file.id, tile.file.name),
+                    fileOperations.onStartRename?.(tile.file.id, tile.file.name),
                   tooltip: t("actions.rename", { ns: "common" }),
                 },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onDelete
+            ? [
                 {
                   icon: <Delete />,
                   onClick: () =>
-                    fileOperations.onDelete(tile.file.id, tile.file.name),
+                    fileOperations.onDelete?.(tile.file.id, tile.file.name),
                   tooltip: t("actions.delete", { ns: "common" }),
                 },
-              ]),
+              ]
+            : []),
         ]}
         isRenaming={fileOperations.isRenaming(tile.file.id)}
         renamingValue={fileOperations.getRenamingName()}
         onRenamingValueChange={fileOperations.onRenamingNameChange}
         onConfirmRename={() => {
-          void fileOperations.onConfirmRename();
+          void fileOperations.onConfirmRename?.();
         }}
-        onCancelRename={fileOperations.onCancelRename}
+        onCancelRename={fileOperations.onCancelRename ?? (() => {})}
         placeholder={fileNamePlaceholder}
       />
     );

@@ -46,10 +46,10 @@ export interface FolderOperations {
   isRenaming: (folderId: string) => boolean;
   getRenamingName: () => string;
   onRenamingNameChange: (name: string) => void;
-  onConfirmRename: () => void;
-  onCancelRename: () => void;
-  onStartRename: (folderId: string, name: string) => void;
-  onDelete: (folderId: string, name: string) => void;
+  onConfirmRename?: () => void;
+  onCancelRename?: () => void;
+  onStartRename?: (folderId: string, name: string) => void;
+  onDelete?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
   onClick: (folderId: string) => void;
 }
@@ -61,12 +61,12 @@ export interface FileOperations {
   isRenaming: (fileId: string) => boolean;
   getRenamingName: () => string;
   onRenamingNameChange: (name: string) => void;
-  onConfirmRename: () => Promise<void>;
-  onCancelRename: () => void;
-  onStartRename: (fileId: string, name: string) => void;
-  onDelete: (fileId: string, name: string) => void;
-  onDownload: (fileId: string, name: string) => void;
-  onShare: (fileId: string, name: string) => void;
+  onConfirmRename?: () => Promise<void>;
+  onCancelRename?: () => void;
+  onStartRename?: (fileId: string, name: string) => void;
+  onDelete?: (fileId: string, name: string) => void;
+  onDownload?: (fileId: string, name: string) => void;
+  onShare?: (fileId: string, name: string) => void;
   onClick: (fileId: string, name: string, sizeBytes?: number) => void;
   onMediaClick?: (fileId: string) => void;
 }

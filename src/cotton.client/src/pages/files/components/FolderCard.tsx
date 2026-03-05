@@ -9,10 +9,10 @@ interface FolderCardProps {
   isRenaming: boolean;
   renamingName: string;
   onRenamingNameChange: (name: string) => void;
-  onConfirmRename: () => void;
-  onCancelRename: () => void;
-  onStartRename: () => void;
-  onDelete: () => void;
+  onConfirmRename?: () => void;
+  onCancelRename?: () => void;
+  onStartRename?: () => void;
+  onDelete?: () => void;
   onShare?: () => void;
   onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
@@ -44,7 +44,7 @@ export const FolderCard = ({
       onClick={onClick}
       variant={variant}
       actions={[
-        ...(onShare
+        ...(!readOnly && onShare
           ? [
               {
                 icon: <Share />,
@@ -53,26 +53,30 @@ export const FolderCard = ({
               },
             ]
           : []),
-        ...(readOnly
-          ? []
-          : [
+        ...(!readOnly && onStartRename
+          ? [
               {
                 icon: <Edit />,
                 onClick: onStartRename,
                 tooltip: t("common:actions.rename"),
               },
+            ]
+          : []),
+        ...(!readOnly && onDelete
+          ? [
               {
                 icon: <Delete />,
                 onClick: onDelete,
                 tooltip: t("common:actions.delete"),
               },
-            ]),
+            ]
+          : []),
       ]}
       isRenaming={isRenaming}
       renamingValue={renamingName}
       onRenamingValueChange={onRenamingNameChange}
-      onConfirmRename={onConfirmRename}
-      onCancelRename={onCancelRename}
+      onConfirmRename={onConfirmRename ?? (() => {})}
+      onCancelRename={onCancelRename ?? (() => {})}
       placeholder={t("actions.folderNamePlaceholder")}
     />
   );
