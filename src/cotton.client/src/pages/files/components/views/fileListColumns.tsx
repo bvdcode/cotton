@@ -69,22 +69,22 @@ interface ColumnOptions {
     isRenaming: (id: string) => boolean;
     getRenamingName: () => string;
     onRenamingNameChange: (value: string) => void;
-    onConfirmRename: () => void;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onDelete: (id: string, name: string) => void;
+    onConfirmRename?: () => void;
+    onCancelRename?: () => void;
+    onStartRename?: (id: string, name: string) => void;
+    onDelete?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
     getRenamingName: () => string;
     onRenamingNameChange: (value: string) => void;
-    onConfirmRename: () => Promise<void>;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onDownload: (id: string, name: string) => void;
-    onShare: (id: string, name: string) => void;
-    onDelete: (id: string, name: string) => void;
+    onConfirmRename?: () => Promise<void>;
+    onCancelRename?: () => void;
+    onStartRename?: (id: string, name: string) => void;
+    onDownload?: (id: string, name: string) => void;
+    onShare?: (id: string, name: string) => void;
+    onDelete?: (id: string, name: string) => void;
   };
   failedPreviews: Set<string>;
   setFailedPreviews: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -222,12 +222,12 @@ export const createNameColumn = (
             }
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                options.folderOperations.onConfirmRename();
+                options.folderOperations.onConfirmRename?.();
               } else if (e.key === "Escape") {
-                options.folderOperations.onCancelRename();
+                options.folderOperations.onCancelRename?.();
               }
             }}
-            onBlur={options.folderOperations.onConfirmRename}
+            onBlur={() => options.folderOperations.onConfirmRename?.()}
             variant="standard"
             onClick={(e) => e.stopPropagation()}
           />
@@ -255,13 +255,13 @@ export const createNameColumn = (
             }
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                void options.fileOperations.onConfirmRename();
+                void options.fileOperations.onConfirmRename?.();
               } else if (e.key === "Escape") {
-                options.fileOperations.onCancelRename();
+                options.fileOperations.onCancelRename?.();
               }
             }}
             onBlur={() => {
-              void options.fileOperations.onConfirmRename();
+              void options.fileOperations.onConfirmRename?.();
             }}
             placeholder={options.fileNamePlaceholder}
             variant="standard"
@@ -426,16 +426,18 @@ export const createActionsColumn = (
         >
           {!options.readOnly && (
             <>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  options.folderOperations.onStartRename(row.id, row.name);
-                }}
-                title={options.labels.rename}
-              >
-                <Edit fontSize="small" />
-              </IconButton>
+              {options.folderOperations.onStartRename && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onStartRename?.(row.id, row.name);
+                  }}
+                  title={options.labels.rename}
+                >
+                  <Edit fontSize="small" />
+                </IconButton>
+              )}
               {options.folderOperations.onShare && (
                 <IconButton
                   size="small"
@@ -448,16 +450,18 @@ export const createActionsColumn = (
                   <Share fontSize="small" />
                 </IconButton>
               )}
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  options.folderOperations.onDelete(row.id, row.name);
-                }}
-                title={options.labels.delete}
-              >
-                <Delete fontSize="small" />
-              </IconButton>
+              {options.folderOperations.onDelete && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onDelete?.(row.id, row.name);
+                  }}
+                  title={options.labels.delete}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              )}
             </>
           )}
         </Box>
@@ -475,48 +479,56 @@ export const createActionsColumn = (
           justifyContent: "flex-end",
         }}
       >
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onDownload(row.id, row.name);
-          }}
-          title={options.labels.download}
-        >
-          <Download fontSize="small" />
-        </IconButton>
+        {options.fileOperations.onDownload && (
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              options.fileOperations.onDownload?.(row.id, row.name);
+            }}
+            title={options.labels.download}
+          >
+            <Download fontSize="small" />
+          </IconButton>
+        )}
         {!options.readOnly && (
           <>
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                options.fileOperations.onShare(row.id, row.name);
-              }}
-              title={options.labels.share}
-            >
-              <Share fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                options.fileOperations.onStartRename(row.id, row.name);
-              }}
-              title={options.labels.rename}
-            >
-              <Edit fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                options.fileOperations.onDelete(row.id, row.name);
-              }}
-              title={options.labels.delete}
-            >
-              <Delete fontSize="small" />
-            </IconButton>
+            {options.fileOperations.onShare && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onShare?.(row.id, row.name);
+                }}
+                title={options.labels.share}
+              >
+                <Share fontSize="small" />
+              </IconButton>
+            )}
+            {options.fileOperations.onStartRename && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onStartRename?.(row.id, row.name);
+                }}
+                title={options.labels.rename}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+            )}
+            {options.fileOperations.onDelete && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onDelete?.(row.id, row.name);
+                }}
+                title={options.labels.delete}
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+            )}
           </>
         )}
       </Box>

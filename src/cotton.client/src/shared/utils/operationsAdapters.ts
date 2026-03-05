@@ -23,10 +23,14 @@ export const buildFolderOperations = (
     isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
     getRenamingName: () => folderOps.renamingFolderName,
     onRenamingNameChange: folderOps.setRenamingFolderName,
-    onConfirmRename: folderOps.handleConfirmRename,
+    onConfirmRename: () => {
+      void folderOps.handleConfirmRename();
+    },
     onCancelRename: folderOps.handleCancelRename,
     onStartRename: folderOps.handleRenameFolder,
-    onDelete: folderOps.handleDeleteFolder,
+    onDelete: (folderId: string, folderName: string) => {
+      void folderOps.handleDeleteFolder(folderId, folderName);
+    },
     onShare: onFolderShare
       ? (folderId: string, folderName: string) => {
           void onFolderShare(folderId, folderName);
@@ -50,10 +54,10 @@ export const buildFileOperations = (
     handleDeleteFile: (fileId: string, fileName: string) => Promise<void>;
   },
   handlers: {
-    onDownload: (fileId: string, fileName: string) => Promise<void>;
-    onShare: (fileId: string, fileName: string) => Promise<void>;
+    onDownload?: (fileId: string, fileName: string) => Promise<void>;
+    onShare?: (fileId: string, fileName: string) => Promise<void>;
     onClick: (fileId: string, fileName: string, fileSizeBytes?: number) => void;
-    onMediaClick: (fileId: string) => void;
+    onMediaClick?: (fileId: string) => void;
   },
 ): FileOperations => {
   return {
@@ -63,11 +67,19 @@ export const buildFileOperations = (
     onConfirmRename: fileOps.handleConfirmRename,
     onCancelRename: fileOps.handleCancelRename,
     onStartRename: fileOps.handleRenameFile,
-    onDelete: fileOps.handleDeleteFile,
-    onDownload: handlers.onDownload,
-    onShare: (fileId: string, fileName: string) => {
-      void handlers.onShare(fileId, fileName);
+    onDelete: (fileId: string, fileName: string) => {
+      void fileOps.handleDeleteFile(fileId, fileName);
     },
+    onDownload: handlers.onDownload
+      ? (fileId: string, fileName: string) => {
+          void handlers.onDownload?.(fileId, fileName);
+        }
+      : undefined,
+    onShare: handlers.onShare
+      ? (fileId: string, fileName: string) => {
+          void handlers.onShare?.(fileId, fileName);
+        }
+      : undefined,
     onClick: handlers.onClick,
     onMediaClick: handlers.onMediaClick,
   };
