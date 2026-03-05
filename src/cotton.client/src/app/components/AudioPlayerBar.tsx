@@ -12,7 +12,9 @@ import {
   Snackbar,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { Close, QueueMusic, Shuffle, Subtitles, TravelExplore } from "@mui/icons-material";
 import type { SnackbarCloseReason } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -35,9 +37,10 @@ import { findActiveLrcLineIndex } from "../../shared/utils/lrc";
 export const AudioPlayerBar: React.FC = () => {
   const { t } = useTranslation(["audioPlayer"]);
 
-  const LYRICS_LINE_HEIGHT_PX = 32;
-  const LYRICS_VISIBLE_LINES = 3;
-  const LYRICS_VIEW_HEIGHT_PX = LYRICS_LINE_HEIGHT_PX * LYRICS_VISIBLE_LINES;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const lyricsLineHeightPx = isMobile ? 44 : 32;
+  const lyricsViewHeightPx = lyricsLineHeightPx * 3;
 
   const open = useAudioPlayerStore(selectAudioPlayerOpen);
   const isScanning = useAudioPlayerStore(selectAudioPlayerIsScanning);
@@ -331,7 +334,7 @@ export const AudioPlayerBar: React.FC = () => {
             ) : lyricsLines.length > 0 ? (
               lyricsCountdown !== null ? (
                 <Box
-                  height={LYRICS_VIEW_HEIGHT_PX}
+                  height={lyricsViewHeightPx}
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
@@ -346,7 +349,7 @@ export const AudioPlayerBar: React.FC = () => {
                   activeIndex={lyricsActiveIndex}
                 />
               ) : (
-                <Box height={LYRICS_VIEW_HEIGHT_PX} />
+                <Box height={lyricsViewHeightPx} />
               )
             ) : lyricsStatus === "error" ? (
               <Typography variant="caption" color="text.secondary">
