@@ -24,6 +24,7 @@ import { useFileSelection } from "./hooks/useFileSelection";
 import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { getFileTypeInfo } from "./utils/fileTypes";
+import { getFileIcon } from "./utils/icons";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import {
@@ -302,7 +303,15 @@ export const FilesPage: React.FC = () => {
     () =>
       sortedFiles
         .filter((file) => getFileTypeInfo(file.name, file.contentType ?? null).type === "audio")
-        .map((file) => ({ id: file.id, name: file.name })),
+        .map((file) => {
+          const previewToken =
+            file.largeFilePreviewPresignedToken ??
+            file.previewHashEncryptedHex ??
+            null;
+          const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
+          const previewUrl = typeof icon === "string" ? icon : undefined;
+          return { id: file.id, name: file.name, previewUrl };
+        }),
     [sortedFiles],
   );
 

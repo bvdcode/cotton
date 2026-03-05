@@ -3,4 +3,5 @@ export interface AudioPlaylistItem {
   name: string;
   nodeId?: string;
   folderPath?: string;
+  previewUrl?: string;
 }

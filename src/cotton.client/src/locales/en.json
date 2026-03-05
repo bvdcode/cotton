@@ -103,6 +103,8 @@
       "scanRecursively": "Find tracks in this folder and subfolders",
       "showQueue": "Show queue",
       "hideQueue": "Hide queue",
+      "enableShuffle": "Enable shuffle",
+      "disableShuffle": "Disable shuffle",
       "close": "Close player"
     }
   },

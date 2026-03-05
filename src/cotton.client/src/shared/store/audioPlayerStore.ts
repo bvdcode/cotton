@@ -7,6 +7,8 @@ interface AudioPlayerState {
   open: boolean;
   isScanning: boolean;
 
+  shuffleEnabled: boolean;
+
   scanRootNodeId: string | null;
 
   playlist: ReadonlyArray<AudioPlaylistItem>;
@@ -18,6 +20,8 @@ interface AudioPlayerState {
     fileName: string;
     playlist?: ReadonlyArray<AudioPlaylistItem> | null;
   }) => void;
+
+  toggleShuffle: () => void;
 
   setCurrentTrack: (item: AudioPlaylistItem) => void;
 
@@ -37,6 +41,11 @@ type NodeInfo = {
   id: string;
   parentId: string | null;
   name: string;
+};
+
+const tryBuildPreviewUrl = (token: string | null | undefined): string | undefined => {
+  if (!token) return undefined;
+  return `/api/v1/preview/${encodeURIComponent(token)}.webp`;
 };
 
 const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPlaylistItem[]> => {
@@ -156,6 +165,9 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
             name: file.name,
             nodeId: file.nodeId ?? undefined,
             folderPath: folderPath ?? undefined,
+            previewUrl: tryBuildPreviewUrl(
+              file.largeFilePreviewPresignedToken ?? file.previewHashEncryptedHex ?? undefined,
+            ),
           });
         }
       }
@@ -182,6 +194,7 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
 export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
   open: false,
   isScanning: false,
+  shuffleEnabled: false,
   scanRootNodeId: null,
   playlist: [],
   currentFileId: null,
@@ -198,6 +211,10 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
       currentFileName: fileName,
       playlist: effectivePlaylist,
     });
+  },
+
+  toggleShuffle: () => {
+    set((prev) => ({ shuffleEnabled: !prev.shuffleEnabled }));
   },
 
   setCurrentTrack: (item) => {
@@ -234,7 +251,12 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
 
       if (currentId && currentName) {
         if (!next.some((x) => x.id === currentId)) {
-          next.unshift({ id: currentId, name: currentName });
+          const existing = get().playlist.find((x) => x.id === currentId);
+          next.unshift({
+            id: currentId,
+            name: currentName,
+            previewUrl: existing?.previewUrl,
+          });
         }
       }
 
@@ -250,6 +272,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
     set({
       open: false,
       isScanning: false,
+      shuffleEnabled: false,
       scanRootNodeId: null,
       playlist: [],
       currentFileId: null,
@@ -259,6 +282,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
 
 export const selectAudioPlayerOpen = (s: AudioPlayerState): boolean => s.open;
 export const selectAudioPlayerIsScanning = (s: AudioPlayerState): boolean => s.isScanning;
+export const selectAudioPlayerShuffleEnabled = (s: AudioPlayerState): boolean => s.shuffleEnabled;
 export const selectAudioPlayerPlaylist = (s: AudioPlayerState): ReadonlyArray<AudioPlaylistItem> => s.playlist;
 export const selectAudioPlayerCurrentFileId = (s: AudioPlayerState): string | null => s.currentFileId;
 export const selectAudioPlayerCurrentFileName = (s: AudioPlayerState): string | null => s.currentFileName;
