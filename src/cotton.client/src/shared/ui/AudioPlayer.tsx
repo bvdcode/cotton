@@ -36,6 +36,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 }) => {
   const urlCacheRef = React.useRef<Map<string, string>>(new Map());
 
+  const currentIndexRef = React.useRef<number>(0);
+
   const effectivePlaylist = React.useMemo<ReadonlyArray<AudioPlaylistItem>>(() => {
     const list = playlist ?? [];
     if (list.length > 0 && list.some((item) => item.id === currentFileId)) {
@@ -49,14 +51,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   );
 
   React.useEffect(() => {
-    setCurrentIndex(findIndexById(effectivePlaylist, currentFileId));
-  }, [effectivePlaylist, currentFileId]);
-
-  const currentItem = effectivePlaylist[currentIndex];
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
   React.useEffect(() => {
-    onTrackChange?.(currentItem);
-  }, [currentItem, onTrackChange]);
+    const nextIndex = findIndexById(effectivePlaylist, currentFileId);
+    setCurrentIndex((prev) => (prev === nextIndex ? prev : nextIndex));
+  }, [effectivePlaylist, currentFileId]);
+
+  const safeIndex = Math.min(
+    Math.max(0, currentIndex),
+    Math.max(0, effectivePlaylist.length - 1),
+  );
+
+  const currentItem = effectivePlaylist[safeIndex];
 
   const [src, setSrc] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
@@ -106,20 +114,46 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const hasPlaylist = effectivePlaylist.length > 1;
 
   const handlePrevious = React.useCallback(() => {
-    setCurrentIndex((idx) => (idx > 0 ? idx - 1 : idx));
-  }, []);
+    const idx = currentIndexRef.current;
+    const nextIndex = idx > 0 ? idx - 1 : idx;
+    if (nextIndex === idx) {
+      return;
+    }
+
+    setCurrentIndex(nextIndex);
+    const nextItem = effectivePlaylist[nextIndex];
+    if (nextItem) {
+      onTrackChange?.(nextItem);
+    }
+  }, [effectivePlaylist, onTrackChange]);
 
   const handleNext = React.useCallback(() => {
-    setCurrentIndex((idx) =>
-      idx + 1 < effectivePlaylist.length ? idx + 1 : idx,
-    );
-  }, [effectivePlaylist.length]);
+    const idx = currentIndexRef.current;
+    const nextIndex = idx + 1 < effectivePlaylist.length ? idx + 1 : idx;
+    if (nextIndex === idx) {
+      return;
+    }
+
+    setCurrentIndex(nextIndex);
+    const nextItem = effectivePlaylist[nextIndex];
+    if (nextItem) {
+      onTrackChange?.(nextItem);
+    }
+  }, [effectivePlaylist, onTrackChange]);
 
   const handleEnded = React.useCallback(() => {
-    setCurrentIndex((idx) =>
-      idx + 1 < effectivePlaylist.length ? idx + 1 : idx,
-    );
-  }, [effectivePlaylist.length]);
+    const idx = currentIndexRef.current;
+    const nextIndex = idx + 1 < effectivePlaylist.length ? idx + 1 : idx;
+    if (nextIndex === idx) {
+      return;
+    }
+
+    setCurrentIndex(nextIndex);
+    const nextItem = effectivePlaylist[nextIndex];
+    if (nextItem) {
+      onTrackChange?.(nextItem);
+    }
+  }, [effectivePlaylist, onTrackChange]);
 
   return (
     <Box
