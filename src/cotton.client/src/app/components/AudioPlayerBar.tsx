@@ -1,14 +1,21 @@
 import React from "react";
 import {
   Box,
+  Collapse,
   CircularProgress,
+  Divider,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
   Paper,
   Snackbar,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import { Close, TravelExplore } from "@mui/icons-material";
+import { Close, QueueMusic, TravelExplore } from "@mui/icons-material";
 import type { SnackbarCloseReason } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import {
   selectAudioPlayerCurrentFileId,
   selectAudioPlayerCurrentFileName,
@@ -20,6 +27,8 @@ import {
 import { AudioPlayer } from "../../shared/ui/AudioPlayer";
 
 export const AudioPlayerBar: React.FC = () => {
+  const { t } = useTranslation(["audioPlayer"]);
+
   const open = useAudioPlayerStore(selectAudioPlayerOpen);
   const isScanning = useAudioPlayerStore(selectAudioPlayerIsScanning);
   const playlist = useAudioPlayerStore(selectAudioPlayerPlaylist);
@@ -29,6 +38,17 @@ export const AudioPlayerBar: React.FC = () => {
   const close = useAudioPlayerStore((s) => s.close);
   const scanRecursively = useAudioPlayerStore((s) => s.scanRecursively);
   const setCurrentTrack = useAudioPlayerStore((s) => s.setCurrentTrack);
+
+  const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
+
+  const playlistTotal = playlist.length;
+  const currentIndex = React.useMemo<number>(() => {
+    const index = playlist.findIndex((x) => x.id === currentFileId);
+    return index >= 0 ? index : 0;
+  }, [playlist, currentFileId]);
+
+  const positionLabel =
+    playlistTotal > 1 ? `${currentIndex + 1}/${playlistTotal}` : null;
 
   const handleClose = (
     _: Event | React.SyntheticEvent<Element, Event>,
@@ -48,9 +68,18 @@ export const AudioPlayerBar: React.FC = () => {
       onClose={handleClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       sx={{
-        width: "100%",
+        left: 0,
+        right: 0,
+        transform: "none",
+        display: "flex",
+        justifyContent: "center",
         px: { xs: 0, sm: 2 },
         pb: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+        "&.MuiSnackbar-anchorOriginBottomCenter": {
+          left: 0,
+          right: 0,
+          transform: "none",
+        },
       }}
     >
       <Paper
@@ -66,32 +95,87 @@ export const AudioPlayerBar: React.FC = () => {
         }}
       >
         <Box display="flex" alignItems="center" gap={1} px={2} pt={1}>
-          <Typography
-            variant="subtitle2"
-            sx={{ flex: 1, minWidth: 0 }}
-            noWrap
-          >
-            {currentFileName}
-          </Typography>
+          <Box display="flex" alignItems="baseline" gap={1} flex={1} minWidth={0}>
+            <Typography variant="subtitle2" noWrap flex={1} minWidth={0}>
+              {currentFileName}
+            </Typography>
 
-          <IconButton
-            size="small"
-            onClick={() => {
-              void scanRecursively();
-            }}
-            disabled={isScanning}
-          >
-            {isScanning ? (
-              <CircularProgress size={18} />
-            ) : (
-              <TravelExplore fontSize="small" />
+            {positionLabel && (
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {positionLabel}
+              </Typography>
             )}
-          </IconButton>
+          </Box>
 
-          <IconButton size="small" onClick={() => close()}>
-            <Close fontSize="small" />
-          </IconButton>
+          <Tooltip
+            title={
+              queueOpen
+                ? t("audioPlayer:actions.hideQueue")
+                : t("audioPlayer:actions.showQueue")
+            }
+            arrow
+          >
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => setQueueOpen((prev) => !prev)}
+                aria-label={t("audioPlayer:actions.showQueue")}
+              >
+                <QueueMusic fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title={t("audioPlayer:actions.scanRecursively")} arrow>
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => {
+                  void scanRecursively();
+                }}
+                disabled={isScanning}
+                aria-label={t("audioPlayer:actions.scanRecursively")}
+              >
+                {isScanning ? (
+                  <CircularProgress size={18} />
+                ) : (
+                  <TravelExplore fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title={t("audioPlayer:actions.close")} arrow>
+            <span>
+              <IconButton size="small" onClick={() => close()} aria-label={t("audioPlayer:actions.close")}>
+                <Close fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Box>
+
+        <Collapse in={queueOpen} timeout="auto" unmountOnExit>
+          <Divider sx={{ mt: 1 }} />
+          <Box maxHeight={{ xs: 220, sm: 300 }} overflow="auto">
+            <List dense disablePadding>
+              {playlist.map((item) => (
+                <ListItemButton
+                  key={item.id}
+                  selected={item.id === currentFileId}
+                  onClick={() => {
+                    setCurrentTrack(item);
+                    setQueueOpen(false);
+                  }}
+                >
+                  <ListItemText
+                    primary={item.name}
+                    primaryTypographyProps={{ noWrap: true }}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          </Box>
+        </Collapse>
 
         <Box px={2} pb={1}>
           <AudioPlayer

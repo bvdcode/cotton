@@ -29,101 +29,65 @@ interface AudioPlayerState {
 }
 
 const SCAN_PAGE_SIZE = 500;
+const MAX_SCAN_DEPTH = 256;
 const MAX_FOLDERS_TO_SCAN = 2500;
 const MAX_AUDIO_FILES = 25000;
 
-const fetchAllChildren = async (nodeId: string): Promise<{
-  nodes: Array<{ id: string; name: string }>;
-  files: Array<{ id: string; name: string; contentType: string }>;
-}> => {
-  const nodes: Array<{ id: string; name: string }> = [];
-  const files: Array<{ id: string; name: string; contentType: string }> = [];
-
-  let page = 1;
-  let total = 0;
-
-  while (true) {
-    const response = await nodesApi.getChildren(nodeId, {
-      page,
-      pageSize: SCAN_PAGE_SIZE,
-      depth: 0,
-    });
-
-    total = response.totalCount;
-
-    for (const n of response.content.nodes) {
-      nodes.push({ id: n.id, name: n.name });
-    }
-
-    for (const f of response.content.files) {
-      files.push({
-        id: f.id,
-        name: f.name,
-        contentType: f.contentType,
-      });
-    }
-
-    const fetched = nodes.length + files.length;
-    if (fetched >= total) {
-      break;
-    }
-
-    page += 1;
-    // Safety valve in case server misreports totals.
-    if (page > 2000) {
-      break;
-    }
-  }
-
-  return { nodes, files };
-};
-
-const buildRecursiveAudioPlaylist = async (
-  rootNodeId: string,
-): Promise<AudioPlaylistItem[]> => {
-  const visited = new Set<string>();
-  const stack: string[] = [rootNodeId];
-
+const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPlaylistItem[]> => {
   const playlist: AudioPlaylistItem[] = [];
+  let foldersSeen = 1;
 
-  while (stack.length > 0) {
-    if (visited.size >= MAX_FOLDERS_TO_SCAN) {
+  for (let depth = 0; depth <= MAX_SCAN_DEPTH; depth += 1) {
+    if (foldersSeen >= MAX_FOLDERS_TO_SCAN) {
       break;
     }
     if (playlist.length >= MAX_AUDIO_FILES) {
       break;
     }
 
-    const nodeId = stack.pop();
-    if (!nodeId) {
-      continue;
-    }
+    let page = 1;
+    let fetched = 0;
+    let total = 0;
+    let hasNextLevelNodes = false;
 
-    if (visited.has(nodeId)) {
-      continue;
-    }
-    visited.add(nodeId);
+    while (true) {
+      const response = await nodesApi.getChildren(rootNodeId, {
+        page,
+        pageSize: SCAN_PAGE_SIZE,
+        depth,
+      });
 
-    const children = await fetchAllChildren(nodeId);
+      total = response.totalCount;
+      fetched += response.content.nodes.length + response.content.files.length;
 
-    const sortedNodes = children.nodes.slice();
-    sortedNodes.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      if (response.content.nodes.length > 0) {
+        hasNextLevelNodes = true;
+        foldersSeen += response.content.nodes.length;
+      }
 
-    for (let i = sortedNodes.length - 1; i >= 0; i -= 1) {
-      stack.push(sortedNodes[i].id);
-    }
+      for (const file of response.content.files) {
+        if (playlist.length >= MAX_AUDIO_FILES) {
+          break;
+        }
 
-    const audioFiles = children.files
-      .filter((file) => getFileTypeInfo(file.name, file.contentType).type === "audio")
-      .slice();
+        if (getFileTypeInfo(file.name, file.contentType).type === "audio") {
+          playlist.push({ id: file.id, name: file.name });
+        }
+      }
 
-    audioFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-
-    for (const file of audioFiles) {
-      if (playlist.length >= MAX_AUDIO_FILES) {
+      if (fetched >= total) {
         break;
       }
-      playlist.push({ id: file.id, name: file.name });
+
+      page += 1;
+      // Safety valve in case server misreports totals.
+      if (page > 2000) {
+        break;
+      }
+    }
+
+    if (!hasNextLevelNodes) {
+      break;
     }
   }
 
