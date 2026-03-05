@@ -321,14 +321,16 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         loading={loading}
       />
 
-      <MediaLightbox
-        items={mediaItems}
-        open={lightboxOpen}
-        initialIndex={lightboxIndex}
-        onClose={() => setLightboxOpen(false)}
-        getSignedMediaUrl={getSignedMediaUrl}
-        getDownloadUrl={getDownloadUrl}
-      />
+      {lightboxOpen && mediaItems.length > 0 && (
+        <MediaLightbox
+          items={mediaItems}
+          open={lightboxOpen}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+          getSignedMediaUrl={getSignedMediaUrl}
+          getDownloadUrl={getDownloadUrl}
+        />
+      )}
 
       <SharedFilePreviewModal
         open={previewState.isOpen}
