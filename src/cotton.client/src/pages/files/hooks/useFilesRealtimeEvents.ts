@@ -83,31 +83,39 @@ export function useFilesRealtimeEvents({
       // connection will retry automatically
     });
 
-    const unsubscribes = FILES_HUB_METHODS.map((method) =>
+    const invalidationMethods = FILES_HUB_METHODS.flatMap((m) => [m, m.toLowerCase()]);
+    const unsubscribes = invalidationMethods.map((method) =>
       eventHub.on(method, () => {
         scheduleInvalidate();
       }),
     );
 
+    const handlePreviewGenerated = (...args: JsonValue[]) => {
+      if (!isPreviewGeneratedArgs(args)) {
+        return;
+      }
+
+      const [eventNodeId, nodeFileId, previewHashHex] = args;
+      if (!nodeIdRef.current || nodeIdRef.current !== eventNodeId) {
+        return;
+      }
+
+      const handler = onPreviewGeneratedRef.current;
+      if (handler) {
+        handler(nodeFileId, previewHashHex);
+      } else {
+        scheduleInvalidate();
+      }
+    };
+
     const unsubscribePreviewGenerated = eventHub.on(
       PREVIEW_GENERATED_METHOD,
-      (...args: JsonValue[]) => {
-        if (!isPreviewGeneratedArgs(args)) {
-          return;
-        }
+      handlePreviewGenerated,
+    );
 
-        const [eventNodeId, nodeFileId, previewHashHex] = args;
-        if (!nodeIdRef.current || nodeIdRef.current !== eventNodeId) {
-          return;
-        }
-
-        const handler = onPreviewGeneratedRef.current;
-        if (handler) {
-          handler(nodeFileId, previewHashHex);
-        } else {
-          scheduleInvalidate();
-        }
-      },
+    const unsubscribePreviewGeneratedLower = eventHub.on(
+      PREVIEW_GENERATED_METHOD.toLowerCase(),
+      handlePreviewGenerated,
     );
 
     return () => {
@@ -121,6 +129,7 @@ export function useFilesRealtimeEvents({
       }
 
       unsubscribePreviewGenerated();
+      unsubscribePreviewGeneratedLower();
     };
   }, [isAuthenticated, scheduleInvalidate]);
 }
