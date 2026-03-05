@@ -82,6 +82,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
 
+  const plugins = React.useMemo(
+    () => [Video, Zoom, Slideshow, Thumbnails, Download, Share],
+    [],
+  );
+
   // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(2500);
 
@@ -169,7 +174,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       open={open}
       close={onClose}
       className={lightboxClassName}
-      plugins={[Video, Zoom, Slideshow, Thumbnails, Download, Share]}
+      plugins={plugins}
       slides={slides}
       index={index}
       animation={{
