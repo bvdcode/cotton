@@ -24,6 +24,7 @@ import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
+import { getFileTypeInfo } from "../files/utils/fileTypes";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -117,6 +118,14 @@ export const SearchPage: React.FC = () => {
     );
     return sorted;
   }, [results]);
+
+  const audioPlaylist = useMemo(
+    () =>
+      sortedFiles
+        .filter((file) => getFileTypeInfo(file.name, file.contentType ?? null).type === "audio")
+        .map((file) => ({ id: file.id, name: file.name })),
+    [sortedFiles],
+  );
 
   const fileListSource = useSearchFileList({
     results,
@@ -242,6 +251,7 @@ export const SearchPage: React.FC = () => {
         fileName={previewState.fileName}
         fileType={previewState.fileType}
         fileSizeBytes={previewState.fileSizeBytes}
+        audioPlaylist={audioPlaylist}
         onClose={closePreview}
       />
 
