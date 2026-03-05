@@ -126,7 +126,12 @@ export const SearchPage: React.FC = () => {
             null;
           const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
           const previewUrl = typeof icon === "string" ? icon : undefined;
-          return { id: file.id, name: file.name, previewUrl };
+          return {
+            id: file.id,
+            name: file.name,
+            nodeId: file.nodeId ?? undefined,
+            previewUrl,
+          };
         }),
     [sortedFiles],
   );

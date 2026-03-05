@@ -5,6 +5,7 @@ import {
   CircularProgress,
   Divider,
   IconButton,
+  LinearProgress,
   List,
   ListItemButton,
   Paper,
@@ -12,19 +13,24 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Close, QueueMusic, Shuffle, TravelExplore } from "@mui/icons-material";
+import { Close, QueueMusic, Shuffle, Subtitles, TravelExplore } from "@mui/icons-material";
 import type { SnackbarCloseReason } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import {
   selectAudioPlayerCurrentFileId,
   selectAudioPlayerCurrentFileName,
   selectAudioPlayerIsScanning,
+  selectAudioPlayerLyricsLines,
+  selectAudioPlayerLyricsOpen,
+  selectAudioPlayerLyricsStatus,
   selectAudioPlayerOpen,
   selectAudioPlayerPlaylist,
   selectAudioPlayerShuffleEnabled,
   useAudioPlayerStore,
 } from "../../shared/store/audioPlayerStore";
 import { AudioPlayer } from "../../shared/ui/AudioPlayer";
+import { AudioLyricsView } from "../../shared/ui/AudioLyricsView";
+import { findActiveLrcLineIndex } from "../../shared/utils/lrc";
 
 export const AudioPlayerBar: React.FC = () => {
   const { t } = useTranslation(["audioPlayer"]);
@@ -35,13 +41,19 @@ export const AudioPlayerBar: React.FC = () => {
   const currentFileId = useAudioPlayerStore(selectAudioPlayerCurrentFileId);
   const currentFileName = useAudioPlayerStore(selectAudioPlayerCurrentFileName);
   const shuffleEnabled = useAudioPlayerStore(selectAudioPlayerShuffleEnabled);
+  const lyricsOpen = useAudioPlayerStore(selectAudioPlayerLyricsOpen);
+  const lyricsStatus = useAudioPlayerStore(selectAudioPlayerLyricsStatus);
+  const lyricsLines = useAudioPlayerStore(selectAudioPlayerLyricsLines);
 
   const close = useAudioPlayerStore((s) => s.close);
   const scanRecursively = useAudioPlayerStore((s) => s.scanRecursively);
   const setCurrentTrack = useAudioPlayerStore((s) => s.setCurrentTrack);
   const toggleShuffle = useAudioPlayerStore((s) => s.toggleShuffle);
+  const toggleLyricsOpen = useAudioPlayerStore((s) => s.toggleLyricsOpen);
+  const loadLyricsForTrack = useAudioPlayerStore((s) => s.loadLyricsForTrack);
 
   const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
+  const [lyricsActiveIndex, setLyricsActiveIndex] = React.useState<number>(0);
 
   const playlistTotal = playlist.length;
   const currentIndex = React.useMemo<number>(() => {
@@ -54,10 +66,40 @@ export const AudioPlayerBar: React.FC = () => {
     return current?.previewUrl;
   }, [playlist, currentFileId]);
 
+  const currentItem = React.useMemo(() => {
+    return playlist.find((x) => x.id === currentFileId) ?? null;
+  }, [playlist, currentFileId]);
+
   const [coverFailed, setCoverFailed] = React.useState(false);
   React.useEffect(() => {
     setCoverFailed(false);
   }, [currentPreviewUrl]);
+
+  React.useEffect(() => {
+    setLyricsActiveIndex(0);
+  }, [lyricsLines]);
+
+  React.useEffect(() => {
+    if (!lyricsOpen) {
+      return;
+    }
+
+    void loadLyricsForTrack({
+      folderNodeId: currentItem?.nodeId ?? null,
+      audioFileName: currentItem?.name ?? currentFileName,
+    });
+  }, [lyricsOpen, currentItem?.nodeId, currentItem?.name, currentFileName, loadLyricsForTrack]);
+
+  const lyricsListenEnabled = lyricsOpen && lyricsLines.length > 0;
+
+  const handleListen = React.useCallback(
+    (timeSeconds: number) => {
+      if (!lyricsListenEnabled) return;
+      const next = findActiveLrcLineIndex(lyricsLines, timeSeconds);
+      setLyricsActiveIndex((prev) => (prev === next ? prev : next));
+    },
+    [lyricsLines, lyricsListenEnabled],
+  );
 
   const positionLabel =
     playlistTotal > 1 ? `${currentIndex + 1}/${playlistTotal}` : null;
@@ -80,6 +122,7 @@ export const AudioPlayerBar: React.FC = () => {
       onClose={handleClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       sx={{
+        bottom: 0,
         left: 0,
         right: 0,
         transform: "none",
@@ -88,6 +131,7 @@ export const AudioPlayerBar: React.FC = () => {
         px: { xs: 0, sm: 2 },
         pb: "env(safe-area-inset-bottom, 0px)",
         "&.MuiSnackbar-anchorOriginBottomCenter": {
+          bottom: 0,
           left: 0,
           right: 0,
           transform: "none",
@@ -180,6 +224,30 @@ export const AudioPlayerBar: React.FC = () => {
             </span>
           </Tooltip>
 
+          <Tooltip
+            title={
+              lyricsOpen
+                ? t("audioPlayer:actions.hideLyrics")
+                : t("audioPlayer:actions.showLyrics")
+            }
+            arrow
+          >
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => toggleLyricsOpen()}
+                aria-label={
+                  lyricsOpen
+                    ? t("audioPlayer:actions.hideLyrics")
+                    : t("audioPlayer:actions.showLyrics")
+                }
+                color={lyricsOpen ? "primary" : "default"}
+              >
+                <Subtitles fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+
           <Tooltip title={t("audioPlayer:actions.scanRecursively")} arrow>
             <span>
               <IconButton
@@ -207,6 +275,32 @@ export const AudioPlayerBar: React.FC = () => {
             </span>
           </Tooltip>
         </Box>
+
+        <Collapse in={lyricsOpen} timeout="auto" unmountOnExit>
+          <Divider sx={{ mt: 1 }} />
+          <Box px={2} py={1}>
+            {!currentItem?.nodeId ? (
+              <Typography variant="caption" color="text.secondary">
+                {t("audioPlayer:lyrics.unavailable")}
+              </Typography>
+            ) : lyricsStatus === "loading" ? (
+              <LinearProgress />
+            ) : lyricsLines.length > 0 ? (
+              <AudioLyricsView
+                lines={lyricsLines}
+                activeIndex={lyricsActiveIndex}
+              />
+            ) : lyricsStatus === "error" ? (
+              <Typography variant="caption" color="text.secondary">
+                {t("audioPlayer:lyrics.loadFailed")}
+              </Typography>
+            ) : (
+              <Typography variant="caption" color="text.secondary">
+                {t("audioPlayer:lyrics.notFound")}
+              </Typography>
+            )}
+          </Box>
+        </Collapse>
 
         <Collapse in={queueOpen} timeout="auto" unmountOnExit>
           <Divider sx={{ mt: 1 }} />
@@ -256,6 +350,8 @@ export const AudioPlayerBar: React.FC = () => {
             playlist={playlist}
             onTrackChange={setCurrentTrack}
             shuffleEnabled={shuffleEnabled}
+            onListen={lyricsListenEnabled ? handleListen : undefined}
+            listenIntervalMs={lyricsListenEnabled ? 250 : undefined}
           />
         </Box>
       </Paper>

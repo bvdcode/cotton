@@ -200,7 +200,12 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             </Stack>
           </Stack>
           {user.email && (
-            <Typography variant="body2" color="text.secondary" noWrap>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              noWrap
+              display={{ xs: "none", sm: "block" }}
+            >
               {user.email}
             </Typography>
           )}
