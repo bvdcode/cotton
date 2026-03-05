@@ -12,7 +12,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Close, QueueMusic, TravelExplore } from "@mui/icons-material";
+import { Close, QueueMusic, Shuffle, TravelExplore } from "@mui/icons-material";
 import type { SnackbarCloseReason } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,6 +21,7 @@ import {
   selectAudioPlayerIsScanning,
   selectAudioPlayerOpen,
   selectAudioPlayerPlaylist,
+  selectAudioPlayerShuffleEnabled,
   useAudioPlayerStore,
 } from "../../shared/store/audioPlayerStore";
 import { AudioPlayer } from "../../shared/ui/AudioPlayer";
@@ -33,10 +34,12 @@ export const AudioPlayerBar: React.FC = () => {
   const playlist = useAudioPlayerStore(selectAudioPlayerPlaylist);
   const currentFileId = useAudioPlayerStore(selectAudioPlayerCurrentFileId);
   const currentFileName = useAudioPlayerStore(selectAudioPlayerCurrentFileName);
+  const shuffleEnabled = useAudioPlayerStore(selectAudioPlayerShuffleEnabled);
 
   const close = useAudioPlayerStore((s) => s.close);
   const scanRecursively = useAudioPlayerStore((s) => s.scanRecursively);
   const setCurrentTrack = useAudioPlayerStore((s) => s.setCurrentTrack);
+  const toggleShuffle = useAudioPlayerStore((s) => s.toggleShuffle);
 
   const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
 
@@ -45,6 +48,16 @@ export const AudioPlayerBar: React.FC = () => {
     const index = playlist.findIndex((x) => x.id === currentFileId);
     return index >= 0 ? index : 0;
   }, [playlist, currentFileId]);
+
+  const currentPreviewUrl = React.useMemo<string | undefined>(() => {
+    const current = playlist.find((x) => x.id === currentFileId);
+    return current?.previewUrl;
+  }, [playlist, currentFileId]);
+
+  const [coverFailed, setCoverFailed] = React.useState(false);
+  React.useEffect(() => {
+    setCoverFailed(false);
+  }, [currentPreviewUrl]);
 
   const positionLabel =
     playlistTotal > 1 ? `${currentIndex + 1}/${playlistTotal}` : null;
@@ -73,7 +86,7 @@ export const AudioPlayerBar: React.FC = () => {
         display: "flex",
         justifyContent: "center",
         px: { xs: 0, sm: 2 },
-        pb: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+        pb: "env(safe-area-inset-bottom, 0px)",
         "&.MuiSnackbar-anchorOriginBottomCenter": {
           left: 0,
           right: 0,
@@ -94,7 +107,23 @@ export const AudioPlayerBar: React.FC = () => {
         }}
       >
         <Box display="flex" alignItems="center" gap={1} px={2} pt={1}>
-          <Box display="flex" alignItems="baseline" gap={1} flex={1} minWidth={0}>
+          <Box display="flex" alignItems="center" gap={1} flex={1} minWidth={0}>
+            {currentPreviewUrl && !coverFailed ? (
+              <Box
+                component="img"
+                src={currentPreviewUrl}
+                alt=""
+                onError={() => setCoverFailed(true)}
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 0.5,
+                  objectFit: "cover",
+                  flexShrink: 0,
+                }}
+              />
+            ) : null}
+
             <Typography variant="subtitle2" noWrap flex={1} minWidth={0}>
               {currentFileName}
             </Typography>
@@ -105,6 +134,30 @@ export const AudioPlayerBar: React.FC = () => {
               </Typography>
             )}
           </Box>
+
+          <Tooltip
+            title={
+              shuffleEnabled
+                ? t("audioPlayer:actions.disableShuffle")
+                : t("audioPlayer:actions.enableShuffle")
+            }
+            arrow
+          >
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => toggleShuffle()}
+                color={shuffleEnabled ? "primary" : "default"}
+                aria-label={
+                  shuffleEnabled
+                    ? t("audioPlayer:actions.disableShuffle")
+                    : t("audioPlayer:actions.enableShuffle")
+                }
+              >
+                <Shuffle fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
 
           <Tooltip
             title={
@@ -204,6 +257,7 @@ export const AudioPlayerBar: React.FC = () => {
             currentFileName={currentFileName}
             playlist={playlist}
             onTrackChange={setCurrentTrack}
+            shuffleEnabled={shuffleEnabled}
           />
         </Box>
       </Paper>

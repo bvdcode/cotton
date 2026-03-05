@@ -117,16 +117,50 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
     {},
   );
+  const [fullResDisplayUrls, setFullResDisplayUrls] = React.useState<
+    Record<string, string>
+  >({});
   const [downloadUrls, setDownloadUrls] = React.useState<
     Record<string, string>
   >({});
 
   const loadingRef = React.useRef<Set<string>>(new Set());
+  const fullResLoadingRef = React.useRef<Set<string>>(new Set());
 
   // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
-  }, [items, displayUrls, signedUrls, downloadUrls]);
+    return buildSlidesFromItems(
+      items,
+      fullResDisplayUrls,
+      displayUrls,
+      signedUrls,
+      downloadUrls,
+    );
+  }, [items, fullResDisplayUrls, displayUrls, signedUrls, downloadUrls]);
+
+  const preloadImage = React.useCallback(async (url: string): Promise<void> => {
+    await new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        if (typeof img.decode === "function") {
+          try {
+            await img.decode();
+          } catch {
+            // ignore decode failures
+          }
+        }
+        resolve();
+      };
+      img.onerror = () => reject(new Error("Failed to preload image"));
+      img.src = url;
+    });
+  }, []);
+
+  const buildInlineUrl = React.useCallback((downloadLink: string): string => {
+    const url = new URL(downloadLink, window.location.origin);
+    url.searchParams.set("download", "false");
+    return url.toString();
+  }, []);
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -154,12 +188,20 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               }
             }
 
-            if (item.kind === "image" && isHeicFile(item.name)) {
-              const convertedUrl = await convertHeicToJpeg(url);
-              setDisplayUrls((p) => ({ ...p, [item.id]: convertedUrl }));
-            } else {
-              setDisplayUrls((p) => ({ ...p, [item.id]: url }));
+            const nextDisplayUrl =
+              item.kind === "image" && isHeicFile(item.name)
+                ? await convertHeicToJpeg(url)
+                : url;
+
+            if (item.kind === "image") {
+              try {
+                await preloadImage(nextDisplayUrl);
+              } catch {
+                // Keep previewUrl if preloading fails
+              }
             }
+
+            setDisplayUrls((p) => ({ ...p, [item.id]: nextDisplayUrl }));
           } catch (e) {
             console.error("Failed to load media original URL", e);
           } finally {
@@ -170,7 +212,52 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         return prev;
       });
     },
-    [items, getSignedMediaUrl, getDownloadUrl],
+    [items, getSignedMediaUrl, getDownloadUrl, preloadImage],
+  );
+
+  const ensureSlideHasFullRes = React.useCallback(
+    async (targetIndex: number) => {
+      const item = items[targetIndex];
+      if (!item) return;
+      if (item.kind !== "image") return;
+
+      if (fullResDisplayUrls[item.id]) return;
+      if (fullResLoadingRef.current.has(item.id)) return;
+
+      fullResLoadingRef.current.add(item.id);
+
+      try {
+        const downloadLink =
+          downloadUrls[item.id] ?? (getDownloadUrl ? await getDownloadUrl(item.id) : null);
+        if (!downloadLink) {
+          return;
+        }
+
+        if (!downloadUrls[item.id]) {
+          setDownloadUrls((p) => ({ ...p, [item.id]: downloadLink }));
+        }
+
+        const inlineUrl = buildInlineUrl(downloadLink);
+        const nextUrl = isHeicFile(item.name)
+          ? await convertHeicToJpeg(inlineUrl)
+          : inlineUrl;
+
+        await preloadImage(nextUrl);
+        setFullResDisplayUrls((p) => ({ ...p, [item.id]: nextUrl }));
+      } catch (e) {
+        console.error("Failed to load media full resolution URL", e);
+      } finally {
+        fullResLoadingRef.current.delete(item.id);
+      }
+    },
+    [
+      items,
+      downloadUrls,
+      getDownloadUrl,
+      buildInlineUrl,
+      preloadImage,
+      fullResDisplayUrls,
+    ],
   );
 
   React.useEffect(() => {
@@ -213,6 +300,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
             void ensureSlideHasOriginal(currentIndex + offset);
           }
+        },
+        zoom: ({ zoom }) => {
+          if (zoom <= 1) {
+            return;
+          }
+          void ensureSlideHasFullRes(index);
         },
       }}
       render={{
@@ -316,6 +409,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
 function buildSlidesFromItems(
   items: MediaItem[],
+  fullResDisplayUrls: Record<string, string>,
   displayUrls: Record<string, string>,
   signedUrls: Record<string, string>,
   downloadUrls: Record<string, string>,
@@ -408,7 +502,7 @@ function buildSlidesFromItems(
     const title = buildTitle(position, item);
 
     const signedUrl = signedUrls[item.id] ?? null;
-    const displayUrl = displayUrls[item.id] ?? null;
+    const displayUrl = (fullResDisplayUrls[item.id] ?? displayUrls[item.id]) ?? null;
     const downloadUrl = downloadUrls[item.id] ?? null;
     const shareCandidate = downloadUrl || signedUrl;
     const shareUrl = buildShareUrl(shareCandidate);
