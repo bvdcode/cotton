@@ -855,6 +855,11 @@
       "confirmTitle": "Delete file \"{{name}}\"?",
       "confirmDescription": "This action cannot be undone."
     },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "Delete {{count}} item permanently?",
+      "confirmTitle_other": "Delete {{count}} items permanently?",
+      "confirmDescription": "This action cannot be undone. Selected items will be deleted forever."
+    },
     "emptyTrash": {
       "confirmTitle": "Empty trash?",
       "confirmDescription": "This action cannot be undone. All items in trash will be permanently deleted.",

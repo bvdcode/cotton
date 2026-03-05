@@ -855,6 +855,11 @@
       "confirmTitle": "¿Eliminar el archivo \"{{name}}\"?",
       "confirmDescription": "Esta acción no se puede deshacer."
     },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "¿Eliminar {{count}} elemento definitivamente?",
+      "confirmTitle_other": "¿Eliminar {{count}} elementos definitivamente?",
+      "confirmDescription": "Esta acción no se puede deshacer. Los elementos seleccionados se eliminarán definitivamente."
+    },
     "emptyTrash": {
       "confirmTitle": "¿Vaciar papelera?",
       "confirmDescription": "Esta acción no se puede deshacer. Todos los elementos de la papelera se eliminarán definitivamente.",
