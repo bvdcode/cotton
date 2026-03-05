@@ -76,8 +76,10 @@ const buildInlineTextUrl = (downloadLink: string): string => {
   return url.toString();
 };
 
-const hasOwn = (obj: Record<string, unknown>, key: string): boolean =>
-  Object.prototype.hasOwnProperty.call(obj, key);
+const hasOwn = (
+  obj: Record<string, ReadonlyArray<LrcLine> | null>,
+  key: string,
+): boolean => Object.prototype.hasOwnProperty.call(obj, key);
 
 type NodeInfo = {
   id: string;

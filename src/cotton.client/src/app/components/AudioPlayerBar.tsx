@@ -35,6 +35,10 @@ import { findActiveLrcLineIndex } from "../../shared/utils/lrc";
 export const AudioPlayerBar: React.FC = () => {
   const { t } = useTranslation(["audioPlayer"]);
 
+  const LYRICS_LINE_HEIGHT_PX = 32;
+  const LYRICS_VISIBLE_LINES = 3;
+  const LYRICS_VIEW_HEIGHT_PX = LYRICS_LINE_HEIGHT_PX * LYRICS_VISIBLE_LINES;
+
   const open = useAudioPlayerStore(selectAudioPlayerOpen);
   const isScanning = useAudioPlayerStore(selectAudioPlayerIsScanning);
   const playlist = useAudioPlayerStore(selectAudioPlayerPlaylist);
@@ -54,6 +58,11 @@ export const AudioPlayerBar: React.FC = () => {
 
   const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
   const [lyricsActiveIndex, setLyricsActiveIndex] = React.useState<number>(0);
+  const [lyricsCountdown, setLyricsCountdown] = React.useState<number | null>(
+    null,
+  );
+  const [lyricsStarted, setLyricsStarted] = React.useState<boolean>(false);
+  const countdownConsumedRef = React.useRef<boolean>(false);
 
   const playlistTotal = playlist.length;
   const currentIndex = React.useMemo<number>(() => {
@@ -77,7 +86,16 @@ export const AudioPlayerBar: React.FC = () => {
 
   React.useEffect(() => {
     setLyricsActiveIndex(0);
+    setLyricsCountdown(null);
+    setLyricsStarted(false);
+    countdownConsumedRef.current = false;
   }, [lyricsLines]);
+
+  React.useEffect(() => {
+    setLyricsCountdown(null);
+    setLyricsStarted(false);
+    countdownConsumedRef.current = false;
+  }, [currentFileId]);
 
   React.useEffect(() => {
     if (!lyricsOpen) {
@@ -95,8 +113,33 @@ export const AudioPlayerBar: React.FC = () => {
   const handleListen = React.useCallback(
     (timeSeconds: number) => {
       if (!lyricsListenEnabled) return;
-      const next = findActiveLrcLineIndex(lyricsLines, timeSeconds);
-      setLyricsActiveIndex((prev) => (prev === next ? prev : next));
+
+      const firstTime = lyricsLines[0]?.timeSeconds;
+      if (typeof firstTime !== "number") {
+        return;
+      }
+
+      const started = timeSeconds >= firstTime;
+      setLyricsStarted((prev) => (prev === started ? prev : started));
+
+      if (started) {
+        countdownConsumedRef.current = true;
+        setLyricsCountdown((prev) => (prev === null ? prev : null));
+
+        const next = findActiveLrcLineIndex(lyricsLines, timeSeconds);
+        setLyricsActiveIndex((prev) => (prev === next ? prev : next));
+        return;
+      }
+
+      if (countdownConsumedRef.current) {
+        setLyricsCountdown((prev) => (prev === null ? prev : null));
+        return;
+      }
+
+      const delta = firstTime - timeSeconds;
+      const nextCountdown =
+        delta > 0 && delta <= 3 ? Math.ceil(delta) : null;
+      setLyricsCountdown((prev) => (prev === nextCountdown ? prev : nextCountdown));
     },
     [lyricsLines, lyricsListenEnabled],
   );
@@ -286,10 +329,25 @@ export const AudioPlayerBar: React.FC = () => {
             ) : lyricsStatus === "loading" ? (
               <LinearProgress />
             ) : lyricsLines.length > 0 ? (
-              <AudioLyricsView
-                lines={lyricsLines}
-                activeIndex={lyricsActiveIndex}
-              />
+              lyricsCountdown !== null ? (
+                <Box
+                  height={LYRICS_VIEW_HEIGHT_PX}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <Typography variant="h4" fontWeight={800} textAlign="center">
+                    {lyricsCountdown}
+                  </Typography>
+                </Box>
+              ) : lyricsStarted ? (
+                <AudioLyricsView
+                  lines={lyricsLines}
+                  activeIndex={lyricsActiveIndex}
+                />
+              ) : (
+                <Box height={LYRICS_VIEW_HEIGHT_PX} />
+              )
             ) : lyricsStatus === "error" ? (
               <Typography variant="caption" color="text.secondary">
                 {t("audioPlayer:lyrics.loadFailed")}
