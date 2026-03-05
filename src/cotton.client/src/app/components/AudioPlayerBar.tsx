@@ -40,7 +40,7 @@ export const AudioPlayerBar: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const lyricsLineHeightPx = isMobile ? 44 : 32;
-  const lyricsViewHeightPx = lyricsLineHeightPx * 3;
+  const lyricsViewHeightPx = lyricsLineHeightPx * 2;
 
   const open = useAudioPlayerStore(selectAudioPlayerOpen);
   const isScanning = useAudioPlayerStore(selectAudioPlayerIsScanning);
