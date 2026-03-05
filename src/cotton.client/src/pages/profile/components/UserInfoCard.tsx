@@ -258,10 +258,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             label={t("fields.createdAt")}
             value={formatDateTime(user.createdAt)}
           />
-          <InfoRow
-            label={t("fields.updatedAt")}
-            value={formatDateTime(user.updatedAt)}
-          />
         </Stack>
       </Stack>
     </Paper>
