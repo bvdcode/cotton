@@ -152,6 +152,12 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
   },
 
   setCurrentTrack: (item) => {
+    const currentId = get().currentFileId;
+    const currentName = get().currentFileName;
+    if (currentId === item.id && currentName === item.name) {
+      return;
+    }
+
     set({ currentFileId: item.id, currentFileName: item.name });
   },
 
@@ -205,7 +211,5 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
 export const selectAudioPlayerOpen = (s: AudioPlayerState): boolean => s.open;
 export const selectAudioPlayerIsScanning = (s: AudioPlayerState): boolean => s.isScanning;
 export const selectAudioPlayerPlaylist = (s: AudioPlayerState): ReadonlyArray<AudioPlaylistItem> => s.playlist;
-export const selectAudioPlayerCurrent = (s: AudioPlayerState): { fileId: string | null; fileName: string | null } => ({
-  fileId: s.currentFileId,
-  fileName: s.currentFileName,
-});
+export const selectAudioPlayerCurrentFileId = (s: AudioPlayerState): string | null => s.currentFileId;
+export const selectAudioPlayerCurrentFileName = (s: AudioPlayerState): string | null => s.currentFileName;

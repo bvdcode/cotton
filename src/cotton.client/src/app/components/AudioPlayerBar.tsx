@@ -10,7 +10,8 @@ import {
 import { Close, TravelExplore } from "@mui/icons-material";
 import type { SnackbarCloseReason } from "@mui/material";
 import {
-  selectAudioPlayerCurrent,
+  selectAudioPlayerCurrentFileId,
+  selectAudioPlayerCurrentFileName,
   selectAudioPlayerIsScanning,
   selectAudioPlayerOpen,
   selectAudioPlayerPlaylist,
@@ -22,7 +23,8 @@ export const AudioPlayerBar: React.FC = () => {
   const open = useAudioPlayerStore(selectAudioPlayerOpen);
   const isScanning = useAudioPlayerStore(selectAudioPlayerIsScanning);
   const playlist = useAudioPlayerStore(selectAudioPlayerPlaylist);
-  const current = useAudioPlayerStore(selectAudioPlayerCurrent);
+  const currentFileId = useAudioPlayerStore(selectAudioPlayerCurrentFileId);
+  const currentFileName = useAudioPlayerStore(selectAudioPlayerCurrentFileName);
 
   const close = useAudioPlayerStore((s) => s.close);
   const scanRecursively = useAudioPlayerStore((s) => s.scanRecursively);
@@ -36,7 +38,7 @@ export const AudioPlayerBar: React.FC = () => {
     close();
   };
 
-  if (!open || !current.fileId || !current.fileName) {
+  if (!open || !currentFileId || !currentFileName) {
     return null;
   }
 
@@ -69,7 +71,7 @@ export const AudioPlayerBar: React.FC = () => {
             sx={{ flex: 1, minWidth: 0 }}
             noWrap
           >
-            {current.fileName}
+            {currentFileName}
           </Typography>
 
           <IconButton
@@ -93,8 +95,8 @@ export const AudioPlayerBar: React.FC = () => {
 
         <Box px={2} pb={1}>
           <AudioPlayer
-            currentFileId={current.fileId}
-            currentFileName={current.fileName}
+            currentFileId={currentFileId}
+            currentFileName={currentFileName}
             playlist={playlist}
             onTrackChange={setCurrentTrack}
           />
