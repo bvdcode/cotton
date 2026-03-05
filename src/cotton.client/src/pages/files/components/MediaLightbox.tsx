@@ -241,6 +241,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             void ensureSlideHasOriginal(currentIndex + offset);
           }
         },
+        click: () => {
+          if (!isTouchDevice) {
+            return;
+          }
+          setTouchControlsVisible((prev) => !prev);
+        },
       }}
       render={{
         buttonZoom: () => null,
@@ -284,17 +290,20 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             </div>
           );
         },
-        slideContainer: ({ children }) => {
+        slideContainer: ({ children, slide }) => {
+          const imageSrc =
+            slide.type === "image" ? (slide as { src?: string }).src : null;
+
           return (
-            <div
-              className="media-lightbox__tap-area"
-              onClick={() => {
-                if (!isTouchDevice) {
-                  return;
-                }
-                setTouchControlsVisible((prev) => !prev);
-              }}
-            >
+            <div className="media-lightbox__tap-area">
+              {imageSrc ? (
+                <img
+                  className="media-lightbox__image-bg"
+                  src={imageSrc}
+                  alt=""
+                  aria-hidden="true"
+                />
+              ) : null}
               {children}
             </div>
           );
@@ -305,7 +314,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         zoomInMultiplier: 1,
         doubleTapDelay: 300,
         doubleClickDelay: 300,
-        doubleClickMaxStops: 2,
+        doubleClickMaxStops: 1,
         keyboardMoveDistance: 50,
         wheelZoomDistanceFactor: 500,
         pinchZoomDistanceFactor: 100,
@@ -336,6 +345,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         preload: 2,
         imageFit: "contain",
         padding: 0,
+        spacing: 0,
       }}
     />
   );
