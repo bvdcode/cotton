@@ -7,13 +7,10 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-  Snackbar,
 } from "@mui/material";
 import {
   FileListViewFactory,
   PageHeader,
-  MediaLightbox,
-  FilePreviewModal,
 } from "../files/components";
 import { Delete } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -25,32 +22,26 @@ import type { NodeContentDto } from "../../shared/api/nodesApi";
 import { useTrashStore } from "../../shared/store/trashStore";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
-import { useFilePreview } from "../files/hooks/useFilePreview";
-import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
-import { downloadFile } from "../files/utils/fileHandlers";
 import {
   buildBreadcrumbs,
   calculateFolderStats,
 } from "../files/utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
-import {
-  buildFolderOperations,
-  buildFileOperations,
-} from "../../shared/utils/operationsAdapters";
-import { shareFile } from "../../shared/utils/shareFile";
 import { filesApi } from "../../shared/api/filesApi";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
   selectTrashLayoutType,
   selectTrashTilesSize,
-  selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import type { TilesSize } from "../files/types/FileListViewTypes";
 import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
-import { getFileTypeInfo } from "../files/utils/fileTypes";
-import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
+import type {
+  FileOperations,
+  FolderOperations,
+} from "../files/types/FileListViewTypes";
+import { useFileSelection } from "../files/hooks/useFileSelection";
 
 function getTrashViewMode(args: {
   layoutType: InterfaceLayoutType;
@@ -123,30 +114,6 @@ async function deleteAllTrashItems(args: {
   }
 }
 
-type ShareToastState = {
-  open: boolean;
-  message: string;
-};
-
-type ShareToastSnackbarProps = {
-  toast: ShareToastState;
-  onClose: () => void;
-};
-
-const ShareToastSnackbar: React.FC<ShareToastSnackbarProps> = ({
-  toast,
-  onClose,
-}) => {
-  return (
-    <Snackbar
-      open={toast.open}
-      autoHideDuration={2500}
-      onClose={onClose}
-      message={toast.message}
-    />
-  );
-};
-
 type EmptyTrashProgressDialogProps = {
   open: boolean;
   title: string;
@@ -171,7 +138,7 @@ const EmptyTrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
 };
 
 export const TrashPage: React.FC = () => {
-  const { t } = useTranslation(["trash", "common"]);
+  const { t } = useTranslation(["trash", "common", "files"]);
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
   const confirm = useConfirm();
@@ -192,9 +159,6 @@ export const TrashPage: React.FC = () => {
   const storedLayoutType = useLocalPreferencesStore(selectTrashLayoutType);
   const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
   const tilesSize = useLocalPreferencesStore(selectTrashTilesSize) as TilesSize;
-  const smoothGalleryTransitions = useLocalPreferencesStore(
-    selectGallerySmoothTransitions,
-  );
   const setLayoutType = useLocalPreferencesStore((s) => s.setTrashLayoutType);
   const setTilesSize = useLocalPreferencesStore((s) => s.setTrashTilesSize);
 
@@ -342,23 +306,18 @@ export const TrashPage: React.FC = () => {
     listContent,
   });
 
-  const { sortedFiles, tiles } = useContentTiles(effectiveContent);
+  const { tiles } = useContentTiles(effectiveContent);
 
-  const audioPlaylist = useMemo(
-    () =>
-      sortedFiles
-        .filter(
-          (file) =>
-            getFileTypeInfo(file.name, file.contentType ?? null).type ===
-            "audio",
-        )
-        .map((file) => ({ id: file.id, name: file.name })),
-    [sortedFiles],
-  );
-
-  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
+  const fileSelection = useFileSelection();
 
   const isTrashRoot = !routeNodeId;
+
+  const goToFolder = React.useMemo(
+    () => (folderId: string) => navigate(`/trash/${folderId}`),
+    [navigate],
+  );
+
+  const goHome = React.useMemo(() => () => navigate("/trash"), [navigate]);
 
   const resolveWrapperNodeId = React.useCallback(
     (itemId: string): string | null => {
@@ -381,29 +340,39 @@ export const TrashPage: React.FC = () => {
     refreshContent,
     isTrashRoot ? resolveWrapperNodeId : undefined,
   );
-  const { previewState, openPreview, closePreview } = useFilePreview();
 
-  const {
-    lightboxOpen,
-    lightboxIndex,
-    mediaItems,
-    getSignedMediaUrl,
-    getDownloadUrl,
-    handleMediaClick,
-    setLightboxOpen,
-  } = useMediaLightbox(sortedFiles);
+  const folderOperations = React.useMemo<FolderOperations>(
+    () => ({
+      isRenaming: () => false,
+      getRenamingName: () => "",
+      onRenamingNameChange: () => {},
+      onClick: goToFolder,
+      onDelete: (folderId: string, folderName: string) => {
+        void folderOps.handleDeleteFolder(folderId, folderName);
+      },
+    }),
+    [folderOps.handleDeleteFolder, goToFolder],
+  );
+
+  const fileOperations = React.useMemo<FileOperations>(
+    () => ({
+      isRenaming: () => false,
+      getRenamingName: () => "",
+      onRenamingNameChange: () => {},
+      onClick: () => {
+        // No preview/download in Trash.
+      },
+      onDelete: (fileId: string, fileName: string) => {
+        void fileOps.handleDeleteFile(fileId, fileName);
+      },
+    }),
+    [fileOps.handleDeleteFile],
+  );
 
   const stats = useMemo(
     () => calculateFolderStats(content?.nodes, content?.files),
     [content?.files, content?.nodes],
   );
-
-  const goToFolder = useMemo(
-    () => (folderId: string) => navigate(`/trash/${folderId}`),
-    [navigate],
-  );
-
-  const goHome = useMemo(() => () => navigate("/trash"), [navigate]);
 
   const handleGoUp = React.useCallback(() => {
     if (ancestors.length > 0) {
@@ -449,45 +418,77 @@ export const TrashPage: React.FC = () => {
     }
   }, [confirm, content, isTrashRoot, refreshContent, t]);
 
-  const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
-    await downloadFile(nodeFileId, fileName);
-  };
+  const handleDeleteSelected = React.useCallback(async () => {
+    if (!nodeId) return;
+    if (!fileSelection.selectionMode) return;
+    if (fileSelection.selectedCount <= 0) return;
 
-  const [shareToast, setShareToast] = React.useState<ShareToastState>({
-    open: false,
-    message: "",
-  });
+    const selected = fileSelection.selectedIds;
+    const selectedTiles = tiles.filter((tile) => {
+      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      return selected.has(id);
+    });
 
-  const handleShareFile = React.useCallback(
-    async (nodeFileId: string, fileName: string) => {
-      await shareFile(nodeFileId, fileName, t, setShareToast);
+    if (selectedTiles.length === 0) return;
+
+    const result = await confirm({
+      title: t("deleteSelectedForever.confirmTitle", {
+        ns: "trash",
+        count: selectedTiles.length,
+      }),
+      description: t("deleteSelectedForever.confirmDescription", {
+        ns: "trash",
+      }),
+      confirmationText: t("common:actions.delete"),
+      cancellationText: t("common:actions.cancel"),
+      confirmationButtonProps: { color: "error" },
+    });
+
+    if (!result.confirmed) return;
+
+    let hadError = false;
+
+    for (const tile of selectedTiles) {
+      try {
+        const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
+        const wrapperId = resolveWrapperNodeId(id);
+
+        if (wrapperId) {
+          await nodesApi.deleteNode(wrapperId, true);
+          continue;
+        }
+
+        if (tile.kind === "folder") {
+          await nodesApi.deleteNode(tile.node.id, true);
+        } else {
+          await filesApi.deleteFile(tile.file.id, true);
+        }
+      } catch (e) {
+        hadError = true;
+        console.error("Failed to delete selected trash item", e);
+      }
+    }
+
+    fileSelection.deselectAll();
+    await refreshContent();
+
+    if (hadError) {
+      // Keep console diagnostics; UI refresh already triggered.
+    }
+  }, [confirm, fileSelection, nodeId, refreshContent, resolveWrapperNodeId, t, tiles]);
+
+  const handleToggleItem = React.useCallback(
+    (
+      id: string,
+      options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
+    ) => {
+      if (!fileSelection.selectionMode) {
+        fileSelection.toggleSelectionMode();
+      }
+      fileSelection.toggleItem(id, options);
     },
-    [t],
+    [fileSelection],
   );
-
-  const handleFileClick = (
-    fileId: string,
-    fileName: string,
-    fileSizeBytes?: number,
-  ) => {
-    if (getFileTypeInfo(fileName, null).type === "audio") {
-      openAudio({ fileId, fileName, playlist: audioPlaylist });
-      return;
-    }
-    const opened = openPreview(fileId, fileName, fileSizeBytes);
-    if (!opened) {
-      void handleDownloadFile(fileId, fileName);
-    }
-  };
-
-  const folderOperations = buildFolderOperations(folderOps, goToFolder);
-
-  const fileOperations = buildFileOperations(fileOps, {
-    onDownload: handleDownloadFile,
-    onShare: handleShareFile,
-    onClick: handleFileClick,
-    onMediaClick: handleMediaClick,
-  });
 
   const isCreatingInThisFolder = false;
 
@@ -502,8 +503,24 @@ export const TrashPage: React.FC = () => {
       onHomeClick: goHome,
       onViewModeCycle: cycleViewMode,
       statsNamespace: "trash",
+      selectionMode: fileSelection.selectionMode,
+      selectedCount: fileSelection.selectedCount,
+      onToggleSelectionMode: fileSelection.toggleSelectionMode,
+      onSelectAll: () => fileSelection.selectAll(tiles),
+      onDeselectAll: fileSelection.deselectAll,
       customActions:
-        ancestors.length === 0 ? (
+        fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
+          <IconButton
+            color="error"
+            onClick={() => {
+              void handleDeleteSelected();
+            }}
+            title={t("selection.deleteSelected", { ns: "files" })}
+            disabled={loading}
+          >
+            <Delete />
+          </IconButton>
+        ) : ancestors.length === 0 ? (
           <IconButton
             onClick={handleEmptyTrash}
             color="error"
@@ -521,13 +538,20 @@ export const TrashPage: React.FC = () => {
       breadcrumbs,
       cycleViewMode,
       emptyingTrash,
+      fileSelection.deselectAll,
+      fileSelection.selectedCount,
+      fileSelection.selectionMode,
+      fileSelection.selectAll,
+      fileSelection.toggleSelectionMode,
       goHome,
+      handleDeleteSelected,
       handleEmptyTrash,
       handleGoUp,
       layoutType,
       loading,
       stats,
       t,
+      tiles,
       viewMode,
     ],
   );
@@ -559,7 +583,10 @@ export const TrashPage: React.FC = () => {
       onConfirmNewFolder: () => Promise.resolve(),
       onCancelNewFolder: () => {},
       folderNamePlaceholder: "",
-      fileNamePlaceholder: "File name",
+      fileNamePlaceholder: t("rename.fileNamePlaceholder", { ns: "files" }),
+      selectionMode: fileSelection.selectionMode,
+      selectedIds: fileSelection.selectedIds,
+      onToggleItem: handleToggleItem,
       pagination:
         layoutType === InterfaceLayoutType.List
           ? {
@@ -573,7 +600,10 @@ export const TrashPage: React.FC = () => {
       content,
       error,
       fileOperations,
+      fileSelection.selectedIds,
+      fileSelection.selectionMode,
       folderOperations,
+      handleToggleItem,
       isCreatingInThisFolder,
       layoutType,
       listContent,
@@ -592,10 +622,6 @@ export const TrashPage: React.FC = () => {
 
   return (
     <>
-      <ShareToastSnackbar
-        toast={shareToast}
-        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-      />
       <Box
         width="100%"
         sx={{
@@ -623,27 +649,6 @@ export const TrashPage: React.FC = () => {
           <FileListViewFactory {...fileListViewProps} />
         </Box>
       </Box>
-
-      <FilePreviewModal
-        isOpen={previewState.isOpen}
-        fileId={previewState.fileId}
-        fileName={previewState.fileName}
-        fileType={previewState.fileType}
-        fileSizeBytes={previewState.fileSizeBytes}
-        onClose={closePreview}
-      />
-
-      {lightboxOpen && mediaItems.length > 0 && (
-        <MediaLightbox
-          items={mediaItems}
-          open={lightboxOpen}
-          initialIndex={lightboxIndex}
-          onClose={() => setLightboxOpen(false)}
-          getSignedMediaUrl={getSignedMediaUrl}
-          getDownloadUrl={getDownloadUrl}
-          smoothTransitions={smoothGalleryTransitions}
-        />
-      )}
 
       <EmptyTrashProgressDialog
         open={emptyingTrash}
