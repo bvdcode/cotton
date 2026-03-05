@@ -3,7 +3,7 @@ import { Box } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import type { GridRowParams, GridRowsProp, GridRowSelectionModel } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
-import { isImageFile, isVideoFile } from "../../utils/fileTypes";
+import { getFileTypeInfo } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
 import { createFileListColumns, type FileListRow } from "./fileListColumns";
 import Loader from "../../../../shared/ui/Loader";
@@ -12,6 +12,7 @@ export const ListView: React.FC<IFileListView> = ({
   tiles,
   folderOperations,
   fileOperations,
+  readOnly = false,
   onGoToFileLocation,
   listColumnFlex,
   isCreatingFolder,
@@ -52,7 +53,9 @@ export const ListView: React.FC<IFileListView> = ({
         name: tile.file.name,
         location: tile.path ?? null,
         containerPath: tile.containerPath ?? null,
+        containerNodeId: tile.file.nodeId ?? null,
         sizeBytes: tile.file.sizeBytes,
+        contentType: tile.file.contentType ?? null,
         tile,
       };
     });
@@ -70,9 +73,18 @@ export const ListView: React.FC<IFileListView> = ({
     ];
   }, [tiles, isCreatingFolder, newFolderName]);
 
+  const orderedIds = useMemo(
+    () =>
+      rows
+        .filter((r) => r.type !== "new-folder")
+        .map((r) => String(r.id)),
+    [rows],
+  );
+
   const columns = useMemo(
     () =>
       createFileListColumns({
+        readOnly,
         labels: {
           name: t("name"),
           size: t("size"),
@@ -100,6 +112,7 @@ export const ListView: React.FC<IFileListView> = ({
       }),
     [
       t,
+      readOnly,
       newFolderName,
       onNewFolderNameChange,
       onConfirmNewFolder,
@@ -114,12 +127,26 @@ export const ListView: React.FC<IFileListView> = ({
     ],
   );
 
-  const handleRowClick = (params: GridRowParams<FileListRow>) => {
+  const handleRowClick = (
+    params: GridRowParams<FileListRow>,
+    event: React.MouseEvent,
+  ) => {
     const row = params.row;
     if (row.type === "new-folder") return;
 
+    if (event.shiftKey && onToggleItem) {
+      onToggleItem(row.id, {
+        shiftKey: true,
+        orderedIds,
+      });
+      return;
+    }
+
     if (selectionMode) {
-      onToggleItem?.(row.id);
+      onToggleItem?.(row.id, {
+        shiftKey: event.shiftKey,
+        orderedIds,
+      });
       return;
     }
 
@@ -131,9 +158,8 @@ export const ListView: React.FC<IFileListView> = ({
     }
 
     if (!fileOperations.isRenaming(row.id)) {
-      const isImage = isImageFile(row.name);
-      const isVideo = isVideoFile(row.name);
-      if (isImage || isVideo) {
+      const typeInfo = getFileTypeInfo(row.name, row.contentType ?? null);
+      if (typeInfo.type === "image" || typeInfo.type === "video") {
         fileOperations.onMediaClick?.(row.id);
       } else {
         fileOperations.onClick(row.id, row.name, row.sizeBytes ?? undefined);

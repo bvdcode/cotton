@@ -188,7 +188,7 @@ public sealed class WebDavBasicAuthenticationHandler(
     {
         if (cache.TryGetValue(cacheKey, out Guid cachedUserId) && cachedUserId != Guid.Empty)
         {
-            Logger.LogInformation("WebDAV auth: cache hit for username '{Username}'.", username);
+            Logger.LogDebug("WebDAV auth: cache hit for username '{Username}'.", username);
             result = AuthenticateSuccess(cachedUserId, username);
             return true;
         }

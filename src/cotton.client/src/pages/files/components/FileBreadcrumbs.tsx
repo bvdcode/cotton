@@ -1,7 +1,7 @@
-import { useMemo, useRef, useEffect, useLayoutEffect } from "react";
-import { Breadcrumbs, Link as MuiLink, Typography, Box } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { Box, Breadcrumbs, Link as MuiLink, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { Link as RouterLink } from "react-router-dom";
 
 interface Breadcrumb {
   id: string;
@@ -10,10 +10,12 @@ interface Breadcrumb {
 
 interface FileBreadcrumbsProps {
   breadcrumbs: Breadcrumb[];
+  onNavigateBreadcrumb?: (breadcrumbIndex: number) => void;
 }
 
 export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
   breadcrumbs,
+  onNavigateBreadcrumb,
 }) => {
   const { t } = useTranslation("files");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -21,7 +23,9 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
 
   const filtered = useMemo(
     () =>
-      breadcrumbs.filter((crumb, idx) => idx > 0 || crumb.name !== "Default"),
+      breadcrumbs
+        .map((crumb, idx) => ({ crumb, idx }))
+        .filter(({ crumb, idx }) => idx > 0 || crumb.name !== "Default"),
     [breadcrumbs],
   );
 
@@ -47,6 +51,7 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
 
   useEffect(() => {
     updateFade();
+
     const container = containerRef.current;
     const bc = breadcrumbsRef.current;
     if (!container || !bc) return;
@@ -99,8 +104,8 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
           },
         }}
       >
-        {filtered.map((crumb, idx) => {
-          const isLast = idx === filtered.length - 1;
+        {filtered.map(({ crumb, idx }, filteredIndex) => {
+          const isLast = filteredIndex === filtered.length - 1;
           if (isLast) {
             return (
               <Typography
@@ -113,6 +118,25 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
               </Typography>
             );
           }
+
+          if (onNavigateBreadcrumb) {
+            return (
+              <MuiLink
+                key={crumb.id}
+                component="button"
+                type="button"
+                underline="hover"
+                color="inherit"
+                onClick={() => onNavigateBreadcrumb(idx)}
+                sx={{ fontSize: "1.1rem" }}
+                noWrap
+                title={crumb.name}
+              >
+                {crumb.name}
+              </MuiLink>
+            );
+          }
+
           return (
             <MuiLink
               key={crumb.id}

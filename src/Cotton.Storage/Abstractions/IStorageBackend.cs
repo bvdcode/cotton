@@ -6,7 +6,9 @@ namespace Cotton.Storage.Abstractions
         void CleanupTempFiles(TimeSpan ttl);
         Task<bool> DeleteAsync(string uid);
         Task<bool> ExistsAsync(string uid);
+        Task<long> GetSizeAsync(string uid);
         Task<Stream> ReadAsync(string uid);
         Task WriteAsync(string uid, Stream stream);
+        IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default);
     }
 }

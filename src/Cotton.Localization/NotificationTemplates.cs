@@ -193,5 +193,14 @@
                    $"Proposed: {proposedTail}\n" +
                    $"Computed: {computedTail}";
         }
+
+        public static string StorageChunkMissingTitle => "File data missing from storage";
+
+        public static string StorageChunkMissingContent(string fileName)
+        {
+            return $"A storage consistency check detected that data for your file '{fileName}' " +
+                   $"is missing from the underlying storage. " +
+                   $"Please verify your storage integrity and re-upload this file.";
+        }
     }
 }

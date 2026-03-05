@@ -83,20 +83,49 @@
     },
     "userMenu": {
       "profile": "Profile",
+      "settings": "Settings",
+      "admin": "Admin",
+      "user": "User",
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
       "logout": "Logout"
     },
+    "app": {
+      "logoAlt": "Cotton logo"
+    },
     "title": "Cotton Cloud",
     "subtitle": "Setup Wizard",
     "ok": "OK"
+  },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "Find tracks in this folder and subfolders",
+      "showQueue": "Show queue",
+      "hideQueue": "Hide queue",
+      "showLyrics": "Show lyrics",
+      "hideLyrics": "Hide lyrics",
+      "enableShuffle": "Enable shuffle",
+      "disableShuffle": "Disable shuffle",
+      "close": "Close player"
+    },
+    "lyrics": {
+      "unavailable": "Lyrics are unavailable for this track.",
+      "notFound": "No .lrc file found next to this track.",
+      "loadFailed": "Failed to load lyrics."
+    }
   },
   "share": {
     "title": "Shared file",
     "loading": "Loading...",
     "unsupported": "Preview is not available for this file type.",
     "message": "Check out \"{{name}}\" on Cotton Cloud",
+    "folder": {
+      "title": "Shared folder",
+      "message": "Check out folder \"{{name}}\" on Cotton Cloud",
+      "empty": "This folder is empty.",
+      "kind": "Folder"
+    },
     "toasts": {
       "copied": "Link copied",
       "shared": "Link shared"
@@ -135,6 +164,10 @@
       "sent": "If an account with that email exists, a password reset link has been sent.",
       "sending": "Sending...",
       "error": "Failed to send reset link. Please try again later."
+    },
+    "firstRun": {
+      "title": "Initial Setup",
+      "message": "This server has no users yet. The credentials you enter will be used to create the first administrator account. This is only possible during the first few minutes after the instance starts. Server uptime: {{uptime}}. If the time window has passed, restart the server and try again."
     }
   },
   "notFound": {
@@ -167,6 +200,23 @@
       "emailWarning": "Changing your email will reset verification status.",
       "errors": {
         "failed": "Failed to update profile."
+      }
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "UI preferences and personalization.",
+      "gallerySmoothTransitions": "Smooth transitions in gallery",
+      "themeMode": {
+        "label": "Theme",
+        "light": "Light",
+        "system": "System",
+        "dark": "Dark"
+      },
+      "language": {
+        "label": "Language",
+        "en": "English",
+        "ru": "Russian",
+        "es": "Español"
       }
     },
     "shareLinks": {
@@ -311,6 +361,11 @@
           "title": "Windows (Command Prompt)",
           "copy": "Copy",
           "caption": "Run in an elevated Command Prompt or use mapped drive in Explorer."
+        },
+        "windowsRegistry": {
+          "title": "Windows (Registry tweak)",
+          "copy": "Copy",
+          "caption": "Apply a registry change to raise the WebDAV file size limit."
         },
         "powershell": {
           "title": "Windows (PowerShell escape)",
@@ -666,8 +721,14 @@
       "exit": "Exit selection",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
+      "deleteSelected": "Delete selected",
       "count_one": "{{count}} item selected",
       "count_other": "{{count}} items selected"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "Delete {{count}} item?",
+      "confirmTitle_other": "Delete {{count}} items?",
+      "confirmDescription": "Selected items will be moved to Trash and can be restored later."
     },
     "conflicts": {
       "title": "File already exists",
@@ -692,7 +753,10 @@
     "share": {
       "copied": "Share link copied: {{name}}",
       "shared": "Sharing: {{name}}",
+      "folderCopied": "Folder link copied: {{name}}",
+      "folderShared": "Sharing folder: {{name}}",
       "message": "Check out \"{{name}}\" on Cotton Cloud",
+      "folderMessage": "Check out folder \"{{name}}\" on Cotton Cloud",
       "errors": {
         "link": "Failed to generate share link.",
         "token": "Failed to extract share token.",
@@ -808,6 +872,11 @@
       "confirmTitle": "Delete file \"{{name}}\"?",
       "confirmDescription": "This action cannot be undone."
     },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "Delete {{count}} item permanently?",
+      "confirmTitle_other": "Delete {{count}} items permanently?",
+      "confirmDescription": "This action cannot be undone. Selected items will be deleted forever."
+    },
     "emptyTrash": {
       "confirmTitle": "Empty trash?",
       "confirmDescription": "This action cannot be undone. All items in trash will be permanently deleted.",
@@ -878,6 +947,7 @@
     "files": "Files",
     "trash": "Trash",
     "profile": "Profile",
+    "settings": "Settings",
     "admin": "Admin"
   },
   "resetPassword": {
@@ -899,7 +969,7 @@
     "verifying": "Verifying your email...",
     "success": "Your email has been verified successfully!",
     "goToLogin": "Go to login",
-    "goToProfile": "Go to profile",
+    "goToSettings": "Go to settings",
     "errors": {
       "invalidToken": "The verification link is invalid or has expired.",
       "failed": "Failed to verify email. Please try again."

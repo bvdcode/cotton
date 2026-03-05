@@ -17,6 +17,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
 import { useSettingsStore } from "../../shared/store/settingsStore";
+import { AudioPlayerBar } from "../components/AudioPlayerBar";
 
 
 interface AppLayoutProps {
@@ -137,9 +138,12 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
       <Container
         component="main"
         maxWidth={false}
-        sx={{
+        sx={(theme) => ({
           pt: 0,
-          pb: 1,
+          pb: {
+            xs: `calc(${theme.spacing(1)} + var(--audio-player-bar-offset, 0px))`,
+            sm: 1,
+          },
           px: { xs: 1, sm: 1 },
           flexGrow: 1,
           minHeight: 0,
@@ -147,10 +151,12 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
           overflow: "auto",
           display: "flex",
           flexDirection: "column",
-        }}
+        })}
       >
         <Outlet />
       </Container>
+
+      <AudioPlayerBar />
 
       <UploadFilePicker />
       <UploadQueueWidget />

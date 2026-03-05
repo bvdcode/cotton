@@ -49,7 +49,33 @@ namespace Cotton.Server.Handlers.Files
             var query = BuildTokenQuery(request.Token, now, includeChunks: !isHtml && !isHead);
             var downloadToken = await query.FirstOrDefaultAsync(cancellationToken: ct);
 
-            if (downloadToken == null || downloadToken.NodeFile.Node.Type != NodeType.Default)
+            if (downloadToken == null)
+            {
+                if (isHtml)
+                {
+                    var nodeShareToken = await _dbContext.NodeShareTokens
+                        .AsNoTracking()
+                        .Include(x => x.Node)
+                        .Where(x => x.Token == request.Token
+                            && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
+                        .SingleOrDefaultAsync(cancellationToken: ct);
+
+                    if (nodeShareToken != null && nodeShareToken.Node.Type == NodeType.Default)
+                    {
+                        string html = BuildFolderRedirectHtml(
+                            baseAppUrl: baseAppUrl,
+                            token: request.Token,
+                            folderName: nodeShareToken.Name);
+                        return ShareFileResult.AsHtml(html);
+                    }
+
+                    return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
+                }
+
+                return ShareFileResult.AsNotFound("File not found");
+            }
+
+            if (downloadToken.NodeFile.Node.Type != NodeType.Default)
             {
                 return isHtml
                     ? ShareFileResult.AsRedirect($"{baseAppUrl}/404")
@@ -59,11 +85,12 @@ namespace Cotton.Server.Handlers.Files
             var file = downloadToken.NodeFile.FileManifest;
             if (isHtml)
             {
+                string? previewHashEncryptedHex = file.GetPreviewHashEncryptedHex();
                 string html = BuildRedirectHtml(
                     baseAppUrl: baseAppUrl,
                     token: request.Token,
                     fileName: downloadToken.FileName,
-                    encryptedPreviewHash: file.EncryptedFilePreviewHash);
+                    previewHashEncryptedHex: previewHashEncryptedHex);
                 return ShareFileResult.AsHtml(html);
             }
 
@@ -128,18 +155,15 @@ namespace Cotton.Server.Handlers.Files
             return EntityTagHeaderValue.Parse($"\"sha256-{Hasher.ToHexStringHash(file.ProposedContentHash)}\"");
         }
 
-        private static string BuildRedirectHtml(string baseAppUrl, string token, string fileName, byte[]? encryptedPreviewHash)
+        private static string BuildRedirectHtml(string baseAppUrl,
+            string token, string fileName, string? previewHashEncryptedHex)
         {
             string canonicalUrl = $"{baseAppUrl}/s/{token}";
             string appShareUrl = $"{baseAppUrl}/share/{token}";
 
-            string? hex = (encryptedPreviewHash == null || encryptedPreviewHash.Length == 0)
-                ? null
-                : Convert.ToHexString(encryptedPreviewHash);
-
-            string previewUrl = hex is null
+            string previewUrl = previewHashEncryptedHex is null
                 ? $"{baseAppUrl}/assets/images/social-preview.jpg"
-                : $"{baseAppUrl}{Routes.V1.Previews}/{hex}.webp";
+                : $"{baseAppUrl}{Routes.V1.Previews}/{previewHashEncryptedHex}.webp";
 
             string previewTag =
                 $"<meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />\n" +
@@ -171,6 +195,45 @@ namespace Cotton.Server.Handlers.Files
                 </body>
                 </html>
                 """;
+        }
+
+        private static string BuildFolderRedirectHtml(string baseAppUrl, string token, string folderName)
+        {
+            string canonicalUrl = $"{baseAppUrl}/s/{token}";
+            string appShareUrl = $"{baseAppUrl}/share/{token}";
+            string previewUrl = $"{baseAppUrl}/assets/images/social-preview.jpg";
+            const string description = "Shared folder via Cotton Cloud";
+
+            return $"""
+                                <!doctype html>
+                                <html lang=\"en\">
+                                <head>
+                                    <meta charset=\"utf-8\">
+                                    <title>{WebUtility.HtmlEncode(folderName)} - Cotton Cloud</title>
+                                    <meta name=\"description\" content=\"{WebUtility.HtmlEncode(description)}\" />
+                                    <meta http-equiv=\"refresh\" content=\"0;url={WebUtility.HtmlEncode(appShareUrl)}\" />
+                                    <link rel=\"canonical\" href=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
+                                    <meta property=\"og:site_name\" content=\"Cotton Cloud\" />
+                                    <meta property=\"og:title\" content=\"{WebUtility.HtmlEncode(folderName)}\" />
+                                    <meta property=\"og:description\" content=\"{WebUtility.HtmlEncode(description)}\" />
+                                    <meta property=\"og:type\" content=\"website\" />
+                                    <meta property=\"og:url\" content=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
+                                    <meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />
+                                    <meta name=\"twitter:card\" content=\"summary_large_image\" />
+                                    <meta name=\"twitter:title\" content=\"{WebUtility.HtmlEncode(folderName)}\" />
+                                    <meta name=\"twitter:description\" content=\"{WebUtility.HtmlEncode(description)}\" />
+                                    <meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />
+                                </head>
+                                <body>
+                                    <noscript>
+                                        <p><a href=\"{WebUtility.HtmlEncode(appShareUrl)}\">Continue</a></p>
+                                    </noscript>
+                                    <script>
+                                        window.location.replace({JsonSerializer.Serialize(appShareUrl)});
+                                    </script>
+                                </body>
+                                </html>
+                                """;
         }
 
         private async Task<ShareFileResult> CreateStreamResultAsync(

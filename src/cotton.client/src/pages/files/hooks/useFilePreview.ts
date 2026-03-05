@@ -34,8 +34,13 @@ export const useFilePreview = () => {
     });
   }, []);
 
-  const openPreview = useCallback((fileId: string, fileName: string, fileSizeBytes?: number) => {
-    const typeInfo = getFileTypeInfo(fileName);
+  const openPreview = useCallback((
+    fileId: string,
+    fileName: string,
+    fileSizeBytes?: number,
+    contentType?: string | null,
+  ) => {
+    const typeInfo = getFileTypeInfo(fileName, contentType);
     if (typeInfo.supportsInlineView) {
       if (typeInfo.type === 'text' && fileSizeBytes && fileSizeBytes > previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES) {
         return false;

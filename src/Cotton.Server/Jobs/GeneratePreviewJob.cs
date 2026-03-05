@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
@@ -6,6 +7,7 @@ using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
+using Cotton.Storage.Processors;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using EasyExtensions.Quartz.Attributes;
@@ -15,7 +17,7 @@ using Quartz;
 
 namespace Cotton.Server.Jobs
 {
-    [JobTrigger(hours: 1)]
+    [JobTrigger(minutes: 15)]
     public class GeneratePreviewJob(
         PerfTracker _perf,
         IStreamCipher _crypto,
@@ -29,15 +31,15 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
-            var itemsToProcess = _dbContext.FileManifests
-                .Where(fm => fm.EncryptedFilePreviewHash == null && fm.PreviewGenerationError == null)
+            var itemsToProcess = await _dbContext.FileManifests
+                .Where(fm => fm.SmallFilePreviewHash == null && fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
                 .Include(fm => fm.NodeFiles)
                 .Include(fm => fm.FileManifestChunks)
                 .ThenInclude(fmc => fmc.Chunk)
                 .OrderBy(fm => fm.CreatedAt)
                 .Take(MaxItemsPerRun)
-                .ToList();
+                .ToListAsync();
 
             if (itemsToProcess.Count > 0)
             {
@@ -67,24 +69,33 @@ namespace Cotton.Server.Jobs
 
                 try
                 {
-                    _logger.LogInformation("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
-                    await using var fs = _storage.GetBlobStream(uids, pipelineContext);
-
-                    _logger.LogInformation("Calling GeneratePreviewWebPAsync for FileManifest {FileManifestId}...", item.Id);
-                    var previewImage = await generator.GeneratePreviewWebPAsync(fs);
-
+                    _logger.LogDebug("Getting blob stream for FileManifest {FileManifestId}...", item.Id);
+                    await using var fsSmall = _storage.GetBlobStream(uids, pipelineContext);
+                    byte[] previewImage = await generator.GeneratePreviewWebPAsync(fsSmall, PreviewGeneratorProvider.DefaultSmallPreviewSize);
                     byte[] hash = Hasher.HashData(previewImage);
                     string hashStr = Hasher.ToHexStringHash(hash);
-
-                    _logger.LogInformation("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
+                    _logger.LogDebug("Storing preview (hash={Hash}) for FileManifest {FileManifestId}...", hashStr, item.Id);
                     using var resultStream = new MemoryStream(previewImage);
                     await _storage.WriteAsync(hashStr, resultStream);
+                    await EnsureChunkExistsAsync(hash, previewImage.Length);
+                    item.SmallFilePreviewHash = hash;
+                    item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
 
-                    item.EncryptedFilePreviewHash = _crypto.Encrypt(hashStr);
+                    if (generator is ImagePreviewGenerator)
+                    {
+                        await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
+                        byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
+                        byte[] hashLarge = Hasher.HashData(previewImageLarge);
+                        string hashLargeStr = Hasher.ToHexStringHash(hashLarge);
+                        _logger.LogDebug("Storing large preview (hash={Hash}) for FileManifest {FileManifestId}...", hashLargeStr, item.Id);
+                        using var resultStreamLarge = new MemoryStream(previewImageLarge);
+                        await _storage.WriteAsync(hashLargeStr, resultStreamLarge);
+                        await EnsureChunkExistsAsync(hashLarge, previewImageLarge.Length);
+                        item.LargeFilePreviewHash = hashLarge;
+                    }
+
                     await _dbContext.SaveChangesAsync();
-
                     _logger.LogDebug("Generated preview for file manifest {FileManifestId}", item.Id);
-                    string hex = Convert.ToHexString(item.EncryptedFilePreviewHash);
                     foreach (var nodeFile in item.NodeFiles)
                     {
                         // Minor vulnerability:
@@ -92,22 +103,23 @@ namespace Cotton.Server.Jobs
                         // because the preview hash will be reset and regenerated, preventing the second user from discovering that the first user had the file.
                         await _hubContext.Clients
                             .User(nodeFile.OwnerId.ToString())
-                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, hex);
+                            .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex());
                     }
                     // TODO: Move to settings or autoconfig
-                    await Task.Delay(500);
+                    await Task.Delay(100);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
                     item.PreviewGenerationError = ex.Message;
+                    await _dbContext.SaveChangesAsync();
                 }
 
                 if (_perf.IsUploading())
                 {
-                    _logger.LogInformation("Upload in progress, pausing preview generation job...");
-                    await Task.Delay(5000);
-                    break;
+                    const int waitTimeSeconds = 5;
+                    _logger.LogInformation("Upload in progress, waiting {seconds}s before processing next item...", waitTimeSeconds);
+                    await Task.Delay(waitTimeSeconds * 1000);
                 }
             }
 
@@ -115,6 +127,20 @@ namespace Cotton.Server.Jobs
             if (processed > 0)
             {
                 _logger.LogInformation("Preview generation job completed successfully. Processed {Count} items", processed);
+            }
+        }
+
+        private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
+        {
+            var existing = await _dbContext.Chunks.FindAsync([(object?)hash]);
+            if (existing == null)
+            {
+                _dbContext.Chunks.Add(new Chunk
+                {
+                    Hash = hash,
+                    SizeBytes = sizeBytes,
+                    CompressionAlgorithm = CompressionProcessor.Algorithm
+                });
             }
         }
     }

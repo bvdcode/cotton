@@ -44,6 +44,7 @@ export const ProfileAccordionCard = ({
     <Accordion
       disableGutters
       defaultExpanded={defaultExpanded}
+      TransitionProps={{ mountOnEnter: true, unmountOnExit: false }}
       sx={[
         {
           borderRadius: 1,

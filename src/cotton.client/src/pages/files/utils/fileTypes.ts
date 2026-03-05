@@ -20,7 +20,9 @@ export interface FileTypeInfo {
 
 const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic"];
 const PDF_EXTENSIONS = ["pdf"];
-const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
+// Only include formats that are generally playable inline in modern browsers.
+// Keep this list conservative to avoid opening the media lightbox for files the browser can't play.
+const VIDEO_EXTENSIONS = ["mp4", "m4v", "webm"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "ogg", "flac", "m4a"];
 const TEXT_EXTENSIONS = [
   "txt",
@@ -39,6 +41,11 @@ const TEXT_EXTENSIONS = [
 ];
 const DOCUMENT_EXTENSIONS = ["doc", "docx", "rtf", "odt"];
 const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
+
+const SUPPORTED_INLINE_VIDEO_MIME_TYPES = new Set<string>([
+  "video/mp4",
+  "video/webm",
+]);
 
 export const getFileExtension = (fileName: string): string => {
   return fileName.toLowerCase().split(".").pop() || "";
@@ -71,10 +78,10 @@ export const isTextFile = (fileName: string): boolean => {
 
 const getFileTypeFromContentType = (contentType?: string): FileType | null => {
   if (!contentType) return null;
-  const normalized = contentType.toLowerCase();
+  const normalized = contentType.toLowerCase().split(";")[0]?.trim() ?? "";
 
   if (normalized.startsWith("image/")) return "image";
-  if (normalized.startsWith("video/")) return "video";
+  if (SUPPORTED_INLINE_VIDEO_MIME_TYPES.has(normalized)) return "video";
   if (normalized.startsWith("audio/")) return "audio";
   if (normalized.startsWith("text/")) return "text";
   if (normalized === "application/pdf") return "pdf";
@@ -106,6 +113,16 @@ export const getFileTypeInfo = (
   contentType?: string | null,
 ): FileTypeInfo => {
   const ext = getFileExtension(fileName);
+
+  // Browser can't reliably play many containers inline; keep video preview conservative.
+  // If the extension is not in our allow-list, do not treat it as previewable video.
+  if (
+    contentType?.toLowerCase().startsWith("video/") === true &&
+    !VIDEO_EXTENSIONS.includes(ext)
+  ) {
+    return { type: "other", supportsPreview: false, supportsInlineView: false };
+  }
+
   const contentTypeMatch = getFileTypeFromContentType(contentType ?? undefined);
 
   if (contentTypeMatch) {

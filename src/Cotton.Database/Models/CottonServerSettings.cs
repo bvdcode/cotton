@@ -38,7 +38,7 @@ namespace Cotton.Database.Models
         public Guid InstanceId { get; init; }
 
         [Column("public_base_url")]
-        public string? PublicBaseUrl { get; set; }
+        public string PublicBaseUrl { get; set; } = null!;
 
         [Column("smtp_server_address")]
         public string? SmtpServerAddress { get; init; }
@@ -82,23 +82,11 @@ namespace Cotton.Database.Models
         [Column("storage_type")]
         public StorageType StorageType { get; init; }
 
-        [Column("import_source")]
-        public ImportSource ImportSource { get; init; }
-
         [Column("server_usage")]
         public ServerUsage[] ServerUsage { get; set; } = [];
 
         [Column("storage_space_mode")]
         public StorageSpaceMode StorageSpaceMode { get; set; }
-
-        [Column("webdav_password_encrypted")]
-        public string? WebdavPasswordEncrypted { get; set; }
-
-        [Column("webdav_username")]
-        public string? WebdavUsername { get; set; }
-
-        [Column("webdav_host")]
-        public string? WebdavHost { get; set; }
 
         [Column("totp_max_failed_attempts")]
         public int TotpMaxFailedAttempts { get; set; }

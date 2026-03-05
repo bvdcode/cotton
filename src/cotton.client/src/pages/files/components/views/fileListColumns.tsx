@@ -1,12 +1,11 @@
 import React from "react";
-import { Box, IconButton, TextField, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, TextField, Typography } from "@mui/material";
 import {
   Article,
   Delete,
   Download,
   Edit,
   Folder,
-  FolderOpen,
   Image as ImageIcon,
   InsertDriveFile,
   TextSnippet,
@@ -28,18 +27,21 @@ export interface FileListRow {
   name: string;
   location?: string | null;
   containerPath?: string | null;
+  containerNodeId?: string | null;
   sizeBytes: number | null;
+  contentType?: string | null;
   tile?: {
     kind: "folder" | "file";
     file?: {
       id: string;
       name: string;
-      encryptedFilePreviewHashHex?: string | null;
+      previewHashEncryptedHex?: string | null;
     };
   };
 }
 
 interface ColumnOptions {
+  readOnly?: boolean;
   labels: {
     name: string;
     size: string;
@@ -58,7 +60,7 @@ interface ColumnOptions {
   onCancelNewFolder: () => void;
   folderNamePlaceholder: string;
   fileNamePlaceholder: string;
-  onGoToFileLocation?: (containerPath: string) => void;
+  onGoToFileLocation?: (target: { nodeId?: string; containerPath?: string }) => void;
   columnFlex?: {
     name: number;
     location: number;
@@ -67,21 +69,22 @@ interface ColumnOptions {
     isRenaming: (id: string) => boolean;
     getRenamingName: () => string;
     onRenamingNameChange: (value: string) => void;
-    onConfirmRename: () => void;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onDelete: (id: string, name: string) => void;
+    onConfirmRename?: () => void;
+    onCancelRename?: () => void;
+    onStartRename?: (id: string, name: string) => void;
+    onDelete?: (id: string, name: string) => void;
+    onShare?: (id: string, name: string) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
     getRenamingName: () => string;
     onRenamingNameChange: (value: string) => void;
-    onConfirmRename: () => Promise<void>;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onDownload: (id: string, name: string) => void;
-    onShare: (id: string, name: string) => void;
-    onDelete: (id: string, name: string) => void;
+    onConfirmRename?: () => Promise<void>;
+    onCancelRename?: () => void;
+    onStartRename?: (id: string, name: string) => void;
+    onDownload?: (id: string, name: string) => void;
+    onShare?: (id: string, name: string) => void;
+    onDelete?: (id: string, name: string) => void;
   };
   failedPreviews: Set<string>;
   setFailedPreviews: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -106,9 +109,9 @@ export const createIconColumn = (
   renderCell: (params) => {
     const previewUrl =
       params.row.type === "file" && params.row.tile?.kind === "file"
-        ? params.row.tile.file?.encryptedFilePreviewHashHex
+        ? params.row.tile.file?.previewHashEncryptedHex
           ? `/api/v1/preview/${encodeURIComponent(
-              params.row.tile.file.encryptedFilePreviewHashHex,
+              params.row.tile.file.previewHashEncryptedHex,
             )}.webp`
           : null
         : null;
@@ -219,12 +222,12 @@ export const createNameColumn = (
             }
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                options.folderOperations.onConfirmRename();
+                options.folderOperations.onConfirmRename?.();
               } else if (e.key === "Escape") {
-                options.folderOperations.onCancelRename();
+                options.folderOperations.onCancelRename?.();
               }
             }}
-            onBlur={options.folderOperations.onConfirmRename}
+            onBlur={() => options.folderOperations.onConfirmRename?.()}
             variant="standard"
             onClick={(e) => e.stopPropagation()}
           />
@@ -252,13 +255,13 @@ export const createNameColumn = (
             }
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                void options.fileOperations.onConfirmRename();
+                void options.fileOperations.onConfirmRename?.();
               } else if (e.key === "Escape") {
-                options.fileOperations.onCancelRename();
+                options.fileOperations.onCancelRename?.();
               }
             }}
             onBlur={() => {
-              void options.fileOperations.onConfirmRename();
+              void options.fileOperations.onConfirmRename?.();
             }}
             placeholder={options.fileNamePlaceholder}
             variant="standard"
@@ -316,14 +319,15 @@ export const createSizeColumn = (
 });
 
 export const createLocationColumn = (
-  options: Pick<ColumnOptions, "labels" | "columnFlex">,
+  options: Pick<ColumnOptions, "labels" | "columnFlex" | "onGoToFileLocation">,
 ): GridColDef<FileListRow> => ({
   field: "location",
   headerName: options.labels.location,
   flex: options.columnFlex?.location ?? 1,
   minWidth: 120,
   renderCell: (params) => {
-    const value = params.row.location;
+    const row = params.row;
+    const value = row.location;
     if (!value) {
       return (
         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
@@ -334,6 +338,19 @@ export const createLocationColumn = (
       );
     }
 
+    const canNavigateToLocation =
+      row.type === "file" &&
+      !!options.onGoToFileLocation &&
+      !!(row.containerNodeId || row.containerPath);
+
+    const navigateToLocation = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      options.onGoToFileLocation?.({
+        nodeId: row.containerNodeId ?? undefined,
+        containerPath: row.containerPath ?? undefined,
+      });
+    };
+
     return (
       <Box
         sx={{
@@ -343,15 +360,37 @@ export const createLocationColumn = (
           width: "100%",
         }}
       >
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          noWrap
-          sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
-          title={value}
-        >
-          {value}
-        </Typography>
+        {canNavigateToLocation ? (
+          <ButtonBase
+            onClick={navigateToLocation}
+            sx={{
+              justifyContent: "flex-start",
+              width: "100%",
+              textAlign: "left",
+              borderRadius: 1,
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="primary"
+              noWrap
+              sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+              title={value}
+            >
+              {value}
+            </Typography>
+          </ButtonBase>
+        ) : (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            noWrap
+            sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+            title={value}
+          >
+            {value}
+          </Typography>
+        )}
       </Box>
     );
   },
@@ -360,12 +399,12 @@ export const createLocationColumn = (
 export const createActionsColumn = (
   options: Pick<
     ColumnOptions,
-    "labels" | "folderOperations" | "fileOperations" | "onGoToFileLocation"
+    "labels" | "folderOperations" | "fileOperations" | "readOnly"
   >,
 ): GridColDef<FileListRow> => ({
   field: "actions",
   headerName: options.labels.actionsTitle,
-  minWidth: 110,
+  minWidth: 180,
   sortable: false,
   align: "right",
   headerAlign: "right",
@@ -385,26 +424,46 @@ export const createActionsColumn = (
             justifyContent: "flex-end",
           }}
         >
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              options.folderOperations.onStartRename(row.id, row.name);
-            }}
-            title={options.labels.rename}
-          >
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              options.folderOperations.onDelete(row.id, row.name);
-            }}
-            title={options.labels.delete}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+          {!options.readOnly && (
+            <>
+              {options.folderOperations.onStartRename && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onStartRename?.(row.id, row.name);
+                  }}
+                  title={options.labels.rename}
+                >
+                  <Edit fontSize="small" />
+                </IconButton>
+              )}
+              {options.folderOperations.onShare && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onShare?.(row.id, row.name);
+                  }}
+                  title={options.labels.share}
+                >
+                  <Share fontSize="small" />
+                </IconButton>
+              )}
+              {options.folderOperations.onDelete && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onDelete?.(row.id, row.name);
+                  }}
+                  title={options.labels.delete}
+                >
+                  <Delete fontSize="small" />
+                </IconButton>
+              )}
+            </>
+          )}
         </Box>
       );
     }
@@ -420,58 +479,58 @@ export const createActionsColumn = (
           justifyContent: "flex-end",
         }}
       >
-        {options.onGoToFileLocation && row.containerPath && (
+        {options.fileOperations.onDownload && (
           <IconButton
             size="small"
             onClick={(e) => {
               e.stopPropagation();
-              options.onGoToFileLocation?.(row.containerPath ?? "/");
+              options.fileOperations.onDownload?.(row.id, row.name);
             }}
-            title={options.labels.goToFolder}
+            title={options.labels.download}
           >
-            <FolderOpen fontSize="small" />
+            <Download fontSize="small" />
           </IconButton>
         )}
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onDownload(row.id, row.name);
-          }}
-          title={options.labels.download}
-        >
-          <Download fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onShare(row.id, row.name);
-          }}
-          title={options.labels.share}
-        >
-          <Share fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onStartRename(row.id, row.name);
-          }}
-          title={options.labels.rename}
-        >
-          <Edit fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            options.fileOperations.onDelete(row.id, row.name);
-          }}
-          title={options.labels.delete}
-        >
-          <Delete fontSize="small" />
-        </IconButton>
+        {!options.readOnly && (
+          <>
+            {options.fileOperations.onShare && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onShare?.(row.id, row.name);
+                }}
+                title={options.labels.share}
+              >
+                <Share fontSize="small" />
+              </IconButton>
+            )}
+            {options.fileOperations.onStartRename && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onStartRename?.(row.id, row.name);
+                }}
+                title={options.labels.rename}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+            )}
+            {options.fileOperations.onDelete && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onDelete?.(row.id, row.name);
+                }}
+                title={options.labels.delete}
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+            )}
+          </>
+        )}
       </Box>
     );
   },

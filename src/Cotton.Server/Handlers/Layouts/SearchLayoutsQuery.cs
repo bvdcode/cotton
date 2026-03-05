@@ -69,6 +69,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
 
         var files = filesToTake == 0 ? []
             : await filesQuery.Skip(filesSkip).Take(filesToTake)
+                .Include(x => x.FileManifest)
                 .ProjectToType<NodeFileManifestDto>()
                 .ToListAsync(ct);
 

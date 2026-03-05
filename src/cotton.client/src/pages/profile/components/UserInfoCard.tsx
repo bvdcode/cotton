@@ -5,6 +5,7 @@ import {
   Chip,
   Divider,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -48,7 +49,7 @@ interface UserInfoCardProps {
 
 type InfoRowProps = {
   label: string;
-  value: string;
+  value: React.ReactNode;
 };
 
 const InfoRow = ({ label, value }: InfoRowProps) => {
@@ -72,8 +73,23 @@ const InfoRow = ({ label, value }: InfoRowProps) => {
 export const UserInfoCard = ({ user }: UserInfoCardProps) => {
   const { t } = useTranslation(["profile", "common"]);
 
-  const displayName = user.displayName ?? user.username;
-  const avatarLetter = displayName.charAt(0).toUpperCase();
+  const getAvatarInitials = (args: {
+    firstName?: string | null;
+    lastName?: string | null;
+    username?: string | null;
+    email?: string | null;
+  }): string => {
+    const first = (args.firstName ?? "").trim();
+    const last = (args.lastName ?? "").trim();
+    if (first && last) {
+      return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+    }
+
+    const fallback = (args.username ?? args.email ?? "").trim();
+    if (!fallback) return "";
+    return fallback.slice(0, 2).toUpperCase();
+  };
+
   const totpEnabled = Boolean(user.isTotpEnabled);
   const placeholder = t("common:placeholder");
 
@@ -81,9 +97,15 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
     .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
     .join(" ");
 
-  const title = fullName || displayName;
-
-  const usernameLine = `@${user.username}`;
+  // title is full name if present, otherwise username
+  const title = fullName || user.username;
+  const displayName = title; // for avatar alt
+  const avatarInitials = getAvatarInitials({
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    email: user.email,
+  });
 
   const birthDateValue = (() => {
     if (!user.birthDate || user.birthDate.trim().length === 0) {
@@ -127,7 +149,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             bgcolor: "primary.main",
           }}
         >
-          {!user.pictureUrl && avatarLetter}
+          {!user.pictureUrl && avatarInitials}
         </Avatar>
 
         <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>
@@ -140,7 +162,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             useFlexGap
           >
             <Box flexGrow={1} minWidth={0}>
-              <Typography variant="h5" fontWeight={800}>
+              <Typography variant="h5" fontWeight={800} height="100%">
                 {title}
               </Typography>
             </Box>
@@ -177,11 +199,13 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
               )}
             </Stack>
           </Stack>
-          <Typography variant="body2" color="text.secondary" noWrap>
-            {usernameLine}
-          </Typography>
           {user.email && (
-            <Typography variant="body2" color="text.secondary" noWrap>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              noWrap
+              display={{ xs: "none", sm: "block" }}
+            >
               {user.email}
             </Typography>
           )}
@@ -195,7 +219,14 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         spacing={{ xs: 1.5, sm: 3 }}
       >
         <Stack spacing={1.25} flex={1}>
-          <InfoRow label={t("fields.username")} value={user.username} />
+          <InfoRow
+            label={t("fields.username")}
+            value={
+              <Tooltip title={user.id} arrow>
+                <Box component="span">{user.username}</Box>
+              </Tooltip>
+            }
+          />
           <InfoRow
             label={t("fields.email")}
             value={
@@ -204,7 +235,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
                 : placeholder
             }
           />
-          <InfoRow label={t("fields.id")} value={user.id} />
         </Stack>
 
         <Stack spacing={1.25} flex={1}>
@@ -212,10 +242,6 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
           <InfoRow
             label={t("fields.createdAt")}
             value={formatDateTime(user.createdAt)}
-          />
-          <InfoRow
-            label={t("fields.updatedAt")}
-            value={formatDateTime(user.updatedAt)}
           />
         </Stack>
       </Stack>

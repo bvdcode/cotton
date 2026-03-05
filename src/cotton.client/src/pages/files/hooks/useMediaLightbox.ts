@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { filesApi } from "../../../shared/api/filesApi";
-import { isImageFile, isVideoFile } from "../utils/fileTypes";
+import { getFileTypeInfo } from "../utils/fileTypes";
 import { getFileIcon } from "../utils/icons";
 import type { MediaItem } from "../components";
 
@@ -9,6 +9,7 @@ export interface MediaHandlers {
   lightboxIndex: number;
   mediaItems: MediaItem[];
   getSignedMediaUrl: (fileId: string) => Promise<string>;
+  getDownloadUrl: (fileId: string) => Promise<string>;
   handleMediaClick: (fileId: string) => void;
   setLightboxOpen: (open: boolean) => void;
   setLightboxIndex: (index: number) => void;
@@ -26,7 +27,8 @@ export const useMediaLightbox = (
     id: string;
     name: string;
     sizeBytes?: number;
-    encryptedFilePreviewHashHex?: string | null;
+    previewHashEncryptedHex?: string | null;
+    largeFilePreviewPresignedToken?: string | null;
     contentType?: string | null;
   }>,
 ): MediaHandlers => {
@@ -66,10 +68,14 @@ export const useMediaLightbox = (
   // Build media items for lightbox (images and videos only)
   const mediaItems = useMemo<MediaItem[]>(() => {
     return sortedFiles
-      .filter((file) => isImageFile(file.name) || isVideoFile(file.name))
-      .map((file) => {
+      .map((file) => ({
+        file,
+        typeInfo: getFileTypeInfo(file.name, file.contentType ?? null),
+      }))
+      .filter(({ typeInfo }) => typeInfo.type === "image" || typeInfo.type === "video")
+      .map(({ file, typeInfo }) => {
         const preview = getFileIcon(
-          file.encryptedFilePreviewHashHex ?? null,
+          file.largeFilePreviewPresignedToken ?? file.previewHashEncryptedHex ?? null,
           file.name,
           file.contentType,
         );
@@ -77,19 +83,23 @@ export const useMediaLightbox = (
 
         return {
           id: file.id,
-          kind: isImageFile(file.name) ? "image" : "video",
+          kind: typeInfo.type === "image" ? "image" : "video",
           name: file.name,
           previewUrl,
-          mimeType: file.name.toLowerCase().endsWith(".mp4")
-            ? "video/mp4"
-            : undefined,
+          mimeType: file.contentType ?? "application/octet-stream",
           sizeBytes: file.sizeBytes,
-        } as MediaItem;
+        };
       });
   }, [sortedFiles]);
 
-  // Get signed media URL for original file
+  // Get signed media URL for gallery viewing - uses lightweight server-side preview
   const getSignedMediaUrl = async (fileId: string): Promise<string> => {
+    const url = await filesApi.getDownloadLink(fileId, 60 * 24);
+    return `${url}&preview=true`;
+  };
+
+  // Get download URL for the actual download button - full original file
+  const getDownloadUrl = async (fileId: string): Promise<string> => {
     return await filesApi.getDownloadLink(fileId, 60 * 24);
   };
 
@@ -121,6 +131,7 @@ export const useMediaLightbox = (
     lightboxIndex,
     mediaItems,
     getSignedMediaUrl,
+    getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
     setLightboxIndex,

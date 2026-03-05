@@ -7,10 +7,11 @@ namespace Cotton.Server.Models.Dto
 {
     public class NodeFileManifestDto : BaseDto<Guid>
     {
+        public Guid NodeId { get; set; }
         public Guid OwnerId { get; set; }
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
         public long SizeBytes { get; set; }
-        public string? EncryptedFilePreviewHashHex { get; set; }
+        public string? PreviewHashEncryptedHex { get; set; }
     }
 }

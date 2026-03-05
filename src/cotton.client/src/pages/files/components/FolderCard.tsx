@@ -1,4 +1,4 @@
-import { Delete, Edit } from "@mui/icons-material";
+import { Delete, Edit, Share } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { RenamableItemCard } from "./RenamableItemCard";
@@ -9,12 +9,14 @@ interface FolderCardProps {
   isRenaming: boolean;
   renamingName: string;
   onRenamingNameChange: (name: string) => void;
-  onConfirmRename: () => void;
-  onCancelRename: () => void;
-  onStartRename: () => void;
-  onDelete: () => void;
-  onClick: () => void;
+  onConfirmRename?: () => void;
+  onCancelRename?: () => void;
+  onStartRename?: () => void;
+  onDelete?: () => void;
+  onShare?: () => void;
+  onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
+  readOnly?: boolean;
 }
 
 export const FolderCard = ({
@@ -26,8 +28,10 @@ export const FolderCard = ({
   onCancelRename,
   onStartRename,
   onDelete,
+  onShare,
   onClick,
   variant = "default",
+  readOnly = false,
 }: FolderCardProps) => {
   const { t } = useTranslation(["files", "common"]);
 
@@ -40,22 +44,39 @@ export const FolderCard = ({
       onClick={onClick}
       variant={variant}
       actions={[
-        {
-          icon: <Edit />,
-          onClick: onStartRename,
-          tooltip: t("common:actions.rename"),
-        },
-        {
-          icon: <Delete />,
-          onClick: onDelete,
-          tooltip: t("common:actions.delete"),
-        },
+        ...(!readOnly && onShare
+          ? [
+              {
+                icon: <Share />,
+                onClick: onShare,
+                tooltip: t("common:actions.share"),
+              },
+            ]
+          : []),
+        ...(!readOnly && onStartRename
+          ? [
+              {
+                icon: <Edit />,
+                onClick: onStartRename,
+                tooltip: t("common:actions.rename"),
+              },
+            ]
+          : []),
+        ...(!readOnly && onDelete
+          ? [
+              {
+                icon: <Delete />,
+                onClick: onDelete,
+                tooltip: t("common:actions.delete"),
+              },
+            ]
+          : []),
       ]}
       isRenaming={isRenaming}
       renamingValue={renamingName}
       onRenamingValueChange={onRenamingNameChange}
-      onConfirmRename={onConfirmRename}
-      onCancelRename={onCancelRename}
+      onConfirmRename={onConfirmRename ?? (() => {})}
+      onCancelRename={onCancelRename ?? (() => {})}
       placeholder={t("actions.folderNamePlaceholder")}
     />
   );

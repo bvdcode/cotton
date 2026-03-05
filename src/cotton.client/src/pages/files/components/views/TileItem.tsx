@@ -6,10 +6,7 @@ import { RenamableItemCard } from "../RenamableItemCard";
 import { getFileIcon } from "../../utils/icons";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
-  isImageFile,
-  isPdfFile,
-  isTextFile,
-  isVideoFile,
+  getFileTypeInfo,
 } from "../../utils/fileTypes";
 import type {
   FileSystemTile,
@@ -23,7 +20,7 @@ interface BlurredPreviewImageProps {
   previewUrl: string;
   alt: string;
   blurOpacity: number;
-  cursor: "pointer" | "default";
+  cursor: React.CSSProperties["cursor"];
   shouldLightenBackdrop: boolean;
   invertInDark: boolean;
 }
@@ -35,55 +32,72 @@ const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
   cursor,
   shouldLightenBackdrop,
   invertInDark,
-}) => (
-  <Box
-    sx={{
-      width: "100%",
-      height: "100%",
-      position: "relative",
-    }}
-  >
+}) => {
+  const [imageFit, setImageFit] = React.useState<"contain" | "cover">(
+    "contain",
+  );
+
+  const handleLoad = React.useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = e.currentTarget;
+      const nextFit =
+        img.naturalWidth > img.naturalHeight ? "cover" : "contain";
+      setImageFit((prev) => (prev === nextFit ? prev : nextFit));
+    },
+    [],
+  );
+
+  return (
     <Box
-      component="img"
-      src={previewUrl}
-      alt=""
-      aria-hidden
       sx={{
-        position: "absolute",
-        inset: 0,
-        display: "block",
         width: "100%",
         height: "100%",
-        objectFit: "cover",
-        filter: "blur(24px)",
-        transform: "scale(1.15)",
-        opacity: blurOpacity,
-      }}
-    />
-    <Box
-      component="img"
-      src={previewUrl}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      sx={(theme) => ({
         position: "relative",
-        display: "block",
-        width: "100%",
-        height: "100%",
-        objectFit: "contain",
-        cursor,
-        ...(shouldLightenBackdrop && {
-          backgroundColor: alpha(theme.palette.common.white, 0.75),
-        }),
-        ...(invertInDark &&
-          theme.palette.mode === "dark" && {
-            filter: "invert(1)",
+      }}
+    >
+      <Box
+        component="img"
+        src={previewUrl}
+        alt=""
+        aria-hidden
+        sx={{
+          position: "absolute",
+          inset: 0,
+          display: "block",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          filter: "blur(24px)",
+          transform: "scale(1.15)",
+          opacity: blurOpacity,
+        }}
+      />
+      <Box
+        component="img"
+        src={previewUrl}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={handleLoad}
+        sx={(theme) => ({
+          position: "relative",
+          display: "block",
+          width: "100%",
+          height: "100%",
+          objectFit: imageFit,
+          cursor,
+          ...(shouldLightenBackdrop && {
+            backgroundColor: alpha(theme.palette.common.white, 0.75),
           }),
-      })}
-    />
-  </Box>
-);
+          ...(invertInDark &&
+            theme.palette.mode === "dark" && {
+              filter: "invert(1)",
+            }),
+        })}
+      />
+    </Box>
+  );
+};
 
 interface NewFolderCardProps {
   newFolderName: string;
@@ -153,9 +167,10 @@ interface TileItemProps {
   folderOperations: FolderOperations;
   fileOperations: FileOperations;
   fileNamePlaceholder: string;
+  readOnly?: boolean;
   selectionMode?: boolean;
   selected?: boolean;
-  onToggle?: () => void;
+  onToggle?: (shiftKey: boolean) => void;
 }
 
 /**
@@ -163,10 +178,99 @@ interface TileItemProps {
  * Extracted for reuse by both plain and virtualized grid.
  */
 export const TileItem: React.FC<TileItemProps> = React.memo(
-  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, selectionMode = false, selected = false, onToggle }) => {
+  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, readOnly = false, selectionMode = false, selected = false, onToggle }) => {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
+
+    const longPressTimerRef = React.useRef<number | null>(null);
+    const longPressTriggeredRef = React.useRef(false);
+    const longPressStartRef = React.useRef<{ x: number; y: number } | null>(null);
+
+    const clearLongPress = React.useCallback(() => {
+      if (longPressTimerRef.current !== null) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressStartRef.current = null;
+    }, []);
+
+    const shouldIgnoreLongPressTarget = React.useCallback((target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(
+        target.closest(
+          ".card-menu-slot, .card-menu-button, button, a, input, textarea, [role='menuitem']",
+        ),
+      );
+    }, []);
+
+    const handlePointerDownCapture = React.useCallback(
+      (e: React.PointerEvent) => {
+        if (!onToggle) return;
+        if (selectionMode) return;
+        if (readOnly) return;
+        if (e.button !== 0) return;
+        if (e.shiftKey) return;
+        if (shouldIgnoreLongPressTarget(e.target)) return;
+
+        longPressTriggeredRef.current = false;
+        longPressStartRef.current = { x: e.clientX, y: e.clientY };
+
+        clearLongPress();
+        longPressTimerRef.current = window.setTimeout(() => {
+          longPressTriggeredRef.current = true;
+          onToggle(false);
+        }, 450);
+      },
+      [clearLongPress, onToggle, readOnly, selectionMode, shouldIgnoreLongPressTarget],
+    );
+
+    const handlePointerMoveCapture = React.useCallback(
+      (e: React.PointerEvent) => {
+        if (longPressTimerRef.current === null) return;
+        const start = longPressStartRef.current;
+        if (!start) return;
+        const dx = Math.abs(e.clientX - start.x);
+        const dy = Math.abs(e.clientY - start.y);
+        if (dx > 8 || dy > 8) {
+          clearLongPress();
+        }
+      },
+      [clearLongPress],
+    );
+
+    const handlePointerUpCapture = React.useCallback(() => {
+      clearLongPress();
+    }, [clearLongPress]);
+
+    const handlePointerCancelCapture = React.useCallback(() => {
+      clearLongPress();
+    }, [clearLongPress]);
+
+    const handleClickCapture = React.useCallback((e: React.MouseEvent) => {
+      if (!longPressTriggeredRef.current) return;
+      longPressTriggeredRef.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }, []);
+
+    const checkbox = (
+      <Checkbox
+        checked={selected}
+        onChange={(e) => {
+          const nativeEvent = e.nativeEvent as MouseEvent;
+          onToggle?.(!!nativeEvent.shiftKey);
+        }}
+        sx={{
+          position: "absolute",
+          top: 4,
+          left: 4,
+          zIndex: 5,
+          display: selectionMode ? "inline-flex" : "none",
+        }}
+        size="small"
+      />
+    );
 
     if (tile.kind === "folder") {
       const folderContent = (
@@ -177,46 +281,66 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onRenamingNameChange={folderOperations.onRenamingNameChange}
           onConfirmRename={folderOperations.onConfirmRename}
           onCancelRename={folderOperations.onCancelRename}
-          onStartRename={() =>
-            folderOperations.onStartRename(tile.node.id, tile.node.name)
+          onStartRename={
+            folderOperations.onStartRename
+              ? () => folderOperations.onStartRename?.(tile.node.id, tile.node.name)
+              : undefined
           }
-          onDelete={() =>
-            folderOperations.onDelete(tile.node.id, tile.node.name)
+          onDelete={
+            folderOperations.onDelete
+              ? () => folderOperations.onDelete?.(tile.node.id, tile.node.name)
+              : undefined
           }
-          onClick={selectionMode ? () => onToggle?.() : () => folderOperations.onClick(tile.node.id)}
+          onShare={
+            folderOperations.onShare
+              ? () => folderOperations.onShare?.(tile.node.id, tile.node.name)
+              : undefined
+          }
+          onClick={(e) => {
+            const shiftKey = !!(e as React.MouseEvent).shiftKey;
+
+            if (shiftKey && onToggle) {
+              onToggle(true);
+              return;
+            }
+
+            if (selectionMode) {
+              onToggle?.(shiftKey);
+              return;
+            }
+
+            folderOperations.onClick(tile.node.id);
+          }}
           variant="squareTile"
+          readOnly={readOnly}
         />
       );
 
-      if (selectionMode) {
-        return (
-          <Box position="relative">
-            <Checkbox
-              checked={selected}
-              onChange={() => onToggle?.()}
-              sx={{
-                position: "absolute",
-                top: 4,
-                left: 4,
-                zIndex: 5,
-              }}
-              size="small"
-            />
-            {folderContent}
-          </Box>
-        );
-      }
-
-      return folderContent;
+      return (
+        <Box
+          position="relative"
+          onPointerDownCapture={handlePointerDownCapture}
+          onPointerMoveCapture={handlePointerMoveCapture}
+          onPointerUpCapture={handlePointerUpCapture}
+          onPointerCancelCapture={handlePointerCancelCapture}
+          onClickCapture={handleClickCapture}
+        >
+          {checkbox}
+          {folderContent}
+        </Box>
+      );
     }
 
-    const isImage = isImageFile(tile.file.name);
-    const isVideo = isVideoFile(tile.file.name);
+    const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType);
+    const isImage = typeInfo.type === "image";
+    const isVideo = typeInfo.type === "video";
+    const isPdf = typeInfo.type === "pdf";
+    const isText = typeInfo.type === "text";
     const shouldLightenPreviewBackdrop =
       isDarkMode &&
-      (isPdfFile(tile.file.name) || isTextFile(tile.file.name));
+      (isPdf || isText);
     const preview = getFileIcon(
-      tile.file.encryptedFilePreviewHashHex ?? null,
+      tile.file.previewHashEncryptedHex ?? null,
       tile.file.name,
       tile.file.contentType,
     );
@@ -232,9 +356,8 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
 
     const icon = (() => {
       if (previewUrl) {
-        const isTextPreview = isTextFile(tile.file.name);
-        const cursor: "pointer" | "default" =
-          isImage || isVideo ? "pointer" : "default";
+        const isTextPreview = isText;
+        const cursor: React.CSSProperties["cursor"] = "inherit";
         return (
           <BlurredPreviewImage
             previewUrl={previewUrl}
@@ -249,16 +372,28 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return preview;
     })();
 
-    const fileClick = selectionMode
-      ? () => onToggle?.()
-      : isImage || isVideo
-        ? () => fileOperations.onMediaClick?.(tile.file.id)
-        : () =>
-            fileOperations.onClick(
-              tile.file.id,
-              tile.file.name,
-              tile.file.sizeBytes,
-            );
+    const fileClick = (e?: React.SyntheticEvent) => {
+      const shiftKey = !!(e as React.MouseEvent | undefined)?.shiftKey;
+
+      if (shiftKey && onToggle) {
+        onToggle(true);
+        return;
+      }
+
+      if (selectionMode) {
+        onToggle?.(shiftKey);
+        return;
+      }
+
+      if (isImage || isVideo) {
+        if (fileOperations.onMediaClick) {
+          fileOperations.onMediaClick(tile.file.id);
+          return;
+        }
+      }
+
+      fileOperations.onClick(tile.file.id, tile.file.name, tile.file.sizeBytes);
+    };
 
     const fileContent = (
       <RenamableItemCard
@@ -269,61 +404,70 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         onClick={fileClick}
         iconContainerSx={iconContainerSx}
         actions={[
-          {
-            icon: <Download />,
-            onClick: () =>
-              fileOperations.onDownload(tile.file.id, tile.file.name),
-            tooltip: t("actions.download", { ns: "common" }),
-          },
-          {
-            icon: <Share />,
-            onClick: () =>
-              fileOperations.onShare(tile.file.id, tile.file.name),
-            tooltip: t("actions.share", { ns: "common" }),
-          },
-          {
-            icon: <Edit />,
-            onClick: () =>
-              fileOperations.onStartRename(tile.file.id, tile.file.name),
-            tooltip: t("actions.rename", { ns: "common" }),
-          },
-          {
-            icon: <Delete />,
-            onClick: () =>
-              fileOperations.onDelete(tile.file.id, tile.file.name),
-            tooltip: t("actions.delete", { ns: "common" }),
-          },
+          ...(fileOperations.onDownload
+            ? [
+                {
+                  icon: <Download />,
+                  onClick: () =>
+                    fileOperations.onDownload?.(tile.file.id, tile.file.name),
+                  tooltip: t("actions.download", { ns: "common" }),
+                },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onShare
+            ? [
+                {
+                  icon: <Share />,
+                  onClick: () =>
+                    fileOperations.onShare?.(tile.file.id, tile.file.name),
+                  tooltip: t("actions.share", { ns: "common" }),
+                },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onStartRename
+            ? [
+                {
+                  icon: <Edit />,
+                  onClick: () =>
+                    fileOperations.onStartRename?.(tile.file.id, tile.file.name),
+                  tooltip: t("actions.rename", { ns: "common" }),
+                },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onDelete
+            ? [
+                {
+                  icon: <Delete />,
+                  onClick: () =>
+                    fileOperations.onDelete?.(tile.file.id, tile.file.name),
+                  tooltip: t("actions.delete", { ns: "common" }),
+                },
+              ]
+            : []),
         ]}
         isRenaming={fileOperations.isRenaming(tile.file.id)}
         renamingValue={fileOperations.getRenamingName()}
         onRenamingValueChange={fileOperations.onRenamingNameChange}
         onConfirmRename={() => {
-          void fileOperations.onConfirmRename();
+          void fileOperations.onConfirmRename?.();
         }}
-        onCancelRename={fileOperations.onCancelRename}
+        onCancelRename={fileOperations.onCancelRename ?? (() => {})}
         placeholder={fileNamePlaceholder}
       />
     );
 
-    if (selectionMode) {
-      return (
-        <Box position="relative">
-          <Checkbox
-            checked={selected}
-            onChange={() => onToggle?.()}
-            sx={{
-              position: "absolute",
-              top: 4,
-              left: 4,
-              zIndex: 5,
-            }}
-            size="small"
-          />
-          {fileContent}
-        </Box>
-      );
-    }
-
-    return fileContent;
+    return (
+      <Box
+        position="relative"
+        onPointerDownCapture={handlePointerDownCapture}
+        onPointerMoveCapture={handlePointerMoveCapture}
+        onPointerUpCapture={handlePointerUpCapture}
+        onPointerCancelCapture={handlePointerCancelCapture}
+        onClickCapture={handleClickCapture}
+      >
+        {checkbox}
+        {fileContent}
+      </Box>
+    );
   },
 );

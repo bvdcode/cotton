@@ -20,6 +20,11 @@ export interface FileTile {
   containerPath?: string;
 }
 
+export interface GoToFileLocationTarget {
+  nodeId?: string;
+  containerPath?: string;
+}
+
 /**
  * Union type for all tile types
  */
@@ -41,10 +46,11 @@ export interface FolderOperations {
   isRenaming: (folderId: string) => boolean;
   getRenamingName: () => string;
   onRenamingNameChange: (name: string) => void;
-  onConfirmRename: () => void;
-  onCancelRename: () => void;
-  onStartRename: (folderId: string, name: string) => void;
-  onDelete: (folderId: string, name: string) => void;
+  onConfirmRename?: () => void;
+  onCancelRename?: () => void;
+  onStartRename?: (folderId: string, name: string) => void;
+  onDelete?: (folderId: string, name: string) => void;
+  onShare?: (folderId: string, name: string) => void;
   onClick: (folderId: string) => void;
 }
 
@@ -55,12 +61,12 @@ export interface FileOperations {
   isRenaming: (fileId: string) => boolean;
   getRenamingName: () => string;
   onRenamingNameChange: (name: string) => void;
-  onConfirmRename: () => Promise<void>;
-  onCancelRename: () => void;
-  onStartRename: (fileId: string, name: string) => void;
-  onDelete: (fileId: string, name: string) => void;
-  onDownload: (fileId: string, name: string) => void;
-  onShare: (fileId: string, name: string) => void;
+  onConfirmRename?: () => Promise<void>;
+  onCancelRename?: () => void;
+  onStartRename?: (fileId: string, name: string) => void;
+  onDelete?: (fileId: string, name: string) => void;
+  onDownload?: (fileId: string, name: string) => void;
+  onShare?: (fileId: string, name: string) => void;
   onClick: (fileId: string, name: string, sizeBytes?: number) => void;
   onMediaClick?: (fileId: string) => void;
 }
@@ -113,10 +119,16 @@ export interface IFileListView {
   fileOperations: FileOperations;
 
   /**
+   * When true, the view must not expose write actions (rename/delete/share/create).
+   * Intended for public/shared browsing.
+   */
+  readOnly?: boolean;
+
+  /**
    * Optional handler for navigating to a file's containing folder.
    * Used by Search results to jump to the node where a file is located.
    */
-  onGoToFileLocation?: (containerPath: string) => void;
+  onGoToFileLocation?: (target: GoToFileLocationTarget) => void;
 
   /**
    * Optional list-view column flex configuration.
@@ -211,5 +223,8 @@ export interface IFileListView {
   /**
    * Handler to toggle selection of a single item
    */
-  onToggleItem?: (id: string) => void;
+  onToggleItem?: (
+    id: string,
+    options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
+  ) => void;
 }

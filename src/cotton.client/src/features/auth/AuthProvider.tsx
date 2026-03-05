@@ -7,8 +7,8 @@ import {
 import { authApi } from "../../shared/api/authApi";
 import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
-import { useSettingsStore } from "../../shared/store/settingsStore";
 import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
+import { resetUserScopedStores } from "../../shared/store/resetUserScopedStores";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -29,12 +29,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logoutLocal = useAuthStore((s) => s.logoutLocal);
   const setHasChecked = useAuthStore((s) => s.setHasChecked);
 
+  const userId = user?.id ?? null;
+
   useEffect(() => {
     // Listen for logout event from httpClient interceptor
     const handleLogout = () => {
       setUnauthenticated();
-      useSettingsStore.getState().reset();
-      useUserPreferencesStore.getState().reset();
+      resetUserScopedStores(null);
     };
     window.addEventListener("auth:logout", handleLogout);
 
@@ -42,6 +43,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener("auth:logout", handleLogout);
     };
   }, []);
+
+  useEffect(() => {
+    // Security: prevent cross-user cached data reuse.
+    // When auth identity changes, clear all user-scoped caches.
+    resetUserScopedStores(userId);
+  }, [userId]);
 
   useEffect(() => {
     if (!user) {
@@ -76,11 +83,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const setAuthenticated = useCallback((value: boolean, u?: User | null) => {
     if (value && u) {
+      // If user changed (or we are coming from unauth state), clear caches first.
+      resetUserScopedStores(u.id);
       setAuthenticatedInStore(u);
       return;
     }
     if (!value) {
       setUnauthenticated();
+      resetUserScopedStores(null);
     }
   }, [setAuthenticatedInStore, setUnauthenticated]);
 
@@ -92,8 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error("Logout error:", error);
     }
     logoutLocal();
-    useSettingsStore.getState().reset();
-    useUserPreferencesStore.getState().reset();
+    resetUserScopedStores(null);
   }, [logoutLocal]);
 
   const value: AuthContextValue = {

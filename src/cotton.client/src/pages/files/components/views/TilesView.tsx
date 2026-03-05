@@ -87,6 +87,7 @@ export const TilesView: React.FC<IFileListView> = ({
   tiles,
   folderOperations,
   fileOperations,
+  readOnly = false,
   isCreatingFolder,
   newFolderName,
   onNewFolderNameChange,
@@ -155,6 +156,14 @@ export const TilesView: React.FC<IFileListView> = ({
   }, [containerWidth, gapPx, isXs, layout.minWidth, tileSize]);
 
   const shouldVirtualize = tiles.length > VIRTUALIZATION_THRESHOLD;
+
+  const orderedIds = useMemo(
+    () =>
+      tiles.map((tile) =>
+        tile.kind === "folder" ? tile.node.id : tile.file.id,
+      ),
+    [tiles],
+  );
 
   if (!loading && !isCreatingFolder && tiles.length === 0 && emptyStateText) {
     return (
@@ -229,10 +238,19 @@ export const TilesView: React.FC<IFileListView> = ({
                       tile={tile}
                       folderOperations={folderOperations}
                       fileOperations={fileOperations}
+                      readOnly={readOnly}
                       fileNamePlaceholder={fileNamePlaceholder}
                       selectionMode={selectionMode}
                       selected={selectedIds?.has(tileId)}
-                      onToggle={onToggleItem ? () => onToggleItem(tileId) : undefined}
+                      onToggle={
+                        onToggleItem
+                          ? (shiftKey) =>
+                              onToggleItem(tileId, {
+                                shiftKey,
+                                orderedIds,
+                              })
+                          : undefined
+                      }
                     />
                   );
                 })}
@@ -250,10 +268,19 @@ export const TilesView: React.FC<IFileListView> = ({
                 tile={tile}
                 folderOperations={folderOperations}
                 fileOperations={fileOperations}
+                readOnly={readOnly}
                 fileNamePlaceholder={fileNamePlaceholder}
                 selectionMode={selectionMode}
                 selected={selectedIds?.has(tileId)}
-                onToggle={onToggleItem ? () => onToggleItem(tileId) : undefined}
+                onToggle={
+                  onToggleItem
+                    ? (shiftKey) =>
+                        onToggleItem(tileId, {
+                          shiftKey,
+                          orderedIds,
+                        })
+                    : undefined
+                }
               />
             );
           })}

@@ -71,7 +71,7 @@ export const WebDavTokenCard = () => {
       command: `net use Z: "${webDavUrl}" /user:${username} ${tokenOrPlaceholder} /persistent:yes`,
     },
     {
-      id: "windows-registry",
+      id: "windowsRegistry",
       command:
         'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\WebClient\\Parameters" /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f',
     },
@@ -182,6 +182,7 @@ export const WebDavTokenCard = () => {
 
         <Accordion
           disableGutters
+          TransitionProps={{ mountOnEnter: true, unmountOnExit: false }}
           sx={{
             boxShadow: "none",
             "&:before": { display: "none" },

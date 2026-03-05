@@ -17,6 +17,7 @@ import {
   Download as DownloadIcon,
   Slideshow as SlideshowIcon,
 } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
 import {
   isHeicFile,
@@ -25,23 +26,12 @@ import {
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { shareLinks } from "../../../shared/utils/shareLinks";
 
-const LOADING_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <style>
-    .spinner { animation: spin 1s linear infinite; transform-origin: 60px 60px; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-  </style>
-  <circle class="spinner" cx="60" cy="20" r="8" fill="#888"/>
-  <circle class="spinner" cx="60" cy="20" r="8" fill="#666" style="animation-delay: -0.875s"/>
-  <circle class="spinner" cx="88.3" cy="31.7" r="8" fill="#888" style="animation-delay: -0.75s"/>
-  <circle class="spinner" cx="100" cy="60" r="8" fill="#888" style="animation-delay: -0.625s"/>
-  <circle class="spinner" cx="88.3" cy="88.3" r="8" fill="#888" style="animation-delay: -0.5s"/>
-  <circle class="spinner" cx="60" cy="100" r="8" fill="#888" style="animation-delay: -0.375s"/>
-  <circle class="spinner" cx="31.7" cy="88.3" r="8" fill="#888" style="animation-delay: -0.25s"/>
-  <circle class="spinner" cx="20" cy="60" r="8" fill="#888" style="animation-delay: -0.125s"/>
-  <circle class="spinner" cx="31.7" cy="31.7" r="8" fill="#888" style="animation-delay: 0s"/>
-</svg>
-`)}`;
+const TRANSPARENT_PLACEHOLDER =
+  "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+
+const LIGHTBOX_ANIMATION_MS = 200;
+const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
+const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
 
 type SlideWithTitle = Slide & {
   title?: string;
@@ -67,6 +57,11 @@ export interface MediaLightboxProps {
   onClose: () => void;
   getSignedMediaUrl: (id: string) => Promise<string>;
   /**
+   * If false, disables swipe/fade animations.
+   * Defaults to true.
+   */
+  smoothTransitions?: boolean;
+  /**
    * Optional separate download URL resolver.
    * If not provided, the signed media URL is used for both viewing and downloading.
    */
@@ -83,12 +78,68 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   initialIndex,
   onClose,
   getSignedMediaUrl,
+  smoothTransitions = true,
   getDownloadUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
 
+  const isTouchDevice = React.useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia?.("(hover: none)")?.matches ?? false;
+  }, []);
+
+  const plugins = React.useMemo(
+    () =>
+      isTouchDevice
+        ? [Video, Zoom, Slideshow, Download, Share]
+        : [Video, Zoom, Slideshow, Thumbnails, Download, Share],
+    [isTouchDevice],
+  );
+
   // Auto-hide controls after 2.5 seconds of inactivity
-  const isActive = useActivityDetection(2500);
+  const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
+
+  const [touchControlsVisible, setTouchControlsVisible] =
+    React.useState<boolean>(true);
+
+  const touchControlsTimerRef = React.useRef<number | null>(null);
+
+  const showTouchControls = React.useCallback(() => {
+    if (!isTouchDevice) {
+      return;
+    }
+
+    setTouchControlsVisible(true);
+
+    if (touchControlsTimerRef.current !== null) {
+      window.clearTimeout(touchControlsTimerRef.current);
+      touchControlsTimerRef.current = null;
+    }
+
+    touchControlsTimerRef.current = window.setTimeout(() => {
+      setTouchControlsVisible(false);
+      touchControlsTimerRef.current = null;
+    }, TOUCH_CONTROLS_AUTOHIDE_MS);
+  }, [isTouchDevice]);
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (!isTouchDevice) {
+      return;
+    }
+
+    showTouchControls();
+
+    return () => {
+      if (touchControlsTimerRef.current !== null) {
+        window.clearTimeout(touchControlsTimerRef.current);
+        touchControlsTimerRef.current = null;
+      }
+    };
+  }, [open, isTouchDevice, showTouchControls]);
 
   const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
     {},
@@ -106,6 +157,24 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const slides = React.useMemo(() => {
     return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
   }, [items, displayUrls, signedUrls, downloadUrls]);
+
+  const preloadImage = React.useCallback(async (url: string): Promise<void> => {
+    await new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        if (typeof img.decode === "function") {
+          try {
+            await img.decode();
+          } catch {
+            // ignore decode failures
+          }
+        }
+        resolve();
+      };
+      img.onerror = () => reject(new Error("Failed to preload image"));
+      img.src = url;
+    });
+  }, []);
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -133,12 +202,20 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               }
             }
 
-            if (item.kind === "image" && isHeicFile(item.name)) {
-              const convertedUrl = await convertHeicToJpeg(url);
-              setDisplayUrls((p) => ({ ...p, [item.id]: convertedUrl }));
-            } else {
-              setDisplayUrls((p) => ({ ...p, [item.id]: url }));
+            const nextDisplayUrl =
+              item.kind === "image" && isHeicFile(item.name)
+                ? await convertHeicToJpeg(url)
+                : url;
+
+            if (item.kind === "image") {
+              try {
+                await preloadImage(nextDisplayUrl);
+              } catch {
+                // Keep previewUrl if preloading fails
+              }
             }
+
+            setDisplayUrls((p) => ({ ...p, [item.id]: nextDisplayUrl }));
           } catch (e) {
             console.error("Failed to load media original URL", e);
           } finally {
@@ -149,7 +226,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         return prev;
       });
     },
-    [items, getSignedMediaUrl, getDownloadUrl],
+    [items, getSignedMediaUrl, getDownloadUrl, preloadImage],
   );
 
   React.useEffect(() => {
@@ -158,13 +235,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   React.useEffect(() => {
     if (!open) return;
-    void ensureSlideHasOriginal(index);
+    for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
+      void ensureSlideHasOriginal(index + offset);
+    }
   }, [open, index, ensureSlideHasOriginal]);
 
   // Build className based on activity state
+  const controlsVisible = isTouchDevice ? touchControlsVisible : isActive;
   const lightboxClassName = [
     "lightbox-autohide",
-    isActive ? "lightbox-autohide--active" : "lightbox-autohide--idle",
+    controlsVisible ? "lightbox-autohide--active" : "lightbox-autohide--idle",
   ].join(" ");
 
   return (
@@ -172,19 +252,41 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       open={open}
       close={onClose}
       className={lightboxClassName}
-      plugins={[Video, Zoom, Slideshow, Thumbnails, Download, Share]}
+      plugins={plugins}
       slides={slides}
       index={index}
+      controller={{
+        closeOnPullDown: true,
+        closeOnPullUp: true,
+      }}
+      animation={{
+        swipe: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+        fade: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+        navigation: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+      }}
       on={{
         view: ({ index: currentIndex }) => {
           setIndex(currentIndex);
-          void ensureSlideHasOriginal(currentIndex);
+          showTouchControls();
+          for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
+            void ensureSlideHasOriginal(currentIndex + offset);
+          }
+        },
+        click: () => {
+          if (!isTouchDevice) {
+            return;
+          }
+
+          // Mobile UX: a tap should reliably show the gallery overlay.
+          // We intentionally do NOT toggle off on tap to avoid interfering with video controls.
+          showTouchControls();
         },
       }}
       render={{
         buttonZoom: () => null,
         iconZoomIn: () => null,
         iconZoomOut: () => null,
+        iconLoading: () => <CircularProgress size={28} />,
         iconClose: () => <Close />,
         iconShare: () => <ShareIcon />,
         iconDownload: () => <DownloadIcon />,
@@ -222,13 +324,31 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             </div>
           );
         },
+        slideContainer: ({ children, slide }) => {
+          const imageSrc =
+            slide.type === "image" ? (slide as { src?: string }).src : null;
+
+          return (
+            <div className="media-lightbox__tap-area">
+              {imageSrc ? (
+                <img
+                  className="media-lightbox__image-bg"
+                  src={imageSrc}
+                  alt=""
+                  aria-hidden="true"
+                />
+              ) : null}
+              {children}
+            </div>
+          );
+        },
       }}
       zoom={{
-        maxZoomPixelRatio: 8,
+        maxZoomPixelRatio: 3,
         zoomInMultiplier: 1,
         doubleTapDelay: 300,
         doubleClickDelay: 300,
-        doubleClickMaxStops: 2,
+        doubleClickMaxStops: 1,
         keyboardMoveDistance: 50,
         wheelZoomDistanceFactor: 500,
         pinchZoomDistanceFactor: 100,
@@ -238,17 +358,21 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         autoplay: false,
         delay: 5000,
       }}
-      thumbnails={{
-        position: "bottom",
-        width: 120,
-        height: 80,
-        border: 0,
-        borderRadius: 4,
-        padding: 2,
-        gap: 4,
-        showToggle: false,
-        hidden: false,
-      }}
+      thumbnails={
+        isTouchDevice
+          ? undefined
+          : {
+              position: "bottom",
+              width: 120,
+              height: 80,
+              border: 0,
+              borderRadius: 4,
+              padding: 2,
+              gap: 4,
+              showToggle: false,
+              hidden: items[index]?.kind === "video",
+            }
+      }
       video={{
         controls: true,
         playsInline: true,
@@ -259,6 +383,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         preload: 2,
         imageFit: "contain",
         padding: 0,
+        spacing: 0,
       }}
     />
   );
@@ -281,7 +406,9 @@ function buildSlidesFromItems(
   const buildTitle = (position: number, item: MediaItem): string => {
     const prefix = total > 0 ? `${position}/${total}` : "";
     const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
-    return sizeStr ? `${prefix} • ${item.name} • ${sizeStr}` : `${prefix} • ${item.name}`;
+    return sizeStr
+      ? `${prefix} • ${item.name} • ${sizeStr}`
+      : `${prefix} • ${item.name}`;
   };
 
   const buildImageSlide = (args: {
@@ -294,7 +421,7 @@ function buildSlidesFromItems(
   }): SlideWithTitle => {
     const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl } = args;
     const isLoading = !displayUrl && !item.previewUrl;
-    const src = displayUrl || item.previewUrl || LOADING_PLACEHOLDER;
+    const src = displayUrl || item.previewUrl || TRANSPARENT_PLACEHOLDER;
 
     return {
       type: "image",
@@ -323,7 +450,7 @@ function buildSlidesFromItems(
     if (!signedUrl) {
       return {
         type: "image",
-        src: poster || LOADING_PLACEHOLDER,
+        src: poster || TRANSPARENT_PLACEHOLDER,
         width: item.width,
         height: item.height,
         title,

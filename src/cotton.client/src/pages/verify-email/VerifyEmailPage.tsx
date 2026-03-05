@@ -17,6 +17,7 @@ import axios from "axios";
 
 export const VerifyEmailPage = () => {
   const { t } = useTranslation("verifyEmail");
+  const { t: tCommon } = useTranslation("common");
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -55,7 +56,7 @@ export const VerifyEmailPage = () => {
   }, [token, t]);
 
   const handleNavigate = useCallback(() => {
-    navigate(isAuthenticated ? "/profile" : "/login");
+    navigate(isAuthenticated ? "/settings" : "/login");
   }, [navigate, isAuthenticated]);
 
   return (
@@ -74,11 +75,11 @@ export const VerifyEmailPage = () => {
           <Typography variant="h4" component="h1" gutterBottom>
             {t("title")}
           </Typography>
-          <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
+          <Avatar src="/assets/icons/icon.svg" alt={tCommon("app.logoAlt")} />
         </Box>
 
         {loading && (
-          <Box display="flex" alignItems="center" gap={2} sx={{ mt: 2 }}>
+          <Box display="flex" alignItems="center" gap={2} mt={2}>
             <CircularProgress size={24} />
             <Typography variant="body1" color="text.secondary">
               {t("verifying")}
@@ -98,7 +99,7 @@ export const VerifyEmailPage = () => {
               onClick={handleNavigate}
               sx={{ mt: 3 }}
             >
-              {isAuthenticated ? t("goToProfile") : t("goToLogin")}
+              {isAuthenticated ? t("goToSettings") : t("goToLogin")}
             </Button>
           </Box>
         )}
@@ -115,7 +116,7 @@ export const VerifyEmailPage = () => {
               onClick={handleNavigate}
               sx={{ mt: 3 }}
             >
-              {isAuthenticated ? t("goToProfile") : t("goToLogin")}
+              {isAuthenticated ? t("goToSettings") : t("goToLogin")}
             </Button>
           </Box>
         )}

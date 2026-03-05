@@ -10,6 +10,19 @@ import type { JsonValue } from "../types/json";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
 
+const SILENCED_METHODS: ReadonlyArray<string> = [
+  "FileCreated",
+  "FileUpdated",
+  "FileDeleted",
+  "FileMoved",
+  "FileRenamed",
+  "NodeCreated",
+  "NodeDeleted",
+  "NodeMoved",
+  "NodeRenamed",
+  "PreviewGenerated",
+].flatMap((m) => [m, m.toLowerCase()]);
+
 class EventHubService {
   private connection: HubConnection | null = null;
   private listeners = new Map<string, Set<HubEventCallback>>();
@@ -79,6 +92,15 @@ class EventHubService {
             .withAutomaticReconnect(reconnectPolicy)
             .configureLogging(LogLevel.Warning)
             .build();
+
+          // Some server versions emit lowercased method names.
+          // Registering no-op handlers prevents SignalR warnings on pages
+          // that don't subscribe to file-related events.
+          for (const method of SILENCED_METHODS) {
+            this.connection.on(method, () => {
+              // no-op
+            });
+          }
 
           this.connection.onreconnected(() => {
             this.resubscribeAll();

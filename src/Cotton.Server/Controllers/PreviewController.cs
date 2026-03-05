@@ -13,13 +13,14 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Previews)]
     public class PreviewController(
         IStreamCipher _crypto,
+        ILogger<PreviewController> _logger,
         IStoragePipeline _storage) : ControllerBase
     {
         private static readonly SemaphoreSlim _previewGate = new(8);
 
-        [HttpGet("{encryptedFilePreviewHashHex}")]
-        [HttpGet("{encryptedFilePreviewHashHex}.webp")]
-        public async Task<IActionResult> GetFilePreview([FromRoute] string encryptedFilePreviewHashHex)
+        [HttpGet("{previewHashEncryptedHex}")]
+        [HttpGet("{previewHashEncryptedHex}.webp")]
+        public async Task<IActionResult> GetFilePreview([FromRoute] string previewHashEncryptedHex)
         {
             await _previewGate.WaitAsync(HttpContext.RequestAborted);
             try
@@ -27,21 +28,25 @@ namespace Cotton.Server.Controllers
                 string? decryptedPreviewHash;
                 try
                 {
-                    byte[] encryptedPreviewHash = Convert.FromHexString(encryptedFilePreviewHashHex);
-                    decryptedPreviewHash = _crypto.Decrypt(encryptedPreviewHash);
+                    byte[] encrypted = Convert.FromHexString(previewHashEncryptedHex);
+                    var hashBytes = _crypto.Decrypt(encrypted);
+                    decryptedPreviewHash = Hasher.ToHexStringHash(hashBytes);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    _logger.LogWarning(ex, "Failed to decrypt preview token {Token}", previewHashEncryptedHex);
                     return this.ApiNotFound("Preview image not found.");
                 }
                 bool validHash = Hasher.IsValidHash(decryptedPreviewHash);
                 if (!validHash)
                 {
+                    _logger.LogWarning("Decrypted preview hash is invalid: {Hash}", decryptedPreviewHash);
                     return this.ApiNotFound("Preview image not found.");
                 }
                 bool exists = await _storage.ExistsAsync(decryptedPreviewHash);
                 if (!exists)
                 {
+                    _logger.LogWarning("Preview image not found for hash: {Hash}", decryptedPreviewHash);
                     return this.ApiNotFound("Preview image not found.");
                 }
                 string etag = $"\"sha256-{decryptedPreviewHash}\"";

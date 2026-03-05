@@ -3,21 +3,23 @@ using Cotton.Database.Models.Enums;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
-using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System.Collections.Concurrent;
 
 namespace Cotton.Server.Jobs
 {
-    [JobTrigger(days: 1)]
+    // TODO: Refactor to use a more robust approach for scheduling and deleting orphaned chunks, e.g. by using a separate table to track scheduled deletions and a background worker that processes that table at a configurable interval. The current approach has potential
+    // issues with concurrency and reliability, e.g. if the job is triggered multiple times in quick succession or if the job fails after scheduling chunks for deletion but before actually deleting them.
+    //[JobTrigger(days: 1)]
     public class GarbageCollectorJob(
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         SettingsProvider _settingsProvider,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
-        private const int BatchSize = 10000;
+        private const int ManifestBatchSize = 1000;
+        private const int ChunkBatchSize = 1000;
         private const int ChunkGcDelayDays = 7;
         private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
@@ -39,7 +41,7 @@ namespace Cotton.Server.Jobs
                 .Where(fm => !fm.NodeFiles.Any())
                 .OrderBy(fm => fm.Id)
                 .Select(fm => fm.Id)
-                .Take(BatchSize)
+                .Take(ManifestBatchSize)
                 .ToListAsync(ct);
 
             if (manifestIds.Count == 0)
@@ -77,10 +79,11 @@ namespace Cotton.Server.Jobs
             };
 
             int orphanedChunks = await _dbContext.Chunks
-                .Where(c => !c.FileManifestChunks.Any() && c.GCScheduledAfter == null)
-                .OrderBy(c => c.Hash)
-                .Take(BatchSize)
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
+                    .Where(c => !c.FileManifestChunks.Any()
+                        && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
+                        && c.GCScheduledAfter == null)
+                    .Take(ChunkBatchSize)
+                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
 
             if (orphanedChunks != 0)
             {
@@ -92,8 +95,7 @@ namespace Cotton.Server.Jobs
         {
             var chunksToDelete = await _dbContext.Chunks
                 .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now && !c.FileManifestChunks.Any())
-                .OrderBy(c => c.Hash)
-                .Take(BatchSize)
+                .Take(ChunkBatchSize)
                 .ToListAsync(ct);
 
             if (chunksToDelete.Count == 0)
@@ -156,7 +158,8 @@ namespace Cotton.Server.Jobs
                 return false;
             }
 
-            bool stillOrphaned = !await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunkHash, ct);
+            bool stillOrphaned = !await _dbContext.FileManifestChunks.AnyAsync(m => m.ChunkHash == chunkHash, ct)
+                && !await _dbContext.FileManifests.AnyAsync(fm => fm.SmallFilePreviewHash == chunkHash || fm.LargeFilePreviewHash == chunkHash, ct);
             if (!stillOrphaned)
             {
                 var tracked = await _dbContext.Chunks.FindAsync([chunkHash], ct);

@@ -11,23 +11,11 @@ import { useTranslation } from "react-i18next";
 import { getFileTypeInfo, type FileType } from "../../files/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { MediaLightbox, type MediaItem, PdfPreview } from "../../files/components";
-import { CodeEditor } from "../../files/components/preview/editors/CodeEditor";
-import { MarkdownEditor } from "../../files/components/preview/editors/MarkdownEditor";
-import { PlainTextEditor } from "../../files/components/preview/editors/PlainTextEditor";
-import { detectMonacoLanguageFromFileName } from "../../../shared/utils/languageDetection";
-
-function detectMonacoLanguageFromContentType(
-  contentType: string | null,
-): string | null {
-  if (!contentType) return null;
-  const normalized = contentType.toLowerCase();
-
-  if (normalized.includes("json")) return "json";
-  if (normalized.includes("xml")) return "xml";
-  if (normalized.includes("yaml") || normalized.includes("yml")) return "yaml";
-
-  return null;
-}
+import {
+  selectGallerySmoothTransitions,
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
+import { ReadOnlyTextViewer } from "./ReadOnlyTextViewer";
 
 interface ShareFileViewerProps {
   token: string;
@@ -75,6 +63,9 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   contentLength,
 }) => {
   const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
 
   const fileTypeInfo = React.useMemo(() => {
     const name = fileName ?? "";
@@ -111,6 +102,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
         onClose={() => setLightboxOpen(false)}
         getSignedMediaUrl={async () => inlineUrl}
         getDownloadUrl={downloadUrl ? async () => downloadUrl : undefined}
+        smoothTransitions={smoothGalleryTransitions}
       />
 
       {!lightboxOpen && (
@@ -175,52 +167,13 @@ const ShareTextViewer: React.FC<ShareTextViewerProps> = ({
   contentType,
   textContent,
 }) => {
-  const handleReadOnlyChange = React.useCallback((_nextValue: string) => {
-    void _nextValue;
-  }, []);
-
-  const resolvedFileName = fileName ?? title;
-  const lowerName = resolvedFileName.toLowerCase();
-  const isMarkdown = lowerName.endsWith(".md") || lowerName.endsWith(".markdown");
-
-  if (isMarkdown) {
-    return (
-      <Box width="100%" height="100%" minHeight={0} minWidth={0}>
-        <MarkdownEditor
-          value={textContent}
-          onChange={handleReadOnlyChange}
-          isEditing={false}
-          fileName={resolvedFileName}
-        />
-      </Box>
-    );
-  }
-
-  const languageOverride =
-    fileName === null ? detectMonacoLanguageFromContentType(contentType) : null;
-  const detectedLanguage = detectMonacoLanguageFromFileName(resolvedFileName);
-  const monacoLanguage = languageOverride ?? detectedLanguage;
-  const shouldUseCodeEditor = monacoLanguage !== "plaintext";
-
   return (
-    <Box width="100%" height="100%" minHeight={0} minWidth={0}>
-      {shouldUseCodeEditor ? (
-        <CodeEditor
-          value={textContent}
-          onChange={handleReadOnlyChange}
-          isEditing={false}
-          fileName={resolvedFileName}
-          language={languageOverride ?? undefined}
-        />
-      ) : (
-        <PlainTextEditor
-          value={textContent}
-          onChange={handleReadOnlyChange}
-          isEditing={false}
-          fileName={resolvedFileName}
-        />
-      )}
-    </Box>
+    <ReadOnlyTextViewer
+      title={title}
+      fileName={fileName}
+      contentType={contentType}
+      textContent={textContent}
+    />
   );
 };
 

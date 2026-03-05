@@ -77,7 +77,7 @@ export const useTrashStore = create<TrashState>((set, get) => ({
           ? Promise.resolve(cachedContent)
           : hasCachedData
             ? Promise.resolve(cachedContent)
-            : (await nodesApi.getChildren(nodeId, { nodeType: "trash" })).content,
+            : (await nodesApi.getChildren(nodeId, { nodeType: "trash", depth: isRoot ? 1 : 0 })).content,
       ]);
 
       set((prev) => ({
@@ -91,7 +91,7 @@ export const useTrashStore = create<TrashState>((set, get) => ({
       }));
 
       if (loadChildren && hasCachedData) {
-        const freshContent = await nodesApi.getChildren(nodeId, { nodeType: "trash" });
+        const freshContent = await nodesApi.getChildren(nodeId, { nodeType: "trash", depth: isRoot ? 1 : 0 });
         set((prev) => ({
           contentByNodeId: {
             ...prev.contentByNodeId,
@@ -107,7 +107,8 @@ export const useTrashStore = create<TrashState>((set, get) => ({
 
   refreshNodeContent: async (nodeId) => {
     try {
-      const content = await nodesApi.getChildren(nodeId, { nodeType: "trash" });
+      const isRoot = get().rootId === nodeId;
+      const content = await nodesApi.getChildren(nodeId, { nodeType: "trash", depth: isRoot ? 1 : 0 });
       set((prev) => ({
         contentByNodeId: {
           ...prev.contentByNodeId,

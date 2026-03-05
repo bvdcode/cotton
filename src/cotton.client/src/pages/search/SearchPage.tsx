@@ -18,8 +18,15 @@ import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
-import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
+import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
+import {
+  selectGallerySmoothTransitions,
+  useLocalPreferencesStore,
+} from "../../shared/store/localPreferencesStore";
+import { getFileTypeInfo } from "../files/utils/fileTypes";
+import { getFileIcon } from "../files/utils/icons";
+import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -40,6 +47,10 @@ export const SearchPage: React.FC = () => {
   }, [ensureHomeData]);
 
   const layoutId = rootNode?.layoutId;
+
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
 
   const searchState = useLayoutSearch({
     layoutId,
@@ -90,16 +101,6 @@ export const SearchPage: React.FC = () => {
     [t],
   );
 
-  const handleFileClick = useCallback(
-    (fileId: string, fileName: string, fileSizeBytes?: number) => {
-      const opened = openPreview(fileId, fileName, fileSizeBytes);
-      if (!opened) {
-        void handleDownloadFile(fileId, fileName);
-      }
-    },
-    [handleDownloadFile, openPreview],
-  );
-
   const sortedFiles = useMemo(() => {
     if (!results) return [];
     const files = results.files ?? [];
@@ -110,12 +111,54 @@ export const SearchPage: React.FC = () => {
     return sorted;
   }, [results]);
 
+  const audioPlaylist = useMemo(
+    () =>
+      sortedFiles
+        .filter(
+          (file) =>
+            getFileTypeInfo(file.name, file.contentType ?? null).type ===
+            "audio",
+        )
+        .map((file) => {
+          const previewToken =
+            file.largeFilePreviewPresignedToken ??
+            file.previewHashEncryptedHex ??
+            null;
+          const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
+          const previewUrl = typeof icon === "string" ? icon : undefined;
+          return {
+            id: file.id,
+            name: file.name,
+            nodeId: file.nodeId ?? undefined,
+            previewUrl,
+          };
+        }),
+    [sortedFiles],
+  );
+
+  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
+
+  const handleFileClick = useCallback(
+    (fileId: string, fileName: string, fileSizeBytes?: number) => {
+      if (getFileTypeInfo(fileName, null).type === "audio") {
+        openAudio({ fileId, fileName, playlist: audioPlaylist });
+        return;
+      }
+      const opened = openPreview(fileId, fileName, fileSizeBytes);
+      if (!opened) {
+        void handleDownloadFile(fileId, fileName);
+      }
+    },
+    [audioPlaylist, handleDownloadFile, openAudio, openPreview],
+  );
+
   const fileListSource = useSearchFileList({
     results,
     loading,
     error: error ?? null,
     totalCount,
     hasQuery: !!query.trim(),
+    rootNodeName: rootNode?.name,
   });
 
   const {
@@ -123,6 +166,7 @@ export const SearchPage: React.FC = () => {
     lightboxIndex,
     mediaItems,
     getSignedMediaUrl,
+    getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
   } = useMediaLightbox(sortedFiles);
@@ -191,6 +235,18 @@ export const SearchPage: React.FC = () => {
             tiles={results ? tiles : []}
             folderOperations={folderOperations}
             fileOperations={fileOperations}
+            onGoToFileLocation={({ nodeId, containerPath }) => {
+              if (nodeId) {
+                navigate(`/files/${nodeId}`);
+                return;
+              }
+
+              const normalized = (containerPath ?? "/").trim();
+              const resolvePath = normalized === "/" ? null : normalized;
+              void layoutsApi.resolve({ path: resolvePath }).then((node) => {
+                navigate(`/files/${node.id}`);
+              });
+            }}
             isCreatingFolder={false}
             newFolderName=""
             onNewFolderNameChange={() => {}}
@@ -229,6 +285,8 @@ export const SearchPage: React.FC = () => {
           initialIndex={lightboxIndex}
           items={mediaItems}
           getSignedMediaUrl={getSignedMediaUrl}
+          getDownloadUrl={getDownloadUrl}
+          smoothTransitions={smoothGalleryTransitions}
           onClose={() => setLightboxOpen(false)}
         />
       )}

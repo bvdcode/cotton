@@ -2,13 +2,15 @@
 {
     public static class PreviewGeneratorProvider
     {
-        public const int DefaultPreviewSize = 256;
+        public const int DefaultSmallPreviewSize = 200;
+        public const int DefaultLargePreviewSize = 1600;
 
         private static readonly IPreviewGenerator[] Generators =
         [
             new PdfPreviewGenerator(),
             new HeicPreviewGenerator(),
             new TextPreviewGenerator(),
+            new AudioPreviewGenerator(),
             new VideoPreviewGenerator(),
             new ImagePreviewGenerator(),
         ];

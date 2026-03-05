@@ -21,6 +21,7 @@ import type { FileBrowserViewMode } from "../hooks/useFilesLayout";
 export interface PageHeaderProps {
   loading: boolean;
   breadcrumbs: Array<{ id: string; name: string }>;
+  onNavigateBreadcrumb?: (breadcrumbIndex: number) => void;
   stats: { folders: number; files: number; sizeBytes: number };
   viewMode: FileBrowserViewMode;
   canGoUp: boolean;
@@ -54,6 +55,7 @@ export interface PageHeaderProps {
 export const PageHeader: React.FC<PageHeaderProps> = ({
   loading,
   breadcrumbs,
+  onNavigateBreadcrumb,
   stats,
   viewMode,
   canGoUp,
@@ -221,7 +223,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           </Box>
         </Box>
 
-        <FileBreadcrumbs breadcrumbs={breadcrumbs} />
+        <FileBreadcrumbs
+          breadcrumbs={breadcrumbs}
+          onNavigateBreadcrumb={onNavigateBreadcrumb}
+        />
 
         {selectionMode && selectedCount > 0 && (
           <>
