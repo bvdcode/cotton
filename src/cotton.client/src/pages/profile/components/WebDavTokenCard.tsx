@@ -182,7 +182,7 @@ export const WebDavTokenCard = () => {
 
         <Accordion
           disableGutters
-          TransitionProps={{ unmountOnExit: true }}
+          TransitionProps={{ mountOnEnter: true, unmountOnExit: false }}
           sx={{
             boxShadow: "none",
             "&:before": { display: "none" },

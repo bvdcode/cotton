@@ -65,6 +65,43 @@ const stripExtension = (fileName: string): string => {
   return fileName.slice(0, idx);
 };
 
+const PLAYLIST_COLLATOR = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+
+const normalizeTrackName = (name: string): string => stripExtension(name).trim();
+
+const compareNullableStrings = (a: string | null, b: string | null): number => {
+  if (a === b) return 0;
+  if (a === null) return -1;
+  if (b === null) return 1;
+  return PLAYLIST_COLLATOR.compare(a, b);
+};
+
+const sortAudioPlaylist = (
+  items: ReadonlyArray<AudioPlaylistItem>,
+): AudioPlaylistItem[] => {
+  if (items.length <= 1) {
+    return items.slice();
+  }
+
+  const next = items.slice();
+  next.sort((left, right) => {
+    const folderCompare = compareNullableStrings(
+      left.folderPath ?? null,
+      right.folderPath ?? null,
+    );
+    if (folderCompare !== 0) return folderCompare;
+
+    return PLAYLIST_COLLATOR.compare(
+      normalizeTrackName(left.name),
+      normalizeTrackName(right.name),
+    );
+  });
+  return next;
+};
+
 const buildLyricsKey = (folderNodeId: string, audioFileName: string): string => {
   const base = stripExtension(audioFileName).trim().toLowerCase();
   return `${folderNodeId}:${base}`;
@@ -249,7 +286,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
       open: true,
       currentFileId: fileId,
       currentFileName: fileName,
-      playlist: effectivePlaylist,
+      playlist: sortAudioPlaylist(effectivePlaylist),
     });
   },
 
@@ -426,7 +463,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
         }
       }
 
-      set({ playlist: next });
+      set({ playlist: sortAudioPlaylist(next) });
     } finally {
       set({ isScanning: false });
     }
