@@ -7,6 +7,7 @@ import {
   Typography,
   Avatar,
   Alert,
+  AlertTitle,
   IconButton,
   Tooltip,
   Link,
@@ -27,6 +28,7 @@ import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import Loader from "../../shared/ui/Loader";
 import axios from "axios";
 import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
+import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 
 type LoginErrorData = {
   message?: string;
@@ -71,6 +73,51 @@ function tryGetTwoFactorHint(args: {
 
   return null;
 }
+
+function formatUptime(uptimeStr: string): string {
+  const match = /^(\d+)\.?(\d{2}):(\d{2}):(\d{2})/.exec(uptimeStr);
+  if (match) {
+    const days = parseInt(match[1], 10);
+    const hours = parseInt(match[2], 10);
+    const minutes = parseInt(match[3], 10);
+    const seconds = parseInt(match[4], 10);
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (parts.length === 0) parts.push(`${seconds}s`);
+    return parts.join(" ");
+  }
+  const hmMatch = /^(\d{2}):(\d{2}):(\d{2})/.exec(uptimeStr);
+  if (hmMatch) {
+    const hours = parseInt(hmMatch[1], 10);
+    const minutes = parseInt(hmMatch[2], 10);
+    const seconds = parseInt(hmMatch[3], 10);
+    const parts: string[] = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (parts.length === 0) parts.push(`${seconds}s`);
+    return parts.join(" ");
+  }
+  return uptimeStr;
+}
+
+type FirstRunAlertProps = {
+  title: string;
+  message: string;
+};
+
+const FirstRunAlert: React.FC<FirstRunAlertProps> = ({
+  title,
+  message,
+}) => {
+  return (
+    <Alert severity="info" sx={{ mb: 2 }}>
+      <AlertTitle>{title}</AlertTitle>
+      {message}
+    </Alert>
+  );
+};
 
 type LoginAlertsProps = {
   error: string;
@@ -282,6 +329,13 @@ export const LoginPage = () => {
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
 
+  const serverInfo = useServerInfoStore((s) => s.data);
+  const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
+
+  useEffect(() => {
+    fetchServerInfo();
+  }, [fetchServerInfo]);
+
   const submitLogin = useCallback(async () => {
     setError("");
     setLoading(true);
@@ -421,6 +475,9 @@ export const LoginPage = () => {
   const showRestoreOverlay =
     hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
 
+  const showFirstRunAlert =
+    serverInfo !== null && !serverInfo.serverHasUsers;
+
   return (
     <>
       {(isInitializing || showRestoreOverlay) && (
@@ -437,6 +494,14 @@ export const LoginPage = () => {
             p: 4,
           }}
         >
+          {showFirstRunAlert && (
+            <FirstRunAlert
+              title={t("firstRun.title")}
+              message={t("firstRun.message", {
+                uptime: formatUptime(serverInfo.uptime),
+              })}
+            />
+          )}
           <Box
             display="flex"
             justifyContent="space-between"

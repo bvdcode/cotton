@@ -160,10 +160,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("encryption_threads");
 
-                    b.Property<int>("ImportSource")
-                        .HasColumnType("integer")
-                        .HasColumnName("import_source");
-
                     b.Property<Guid>("InstanceId")
                         .HasColumnType("uuid")
                         .HasColumnName("instance_id");
@@ -173,6 +169,7 @@ namespace Cotton.Database.Migrations
                         .HasColumnName("max_chunk_size_bytes");
 
                     b.Property<string>("PublicBaseUrl")
+                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("public_base_url");
 
@@ -254,18 +251,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<string>("WebdavHost")
-                        .HasColumnType("text")
-                        .HasColumnName("webdav_host");
-
-                    b.Property<string>("WebdavPasswordEncrypted")
-                        .HasColumnType("text")
-                        .HasColumnName("webdav_password_encrypted");
-
-                    b.Property<string>("WebdavUsername")
-                        .HasColumnType("text")
-                        .HasColumnName("webdav_username");
-
                     b.HasKey("Id");
 
                     b.ToTable("server_settings");
@@ -344,9 +329,9 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("EncryptedFilePreviewHash")
+                    b.Property<byte[]>("LargeFilePreviewHash")
                         .HasColumnType("bytea")
-                        .HasColumnName("encrypted_file_preview_hash");
+                        .HasColumnName("large_file_preview_hash");
 
                     b.Property<string>("PreviewGenerationError")
                         .HasColumnType("text")
@@ -360,6 +345,14 @@ namespace Cotton.Database.Migrations
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
+
+                    b.Property<byte[]>("SmallFilePreviewHash")
+                        .HasColumnType("bytea")
+                        .HasColumnName("small_file_preview_hash");
+
+                    b.Property<byte[]>("SmallFilePreviewHashEncrypted")
+                        .HasColumnType("bytea")
+                        .HasColumnName("small_file_preview_hash_encrypted");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -550,6 +543,55 @@ namespace Cotton.Database.Migrations
                     b.ToTable("node_files");
                 });
 
+            modelBuilder.Entity("Cotton.Database.Models.NodeShareToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("node_id");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("token");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("NodeId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("node_share_tokens");
+                });
+
             modelBuilder.Entity("Cotton.Database.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -680,6 +722,7 @@ namespace Cotton.Database.Migrations
 
                     b.Property<string>("Username")
                         .IsRequired()
+                        .HasMaxLength(32)
                         .HasColumnType("citext")
                         .HasColumnName("username");
 
@@ -889,6 +932,25 @@ namespace Cotton.Database.Migrations
                     b.Navigation("Node");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.NodeShareToken", b =>
+                {
+                    b.HasOne("Cotton.Database.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cotton.Database.Models.Node", "Node")
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Node");
                 });
 
             modelBuilder.Entity("Cotton.Database.Models.Notification", b =>

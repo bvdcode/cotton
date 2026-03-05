@@ -2,11 +2,17 @@ import { httpClient } from "./httpClient";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
 
 export interface NodeFileManifestDto extends BaseDto {
-  ownerId: Guid;
+  /**
+   * Container node id (folder) where this file is located.
+   * Present in search results; may be omitted in other endpoints.
+   */
+  nodeId?: Guid;
+  ownerId?: Guid;
   name: string;
   contentType: string;
   sizeBytes: number;
-  encryptedFilePreviewHashHex?: string | null;
+  previewHashEncryptedHex?: string | null;
+  largeFilePreviewPresignedToken?: string | null;
 }
 export interface NodeResponse {
   content: NodeContentDto;
@@ -48,7 +54,7 @@ export const nodesApi = {
 
   getChildren: async (
     nodeId: Guid,
-    options?: { nodeType?: string; page?: number; pageSize?: number },
+    options?: { nodeType?: string; page?: number; pageSize?: number; depth?: number },
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000000;
@@ -59,6 +65,7 @@ export const nodesApi = {
           page: requestedPage,
           pageSize: requestedPageSize,
           nodeType: options?.nodeType,
+          depth: options?.depth,
         },
       },
     );

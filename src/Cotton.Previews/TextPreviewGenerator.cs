@@ -26,7 +26,7 @@ namespace Cotton.Previews
 
         private static readonly FontFamily _fontFamily = LoadFontFamily();
 
-        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = PreviewGeneratorProvider.DefaultPreviewSize)
+        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 

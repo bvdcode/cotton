@@ -10,7 +10,6 @@ using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
-using System.Net.Http.Json;
 
 namespace Cotton.Server.Providers
 {
@@ -20,6 +19,9 @@ namespace Cotton.Server.Providers
     {
         private static readonly Lock _cacheLock = new();
         private static CottonServerSettings? _cache;
+        private static readonly TimeSpan _boolCacheTtl = TimeSpan.FromMinutes(1);
+        private static (bool Value, DateTimeOffset CachedAt)? _isServerInitializedCache;
+        private static (bool Value, DateTimeOffset CachedAt)? _serverHasUsersCache;
         private const int defaultSessionTimeoutHours = 24 * 30;
         private const int defaultTotpMaxFailedAttempts = 64;
         private const int defaultEncryptionThreads = 2;
@@ -33,7 +35,7 @@ namespace Cotton.Server.Providers
                 return null;
             }
             byte[] encryptedBytes = Convert.FromBase64String(encryptedValue);
-            return _crypto.Decrypt(encryptedBytes);
+            return _crypto.DecryptString(encryptedBytes);
         }
 
         public CottonServerSettings GetServerSettings()
@@ -76,91 +78,42 @@ namespace Cotton.Server.Providers
             }
         }
 
-        public async Task<string?> EnsurePublicBaseUrlAsync(HttpRequest request, CancellationToken cancellationToken = default)
+        public async Task<bool> IsServerInitializedAsync()
         {
-            var cached = GetServerSettings();
-            if (!string.IsNullOrWhiteSpace(cached.PublicBaseUrl))
-            {
-                return cached.PublicBaseUrl;
-            }
-
-            string? incoming = TryBuildBaseUrl(request);
-            if (string.IsNullOrWhiteSpace(incoming))
-            {
-                return null;
-            }
-
-            // Capture in cache first (covers pre-initialization requests).
+            var now = DateTimeOffset.UtcNow;
             lock (_cacheLock)
             {
-                _cache ??= cached;
-                if (string.IsNullOrWhiteSpace(_cache.PublicBaseUrl))
+                if (_isServerInitializedCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
                 {
-                    _cache.PublicBaseUrl = incoming;
+                    return cached.Value;
                 }
             }
 
-            // Persist to DB if server settings already exist.
-            var lastSettings = await _dbContext.ServerSettings
-                .OrderByDescending(s => s.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (lastSettings is not null && string.IsNullOrWhiteSpace(lastSettings.PublicBaseUrl))
-            {
-                lastSettings.PublicBaseUrl = incoming;
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                InvalidateCache();
-            }
-
-            return incoming;
-        }
-
-        private static string? TryBuildBaseUrl(HttpRequest request)
-        {
-            var host = request.Host;
-            if (!host.HasValue)
-            {
-                return null;
-            }
-
-            string scheme = string.IsNullOrWhiteSpace(request.Scheme) ? "https" : request.Scheme;
-            string candidate = $"{scheme}://{host.Value}";
-
-            if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
-            {
-                return null;
-            }
-
-            // Avoid capturing obvious local dev/loopback addresses.
-            if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            if (System.Net.IPAddress.TryParse(uri.Host, out var ip) && System.Net.IPAddress.IsLoopback(ip))
-            {
-                return null;
-            }
-
-            return uri.GetLeftPart(UriPartial.Authority);
-        }
-
-        public static void InvalidateCache()
-        {
+            bool value = await _dbContext.ServerSettings.AsNoTracking().AnyAsync();
             lock (_cacheLock)
             {
-                _cache = null;
+                _isServerInitializedCache = (value, DateTimeOffset.UtcNow);
             }
+            return value;
         }
 
-        public Task<bool> IsServerInitializedAsync()
+        public async Task<bool> ServerHasUsersAsync()
         {
-            return _dbContext.ServerSettings.AnyAsync();
-        }
+            var now = DateTimeOffset.UtcNow;
+            lock (_cacheLock)
+            {
+                if (_serverHasUsersCache is { } cached && now - cached.CachedAt < _boolCacheTtl)
+                {
+                    return cached.Value;
+                }
+            }
 
-        public Task<bool> ServerHasUsersAsync()
-        {
-            return _dbContext.Users.AnyAsync();
+            bool value = await _dbContext.Users.AsNoTracking().AnyAsync();
+            lock (_cacheLock)
+            {
+                _serverHasUsersCache = (value, DateTimeOffset.UtcNow);
+            }
+            return value;
         }
 
         public async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
@@ -180,12 +133,6 @@ namespace Cotton.Server.Providers
             if (emailError is not null)
             {
                 return emailError;
-            }
-
-            var importError = ValidateImportConstraints(request);
-            if (importError is not null)
-            {
-                return importError;
             }
 
             var storageError = await ValidateStorageConstraintsAsync(request);
@@ -260,26 +207,13 @@ namespace Cotton.Server.Providers
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                var response = await client.GetFromJsonAsync<HealthResponse>(
-                    "https://cotton-gateway.splidex.com/api/v1/health");
+                var response = await client.GetFromJsonAsync<HealthResponse>(CottonPublicEmailProvider.GatewayBaseUrl + "health");
                 return response != null && response.Status == "Healthy";
             }
             catch
             {
                 return false;
             }
-        }
-
-        private static string? ValidateImportConstraints(ServerSettingsRequestDto request)
-        {
-            if (request.ImportSource != ImportSource.Webdav)
-            {
-                return null;
-            }
-
-            return request.WebdavConfig is null
-                ? "WebdavConfig must be provided when using Webdav import source."
-                : null;
         }
 
         private static async Task<string?> ValidateStorageConstraintsAsync(ServerSettingsRequestDto request)
@@ -370,7 +304,6 @@ namespace Cotton.Server.Providers
                 EmailMode = request.Email,
                 ComputionMode = request.ComputionMode,
                 StorageType = request.Storage,
-                ImportSource = request.ImportSource,
                 EncryptionThreads = defaultEncryptionThreads,
                 MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                 CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
@@ -391,17 +324,18 @@ namespace Cotton.Server.Providers
                 S3Region = request.S3Config?.Region,
                 S3EndpointUrl = request.S3Config?.Endpoint,
                 InstanceId = instanceId,
-                PublicBaseUrl = lastSettings?.PublicBaseUrl ?? GetServerSettings().PublicBaseUrl,
+                PublicBaseUrl = request.PublicBaseUrl.TrimEnd('/'),
                 ServerUsage = request.Usage,
                 StorageSpaceMode = request.StorageSpace,
-                WebdavHost = request.WebdavConfig?.ServerUrl,
-                WebdavUsername = request.WebdavConfig?.Username,
-                WebdavPasswordEncrypted = TryEncrypt(request.WebdavConfig?.Password),
                 TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
             };
             await _dbContext.ServerSettings.AddAsync(newSettings);
             await _dbContext.SaveChangesAsync();
             _cache = null;
+            lock (_cacheLock)
+            {
+                _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
+            }
         }
 
         private static int? TryParseInt(string? value)
@@ -415,7 +349,7 @@ namespace Cotton.Server.Providers
             {
                 return null;
             }
-            byte[] passwordBytes = _crypto.Encrypt(password);
+            byte[] passwordBytes = _crypto.EncryptString(password);
             return Convert.ToBase64String(passwordBytes);
         }
     }

@@ -143,9 +143,9 @@ export const TotpSettingsCard = ({
       ariaControls="totp-settings-content"
       icon={
         totpEnabled ? (
-          <SecurityIcon color="success" />
+          <SecurityIcon color="primary" />
         ) : (
-          <SecurityOutlinedIcon color="warning" />
+          <SecurityOutlinedIcon color="primary" />
         )
       }
       title={t("totp.sectionTitle")}

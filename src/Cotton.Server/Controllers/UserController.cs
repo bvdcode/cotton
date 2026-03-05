@@ -41,7 +41,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> SendEmailVerification(CancellationToken cancellationToken)
         {
             Guid userId = User.GetUserId();
-            var request = new SendEmailVerificationRequest(userId, Request);
+            var request = new SendEmailVerificationRequest(userId);
             await _mediator.Send(request, cancellationToken);
             return Ok();
         }
@@ -108,7 +108,7 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost]
-        public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequestDto request, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequest request, CancellationToken cancellationToken)
         {
             AdminCreateUserRequest command = new(request.Username, request.Email, request.Password, request.Role);
             UserDto user = await _mediator.Send(command, cancellationToken);

@@ -21,7 +21,7 @@ namespace Cotton.Email
             @"          <!-- Footer -->
           <tr>
             <td style=""padding:24px 40px;border-top:1px solid #eaeaec;text-align:center;"">
-              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;"">{{year}} Cotton Cloud </a> &middot; &middot; All rights reserved</p>
+              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; {{year}} <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;""> Cotton Cloud </a> &middot; All rights reserved</p>
             </td>
           </tr>
 ";
@@ -30,7 +30,7 @@ namespace Cotton.Email
             @"          <!-- Footer -->
           <tr>
             <td style=""padding:24px 40px;border-top:1px solid #eaeaec;text-align:center;"">
-              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;""> {{year}} Cotton Cloud </a> &middot; &middot; Все права защищены</p>
+              <p style=""margin:0;color:#b0b0b8;font-size:12px;"">&copy; {{year}} <a href=""https://github.com/bvdcode/cotton"" target=""_blank"" style=""color:#b0b0b8;text-decoration:underline;""> Cotton Cloud </a> &middot; Все права защищены</p>
             </td>
           </tr>
 ";

@@ -31,6 +31,11 @@ namespace Cotton.Storage.Tests.Streams
                 return Task.FromResult(_data.ContainsKey(uid));
             }
 
+            public Task<long> GetSizeAsync(string uid)
+            {
+                return Task.FromResult(_data.TryGetValue(uid, out var data) ? data.Length : 0L);
+            }
+
             public Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
             {
                 if (!_data.TryGetValue(uid, out var data))
@@ -43,6 +48,15 @@ namespace Cotton.Storage.Tests.Streams
             public Task WriteAsync(string uid, Stream stream, PipelineContext? context = null)
             {
                 throw new NotImplementedException();
+            }
+
+            public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            {
+                foreach (var key in _data.Keys)
+                {
+                    yield return key;
+                }
+                await Task.CompletedTask;
             }
         }
 

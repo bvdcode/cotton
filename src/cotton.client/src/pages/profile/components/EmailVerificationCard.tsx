@@ -77,9 +77,9 @@ export const EmailVerificationCard = ({ user }: EmailVerificationCardProps) => {
       ariaControls="email-verification-content"
       icon={
         isVerified ? (
-          <MarkEmailRead color="success" />
+          <MarkEmailRead color="primary" />
         ) : (
-          <MarkEmailUnread color="warning" />
+          <MarkEmailUnread color="primary" />
         )
       }
       title={t("emailVerification.title")}
