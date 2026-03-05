@@ -1,6 +1,10 @@
 import React from "react";
-import { PreviewModal, PdfPreview, TextPreview } from "./preview";
+import { PreviewModal, PdfPreview, TextPreview, AudioPreview } from "./preview";
 import type { FileType } from "../utils/fileTypes";
+import type { AudioPlaylistItem } from "./preview/AudioPreview";
+import { Box, IconButton, Paper, Snackbar, Typography } from "@mui/material";
+import { Close } from "@mui/icons-material";
+import type { SnackbarCloseReason } from "@mui/material";
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -8,6 +12,7 @@ interface FilePreviewModalProps {
   fileName: string | null;
   fileType: FileType | null;
   fileSizeBytes: number | null;
+  audioPlaylist?: ReadonlyArray<AudioPlaylistItem> | null;
   onClose: () => void;
   onSaved?: () => void;
 }
@@ -22,11 +27,64 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   fileName,
   fileType,
   fileSizeBytes,
+  audioPlaylist,
   onClose,
   onSaved,
 }) => {
   if (!isOpen || !fileId || !fileName) {
     return null;
+  }
+
+  if (fileType === "audio") {
+    const handleSnackbarClose = (
+      _: Event | React.SyntheticEvent<Element, Event>,
+      reason?: SnackbarCloseReason,
+    ) => {
+      if (reason === "clickaway") return;
+      onClose();
+    };
+
+    return (
+      <Snackbar
+        open={isOpen}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{
+          width: "100%",
+          px: { xs: 0, sm: 2 },
+          pb: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+        }}
+      >
+        <Paper
+          elevation={8}
+          sx={{
+            width: "100%",
+            maxWidth: 920,
+            borderRadius: { xs: 0, sm: 2 },
+            bgcolor: "background.paper",
+            border: 1,
+            borderColor: "divider",
+            overflow: "hidden",
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1} px={2} pt={1}>
+            <Typography variant="subtitle2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+              {fileName}
+            </Typography>
+            <IconButton onClick={onClose} size="small">
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
+          <Box px={2} pb={1}>
+            <AudioPreview
+              nodeFileId={fileId}
+              fileName={fileName}
+              playlist={audioPlaylist}
+            />
+          </Box>
+        </Paper>
+      </Snackbar>
+    );
   }
 
   return (
