@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, LinearProgress } from "@mui/material";
 import H5AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import { filesApi } from "../api/filesApi";
@@ -38,7 +38,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   const currentIndexRef = React.useRef<number>(0);
 
-  const effectivePlaylist = React.useMemo<ReadonlyArray<AudioPlaylistItem>>(() => {
+  const effectivePlaylist = React.useMemo<
+    ReadonlyArray<AudioPlaylistItem>
+  >(() => {
     const list = playlist ?? [];
     if (list.length > 0 && list.some((item) => item.id === currentFileId)) {
       return list;
@@ -94,7 +96,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           setSrc(inlineUrl);
         }
       } catch {
-        if (!cancelled) {
+        // Keep previous src if present; only clear when there is nothing to play.
+        if (!cancelled && !urlCacheRef.current.size) {
           setSrc(null);
         }
       } finally {
@@ -158,6 +161,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   return (
     <Box
       width="100%"
+      position="relative"
       sx={(theme) => ({
         "& .rhap_container": {
           backgroundColor: "transparent",
@@ -182,30 +186,37 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         "& .rhap_main-controls-button, & .rhap_volume-button": {
           color: theme.palette.text.primary,
         },
-        "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button": {
-          color: theme.palette.text.primary,
-        },
+        "& .rhap_repeat-button, & .rhap_forward-button, & .rhap_rewind-button":
+          {
+            color: theme.palette.text.primary,
+          },
       })}
     >
       {loading && (
-        <Box display="flex" alignItems="center" justifyContent="center" py={1}>
-          <CircularProgress size={18} />
+        <Box
+          position="absolute"
+          top={8}
+          right={8}
+          zIndex={1}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <LinearProgress />
         </Box>
       )}
 
-      {!loading && src && (
-        <H5AudioPlayer
-          src={src}
-          autoPlay
-          autoPlayAfterSrcChange
-          showSkipControls={hasPlaylist}
-          showJumpControls={false}
-          onClickPrevious={hasPlaylist ? handlePrevious : undefined}
-          onClickNext={hasPlaylist ? handleNext : undefined}
-          onEnded={handleEnded}
-          preload="metadata"
-        />
-      )}
+      <H5AudioPlayer
+        src={src ?? ""}
+        autoPlay
+        autoPlayAfterSrcChange
+        showSkipControls={hasPlaylist}
+        showJumpControls={false}
+        onClickPrevious={hasPlaylist ? handlePrevious : undefined}
+        onClickNext={hasPlaylist ? handleNext : undefined}
+        onEnded={handleEnded}
+        preload="metadata"
+      />
     </Box>
   );
 };
