@@ -23,6 +23,11 @@ namespace Cotton.Storage.Pipelines
             return _backendProvider.GetBackend().DeleteAsync(uid);
         }
 
+        public Task<long> GetSizeAsync(string uid)
+        {
+            return _backendProvider.GetBackend().GetSizeAsync(uid);
+        }
+
         public async Task<Stream> ReadAsync(string uid, PipelineContext? context = null)
         {
             var backend = _backendProvider.GetBackend();
@@ -73,6 +78,11 @@ namespace Cotton.Storage.Pipelines
             {
                 _maxParallel.Release();
             }
+        }
+
+        public IAsyncEnumerable<string> ListAllKeysAsync(CancellationToken ct = default)
+        {
+            return _backendProvider.GetBackend().ListAllKeysAsync(ct);
         }
     }
 }

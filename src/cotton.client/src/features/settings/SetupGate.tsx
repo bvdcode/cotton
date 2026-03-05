@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import Loader from "../../shared/ui/Loader";
-import { useSettingsStore } from "../../shared/store/settingsStore";
+import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 import { useAuth } from "../auth";
 
 type Props = {
@@ -10,23 +10,23 @@ type Props = {
 
 /**
  * Guards routes based on server initialization state.
- * - Fetches settings if not loaded yet
+ * - Fetches public server info (no auth required)
  * - Redirects to /setup if server is not initialized
  * - Redirects from /setup to home when server is initialized
  */
 export function SetupGate({ children }: Props) {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-  const data = useSettingsStore((s) => s.data);
-  const loaded = useSettingsStore((s) => s.loaded);
-  const loading = useSettingsStore((s) => s.loading);
-  const fetchSettings = useSettingsStore((s) => s.fetchSettings);
+  const data = useServerInfoStore((s) => s.data);
+  const loaded = useServerInfoStore((s) => s.loaded);
+  const loading = useServerInfoStore((s) => s.loading);
+  const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     if (loaded || loading) return;
-    fetchSettings();
-  }, [isAuthenticated, loaded, loading, fetchSettings]);
+    fetchServerInfo();
+  }, [isAuthenticated, loaded, loading, fetchServerInfo]);
 
   if (!loaded || loading) {
     return (

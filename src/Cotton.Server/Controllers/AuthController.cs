@@ -47,9 +47,10 @@ namespace Cotton.Server.Controllers
         WebDavAuthCache _webDavAuthCache,
         INotificationsProvider _notifications) : ControllerBase
     {
-        private const int WebDavTokenLength = 32;
-        private const int RefreshTokenLength = 32;
-        private const string CookieRefreshTokenKey = "refresh_token";
+        public const int WebDavTokenLength = 32;
+        public const int RefreshTokenLength = 32;
+        public const string CookieAccessTokenKey = "access_token";
+        public const string CookieRefreshTokenKey = "refresh_token";
 
         [Authorize]
         [HttpGet("webdav/token")]
@@ -114,7 +115,7 @@ namespace Cotton.Server.Controllers
             {
                 return this.ApiBadRequest("TOTP setup has not been initiated for this user");
             }
-            string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
+            string secret = _crypto.DecryptString(user.TotpSecretEncrypted);
             bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode);
             if (!isValid)
             {
@@ -148,7 +149,7 @@ namespace Cotton.Server.Controllers
                 ? user.Username
                 : $"{user.Username}@{Request.Host.Host}";
             TotpSetup setup = TotpHelpers.CreateSetup(issuer, account);
-            user.TotpSecretEncrypted = _crypto.Encrypt(setup.SecretBase32);
+            user.TotpSecretEncrypted = _crypto.EncryptString(setup.SecretBase32);
             await _dbContext.SaveChangesAsync();
             return Ok(setup);
         }
@@ -193,6 +194,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.RefreshTokens.AddAsync(dbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token, request.TrustDevice);
+            AddAccessTokenToCookies(accessToken);
             await _notifications.SendSuccessfulLoginAsync(user.Id,
                 Request.GetRemoteIPAddress(),
                 Request.Headers.UserAgent);
@@ -258,7 +260,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
             }
 
-            string secret = _crypto.Decrypt(user.TotpSecretEncrypted);
+            string secret = _crypto.DecryptString(user.TotpSecretEncrypted);
             bool isValid = TotpHelpers.VerifyCode(secret, request.TwoFactorCode);
             if (!isValid)
             {
@@ -303,6 +305,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.RefreshTokens.AddAsync(newDbToken);
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(newDbToken.Token, dbToken.IsTrusted);
+            AddAccessTokenToCookies(accessToken);
             return Ok(new TokenPairResponseDto()
             {
                 AccessToken = accessToken,
@@ -386,6 +389,17 @@ namespace Cotton.Server.Controllers
                 HttpOnly = true,
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddHours(trustDevice ? yearHours : sessionTimeoutHours)
+            });
+        }
+
+        private void AddAccessTokenToCookies(string accessToken)
+        {
+            Response.Cookies.Append(CookieAccessTokenKey, accessToken, new CookieOptions
+            {
+                Secure = true,
+                HttpOnly = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.Add(_tokens.TokenLifetime)
             });
         }
 

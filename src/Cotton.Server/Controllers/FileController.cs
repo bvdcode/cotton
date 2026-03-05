@@ -262,7 +262,8 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,
             [FromQuery] string token,
-            [FromQuery] bool download = true)
+            [FromQuery] bool download = true,
+            [FromQuery] bool preview = false)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -283,6 +284,27 @@ namespace Cotton.Server.Controllers
             if (downloadToken == null || (downloadToken.ExpiresAt.HasValue && downloadToken.ExpiresAt.Value < DateTime.UtcNow))
             {
                 return CottonResult.NotFound("File not found");
+            }
+
+            if (preview && nodeFile.FileManifest.LargeFilePreviewHash != null)
+            {
+                string previewHashHex = Hasher.ToHexStringHash(nodeFile.FileManifest.LargeFilePreviewHash);
+                var previewStream = _storage.GetBlobStream([previewHashHex]);
+                string etag = $"\"sha256-{previewHashHex}\"";
+                var etagHeader = new EntityTagHeaderValue(etag);
+                if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var inmValues))
+                {
+                    var clientEtags = EntityTagHeaderValue.ParseList([.. inmValues!]);
+                    if (clientEtags.Any(x => x.Compare(etagHeader, useStrongComparison: true)))
+                    {
+                        Response.Headers.ETag = etagHeader.ToString();
+                        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                        return StatusCode(StatusCodes.Status304NotModified);
+                    }
+                }
+                Response.Headers.ETag = etag;
+                Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                return File(previewStream, "image/webp");
             }
 
             string[] uids = nodeFile.FileManifest.FileManifestChunks.GetChunkHashes();

@@ -13,6 +13,8 @@ interface LocalPreferencesState {
   filesTilesSize: TilesSize;
   trashTilesSize: TilesSize;
 
+  gallerySmoothTransitions: boolean;
+
   editorModes: Record<string, string>;
   languageOverrides: Record<string, string>;
 
@@ -20,6 +22,8 @@ interface LocalPreferencesState {
   setTrashLayoutType: (layoutType: InterfaceLayoutType) => void;
   setFilesTilesSize: (size: TilesSize) => void;
   setTrashTilesSize: (size: TilesSize) => void;
+
+  setGallerySmoothTransitions: (enabled: boolean) => void;
 
   setEditorMode: (fileId: string, mode: string) => void;
   setLanguageOverride: (fileId: string, language: string) => void;
@@ -33,6 +37,7 @@ const INITIAL_STATE = {
   trashLayoutType: null as InterfaceLayoutType | null,
   filesTilesSize: DEFAULT_TILES_SIZE as TilesSize,
   trashTilesSize: DEFAULT_TILES_SIZE as TilesSize,
+  gallerySmoothTransitions: true,
   editorModes: {} as Record<string, string>,
   languageOverrides: {} as Record<string, string>,
 };
@@ -46,6 +51,9 @@ export const useLocalPreferencesStore = create<LocalPreferencesState>()(
       setTrashLayoutType: (layoutType) => set({ trashLayoutType: layoutType }),
       setFilesTilesSize: (size) => set({ filesTilesSize: size }),
       setTrashTilesSize: (size) => set({ trashTilesSize: size }),
+
+      setGallerySmoothTransitions: (enabled) =>
+        set({ gallerySmoothTransitions: enabled }),
 
       setEditorMode: (fileId, mode) =>
         set((s) => ({
@@ -85,3 +93,7 @@ export const selectFilesTilesSize = (s: LocalPreferencesState): TilesSize =>
 
 export const selectTrashTilesSize = (s: LocalPreferencesState): TilesSize =>
   s.trashTilesSize;
+
+export const selectGallerySmoothTransitions = (
+  s: LocalPreferencesState,
+): boolean => s.gallerySmoothTransitions;

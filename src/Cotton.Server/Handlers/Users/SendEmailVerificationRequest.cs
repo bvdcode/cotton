@@ -11,10 +11,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    public class SendEmailVerificationRequest(Guid userId, HttpRequest httpRequest) : IRequest
+    public class SendEmailVerificationRequest(Guid userId) : IRequest
     {
         public Guid UserId { get; } = userId;
-        public HttpRequest HttpRequest { get; } = httpRequest;
     }
 
     public class SendEmailVerificationRequestHandler(
@@ -52,9 +51,7 @@ namespace Cotton.Server.Handlers.Users
             user.EmailVerificationTokenSentAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            string fallbackBaseUrl = $"{request.HttpRequest.Scheme}://{request.HttpRequest.Host}";
-            string baseUrl = await _settingsProvider.EnsurePublicBaseUrlAsync(request.HttpRequest, cancellationToken)
-                ?? fallbackBaseUrl;
+            string baseUrl = _settingsProvider.GetServerSettings().PublicBaseUrl;
             var parameters = new Dictionary<string, string>
             {
                 ["token"] = user.EmailVerificationToken,

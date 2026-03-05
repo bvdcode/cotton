@@ -21,6 +21,12 @@ public sealed class InMemoryStorage : IStoragePipeline
         return Task.FromResult(_blobs.TryRemove(uid, out _));
     }
 
+    public Task<long> GetSizeAsync(string uid)
+    {
+        ArgumentNullException.ThrowIfNull(uid);
+        return Task.FromResult(_blobs.TryGetValue(uid, out var data) ? data.Length : 0L);
+    }
+
     public Task<bool> ExistsAsync(string uid)
     {
         ArgumentNullException.ThrowIfNull(uid);
@@ -54,5 +60,14 @@ public sealed class InMemoryStorage : IStoragePipeline
         }
         await stream.CopyToAsync(ms).ConfigureAwait(false);
         _blobs[uid] = ms.ToArray();
+    }
+
+    public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        foreach (var key in _blobs.Keys)
+        {
+            yield return key;
+        }
+        await Task.CompletedTask;
     }
 }

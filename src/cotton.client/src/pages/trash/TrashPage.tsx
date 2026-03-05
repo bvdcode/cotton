@@ -7,13 +7,10 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-  Snackbar,
 } from "@mui/material";
 import {
   FileListViewFactory,
   PageHeader,
-  MediaLightbox,
-  FilePreviewModal,
 } from "../files/components";
 import { Delete } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -25,20 +22,12 @@ import type { NodeContentDto } from "../../shared/api/nodesApi";
 import { useTrashStore } from "../../shared/store/trashStore";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
-import { useFilePreview } from "../files/hooks/useFilePreview";
-import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
-import { downloadFile } from "../files/utils/fileHandlers";
 import {
   buildBreadcrumbs,
   calculateFolderStats,
 } from "../files/utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
-import {
-  buildFolderOperations,
-  buildFileOperations,
-} from "../../shared/utils/operationsAdapters";
-import { shareFile } from "../../shared/utils/shareFile";
 import { filesApi } from "../../shared/api/filesApi";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
@@ -48,6 +37,11 @@ import {
 } from "../../shared/store/localPreferencesStore";
 import type { TilesSize } from "../files/types/FileListViewTypes";
 import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
+import type {
+  FileOperations,
+  FolderOperations,
+} from "../files/types/FileListViewTypes";
+import { useFileSelection } from "../files/hooks/useFileSelection";
 
 function getTrashViewMode(args: {
   layoutType: InterfaceLayoutType;
@@ -64,58 +58,61 @@ function getTrashViewMode(args: {
 
 async function deleteAllTrashItems(args: {
   content: NodeContentDto;
+  isTrashRoot: boolean;
   onProgress: (current: number, total: number) => void;
 }): Promise<void> {
-  const { content, onProgress } = args;
-  const totalItems =
-    (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+  const { content, isTrashRoot, onProgress } = args;
 
-  let deleted = 0;
-
-  for (const folder of content.nodes ?? []) {
-    try {
-      await nodesApi.deleteNode(folder.id, true);
-      deleted += 1;
-      onProgress(deleted, totalItems);
-    } catch (err) {
-      console.error(`Failed to delete folder ${folder.id}:`, err);
+  if (isTrashRoot) {
+    // Collect unique wrapper node IDs from the unwrapped content.
+    // For nodes: parentId is the wrapper; for files: nodeId is the wrapper.
+    const wrapperIds = new Set<string>();
+    for (const node of content.nodes ?? []) {
+      if (node.parentId) wrapperIds.add(node.parentId);
     }
-  }
+    for (const file of content.files ?? []) {
+      if (file.nodeId) wrapperIds.add(file.nodeId);
+    }
 
-  for (const file of content.files ?? []) {
-    try {
-      await filesApi.deleteFile(file.id, true);
-      deleted += 1;
-      onProgress(deleted, totalItems);
-    } catch (err) {
-      console.error(`Failed to delete file ${file.id}:`, err);
+    const wrapperArray = [...wrapperIds];
+    let deleted = 0;
+
+    for (const wrapperId of wrapperArray) {
+      try {
+        await nodesApi.deleteNode(wrapperId, true);
+        deleted += 1;
+        onProgress(deleted, wrapperArray.length);
+      } catch (err) {
+        console.error(`Failed to delete trash wrapper ${wrapperId}:`, err);
+      }
+    }
+  } else {
+    const totalItems =
+      (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
+
+    let deleted = 0;
+
+    for (const folder of content.nodes ?? []) {
+      try {
+        await nodesApi.deleteNode(folder.id, true);
+        deleted += 1;
+        onProgress(deleted, totalItems);
+      } catch (err) {
+        console.error(`Failed to delete folder ${folder.id}:`, err);
+      }
+    }
+
+    for (const file of content.files ?? []) {
+      try {
+        await filesApi.deleteFile(file.id, true);
+        deleted += 1;
+        onProgress(deleted, totalItems);
+      } catch (err) {
+        console.error(`Failed to delete file ${file.id}:`, err);
+      }
     }
   }
 }
-
-type ShareToastState = {
-  open: boolean;
-  message: string;
-};
-
-type ShareToastSnackbarProps = {
-  toast: ShareToastState;
-  onClose: () => void;
-};
-
-const ShareToastSnackbar: React.FC<ShareToastSnackbarProps> = ({
-  toast,
-  onClose,
-}) => {
-  return (
-    <Snackbar
-      open={toast.open}
-      autoHideDuration={2500}
-      onClose={onClose}
-      message={toast.message}
-    />
-  );
-};
 
 type EmptyTrashProgressDialogProps = {
   open: boolean;
@@ -141,7 +138,7 @@ const EmptyTrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
 };
 
 export const TrashPage: React.FC = () => {
-  const { t } = useTranslation(["trash", "common"]);
+  const { t } = useTranslation(["trash", "common", "files"]);
   const navigate = useNavigate();
   const params = useParams<{ nodeId?: string }>();
   const confirm = useConfirm();
@@ -227,6 +224,7 @@ export const TrashPage: React.FC = () => {
           nodeType: "trash",
           page: page + 1,
           pageSize,
+          depth: !routeNodeId ? 1 : 0,
         });
         setListContent(response.content);
         setListTotalCount(response.totalCount);
@@ -237,7 +235,7 @@ export const TrashPage: React.FC = () => {
         setListLoading(false);
       }
     },
-    [nodeId, t],
+    [nodeId, routeNodeId, t],
   );
 
   useEffect(() => {
@@ -308,41 +306,82 @@ export const TrashPage: React.FC = () => {
     listContent,
   });
 
-  const { sortedFiles, tiles } = useContentTiles(effectiveContent);
+  const { tiles } = useContentTiles(effectiveContent);
 
-  const folderOps = useTrashFolderOperations(nodeId, refreshContent);
-  const fileOps = useTrashFileOperations(refreshContent);
-  const { previewState, openPreview, closePreview } = useFilePreview();
+  const fileSelection = useFileSelection();
 
-  const {
-    lightboxOpen,
-    lightboxIndex,
-    mediaItems,
-    getSignedMediaUrl,
-    handleMediaClick,
-    setLightboxOpen,
-  } = useMediaLightbox(sortedFiles);
+  const isTrashRoot = !routeNodeId;
+
+  const goToFolder = React.useMemo(
+    () => (folderId: string) => navigate(`/trash/${folderId}`),
+    [navigate],
+  );
+
+  const goHome = React.useMemo(() => () => navigate("/trash"), [navigate]);
+
+  const resolveWrapperNodeId = React.useCallback(
+    (itemId: string): string | null => {
+      if (!isTrashRoot || !effectiveContent) return null;
+      const node = effectiveContent.nodes?.find((n) => n.id === itemId);
+      if (node?.parentId) return node.parentId;
+      const file = effectiveContent.files?.find((f) => f.id === itemId);
+      if (file?.nodeId) return file.nodeId;
+      return null;
+    },
+    [isTrashRoot, effectiveContent],
+  );
+
+  const folderOps = useTrashFolderOperations(
+    nodeId,
+    refreshContent,
+    isTrashRoot ? resolveWrapperNodeId : undefined,
+  );
+  const fileOps = useTrashFileOperations(
+    refreshContent,
+    isTrashRoot ? resolveWrapperNodeId : undefined,
+  );
+
+  const folderOperations = React.useMemo<FolderOperations>(
+    () => ({
+      isRenaming: () => false,
+      getRenamingName: () => "",
+      onRenamingNameChange: () => {},
+      onClick: goToFolder,
+      onDelete: (folderId: string, folderName: string) => {
+        void folderOps.handleDeleteFolder(folderId, folderName);
+      },
+    }),
+    [folderOps.handleDeleteFolder, goToFolder],
+  );
+
+  const fileOperations = React.useMemo<FileOperations>(
+    () => ({
+      isRenaming: () => false,
+      getRenamingName: () => "",
+      onRenamingNameChange: () => {},
+      onClick: () => {
+        // No preview/download in Trash.
+      },
+      onDelete: (fileId: string, fileName: string) => {
+        void fileOps.handleDeleteFile(fileId, fileName);
+      },
+    }),
+    [fileOps.handleDeleteFile],
+  );
 
   const stats = useMemo(
     () => calculateFolderStats(content?.nodes, content?.files),
     [content?.files, content?.nodes],
   );
 
-  const goToFolder = useMemo(
-    () => (folderId: string) => navigate(`/trash/${folderId}`),
-    [navigate],
-  );
-
-  const goHome = useMemo(() => () => navigate("/trash"), [navigate]);
-
-  const handleGoUp = () => {
+  const handleGoUp = React.useCallback(() => {
     if (ancestors.length > 0) {
       const parent = ancestors[ancestors.length - 1];
       navigate(`/trash/${parent.id}`);
     } else {
       navigate("/trash");
     }
-  };
+  }, [ancestors, navigate]);
 
   const handleEmptyTrash = React.useCallback(async () => {
     if (!content) return;
@@ -367,6 +406,7 @@ export const TrashPage: React.FC = () => {
 
       await deleteAllTrashItems({
         content,
+        isTrashRoot,
         onProgress: (current, total) =>
           setEmptyTrashProgress({ current, total }),
       });
@@ -376,43 +416,79 @@ export const TrashPage: React.FC = () => {
     } catch {
       setEmptyingTrash(false);
     }
-  }, [confirm, content, refreshContent, t]);
+  }, [confirm, content, isTrashRoot, refreshContent, t]);
 
-  const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
-    await downloadFile(nodeFileId, fileName);
-  };
+  const handleDeleteSelected = React.useCallback(async () => {
+    if (!nodeId) return;
+    if (!fileSelection.selectionMode) return;
+    if (fileSelection.selectedCount <= 0) return;
 
-  const [shareToast, setShareToast] = React.useState<ShareToastState>({
-    open: false,
-    message: "",
-  });
+    const selected = fileSelection.selectedIds;
+    const selectedTiles = tiles.filter((tile) => {
+      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      return selected.has(id);
+    });
 
-  const handleShareFile = React.useCallback(
-    async (nodeFileId: string, fileName: string) => {
-      await shareFile(nodeFileId, fileName, t, setShareToast);
-    },
-    [t],
-  );
+    if (selectedTiles.length === 0) return;
 
-  const handleFileClick = (
-    fileId: string,
-    fileName: string,
-    fileSizeBytes?: number,
-  ) => {
-    const opened = openPreview(fileId, fileName, fileSizeBytes);
-    if (!opened) {
-      void handleDownloadFile(fileId, fileName);
+    const result = await confirm({
+      title: t("deleteSelectedForever.confirmTitle", {
+        ns: "trash",
+        count: selectedTiles.length,
+      }),
+      description: t("deleteSelectedForever.confirmDescription", {
+        ns: "trash",
+      }),
+      confirmationText: t("common:actions.delete"),
+      cancellationText: t("common:actions.cancel"),
+      confirmationButtonProps: { color: "error" },
+    });
+
+    if (!result.confirmed) return;
+
+    let hadError = false;
+
+    for (const tile of selectedTiles) {
+      try {
+        const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
+        const wrapperId = resolveWrapperNodeId(id);
+
+        if (wrapperId) {
+          await nodesApi.deleteNode(wrapperId, true);
+          continue;
+        }
+
+        if (tile.kind === "folder") {
+          await nodesApi.deleteNode(tile.node.id, true);
+        } else {
+          await filesApi.deleteFile(tile.file.id, true);
+        }
+      } catch (e) {
+        hadError = true;
+        console.error("Failed to delete selected trash item", e);
+      }
     }
-  };
 
-  const folderOperations = buildFolderOperations(folderOps, goToFolder);
+    fileSelection.deselectAll();
+    await refreshContent();
 
-  const fileOperations = buildFileOperations(fileOps, {
-    onDownload: handleDownloadFile,
-    onShare: handleShareFile,
-    onClick: handleFileClick,
-    onMediaClick: handleMediaClick,
-  });
+    if (hadError) {
+      // Keep console diagnostics; UI refresh already triggered.
+    }
+  }, [confirm, fileSelection, nodeId, refreshContent, resolveWrapperNodeId, t, tiles]);
+
+  const handleToggleItem = React.useCallback(
+    (
+      id: string,
+      options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
+    ) => {
+      if (!fileSelection.selectionMode) {
+        fileSelection.toggleSelectionMode();
+      }
+      fileSelection.toggleItem(id, options);
+    },
+    [fileSelection],
+  );
 
   const isCreatingInThisFolder = false;
 
@@ -427,8 +503,23 @@ export const TrashPage: React.FC = () => {
       onHomeClick: goHome,
       onViewModeCycle: cycleViewMode,
       statsNamespace: "trash",
+      selectionMode: fileSelection.selectionMode,
+      selectedCount: fileSelection.selectedCount,
+      onSelectAll: () => fileSelection.selectAll(tiles),
+      onDeselectAll: fileSelection.deselectAll,
       customActions:
-        ancestors.length === 0 ? (
+        fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
+          <IconButton
+            color="error"
+            onClick={() => {
+              void handleDeleteSelected();
+            }}
+            title={t("selection.deleteSelected", { ns: "files" })}
+            disabled={loading}
+          >
+            <Delete />
+          </IconButton>
+        ) : ancestors.length === 0 ? (
           <IconButton
             onClick={handleEmptyTrash}
             color="error"
@@ -446,13 +537,20 @@ export const TrashPage: React.FC = () => {
       breadcrumbs,
       cycleViewMode,
       emptyingTrash,
+      fileSelection.deselectAll,
+      fileSelection.selectedCount,
+      fileSelection.selectionMode,
+      fileSelection.selectAll,
+      fileSelection.toggleSelectionMode,
       goHome,
+      handleDeleteSelected,
       handleEmptyTrash,
       handleGoUp,
       layoutType,
       loading,
       stats,
       t,
+      tiles,
       viewMode,
     ],
   );
@@ -484,7 +582,10 @@ export const TrashPage: React.FC = () => {
       onConfirmNewFolder: () => Promise.resolve(),
       onCancelNewFolder: () => {},
       folderNamePlaceholder: "",
-      fileNamePlaceholder: "File name",
+      fileNamePlaceholder: t("rename.fileNamePlaceholder", { ns: "files" }),
+      selectionMode: fileSelection.selectionMode,
+      selectedIds: fileSelection.selectedIds,
+      onToggleItem: handleToggleItem,
       pagination:
         layoutType === InterfaceLayoutType.List
           ? {
@@ -498,7 +599,10 @@ export const TrashPage: React.FC = () => {
       content,
       error,
       fileOperations,
+      fileSelection.selectedIds,
+      fileSelection.selectionMode,
       folderOperations,
+      handleToggleItem,
       isCreatingInThisFolder,
       layoutType,
       listContent,
@@ -517,10 +621,6 @@ export const TrashPage: React.FC = () => {
 
   return (
     <>
-      <ShareToastSnackbar
-        toast={shareToast}
-        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-      />
       <Box
         width="100%"
         sx={{
@@ -548,25 +648,6 @@ export const TrashPage: React.FC = () => {
           <FileListViewFactory {...fileListViewProps} />
         </Box>
       </Box>
-
-      <FilePreviewModal
-        isOpen={previewState.isOpen}
-        fileId={previewState.fileId}
-        fileName={previewState.fileName}
-        fileType={previewState.fileType}
-        fileSizeBytes={previewState.fileSizeBytes}
-        onClose={closePreview}
-      />
-
-      {lightboxOpen && mediaItems.length > 0 && (
-        <MediaLightbox
-          items={mediaItems}
-          open={lightboxOpen}
-          initialIndex={lightboxIndex}
-          onClose={() => setLightboxOpen(false)}
-          getSignedMediaUrl={getSignedMediaUrl}
-        />
-      )}
 
       <EmptyTrashProgressDialog
         open={emptyingTrash}

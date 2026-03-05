@@ -1,22 +1,33 @@
 import { httpClient } from "./httpClient";
 import type { JsonValue } from "../types/json";
 
-export interface ServerSettings {
+export interface PublicServerInfo {
+  uptime: string;
+  version: string;
+  currentTime: string;
   serverHasUsers: boolean;
-  maxChunkSizeBytes: number;
+  product: string;
+  instanceIdHash: string;
   isServerInitialized: boolean;
+}
+
+export interface ServerSettings {
+  maxChunkSizeBytes: number;
   supportedHashAlgorithm: string;
 }
 
 interface ServerSettingsRaw {
-  serverHasUsers: boolean;
   maxChunkSizeBytes: number;
-  isServerInitialized: boolean;
   SupportedHashAlgorithm?: string;
   supportedHashAlgorithm?: string;
 }
 
 export const settingsApi = {
+  getPublicInfo: async (): Promise<PublicServerInfo> => {
+    const response = await httpClient.get<PublicServerInfo>("server/info");
+    return response.data;
+  },
+
   get: async (): Promise<ServerSettings> => {
     const response = await httpClient.get<ServerSettingsRaw>("server/settings");
 
@@ -26,9 +37,7 @@ export const settingsApi = {
       "Unknown";
 
     return {
-      serverHasUsers: response.data.serverHasUsers,
       maxChunkSizeBytes: response.data.maxChunkSizeBytes,
-      isServerInitialized: response.data.isServerInitialized,
       supportedHashAlgorithm,
     };
   },

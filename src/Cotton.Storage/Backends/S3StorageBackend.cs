@@ -73,6 +73,31 @@ namespace Cotton.Storage.Backends
             }
         }
 
+        public async Task<long> GetSizeAsync(string uid)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(uid);
+
+            IAmazonS3 s3 = _s3Provider.GetS3Client();
+            string bucket = _s3Provider.GetBucketName();
+            string key = GetS3Key(uid);
+
+            var req = new GetObjectMetadataRequest
+            {
+                Key = key,
+                BucketName = bucket,
+            };
+
+            try
+            {
+                var res = await s3.GetObjectMetadataAsync(req).ConfigureAwait(false);
+                return res.ContentLength;
+            }
+            catch (AmazonS3Exception s3Ex) when (s3Ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                return 0;
+            }
+        }
+
         public async Task WriteAsync(string uid, Stream source)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uid);
@@ -128,6 +153,51 @@ namespace Cotton.Storage.Backends
         public void CleanupTempFiles(TimeSpan ttl)
         {
             // No-op for S3 backend
+        }
+
+        public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            IAmazonS3 s3 = _s3Provider.GetS3Client();
+            string bucket = _s3Provider.GetBucketName();
+            string? continuationToken = null;
+
+            do
+            {
+                var request = new ListObjectsV2Request
+                {
+                    BucketName = bucket,
+                    MaxKeys = 1000,
+                    ContinuationToken = continuationToken
+                };
+
+                var response = await s3.ListObjectsV2Async(request, ct);
+
+                foreach (var obj in response.S3Objects)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    if (!obj.Key.EndsWith(".ctn", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    string[] parts = obj.Key.Split('/');
+                    if (parts.Length != 3)
+                    {
+                        continue;
+                    }
+
+                    string p1 = parts[0];
+                    string p2 = parts[1];
+                    string fileName = Path.GetFileNameWithoutExtension(parts[2]);
+                    string uid = p1 + p2 + fileName;
+
+                    yield return uid;
+                }
+
+                continuationToken = response.IsTruncated == true ? response.NextContinuationToken : null;
+            }
+            while (continuationToken != null);
         }
     }
 }

@@ -124,6 +124,11 @@ namespace Cotton.Benchmark.Benchmarks
                 return Task.FromResult(_storage.ContainsKey(uid));
             }
 
+            public Task<long> GetSizeAsync(string uid)
+            {
+                return Task.FromResult(_storage.TryGetValue(uid, out var data) ? data.Length : 0L);
+            }
+
             public Task<Stream> ReadAsync(string uid)
             {
                 if (!_storage.TryGetValue(uid, out var data))
@@ -139,6 +144,15 @@ namespace Cotton.Benchmark.Benchmarks
                 stream.CopyTo(ms);
                 _storage[uid] = ms.ToArray();
                 return Task.CompletedTask;
+            }
+
+            public async IAsyncEnumerable<string> ListAllKeysAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            {
+                foreach (var key in _storage.Keys)
+                {
+                    yield return key;
+                }
+                await Task.CompletedTask;
             }
         }
 
