@@ -31,6 +31,7 @@ const TRANSPARENT_PLACEHOLDER =
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
+const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
 
 type SlideWithTitle = Slide & {
   title?: string;
@@ -88,15 +89,38 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   }, []);
 
   const plugins = React.useMemo(
-    () => [Video, Zoom, Slideshow, Thumbnails, Download, Share],
-    [],
+    () =>
+      isTouchDevice
+        ? [Video, Zoom, Slideshow, Download, Share]
+        : [Video, Zoom, Slideshow, Thumbnails, Download, Share],
+    [isTouchDevice],
   );
 
   // Auto-hide controls after 2.5 seconds of inactivity
-  const isActive = useActivityDetection(2500);
+  const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
 
   const [touchControlsVisible, setTouchControlsVisible] =
     React.useState<boolean>(true);
+
+  const touchControlsTimerRef = React.useRef<number | null>(null);
+
+  const showTouchControls = React.useCallback(() => {
+    if (!isTouchDevice) {
+      return;
+    }
+
+    setTouchControlsVisible(true);
+
+    if (touchControlsTimerRef.current !== null) {
+      window.clearTimeout(touchControlsTimerRef.current);
+      touchControlsTimerRef.current = null;
+    }
+
+    touchControlsTimerRef.current = window.setTimeout(() => {
+      setTouchControlsVisible(false);
+      touchControlsTimerRef.current = null;
+    }, TOUCH_CONTROLS_AUTOHIDE_MS);
+  }, [isTouchDevice]);
 
   React.useEffect(() => {
     if (!open) {
@@ -107,10 +131,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       return;
     }
 
-    setTouchControlsVisible(true);
-    const id = window.setTimeout(() => setTouchControlsVisible(false), 2500);
-    return () => window.clearTimeout(id);
-  }, [open, isTouchDevice]);
+    showTouchControls();
+
+    return () => {
+      if (touchControlsTimerRef.current !== null) {
+        window.clearTimeout(touchControlsTimerRef.current);
+        touchControlsTimerRef.current = null;
+      }
+    };
+  }, [open, isTouchDevice, showTouchControls]);
 
   const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
     {},
@@ -228,6 +257,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       index={index}
       controller={{
         closeOnPullDown: true,
+        closeOnPullUp: true,
       }}
       animation={{
         swipe: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
@@ -237,6 +267,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       on={{
         view: ({ index: currentIndex }) => {
           setIndex(currentIndex);
+          showTouchControls();
           for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
             void ensureSlideHasOriginal(currentIndex + offset);
           }
@@ -245,7 +276,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           if (!isTouchDevice) {
             return;
           }
-          setTouchControlsVisible((prev) => !prev);
+
+          // Mobile UX: a tap should reliably show the gallery overlay.
+          // We intentionally do NOT toggle off on tap to avoid interfering with video controls.
+          showTouchControls();
         },
       }}
       render={{
@@ -324,17 +358,21 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         autoplay: false,
         delay: 5000,
       }}
-      thumbnails={{
-        position: "bottom",
-        width: 120,
-        height: 80,
-        border: 0,
-        borderRadius: 4,
-        padding: 2,
-        gap: 4,
-        showToggle: false,
-        hidden: items[index]?.kind === "video",
-      }}
+      thumbnails={
+        isTouchDevice
+          ? undefined
+          : {
+              position: "bottom",
+              width: 120,
+              height: 80,
+              border: 0,
+              borderRadius: 4,
+              padding: 2,
+              gap: 4,
+              showToggle: false,
+              hidden: items[index]?.kind === "video",
+            }
+      }
       video={{
         controls: true,
         playsInline: true,

@@ -69,6 +69,41 @@ export const AudioPlayerBar: React.FC = () => {
   const [lyricsIntroProgress, setLyricsIntroProgress] = React.useState<number>(1);
   const countdownConsumedRef = React.useRef<boolean>(false);
 
+  const paperRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useLayoutEffect(() => {
+    const root = document.documentElement;
+
+    if (!open) {
+      root.style.setProperty("--audio-player-bar-offset", "0px");
+      return;
+    }
+
+    const el = paperRef.current;
+    if (!el) {
+      return;
+    }
+
+    const update = () => {
+      const heightPx = Math.ceil(el.getBoundingClientRect().height);
+      root.style.setProperty(
+        "--audio-player-bar-offset",
+        `calc(${heightPx}px + env(safe-area-inset-bottom, 0px))`,
+      );
+    };
+
+    update();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const ro = new ResizeObserver(() => update());
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, [open]);
+
   const playlistTotal = playlist.length;
   const currentIndex = React.useMemo<number>(() => {
     const index = playlist.findIndex((x) => x.id === currentFileId);
@@ -207,6 +242,7 @@ export const AudioPlayerBar: React.FC = () => {
       }}
     >
       <Paper
+        ref={paperRef}
         elevation={8}
         sx={{
           width: "100%",

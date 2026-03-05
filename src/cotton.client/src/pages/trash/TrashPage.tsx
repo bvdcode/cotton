@@ -505,7 +505,6 @@ export const TrashPage: React.FC = () => {
       statsNamespace: "trash",
       selectionMode: fileSelection.selectionMode,
       selectedCount: fileSelection.selectedCount,
-      onToggleSelectionMode: fileSelection.toggleSelectionMode,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
       customActions:
