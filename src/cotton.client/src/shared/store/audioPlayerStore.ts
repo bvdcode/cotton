@@ -33,9 +33,77 @@ const MAX_SCAN_DEPTH = 256;
 const MAX_FOLDERS_TO_SCAN = 2500;
 const MAX_AUDIO_FILES = 25000;
 
+type NodeInfo = {
+  id: string;
+  parentId: string | null;
+  name: string;
+};
+
 const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPlaylistItem[]> => {
   const playlist: AudioPlaylistItem[] = [];
   let foldersSeen = 1;
+
+  const rootNode = await nodesApi.getNode(rootNodeId);
+  const rootAncestors = await nodesApi.getAncestors(rootNodeId);
+  const prefixParts = [...rootAncestors.map((n) => n.name), rootNode.name].filter(
+    (p) => p.trim().length > 0,
+  );
+
+  const nodeMap = new Map<string, NodeInfo>();
+  nodeMap.set(rootNode.id, {
+    id: rootNode.id,
+    parentId: rootNode.parentId,
+    name: rootNode.name,
+  });
+
+  const folderPathCache = new Map<string, string>();
+
+  const buildFolderPath = (nodeId: string): string | null => {
+    const cached = folderPathCache.get(nodeId);
+    if (cached) {
+      return cached;
+    }
+
+    if (nodeId === rootNodeId) {
+      const rootPath = prefixParts.join("/");
+      folderPathCache.set(nodeId, rootPath);
+      return rootPath;
+    }
+
+    const parts: string[] = [];
+    let current: string | null = nodeId;
+    let guard = 0;
+
+    while (current && current !== rootNodeId) {
+      if (guard++ > MAX_SCAN_DEPTH + 5) {
+        break;
+      }
+
+      const info = nodeMap.get(current);
+      if (!info) {
+        return null;
+      }
+
+      parts.push(info.name);
+      current = info.parentId;
+    }
+
+    parts.reverse();
+    const rel = parts.filter((p) => p.trim().length > 0).join("/");
+    const rootPrefix = prefixParts.join("/");
+
+    const fullPath = !rel
+      ? rootPrefix
+      : rootPrefix
+        ? `${rootPrefix}/${rel}`
+        : rel;
+
+    if (fullPath) {
+      folderPathCache.set(nodeId, fullPath);
+    }
+
+    return fullPath || null;
+  };
 
   for (let depth = 0; depth <= MAX_SCAN_DEPTH; depth += 1) {
     if (foldersSeen >= MAX_FOLDERS_TO_SCAN) {
@@ -65,13 +133,30 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
         foldersSeen += response.content.nodes.length;
       }
 
+      for (const node of response.content.nodes) {
+        if (nodeMap.size >= MAX_FOLDERS_TO_SCAN) {
+          break;
+        }
+        nodeMap.set(node.id, {
+          id: node.id,
+          parentId: node.parentId,
+          name: node.name,
+        });
+      }
+
       for (const file of response.content.files) {
         if (playlist.length >= MAX_AUDIO_FILES) {
           break;
         }
 
         if (getFileTypeInfo(file.name, file.contentType).type === "audio") {
-          playlist.push({ id: file.id, name: file.name });
+          const folderPath = file.nodeId ? buildFolderPath(file.nodeId) : null;
+          playlist.push({
+            id: file.id,
+            name: file.name,
+            nodeId: file.nodeId ?? undefined,
+            folderPath: folderPath ?? undefined,
+          });
         }
       }
 

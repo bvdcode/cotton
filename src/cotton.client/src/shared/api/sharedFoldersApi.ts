@@ -144,8 +144,6 @@ export const sharedFoldersApi = {
     const link = document.createElement("a");
     link.href = objectUrl;
     link.download = fileName;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
     link.style.display = "none";
 
     document.body.appendChild(link);

@@ -7,7 +7,6 @@ import {
   IconButton,
   List,
   ListItemButton,
-  ListItemText,
   Paper,
   Snackbar,
   Tooltip,
@@ -171,10 +170,28 @@ export const AudioPlayerBar: React.FC = () => {
                     setQueueOpen(false);
                   }}
                 >
-                  <ListItemText
-                    primary={item.name}
-                    primaryTypographyProps={{ noWrap: true }}
-                  />
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={2}
+                    width="100%"
+                    minWidth={0}
+                  >
+                    <Typography variant="body2" noWrap flex={1} minWidth={0}>
+                      {item.name}
+                    </Typography>
+
+                    {item.folderPath ? (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                        sx={{ maxWidth: "55%" }}
+                      >
+                        {item.folderPath}
+                      </Typography>
+                    ) : null}
+                  </Box>
                 </ListItemButton>
               ))}
             </List>

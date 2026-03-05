@@ -82,6 +82,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
 
+  const isTouchDevice = React.useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia?.("(hover: none)")?.matches ?? false;
+  }, []);
+
   const plugins = React.useMemo(
     () => [Video, Zoom, Slideshow, Thumbnails, Download, Share],
     [],
@@ -89,6 +94,22 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(2500);
+
+  const [touchControlsVisible, setTouchControlsVisible] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (!isTouchDevice) {
+      return;
+    }
+
+    setTouchControlsVisible(true);
+    const id = window.setTimeout(() => setTouchControlsVisible(false), 2500);
+    return () => window.clearTimeout(id);
+  }, [open, isTouchDevice]);
 
   const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
     {},
@@ -164,9 +185,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   }, [open, index, ensureSlideHasOriginal]);
 
   // Build className based on activity state
+  const controlsVisible = isTouchDevice ? touchControlsVisible : isActive;
   const lightboxClassName = [
     "lightbox-autohide",
-    isActive ? "lightbox-autohide--active" : "lightbox-autohide--idle",
+    controlsVisible ? "lightbox-autohide--active" : "lightbox-autohide--idle",
   ].join(" ");
 
   return (
@@ -177,6 +199,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       plugins={plugins}
       slides={slides}
       index={index}
+      controller={{
+        closeOnPullDown: true,
+      }}
       animation={{
         swipe: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
         fade: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
@@ -232,6 +257,21 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             </div>
           );
         },
+        slideContainer: ({ children }) => {
+          return (
+            <div
+              className="media-lightbox__tap-area"
+              onClick={() => {
+                if (!isTouchDevice) {
+                  return;
+                }
+                setTouchControlsVisible((prev) => !prev);
+              }}
+            >
+              {children}
+            </div>
+          );
+        },
       }}
       zoom={{
         maxZoomPixelRatio: 8,
@@ -267,7 +307,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       carousel={{
         finite: true,
         preload: 2,
-        imageFit: "contain",
+        imageFit: "cover",
         padding: 0,
       }}
     />
