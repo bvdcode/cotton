@@ -184,7 +184,8 @@
       "language": {
         "label": "Язык",
         "en": "English",
-        "ru": "Русский"
+        "ru": "Русский",
+        "es": "Español"
       }
     },
     "totp": {
