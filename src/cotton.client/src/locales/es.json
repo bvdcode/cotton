@@ -84,7 +84,7 @@
     "userMenu": {
       "profile": "Perfil",
       "settings": "Ajustes",
-      "admin": "Admin",
+      "admin": "Administración",
       "user": "Usuario",
       "lightMode": "Tema claro",
       "darkMode": "Tema oscuro",
@@ -168,7 +168,7 @@
     "ageYears_other": "{{count}} años",
     "roles": {
       "user": "Usuario",
-      "admin": "Admin"
+      "admin": "Administrador"
     },
     "editProfile": {
       "title": "Editar perfil",
