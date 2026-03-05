@@ -35,6 +35,7 @@ import { shareFile } from "../../shared/utils/shareFile";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import { filesApi } from "../../shared/api/filesApi";
 import Loader from "../../shared/ui/Loader";
+import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
@@ -305,6 +306,14 @@ export const FilesPage: React.FC = () => {
     [sortedFiles],
   );
 
+  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
+  const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
+
+  useEffect(() => {
+    if (!nodeId) return;
+    setScanRootNodeId(nodeId);
+  }, [nodeId, setScanRootNodeId]);
+
   const [shareToast, setShareToast] = React.useState<ShareToastState>({
     open: false,
     message: "",
@@ -381,6 +390,10 @@ export const FilesPage: React.FC = () => {
     fileName: string,
     fileSizeBytes?: number,
   ) => {
+    if (getFileTypeInfo(fileName, null).type === "audio") {
+      openAudio({ fileId, fileName, playlist: audioPlaylist });
+      return;
+    }
     const opened = openPreview(fileId, fileName, fileSizeBytes);
     if (!opened) {
       void handleDownloadFile(fileId, fileName);
@@ -673,7 +686,6 @@ export const FilesPage: React.FC = () => {
         fileName={previewState.fileName}
         fileType={previewState.fileType}
         fileSizeBytes={previewState.fileSizeBytes}
-        audioPlaylist={audioPlaylist}
         onClose={closePreview}
         onSaved={() => {
           if (nodeId) {

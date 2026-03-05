@@ -3,6 +3,7 @@ import { useNodesStore } from "./nodesStore";
 import { useNotificationsStore } from "./notificationsStore";
 import { useSettingsStore } from "./settingsStore";
 import { useTrashStore } from "./trashStore";
+import { useAudioPlayerStore } from "./audioPlayerStore";
 import { useUserPreferencesStore } from "./userPreferencesStore";
 
 const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
@@ -41,4 +42,5 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   useNotificationsStore.getState().reset();
   useSettingsStore.getState().reset();
   useUserPreferencesStore.getState().reset();
+  useAudioPlayerStore.getState().reset();
 };

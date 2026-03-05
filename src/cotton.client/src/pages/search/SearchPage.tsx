@@ -25,6 +25,7 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import { getFileTypeInfo } from "../files/utils/fileTypes";
+import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -99,16 +100,6 @@ export const SearchPage: React.FC = () => {
     [t],
   );
 
-  const handleFileClick = useCallback(
-    (fileId: string, fileName: string, fileSizeBytes?: number) => {
-      const opened = openPreview(fileId, fileName, fileSizeBytes);
-      if (!opened) {
-        void handleDownloadFile(fileId, fileName);
-      }
-    },
-    [handleDownloadFile, openPreview],
-  );
-
   const sortedFiles = useMemo(() => {
     if (!results) return [];
     const files = results.files ?? [];
@@ -122,9 +113,29 @@ export const SearchPage: React.FC = () => {
   const audioPlaylist = useMemo(
     () =>
       sortedFiles
-        .filter((file) => getFileTypeInfo(file.name, file.contentType ?? null).type === "audio")
+        .filter(
+          (file) =>
+            getFileTypeInfo(file.name, file.contentType ?? null).type ===
+            "audio",
+        )
         .map((file) => ({ id: file.id, name: file.name })),
     [sortedFiles],
+  );
+
+  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
+
+  const handleFileClick = useCallback(
+    (fileId: string, fileName: string, fileSizeBytes?: number) => {
+      if (getFileTypeInfo(fileName, null).type === "audio") {
+        openAudio({ fileId, fileName, playlist: audioPlaylist });
+        return;
+      }
+      const opened = openPreview(fileId, fileName, fileSizeBytes);
+      if (!opened) {
+        void handleDownloadFile(fileId, fileName);
+      }
+    },
+    [audioPlaylist, handleDownloadFile, openAudio, openPreview],
   );
 
   const fileListSource = useSearchFileList({
@@ -251,7 +262,6 @@ export const SearchPage: React.FC = () => {
         fileName={previewState.fileName}
         fileType={previewState.fileType}
         fileSizeBytes={previewState.fileSizeBytes}
-        audioPlaylist={audioPlaylist}
         onClose={closePreview}
       />
 

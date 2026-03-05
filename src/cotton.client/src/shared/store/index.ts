@@ -5,3 +5,4 @@ export * from "./trashStore";
 export * from "./notificationsStore";
 export * from "./userPreferencesStore";
 export * from "./localPreferencesStore";
+export * from "./audioPlayerStore";

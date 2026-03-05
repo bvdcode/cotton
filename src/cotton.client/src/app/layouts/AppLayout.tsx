@@ -17,6 +17,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
 import { useSettingsStore } from "../../shared/store/settingsStore";
+import { AudioPlayerBar } from "../components/AudioPlayerBar";
 
 
 interface AppLayoutProps {
@@ -151,6 +152,8 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
       >
         <Outlet />
       </Container>
+
+      <AudioPlayerBar />
 
       <UploadFilePicker />
       <UploadQueueWidget />
