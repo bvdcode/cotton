@@ -103,6 +103,8 @@
       "scanRecursively": "Buscar pistas en esta carpeta y subcarpetas",
       "showQueue": "Mostrar cola",
       "hideQueue": "Ocultar cola",
+      "enableShuffle": "Activar reproducción aleatoria",
+      "disableShuffle": "Desactivar reproducción aleatoria",
       "close": "Cerrar reproductor"
     }
   },

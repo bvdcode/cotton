@@ -25,6 +25,7 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import { getFileTypeInfo } from "../files/utils/fileTypes";
+import { getFileIcon } from "../files/utils/icons";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 
 export const SearchPage: React.FC = () => {
@@ -118,7 +119,15 @@ export const SearchPage: React.FC = () => {
             getFileTypeInfo(file.name, file.contentType ?? null).type ===
             "audio",
         )
-        .map((file) => ({ id: file.id, name: file.name })),
+        .map((file) => {
+          const previewToken =
+            file.largeFilePreviewPresignedToken ??
+            file.previewHashEncryptedHex ??
+            null;
+          const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
+          const previewUrl = typeof icon === "string" ? icon : undefined;
+          return { id: file.id, name: file.name, previewUrl };
+        }),
     [sortedFiles],
   );
 

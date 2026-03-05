@@ -89,6 +89,8 @@
       "scanRecursively": "Найти треки в этой папке и подпапках",
       "showQueue": "Показать очередь",
       "hideQueue": "Скрыть очередь",
+      "enableShuffle": "Включить шафл",
+      "disableShuffle": "Выключить шафл",
       "close": "Закрыть плеер"
     }
   },
