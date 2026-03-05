@@ -95,7 +95,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(2500);
 
-  const [touchControlsVisible, setTouchControlsVisible] = React.useState<boolean>(true);
+  const [touchControlsVisible, setTouchControlsVisible] =
+    React.useState<boolean>(true);
 
   React.useEffect(() => {
     if (!open) {
@@ -125,12 +126,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(
-      items,
-      displayUrls,
-      signedUrls,
-      downloadUrls,
-    );
+    return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
   }, [items, displayUrls, signedUrls, downloadUrls]);
 
   const preloadImage = React.useCallback(async (url: string): Promise<void> => {
@@ -305,7 +301,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         },
       }}
       zoom={{
-        maxZoomPixelRatio: 8,
+        maxZoomPixelRatio: 3,
         zoomInMultiplier: 1,
         doubleTapDelay: 300,
         doubleClickDelay: 300,
