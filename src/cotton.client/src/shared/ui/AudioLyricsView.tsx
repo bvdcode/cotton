@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
 import type { LrcLine } from "../utils/lrc";
 
 const DESKTOP_LINE_HEIGHT_PX = 32;
@@ -14,17 +14,24 @@ const clamp = (value: number, min: number, max: number): number => {
 interface AudioLyricsViewProps {
   lines: ReadonlyArray<LrcLine>;
   activeIndex: number;
+  isActivePlaying?: boolean;
+  translateExtraPx?: number;
+  activeOpacity?: number;
 }
 
 export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
   lines,
   activeIndex,
+  isActivePlaying = true,
+  translateExtraPx = 0,
+  activeOpacity = 1,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const lineHeightPx = isMobile ? MOBILE_LINE_HEIGHT_PX : DESKTOP_LINE_HEIGHT_PX;
 
-  const offsetLines = clamp(activeIndex - 1, 0, Math.max(0, lines.length - 1));
+  const maxOffset = Math.max(-1, lines.length - 2);
+  const offsetLines = clamp(activeIndex - 1, -1, maxOffset);
   const translateY = offsetLines * lineHeightPx;
 
   return (
@@ -35,45 +42,16 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
       width="100%"
     >
       <Box
-        position="absolute"
-        top={0}
-        left={0}
-        right={0}
-        height={lineHeightPx}
-        zIndex={1}
         sx={{
-          background: `linear-gradient(to bottom, ${alpha(
-            theme.palette.background.paper,
-            0.7,
-          )} 0%, ${alpha(theme.palette.background.paper, 0)} 100%)`,
-          pointerEvents: "none",
-        }}
-      />
-      <Box
-        position="absolute"
-        bottom={0}
-        left={0}
-        right={0}
-        height={lineHeightPx}
-        zIndex={1}
-        sx={{
-          background: `linear-gradient(to top, ${alpha(
-            theme.palette.background.paper,
-            0.7,
-          )} 0%, ${alpha(theme.palette.background.paper, 0)} 100%)`,
-          pointerEvents: "none",
-        }}
-      />
-
-      <Box
-        sx={{
-          transform: `translateY(-${translateY}px)`,
+          transform: `translateY(${translateExtraPx}px) translateY(-${translateY}px)`,
           transition: "transform 350ms ease",
           willChange: "transform",
         }}
       >
         {lines.map((line, idx) => {
           const isActive = idx === activeIndex;
+          const distance = Math.abs(idx - activeIndex);
+          const baseOpacity = distance === 0 ? 1 : distance === 1 ? 0.35 : 0.2;
           return (
             <Box
               key={`${line.timeSeconds}-${idx}`}
@@ -90,7 +68,13 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
                 textAlign="center"
                 sx={{
                   px: 1,
-                  opacity: isActive ? 1 : 0.35,
+                  opacity:
+                    isActive ? baseOpacity * activeOpacity : baseOpacity,
+                  ...(isActive && !isActivePlaying
+                    ? {
+                        color: theme.palette.text.secondary,
+                      }
+                    : null),
                   lineHeight: 1.15,
                   whiteSpace: "normal",
                   overflow: "hidden",
