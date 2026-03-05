@@ -103,9 +103,16 @@
       "scanRecursively": "Find tracks in this folder and subfolders",
       "showQueue": "Show queue",
       "hideQueue": "Hide queue",
+      "showLyrics": "Show lyrics",
+      "hideLyrics": "Hide lyrics",
       "enableShuffle": "Enable shuffle",
       "disableShuffle": "Disable shuffle",
       "close": "Close player"
+    },
+    "lyrics": {
+      "unavailable": "Lyrics are unavailable for this track.",
+      "notFound": "No .lrc file found next to this track.",
+      "loadFailed": "Failed to load lyrics."
     }
   },
   "share": {

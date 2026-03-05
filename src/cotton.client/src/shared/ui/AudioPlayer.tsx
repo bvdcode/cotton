@@ -11,6 +11,8 @@ interface AudioPlayerProps {
   playlist?: ReadonlyArray<AudioPlaylistItem> | null;
   onTrackChange?: (item: AudioPlaylistItem) => void;
   shuffleEnabled?: boolean;
+  onListen?: (timeSeconds: number) => void;
+  listenIntervalMs?: number;
 }
 
 const EXPIRE_AFTER_MINUTES = 60 * 24;
@@ -35,7 +37,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   playlist,
   onTrackChange,
   shuffleEnabled = false,
+  onListen,
+  listenIntervalMs,
 }) => {
+  const playerRef = React.useRef<React.ElementRef<typeof H5AudioPlayer>>(null);
   const urlCacheRef = React.useRef<Map<string, string>>(new Map());
 
   const currentIndexRef = React.useRef<number>(0);
@@ -126,6 +131,25 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   const [src, setSrc] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    if (!onListen) {
+      return;
+    }
+
+    type PlayerWithAudioRef = { audio: React.RefObject<HTMLAudioElement> };
+    const intervalMs = listenIntervalMs ?? 250;
+
+    const timerId = window.setInterval(() => {
+      const audioEl = (playerRef.current as PlayerWithAudioRef | null)?.audio.current;
+      if (!audioEl) return;
+      onListen(audioEl.currentTime);
+    }, intervalMs);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [onListen, listenIntervalMs]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -317,6 +341,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       )}
 
       <H5AudioPlayer
+        ref={playerRef}
         src={src ?? ""}
         autoPlay
         autoPlayAfterSrcChange
