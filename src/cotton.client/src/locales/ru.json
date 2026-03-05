@@ -849,6 +849,13 @@
       "confirmTitle": "Удалить файл \"{{name}}\"?",
       "confirmDescription": "Это действие нельзя отменить. Файл будет удалён навсегда."
     },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "Удалить {{count}} элемент навсегда?",
+      "confirmTitle_few": "Удалить {{count}} элемента навсегда?",
+      "confirmTitle_many": "Удалить {{count}} элементов навсегда?",
+      "confirmTitle_other": "Удалить {{count}} элементов навсегда?",
+      "confirmDescription": "Это действие нельзя отменить. Выбранные элементы будут удалены навсегда."
+    },
     "emptyTrash": {
       "confirmTitle": "Очистить корзину?",
       "confirmDescription": "Это действие нельзя отменить. Все элементы в корзине будут удалены навсегда.",
