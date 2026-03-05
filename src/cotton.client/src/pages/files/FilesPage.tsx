@@ -310,9 +310,14 @@ export const FilesPage: React.FC = () => {
             null;
           const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
           const previewUrl = typeof icon === "string" ? icon : undefined;
-          return { id: file.id, name: file.name, previewUrl };
+          return {
+            id: file.id,
+            name: file.name,
+            nodeId: nodeId ?? undefined,
+            previewUrl,
+          };
         }),
-    [sortedFiles],
+    [sortedFiles, nodeId],
   );
 
   const openAudio = useAudioPlayerStore((s) => s.openFromSelection);

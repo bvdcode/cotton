@@ -89,9 +89,16 @@
       "scanRecursively": "Найти треки в этой папке и подпапках",
       "showQueue": "Показать очередь",
       "hideQueue": "Скрыть очередь",
+      "showLyrics": "Показать слова",
+      "hideLyrics": "Скрыть слова",
       "enableShuffle": "Включить шафл",
       "disableShuffle": "Выключить шафл",
       "close": "Закрыть плеер"
+    },
+    "lyrics": {
+      "unavailable": "Для этого трека слова недоступны.",
+      "notFound": "Рядом с треком не найден файл .lrc.",
+      "loadFailed": "Не удалось загрузить слова."
     }
   },
   "share": {
