@@ -37,6 +37,19 @@
   padding: 0;
 }
 
+/*
+ * YARL sets inline max-width/max-height based on slide width/height.
+ * If those dimensions come from a preview (e.g. 1600x1067), it prevents the
+ * photo from expanding to the viewport. Override to allow edge-to-edge fit.
+ */
+.lightbox-autohide .yarl__slide_image {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain;
+}
+
 /* Full-size tap zone for toggling controls on touch */
 .lightbox-autohide .media-lightbox__tap-area {
   width: 100%;
