@@ -4,7 +4,7 @@ export function tryParseFileName(
   if (!contentDisposition) return null;
 
   // RFC 5987 / RFC 6266: prefer `filename*` over `filename`.
-  // Example: inline; filename*=UTF-8''20250903_130511.heic; filename=20250903_130511.heic
+  // Example: inline; filename*=UTF-8''report.pdf; filename=report.pdf
   const filenameStarMatch = contentDisposition.match(
     /filename\*\s*=\s*([^']+)''([^;]+)/i,
   );
