@@ -19,10 +19,6 @@ import {
 } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
-import {
-  isHeicFile,
-  convertHeicToJpeg,
-} from "../../../shared/utils/heicConverter";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { shareLinks } from "../../../shared/utils/shareLinks";
 
@@ -202,10 +198,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               }
             }
 
-            const nextDisplayUrl =
-              item.kind === "image" && isHeicFile(item.name)
-                ? await convertHeicToJpeg(url)
-                : url;
+            const nextDisplayUrl = url;
 
             if (item.kind === "image") {
               try {

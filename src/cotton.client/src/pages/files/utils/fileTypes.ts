@@ -18,7 +18,16 @@ export interface FileTypeInfo {
   supportsInlineView: boolean;
 }
 
-const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic"];
+const IMAGE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "webp",
+  "bmp",
+  "svg",
+  "heic",
+];
 const PDF_EXTENSIONS = ["pdf"];
 // Only include formats that are generally playable inline in modern browsers.
 // Keep this list conservative to avoid opening the media lightbox for files the browser can't play.
