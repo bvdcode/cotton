@@ -140,86 +140,93 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
     {},
   );
+  const signedUrlsRef = React.useRef<Record<string, string>>({});
   const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
     {},
   );
+  const displayUrlsRef = React.useRef<Record<string, string>>({});
   const [downloadUrls, setDownloadUrls] = React.useState<
     Record<string, string>
   >({});
+  const downloadUrlsRef = React.useRef<Record<string, string>>({});
 
-  const loadingRef = React.useRef<Set<string>>(new Set());
+  const inFlightLoadsRef = React.useRef<Map<string, Promise<void>>>(new Map());
 
   // Rebuild slides when originalUrls or shareUrls change
   const slides = React.useMemo(() => {
     return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
   }, [items, displayUrls, signedUrls, downloadUrls]);
 
-  const preloadImage = React.useCallback(async (url: string): Promise<void> => {
-    await new Promise<void>((resolve, reject) => {
-      const img = new Image();
-      img.onload = async () => {
-        if (typeof img.decode === "function") {
-          try {
-            await img.decode();
-          } catch {
-            // ignore decode failures
-          }
-        }
-        resolve();
-      };
-      img.onerror = () => reject(new Error("Failed to preload image"));
-      img.src = url;
-    });
-  }, []);
+  React.useEffect(() => {
+    signedUrlsRef.current = signedUrls;
+  }, [signedUrls]);
+
+  React.useEffect(() => {
+    displayUrlsRef.current = displayUrls;
+  }, [displayUrls]);
+
+  React.useEffect(() => {
+    downloadUrlsRef.current = downloadUrls;
+  }, [downloadUrls]);
 
   const ensureSlideHasOriginal = React.useCallback(
-    async (targetIndex: number) => {
+    async (targetIndex: number): Promise<void> => {
       const item = items[targetIndex];
       if (!item) return;
 
-      if (loadingRef.current.has(item.id)) return;
+      const signedUrlAlreadyLoaded = Boolean(signedUrlsRef.current[item.id]);
+      const displayUrlAlreadyLoaded = Boolean(displayUrlsRef.current[item.id]);
+      const downloadUrlAlreadyLoaded = Boolean(downloadUrlsRef.current[item.id]);
 
-      setSignedUrls((prev) => {
-        if (prev[item.id]) return prev;
+      const needsDownloadUrl = Boolean(getDownloadUrl);
+      const isFullyLoaded =
+        signedUrlAlreadyLoaded &&
+        displayUrlAlreadyLoaded &&
+        (!needsDownloadUrl || downloadUrlAlreadyLoaded);
 
-        loadingRef.current.add(item.id);
+      if (isFullyLoaded) return;
 
-        (async () => {
-          try {
-            const url = await getSignedMediaUrl(item.id);
-            setSignedUrls((p) => ({ ...p, [item.id]: url }));
+      const existingInFlight = inFlightLoadsRef.current.get(item.id);
+      if (existingInFlight) {
+        await existingInFlight;
+        return;
+      }
 
-            if (getDownloadUrl) {
-              try {
-                const dl = await getDownloadUrl(item.id);
-                setDownloadUrls((p) => ({ ...p, [item.id]: dl }));
-              } catch (e) {
-                console.error("Failed to load media download URL", e);
-              }
-            }
-
-            const nextDisplayUrl = url;
-
-            if (item.kind === "image") {
-              try {
-                await preloadImage(nextDisplayUrl);
-              } catch {
-                // Keep previewUrl if preloading fails
-              }
-            }
-
-            setDisplayUrls((p) => ({ ...p, [item.id]: nextDisplayUrl }));
-          } catch (e) {
-            console.error("Failed to load media original URL", e);
-          } finally {
-            loadingRef.current.delete(item.id);
+      const loadTask = (async () => {
+        try {
+          let signedUrl = signedUrlsRef.current[item.id];
+          if (!signedUrl) {
+            signedUrl = await getSignedMediaUrl(item.id);
+            setSignedUrls((prev) =>
+              prev[item.id] ? prev : { ...prev, [item.id]: signedUrl },
+            );
           }
-        })();
 
-        return prev;
-      });
+          if (getDownloadUrl && !downloadUrlsRef.current[item.id]) {
+            try {
+              const dl = await getDownloadUrl(item.id);
+              setDownloadUrls((prev) =>
+                prev[item.id] ? prev : { ...prev, [item.id]: dl },
+              );
+            } catch (e) {
+              console.error("Failed to load media download URL", e);
+            }
+          }
+
+          setDisplayUrls((prev) =>
+            prev[item.id] ? prev : { ...prev, [item.id]: signedUrl },
+          );
+        } catch (e) {
+          console.error("Failed to load media original URL", e);
+        } finally {
+          inFlightLoadsRef.current.delete(item.id);
+        }
+      })();
+
+      inFlightLoadsRef.current.set(item.id, loadTask);
+      await loadTask;
     },
-    [items, getSignedMediaUrl, getDownloadUrl, preloadImage],
+    [items, getSignedMediaUrl, getDownloadUrl],
   );
 
   React.useEffect(() => {
