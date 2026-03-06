@@ -4,6 +4,7 @@
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -164,6 +165,48 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         dl.EnsureSuccessStatusCode();
         var bytes = await dl.Content.ReadAsByteArrayAsync();
         Assert.That(Encoding.UTF8.GetString(bytes), Is.EqualTo("download me"));
+    }
+
+    [Test]
+    public async Task Create_File_From_Chunks_Detects_ContentType_From_FileName_When_Missing()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var content = Encoding.UTF8.GetBytes("auto detect me");
+        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                },
+                "file",
+                "chunk.bin"
+            },
+            { new StringContent(chunkHashLower), "hash" }
+        };
+        var upRes = await _client.PostAsync("/api/v1/chunks", form);
+        upRes.EnsureSuccessStatusCode();
+
+        var fileReq = new CreateFileRequest
+        {
+            ChunkHashes = [chunkHashLower],
+            Name = "auto-detect.txt",
+            ContentType = string.Empty,
+            Hash = chunkHashLower,
+            NodeId = root!.Id
+        };
+        var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        createFileRes.EnsureSuccessStatusCode();
+
+        var manifest = await createFileRes.Content.ReadFromJsonAsync<NodeFileManifestDto>();
+        Assert.That(manifest, Is.Not.Null);
+        Assert.That(manifest!.ContentType, Is.EqualTo("text/plain"));
     }
 
     private async Task<string> LoginAsync()
