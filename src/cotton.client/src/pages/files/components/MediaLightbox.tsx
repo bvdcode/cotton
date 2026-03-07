@@ -144,6 +144,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const mediaRevealFrameRef = React.useRef<number | null>(null);
   const thumbnailStripRef = React.useRef<HTMLDivElement | null>(null);
   const thumbnailButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
+  const warmedImageUrlsRef = React.useRef<Set<string>>(new Set());
+  const inFlightImagePreloadsRef = React.useRef<Map<string, Promise<boolean>>>(new Map());
   const [mediaVisible, setMediaVisible] = React.useState(!smoothTransitions);
 
   const isTouchDevice = React.useMemo(() => {
@@ -197,7 +199,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     };
   }, []);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!open) {
       return;
     }
@@ -250,6 +252,38 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     };
   }, [activeMediaKey, open, smoothTransitions]);
 
+  const preloadImageUrl = React.useCallback(async (url: string): Promise<boolean> => {
+    if (warmedImageUrlsRef.current.has(url)) {
+      return true;
+    }
+
+    const existingTask = inFlightImagePreloadsRef.current.get(url);
+    if (existingTask) {
+      return await existingTask;
+    }
+
+    const loadTask = new Promise<boolean>((resolve) => {
+      const image = new Image();
+      image.decoding = "async";
+
+      image.onload = () => {
+        warmedImageUrlsRef.current.add(url);
+        inFlightImagePreloadsRef.current.delete(url);
+        resolve(true);
+      };
+
+      image.onerror = () => {
+        inFlightImagePreloadsRef.current.delete(url);
+        resolve(false);
+      };
+
+      image.src = url;
+    });
+
+    inFlightImagePreloadsRef.current.set(url, loadTask);
+    return await loadTask;
+  }, []);
+
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number): Promise<void> => {
       const item = items[targetIndex];
@@ -261,12 +295,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       const displayUrlAlreadyLoaded =
         item.kind === "video" ||
         displayUrlsRef.current[item.id] === signedUrlsRef.current[item.id];
-      const downloadUrlAlreadyLoaded = Boolean(downloadUrlsRef.current[item.id]);
-      const needsDownloadUrl = Boolean(getDownloadUrl);
       const isFullyLoaded =
         signedUrlAlreadyLoaded &&
-        displayUrlAlreadyLoaded &&
-        (!needsDownloadUrl || downloadUrlAlreadyLoaded);
+        displayUrlAlreadyLoaded;
 
       if (isFullyLoaded) {
         return;
@@ -289,7 +320,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             );
           }
 
-          if (displayUrlsRef.current[item.id] !== signedUrl) {
+          if (item.kind === "image" && displayUrlsRef.current[item.id] !== signedUrl) {
+            const didPreload = await preloadImageUrl(signedUrl);
+            if (!didPreload) {
+              return;
+            }
+
             setDisplayUrls((previous) =>
               previous[item.id] === signedUrl
                 ? previous
@@ -297,17 +333,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             );
           }
 
-          if (getDownloadUrl && !downloadUrlsRef.current[item.id]) {
-            try {
-              const downloadUrl = await getDownloadUrl(item.id);
-              setDownloadUrls((previous) =>
-                previous[item.id]
-                  ? previous
-                  : { ...previous, [item.id]: downloadUrl },
-              );
-            } catch (error) {
-              console.error("Failed to load media download URL", error);
-            }
+          if (item.kind !== "image" && displayUrlsRef.current[item.id] !== signedUrl) {
+            setDisplayUrls((previous) =>
+              previous[item.id] === signedUrl
+                ? previous
+                : { ...previous, [item.id]: signedUrl },
+            );
           }
         } catch (error) {
           console.error("Failed to load media URL", error);
@@ -319,7 +350,32 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       inFlightLoadsRef.current.set(item.id, loadTask);
       await loadTask;
     },
-    [getDownloadUrl, getSignedMediaUrl, items],
+    [getSignedMediaUrl, items, preloadImageUrl],
+  );
+
+  const ensureDownloadUrl = React.useCallback(
+    async (fileId: string): Promise<string | null> => {
+      const existingUrl = downloadUrlsRef.current[fileId];
+      if (existingUrl) {
+        return existingUrl;
+      }
+
+      if (!getDownloadUrl) {
+        return null;
+      }
+
+      try {
+        const nextUrl = await getDownloadUrl(fileId);
+        setDownloadUrls((previous) =>
+          previous[fileId] ? previous : { ...previous, [fileId]: nextUrl },
+        );
+        return nextUrl;
+      } catch (error) {
+        console.error("Failed to load media download URL", error);
+        return null;
+      }
+    },
+    [getDownloadUrl],
   );
 
   React.useEffect(() => {
@@ -331,6 +387,23 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       void ensureSlideHasOriginal(currentIndex + offset);
     }
   }, [currentIndex, ensureSlideHasOriginal, open]);
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    for (const offset of [-1, 1]) {
+      const targetIndex = currentIndex + offset;
+      const item = items[targetIndex];
+
+      if (!item || item.kind !== "image") {
+        continue;
+      }
+
+      void ensureSlideHasOriginal(targetIndex);
+    }
+  }, [currentIndex, ensureSlideHasOriginal, items, open]);
 
   const goToIndex = React.useCallback(
     (targetIndex: number, revealControls: boolean = false) => {
@@ -382,11 +455,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const currentItem = items[currentIndex] ?? null;
   const currentSignedUrl = currentItem ? signedUrls[currentItem.id] ?? null : null;
   const currentDisplayUrl = currentItem
-    ? currentSignedUrl || displayUrls[currentItem.id] || currentItem.previewUrl || TRANSPARENT_PLACEHOLDER
+    ? displayUrls[currentItem.id] || currentItem.previewUrl || currentSignedUrl || TRANSPARENT_PLACEHOLDER
     : TRANSPARENT_PLACEHOLDER;
   const currentDownloadUrl = currentItem
     ? downloadUrls[currentItem.id] ?? currentSignedUrl
     : null;
+  const canDownloadCurrentItem = Boolean(currentItem) && Boolean(getDownloadUrl || currentSignedUrl);
   const currentShareUrl = React.useMemo(
     () => buildShareUrl(currentDownloadUrl),
     [currentDownloadUrl],
@@ -401,14 +475,14 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     await ensureSlideHasOriginal(currentIndex);
 
     const downloadUrl =
-      downloadUrlsRef.current[currentItem.id] ?? signedUrlsRef.current[currentItem.id];
+      (await ensureDownloadUrl(currentItem.id)) ?? signedUrlsRef.current[currentItem.id];
 
     if (!downloadUrl) {
       return;
     }
 
     triggerDownload(downloadUrl, currentItem.name);
-  }, [currentIndex, currentItem, ensureSlideHasOriginal, showTouchControls]);
+  }, [currentIndex, currentItem, ensureDownloadUrl, ensureSlideHasOriginal, showTouchControls]);
 
   const handleShare = React.useCallback(async () => {
     if (!currentItem) {
@@ -613,7 +687,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             objectFit: "cover",
             filter: "blur(28px)",
             transform: "scale(1.15)",
-            opacity: 0.35,
+            opacity: 0.48,
             pointerEvents: "none",
             userSelect: "none",
           }}
@@ -624,7 +698,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.14) 24%, rgba(0, 0, 0, 0.18) 100%)",
+              "linear-gradient(180deg, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.04) 24%, rgba(0, 0, 0, 0.08) 100%)",
             pointerEvents: "none",
           }}
         />
@@ -675,7 +749,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             </Tooltip>
           ) : null}
 
-          {currentDownloadUrl ? (
+          {canDownloadCurrentItem ? (
             <Tooltip title={t("actions.download", { ns: "common" })}>
               <IconButton
                 onClick={() => {
@@ -921,7 +995,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
                         height: 56,
                         p: 0,
                         border: "none",
-                        borderRadius: 1.5,
+                        borderRadius: 0.75,
                         overflow: "hidden",
                         cursor: "pointer",
                         position: "relative",
