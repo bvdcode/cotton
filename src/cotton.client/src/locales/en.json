@@ -68,8 +68,11 @@
     "actions": {
       "confirm": "Confirm",
       "cancel": "Cancel",
+      "close": "Close",
       "delete": "Delete",
       "rename": "Rename",
+      "previous": "Previous",
+      "next": "Next",
       "download": "Download",
       "share": "Share",
       "copied": "Copied!",
