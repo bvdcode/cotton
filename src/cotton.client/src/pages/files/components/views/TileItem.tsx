@@ -19,7 +19,6 @@ import { useTranslation } from "react-i18next";
 interface BlurredPreviewImageProps {
   previewUrl: string;
   alt: string;
-  blurOpacity: number;
   cursor: React.CSSProperties["cursor"];
   shouldLightenBackdrop: boolean;
   invertInDark: boolean;
@@ -28,7 +27,6 @@ interface BlurredPreviewImageProps {
 const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
   previewUrl,
   alt,
-  blurOpacity,
   cursor,
   shouldLightenBackdrop,
   invertInDark,
@@ -49,27 +47,28 @@ const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
 
   return (
     <Box
+      position="relative"
       sx={{
         width: "100%",
         height: "100%",
-        position: "relative",
       }}
     >
       <Box
         component="img"
         src={previewUrl}
         alt=""
-        aria-hidden
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
         sx={{
           position: "absolute",
-          inset: 0,
-          display: "block",
+          top: 0,
+          left: 0,
           width: "100%",
           height: "100%",
           objectFit: "cover",
-          filter: "blur(24px)",
+          filter: "blur(20px)",
           transform: "scale(1.15)",
-          opacity: blurOpacity,
         }}
       />
       <Box
@@ -362,7 +361,6 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           <BlurredPreviewImage
             previewUrl={previewUrl}
             alt={tile.file.name}
-            blurOpacity={isImage || isVideo ? 0.6 : 0.5}
             cursor={cursor}
             shouldLightenBackdrop={shouldLightenPreviewBackdrop}
             invertInDark={isTextPreview}
