@@ -41,22 +41,6 @@ type FileUploadOptions = {
   onToast?: (message: string) => void;
 };
 
-const hasFileDragPayload = (dataTransfer: DataTransfer | null): boolean => {
-  if (!dataTransfer) {
-    return false;
-  }
-
-  if (dataTransfer.items && dataTransfer.items.length > 0) {
-    return Array.from(dataTransfer.items).some((item) => item.kind === "file");
-  }
-
-  if (dataTransfer.types && dataTransfer.types.length > 0) {
-    return Array.from(dataTransfer.types).includes("Files");
-  }
-
-  return Boolean(dataTransfer.files && dataTransfer.files.length > 0);
-};
-
 export const useFileUpload = (
   nodeId: string | null,
   breadcrumbs: UseBreadcrumb[],
@@ -480,10 +464,6 @@ export const useFileUpload = (
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
-    if (!hasFileDragPayload(e.dataTransfer)) {
-      return;
-    }
-
     e.preventDefault();
     e.stopPropagation();
     dragDepthRef.current += 1;
@@ -493,21 +473,12 @@ export const useFileUpload = (
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (!hasFileDragPayload(e.dataTransfer)) {
-      return;
-    }
-
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = "copy";
     if (!isDragging) setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    if (!isDragging) {
-      return;
-    }
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -518,10 +489,6 @@ export const useFileUpload = (
   };
 
   const handleDrop = async (e: React.DragEvent) => {
-    if (!hasFileDragPayload(e.dataTransfer)) {
-      return;
-    }
-
     e.preventDefault();
     e.stopPropagation();
     dragDepthRef.current = 0;
