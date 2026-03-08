@@ -68,10 +68,14 @@
     "actions": {
       "confirm": "Confirm",
       "cancel": "Cancel",
+      "close": "Close",
       "delete": "Delete",
       "rename": "Rename",
       "download": "Download",
       "share": "Share",
+      "more": "More actions",
+      "play": "Play",
+      "pause": "Pause",
       "copied": "Copied!",
       "reload": "Reload"
     },
