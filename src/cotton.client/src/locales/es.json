@@ -68,10 +68,14 @@
     "actions": {
       "confirm": "Confirmar",
       "cancel": "Cancelar",
+      "close": "Cerrar",
       "delete": "Eliminar",
       "rename": "Renombrar",
       "download": "Descargar",
       "share": "Compartir",
+      "more": "Más acciones",
+      "play": "Reproducir",
+      "pause": "Pausar",
       "copied": "¡Copiado!",
       "reload": "Recargar"
     },
