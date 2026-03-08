@@ -11,29 +11,7 @@ namespace Cotton.Server.Services
 {
     public class FileManifestService(CottonDbContext _dbContext)
     {
-        public const string DefaultContentType = "application/octet-stream";
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
-
-        public static string ResolveContentType(string? fileName, string? contentType)
-        {
-            string normalizedContentType = contentType?.Trim() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(normalizedContentType)
-                && !string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
-            {
-                return normalizedContentType;
-            }
-
-            if (!string.IsNullOrWhiteSpace(fileName)
-                && fileExtensionContentTypeProvider.TryGetContentType(fileName, out string? detectedContentType)
-                && !string.IsNullOrWhiteSpace(detectedContentType))
-            {
-                return detectedContentType;
-            }
-
-            return string.IsNullOrWhiteSpace(normalizedContentType)
-                ? DefaultContentType
-                : normalizedContentType;
-        }
 
         public async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes, Guid userId, CancellationToken cancellationToken = default)
         {
@@ -59,16 +37,28 @@ namespace Cotton.Server.Services
         public async Task<FileManifest> CreateNewFileManifestAsync(
             List<Chunk> chunks,
             string fileName,
-            string? contentType,
+            string contentType,
             byte[] proposedContentHash,
             CancellationToken cancellationToken = default)
         {
             var newFileManifest = new FileManifest()
             {
-                ContentType = ResolveContentType(fileName, contentType),
+                ContentType = contentType,
                 SizeBytes = chunks.Sum(x => x.SizeBytes),
                 ProposedContentHash = proposedContentHash,
             };
+            if (newFileManifest.ContentType == "application/octet-stream")
+            {
+                string? extension = Path.GetExtension(fileName);
+                if (!string.IsNullOrWhiteSpace(extension))
+                {
+                    bool recognized = fileExtensionContentTypeProvider.TryGetContentType(fileName, out string? recognizedContentType);
+                    if (recognized && !string.IsNullOrWhiteSpace(recognizedContentType))
+                    {
+                        newFileManifest.ContentType = recognizedContentType;
+                    }
+                }
+            }
 
             await _dbContext.FileManifests.AddAsync(newFileManifest, cancellationToken);
             for (int i = 0; i < chunks.Count; i++)
