@@ -37,6 +37,7 @@ const DEFAULT_IMAGE_ZOOM = 2.5;
 const ZOOM_WHEEL_FACTOR = 1.12;
 const DOUBLE_TAP_DELAY_MS = 260;
 const ZOOM_ANIMATE_MS = 250;
+const BACKGROUND_CROSSFADE_MS = 320;
 
 type MediaKind = "image" | "video";
 
@@ -67,6 +68,10 @@ function clampIndex(index: number, total: number): number {
   }
 
   return Math.min(Math.max(index, 0), total - 1);
+}
+
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 function buildShareUrl(candidateUrl: string | null): string | null {
@@ -107,11 +112,25 @@ function shouldIgnoreGestureTarget(target: EventTarget | null): boolean {
   return Boolean(target.closest("button, a, input, textarea, video, [role='button']"));
 }
 
+function getTouchDistance(
+  firstTouch: { clientX: number; clientY: number },
+  secondTouch: { clientX: number; clientY: number },
+): number {
+  return Math.hypot(firstTouch.clientX - secondTouch.clientX, firstTouch.clientY - secondTouch.clientY);
+}
+
 interface TouchGestureState {
   startX: number;
   startY: number;
   lastX: number;
   lastY: number;
+}
+
+interface PinchGestureState {
+  startDistance: number;
+  startScale: number;
+  startPanX: number;
+  startPanY: number;
 }
 
 interface SlideTransitionState {
@@ -160,6 +179,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [isThumbnailStripHovered, setIsThumbnailStripHovered] = React.useState(false);
   const touchControlsTimerRef = React.useRef<number | null>(null);
   const touchGestureRef = React.useRef<TouchGestureState | null>(null);
+  const pinchGestureRef = React.useRef<PinchGestureState | null>(null);
   const mediaRevealFrameRef = React.useRef<number | null>(null);
   const slideTransitionTimeoutRef = React.useRef<number | null>(null);
   const slideTransitionFrameRef = React.useRef<number | null>(null);
@@ -546,19 +566,19 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        setCurrentIndex((previousIndex) => clampIndex(previousIndex - 1, items.length));
+        goToIndex(currentIndex - 1, true);
         return;
       }
 
       if (event.key === "ArrowRight") {
         event.preventDefault();
-        setCurrentIndex((previousIndex) => clampIndex(previousIndex + 1, items.length));
+        goToIndex(currentIndex + 1, true);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [items.length, onClose, open]);
+  }, [currentIndex, goToIndex, onClose, open]);
 
   const currentItem = items[currentIndex] ?? null;
   const currentSignedUrl = currentItem ? signedUrls[currentItem.id] ?? null : null;
@@ -680,6 +700,89 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     isThumbnailStripHovered;
   const canZoomCurrentItem = Boolean(open && currentItem?.kind === "image");
 
+  const clampZoomState = React.useCallback(
+    (nextZoom: { scale: number; panX: number; panY: number }, item: MediaItem | null) => {
+      const nextScale = clampValue(nextZoom.scale, 1, MAX_IMAGE_ZOOM);
+      if (nextScale <= 1 || !item || item.kind !== "image") {
+        return { scale: 1, panX: 0, panY: 0 };
+      }
+
+      const viewport = mediaViewportRef.current?.getBoundingClientRect();
+      if (!viewport || viewport.width <= 0 || viewport.height <= 0) {
+        return { scale: nextScale, panX: nextZoom.panX, panY: nextZoom.panY };
+      }
+
+      let mediaWidth = viewport.width;
+      let mediaHeight = viewport.height;
+
+      if (item.width && item.height && item.width > 0 && item.height > 0) {
+        const mediaRatio = item.width / item.height;
+        const viewportRatio = viewport.width / viewport.height;
+
+        if (mediaRatio > viewportRatio) {
+          mediaWidth = viewport.width;
+          mediaHeight = viewport.width / mediaRatio;
+        } else {
+          mediaHeight = viewport.height;
+          mediaWidth = viewport.height * mediaRatio;
+        }
+      }
+
+      const maxPanX = Math.max(0, ((mediaWidth * nextScale) - mediaWidth) / 2);
+      const maxPanY = Math.max(0, ((mediaHeight * nextScale) - mediaHeight) / 2);
+
+      return {
+        scale: nextScale,
+        panX: clampValue(nextZoom.panX, -maxPanX, maxPanX),
+        panY: clampValue(nextZoom.panY, -maxPanY, maxPanY),
+      };
+    },
+    [],
+  );
+
+  const setClampedZoom = React.useCallback(
+    (
+      value:
+        | { scale: number; panX: number; panY: number }
+        | ((previous: { scale: number; panX: number; panY: number }) => {
+            scale: number;
+            panX: number;
+            panY: number;
+          }),
+    ) => {
+      setZoom((previous) => {
+        const nextValue = typeof value === "function" ? value(previous) : value;
+        const clamped = clampZoomState(nextValue, currentItem);
+        zoomRef.current = clamped;
+        return clamped;
+      });
+    },
+    [clampZoomState, currentItem],
+  );
+
+  const getBackgroundUrl = React.useCallback(
+    (item: MediaItem | null) => {
+      if (!item) {
+        return TRANSPARENT_PLACEHOLDER;
+      }
+
+      return item.previewUrl || displayUrls[item.id] || signedUrls[item.id] || TRANSPARENT_PLACEHOLDER;
+    },
+    [displayUrls, signedUrls],
+  );
+
+  const transitionBackground = React.useMemo(() => {
+    if (!slideTransition) {
+      return null;
+    }
+
+    return {
+      bottom: getBackgroundUrl(items[slideTransition.fromIndex] ?? null),
+      top: getBackgroundUrl(items[slideTransition.toIndex] ?? null),
+      topOpacity: slideTransition.phase === "active" ? 1 : 0,
+    };
+  }, [getBackgroundUrl, items, slideTransition]);
+
   const getCursorRelativeToCenter = React.useCallback((clientX: number, clientY: number) => {
     const viewport = mediaViewportRef.current;
     if (!viewport) {
@@ -713,7 +816,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       }
 
       const cursor = getCursorRelativeToCenter(clientX, clientY);
-      setZoom((prev) => {
+      setClampedZoom((prev) => {
         if (prev.scale > 1) {
           return { scale: 1, panX: 0, panY: 0 };
         }
@@ -727,7 +830,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       });
       animateZoomTransition();
     },
-    [animateZoomTransition, canZoomCurrentItem, getCursorRelativeToCenter],
+    [animateZoomTransition, canZoomCurrentItem, getCursorRelativeToCenter, setClampedZoom],
   );
 
   const handleMediaWheel = React.useCallback(
@@ -742,7 +845,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       const cursor = getCursorRelativeToCenter(event.clientX, event.clientY);
       const factor = event.deltaY < 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR;
 
-      setZoom((prev) => {
+      setClampedZoom((prev) => {
         const nextScale = Math.min(MAX_IMAGE_ZOOM, Math.max(1, prev.scale * factor));
 
         if (nextScale <= 1) {
@@ -757,7 +860,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         };
       });
     },
-    [canZoomCurrentItem, getCursorRelativeToCenter],
+    [canZoomCurrentItem, getCursorRelativeToCenter, setClampedZoom],
   );
 
   const handleMediaDoubleClick = React.useCallback(
@@ -798,7 +901,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
         didMove = true;
         setIsPanning(true);
-        setZoom((prev) => ({ ...prev, panX: startPanX + dx, panY: startPanY + dy }));
+        setClampedZoom((prev) => ({ ...prev, panX: startPanX + dx, panY: startPanY + dy }));
       };
 
       const handleMouseUp = () => {
@@ -813,8 +916,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
     },
-    [],
+    [setClampedZoom],
   );
+
+  React.useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setClampedZoom((previous) => previous);
+  }, [currentItem, open, setClampedZoom]);
 
   const getSlideUrls = React.useCallback(
     (item: MediaItem | null) => {
@@ -881,6 +992,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               transform: zoomTransform,
               transformOrigin: "center center",
               transition: imageTransition,
+              willChange: interactive ? "transform, opacity" : "opacity",
+              backfaceVisibility: "hidden",
             }}
           />
           {urls.finalUrl ? (
@@ -902,6 +1015,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
                 transformOrigin: "center center",
                 opacity: mediaVisible ? 1 : 0,
                 transition: imageTransition,
+                willChange: interactive ? "transform, opacity" : "opacity",
+                backfaceVisibility: "hidden",
               }}
             />
           ) : null}
@@ -998,6 +1113,19 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
       showTouchControls();
 
+      if (event.touches.length === 2 && canZoomCurrentItem) {
+        event.preventDefault();
+        const [firstTouch, secondTouch] = [event.touches[0], event.touches[1]];
+        pinchGestureRef.current = {
+          startDistance: getTouchDistance(firstTouch, secondTouch),
+          startScale: zoomRef.current.scale,
+          startPanX: zoomRef.current.panX,
+          startPanY: zoomRef.current.panY,
+        };
+        touchGestureRef.current = null;
+        return;
+      }
+
       if (event.touches.length !== 1 || shouldIgnoreGestureTarget(event.target)) {
         touchGestureRef.current = null;
         return;
@@ -1011,13 +1139,37 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         lastY: touch.clientY,
       };
     },
-    [isTouchDevice, showTouchControls],
+    [canZoomCurrentItem, isTouchDevice, showTouchControls],
   );
 
   const handleTouchMove = React.useCallback((event: React.TouchEvent) => {
+    if (event.touches.length === 2 && pinchGestureRef.current && canZoomCurrentItem) {
+      event.preventDefault();
+      const [firstTouch, secondTouch] = [event.touches[0], event.touches[1]];
+      const distance = getTouchDistance(firstTouch, secondTouch);
+      const pinch = pinchGestureRef.current;
+      const midpointX = (firstTouch.clientX + secondTouch.clientX) / 2;
+      const midpointY = (firstTouch.clientY + secondTouch.clientY) / 2;
+      const cursor = getCursorRelativeToCenter(midpointX, midpointY);
+      const startScale = Math.max(1, pinch.startScale);
+      const nextScale = pinch.startDistance > 0
+        ? pinch.startScale * (distance / pinch.startDistance)
+        : pinch.startScale;
+      const ratio = nextScale / startScale;
+
+      setClampedZoom({
+        scale: nextScale,
+        panX: cursor.x - (cursor.x - pinch.startPanX) * ratio,
+        panY: cursor.y - (cursor.y - pinch.startPanY) * ratio,
+      });
+      return;
+    }
+
     if (!touchGestureRef.current || event.touches.length !== 1) {
       return;
     }
+
+    event.preventDefault();
 
     const touch = event.touches[0];
     const prev = touchGestureRef.current;
@@ -1025,7 +1177,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     if (zoomRef.current.scale > 1) {
       const dx = touch.clientX - prev.lastX;
       const dy = touch.clientY - prev.lastY;
-      setZoom((z) => ({ ...z, panX: z.panX + dx, panY: z.panY + dy }));
+      setClampedZoom((z) => ({ ...z, panX: z.panX + dx, panY: z.panY + dy }));
     }
 
     touchGestureRef.current = {
@@ -1033,9 +1185,29 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       lastX: touch.clientX,
       lastY: touch.clientY,
     };
-  }, []);
+  }, [canZoomCurrentItem, getCursorRelativeToCenter, setClampedZoom]);
 
-  const handleTouchEnd = React.useCallback(() => {
+  const handleTouchEnd = React.useCallback((event: React.TouchEvent) => {
+    if (pinchGestureRef.current) {
+      if (event.touches.length === 1) {
+        const touch = event.touches[0];
+        touchGestureRef.current = {
+          startX: touch.clientX,
+          startY: touch.clientY,
+          lastX: touch.clientX,
+          lastY: touch.clientY,
+        };
+      }
+
+      if (event.touches.length < 2) {
+        pinchGestureRef.current = null;
+      }
+
+      if (event.touches.length > 0) {
+        return;
+      }
+    }
+
     const gesture = touchGestureRef.current;
     touchGestureRef.current = null;
 
@@ -1125,6 +1297,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           height: "100%",
           overflow: "hidden",
           bgcolor: "rgba(5, 7, 10, 0.98)",
+          touchAction: "none",
           cursor: isPanning
             ? "grabbing"
             : zoom.scale > 1
@@ -1140,6 +1313,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={() => {
+          pinchGestureRef.current = null;
           touchGestureRef.current = null;
         }}
         onWheel={handleMediaWheel}
@@ -1163,7 +1337,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         >
           <Box
             component="img"
-            src={bgLayers.bottom}
+            src={transitionBackground?.bottom ?? bgLayers.bottom}
             alt=""
             sx={{
               position: "absolute",
@@ -1173,11 +1347,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               objectFit: "cover",
               filter: "blur(28px)",
               transform: "scale(1.15)",
+              willChange: "opacity",
             }}
           />
           <Box
             component="img"
-            src={bgLayers.top}
+            src={transitionBackground?.top ?? bgLayers.top}
             alt=""
             sx={{
               position: "absolute",
@@ -1187,10 +1362,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               objectFit: "cover",
               filter: "blur(28px)",
               transform: "scale(1.15)",
-              opacity: bgTopOpacity,
+              opacity: transitionBackground?.topOpacity ?? bgTopOpacity,
               transition: smoothTransitions
-                ? `opacity ${LIGHTBOX_ANIMATION_MS}ms ease`
+                ? `opacity ${BACKGROUND_CROSSFADE_MS}ms ease`
                 : "none",
+              willChange: "opacity",
             }}
           />
         </Box>
@@ -1214,10 +1390,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             zIndex: 3,
             display: "flex",
             alignItems: "center",
-            gap: 2,
+            gap: { xs: 0.75, sm: 2 },
             px: { xs: 1.5, sm: 2 },
-            py: "calc(env(safe-area-inset-top, 0px) + 12px)",
-            minHeight: "calc(env(safe-area-inset-top, 0px) + 56px)",
+            py: { xs: "calc(env(safe-area-inset-top, 0px) + 8px)", sm: "calc(env(safe-area-inset-top, 0px) + 12px)" },
+            minHeight: { xs: "calc(env(safe-area-inset-top, 0px) + 44px)", sm: "calc(env(safe-area-inset-top, 0px) + 56px)" },
             opacity: controlsVisible ? 1 : 0,
             pointerEvents: controlsVisible ? "auto" : "none",
             transition: transitionStyle,
@@ -1244,9 +1420,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
                   void handleShare();
                 }}
                 aria-label={t("actions.share", { ns: "common" })}
-                sx={{ color: "common.white", bgcolor: "rgba(0, 0, 0, 0.32)" }}
+                size="small"
+                sx={{
+                  color: "common.white",
+                  bgcolor: "rgba(0, 0, 0, 0.32)",
+                  width: { xs: 34, sm: 40 },
+                  height: { xs: 34, sm: 40 },
+                }}
               >
-                <ShareIcon />
+                <ShareIcon sx={{ fontSize: { xs: 18, sm: 22 } }} />
               </IconButton>
             </Tooltip>
           ) : null}
@@ -1258,9 +1440,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
                   void handleDownload();
                 }}
                 aria-label={t("actions.download", { ns: "common" })}
-                sx={{ color: "common.white", bgcolor: "rgba(0, 0, 0, 0.32)" }}
+                size="small"
+                sx={{
+                  color: "common.white",
+                  bgcolor: "rgba(0, 0, 0, 0.32)",
+                  width: { xs: 34, sm: 40 },
+                  height: { xs: 34, sm: 40 },
+                }}
               >
-                <DownloadIcon />
+                <DownloadIcon sx={{ fontSize: { xs: 18, sm: 22 } }} />
               </IconButton>
             </Tooltip>
           ) : null}
@@ -1269,9 +1457,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             <IconButton
               onClick={onClose}
               aria-label={t("actions.close", { ns: "common" })}
-              sx={{ color: "common.white", bgcolor: "rgba(0, 0, 0, 0.32)" }}
+              size="small"
+              sx={{
+                color: "common.white",
+                bgcolor: "rgba(0, 0, 0, 0.32)",
+                width: { xs: 34, sm: 40 },
+                height: { xs: 34, sm: 40 },
+              }}
             >
-              <Close />
+              <Close sx={{ fontSize: { xs: 18, sm: 22 } }} />
             </IconButton>
           </Tooltip>
         </Box>
