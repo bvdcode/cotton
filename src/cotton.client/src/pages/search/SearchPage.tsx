@@ -279,7 +279,7 @@ export const SearchPage: React.FC = () => {
         onClose={closePreview}
       />
 
-      {lightboxOpen && mediaItems.length > 0 && (
+      {mediaItems.length > 0 && (
         <MediaLightbox
           open={lightboxOpen}
           initialIndex={lightboxIndex}

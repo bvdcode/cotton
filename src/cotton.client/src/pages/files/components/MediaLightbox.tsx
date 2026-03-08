@@ -3,6 +3,7 @@ import {
   Box,
   CircularProgress,
   Dialog,
+  Grow,
   IconButton,
   Snackbar,
   Tooltip,
@@ -31,6 +32,11 @@ const FEEDBACK_AUTOHIDE_MS = 2000;
 const HORIZONTAL_SWIPE_PX = 56;
 const VERTICAL_CLOSE_SWIPE_PX = 88;
 const THUMBNAIL_REVEAL_ZONE_PX = 64;
+const MAX_IMAGE_ZOOM = 5;
+const DEFAULT_IMAGE_ZOOM = 2.5;
+const ZOOM_WHEEL_FACTOR = 1.12;
+const DOUBLE_TAP_DELAY_MS = 260;
+const ZOOM_ANIMATE_MS = 250;
 
 type MediaKind = "image" | "video";
 
@@ -108,6 +114,19 @@ interface TouchGestureState {
   lastY: number;
 }
 
+interface SlideTransitionState {
+  fromIndex: number;
+  toIndex: number;
+  direction: 1 | -1;
+  phase: "enter" | "active";
+}
+
+interface TapState {
+  time: number;
+  x: number;
+  y: number;
+}
+
 /**
  * Internal media viewer used across files/search/share pages.
  * Replaces the previous third-party lightbox to avoid runtime crashes from plugin state loops.
@@ -142,11 +161,25 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const touchControlsTimerRef = React.useRef<number | null>(null);
   const touchGestureRef = React.useRef<TouchGestureState | null>(null);
   const mediaRevealFrameRef = React.useRef<number | null>(null);
+  const slideTransitionTimeoutRef = React.useRef<number | null>(null);
+  const slideTransitionFrameRef = React.useRef<number | null>(null);
   const thumbnailStripRef = React.useRef<HTMLDivElement | null>(null);
   const thumbnailButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
   const warmedImageUrlsRef = React.useRef<Set<string>>(new Set());
   const inFlightImagePreloadsRef = React.useRef<Map<string, Promise<boolean>>>(new Map());
+  const mediaViewportRef = React.useRef<HTMLDivElement | null>(null);
+  const lastTapRef = React.useRef<TapState | null>(null);
   const [mediaVisible, setMediaVisible] = React.useState(!smoothTransitions);
+  const [slideTransition, setSlideTransition] = React.useState<SlideTransitionState | null>(null);
+  const [zoom, setZoom] = React.useState({ scale: 1, panX: 0, panY: 0 });
+  const zoomRef = React.useRef({ scale: 1, panX: 0, panY: 0 });
+  const [zoomAnimating, setZoomAnimating] = React.useState(false);
+  const zoomAnimateTimerRef = React.useRef<number | null>(null);
+  const [isPanning, setIsPanning] = React.useState(false);
+  const displayedBgRef = React.useRef(TRANSPARENT_PLACEHOLDER);
+  const bgCrossfadeFrameRef = React.useRef<number | null>(null);
+  const [bgLayers, setBgLayers] = React.useState({ bottom: TRANSPARENT_PLACEHOLDER, top: TRANSPARENT_PLACEHOLDER });
+  const [bgTopOpacity, setBgTopOpacity] = React.useState(1);
 
   const isTouchDevice = React.useMemo(() => {
     if (typeof window === "undefined") {
@@ -196,6 +229,22 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       if (mediaRevealFrameRef.current !== null) {
         window.cancelAnimationFrame(mediaRevealFrameRef.current);
       }
+
+      if (slideTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(slideTransitionTimeoutRef.current);
+      }
+
+      if (slideTransitionFrameRef.current !== null) {
+        window.cancelAnimationFrame(slideTransitionFrameRef.current);
+      }
+
+      if (zoomAnimateTimerRef.current !== null) {
+        window.clearTimeout(zoomAnimateTimerRef.current);
+      }
+
+      if (bgCrossfadeFrameRef.current !== null) {
+        window.cancelAnimationFrame(bgCrossfadeFrameRef.current);
+      }
     };
   }, []);
 
@@ -212,6 +261,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   React.useEffect(() => {
     setCurrentIndex((previousIndex) => clampIndex(previousIndex, items.length));
   }, [items.length]);
+
+  React.useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  React.useEffect(() => {
+    setZoom({ scale: 1, panX: 0, panY: 0 });
+    setZoomAnimating(false);
+    setIsPanning(false);
+  }, [currentIndex, open]);
 
   const activeMediaKey = React.useMemo(() => {
     const item = items[currentIndex];
@@ -405,15 +464,64 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }
   }, [currentIndex, ensureSlideHasOriginal, items, open]);
 
+  const clearSlideTransition = React.useCallback(() => {
+    if (slideTransitionTimeoutRef.current !== null) {
+      window.clearTimeout(slideTransitionTimeoutRef.current);
+      slideTransitionTimeoutRef.current = null;
+    }
+
+    if (slideTransitionFrameRef.current !== null) {
+      window.cancelAnimationFrame(slideTransitionFrameRef.current);
+      slideTransitionFrameRef.current = null;
+    }
+  }, []);
+
+  const startSlideTransition = React.useCallback(
+    (fromIndex: number, toIndex: number) => {
+      clearSlideTransition();
+
+      if (!smoothTransitions || fromIndex === toIndex) {
+        setSlideTransition(null);
+        return;
+      }
+
+      const direction: 1 | -1 = toIndex > fromIndex ? 1 : -1;
+      setSlideTransition({ fromIndex, toIndex, direction, phase: "enter" });
+
+      slideTransitionFrameRef.current = window.requestAnimationFrame(() => {
+        setSlideTransition((previous) => {
+          if (!previous || previous.fromIndex !== fromIndex || previous.toIndex !== toIndex) {
+            return previous;
+          }
+
+          return { ...previous, phase: "active" };
+        });
+        slideTransitionFrameRef.current = null;
+      });
+
+      slideTransitionTimeoutRef.current = window.setTimeout(() => {
+        setSlideTransition(null);
+        slideTransitionTimeoutRef.current = null;
+      }, LIGHTBOX_ANIMATION_MS + 40);
+    },
+    [clearSlideTransition, smoothTransitions],
+  );
+
   const goToIndex = React.useCallback(
     (targetIndex: number, revealControls: boolean = false) => {
-      setCurrentIndex(clampIndex(targetIndex, items.length));
+      const nextIndex = clampIndex(targetIndex, items.length);
+      if (nextIndex === currentIndex) {
+        return;
+      }
+
+      startSlideTransition(currentIndex, nextIndex);
+      setCurrentIndex(nextIndex);
 
       if (revealControls) {
         showTouchControls();
       }
     },
-    [items.length, showTouchControls],
+    [currentIndex, items.length, showTouchControls, startSlideTransition],
   );
 
   const handlePrev = React.useCallback(() => {
@@ -533,13 +641,328 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const currentMeta = buildMetaLabel(currentItem, currentIndex, items.length);
   const currentBackgroundUrl =
     currentItem?.previewUrl || currentDisplayUrl || currentSignedUrl || TRANSPARENT_PLACEHOLDER;
+
+  React.useEffect(() => {
+    if (currentBackgroundUrl === displayedBgRef.current) {
+      return;
+    }
+
+    const prevUrl = displayedBgRef.current;
+    displayedBgRef.current = currentBackgroundUrl;
+
+    if (!smoothTransitions) {
+      setBgLayers({ bottom: currentBackgroundUrl, top: currentBackgroundUrl });
+      setBgTopOpacity(1);
+      return;
+    }
+
+    setBgLayers({ bottom: prevUrl, top: currentBackgroundUrl });
+    setBgTopOpacity(0);
+
+    if (bgCrossfadeFrameRef.current !== null) {
+      window.cancelAnimationFrame(bgCrossfadeFrameRef.current);
+    }
+
+    bgCrossfadeFrameRef.current = window.requestAnimationFrame(() => {
+      setBgTopOpacity(1);
+      bgCrossfadeFrameRef.current = null;
+    });
+  }, [currentBackgroundUrl, smoothTransitions]);
+
   const isVideoLoading = currentItem?.kind === "video" && !currentSignedUrl;
-  const isImageLoading = currentItem?.kind === "image" && !currentSignedUrl;
+  const isImageLoading =
+    currentItem?.kind === "image" &&
+    (!currentSignedUrl || displayUrls[currentItem.id] !== currentSignedUrl);
   const showThumbnailStrip =
     !isTouchDevice &&
-    currentItem.kind === "image" &&
+    currentItem?.kind === "image" &&
     items.length > 1 &&
     isThumbnailStripHovered;
+  const canZoomCurrentItem = Boolean(open && currentItem?.kind === "image");
+
+  const getCursorRelativeToCenter = React.useCallback((clientX: number, clientY: number) => {
+    const viewport = mediaViewportRef.current;
+    if (!viewport) {
+      return { x: 0, y: 0 };
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    return {
+      x: clientX - rect.left - rect.width / 2,
+      y: clientY - rect.top - rect.height / 2,
+    };
+  }, []);
+
+  const animateZoomTransition = React.useCallback(() => {
+    setZoomAnimating(true);
+
+    if (zoomAnimateTimerRef.current !== null) {
+      window.clearTimeout(zoomAnimateTimerRef.current);
+    }
+
+    zoomAnimateTimerRef.current = window.setTimeout(() => {
+      setZoomAnimating(false);
+      zoomAnimateTimerRef.current = null;
+    }, ZOOM_ANIMATE_MS + 20);
+  }, []);
+
+  const toggleZoomAtPoint = React.useCallback(
+    (clientX: number, clientY: number) => {
+      if (!canZoomCurrentItem) {
+        return;
+      }
+
+      const cursor = getCursorRelativeToCenter(clientX, clientY);
+      setZoom((prev) => {
+        if (prev.scale > 1) {
+          return { scale: 1, panX: 0, panY: 0 };
+        }
+
+        const nextScale = DEFAULT_IMAGE_ZOOM;
+        return {
+          scale: nextScale,
+          panX: cursor.x - cursor.x * nextScale,
+          panY: cursor.y - cursor.y * nextScale,
+        };
+      });
+      animateZoomTransition();
+    },
+    [animateZoomTransition, canZoomCurrentItem, getCursorRelativeToCenter],
+  );
+
+  const handleMediaWheel = React.useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!canZoomCurrentItem) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const cursor = getCursorRelativeToCenter(event.clientX, event.clientY);
+      const factor = event.deltaY < 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR;
+
+      setZoom((prev) => {
+        const nextScale = Math.min(MAX_IMAGE_ZOOM, Math.max(1, prev.scale * factor));
+
+        if (nextScale <= 1) {
+          return { scale: 1, panX: 0, panY: 0 };
+        }
+
+        const ratio = nextScale / prev.scale;
+        return {
+          scale: nextScale,
+          panX: cursor.x - (cursor.x - prev.panX) * ratio,
+          panY: cursor.y - (cursor.y - prev.panY) * ratio,
+        };
+      });
+    },
+    [canZoomCurrentItem, getCursorRelativeToCenter],
+  );
+
+  const handleMediaDoubleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (isPanning) {
+        return;
+      }
+
+      toggleZoomAtPoint(event.clientX, event.clientY);
+    },
+    [isPanning, toggleZoomAtPoint],
+  );
+
+  const handlePanMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const currentZoom = zoomRef.current;
+      if (currentZoom.scale <= 1 || event.button !== 0) {
+        return;
+      }
+
+      if (shouldIgnoreGestureTarget(event.target)) {
+        return;
+      }
+
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const startPanX = currentZoom.panX;
+      const startPanY = currentZoom.panY;
+      let didMove = false;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+
+        if (!didMove && Math.abs(dx) < 4 && Math.abs(dy) < 4) {
+          return;
+        }
+
+        didMove = true;
+        setIsPanning(true);
+        setZoom((prev) => ({ ...prev, panX: startPanX + dx, panY: startPanY + dy }));
+      };
+
+      const handleMouseUp = () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+
+        if (didMove) {
+          setTimeout(() => setIsPanning(false), 0);
+        }
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    },
+    [],
+  );
+
+  const getSlideUrls = React.useCallback(
+    (item: MediaItem | null) => {
+      if (!item) {
+        return {
+          previewUrl: TRANSPARENT_PLACEHOLDER,
+          finalUrl: null as string | null,
+          displayUrl: TRANSPARENT_PLACEHOLDER,
+        };
+      }
+
+      const signedUrl = signedUrls[item.id] ?? null;
+      const finalReady = Boolean(signedUrl && displayUrls[item.id] === signedUrl);
+
+      return {
+        previewUrl: item.previewUrl || TRANSPARENT_PLACEHOLDER,
+        finalUrl: finalReady ? signedUrl : null,
+        displayUrl:
+          displayUrls[item.id] || item.previewUrl || signedUrl || TRANSPARENT_PLACEHOLDER,
+      };
+    },
+    [displayUrls, signedUrls],
+  );
+
+  const renderImageSlide = React.useCallback(
+    (item: MediaItem, interactive: boolean) => {
+      const urls = getSlideUrls(item);
+      const activeZoom = interactive ? zoom : { scale: 1, panX: 0, panY: 0 };
+      const zoomTransform = `translate(${activeZoom.panX}px, ${activeZoom.panY}px) scale(${activeZoom.scale})`;
+      const shouldAnimateZoom = interactive && zoomAnimating;
+
+      const transitionParts: string[] = [];
+      if (shouldAnimateZoom) {
+        transitionParts.push(`transform ${ZOOM_ANIMATE_MS}ms ease-out`);
+      }
+      if (smoothTransitions) {
+        transitionParts.push(`opacity ${LIGHTBOX_ANIMATION_MS}ms ease`);
+      }
+      const imageTransition = transitionParts.length > 0 ? transitionParts.join(", ") : "none";
+
+      return (
+        <Box
+          sx={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+          }}
+        >
+          <Box
+            component="img"
+            src={urls.previewUrl}
+            alt={item.name}
+            draggable={false}
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "block",
+              width: "100%",
+              height: "100%",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              transform: zoomTransform,
+              transformOrigin: "center center",
+              transition: imageTransition,
+            }}
+          />
+          {urls.finalUrl ? (
+            <Box
+              component="img"
+              src={urls.finalUrl}
+              alt={item.name}
+              draggable={false}
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "block",
+                width: "100%",
+                height: "100%",
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                transform: zoomTransform,
+                transformOrigin: "center center",
+                opacity: mediaVisible ? 1 : 0,
+                transition: imageTransition,
+              }}
+            />
+          ) : null}
+        </Box>
+      );
+    },
+    [getSlideUrls, mediaVisible, smoothTransitions, zoom, zoomAnimating],
+  );
+
+  const renderMediaSlide = React.useCallback(
+    (item: MediaItem, interactive: boolean) => {
+      if (item.kind === "image") {
+        return renderImageSlide(item, interactive);
+      }
+
+      const signedUrl = signedUrls[item.id] ?? null;
+      if (signedUrl) {
+        return (
+          <Box
+            component="video"
+            src={signedUrl}
+            poster={item.previewUrl || undefined}
+            controls
+            autoPlay
+            playsInline
+            draggable={false}
+            sx={{
+              display: "block",
+              width: "100%",
+              height: "100%",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              opacity: mediaVisible ? 1 : 0,
+              transition: transitionStyle,
+            }}
+          />
+        );
+      }
+
+      return (
+        <Box
+          component="img"
+          src={item.previewUrl || TRANSPARENT_PLACEHOLDER}
+          alt={item.name}
+          draggable={false}
+          sx={{
+            display: "block",
+            width: "100%",
+            height: "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
+            opacity: mediaVisible ? 0.82 : 0,
+            transition: transitionStyle,
+          }}
+        />
+      );
+    },
+    [mediaVisible, renderImageSlide, signedUrls, transitionStyle],
+  );
 
   React.useEffect(() => {
     if (!showThumbnailStrip) {
@@ -597,8 +1020,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }
 
     const touch = event.touches[0];
+    const prev = touchGestureRef.current;
+
+    if (zoomRef.current.scale > 1) {
+      const dx = touch.clientX - prev.lastX;
+      const dy = touch.clientY - prev.lastY;
+      setZoom((z) => ({ ...z, panX: z.panX + dx, panY: z.panY + dy }));
+    }
+
     touchGestureRef.current = {
-      ...touchGestureRef.current,
+      ...prev,
       lastX: touch.clientX,
       lastY: touch.clientY,
     };
@@ -617,6 +1048,34 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
+    if (canZoomCurrentItem && absX < 12 && absY < 12) {
+      const now = window.performance.now();
+      const previousTap = lastTapRef.current;
+
+      if (
+        previousTap &&
+        now - previousTap.time <= DOUBLE_TAP_DELAY_MS &&
+        Math.abs(previousTap.x - gesture.lastX) < 20 &&
+        Math.abs(previousTap.y - gesture.lastY) < 20
+      ) {
+        toggleZoomAtPoint(gesture.lastX, gesture.lastY);
+        lastTapRef.current = null;
+        return;
+      }
+
+      lastTapRef.current = {
+        time: now,
+        x: gesture.lastX,
+        y: gesture.lastY,
+      };
+    } else {
+      lastTapRef.current = null;
+    }
+
+    if (zoomRef.current.scale > 1) {
+      return;
+    }
+
     if (absY >= VERTICAL_CLOSE_SWIPE_PX && absY > absX * 1.15) {
       onClose();
       return;
@@ -629,9 +1088,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         goToIndex(currentIndex - 1);
       }
     }
-  }, [currentIndex, goToIndex, onClose]);
+  }, [canZoomCurrentItem, currentIndex, goToIndex, onClose, toggleZoomAtPoint]);
 
-  if (!open || items.length === 0 || !currentItem) {
+  if (items.length === 0 || !currentItem) {
     return null;
   }
 
@@ -640,6 +1099,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       open={open}
       onClose={onClose}
       fullScreen
+      keepMounted
+      TransitionComponent={Grow}
+      TransitionProps={{
+        timeout: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+        style: { transformOrigin: "center center" },
+      }}
       transitionDuration={smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0}
       PaperProps={{
         sx: {
@@ -653,13 +1118,20 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       }}
     >
       <Box
+        ref={mediaViewportRef}
         sx={{
           position: "relative",
           width: "100%",
           height: "100%",
           overflow: "hidden",
           bgcolor: "rgba(5, 7, 10, 0.98)",
-          cursor: controlsVisible ? "default" : "none",
+          cursor: isPanning
+            ? "grabbing"
+            : zoom.scale > 1
+              ? "grab"
+              : controlsVisible
+                ? "default"
+                : "none",
           userSelect: "none",
           WebkitUserSelect: "none",
         }}
@@ -670,28 +1142,58 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         onTouchCancel={() => {
           touchGestureRef.current = null;
         }}
+        onWheel={handleMediaWheel}
+        onDoubleClick={handleMediaDoubleClick}
+        onMouseDown={handlePanMouseDown}
         onMouseLeave={() => {
+          setIsPanning(false);
           setIsThumbnailStripHovered(false);
         }}
       >
         <Box
-          component="img"
-          src={currentBackgroundUrl}
-          alt=""
           aria-hidden="true"
           sx={{
             position: "absolute",
             inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            filter: "blur(28px)",
-            transform: "scale(1.15)",
             opacity: 0.48,
             pointerEvents: "none",
             userSelect: "none",
+            overflow: "hidden",
           }}
-        />
+        >
+          <Box
+            component="img"
+            src={bgLayers.bottom}
+            alt=""
+            sx={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: "blur(28px)",
+              transform: "scale(1.15)",
+            }}
+          />
+          <Box
+            component="img"
+            src={bgLayers.top}
+            alt=""
+            sx={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: "blur(28px)",
+              transform: "scale(1.15)",
+              opacity: bgTopOpacity,
+              transition: smoothTransitions
+                ? `opacity ${LIGHTBOX_ANIMATION_MS}ms ease`
+                : "none",
+            }}
+          />
+        </Box>
 
         <Box
           sx={{
@@ -776,57 +1278,51 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
         {items.length > 1 ? (
           <>
-            <Tooltip title={t("actions.previous", { ns: "common" })}>
-              <Box component="span">
-                <IconButton
-                  onClick={handlePrev}
-                  disabled={!canGoPrev}
-                  sx={{
-                    position: "absolute",
-                    left: { xs: 8, sm: 16 },
-                    top: "50%",
-                    zIndex: 3,
-                    transform: "translateY(-50%)",
-                    color: "common.white",
-                    bgcolor: "rgba(0, 0, 0, 0.32)",
-                    opacity: controlsVisible ? 1 : 0,
-                    pointerEvents: controlsVisible ? "auto" : "none",
-                    transition: transitionStyle,
-                    "&.Mui-disabled": {
-                      color: "rgba(255, 255, 255, 0.25)",
-                    },
-                  }}
-                >
-                  <ChevronLeft />
-                </IconButton>
-              </Box>
-            </Tooltip>
+            <IconButton
+              onClick={handlePrev}
+              disabled={!canGoPrev}
+              aria-label={t("actions.previous", { ns: "common" })}
+              sx={{
+                position: "absolute",
+                left: { xs: 8, sm: 16 },
+                top: "50%",
+                zIndex: 3,
+                transform: "translateY(-50%)",
+                color: "common.white",
+                bgcolor: "rgba(0, 0, 0, 0.32)",
+                opacity: controlsVisible ? 1 : 0,
+                pointerEvents: controlsVisible ? "auto" : "none",
+                transition: transitionStyle,
+                "&.Mui-disabled": {
+                  color: "rgba(255, 255, 255, 0.25)",
+                },
+              }}
+            >
+              <ChevronLeft />
+            </IconButton>
 
-            <Tooltip title={t("actions.next", { ns: "common" })}>
-              <Box component="span">
-                <IconButton
-                  onClick={handleNext}
-                  disabled={!canGoNext}
-                  sx={{
-                    position: "absolute",
-                    right: { xs: 8, sm: 16 },
-                    top: "50%",
-                    zIndex: 3,
-                    transform: "translateY(-50%)",
-                    color: "common.white",
-                    bgcolor: "rgba(0, 0, 0, 0.32)",
-                    opacity: controlsVisible ? 1 : 0,
-                    pointerEvents: controlsVisible ? "auto" : "none",
-                    transition: transitionStyle,
-                    "&.Mui-disabled": {
-                      color: "rgba(255, 255, 255, 0.25)",
-                    },
-                  }}
-                >
-                  <ChevronRight />
-                </IconButton>
-              </Box>
-            </Tooltip>
+            <IconButton
+              onClick={handleNext}
+              disabled={!canGoNext}
+              aria-label={t("actions.next", { ns: "common" })}
+              sx={{
+                position: "absolute",
+                right: { xs: 8, sm: 16 },
+                top: "50%",
+                zIndex: 3,
+                transform: "translateY(-50%)",
+                color: "common.white",
+                bgcolor: "rgba(0, 0, 0, 0.32)",
+                opacity: controlsVisible ? 1 : 0,
+                pointerEvents: controlsVisible ? "auto" : "none",
+                transition: transitionStyle,
+                "&.Mui-disabled": {
+                  color: "rgba(255, 255, 255, 0.25)",
+                },
+              }}
+            >
+              <ChevronRight />
+            </IconButton>
           </>
         ) : null}
 
@@ -842,63 +1338,47 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             py: 0,
           }}
         >
-          {currentItem.kind === "image" ? (
-            <Box
-              component="img"
-              key={`${currentItem.id}:${currentDisplayUrl}`}
-              src={currentDisplayUrl}
-              alt={currentItem.name}
-              draggable={false}
-              sx={{
-                display: "block",
-                width: "100%",
-                height: "100%",
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                opacity: mediaVisible ? 1 : 0,
-                transition: transitionStyle,
-              }}
-            />
-          ) : currentSignedUrl ? (
-            <Box
-              component="video"
-              key={`${currentItem.id}:${currentSignedUrl}`}
-              src={currentSignedUrl}
-              poster={currentItem.previewUrl || undefined}
-              controls
-              autoPlay
-              playsInline
-              draggable={false}
-              sx={{
-                display: "block",
-                width: "100%",
-                height: "100%",
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                opacity: mediaVisible ? 1 : 0,
-                transition: transitionStyle,
-              }}
-            />
+          {slideTransition ? (
+            <>
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform:
+                    slideTransition.phase === "active"
+                      ? `translateX(${slideTransition.direction > 0 ? "-100%" : "100%"})`
+                      : "translateX(0%)",
+                  transition: smoothTransitions
+                    ? `transform ${LIGHTBOX_ANIMATION_MS}ms ease`
+                    : "none",
+                }}
+              >
+                {renderMediaSlide(items[slideTransition.fromIndex] ?? currentItem, false)}
+              </Box>
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform:
+                    slideTransition.phase === "active"
+                      ? "translateX(0%)"
+                      : `translateX(${slideTransition.direction > 0 ? "100%" : "-100%"})`,
+                  transition: smoothTransitions
+                    ? `transform ${LIGHTBOX_ANIMATION_MS}ms ease`
+                    : "none",
+                }}
+              >
+                {renderMediaSlide(items[slideTransition.toIndex] ?? currentItem, true)}
+              </Box>
+            </>
           ) : (
-            <Box
-              component="img"
-              key={`${currentItem.id}:${currentBackgroundUrl}`}
-              src={currentBackgroundUrl}
-              alt={currentItem.name}
-              draggable={false}
-              sx={{
-                display: "block",
-                width: "100%",
-                height: "100%",
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                opacity: mediaVisible ? 0.82 : 0,
-                transition: transitionStyle,
-              }}
-            />
+            renderMediaSlide(currentItem, true)
           )}
 
           {(isImageLoading || isVideoLoading) ? (
@@ -926,7 +1406,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
                 right: 0,
                 bottom: 0,
                 zIndex: 2,
-                display: { xs: "none", md: currentItem.kind === "image" ? "block" : "none" },
+                display: { xs: "none", md: currentItem?.kind === "image" ? "block" : "none" },
                 height: THUMBNAIL_REVEAL_ZONE_PX,
               }}
               onMouseEnter={() => {
@@ -941,7 +1421,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
                 right: 0,
                 bottom: 0,
                 zIndex: 3,
-                display: { xs: "none", md: currentItem.kind === "image" ? "flex" : "none" },
+                display: { xs: "none", md: currentItem?.kind === "image" ? "flex" : "none" },
                 justifyContent: "center",
                 px: 2,
                 pb: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
