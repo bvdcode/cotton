@@ -34,6 +34,8 @@ const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
 
 type SlideWithTitle = Slide & {
+  fileId: string;
+  fileName: string;
   title?: string;
 };
 
@@ -150,12 +152,19 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [downloadUrls, setDownloadUrls] = React.useState<
     Record<string, string>
   >({});
+  const downloadUrlsRef = React.useRef<Record<string, string>>({});
+  const inFlightDownloadLoadsRef = React.useRef<Map<string, Promise<string | null>>>(
+    new Map(),
+  );
   const loadingRef = React.useRef<Set<string>>(new Set());
 
-  // Rebuild slides when originalUrls or shareUrls change
+  React.useEffect(() => {
+    downloadUrlsRef.current = downloadUrls;
+  }, [downloadUrls]);
+
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
-  }, [items, displayUrls, signedUrls, downloadUrls]);
+    return buildSlidesFromItems(items, displayUrls, signedUrls);
+  }, [items, displayUrls, signedUrls]);
 
   const preloadImage = React.useCallback(async (url: string): Promise<void> => {
     await new Promise<void>((resolve, reject) => {
@@ -199,15 +208,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
             const signedUrl = await getSignedMediaUrl(item.id);
             setSignedUrls((nextPrevious) => ({ ...nextPrevious, [item.id]: signedUrl }));
 
-            if (getDownloadUrl) {
-              try {
-                const downloadUrl = await getDownloadUrl(item.id);
-                setDownloadUrls((nextPrevious) => ({ ...nextPrevious, [item.id]: downloadUrl }));
-              } catch (error) {
-                console.error("Failed to load media download URL", error);
-              }
-            }
-
             const nextDisplayUrl =
               item.kind === "image" && isHeicFile(item.name)
                 ? await convertHeicToJpeg(signedUrl)
@@ -232,7 +232,107 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         return previous;
       });
     },
-    [items, getDownloadUrl, getSignedMediaUrl, preloadImage],
+    [items, getSignedMediaUrl, preloadImage],
+  );
+
+  const ensureDownloadUrl = React.useCallback(
+    async (fileId: string): Promise<string | null> => {
+      const existingUrl = downloadUrlsRef.current[fileId];
+      if (existingUrl) {
+        return existingUrl;
+      }
+
+      if (!getDownloadUrl) {
+        return null;
+      }
+
+      const existingInFlight = inFlightDownloadLoadsRef.current.get(fileId);
+      if (existingInFlight) {
+        return await existingInFlight;
+      }
+
+      const loadTask = (async () => {
+        try {
+          const nextUrl = await getDownloadUrl(fileId);
+          setDownloadUrls((previous) =>
+            previous[fileId] ? previous : { ...previous, [fileId]: nextUrl },
+          );
+          return nextUrl;
+        } catch (error) {
+          console.error("Failed to load media download URL", error);
+          return null;
+        } finally {
+          inFlightDownloadLoadsRef.current.delete(fileId);
+        }
+      })();
+
+      inFlightDownloadLoadsRef.current.set(fileId, loadTask);
+      return await loadTask;
+    },
+    [getDownloadUrl],
+  );
+
+  const getSlideSourceUrl = React.useCallback((slide: SlideWithTitle): string | null => {
+    if (slide.type === "video") {
+      const videoSlide = slide as SlideWithTitle & {
+        sources?: Array<{ src?: string }>;
+      };
+      return videoSlide.sources?.[0]?.src ?? null;
+    }
+
+    const imageSlide = slide as SlideWithTitle & { src?: string };
+    return imageSlide.src ?? null;
+  }, []);
+
+  const handleCustomDownload = React.useCallback(
+    async ({
+      slide,
+      saveAs,
+    }: {
+      slide: Slide;
+      saveAs: (source: string | Blob, name?: string) => void;
+    }) => {
+      const lightboxSlide = slide as SlideWithTitle;
+      const downloadUrl =
+        (await ensureDownloadUrl(lightboxSlide.fileId)) ??
+        getSlideSourceUrl(lightboxSlide);
+
+      if (!downloadUrl) {
+        return;
+      }
+
+      saveAs(downloadUrl, lightboxSlide.fileName);
+    },
+    [ensureDownloadUrl, getSlideSourceUrl],
+  );
+
+  const handleCustomShare = React.useCallback(
+    async ({ slide }: { slide: Slide }) => {
+      const lightboxSlide = slide as SlideWithTitle;
+      if (!navigator.canShare) {
+        return;
+      }
+
+      const downloadUrl =
+        (await ensureDownloadUrl(lightboxSlide.fileId)) ??
+        getSlideSourceUrl(lightboxSlide);
+      if (!downloadUrl) {
+        return;
+      }
+
+      const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadUrl);
+      const shareUrl = token ? shareLinks.buildShareUrl(token) : downloadUrl;
+      const sharePayload = { title: lightboxSlide.fileName, url: shareUrl };
+
+      if (!navigator.canShare(sharePayload)) {
+        return;
+      }
+
+      navigator.share(sharePayload).catch(() => {
+        // Ignore dismissed share sheets.
+      });
+    },
+    [ensureDownloadUrl, getSlideSourceUrl],
   );
 
   React.useEffect(() => {
@@ -349,6 +449,12 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           );
         },
       }}
+      download={{
+        download: handleCustomDownload,
+      }}
+      share={{
+        share: handleCustomShare,
+      }}
       zoom={{
         maxZoomPixelRatio: 3,
         zoomInMultiplier: 1,
@@ -399,15 +505,8 @@ function buildSlidesFromItems(
   items: MediaItem[],
   displayUrls: Record<string, string>,
   signedUrls: Record<string, string>,
-  downloadUrls: Record<string, string>,
 ): SlideWithTitle[] {
   const total = items.length;
-
-  const buildShareUrl = (candidateUrl: string | null): string | null => {
-    if (!candidateUrl) return null;
-    const token = shareLinks.tryExtractTokenFromDownloadUrl(candidateUrl);
-    return token ? shareLinks.buildShareUrl(token) : null;
-  };
 
   const buildTitle = (position: number, item: MediaItem): string => {
     const prefix = total > 0 ? `${position}/${total}` : "";
@@ -421,25 +520,21 @@ function buildSlidesFromItems(
     item: MediaItem;
     title: string;
     displayUrl: string | null;
-    signedUrl: string | null;
-    downloadUrl: string | null;
-    shareUrl: string | null;
   }): SlideWithTitle => {
-    const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl } = args;
+    const { item, title, displayUrl } = args;
     const isLoading = !displayUrl && !item.previewUrl;
     const src = displayUrl || item.previewUrl || TRANSPARENT_PLACEHOLDER;
 
     return {
+      fileId: item.id,
+      fileName: item.name,
       type: "image",
       src,
       width: isLoading ? 120 : item.width,
       height: isLoading ? 120 : item.height,
       title,
-      download:
-        downloadUrl || signedUrl
-          ? { url: downloadUrl || signedUrl || "", filename: item.name }
-          : undefined,
-      share: shareUrl || undefined,
+      download: true,
+      share: true,
     };
   };
 
@@ -447,34 +542,34 @@ function buildSlidesFromItems(
     item: MediaItem;
     title: string;
     signedUrl: string | null;
-    downloadUrl: string | null;
-    shareUrl: string | null;
   }): SlideWithTitle => {
-    const { item, title, signedUrl, downloadUrl, shareUrl } = args;
+    const { item, title, signedUrl } = args;
     const poster = item.previewUrl || undefined;
 
     if (!signedUrl) {
       return {
+        fileId: item.id,
+        fileName: item.name,
         type: "image",
         src: poster || TRANSPARENT_PLACEHOLDER,
         width: item.width,
         height: item.height,
         title,
-        share: undefined,
+        download: true,
+        share: true,
       };
     }
 
     return {
+      fileId: item.id,
+      fileName: item.name,
       type: "video",
       poster,
       width: item.width,
       height: item.height,
       title,
-      download: {
-        url: downloadUrl || signedUrl,
-        filename: item.name,
-      },
-      share: shareUrl || undefined,
+      download: true,
+      share: true,
       sources: [
         {
           src: signedUrl,
@@ -490,18 +585,12 @@ function buildSlidesFromItems(
 
     const signedUrl = signedUrls[item.id] ?? null;
     const displayUrl = displayUrls[item.id] ?? null;
-    const downloadUrl = downloadUrls[item.id] ?? null;
-    const shareCandidate = downloadUrl || signedUrl;
-    const shareUrl = buildShareUrl(shareCandidate);
 
     if (item.kind === "image") {
       return buildImageSlide({
         item,
         title,
         displayUrl,
-        signedUrl,
-        downloadUrl,
-        shareUrl,
       });
     }
 
@@ -509,8 +598,6 @@ function buildSlidesFromItems(
       item,
       title,
       signedUrl,
-      downloadUrl,
-      shareUrl,
     });
   });
 }
