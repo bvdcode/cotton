@@ -17,15 +17,6 @@ export interface MediaHandlers {
 
 const LIGHTBOX_HISTORY_STATE = "lightbox";
 
-const getSignedMediaPreviewUrl = async (fileId: string): Promise<string> => {
-  const url = await filesApi.getDownloadLink(fileId, 60 * 24);
-  return `${url}&preview=true`;
-};
-
-const getMediaDownloadUrl = async (fileId: string): Promise<string> => {
-  return await filesApi.getDownloadLink(fileId, 60 * 24);
-};
-
 /**
  * Hook for managing media lightbox state and handlers.
  * Pushes a history entry when opening so that mobile swipe-back
@@ -102,10 +93,15 @@ export const useMediaLightbox = (
   }, [sortedFiles]);
 
   // Get signed media URL for gallery viewing - uses lightweight server-side preview
-  const getSignedMediaUrl = getSignedMediaPreviewUrl;
+  const getSignedMediaUrl = async (fileId: string): Promise<string> => {
+    const url = await filesApi.getDownloadLink(fileId, 60 * 24);
+    return `${url}&preview=true`;
+  };
 
   // Get download URL for the actual download button - full original file
-  const getDownloadUrl = getMediaDownloadUrl;
+  const getDownloadUrl = async (fileId: string): Promise<string> => {
+    return await filesApi.getDownloadLink(fileId, 60 * 24);
+  };
 
   // Handler to open media lightbox
   const handleMediaClick = useCallback(

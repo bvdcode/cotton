@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Auto-hide controls in media lightbox gallery
  * 
  * Architecture:
@@ -92,7 +92,7 @@
   cursor: none;
 }
 
-/* Move media metadata (counter ΓÇó size ΓÇó name) to the top-left. */
+/* Move media metadata (counter • size • name) to the top-left. */
 .lightbox-autohide .media-lightbox__header {
   position: absolute;
   top: 0;
