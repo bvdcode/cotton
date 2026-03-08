@@ -1,6 +1,6 @@
 ﻿using Cotton.Database;
-using Cotton.Server.Services;
 using EasyExtensions.Quartz.Attributes;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 
@@ -15,6 +15,7 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            FileExtensionContentTypeProvider provider = new();
             long totalUpdated = 0;
             Guid lastId = Guid.Empty;
 
@@ -23,8 +24,7 @@ namespace Cotton.Server.Jobs
                 var manifests = await _dbContext.FileManifests
                     .Include(m => m.NodeFiles)
                     .Where(m =>
-                        (m.ContentType == FileManifestService.DefaultContentType
-                            || m.ContentType == string.Empty) &&
+                        m.ContentType == "application/octet-stream" &&
                         m.Id.CompareTo(lastId) > 0)
                     .OrderBy(m => m.Id)
                     .Take(BatchSize)
@@ -39,8 +39,14 @@ namespace Cotton.Server.Jobs
                     if (string.IsNullOrWhiteSpace(fileName))
                         continue;
 
-                    string contentType = FileManifestService.ResolveContentType(fileName, manifest.ContentType);
-                    if (!string.Equals(manifest.ContentType, contentType, StringComparison.OrdinalIgnoreCase))
+                    var extension = Path.GetExtension(fileName);
+                    if (string.IsNullOrWhiteSpace(extension))
+                        continue;
+
+                    if (!provider.TryGetContentType(extension, out var contentType))
+                        continue;
+
+                    if (manifest.ContentType != contentType)
                     {
                         manifest.ContentType = contentType;
                         totalUpdated++;

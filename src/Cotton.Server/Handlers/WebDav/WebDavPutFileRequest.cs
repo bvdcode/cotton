@@ -13,6 +13,7 @@ using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Quartz.Extensions;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System.Security.Cryptography;
@@ -91,7 +92,7 @@ public class WebDavPutFileRequestHandler(
             return contentError;
         }
 
-        string contentType = FileManifestService.ResolveContentType(target!.ResourceName, request.ContentType);
+        string contentType = ResolveContentType(request.ContentType, target!.ResourceName);
         var fileManifest = await GetOrCreateFileManifestAsync(
             chunks: content!.Chunks,
             fileHash: content.FileHash,
@@ -264,6 +265,15 @@ public class WebDavPutFileRequestHandler(
         }
 
         return (new PutContent(chunks, fileHash, totalBytes), null);
+    }
+
+    private static string ResolveContentType(string? contentType, string resourceName)
+    {
+        FileExtensionContentTypeProvider contentTypeProvider = new();
+        return contentType ??
+            (contentTypeProvider.TryGetContentType(resourceName, out var detectedType)
+                ? detectedType
+                : "application/octet-stream");
     }
 
     private async Task<FileManifest> GetOrCreateFileManifestAsync(
