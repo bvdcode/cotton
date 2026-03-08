@@ -23,7 +23,8 @@
 </div>
 
 
-<img width="1379" height="846" alt="image" src="https://github.com/user-attachments/assets/99f9c587-7ac6-43a4-9c33-50bdafd136d9" />
+<img width="1379" height="846" alt="image" src="https://github.com/user-attachments/assets/35668eb2-049e-4be9-8739-6d603a026b9f" />
+
 
 
 ---
