@@ -708,7 +708,7 @@ export const FilesPage: React.FC = () => {
         }}
       />
 
-      {lightboxOpen && mediaItems.length > 0 && (
+      {mediaItems.length > 0 && (
         <MediaLightbox
           items={mediaItems}
           open={lightboxOpen}

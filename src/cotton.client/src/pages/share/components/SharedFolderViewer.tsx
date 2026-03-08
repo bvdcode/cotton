@@ -321,7 +321,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         loading={loading}
       />
 
-      {lightboxOpen && mediaItems.length > 0 && (
+      {mediaItems.length > 0 && (
         <MediaLightbox
           items={mediaItems}
           open={lightboxOpen}
