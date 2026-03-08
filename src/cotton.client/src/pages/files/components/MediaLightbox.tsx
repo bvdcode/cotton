@@ -32,6 +32,7 @@ const FEEDBACK_AUTOHIDE_MS = 2000;
 const HORIZONTAL_SWIPE_PX = 56;
 const VERTICAL_CLOSE_SWIPE_PX = 88;
 const THUMBNAIL_REVEAL_ZONE_PX = 64;
+const THUMBNAIL_WINDOW_RADIUS = 24;
 const MAX_IMAGE_ZOOM = 5;
 const DEFAULT_IMAGE_ZOOM = 2.5;
 const ZOOM_WHEEL_FACTOR = 1.12;
@@ -117,6 +118,11 @@ function getTouchDistance(
   secondTouch: { clientX: number; clientY: number },
 ): number {
   return Math.hypot(firstTouch.clientX - secondTouch.clientX, firstTouch.clientY - secondTouch.clientY);
+}
+
+function stopEvent(event: { preventDefault?: () => void; stopPropagation: () => void }): void {
+  event.preventDefault?.();
+  event.stopPropagation();
 }
 
 interface TouchGestureState {
@@ -783,6 +789,20 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     };
   }, [getBackgroundUrl, items, slideTransition]);
 
+  const visibleThumbnailItems = React.useMemo(() => {
+    if (!showThumbnailStrip) {
+      return [] as Array<{ item: MediaItem; index: number }>;
+    }
+
+    const startIndex = Math.max(0, currentIndex - THUMBNAIL_WINDOW_RADIUS);
+    const endIndex = Math.min(items.length, currentIndex + THUMBNAIL_WINDOW_RADIUS + 1);
+
+    return items.slice(startIndex, endIndex).map((item, offset) => ({
+      item,
+      index: startIndex + offset,
+    }));
+  }, [currentIndex, items, showThumbnailStrip]);
+
   const getCursorRelativeToCenter = React.useCallback((clientX: number, clientY: number) => {
     const viewport = mediaViewportRef.current;
     if (!viewport) {
@@ -865,6 +885,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
 
   const handleMediaDoubleClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      if (shouldIgnoreGestureTarget(event.target)) {
+        return;
+      }
+
       if (isPanning) {
         return;
       }
@@ -918,6 +942,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     },
     [setClampedZoom],
   );
+
+  const handleViewportDragEvent = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    stopEvent(event);
+  }, []);
 
   React.useEffect(() => {
     if (!open) {
@@ -1309,6 +1337,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           WebkitUserSelect: "none",
         }}
         onDragStartCapture={(event) => event.preventDefault()}
+        onDragEnterCapture={handleViewportDragEvent}
+        onDragOverCapture={handleViewportDragEvent}
+        onDragLeaveCapture={handleViewportDragEvent}
+        onDropCapture={handleViewportDragEvent}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -1650,7 +1682,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
                   },
                 }}
               >
-                {items.map((item, index) => {
+                {visibleThumbnailItems.map(({ item, index }) => {
                   const thumbnailUrl =
                     item.previewUrl || displayUrls[item.id] || signedUrls[item.id] || TRANSPARENT_PLACEHOLDER;
                   const isSelected = index === currentIndex;
