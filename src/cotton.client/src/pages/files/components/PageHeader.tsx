@@ -230,10 +230,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     ],
   );
 
+  React.useEffect(() => {
+    // Keep actions visible by default and only hide them after a successful measure pass.
+    setVisibleActionKeys(actionTabs.map((action) => action.key));
+  }, [actionTabs]);
+
   React.useLayoutEffect(() => {
     const container = actionsContainerRef.current;
     if (!container || actionTabs.length === 0) {
-      setVisibleActionKeys([]);
+      setVisibleActionKeys(actionTabs.map((action) => action.key));
       return;
     }
 
@@ -242,11 +247,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
     const measure = () => {
       const available = container.clientWidth;
-      if (available <= 0) return;
+      if (available <= 0) {
+        setVisibleActionKeys(actionTabs.map((action) => action.key));
+        return;
+      }
 
       const widths = actionTabs.map((action) => {
         const el = actionButtonRefs.current[action.key];
-        return el ? Math.ceil(el.getBoundingClientRect().width) : 36;
+        if (!el) return 36;
+        const measured = Math.ceil(el.getBoundingClientRect().width);
+        return measured > 0 ? measured : 36;
       });
 
       const totalWidth = widths.reduce((sum, w) => sum + w, 0) +
@@ -281,10 +291,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
     measure();
 
+    const rafId = window.requestAnimationFrame(() => {
+      measure();
+    });
+
     const observer = new ResizeObserver(() => measure());
     observer.observe(container);
 
     return () => {
+      window.cancelAnimationFrame(rafId);
       observer.disconnect();
     };
   }, [actionTabs]);
@@ -328,7 +343,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             display: "flex",
             alignItems: "center",
             flexShrink: 0,
-            maxWidth: { xs: "58%", md: "46%" },
             minWidth: 0,
             gap: 0.5,
           }}
