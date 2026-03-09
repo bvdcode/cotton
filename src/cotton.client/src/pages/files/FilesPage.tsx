@@ -15,27 +15,22 @@ import { useNodesStore } from "../../shared/store/nodesStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
-import { useFilePreview } from "./hooks/useFilePreview";
-import { useMediaLightbox } from "./hooks/useMediaLightbox";
+import { useFileInteractionHandlers } from "./hooks/useFileInteractionHandlers";
 import { useFilesLayout } from "./hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "./hooks/useFileSelection";
-import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
-import { getFileTypeInfo } from "./utils/fileTypes";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
-import { buildAudioPlaylistFromFiles } from "../../shared/utils/audioPlaylistBuilder";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
-import { shareFile } from "../../shared/utils/shareFile";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import { filesApi } from "../../shared/api/filesApi";
 import Loader from "../../shared/ui/Loader";
-import { AppToast, type AppToastState } from "../../shared/ui/AppToast";
+import { AppToast } from "../../shared/ui/AppToast";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
@@ -268,13 +263,6 @@ export const FilesPage: React.FC = () => {
     !!effectiveContent && deferredContent !== effectiveContent;
 
   const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
-
-  const audioPlaylist = useMemo(
-    () => buildAudioPlaylistFromFiles(sortedFiles, { fallbackNodeId: nodeId ?? undefined }),
-    [sortedFiles, nodeId],
-  );
-
-  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
   const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
 
   useEffect(() => {
@@ -282,29 +270,14 @@ export const FilesPage: React.FC = () => {
     setScanRootNodeId(nodeId);
   }, [nodeId, setScanRootNodeId]);
 
-  const [shareToast, setShareToast] = React.useState<AppToastState>({
-    open: false,
-    message: "",
-  });
-
-  const showToast = React.useCallback(
-    (message: string) => setShareToast({ open: true, message }),
-    [],
-  );
-
-  const folderOps = useFolderOperations(nodeId, handleFolderChanged);
-  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
-    onToast: showToast,
-  });
-  const fileOps = useFileOperations(reloadCurrentNode);
-  const { previewState, openPreview, closePreview } = useFilePreview();
-  const fileSelection = useFileSelection();
-
-  const smoothGalleryTransitions = useLocalPreferencesStore(
-    selectGallerySmoothTransitions,
-  );
-
   const {
+    previewState,
+    closePreview,
+    handleFileClick,
+    handleDownloadFile,
+    handleShareFile,
+    shareToast,
+    setShareToast,
     lightboxOpen,
     lightboxIndex,
     mediaItems,
@@ -312,7 +285,26 @@ export const FilesPage: React.FC = () => {
     getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
-  } = useMediaLightbox(sortedFiles);
+  } = useFileInteractionHandlers({
+    sortedFiles,
+    audioFallbackNodeId: nodeId ?? undefined,
+  });
+
+  const showToast = React.useCallback(
+    (message: string) => setShareToast({ open: true, message }),
+    [setShareToast],
+  );
+
+  const folderOps = useFolderOperations(nodeId, handleFolderChanged);
+  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
+    onToast: showToast,
+  });
+  const fileOps = useFileOperations(reloadCurrentNode);
+  const fileSelection = useFileSelection();
+
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
 
   const stats = useMemo(
     () => calculateFolderStats(deferredContent?.nodes, deferredContent?.files),
@@ -335,38 +327,12 @@ export const FilesPage: React.FC = () => {
     }
   }, [ancestors, navigate]);
 
-  const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
-    await downloadFile(nodeFileId, fileName);
-  };
-
-  const handleShareFile = React.useCallback(
-    async (nodeFileId: string, fileName: string) => {
-      await shareFile(nodeFileId, fileName, t, setShareToast);
-    },
-    [t],
-  );
-
   const handleShareFolder = React.useCallback(
     async (folderId: string, folderName: string) => {
       await shareFolder(folderId, folderName, t, setShareToast);
     },
-    [t],
+    [setShareToast, t],
   );
-
-  const handleFileClick = (
-    fileId: string,
-    fileName: string,
-    fileSizeBytes?: number,
-  ) => {
-    if (getFileTypeInfo(fileName, null).type === "audio") {
-      openAudio({ fileId, fileName, playlist: audioPlaylist });
-      return;
-    }
-    const opened = openPreview(fileId, fileName, fileSizeBytes);
-    if (!opened) {
-      void handleDownloadFile(fileId, fileName);
-    }
-  };
 
   const onPaginationModelChange = useMemo(
     () => (model: { page: number; pageSize: number }) => {

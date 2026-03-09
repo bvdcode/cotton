@@ -5,29 +5,23 @@ import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
 import { SearchBar } from "./components/SearchBar";
 import { useLayoutSearch } from "./hooks/useLayoutSearch";
-import { downloadFile } from "../files/utils/fileHandlers";
-import { useFilePreview } from "../files/hooks/useFilePreview";
 import { FilePreviewModal } from "../files/components";
 import { FileListViewFactory } from "../files/components";
 import { MediaLightbox } from "../files/components";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
 import { useFileOperations } from "../files/hooks/useFileOperations";
-import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
+import { useFileInteractionHandlers } from "../files/hooks/useFileInteractionHandlers";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
-import { shareFile } from "../../shared/utils/shareFile";
 import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
-import { getFileTypeInfo } from "../files/utils/fileTypes";
-import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
-import { AppToast, type AppToastState } from "../../shared/ui/AppToast";
-import { buildAudioPlaylistFromFiles } from "../../shared/utils/audioPlaylistBuilder";
+import { AppToast } from "../../shared/ui/AppToast";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -74,32 +68,11 @@ export const SearchPage: React.FC = () => {
     setPage(1);
   }, [query, setPage]);
 
-  const { previewState, openPreview, closePreview } = useFilePreview();
-
   const handleFolderClick = useCallback(
     (nodeId: string) => {
       navigate(`/files/${nodeId}`);
     },
     [navigate],
-  );
-
-  const handleDownloadFile = useCallback(
-    async (fileId: string, fileName: string) => {
-      await downloadFile(fileId, fileName);
-    },
-    [],
-  );
-
-  const [shareToast, setShareToast] = React.useState<AppToastState>({
-    open: false,
-    message: "",
-  });
-
-  const handleShareFile = useCallback(
-    async (fileId: string, fileName: string) => {
-      await shareFile(fileId, fileName, t, setShareToast);
-    },
-    [t],
   );
 
   const sortedFiles = useMemo(() => {
@@ -112,26 +85,24 @@ export const SearchPage: React.FC = () => {
     return sorted;
   }, [results]);
 
-  const audioPlaylist = useMemo(
-    () => buildAudioPlaylistFromFiles(sortedFiles),
-    [sortedFiles],
-  );
-
-  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
-
-  const handleFileClick = useCallback(
-    (fileId: string, fileName: string, fileSizeBytes?: number) => {
-      if (getFileTypeInfo(fileName, null).type === "audio") {
-        openAudio({ fileId, fileName, playlist: audioPlaylist });
-        return;
-      }
-      const opened = openPreview(fileId, fileName, fileSizeBytes);
-      if (!opened) {
-        void handleDownloadFile(fileId, fileName);
-      }
-    },
-    [audioPlaylist, handleDownloadFile, openAudio, openPreview],
-  );
+  const {
+    previewState,
+    closePreview,
+    handleFileClick,
+    handleDownloadFile,
+    handleShareFile,
+    shareToast,
+    setShareToast,
+    lightboxOpen,
+    lightboxIndex,
+    mediaItems,
+    getSignedMediaUrl,
+    getDownloadUrl,
+    handleMediaClick,
+    setLightboxOpen,
+  } = useFileInteractionHandlers({
+    sortedFiles,
+  });
 
   const fileListSource = useSearchFileList({
     results,
@@ -141,16 +112,6 @@ export const SearchPage: React.FC = () => {
     hasQuery: !!query.trim(),
     rootNodeName: rootNode?.name,
   });
-
-  const {
-    lightboxOpen,
-    lightboxIndex,
-    mediaItems,
-    getSignedMediaUrl,
-    getDownloadUrl,
-    handleMediaClick,
-    setLightboxOpen,
-  } = useMediaLightbox(sortedFiles);
 
   const tiles = fileListSource.tiles;
 
