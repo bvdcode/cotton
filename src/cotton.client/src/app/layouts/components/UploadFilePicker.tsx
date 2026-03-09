@@ -1,12 +1,27 @@
 import { useEffect, useRef } from "react";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 
+type FilePickerHandle = {
+  getFile: () => Promise<File>;
+};
+
+type FilePickerOptions = {
+  multiple?: boolean;
+  excludeAcceptAllOption?: boolean;
+};
+
+type FilePickerWindow = Window & {
+  showOpenFilePicker?: (
+    options?: FilePickerOptions,
+  ) => Promise<FilePickerHandle[]>;
+};
+
 export const UploadFilePicker = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     uploadManager.setFilePickerOpen(async ({ multiple, accept }) => {
-      const showOpenFilePicker = (window as unknown as { showOpenFilePicker?: (options?: unknown) => Promise<Array<{ getFile: () => Promise<File> }>> }).showOpenFilePicker;
+      const showOpenFilePicker = (window as FilePickerWindow).showOpenFilePicker;
 
       if (typeof showOpenFilePicker === "function") {
         try {

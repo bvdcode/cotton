@@ -53,7 +53,7 @@ export const OneTimeCodeInput = ({
 
   return (
     <Box sx={{ display: "flex", gap: { xs: 1, sm: 1.25 }, width: "100%" }}>
-      {Array.from({ length }).map((_: unknown, i: number) => (
+      {Array.from({ length }).map((_, i: number) => (
         <TextField
           key={i}
           inputRef={(el) => {
@@ -67,10 +67,16 @@ export const OneTimeCodeInput = ({
             inputMode: "numeric",
             pattern: "[0-9]*",
             maxLength: 1,
-            style: { textAlign: "center", fontWeight: 700 },
             "aria-label": inputAriaLabel ? `${inputAriaLabel} ${i + 1}` : undefined,
           }}
-          sx={{ flex: 1, minWidth: 0 }}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            "& .MuiInputBase-input": {
+              textAlign: "center",
+              fontWeight: 700,
+            },
+          }}
           onChange={(e) => {
             const next = normalize(e.target.value, 1);
             if (next.length === 0) {
