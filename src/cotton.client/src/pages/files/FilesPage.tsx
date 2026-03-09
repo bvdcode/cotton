@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
-import { Alert, Box, IconButton, Snackbar, Typography } from "@mui/material";
+import { Alert, Box, IconButton, Typography } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 import {
   FileListViewFactory,
@@ -24,18 +24,18 @@ import { useFileSelection } from "./hooks/useFileSelection";
 import { downloadFile } from "./utils/fileHandlers";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { getFileTypeInfo } from "./utils/fileTypes";
-import { getFileIcon } from "./utils/icons";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
-import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
+import { buildAudioPlaylistFromFiles } from "../../shared/utils/audioPlaylistBuilder";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFile } from "../../shared/utils/shareFile";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import { filesApi } from "../../shared/api/filesApi";
 import Loader from "../../shared/ui/Loader";
+import { AppToast, type AppToastState } from "../../shared/ui/AppToast";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
@@ -106,30 +106,6 @@ function getDropPreparationCaption(
 
   return `${found} • ${progress}`;
 }
-
-type ShareToastState = {
-  open: boolean;
-  message: string;
-};
-
-type ShareToastSnackbarProps = {
-  toast: ShareToastState;
-  onClose: () => void;
-};
-
-const ShareToastSnackbar: React.FC<ShareToastSnackbarProps> = ({
-  toast,
-  onClose,
-}) => {
-  return (
-    <Snackbar
-      open={toast.open}
-      autoHideDuration={2500}
-      onClose={onClose}
-      message={toast.message}
-    />
-  );
-};
 
 type DraggingOverlayProps = {
   open: boolean;
@@ -291,32 +267,10 @@ export const FilesPage: React.FC = () => {
   const isContentTransitioning =
     !!effectiveContent && deferredContent !== effectiveContent;
 
-  useFolderFileList({
-    nodeId,
-    layoutType,
-    listContent,
-  });
-
   const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
 
   const audioPlaylist = useMemo(
-    () =>
-      sortedFiles
-        .filter((file) => getFileTypeInfo(file.name, file.contentType ?? null).type === "audio")
-        .map((file) => {
-          const previewToken =
-            file.largeFilePreviewPresignedToken ??
-            file.previewHashEncryptedHex ??
-            null;
-          const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
-          const previewUrl = typeof icon === "string" ? icon : undefined;
-          return {
-            id: file.id,
-            name: file.name,
-            nodeId: nodeId ?? undefined,
-            previewUrl,
-          };
-        }),
+    () => buildAudioPlaylistFromFiles(sortedFiles, { fallbackNodeId: nodeId ?? undefined }),
     [sortedFiles, nodeId],
   );
 
@@ -328,7 +282,7 @@ export const FilesPage: React.FC = () => {
     setScanRootNodeId(nodeId);
   }, [nodeId, setScanRootNodeId]);
 
-  const [shareToast, setShareToast] = React.useState<ShareToastState>({
+  const [shareToast, setShareToast] = React.useState<AppToastState>({
     open: false,
     message: "",
   });
@@ -644,7 +598,7 @@ export const FilesPage: React.FC = () => {
         />
       )}
 
-      <ShareToastSnackbar
+      <AppToast
         toast={shareToast}
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
       />

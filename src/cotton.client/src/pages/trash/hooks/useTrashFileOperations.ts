@@ -56,17 +56,21 @@ export const useTrashFileOperations = (
       return;
     }
 
-    const wrapperId = resolveWrapperNodeId?.(fileId);
-    if (wrapperId) {
-      // Delete the wrapper node (permanent), which cascades to its contents
-      await nodesApi.deleteNode(wrapperId, true);
-    } else {
-      // Pass skipTrash=true for permanent deletion
-      await filesApi.deleteFile(fileId, true);
-    }
+    try {
+      const wrapperId = resolveWrapperNodeId?.(fileId);
+      if (wrapperId) {
+        // Delete the wrapper node (permanent), which cascades to its contents
+        await nodesApi.deleteNode(wrapperId, true);
+      } else {
+        // Pass skipTrash=true for permanent deletion
+        await filesApi.deleteFile(fileId, true);
+      }
 
-    if (onFilesChanged) {
-      onFilesChanged();
+      if (onFilesChanged) {
+        onFilesChanged();
+      }
+    } catch (error) {
+      console.error("Failed to delete file permanently:", error);
     }
   };
 

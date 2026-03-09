@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { Box, Alert, Snackbar, Typography } from "@mui/material";
+import { Box, Alert, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
@@ -25,8 +25,9 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import { getFileTypeInfo } from "../files/utils/fileTypes";
-import { getFileIcon } from "../files/utils/icons";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
+import { AppToast, type AppToastState } from "../../shared/ui/AppToast";
+import { buildAudioPlaylistFromFiles } from "../../shared/utils/audioPlaylistBuilder";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -89,10 +90,10 @@ export const SearchPage: React.FC = () => {
     [],
   );
 
-  const [shareToast, setShareToast] = React.useState<{
-    open: boolean;
-    message: string;
-  }>({ open: false, message: "" });
+  const [shareToast, setShareToast] = React.useState<AppToastState>({
+    open: false,
+    message: "",
+  });
 
   const handleShareFile = useCallback(
     async (fileId: string, fileName: string) => {
@@ -112,27 +113,7 @@ export const SearchPage: React.FC = () => {
   }, [results]);
 
   const audioPlaylist = useMemo(
-    () =>
-      sortedFiles
-        .filter(
-          (file) =>
-            getFileTypeInfo(file.name, file.contentType ?? null).type ===
-            "audio",
-        )
-        .map((file) => {
-          const previewToken =
-            file.largeFilePreviewPresignedToken ??
-            file.previewHashEncryptedHex ??
-            null;
-          const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
-          const previewUrl = typeof icon === "string" ? icon : undefined;
-          return {
-            id: file.id,
-            name: file.name,
-            nodeId: file.nodeId ?? undefined,
-            previewUrl,
-          };
-        }),
+    () => buildAudioPlaylistFromFiles(sortedFiles),
     [sortedFiles],
   );
 
@@ -203,11 +184,9 @@ export const SearchPage: React.FC = () => {
       width="100%"
       sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
     >
-      <Snackbar
-        open={shareToast.open}
-        autoHideDuration={2500}
+      <AppToast
+        toast={shareToast}
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-        message={shareToast.message}
       />
       <SearchBar
         value={query}
