@@ -374,26 +374,47 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             sx={{ display: { xs: "none", sm: "block" } }}
           />
 
-          <Typography
-            color="text.secondary"
-            sx={{ fontSize: "0.875rem", display: { xs: "none", md: "block" } }}
+          <Box
+            sx={{
+              display: { xs: "none", md: "flex" },
+              alignItems: "center",
+              gap: 1,
+              flexShrink: 0,
+              minWidth: 0,
+            }}
           >
-            {t("stats.summary", {
-              ns: statsNamespace,
-              folders: stats.folders,
-              files: stats.files,
-              size: formatBytes(stats.sizeBytes),
-            })}
-          </Typography>
-
-          {selectionMode && selectedCount > 0 && (
             <Typography
               color="text.secondary"
-              sx={{ fontSize: "0.875rem", display: { xs: "none", sm: "block" } }}
+              noWrap
+              sx={{
+                fontSize: "0.875rem",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
             >
-              {t("selection.count", { count: selectedCount })}
+              {t("stats.summary", {
+                ns: statsNamespace,
+                folders: stats.folders,
+                files: stats.files,
+                size: formatBytes(stats.sizeBytes),
+              })}
             </Typography>
-          )}
+
+            {selectionMode && selectedCount > 0 && (
+              <Typography
+                color="text.secondary"
+                noWrap
+                sx={{
+                  fontSize: "0.875rem",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                {t("selection.count", { count: selectedCount })}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </Box>
     </Box>
