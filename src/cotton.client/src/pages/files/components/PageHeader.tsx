@@ -29,6 +29,7 @@ import {
   getTilesIconScale,
   type FileBrowserViewMode,
 } from "../utils/viewMode";
+import { useOverflowActionKeys } from "../hooks/useOverflowActionKeys";
 
 export interface PageHeaderActionItem {
   key: string;
@@ -103,7 +104,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
   const actionButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
   const [menuAnchorEl, setMenuAnchorEl] = React.useState<HTMLElement | null>(null);
-  const [visibleActionKeys, setVisibleActionKeys] = React.useState<string[]>([]);
 
   const viewIcon = React.useMemo(
     () =>
@@ -230,79 +230,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     ],
   );
 
-  React.useEffect(() => {
-    // Keep actions visible by default and only hide them after a successful measure pass.
-    setVisibleActionKeys(actionTabs.map((action) => action.key));
-  }, [actionTabs]);
-
-  React.useLayoutEffect(() => {
-    const container = actionsContainerRef.current;
-    if (!container || actionTabs.length === 0) {
-      setVisibleActionKeys(actionTabs.map((action) => action.key));
-      return;
-    }
-
-    const ACTION_GAP = 4;
-    const MORE_BUTTON_WIDTH = 36;
-
-    const measure = () => {
-      const available = container.clientWidth;
-      if (available <= 0) {
-        setVisibleActionKeys(actionTabs.map((action) => action.key));
-        return;
-      }
-
-      const widths = actionTabs.map((action) => {
-        const el = actionButtonRefs.current[action.key];
-        if (!el) return 36;
-        const measured = Math.ceil(el.getBoundingClientRect().width);
-        return measured > 0 ? measured : 36;
-      });
-
-      const totalWidth = widths.reduce((sum, w) => sum + w, 0) +
-        Math.max(0, widths.length - 1) * ACTION_GAP;
-
-      if (totalWidth <= available) {
-        setVisibleActionKeys(actionTabs.map((a) => a.key));
-        return;
-      }
-
-      const maxWithoutOverflow = Math.max(0, available - MORE_BUTTON_WIDTH - ACTION_GAP);
-      const nextVisible: string[] = [];
-      let consumed = 0;
-
-      for (let i = 0; i < actionTabs.length; i += 1) {
-        const width = widths[i] ?? 36;
-        const projected = consumed + width + (nextVisible.length > 0 ? ACTION_GAP : 0);
-        if (projected > maxWithoutOverflow) {
-          break;
-        }
-
-        nextVisible.push(actionTabs[i].key);
-        consumed = projected;
-      }
-
-      if (nextVisible.length === 0 && actionTabs.length > 0) {
-        nextVisible.push(actionTabs[0].key);
-      }
-
-      setVisibleActionKeys(nextVisible);
-    };
-
-    measure();
-
-    const rafId = window.requestAnimationFrame(() => {
-      measure();
-    });
-
-    const observer = new ResizeObserver(() => measure());
-    observer.observe(container);
-
-    return () => {
-      window.cancelAnimationFrame(rafId);
-      observer.disconnect();
-    };
-  }, [actionTabs]);
+  const visibleActionKeys = useOverflowActionKeys({
+    actions: actionTabs,
+    actionsContainerRef,
+    actionButtonRefs,
+  });
 
   const overflowActions = React.useMemo(
     () => actionTabs.filter((action) => !visibleActionKeys.includes(action.key)),
