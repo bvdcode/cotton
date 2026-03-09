@@ -47,8 +47,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     // Security: prevent cross-user cached data reuse.
     // When auth identity changes, clear all user-scoped caches.
+    // During initial auth bootstrap user can be temporarily null,
+    // so defer reset until the first auth check is completed.
+    if (!hydrated) return;
+    if (!hasChecked && refreshEnabled) return;
+
     resetUserScopedStores(userId);
-  }, [userId]);
+  }, [userId, hydrated, hasChecked, refreshEnabled]);
 
   useEffect(() => {
     if (!user) {
