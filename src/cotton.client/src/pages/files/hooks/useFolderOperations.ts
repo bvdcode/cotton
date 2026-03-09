@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../../shared/store/nodesStore";
-import { useRenameState } from "../../../shared/hooks/useRenameState";
+import { useFolderRenameDeleteOperations } from "../../../shared/hooks/useFolderRenameDeleteOperations";
 
 export const useFolderOperations = (
   currentNodeId: string | null,
   onFolderChanged?: () => void,
 ) => {
   const { t } = useTranslation(["files", "common"]);
-  const confirm = useConfirm();
   const { createFolder, deleteFolder, renameFolder } = useNodesStore();
 
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -18,7 +16,30 @@ export const useFolderOperations = (
     null,
   );
 
-  const [renameState, renameHandlers] = useRenameState();
+  const renameDelete = useFolderRenameDeleteOperations({
+    getDeleteDialogContent: (folderName) => ({
+      title: t("deleteFolder.confirmTitle", {
+        ns: "files",
+        name: folderName,
+      }),
+      description: t("deleteFolder.confirmDescription", { ns: "files" }),
+      confirmationText: t("common:actions.delete"),
+      cancellationText: t("common:actions.cancel"),
+    }),
+    renameFolder: async (folderId, newName) => {
+      return await renameFolder(
+        folderId,
+        newName,
+        currentNodeId ?? undefined,
+      );
+    },
+    deleteFolder: async (folderId) => {
+      await deleteFolder(folderId, currentNodeId ?? undefined);
+      onFolderChanged?.();
+    },
+    renameErrorMessage: "Failed to rename folder:",
+    deleteErrorMessage: "Failed to delete folder:",
+  });
 
   const handleNewFolder = () => {
     setNewFolderParentId(currentNodeId);
@@ -47,46 +68,6 @@ export const useFolderOperations = (
     setNewFolderParentId(null);
   };
 
-  const handleRenameFolder = (folderId: string, currentName: string) => {
-    renameHandlers.startRename(folderId, currentName);
-  };
-
-  const handleConfirmRename = async () => {
-    await renameHandlers.confirmRename(async (folderId, newName) => {
-      return await renameFolder(
-        folderId,
-        newName,
-        currentNodeId ?? undefined,
-      );
-    });
-  };
-
-  const handleCancelRename = () => {
-    renameHandlers.cancelRename();
-  };
-
-  const handleDeleteFolder = async (folderId: string, folderName: string) => {
-    try {
-      const result = await confirm({
-        title: t("deleteFolder.confirmTitle", {
-          ns: "files",
-          name: folderName,
-        }),
-        description: t("deleteFolder.confirmDescription", { ns: "files" }),
-        confirmationText: t("common:actions.delete"),
-        cancellationText: t("common:actions.cancel"),
-        confirmationButtonProps: { color: "error" },
-      });
-
-      if (result.confirmed) {
-        await deleteFolder(folderId, currentNodeId ?? undefined);
-        onFolderChanged?.();
-      }
-    } catch {
-      // User cancelled
-    }
-  };
-
   return {
     // Create folder state
     isCreatingFolder,
@@ -98,14 +79,14 @@ export const useFolderOperations = (
     handleCancelNewFolder,
 
     // Rename folder state
-    renamingFolderId: renameState.renamingId,
-    renamingFolderName: renameState.renamingName,
-    setRenamingFolderName: renameHandlers.setRenamingName,
-    handleRenameFolder,
-    handleConfirmRename,
-    handleCancelRename,
+    renamingFolderId: renameDelete.renamingFolderId,
+    renamingFolderName: renameDelete.renamingFolderName,
+    setRenamingFolderName: renameDelete.setRenamingFolderName,
+    handleRenameFolder: renameDelete.handleRenameFolder,
+    handleConfirmRename: renameDelete.handleConfirmRename,
+    handleCancelRename: renameDelete.handleCancelRename,
 
     // Delete folder
-    handleDeleteFolder,
+    handleDeleteFolder: renameDelete.handleDeleteFolder,
   };
 };
