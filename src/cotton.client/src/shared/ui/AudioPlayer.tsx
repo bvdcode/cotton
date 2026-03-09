@@ -329,6 +329,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           {
             color: theme.palette.text.primary,
           },
+        "& .rhap_button-clear": {
+          WebkitTapHighlightColor: "transparent",
+        },
+        "& .rhap_button-clear:focus, & .rhap_button-clear:focus-visible": {
+          outline: "none",
+          boxShadow: "none",
+        },
+        "& .rhap_progress-indicator:focus, & .rhap_progress-indicator:focus-visible": {
+          outline: "none",
+          boxShadow: "none",
+        },
         "& .ctn-shuffle-button": {
           color: theme.palette.text.secondary,
         },

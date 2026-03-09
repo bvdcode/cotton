@@ -40,7 +40,7 @@ export const AudioPlayerBar: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const lyricsLineHeightPx = isMobile ? 44 : 32;
-  const lyricsViewHeightPx = lyricsLineHeightPx * 2;
+  const lyricsViewHeightPx = lyricsLineHeightPx * 3;
 
   const open = useAudioPlayerStore(selectAudioPlayerOpen);
   const isScanning = useAudioPlayerStore(selectAudioPlayerIsScanning);
@@ -343,7 +343,7 @@ export const AudioPlayerBar: React.FC = () => {
 
         <Collapse in={lyricsOpen} timeout="auto" unmountOnExit>
           <Divider sx={{ mt: 1 }} />
-          <Box px={2} py={1}>
+          <Box px={2} py={1.25}>
             {!currentItem?.nodeId ? (
               <Typography variant="caption" color="text.secondary">
                 {t("audioPlayer:lyrics.unavailable")}
@@ -404,6 +404,14 @@ export const AudioPlayerBar: React.FC = () => {
                   onClick={() => {
                     setCurrentTrack(item);
                     setQueueOpen(false);
+                  }}
+                  sx={{
+                    "&.Mui-selected": {
+                      bgcolor: "action.hover",
+                    },
+                    "&.Mui-selected:hover": {
+                      bgcolor: "action.selected",
+                    },
                   }}
                 >
                   <Box
