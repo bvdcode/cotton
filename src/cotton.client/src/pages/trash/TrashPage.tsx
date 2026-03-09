@@ -2,7 +2,6 @@ import React, { useEffect, useMemo } from "react";
 import {
   Alert,
   Box,
-  IconButton,
   LinearProgress,
   Dialog,
   DialogContent,
@@ -481,30 +480,33 @@ export const TrashPage: React.FC = () => {
       selectedCount: fileSelection.selectedCount,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
-      customActions:
+      customActionItems:
         fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
-          <IconButton
-            color="error"
-            onClick={() => {
-              void handleDeleteSelected();
-            }}
-            title={t("selection.deleteSelected", { ns: "files" })}
-            disabled={loading}
-          >
-            <Delete />
-          </IconButton>
+          [
+            {
+              key: "delete-selected-trash",
+              icon: <Delete />,
+              title: t("selection.deleteSelected", { ns: "files" }),
+              onClick: () => {
+                void handleDeleteSelected();
+              },
+              disabled: loading,
+              color: "error" as const,
+            },
+          ]
         ) : ancestors.length === 0 ? (
-          <IconButton
-            onClick={handleEmptyTrash}
-            color="error"
-            disabled={
-              loading || emptyingTrash || stats.folders + stats.files === 0
-            }
-            title={t("actions.emptyTrash")}
-          >
-            <Delete />
-          </IconButton>
-        ) : null,
+          [
+            {
+              key: "empty-trash",
+              icon: <Delete />,
+              title: t("actions.emptyTrash"),
+              onClick: handleEmptyTrash,
+              disabled:
+                loading || emptyingTrash || stats.folders + stats.files === 0,
+              color: "error" as const,
+            },
+          ]
+        ) : undefined,
     }),
     [
       ancestors.length,
