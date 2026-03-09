@@ -114,6 +114,45 @@ async function resolveNodeAndAncestors(
   return { node, ancestors };
 }
 
+function buildPersistedContentSnapshot(state: {
+  rootNodeId: string | null;
+  currentNode: NodeDto | null;
+  ancestors: NodeDto[];
+  contentByNodeId: Record<string, NodeContentDto | undefined>;
+  ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
+  lastUpdatedByNodeId: Record<string, number | undefined>;
+}) {
+  const keepNodeIds = new Set<string>();
+
+  if (state.rootNodeId) {
+    keepNodeIds.add(state.rootNodeId);
+  }
+
+  if (state.currentNode?.id) {
+    keepNodeIds.add(state.currentNode.id);
+  }
+
+  for (const ancestor of state.ancestors) {
+    keepNodeIds.add(ancestor.id);
+  }
+
+  const contentByNodeId: Record<string, NodeContentDto | undefined> = {};
+  const ancestorsByNodeId: Record<string, NodeDto[] | undefined> = {};
+  const lastUpdatedByNodeId: Record<string, number | undefined> = {};
+
+  for (const nodeId of keepNodeIds) {
+    contentByNodeId[nodeId] = state.contentByNodeId[nodeId];
+    ancestorsByNodeId[nodeId] = state.ancestorsByNodeId[nodeId];
+    lastUpdatedByNodeId[nodeId] = state.lastUpdatedByNodeId[nodeId];
+  }
+
+  return {
+    contentByNodeId,
+    ancestorsByNodeId,
+    lastUpdatedByNodeId,
+  };
+}
+
 export const useNodesStore = create<NodesState>()(
   persist(
     (set, get) => {
@@ -587,12 +626,18 @@ export const useNodesStore = create<NodesState>()(
     },
     {
       name: NODES_STORAGE_KEY,
-      partialize: (state) => ({
-        cacheOwnerUserId: state.cacheOwnerUserId,
-        currentNode: state.currentNode,
-        ancestors: state.ancestors,
-        rootNodeId: state.rootNodeId,
-      }),
+      partialize: (state) => {
+        const persistedSnapshot = buildPersistedContentSnapshot(state);
+        return {
+          cacheOwnerUserId: state.cacheOwnerUserId,
+          currentNode: state.currentNode,
+          ancestors: state.ancestors,
+          rootNodeId: state.rootNodeId,
+          contentByNodeId: persistedSnapshot.contentByNodeId,
+          ancestorsByNodeId: persistedSnapshot.ancestorsByNodeId,
+          lastUpdatedByNodeId: persistedSnapshot.lastUpdatedByNodeId,
+        };
+      },
     },
   ),
 );
