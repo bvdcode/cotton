@@ -16,7 +16,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { FileBreadcrumbs } from "./FileBreadcrumbs";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import type { FileBrowserViewMode } from "../hooks/useFilesLayout";
+import {
+  getNextFileBrowserViewTitleKey,
+  getTilesIconScale,
+  type FileBrowserViewMode,
+} from "../utils/viewMode";
 
 export interface PageHeaderProps {
   loading: boolean;
@@ -77,20 +81,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   customActions,
 }) => {
   const { t } = useTranslation(["files", "trash", "common"]);
-  const nextViewTitleKey: string = (() => {
-    switch (viewMode) {
-      case "table":
-        return "actions.switchToSmallTilesView";
-      case "tiles-small":
-        return "actions.switchToMediumTilesView";
-      case "tiles-medium":
-        return "actions.switchToLargeTilesView";
-      case "tiles-large":
-        return "actions.switchToTableView";
-      default:
-        return "actions.switchToTableView";
-    }
-  })();
+  const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
 
   const viewIcon =
     viewMode === "table" ? (
@@ -98,12 +89,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     ) : (
       <ViewModule
         sx={{
-          transform:
-            viewMode === "tiles-small"
-              ? "scale(0.9)"
-              : viewMode === "tiles-large"
-                ? "scale(1.1)"
-                : "scale(1)",
+          transform: `scale(${getTilesIconScale(viewMode)})`,
         }}
       />
     );
