@@ -3,8 +3,8 @@ import { Box, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import type { LrcLine } from "../utils/lrc";
 
-const DESKTOP_LINE_HEIGHT_PX = 28;
-const MOBILE_LINE_HEIGHT_PX = 36;
+const DESKTOP_LINE_HEIGHT_PX = 32;
+const MOBILE_LINE_HEIGHT_PX = 44;
 const VISIBLE_LINES = 3;
 const HIGHLIGHT_SWAP_DELAY_MS = 180;
 
@@ -94,18 +94,20 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
                 variant={activeAndPlaying ? "h6" : "body2"}
                 fontWeight={activeAndPlaying ? 800 : isActive ? 500 : 400}
                 color={activeAndPlaying ? "text.primary" : "text.secondary"}
+                noWrap={!isActive}
                 width="100%"
                 textAlign="center"
                 sx={{
                   px: 1,
                   opacity: baseOpacity,
-                  lineHeight: 1.05,
-                  whiteSpace: "normal",
+                  lineHeight: 1.1,
+                  whiteSpace: isActive ? "normal" : "nowrap",
                   overflow: "hidden",
+                  textOverflow: isActive ? "clip" : "ellipsis",
                   display: "block",
                   ...(activeAndPlaying
                     ? {
-                        fontSize: { xs: "1.25rem", sm: "1.35rem" },
+                        fontSize: { xs: "1.15rem", sm: "1.25rem" },
                       }
                     : {
                         fontSize: { xs: "0.95rem", sm: "1rem" },
