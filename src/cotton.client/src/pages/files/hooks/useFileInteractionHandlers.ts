@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { downloadFile } from "../utils/fileHandlers";
 import { shareFile } from "../../../shared/utils/shareFile";
 import { getFileTypeInfo } from "../utils/fileTypes";
@@ -63,11 +62,15 @@ export const useFileInteractionHandlers = ({
 
   const handleShareFile = React.useCallback(
     async (fileId: string, fileName: string) => {
+      const showShareToast = (toast: AppToastState) => {
+        setShareToast(toast);
+      };
+
       await shareFile(
         fileId,
         fileName,
-        t as TFunction,
-        setShareToast as React.Dispatch<React.SetStateAction<AppToastState>>,
+        t,
+        showShareToast,
       );
     },
     [t],

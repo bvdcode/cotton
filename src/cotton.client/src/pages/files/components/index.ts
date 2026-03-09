@@ -1,4 +1,5 @@
 export { FolderCard } from "./FolderCard";
+export { DraggingOverlay } from "./DraggingOverlay";
 export { FileBreadcrumbs } from "./FileBreadcrumbs";
 export { MediaLightbox } from "./MediaLightbox";
 export type { MediaItem } from "./mediaLightbox.types";
