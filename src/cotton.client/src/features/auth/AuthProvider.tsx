@@ -76,6 +76,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const token = await authApi.refresh();
       if (token) {
         const userData = await authApi.me();
+
+        // Ensure stale persisted data from another identity is cleared
+        // before protected routes can render for this user.
+        resetUserScopedStores(userData.id);
         setAuthenticatedInStore(userData);
       } else {
         setUnauthenticated();

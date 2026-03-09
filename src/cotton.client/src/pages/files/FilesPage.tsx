@@ -13,6 +13,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../shared/store/nodesStore";
+import { useAuthStore } from "../../shared/store/authStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
@@ -54,6 +55,7 @@ export const FilesPage: React.FC = () => {
     currentNode,
     ancestors,
     contentByNodeId,
+    cacheOwnerUserId,
     rootNodeId,
     loading,
     error,
@@ -64,6 +66,7 @@ export const FilesPage: React.FC = () => {
     deleteFolder,
     optimisticDeleteFile,
   } = useNodesStore();
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const routeNodeId = params.nodeId;
 
@@ -85,7 +88,8 @@ export const FilesPage: React.FC = () => {
   }, [routeNodeId, layoutType, resolveRootInBackground]);
 
   const nodeId = routeNodeId ?? rootNodeId ?? null;
-  const content = nodeId ? contentByNodeId[nodeId] : undefined;
+  const isUserCacheValid = cacheOwnerUserId === currentUserId;
+  const content = nodeId && isUserCacheValid ? contentByNodeId[nodeId] : undefined;
 
   const {
     childrenTotalCount,

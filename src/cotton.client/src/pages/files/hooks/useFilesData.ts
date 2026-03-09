@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
+import { useAuthStore } from "../../../shared/store/authStore";
 
 interface UseFilesDataParams {
   nodeId: string | null;
@@ -29,9 +30,15 @@ export const useFilesData = ({
   const clampPageSize = (pageSize: number) => Math.max(1, Math.min(100, pageSize));
 
   // Derive children count reactively from cached/loaded content
-  const cachedContent = useNodesStore(
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
+  const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
+  const rawCachedContent = useNodesStore(
     (s) => (nodeId ? s.contentByNodeId[nodeId] : undefined),
   );
+  const cachedContent =
+    cacheOwnerUserId === currentUserId
+      ? rawCachedContent
+      : undefined;
 
   const optimisticSetFilePreviewHash = useNodesStore(
     (s) => s.optimisticSetFilePreviewHash,
