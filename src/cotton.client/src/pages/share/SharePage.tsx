@@ -17,13 +17,17 @@ import { ShareHeaderBar } from "./components/ShareHeaderBar";
 import { SharedFolderViewer } from "./components/SharedFolderViewer";
 import { useShareFileInfo } from "./hooks/useShareFileInfo";
 import { AppToast, type AppToastState } from "../../shared/ui/AppToast";
+import {
+  resolveSharePageViewState,
+  type ShareTargetKind,
+} from "./utils/sharePageViewState";
 
 export const SharePage: React.FC = () => {
   const { t } = useTranslation(["share", "common"]);
   const params = useParams<{ token?: string }>();
   const token = params.token ?? null;
 
-  const [targetKind, setTargetKind] = React.useState<"resolving" | "file" | "folder">("resolving");
+  const [targetKind, setTargetKind] = React.useState<ShareTargetKind>("resolving");
   const [sharedFolderInfo, setSharedFolderInfo] = React.useState<{
     nodeId: string;
     name: string;
@@ -175,19 +179,25 @@ export const SharePage: React.FC = () => {
     }
   }, [fileName, markCopied, shareUrl, sharedFolderInfo?.name, t, targetKind, title]);
 
-  const isResolvingTarget = token !== null && targetKind === "resolving";
-  const showFileLoading = targetKind === "file" && loading;
-  const showLoading = isResolvingTarget || showFileLoading;
-  const showFolder =
-    targetKind === "folder" &&
-    token !== null &&
-    sharedFolderInfo !== null;
-  const showFile =
-    targetKind === "file" &&
-    !loading &&
-    !resolvedError &&
-    token !== null &&
-    resolvedInlineUrl !== null;
+  const viewState = React.useMemo(
+    () =>
+      resolveSharePageViewState({
+        token,
+        targetKind,
+        loading,
+        resolvedError,
+        resolvedInlineUrl,
+        sharedFolderInfo,
+      }),
+    [
+      loading,
+      resolvedError,
+      resolvedInlineUrl,
+      sharedFolderInfo,
+      targetKind,
+      token,
+    ],
+  );
 
   return (
     <Box
@@ -205,7 +215,7 @@ export const SharePage: React.FC = () => {
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
       />
 
-      {showLoading && (
+      {viewState.kind === "loading" && (
         <Box
           flex={1}
           minHeight={0}
@@ -221,7 +231,7 @@ export const SharePage: React.FC = () => {
         </Box>
       )}
 
-      {!showLoading && resolvedError && targetKind === "file" && (
+      {viewState.kind === "file-error" && (
         <Box
           flex={1}
           minHeight={0}
@@ -230,11 +240,11 @@ export const SharePage: React.FC = () => {
           justifyContent="center"
           p={2}
         >
-          <Alert severity="error">{resolvedError}</Alert>
+          <Alert severity="error">{viewState.message}</Alert>
         </Box>
       )}
 
-      {showFolder && (
+      {viewState.kind === "folder" && (
         <>
           <ShareHeaderBar
             title={title}
@@ -247,14 +257,14 @@ export const SharePage: React.FC = () => {
           />
 
           <SharedFolderViewer
-            token={token}
-            rootNodeId={sharedFolderInfo.nodeId}
-            rootName={sharedFolderInfo.name}
+            token={viewState.token}
+            rootNodeId={viewState.folder.nodeId}
+            rootName={viewState.folder.name}
           />
         </>
       )}
 
-      {showFile && (
+      {viewState.kind === "file" && (
         <>
           <ShareHeaderBar
             title={title}
@@ -275,9 +285,9 @@ export const SharePage: React.FC = () => {
             overflow="hidden"
           >
             <ShareFileViewer
-              token={token}
+              token={viewState.token}
               title={title}
-              inlineUrl={resolvedInlineUrl}
+              inlineUrl={viewState.inlineUrl}
               downloadUrl={downloadUrl}
               fileName={fileName}
               contentType={contentType}
