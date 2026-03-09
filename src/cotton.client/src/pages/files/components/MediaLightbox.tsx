@@ -19,62 +19,17 @@ import {
 } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
-import {
-  convertHeicToJpeg,
-  isHeicFile,
-} from "../../../shared/utils/heicConverter";
-import { formatBytes } from "../../../shared/utils/formatBytes";
+import type {
+  MediaLightboxProps,
+  SlideWithTitle,
+} from "./mediaLightbox.types";
+import { useMediaLightboxUrls } from "../hooks/useMediaLightboxUrls";
 import { shareLinks } from "../../../shared/utils/shareLinks";
-
-const TRANSPARENT_PLACEHOLDER =
-  "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
-const IMAGE_DECODE_TIMEOUT_MS = 400;
 
-type SlideWithTitle = Slide & {
-  fileId: string;
-  fileName: string;
-  title?: string;
-};
-
-type MediaKind = "image" | "video";
-
-export interface MediaItem {
-  id: string;
-  kind: MediaKind;
-  name: string;
-  previewUrl: string;
-  width?: number;
-  height?: number;
-  mimeType: string;
-  sizeBytes?: number;
-}
-
-export interface MediaLightboxProps {
-  items: MediaItem[];
-  open: boolean;
-  initialIndex: number;
-  onClose: () => void;
-  getSignedMediaUrl: (id: string) => Promise<string>;
-  /**
-   * If false, disables swipe/fade animations.
-   * Defaults to true.
-   */
-  smoothTransitions?: boolean;
-  /**
-   * Optional separate download URL resolver.
-   * If not provided, the signed media URL is used for both viewing and downloading.
-   */
-  getDownloadUrl?: (id: string) => Promise<string>;
-}
-
-/**
- * MediaLightbox component
- * Displays media items (images/videos) as slides with lazy-loaded signed URLs
- */
 export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   items,
   open,
@@ -99,12 +54,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [isTouchDevice],
   );
 
-  // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
-
   const [touchControlsVisible, setTouchControlsVisible] =
     React.useState<boolean>(true);
-
   const touchControlsTimerRef = React.useRef<number | null>(null);
 
   const clearTouchControlsTimer = React.useCallback(() => {
@@ -115,12 +67,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   }, []);
 
   const showTouchControls = React.useCallback(() => {
-    if (!isTouchDevice) {
-      return;
-    }
+    if (!isTouchDevice) return;
 
     setTouchControlsVisible(true);
-
     clearTouchControlsTimer();
 
     touchControlsTimerRef.current = window.setTimeout(() => {
@@ -130,13 +79,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   }, [clearTouchControlsTimer, isTouchDevice]);
 
   const toggleTouchControls = React.useCallback(() => {
-    if (!isTouchDevice) {
-      return;
-    }
+    if (!isTouchDevice) return;
 
     setTouchControlsVisible((previous) => {
       const next = !previous;
-
       clearTouchControlsTimer();
 
       if (next) {
@@ -151,11 +97,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   }, [clearTouchControlsTimer, isTouchDevice]);
 
   React.useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    if (!isTouchDevice) {
+    if (!open || !isTouchDevice) {
       return;
     }
 
@@ -166,148 +108,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     };
   }, [open, isTouchDevice, showTouchControls, clearTouchControlsTimer]);
 
-  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
-    {},
-  );
-  const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
-    {},
-  );
-  const [downloadUrls, setDownloadUrls] = React.useState<
-    Record<string, string>
-  >({});
-  const downloadUrlsRef = React.useRef<Record<string, string>>({});
-  const inFlightDownloadLoadsRef = React.useRef<Map<string, Promise<string | null>>>(
-    new Map(),
-  );
-  const loadingRef = React.useRef<Set<string>>(new Set());
-  const loadedIdsRef = React.useRef<Set<string>>(new Set());
-
-  React.useEffect(() => {
-    downloadUrlsRef.current = downloadUrls;
-  }, [downloadUrls]);
-
-  const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, displayUrls, signedUrls);
-  }, [items, displayUrls, signedUrls]);
-
-  const preloadImage = React.useCallback(async (url: string): Promise<void> => {
-    await new Promise<void>((resolve, reject) => {
-      const image = new Image();
-
-      image.onload = async () => {
-        if (typeof image.decode === "function") {
-          try {
-            await Promise.race<void | undefined>([
-              image.decode(),
-              new Promise<void>((decodeResolve) => {
-                window.setTimeout(() => {
-                  decodeResolve();
-                }, IMAGE_DECODE_TIMEOUT_MS);
-              }),
-            ]);
-          } catch {
-            // ignore decode failures
-          }
-        }
-
-        resolve();
-      };
-
-      image.onerror = () => reject(new Error("Failed to preload image"));
-      image.src = url;
-    });
-  }, []);
-
-  const ensureSlideHasOriginal = React.useCallback(
-    async (targetIndex: number) => {
-      const item = items[targetIndex];
-      if (!item) return;
-
-      if (loadedIdsRef.current.has(item.id) || loadingRef.current.has(item.id)) {
-        return;
-      }
-
-      loadingRef.current.add(item.id);
-
-      try {
-        const signedUrl = await getSignedMediaUrl(item.id);
-
-        if (item.kind === "video") {
-          setSignedUrls((prev) => ({ ...prev, [item.id]: signedUrl }));
-        }
-
-        const nextDisplayUrl =
-          item.kind === "image" && isHeicFile(item.name)
-            ? await convertHeicToJpeg(signedUrl)
-            : signedUrl;
-
-        if (item.kind === "image") {
-          try {
-            await preloadImage(nextDisplayUrl);
-          } catch {
-            // Keep previewUrl if preloading fails.
-          }
-        }
-
-        setDisplayUrls((prev) => ({ ...prev, [item.id]: nextDisplayUrl }));
-      } catch (error) {
-        console.error("Failed to load media original URL", error);
-      } finally {
-        loadingRef.current.delete(item.id);
-        loadedIdsRef.current.add(item.id);
-      }
-    },
-    [items, getSignedMediaUrl, preloadImage],
-  );
-
-  const ensureDownloadUrl = React.useCallback(
-    async (fileId: string): Promise<string | null> => {
-      const existingUrl = downloadUrlsRef.current[fileId];
-      if (existingUrl) {
-        return existingUrl;
-      }
-
-      if (!getDownloadUrl) {
-        return null;
-      }
-
-      const existingInFlight = inFlightDownloadLoadsRef.current.get(fileId);
-      if (existingInFlight) {
-        return await existingInFlight;
-      }
-
-      const loadTask = (async () => {
-        try {
-          const nextUrl = await getDownloadUrl(fileId);
-          setDownloadUrls((previous) =>
-            previous[fileId] ? previous : { ...previous, [fileId]: nextUrl },
-          );
-          return nextUrl;
-        } catch (error) {
-          console.error("Failed to load media download URL", error);
-          return null;
-        } finally {
-          inFlightDownloadLoadsRef.current.delete(fileId);
-        }
-      })();
-
-      inFlightDownloadLoadsRef.current.set(fileId, loadTask);
-      return await loadTask;
-    },
-    [getDownloadUrl],
-  );
-
-  const getSlideSourceUrl = React.useCallback((slide: SlideWithTitle): string | null => {
-    if (slide.type === "video") {
-      const videoSlide = slide as SlideWithTitle & {
-        sources?: Array<{ src?: string }>;
-      };
-      return videoSlide.sources?.[0]?.src ?? null;
-    }
-
-    const imageSlide = slide as SlideWithTitle & { src?: string };
-    return imageSlide.src ?? null;
-  }, []);
+  const {
+    slides,
+    ensureSlideHasOriginal,
+    resolveSlideDownloadUrl,
+  } = useMediaLightboxUrls({
+    items,
+    getSignedMediaUrl,
+    getDownloadUrl,
+  });
 
   const handleCustomDownload = React.useCallback(
     async ({
@@ -318,46 +127,32 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       saveAs: (source: string | Blob, name?: string) => void;
     }) => {
       const lightboxSlide = slide as SlideWithTitle;
-      const downloadUrl =
-        (await ensureDownloadUrl(lightboxSlide.fileId)) ??
-        getSlideSourceUrl(lightboxSlide);
-
-      if (!downloadUrl) {
-        return;
-      }
-
+      const downloadUrl = await resolveSlideDownloadUrl(slide);
+      if (!downloadUrl) return;
       saveAs(downloadUrl, lightboxSlide.fileName);
     },
-    [ensureDownloadUrl, getSlideSourceUrl],
+    [resolveSlideDownloadUrl],
   );
 
   const handleCustomShare = React.useCallback(
     async ({ slide }: { slide: Slide }) => {
       const lightboxSlide = slide as SlideWithTitle;
-      if (!navigator.canShare) {
-        return;
-      }
+      if (!navigator.canShare) return;
 
-      const downloadUrl =
-        (await ensureDownloadUrl(lightboxSlide.fileId)) ??
-        getSlideSourceUrl(lightboxSlide);
-      if (!downloadUrl) {
-        return;
-      }
+      const downloadUrl = await resolveSlideDownloadUrl(slide);
+      if (!downloadUrl) return;
 
       const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadUrl);
       const shareUrl = token ? shareLinks.buildShareUrl(token) : downloadUrl;
       const sharePayload = { title: lightboxSlide.fileName, url: shareUrl };
 
-      if (!navigator.canShare(sharePayload)) {
-        return;
-      }
+      if (!navigator.canShare(sharePayload)) return;
 
       navigator.share(sharePayload).catch(() => {
         // Ignore dismissed share sheets.
       });
     },
-    [ensureDownloadUrl, getSlideSourceUrl],
+    [resolveSlideDownloadUrl],
   );
 
   React.useEffect(() => {
@@ -371,7 +166,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }
   }, [open, index, ensureSlideHasOriginal]);
 
-  // Build className based on activity state
   const controlsVisible = isTouchDevice ? touchControlsVisible : isActive;
   const lightboxClassName = [
     "lightbox-autohide",
@@ -405,10 +199,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         }
       },
       click: () => {
-        if (!isTouchDevice) {
-          return;
-        }
-
+        if (!isTouchDevice) return;
         window.setTimeout(() => {
           toggleTouchControls();
         }, 0);
@@ -460,7 +251,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
           </div>
         );
       },
-      slideContainer: ({ children, slide }: { children?: React.ReactNode; slide: Slide }) => {
+      slideContainer: ({
+        children,
+        slide,
+      }: {
+        children?: React.ReactNode;
+        slide: Slide;
+      }) => {
         const imageSrc =
           slide.type === "image" ? (slide as { src?: string }).src : null;
 
@@ -579,104 +376,3 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     />
   );
 };
-
-function buildSlidesFromItems(
-  items: MediaItem[],
-  displayUrls: Record<string, string>,
-  signedUrls: Record<string, string>,
-): SlideWithTitle[] {
-  const total = items.length;
-
-  const buildTitle = (position: number, item: MediaItem): string => {
-    const prefix = total > 0 ? `${position}/${total}` : "";
-    const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
-    return sizeStr
-      ? `${prefix} • ${item.name} • ${sizeStr}`
-      : `${prefix} • ${item.name}`;
-  };
-
-  const buildImageSlide = (args: {
-    item: MediaItem;
-    title: string;
-    displayUrl: string | null;
-  }): SlideWithTitle => {
-    const { item, title, displayUrl } = args;
-    const isLoading = !displayUrl && !item.previewUrl;
-    const src = displayUrl || item.previewUrl || TRANSPARENT_PLACEHOLDER;
-
-    return {
-      fileId: item.id,
-      fileName: item.name,
-      type: "image",
-      src,
-      width: isLoading ? 120 : item.width,
-      height: isLoading ? 120 : item.height,
-      title,
-      download: true,
-      share: true,
-    };
-  };
-
-  const buildVideoSlide = (args: {
-    item: MediaItem;
-    title: string;
-    signedUrl: string | null;
-  }): SlideWithTitle => {
-    const { item, title, signedUrl } = args;
-    const poster = item.previewUrl || undefined;
-
-    if (!signedUrl) {
-      return {
-        fileId: item.id,
-        fileName: item.name,
-        type: "image",
-        src: poster || TRANSPARENT_PLACEHOLDER,
-        width: item.width,
-        height: item.height,
-        title,
-        download: true,
-        share: true,
-      };
-    }
-
-    return {
-      fileId: item.id,
-      fileName: item.name,
-      type: "video",
-      poster,
-      width: item.width,
-      height: item.height,
-      title,
-      download: true,
-      share: true,
-      sources: [
-        {
-          src: signedUrl,
-          type: item.mimeType,
-        },
-      ],
-    } as SlideWithTitle;
-  };
-
-  return items.map<SlideWithTitle>((item, idx) => {
-    const position = idx + 1;
-    const title = buildTitle(position, item);
-
-    const signedUrl = signedUrls[item.id] ?? null;
-    const displayUrl = displayUrls[item.id] ?? null;
-
-    if (item.kind === "image") {
-      return buildImageSlide({
-        item,
-        title,
-        displayUrl,
-      });
-    }
-
-    return buildVideoSlide({
-      item,
-      title,
-      signedUrl,
-    });
-  });
-}
