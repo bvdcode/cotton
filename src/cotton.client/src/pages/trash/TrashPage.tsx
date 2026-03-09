@@ -16,18 +16,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import Loader from "../../shared/ui/Loader";
-import { nodesApi } from "../../shared/api/nodesApi";
-import type { NodeContentDto } from "../../shared/api/nodesApi";
 import { useTrashStore } from "../../shared/store/trashStore";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
+import { useTrashBulkActions, useTrashListData } from "./hooks";
 import {
   buildBreadcrumbs,
   calculateFolderStats,
 } from "../files/utils/nodeUtils";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
-import { filesApi } from "../../shared/api/filesApi";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
   selectTrashLayoutType,
@@ -44,64 +42,6 @@ import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,
 } from "../files/utils/viewMode";
-
-async function deleteAllTrashItems(args: {
-  content: NodeContentDto;
-  isTrashRoot: boolean;
-  onProgress: (current: number, total: number) => void;
-}): Promise<void> {
-  const { content, isTrashRoot, onProgress } = args;
-
-  if (isTrashRoot) {
-    // Collect unique wrapper node IDs from the unwrapped content.
-    // For nodes: parentId is the wrapper; for files: nodeId is the wrapper.
-    const wrapperIds = new Set<string>();
-    for (const node of content.nodes ?? []) {
-      if (node.parentId) wrapperIds.add(node.parentId);
-    }
-    for (const file of content.files ?? []) {
-      if (file.nodeId) wrapperIds.add(file.nodeId);
-    }
-
-    const wrapperArray = [...wrapperIds];
-    let deleted = 0;
-
-    for (const wrapperId of wrapperArray) {
-      try {
-        await nodesApi.deleteNode(wrapperId, true);
-        deleted += 1;
-        onProgress(deleted, wrapperArray.length);
-      } catch (err) {
-        console.error(`Failed to delete trash wrapper ${wrapperId}:`, err);
-      }
-    }
-  } else {
-    const totalItems =
-      (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
-
-    let deleted = 0;
-
-    for (const folder of content.nodes ?? []) {
-      try {
-        await nodesApi.deleteNode(folder.id, true);
-        deleted += 1;
-        onProgress(deleted, totalItems);
-      } catch (err) {
-        console.error(`Failed to delete folder ${folder.id}:`, err);
-      }
-    }
-
-    for (const file of content.files ?? []) {
-      try {
-        await filesApi.deleteFile(file.id, true);
-        deleted += 1;
-        onProgress(deleted, totalItems);
-      } catch (err) {
-        console.error(`Failed to delete file ${file.id}:`, err);
-      }
-    }
-  }
-}
 
 type EmptyTrashProgressDialogProps = {
   open: boolean;
@@ -157,23 +97,6 @@ export const TrashPage: React.FC = () => {
     cycleFileBrowserViewMode(viewMode, setLayoutType, setTilesSize);
   }, [setLayoutType, setTilesSize, viewMode]);
 
-  const [listTotalCount, setListTotalCount] = React.useState(0);
-  const [, setListLoading] = React.useState(false);
-  const [listError, setListError] = React.useState<string | null>(null);
-  const [listContent, setListContent] = React.useState<NodeContentDto | null>(
-    null,
-  );
-  const [currentPagination, setCurrentPagination] = React.useState<{
-    page: number;
-    pageSize: number;
-  } | null>(null);
-
-  const [emptyingTrash, setEmptyingTrash] = React.useState(false);
-  const [emptyTrashProgress, setEmptyTrashProgress] = React.useState({
-    current: 0,
-    total: 0,
-  });
-
   useEffect(() => {
     const loadChildren = layoutType !== InterfaceLayoutType.List;
     if (!routeNodeId) {
@@ -186,72 +109,36 @@ export const TrashPage: React.FC = () => {
   const nodeId = routeNodeId ?? currentNode?.id ?? null;
   const content = nodeId ? contentByNodeId[nodeId] : undefined;
 
-  const fetchListPage = React.useCallback(
-    async (page: number, pageSize: number) => {
-      if (!nodeId) return;
-
-      setListLoading(true);
-      setListError(null);
-      try {
-        const response = await nodesApi.getChildren(nodeId, {
-          nodeType: "trash",
-          page: page + 1,
-          pageSize,
-          depth: !routeNodeId ? 1 : 0,
-        });
-        setListContent(response.content);
-        setListTotalCount(response.totalCount);
-      } catch (err) {
-        console.error("Failed to load paged trash content", err);
-        setListError(t("error"));
-      } finally {
-        setListLoading(false);
-      }
-    },
-    [nodeId, routeNodeId, t],
-  );
-
-  useEffect(() => {
-    if (
-      layoutType === InterfaceLayoutType.List &&
-      nodeId &&
-      currentPagination
-    ) {
-      void fetchListPage(currentPagination.page, currentPagination.pageSize);
-    }
-  }, [nodeId, layoutType, currentPagination, fetchListPage]);
-
-  // Auto-init pagination when switching to list mode
-  useEffect(() => {
-    if (layoutType !== InterfaceLayoutType.List) {
-      setListContent(null);
-      setListError(null);
-      setCurrentPagination(null);
-      return;
-    }
-    if (nodeId && !currentPagination) {
-      setCurrentPagination({ page: 0, pageSize: 100 });
-    }
-  }, [nodeId, layoutType, currentPagination]);
-
-  const handlePaginationChange = React.useCallback(
-    (page: number, pageSize: number) => {
-      setCurrentPagination({ page, pageSize });
-      void fetchListPage(page, pageSize);
-    },
-    [fetchListPage],
-  );
+  const {
+    listTotalCount,
+    listLoading,
+    listError: listLoadError,
+    listContent,
+    handlePaginationChange,
+    reloadListPage,
+  } = useTrashListData({
+    nodeId,
+    routeNodeId,
+    layoutType,
+    fallbackContent: content,
+    loadErrorText: t("error"),
+  });
   const refreshContent = React.useCallback(async () => {
     if (!nodeId) return;
+    if (layoutType === InterfaceLayoutType.List) {
+      reloadListPage();
+      return;
+    }
+
     void refreshNodeContent(nodeId);
-  }, [nodeId, refreshNodeContent]);
+  }, [layoutType, nodeId, refreshNodeContent, reloadListPage]);
 
   useEffect(() => {
     const folderName = currentNode?.name;
     const isRoot = !routeNodeId || ancestors.length === 0;
 
     if (isRoot) {
-      document.title = "Cotton - Trash";
+      document.title = `Cotton - ${t("title")}`;
     } else if (folderName) {
       document.title = `Cotton - ${folderName}`;
     } else {
@@ -261,7 +148,7 @@ export const TrashPage: React.FC = () => {
     return () => {
       document.title = "Cotton";
     };
-  }, [currentNode?.name, routeNodeId, ancestors.length]);
+  }, [currentNode?.name, routeNodeId, ancestors.length, t]);
 
   const breadcrumbs = useMemo(
     () => buildBreadcrumbs(ancestors, currentNode),
@@ -356,99 +243,22 @@ export const TrashPage: React.FC = () => {
     }
   }, [ancestors, navigate]);
 
-  const handleEmptyTrash = React.useCallback(async () => {
-    if (!content) return;
-
-    const totalItems =
-      (content.nodes?.length ?? 0) + (content.files?.length ?? 0);
-    if (totalItems === 0) return;
-
-    try {
-      const result = await confirm({
-        title: t("emptyTrash.confirmTitle"),
-        description: t("emptyTrash.confirmDescription"),
-        confirmationText: t("common:actions.delete"),
-        cancellationText: t("common:actions.cancel"),
-        confirmationButtonProps: { color: "error" },
-      });
-
-      if (!result.confirmed) return;
-
-      setEmptyingTrash(true);
-      setEmptyTrashProgress({ current: 0, total: totalItems });
-
-      await deleteAllTrashItems({
-        content,
-        isTrashRoot,
-        onProgress: (current, total) =>
-          setEmptyTrashProgress({ current, total }),
-      });
-
-      setEmptyingTrash(false);
-      await refreshContent();
-    } catch {
-      setEmptyingTrash(false);
-    }
-  }, [confirm, content, isTrashRoot, refreshContent, t]);
-
-  const handleDeleteSelected = React.useCallback(async () => {
-    if (!nodeId) return;
-    if (!fileSelection.selectionMode) return;
-    if (fileSelection.selectedCount <= 0) return;
-
-    const selected = fileSelection.selectedIds;
-    const selectedTiles = tiles.filter((tile) => {
-      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
-      return selected.has(id);
-    });
-
-    if (selectedTiles.length === 0) return;
-
-    const result = await confirm({
-      title: t("deleteSelectedForever.confirmTitle", {
-        ns: "trash",
-        count: selectedTiles.length,
-      }),
-      description: t("deleteSelectedForever.confirmDescription", {
-        ns: "trash",
-      }),
-      confirmationText: t("common:actions.delete"),
-      cancellationText: t("common:actions.cancel"),
-      confirmationButtonProps: { color: "error" },
-    });
-
-    if (!result.confirmed) return;
-
-    let hadError = false;
-
-    for (const tile of selectedTiles) {
-      try {
-        const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
-        const wrapperId = resolveWrapperNodeId(id);
-
-        if (wrapperId) {
-          await nodesApi.deleteNode(wrapperId, true);
-          continue;
-        }
-
-        if (tile.kind === "folder") {
-          await nodesApi.deleteNode(tile.node.id, true);
-        } else {
-          await filesApi.deleteFile(tile.file.id, true);
-        }
-      } catch (e) {
-        hadError = true;
-        console.error("Failed to delete selected trash item", e);
-      }
-    }
-
-    fileSelection.deselectAll();
-    await refreshContent();
-
-    if (hadError) {
-      // Keep console diagnostics; UI refresh already triggered.
-    }
-  }, [confirm, fileSelection, nodeId, refreshContent, resolveWrapperNodeId, t, tiles]);
+  const {
+    emptyingTrash,
+    emptyTrashProgress,
+    handleEmptyTrash,
+    handleDeleteSelected,
+  } = useTrashBulkActions({
+    t,
+    confirm,
+    content,
+    tiles,
+    nodeId,
+    isTrashRoot,
+    fileSelection,
+    resolveWrapperNodeId,
+    refreshContent,
+  });
 
   const handleToggleItem = React.useCallback(
     (
@@ -544,7 +354,7 @@ export const TrashPage: React.FC = () => {
       tileSize: tilesSize,
       loading:
         layoutType === InterfaceLayoutType.List
-          ? !listContent && !listError
+          ? (!listContent && !listLoadError) || listLoading
           : !content && !error,
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
@@ -562,7 +372,7 @@ export const TrashPage: React.FC = () => {
         layoutType === InterfaceLayoutType.List
           ? {
               totalCount: listTotalCount,
-              loading: !listContent && !listError,
+              loading: listLoading,
               onPaginationModelChange,
             }
           : undefined,
@@ -578,7 +388,8 @@ export const TrashPage: React.FC = () => {
       isCreatingInThisFolder,
       layoutType,
       listContent,
-      listError,
+      listLoadError,
+      listLoading,
       listTotalCount,
       onPaginationModelChange,
       t,
@@ -604,9 +415,9 @@ export const TrashPage: React.FC = () => {
         }}
       >
         <PageHeader {...pageHeaderProps} />
-        {(error || listError) && (
+        {(error || listLoadError) && (
           <Box mb={1} px={1}>
-            <Alert severity="error">{error ?? listError}</Alert>
+            <Alert severity="error">{error ?? listLoadError}</Alert>
           </Box>
         )}
 
