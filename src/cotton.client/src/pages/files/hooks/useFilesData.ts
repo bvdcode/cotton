@@ -23,6 +23,7 @@ export const useFilesData = ({
   const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
   const lastNodeIdRef = useRef<string | null>(null);
   const tilesLoadedNodeIdRef = useRef<string | null>(null);
+  const listRequestIdRef = useRef(0);
 
   const DEFAULT_PAGE_SIZE = 100;
   const clampPageSize = (pageSize: number) => Math.max(1, Math.min(100, pageSize));
@@ -96,30 +97,42 @@ export const useFilesData = ({
     lastNodeIdRef.current = nodeId ?? null;
   }, [nodeId, layoutType, currentPagination]);
 
-  const fetchListPage = useCallback(async (page: number, pageSize: number) => {
-    if (!nodeId) {
+  const fetchListPage = useCallback(async (targetNodeId: string, page: number, pageSize: number) => {
+    if (!targetNodeId) {
       return;
     }
 
+    const requestId = ++listRequestIdRef.current;
     setListLoading(true);
     try {
-      const response = await nodesApi.getChildren(nodeId, {
+      const response = await nodesApi.getChildren(targetNodeId, {
         page: page + 1,
         pageSize: clampPageSize(pageSize),
       });
+
+      if (requestId !== listRequestIdRef.current) {
+        return;
+      }
+
       setListContent(response.content);
       setListTotalCount(response.totalCount);
     } catch (err) {
+      if (requestId !== listRequestIdRef.current) {
+        return;
+      }
+
       console.error("Failed to load paged content", err);
       setListError("Failed to load list");
     } finally {
-      setListLoading(false);
+      if (requestId === listRequestIdRef.current) {
+        setListLoading(false);
+      }
     }
-  }, [nodeId]);
+  }, []);
 
   useEffect(() => {
     if (layoutType === InterfaceLayoutType.List && nodeId && currentPagination) {
-      void fetchListPage(currentPagination.page, currentPagination.pageSize);
+      void fetchListPage(nodeId, currentPagination.page, currentPagination.pageSize);
     }
   }, [nodeId, layoutType, currentPagination, fetchListPage]);
 
@@ -140,7 +153,7 @@ export const useFilesData = ({
     }
 
     if (layoutType === InterfaceLayoutType.List && currentPagination) {
-      void fetchListPage(currentPagination.page, currentPagination.pageSize);
+      void fetchListPage(nodeId, currentPagination.page, currentPagination.pageSize);
       return;
     }
 
