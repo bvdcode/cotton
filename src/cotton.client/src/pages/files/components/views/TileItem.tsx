@@ -317,6 +317,9 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return (
         <Box
           position="relative"
+          onContextMenu={(e) => {
+            e.preventDefault();
+          }}
           onPointerDownCapture={handlePointerDownCapture}
           onPointerMoveCapture={handlePointerMoveCapture}
           onPointerUpCapture={handlePointerUpCapture}
@@ -457,6 +460,9 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     return (
       <Box
         position="relative"
+        onContextMenu={(e) => {
+          e.preventDefault();
+        }}
         onPointerDownCapture={handlePointerDownCapture}
         onPointerMoveCapture={handlePointerMoveCapture}
         onPointerUpCapture={handlePointerUpCapture}

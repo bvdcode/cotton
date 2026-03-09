@@ -15,7 +15,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { Close, QueueMusic, Shuffle, Subtitles, TravelExplore } from "@mui/icons-material";
+import { Close, QueueMusic, Subtitles, TravelExplore } from "@mui/icons-material";
 import type { SnackbarCloseReason } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import {
@@ -65,8 +65,6 @@ export const AudioPlayerBar: React.FC = () => {
     null,
   );
   const [lyricsStarted, setLyricsStarted] = React.useState<boolean>(false);
-  const [lyricsPrelude, setLyricsPrelude] = React.useState<boolean>(false);
-  const [lyricsIntroProgress, setLyricsIntroProgress] = React.useState<number>(1);
   const countdownConsumedRef = React.useRef<boolean>(false);
 
   const paperRef = React.useRef<HTMLDivElement | null>(null);
@@ -128,16 +126,12 @@ export const AudioPlayerBar: React.FC = () => {
     setLyricsActiveIndex(0);
     setLyricsCountdown(null);
     setLyricsStarted(false);
-    setLyricsPrelude(false);
-    setLyricsIntroProgress(1);
     countdownConsumedRef.current = false;
   }, [lyricsLines]);
 
   React.useEffect(() => {
     setLyricsCountdown(null);
     setLyricsStarted(false);
-    setLyricsPrelude(false);
-    setLyricsIntroProgress(1);
     countdownConsumedRef.current = false;
   }, [currentFileId]);
 
@@ -169,8 +163,6 @@ export const AudioPlayerBar: React.FC = () => {
       if (started) {
         countdownConsumedRef.current = true;
         setLyricsCountdown((prev) => (prev === null ? prev : null));
-        setLyricsPrelude((prev) => (prev ? false : prev));
-        setLyricsIntroProgress((prev) => (prev === 1 ? prev : 1));
 
         const next = findActiveLrcLineIndex(lyricsLines, timeSeconds);
         setLyricsActiveIndex((prev) => (prev === next ? prev : next));
@@ -179,8 +171,6 @@ export const AudioPlayerBar: React.FC = () => {
 
       if (countdownConsumedRef.current) {
         setLyricsCountdown((prev) => (prev === null ? prev : null));
-        setLyricsPrelude((prev) => (prev ? prev : true));
-        setLyricsIntroProgress((prev) => (prev === 1 ? prev : 1));
         return;
       }
 
@@ -188,18 +178,12 @@ export const AudioPlayerBar: React.FC = () => {
 
       if (delta > 3) {
         setLyricsCountdown((prev) => (prev === null ? prev : null));
-        setLyricsPrelude((prev) => (prev ? prev : true));
-        setLyricsIntroProgress((prev) => (prev === 1 ? prev : 1));
         return;
       }
 
       const safeDelta = Math.max(0.0001, delta);
       const nextCountdown = Math.ceil(safeDelta);
       setLyricsCountdown((prev) => (prev === nextCountdown ? prev : nextCountdown));
-      setLyricsPrelude((prev) => (prev ? false : prev));
-
-      const progress = Math.min(1, Math.max(0, (3 - safeDelta) / 3));
-      setLyricsIntroProgress((prev) => (prev === progress ? prev : progress));
     },
     [lyricsLines, lyricsListenEnabled],
   );
@@ -283,30 +267,6 @@ export const AudioPlayerBar: React.FC = () => {
 
           <Tooltip
             title={
-              shuffleEnabled
-                ? t("audioPlayer:actions.disableShuffle")
-                : t("audioPlayer:actions.enableShuffle")
-            }
-            arrow
-          >
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => toggleShuffle()}
-                color={shuffleEnabled ? "primary" : "default"}
-                aria-label={
-                  shuffleEnabled
-                    ? t("audioPlayer:actions.disableShuffle")
-                    : t("audioPlayer:actions.enableShuffle")
-                }
-              >
-                <Shuffle fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip
-            title={
               queueOpen
                 ? t("audioPlayer:actions.hideQueue")
                 : t("audioPlayer:actions.showQueue")
@@ -317,6 +277,7 @@ export const AudioPlayerBar: React.FC = () => {
               <IconButton
                 size="small"
                 onClick={() => setQueueOpen((prev) => !prev)}
+                color={queueOpen ? "primary" : "default"}
                 aria-label={
                   queueOpen
                     ? t("audioPlayer:actions.hideQueue")
@@ -395,22 +356,6 @@ export const AudioPlayerBar: React.FC = () => {
                   lines={lyricsLines}
                   activeIndex={lyricsStarted ? lyricsActiveIndex : 0}
                   isActivePlaying={lyricsStarted}
-                  translateExtraPx={
-                    lyricsStarted
-                      ? 0
-                      : lyricsCountdown !== null
-                        ? (1 - lyricsIntroProgress) * lyricsLineHeightPx
-                        : 0
-                  }
-                  activeOpacity={
-                    lyricsStarted
-                      ? 1
-                      : lyricsCountdown !== null
-                        ? 0.35 + 0.65 * lyricsIntroProgress
-                        : lyricsPrelude
-                          ? 0.6
-                          : 0.6
-                  }
                 />
 
                 {lyricsCountdown !== null ? (
@@ -496,6 +441,12 @@ export const AudioPlayerBar: React.FC = () => {
             playlist={playlist}
             onTrackChange={setCurrentTrack}
             shuffleEnabled={shuffleEnabled}
+            onToggleShuffle={toggleShuffle}
+            shuffleLabel={
+              shuffleEnabled
+                ? t("audioPlayer:actions.disableShuffle")
+                : t("audioPlayer:actions.enableShuffle")
+            }
             onListen={lyricsListenEnabled ? handleListen : undefined}
             listenIntervalMs={lyricsListenEnabled ? 250 : undefined}
           />

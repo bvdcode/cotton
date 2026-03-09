@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, LinearProgress } from "@mui/material";
+import { Shuffle } from "@mui/icons-material";
 import H5AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import { filesApi } from "../api/filesApi";
@@ -11,6 +12,8 @@ interface AudioPlayerProps {
   playlist?: ReadonlyArray<AudioPlaylistItem> | null;
   onTrackChange?: (item: AudioPlaylistItem) => void;
   shuffleEnabled?: boolean;
+  onToggleShuffle?: () => void;
+  shuffleLabel?: string;
   onListen?: (timeSeconds: number) => void;
   listenIntervalMs?: number;
 }
@@ -37,6 +40,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   playlist,
   onTrackChange,
   shuffleEnabled = false,
+  onToggleShuffle,
+  shuffleLabel,
   onListen,
   listenIntervalMs,
 }) => {
@@ -324,6 +329,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           {
             color: theme.palette.text.primary,
           },
+        "& .ctn-shuffle-button": {
+          color: theme.palette.text.secondary,
+        },
+        "& .ctn-shuffle-button.ctn-shuffle-active": {
+          color: theme.palette.primary.main,
+        },
       })}
     >
       {loading && (
@@ -351,6 +362,24 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         onClickNext={hasPlaylist ? handleNext : undefined}
         onEnded={handleEnded}
         preload="metadata"
+        customAdditionalControls={
+          onToggleShuffle
+            ? [
+                <button
+                  key="shuffle"
+                  type="button"
+                  className={`rhap_button-clear rhap_repeat-button ctn-shuffle-button${
+                    shuffleEnabled ? " ctn-shuffle-active" : ""
+                  }`}
+                  onClick={onToggleShuffle}
+                  aria-label={shuffleLabel}
+                  title={shuffleLabel}
+                >
+                  <Shuffle fontSize="small" />
+                </button>,
+              ]
+            : undefined
+        }
       />
     </Box>
   );
