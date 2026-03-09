@@ -1,6 +1,6 @@
 import { httpClient } from "./httpClient";
 import type { Guid, NodeDto } from "./layoutsApi";
-import { readRequiredIntHeader } from "./utils/headerUtils";
+import { readRequiredIntHeader, type HeaderMap } from "./utils/headerUtils";
 
 export interface SharedNodeFileDto {
   id: Guid;
@@ -61,7 +61,7 @@ export const sharedFoldersApi = {
         },
       },
     );
-    const totalCount = readRequiredIntHeader(response.headers, "x-total-count");
+    const totalCount = readRequiredIntHeader(response.headers as HeaderMap, "x-total-count");
 
     return { content: response.data, totalCount };
   },

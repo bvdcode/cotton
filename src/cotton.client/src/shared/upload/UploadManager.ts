@@ -27,6 +27,10 @@ export interface UploadTask {
   completedAt?: number;
 }
 
+interface UploadTaskInternal extends UploadTask {
+  _file: File;
+}
+
 export interface UploadFilePickerContext {
   nodeId: Guid;
   nodeLabel: string;
@@ -51,7 +55,7 @@ const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
 
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
-  private readonly tasks: UploadTask[] = [];
+  private readonly tasks: UploadTaskInternal[] = [];
   private running = false;
   private open = false;
   private snapshot: { open: boolean; tasks: UploadTask[]; overall: UploadOverallStats } = {
@@ -166,9 +170,8 @@ export class UploadManager {
         bytesUploaded: 0,
         progress01: 0,
         status: "queued",
+        _file: file,
       });
-      // Store the File object on the task instance via a hidden symbol.
-      (this.tasks[0] as unknown as { _file: File })._file = file;
     }
 
     // Pop open the widget.
@@ -267,7 +270,7 @@ export class UploadManager {
           continue;
         }
 
-        const file = (next as unknown as { _file: File })._file;
+        const file = next._file;
         next.status = "uploading";
         next.error = undefined;
         next.uploadSpeedBytesPerSec = 0;
