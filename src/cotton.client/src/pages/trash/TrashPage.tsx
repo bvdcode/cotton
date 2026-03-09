@@ -36,25 +36,15 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import type { TilesSize } from "../files/types/FileListViewTypes";
-import type { FileBrowserViewMode } from "../files/hooks/useFilesLayout";
 import type {
   FileOperations,
   FolderOperations,
 } from "../files/types/FileListViewTypes";
 import { useFileSelection } from "../files/hooks/useFileSelection";
-
-function getTrashViewMode(args: {
-  layoutType: InterfaceLayoutType;
-  tilesSize: TilesSize;
-}): FileBrowserViewMode {
-  const { layoutType, tilesSize } = args;
-
-  if (layoutType === InterfaceLayoutType.List) return "table";
-
-  if (tilesSize === "small") return "tiles-small";
-  if (tilesSize === "large") return "tiles-large";
-  return "tiles-medium";
-}
+import {
+  cycleFileBrowserViewMode,
+  getFileBrowserViewMode,
+} from "../files/utils/viewMode";
 
 async function deleteAllTrashItems(args: {
   content: NodeContentDto;
@@ -162,26 +152,10 @@ export const TrashPage: React.FC = () => {
   const setLayoutType = useLocalPreferencesStore((s) => s.setTrashLayoutType);
   const setTilesSize = useLocalPreferencesStore((s) => s.setTrashTilesSize);
 
-  const viewMode = getTrashViewMode({ layoutType, tilesSize });
+  const viewMode = getFileBrowserViewMode(layoutType, tilesSize);
 
   const cycleViewMode = React.useCallback(() => {
-    switch (viewMode) {
-      case "table":
-        setLayoutType(InterfaceLayoutType.Tiles);
-        setTilesSize("small");
-        return;
-      case "tiles-small":
-        setTilesSize("medium");
-        return;
-      case "tiles-medium":
-        setTilesSize("large");
-        return;
-      case "tiles-large":
-        setLayoutType(InterfaceLayoutType.List);
-        return;
-      default:
-        setLayoutType(InterfaceLayoutType.List);
-    }
+    cycleFileBrowserViewMode(viewMode, setLayoutType, setTilesSize);
   }, [setLayoutType, setTilesSize, viewMode]);
 
   const [listTotalCount, setListTotalCount] = React.useState(0);
