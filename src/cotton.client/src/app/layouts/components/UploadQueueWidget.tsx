@@ -43,6 +43,8 @@ export const UploadQueueWidget = () => {
       ? t(widgetTitle.key, widgetTitle.options)
       : t(widgetTitle.key);
 
+  const listHeight = Math.min(tasks.length * 90, 400);
+
   if (!visible) return null;
 
   return (
@@ -88,18 +90,21 @@ export const UploadQueueWidget = () => {
           sx={{
             maxHeight: isCollapsed
               ? 0
-              : `${Math.min(tasks.length * 90, 400)}px`,
+              : `${listHeight}px`,
             overflow: "hidden",
             position: "relative",
             zIndex: 1,
             transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
             opacity: isCollapsed ? 0 : 1,
             pb: isCollapsed ? 0 : 1.5,
+            "& .upload-queue-widget__list": {
+              height: `${listHeight}px`,
+            },
           }}
         >
           {tasks.length > 0 && (
             <Virtuoso
-              style={{ height: Math.min(tasks.length * 90, 400) }}
+              className="upload-queue-widget__list"
               totalCount={tasks.length}
               overscan={5}
               itemContent={(index) => (

@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   CircularProgress,
-  Snackbar,
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -17,6 +16,7 @@ import { ShareFileViewer } from "./components/ShareFileViewer";
 import { ShareHeaderBar } from "./components/ShareHeaderBar";
 import { SharedFolderViewer } from "./components/SharedFolderViewer";
 import { useShareFileInfo } from "./hooks/useShareFileInfo";
+import { AppToast, type AppToastState } from "../../shared/ui/AppToast";
 
 export const SharePage: React.FC = () => {
   const { t } = useTranslation(["share", "common"]);
@@ -97,10 +97,10 @@ export const SharePage: React.FC = () => {
     downloadUrl,
   });
 
-  const [shareToast, setShareToast] = React.useState<{
-    open: boolean;
-    message: string;
-  }>({ open: false, message: "" });
+  const [shareToast, setShareToast] = React.useState<AppToastState>({
+    open: false,
+    message: "",
+  });
 
   const [isCopied, markCopied] = useCopyFeedback();
 
@@ -200,11 +200,9 @@ export const SharePage: React.FC = () => {
       minHeight={0}
       minWidth={0}
     >
-      <Snackbar
-        open={shareToast.open}
-        autoHideDuration={2500}
+      <AppToast
+        toast={shareToast}
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-        message={shareToast.message}
       />
 
       {showLoading && (

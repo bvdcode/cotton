@@ -41,7 +41,7 @@ export const UploadFilePicker = () => {
     <input
       ref={inputRef}
       type="file"
-      style={{ display: "none" }}
+      hidden
       onChange={(e) => {
         const files = e.currentTarget.files;
         if (files && files.length > 0) {
