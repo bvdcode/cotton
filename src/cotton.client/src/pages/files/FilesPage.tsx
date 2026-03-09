@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
-import { Alert, Box, IconButton } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 import {
   FileListViewFactory,
@@ -276,18 +276,20 @@ export const FilesPage: React.FC = () => {
       selectedCount: fileSelection.selectedCount,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
-      customActions:
+      customActionItems:
         fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
-          <IconButton
-            color="error"
-            onClick={() => {
-              void handleDeleteSelected();
-            }}
-            title={t("selection.deleteSelected", { ns: "files" })}
-            disabled={loading}
-          >
-            <Delete />
-          </IconButton>
+          [
+            {
+              key: "delete-selected",
+              icon: <Delete />,
+              title: t("selection.deleteSelected", { ns: "files" }),
+              onClick: () => {
+                void handleDeleteSelected();
+              },
+              disabled: loading,
+              color: "error" as const,
+            },
+          ]
         ) : undefined,
     }),
     [
