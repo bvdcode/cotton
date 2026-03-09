@@ -6,7 +6,7 @@ import { useNodesStore } from "../../../shared/store/nodesStore";
 interface UseFilesDataParams {
   nodeId: string | null;
   layoutType: InterfaceLayoutType;
-  loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<unknown>;
+  loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<void>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
 }
 
@@ -38,6 +38,26 @@ export const useFilesData = ({
   const childrenTotalCount = cachedContent
     ? cachedContent.nodes.length + cachedContent.files.length
     : null;
+
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) {
+      return;
+    }
+
+    if (!nodeId) {
+      setListContent(null);
+      setListTotalCount(0);
+      return;
+    }
+
+    if (!cachedContent) {
+      return;
+    }
+
+    setListError(null);
+    setListContent(cachedContent);
+    setListTotalCount(cachedContent.nodes.length + cachedContent.files.length);
+  }, [layoutType, nodeId, cachedContent]);
 
   // Tiles mode: single loadNode call — store handles SWR internally
   useEffect(() => {

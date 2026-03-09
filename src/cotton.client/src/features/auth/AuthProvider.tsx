@@ -61,7 +61,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const ensureAuth = useCallback(async () => {
     if (isAuthenticated || isInitializing) return;
     if (!hydrated) return;
-    if (!refreshEnabled) return;
+    if (!refreshEnabled) {
+      setHasChecked(true);
+      return;
+    }
 
     setInitializing(true);
     try {
