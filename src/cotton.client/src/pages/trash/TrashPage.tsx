@@ -351,7 +351,7 @@ export const TrashPage: React.FC = () => {
         void folderOps.handleDeleteFolder(folderId, folderName);
       },
     }),
-    [folderOps.handleDeleteFolder, goToFolder],
+    [folderOps, goToFolder],
   );
 
   const fileOperations = React.useMemo<FileOperations>(
@@ -366,7 +366,7 @@ export const TrashPage: React.FC = () => {
         void fileOps.handleDeleteFile(fileId, fileName);
       },
     }),
-    [fileOps.handleDeleteFile],
+    [fileOps],
   );
 
   const stats = useMemo(
@@ -537,11 +537,7 @@ export const TrashPage: React.FC = () => {
       breadcrumbs,
       cycleViewMode,
       emptyingTrash,
-      fileSelection.deselectAll,
-      fileSelection.selectedCount,
-      fileSelection.selectionMode,
-      fileSelection.selectAll,
-      fileSelection.toggleSelectionMode,
+      fileSelection,
       goHome,
       handleDeleteSelected,
       handleEmptyTrash,
