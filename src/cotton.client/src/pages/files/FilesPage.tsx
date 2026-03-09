@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
-import { Alert, Box, IconButton, Typography } from "@mui/material";
+import { Alert, Box, IconButton } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 import {
   FileListViewFactory,
@@ -7,6 +7,7 @@ import {
   MediaLightbox,
   FilePreviewModal,
   FileConflictDialog,
+  DraggingOverlay,
 } from "./components";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -20,7 +21,12 @@ import { useFilesLayout } from "./hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "./hooks/useFileSelection";
+import { useDeleteSelectedItems } from "./hooks/useDeleteSelectedItems";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
+import {
+  getDropPreparationCaption,
+  getDropPreparationTitle,
+} from "./utils/dropPreparation";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import {
   buildFolderOperations,
@@ -28,7 +34,6 @@ import {
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
-import { filesApi } from "../../shared/api/filesApi";
 import Loader from "../../shared/ui/Loader";
 import { AppToast } from "../../shared/ui/AppToast";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
@@ -38,125 +43,6 @@ import {
 } from "../../shared/store/localPreferencesStore";
 
 const HUGE_FOLDER_THRESHOLD = 10_000;
-
-type TranslationFn = (
-  key: string,
-  options?: {
-    ns?: string;
-    count?: number;
-    processed?: number;
-    total?: number;
-  },
-) => string;
-
-type DropPreparationInfo = {
-  phase: "idle" | "scanning" | "preparing";
-  step: "idle" | "scanning" | "mapping" | "folders" | "conflicts" | "enqueue";
-  filesFound: number;
-  processed: number;
-};
-
-function getDropPreparationTitle(t: TranslationFn, info: DropPreparationInfo): string {
-  const { phase, step } = info;
-
-  if (phase === "scanning") {
-    return t("uploadDrop.scanning.title", { ns: "files" });
-  }
-
-  if (step === "mapping") {
-    return t("uploadDrop.preparing.mapping.title", { ns: "files" });
-  }
-  if (step === "folders") {
-    return t("uploadDrop.preparing.folders.title", { ns: "files" });
-  }
-  if (step === "conflicts") {
-    return t("uploadDrop.preparing.conflicts.title", { ns: "files" });
-  }
-  if (step === "enqueue") {
-    return t("uploadDrop.preparing.enqueue.title", { ns: "files" });
-  }
-
-  return t("uploadDrop.preparing.title", { ns: "files" });
-}
-
-function getDropPreparationCaption(
-  t: TranslationFn,
-  info: DropPreparationInfo,
-): string {
-  const { phase, filesFound, processed } = info;
-
-  const found = t("uploadDrop.captionFound", {
-    ns: "files",
-    count: filesFound,
-  });
-
-  if (phase === "scanning") return found;
-  if (filesFound <= 0) return found;
-
-  const progress = t("uploadDrop.captionProgress", {
-    ns: "files",
-    processed: Math.max(0, Math.min(filesFound, processed)),
-    total: filesFound,
-  });
-
-  return `${found} • ${progress}`;
-}
-
-type DraggingOverlayProps = {
-  open: boolean;
-  onDragEnter: React.DragEventHandler<HTMLDivElement>;
-  onDragOver: React.DragEventHandler<HTMLDivElement>;
-  onDragLeave: React.DragEventHandler<HTMLDivElement>;
-  onDrop: React.DragEventHandler<HTMLDivElement>;
-  label: string;
-};
-
-const DraggingOverlay: React.FC<DraggingOverlayProps> = ({
-  open,
-  onDragEnter,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  label,
-}) => {
-  if (!open) return null;
-
-  return (
-    <Box
-      onDragEnter={onDragEnter}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        bgcolor: "primary.main",
-        opacity: 0.15,
-        border: "4px dashed",
-        borderColor: "primary.main",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Typography
-        variant="h3"
-        sx={{
-          color: "primary.main",
-          fontWeight: "bold",
-          textShadow: "0 0 10px rgba(255,255,255,0.8)",
-          pointerEvents: "none",
-        }}
-      >
-        {label}
-      </Typography>
-    </Box>
-  );
-};
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -356,61 +242,7 @@ export const FilesPage: React.FC = () => {
     onMediaClick: handleMediaClick,
   });
 
-  const handleDeleteSelected = React.useCallback(async () => {
-    if (!nodeId) return;
-    if (!fileSelection.selectionMode) return;
-    if (fileSelection.selectedCount <= 0) return;
-
-    const selected = fileSelection.selectedIds;
-    const selectedTiles = tiles.filter((tile) => {
-      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
-      return selected.has(id);
-    });
-
-    if (selectedTiles.length === 0) return;
-
-    const result = await confirm({
-      title: t("deleteSelected.confirmTitle", {
-        ns: "files",
-        count: selectedTiles.length,
-      }),
-      description: t("deleteSelected.confirmDescription", { ns: "files" }),
-      confirmationText: t("common:actions.delete"),
-      cancellationText: t("common:actions.cancel"),
-      confirmationButtonProps: { color: "error" },
-    });
-
-    if (!result.confirmed) return;
-
-    let hadError = false;
-
-    for (const tile of selectedTiles) {
-      if (tile.kind === "folder") {
-        try {
-          await deleteFolder(tile.node.id, nodeId);
-        } catch (e) {
-          hadError = true;
-          console.error("Failed to delete selected folder", e);
-        }
-        continue;
-      }
-
-      try {
-        optimisticDeleteFile(nodeId, tile.file.id);
-        await filesApi.deleteFile(tile.file.id);
-      } catch (e) {
-        hadError = true;
-        console.error("Failed to delete selected file", e);
-      }
-    }
-
-    fileSelection.deselectAll();
-    if (hadError) {
-      reloadCurrentNode();
-      return;
-    }
-    reloadCurrentNode();
-  }, [
+  const handleDeleteSelected = useDeleteSelectedItems({
     nodeId,
     fileSelection,
     tiles,
@@ -419,7 +251,7 @@ export const FilesPage: React.FC = () => {
     deleteFolder,
     optimisticDeleteFile,
     reloadCurrentNode,
-  ]);
+  });
 
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
