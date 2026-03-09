@@ -1,10 +1,6 @@
-import type { AxiosResponseHeaders, RawAxiosResponseHeaders } from "axios";
+type HeaderPrimitive = string | number | boolean | string[] | null | undefined;
 
-type HeaderPrimitive = string | number | boolean | null | undefined;
-
-type HeaderMap = RawAxiosResponseHeaders & AxiosResponseHeaders;
-
-type GettableHeaders = {
+export type HeaderMap = Record<string, HeaderPrimitive> & {
   get?: (name: string) => HeaderPrimitive;
 };
 
@@ -22,7 +18,7 @@ const tryReadHeader = (
     return lower;
   }
 
-  const getter = (headers as HeaderMap & GettableHeaders).get;
+  const getter = headers.get;
   if (typeof getter === "function") {
     const fromGet = getter(name) ?? getter(name.toLowerCase());
     if (fromGet !== undefined && fromGet !== null) {
