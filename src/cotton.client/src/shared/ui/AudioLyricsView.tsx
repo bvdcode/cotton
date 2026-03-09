@@ -3,8 +3,8 @@ import { Box, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import type { LrcLine } from "../utils/lrc";
 
-const DESKTOP_LINE_HEIGHT_PX = 32;
-const MOBILE_LINE_HEIGHT_PX = 44;
+const DESKTOP_LINE_HEIGHT_PX = 28;
+const MOBILE_LINE_HEIGHT_PX = 36;
 const VISIBLE_LINES = 2;
 
 const clamp = (value: number, min: number, max: number): number => {
@@ -15,16 +15,12 @@ interface AudioLyricsViewProps {
   lines: ReadonlyArray<LrcLine>;
   activeIndex: number;
   isActivePlaying?: boolean;
-  translateExtraPx?: number;
-  activeOpacity?: number;
 }
 
 export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
   lines,
   activeIndex,
   isActivePlaying = true,
-  translateExtraPx = 0,
-  activeOpacity = 1,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -43,13 +39,14 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
     >
       <Box
         sx={{
-          transform: `translateY(${translateExtraPx}px) translateY(-${translateY}px)`,
+          transform: `translateY(-${translateY}px)`,
           transition: "transform 350ms ease",
           willChange: "transform",
         }}
       >
         {lines.map((line, idx) => {
           const isActive = idx === activeIndex;
+          const activeAndPlaying = isActive && isActivePlaying;
           const distance = Math.abs(idx - activeIndex);
           const baseOpacity = distance === 0 ? 1 : distance === 1 ? 0.45 : 0.1;
           return (
@@ -61,24 +58,25 @@ export const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
               justifyContent="center"
             >
               <Typography
-                variant={isActive ? "subtitle1" : "body2"}
-                fontWeight={isActive ? 800 : 400}
-                color={isActive ? "text.primary" : "text.secondary"}
+                variant={activeAndPlaying ? "h6" : "body2"}
+                fontWeight={activeAndPlaying ? 800 : isActive ? 500 : 400}
+                color={activeAndPlaying ? "text.primary" : "text.secondary"}
                 width="100%"
                 textAlign="center"
                 sx={{
                   px: 1,
-                  opacity:
-                    isActive ? baseOpacity * activeOpacity : baseOpacity,
-                  ...(isActive && !isActivePlaying
-                    ? {
-                        color: theme.palette.text.secondary,
-                      }
-                    : null),
-                  lineHeight: 1.15,
+                  opacity: baseOpacity,
+                  lineHeight: 1.05,
                   whiteSpace: "normal",
                   overflow: "hidden",
                   display: "block",
+                  ...(activeAndPlaying
+                    ? {
+                        fontSize: { xs: "1.25rem", sm: "1.35rem" },
+                      }
+                    : {
+                        fontSize: { xs: "0.95rem", sm: "1rem" },
+                      }),
                 }}
               >
                 {line.text || "\u00A0"}
