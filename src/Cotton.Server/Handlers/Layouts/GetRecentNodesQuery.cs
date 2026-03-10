@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -24,6 +25,7 @@ namespace Cotton.Server.Handlers.Layouts
                 .AsNoTracking()
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
+                .Where(x => x.Node.Type == NodeType.Default)
                 .Where(x => x.OwnerId == request.UserId && x.Node.LayoutId == request.LayoutId)
                 .OrderByDescending(x => x.CreatedAt)
                 .Take(request.Count)
