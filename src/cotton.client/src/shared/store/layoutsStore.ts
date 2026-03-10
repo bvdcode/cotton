@@ -108,7 +108,7 @@ export const useLayoutsStore = create<LayoutsState>()(
         }
       },
 
-      fetchRecentFiles: async (layoutId, count = 3) => {
+      fetchRecentFiles: async (layoutId, count = 15) => {
         set({ loadingRecent: true });
         try {
           const files = await layoutsApi.getRecentFiles(layoutId, count);

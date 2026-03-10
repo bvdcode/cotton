@@ -12,6 +12,9 @@ import { useNavigate } from "react-router-dom";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 import { RecentFileItem } from "./RecentFileItem";
 
+const ROWS = 3;
+const SKELETON_COUNT = 5;
+
 interface RecentFilesCardProps {
   files: NodeFileManifestDto[];
   loading: boolean;
@@ -35,15 +38,22 @@ export const RecentFilesCard: React.FC<RecentFilesCardProps> = ({
   );
 
   return (
-    <Card sx={{ gridColumn: { xs: "1", md: "span 4" } }}>
+    <Card sx={{ gridColumn: { xs: "1", sm: "span 2", md: "span 5" } }}>
       <CardContent>
         <Typography variant="overline" color="text.secondary">
           {t("cards.recentFiles.title")}
         </Typography>
 
         {loading && files.length === 0 ? (
-          <Box display="flex" flexDirection="column" gap={1} mt={1}>
-            {Array.from({ length: 3 }, (_, i) => (
+          <Box
+            display="grid"
+            gridTemplateRows={`repeat(${ROWS}, 1fr)`}
+            gridAutoFlow="column"
+            gridAutoColumns="1fr"
+            gap={0.5}
+            mt={1}
+          >
+            {Array.from({ length: SKELETON_COUNT }, (_, i) => (
               <Skeleton key={i} variant="rounded" height={48} />
             ))}
           </Box>
@@ -52,7 +62,14 @@ export const RecentFilesCard: React.FC<RecentFilesCardProps> = ({
             {t("cards.recentFiles.empty")}
           </Typography>
         ) : (
-          <Box display="flex" flexDirection="column" gap={0.5} mt={1}>
+          <Box
+            display="grid"
+            gridTemplateRows={`repeat(${ROWS}, 1fr)`}
+            gridAutoFlow="column"
+            gridAutoColumns="1fr"
+            gap={0.5}
+            mt={1}
+          >
             {files.map((file) => (
               <CardActionArea
                 key={file.id}
