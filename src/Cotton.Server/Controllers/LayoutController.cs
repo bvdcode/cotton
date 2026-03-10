@@ -43,6 +43,17 @@ namespace Cotton.Server.Controllers
         private const int DefaultSharedFolderTokenLength = 16;
 
         [Authorize]
+        [HttpGet("{layoutId:guid}/recent")]
+        public async Task<IActionResult> GetRecentNodes([FromRoute] Guid layoutId,
+            [FromQuery] int count = 10)
+        {
+            Guid userId = User.GetUserId();
+            GetRecentNodesQuery request = new(userId, layoutId, count);
+            var result = await _mediator.Send(request);
+            return Ok(result);
+        }
+
+        [Authorize]
         [HttpGet("{layoutId:guid}/search")]
         public async Task<IActionResult> SearchLayouts(
             [FromRoute] Guid layoutId,
