@@ -1,21 +1,16 @@
-﻿import heic2any from "heic2any";
+import heic2any from "heic2any";
 
 const heicUrlCache = new Map<string, string>();
 
-const HEIC_MIME_TYPES: ReadonlySet<string> = new Set([
-  "image/heic",
-  "image/heif",
-  "image/heic-sequence",
-  "image/heif-sequence",
-]);
+const HEIC_CONTENT_TYPES = ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"];
 
 export const isHeicFile = (fileName: string): boolean => {
   return fileName.toLowerCase().endsWith(".heic");
 };
 
-const needsHeicConversion = (blob: Blob): boolean => {
-  if (HEIC_MIME_TYPES.has(blob.type)) return true;
-  return blob.type === "" || blob.type === "application/octet-stream";
+const isHeicContentType = (contentType: string): boolean => {
+  const normalized = contentType.split(";")[0].trim().toLowerCase();
+  return HEIC_CONTENT_TYPES.includes(normalized) || normalized === "" || normalized === "application/octet-stream";
 };
 
 export const convertHeicToJpeg = async (url: string): Promise<string> => {
@@ -24,16 +19,16 @@ export const convertHeicToJpeg = async (url: string): Promise<string> => {
     return cachedUrl;
   }
 
-  const response = await fetch(url);
-  const blob = await response.blob();
+  const headResponse = await fetch(url, { method: "HEAD" });
+  const contentType = headResponse.headers.get("content-type") ?? "";
 
-  // Server already converted to a web-friendly format (e.g. webp) - use as-is
-  if (!needsHeicConversion(blob)) {
-    const objectUrl = URL.createObjectURL(blob);
-    heicUrlCache.set(url, objectUrl);
-    return objectUrl;
+  if (!isHeicContentType(contentType)) {
+    heicUrlCache.set(url, url);
+    return url;
   }
 
+  const response = await fetch(url);
+  const blob = await response.blob();
   const jpegBlob = await heic2any({
     blob,
     toType: "image/jpeg",
@@ -50,7 +45,8 @@ export const convertHeicToJpeg = async (url: string): Promise<string> => {
 
 export const cleanupHeicUrl = (url: string): void => {
   const cachedUrl = heicUrlCache.get(url);
-  if (!cachedUrl) {
+  if (!cachedUrl || cachedUrl === url) {
+    heicUrlCache.delete(url);
     return;
   }
 
