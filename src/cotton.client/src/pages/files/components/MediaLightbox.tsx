@@ -111,6 +111,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const {
     slides,
     ensureSlideHasOriginal,
+    handleSlideImageError,
     resolveSlideDownloadUrl,
   } = useMediaLightboxUrls({
     items,
@@ -258,25 +259,19 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         children?: React.ReactNode;
         slide: Slide;
       }) => {
-        const imageSrc =
-          slide.type === "image" ? (slide as { src?: string }).src : null;
-
         return (
-          <div className="media-lightbox__tap-area">
-            {imageSrc ? (
-              <img
-                className="media-lightbox__image-bg"
-                src={imageSrc}
-                alt=""
-                aria-hidden="true"
-              />
-            ) : null}
+          <div
+            className="media-lightbox__tap-area"
+            onErrorCapture={() => {
+              void handleSlideImageError(slide);
+            }}
+          >
             {children}
           </div>
         );
       },
     }),
-    [],
+    [handleSlideImageError],
   );
 
   const lightboxDownload = React.useMemo(

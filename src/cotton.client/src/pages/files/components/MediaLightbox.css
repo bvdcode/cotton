@@ -58,20 +58,6 @@
   overflow: hidden;
 }
 
-/* Fill letterboxed areas for `contain` with a blurred version of the same image. */
-.lightbox-autohide .media-lightbox__image-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: blur(28px);
-  transform: scale(1.15);
-  opacity: 0.35;
-  pointer-events: none;
-  user-select: none;
-}
-
 /* Idle state: controls hidden */
 .lightbox-autohide--idle .yarl__toolbar,
 .lightbox-autohide--idle .yarl__navigation_prev,

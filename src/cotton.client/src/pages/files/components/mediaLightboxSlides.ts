@@ -34,6 +34,7 @@ export function buildSlidesFromItems(
         fileName: item.name,
         type: "image",
         src,
+        thumbnail: item.previewUrl || undefined,
         width: isLoading ? 120 : item.width,
         height: isLoading ? 120 : item.height,
         title,
