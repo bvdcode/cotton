@@ -648,6 +648,10 @@
       "data": {
         "title": "Data",
         "caption": "Total size of all your files"
+      },
+      "recentFiles": {
+        "title": "Recent Files",
+        "empty": "No recent files"
       }
     }
   },
