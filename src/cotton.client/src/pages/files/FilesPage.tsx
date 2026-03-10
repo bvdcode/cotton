@@ -9,7 +9,7 @@ import {
   FileConflictDialog,
   DraggingOverlay,
 } from "./components";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../shared/store/nodesStore";
@@ -49,7 +49,11 @@ export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const location = useLocation();
   const params = useParams<{ nodeId?: string }>();
+  const pendingSelectedFileIdRef = React.useRef<string | null>(
+    (location.state as { selectedFileId?: string } | null)?.selectedFileId ?? null,
+  );
 
   const {
     currentNode,
@@ -153,6 +157,24 @@ export const FilesPage: React.FC = () => {
     !!effectiveContent && deferredContent !== effectiveContent;
 
   const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
+
+  // Consume selectedFileId from router state (e.g. dashboard → open folder with file highlighted)
+  React.useEffect(() => {
+    const targetId = pendingSelectedFileIdRef.current;
+    if (!targetId || tiles.length === 0) return;
+
+    pendingSelectedFileIdRef.current = null;
+    // Clear the router state so refresh doesn't re-select
+    window.history.replaceState({}, "");
+
+    // Scroll to the file after a tick so the DOM has rendered
+    requestAnimationFrame(() => {
+      const element =
+        document.querySelector(`[data-item-id="${CSS.escape(targetId)}"]`) ??
+        document.querySelector(`[data-id="${CSS.escape(targetId)}"]`);
+      element?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }, [tiles]);
   const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
 
   useEffect(() => {
