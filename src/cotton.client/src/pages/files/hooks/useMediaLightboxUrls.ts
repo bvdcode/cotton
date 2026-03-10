@@ -7,8 +7,6 @@ import {
 import { buildSlidesFromItems } from "../components/mediaLightboxSlides";
 import type { MediaItem, SlideWithTitle } from "../components/mediaLightbox.types";
 
-const IMAGE_DECODE_TIMEOUT_MS = 400;
-
 interface UseMediaLightboxUrlsArgs {
   items: MediaItem[];
   getSignedMediaUrl: (id: string) => Promise<string>;
@@ -28,6 +26,12 @@ export const useMediaLightboxUrls = ({
   const inFlightDownloadLoadsRef = React.useRef<Map<string, Promise<string | null>>>(
     new Map(),
   );
+  const inFlightOriginalLoadsRef = React.useRef<Map<string, Promise<string | null>>>(
+    new Map(),
+  );
+  const inFlightHeicFallbacksRef = React.useRef<Map<string, Promise<string | null>>>(
+    new Map(),
+  );
   const loadingRef = React.useRef<Set<string>>(new Set());
   const loadedIdsRef = React.useRef<Set<string>>(new Set());
 
@@ -39,33 +43,45 @@ export const useMediaLightboxUrls = ({
     return buildSlidesFromItems(items, displayUrls, signedUrls);
   }, [items, displayUrls, signedUrls]);
 
-  const preloadImage = React.useCallback(async (url: string): Promise<void> => {
-    await new Promise<void>((resolve, reject) => {
-      const image = new Image();
+  const ensureOriginalUrl = React.useCallback(
+    async (item: MediaItem): Promise<string | null> => {
+      const existingDisplayUrl = displayUrls[item.id];
+      if (existingDisplayUrl) {
+        return existingDisplayUrl;
+      }
 
-      image.onload = async () => {
-        if (typeof image.decode === "function") {
-          try {
-            await Promise.race<void | undefined>([
-              image.decode(),
-              new Promise<void>((decodeResolve) => {
-                window.setTimeout(() => {
-                  decodeResolve();
-                }, IMAGE_DECODE_TIMEOUT_MS);
-              }),
-            ]);
-          } catch {
-            // ignore decode failures
+      const existingInFlight = inFlightOriginalLoadsRef.current.get(item.id);
+      if (existingInFlight) {
+        return await existingInFlight;
+      }
+
+      const loadTask = (async () => {
+        try {
+          const signedUrl = await getSignedMediaUrl(item.id);
+
+          if (item.kind === "video") {
+            setSignedUrls((prev) => ({ ...prev, [item.id]: signedUrl }));
+            return signedUrl;
           }
+
+          setDisplayUrls((prev) =>
+            prev[item.id] ? prev : { ...prev, [item.id]: signedUrl },
+          );
+
+          return signedUrl;
+        } catch (error) {
+          console.error("Failed to load media original URL", error);
+          return null;
+        } finally {
+          inFlightOriginalLoadsRef.current.delete(item.id);
         }
+      })();
 
-        resolve();
-      };
-
-      image.onerror = () => reject(new Error("Failed to preload image"));
-      image.src = url;
-    });
-  }, []);
+      inFlightOriginalLoadsRef.current.set(item.id, loadTask);
+      return await loadTask;
+    },
+    [displayUrls, getSignedMediaUrl],
+  );
 
   const ensureSlideHasOriginal = React.useCallback(
     async (targetIndex: number) => {
@@ -79,34 +95,56 @@ export const useMediaLightboxUrls = ({
       loadingRef.current.add(item.id);
 
       try {
-        const signedUrl = await getSignedMediaUrl(item.id);
-
-        if (item.kind === "video") {
-          setSignedUrls((prev) => ({ ...prev, [item.id]: signedUrl }));
-        }
-
-        const nextDisplayUrl =
-          item.kind === "image" && isHeicFile(item.name)
-            ? await convertHeicToJpeg(signedUrl)
-            : signedUrl;
-
-        if (item.kind === "image") {
-          try {
-            await preloadImage(nextDisplayUrl);
-          } catch {
-            // Keep previewUrl if preloading fails.
-          }
-        }
-
-        setDisplayUrls((prev) => ({ ...prev, [item.id]: nextDisplayUrl }));
-      } catch (error) {
-        console.error("Failed to load media original URL", error);
+        await ensureOriginalUrl(item);
       } finally {
         loadingRef.current.delete(item.id);
         loadedIdsRef.current.add(item.id);
       }
     },
-    [items, getSignedMediaUrl, preloadImage],
+    [ensureOriginalUrl, items],
+  );
+
+  const handleSlideImageError = React.useCallback(
+    async (slide: Slide): Promise<void> => {
+      const lightboxSlide = slide as SlideWithTitle;
+      const item = items.find((entry) => entry.id === lightboxSlide.fileId);
+      if (!item || item.kind !== "image" || !isHeicFile(item.name)) {
+        return;
+      }
+
+      const currentDisplayUrl = displayUrls[item.id];
+      if (currentDisplayUrl?.startsWith("blob:")) {
+        return;
+      }
+
+      const existingFallback = inFlightHeicFallbacksRef.current.get(item.id);
+      if (existingFallback) {
+        await existingFallback;
+        return;
+      }
+
+      const fallbackTask = (async () => {
+        try {
+          const originalUrl = (await ensureOriginalUrl(item)) ?? currentDisplayUrl;
+          if (!originalUrl) {
+            return null;
+          }
+
+          const convertedUrl = await convertHeicToJpeg(originalUrl);
+          setDisplayUrls((prev) => ({ ...prev, [item.id]: convertedUrl }));
+          return convertedUrl;
+        } catch (error) {
+          console.error("Failed to convert HEIC after image load error", error);
+          return null;
+        } finally {
+          inFlightHeicFallbacksRef.current.delete(item.id);
+        }
+      })();
+
+      inFlightHeicFallbacksRef.current.set(item.id, fallbackTask);
+      await fallbackTask;
+    },
+    [displayUrls, ensureOriginalUrl, items],
   );
 
   const ensureDownloadUrl = React.useCallback(
@@ -173,6 +211,7 @@ export const useMediaLightboxUrls = ({
   return {
     slides,
     ensureSlideHasOriginal,
+    handleSlideImageError,
     resolveSlideDownloadUrl,
   };
 };
