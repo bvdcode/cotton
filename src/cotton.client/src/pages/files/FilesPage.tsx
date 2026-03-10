@@ -24,6 +24,7 @@ import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "./hooks/useFileSelection";
 import { useDeleteSelectedItems } from "./hooks/useDeleteSelectedItems";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
+import { getFileTypeInfo } from "./utils/fileTypes";
 import {
   getDropPreparationCaption,
   getDropPreparationTitle,
@@ -158,23 +159,6 @@ export const FilesPage: React.FC = () => {
 
   const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
 
-  // Consume selectedFileId from router state (e.g. dashboard → open folder with file highlighted)
-  React.useEffect(() => {
-    const targetId = pendingSelectedFileIdRef.current;
-    if (!targetId || tiles.length === 0) return;
-
-    pendingSelectedFileIdRef.current = null;
-    // Clear the router state so refresh doesn't re-select
-    window.history.replaceState({}, "");
-
-    // Scroll to the file after a tick so the DOM has rendered
-    requestAnimationFrame(() => {
-      const element =
-        document.querySelector(`[data-item-id="${CSS.escape(targetId)}"]`) ??
-        document.querySelector(`[data-id="${CSS.escape(targetId)}"]`);
-      element?.scrollIntoView({ block: "center", behavior: "smooth" });
-    });
-  }, [tiles]);
   const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
 
   useEffect(() => {
@@ -201,6 +185,25 @@ export const FilesPage: React.FC = () => {
     sortedFiles,
     audioFallbackNodeId: nodeId ?? undefined,
   });
+
+  // Consume selectedFileId from router state (e.g. dashboard → open file)
+  React.useEffect(() => {
+    const targetId = pendingSelectedFileIdRef.current;
+    if (!targetId || sortedFiles.length === 0) return;
+
+    const file = sortedFiles.find((f) => f.id === targetId);
+    if (!file) return;
+
+    pendingSelectedFileIdRef.current = null;
+    window.history.replaceState({}, "");
+
+    const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null);
+    if (typeInfo.type === "image" || typeInfo.type === "video") {
+      handleMediaClick(file.id);
+    } else {
+      handleFileClick(file.id, file.name, file.sizeBytes);
+    }
+  }, [sortedFiles, handleFileClick, handleMediaClick]);
 
   const showToast = React.useCallback(
     (message: string) => setShareToast({ open: true, message }),
