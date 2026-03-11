@@ -86,6 +86,11 @@ httpClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // Public share links are anonymous and must not trigger auth refresh/logout loops.
+      if (url.includes("/layouts/shared/")) {
+        return Promise.reject(error);
+      }
+
       // If refresh is disabled (explicit logout), never attempt refresh.
       if (!getRefreshEnabled()) {
         clearAccessToken();
