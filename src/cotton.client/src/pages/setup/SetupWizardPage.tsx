@@ -332,9 +332,9 @@ export function SetupWizardPage() {
                           marginLeft: "-12px",
                         }}
                       />
-                      <span style={{ visibility: "hidden" }}>
+                      <Box component="span" sx={{ visibility: "hidden" }}>
                         {isLastStep ? t("actions.finish") : t("actions.next")}
-                      </span>
+                      </Box>
                     </>
                   ) : (
                     <>{isLastStep ? t("actions.finish") : t("actions.next")}</>

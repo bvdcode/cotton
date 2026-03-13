@@ -62,10 +62,11 @@ namespace Cotton.Server.Handlers.Files
 
                     if (nodeShareToken != null && nodeShareToken.Node.Type == NodeType.Default)
                     {
-                        string html = BuildFolderRedirectHtml(
+                        string html = BuildRedirectHtml(
                             baseAppUrl: baseAppUrl,
                             token: request.Token,
-                            folderName: nodeShareToken.Name);
+                            fileName: nodeShareToken.Name,
+                            previewHashEncryptedHex: null);
                         return ShareFileResult.AsHtml(html);
                     }
 
@@ -195,45 +196,6 @@ namespace Cotton.Server.Handlers.Files
                 </body>
                 </html>
                 """;
-        }
-
-        private static string BuildFolderRedirectHtml(string baseAppUrl, string token, string folderName)
-        {
-            string canonicalUrl = $"{baseAppUrl}/s/{token}";
-            string appShareUrl = $"{baseAppUrl}/share/{token}";
-            string previewUrl = $"{baseAppUrl}/assets/images/social-preview.jpg";
-            const string description = "Shared folder via Cotton Cloud";
-
-            return $"""
-                                <!doctype html>
-                                <html lang=\"en\">
-                                <head>
-                                    <meta charset=\"utf-8\">
-                                    <title>{WebUtility.HtmlEncode(folderName)} - Cotton Cloud</title>
-                                    <meta name=\"description\" content=\"{WebUtility.HtmlEncode(description)}\" />
-                                    <meta http-equiv=\"refresh\" content=\"0;url={WebUtility.HtmlEncode(appShareUrl)}\" />
-                                    <link rel=\"canonical\" href=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
-                                    <meta property=\"og:site_name\" content=\"Cotton Cloud\" />
-                                    <meta property=\"og:title\" content=\"{WebUtility.HtmlEncode(folderName)}\" />
-                                    <meta property=\"og:description\" content=\"{WebUtility.HtmlEncode(description)}\" />
-                                    <meta property=\"og:type\" content=\"website\" />
-                                    <meta property=\"og:url\" content=\"{WebUtility.HtmlEncode(canonicalUrl)}\" />
-                                    <meta property=\"og:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />
-                                    <meta name=\"twitter:card\" content=\"summary_large_image\" />
-                                    <meta name=\"twitter:title\" content=\"{WebUtility.HtmlEncode(folderName)}\" />
-                                    <meta name=\"twitter:description\" content=\"{WebUtility.HtmlEncode(description)}\" />
-                                    <meta name=\"twitter:image\" content=\"{WebUtility.HtmlEncode(previewUrl)}\" />
-                                </head>
-                                <body>
-                                    <noscript>
-                                        <p><a href=\"{WebUtility.HtmlEncode(appShareUrl)}\">Continue</a></p>
-                                    </noscript>
-                                    <script>
-                                        window.location.replace({JsonSerializer.Serialize(appShareUrl)});
-                                    </script>
-                                </body>
-                                </html>
-                                """;
         }
 
         private async Task<ShareFileResult> CreateStreamResultAsync(

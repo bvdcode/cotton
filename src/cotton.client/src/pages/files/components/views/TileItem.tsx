@@ -184,7 +184,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     const { t } = useTranslation(["common"]);
 
     const longPressTimerRef = React.useRef<number | null>(null);
-    const longPressTriggeredRef = React.useRef(false);
+    const suppressClickUntilRef = React.useRef(0);
     const longPressStartRef = React.useRef<{ x: number; y: number } | null>(null);
 
     const clearLongPress = React.useCallback(() => {
@@ -213,12 +213,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         if (e.shiftKey) return;
         if (shouldIgnoreLongPressTarget(e.target)) return;
 
-        longPressTriggeredRef.current = false;
         longPressStartRef.current = { x: e.clientX, y: e.clientY };
 
         clearLongPress();
         longPressTimerRef.current = window.setTimeout(() => {
-          longPressTriggeredRef.current = true;
+          suppressClickUntilRef.current = Date.now() + 450;
           onToggle(false);
         }, 450);
       },
@@ -248,8 +247,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     }, [clearLongPress]);
 
     const handleClickCapture = React.useCallback((e: React.MouseEvent) => {
-      if (!longPressTriggeredRef.current) return;
-      longPressTriggeredRef.current = false;
+      if (Date.now() > suppressClickUntilRef.current) return;
       e.preventDefault();
       e.stopPropagation();
     }, []);
@@ -319,6 +317,9 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return (
         <Box
           position="relative"
+          onContextMenu={(e) => {
+            e.preventDefault();
+          }}
           onPointerDownCapture={handlePointerDownCapture}
           onPointerMoveCapture={handlePointerMoveCapture}
           onPointerUpCapture={handlePointerUpCapture}
@@ -459,6 +460,9 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     return (
       <Box
         position="relative"
+        onContextMenu={(e) => {
+          e.preventDefault();
+        }}
         onPointerDownCapture={handlePointerDownCapture}
         onPointerMoveCapture={handlePointerMoveCapture}
         onPointerUpCapture={handlePointerUpCapture}

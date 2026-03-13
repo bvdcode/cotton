@@ -1,14 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { layoutsApi, type LayoutStatsDto, type NodeDto } from "../api/layoutsApi";
+import type { NodeFileManifestDto } from "../api/nodesApi";
 import { LAYOUTS_STORAGE_KEY } from "../config/storageKeys";
 
 type LayoutsState = {
   cacheOwnerUserId: string | null;
   rootNode: NodeDto | null;
   statsByLayoutId: Record<string, LayoutStatsDto | undefined>;
+  recentFiles: NodeFileManifestDto[];
   loadingRoot: boolean;
   loadingStats: boolean;
+  loadingRecent: boolean;
   error: string | null;
   lastUpdatedRoot: number | null;
   lastUpdatedStatsByLayoutId: Record<string, number | undefined>;
@@ -18,6 +21,10 @@ type LayoutsState = {
     layoutId: string,
     options?: { force?: boolean },
   ) => Promise<LayoutStatsDto | null>;
+  fetchRecentFiles: (
+    layoutId: string,
+    count?: number,
+  ) => Promise<NodeFileManifestDto[]>;
 
   /**
    * Home page initializer:
@@ -35,8 +42,10 @@ export const useLayoutsStore = create<LayoutsState>()(
       cacheOwnerUserId: null,
       rootNode: null,
       statsByLayoutId: {},
+      recentFiles: [],
       loadingRoot: false,
       loadingStats: false,
+      loadingRecent: false,
       error: null,
       lastUpdatedRoot: null,
       lastUpdatedStatsByLayoutId: {},
@@ -99,6 +108,19 @@ export const useLayoutsStore = create<LayoutsState>()(
         }
       },
 
+      fetchRecentFiles: async (layoutId, count = 15) => {
+        set({ loadingRecent: true });
+        try {
+          const files = await layoutsApi.getRecentFiles(layoutId, count);
+          set({ recentFiles: files, loadingRecent: false });
+          return files;
+        } catch (error) {
+          console.error("Failed to load recent files", error);
+          set({ loadingRecent: false });
+          return [];
+        }
+      },
+
       ensureHomeData: async () => {
         // Use cached data immediately if present. Refetch in background so UI doesn't
         // block/flicker when user already has data from persisted store.
@@ -109,12 +131,17 @@ export const useLayoutsStore = create<LayoutsState>()(
           await get().fetchLayoutStats(cachedLayoutId, { force: false });
         }
 
+        if (cachedLayoutId) {
+          void get().fetchRecentFiles(cachedLayoutId);
+        }
+
         void (async () => {
           const refreshedRoot = await get().resolveRootNode({ force: true });
           const refreshedLayoutId = refreshedRoot?.layoutId ?? cachedLayoutId;
           if (!refreshedLayoutId) return;
 
           await get().fetchLayoutStats(refreshedLayoutId, { force: true });
+          await get().fetchRecentFiles(refreshedLayoutId);
         })();
       },
 
@@ -123,8 +150,10 @@ export const useLayoutsStore = create<LayoutsState>()(
           cacheOwnerUserId: cacheOwnerUserId ?? prev.cacheOwnerUserId,
           rootNode: null,
           statsByLayoutId: {},
+          recentFiles: [],
           loadingRoot: false,
           loadingStats: false,
+          loadingRecent: false,
           error: null,
           lastUpdatedRoot: null,
           lastUpdatedStatsByLayoutId: {},

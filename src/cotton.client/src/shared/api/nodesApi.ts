@@ -1,5 +1,6 @@
 import { httpClient } from "./httpClient";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
+import { readRequiredIntHeader, type HeaderMap } from "./utils/headerUtils";
 
 export interface NodeFileManifestDto extends BaseDto {
   /**
@@ -69,22 +70,7 @@ export const nodesApi = {
         },
       },
     );
-    const headersAny = response.headers as unknown as {
-      [key: string]: unknown;
-      get?: (name: string) => unknown;
-    };
-
-    const headerValue =
-      headersAny?.["x-total-count"] ??
-      headersAny?.["X-Total-Count"] ??
-      headersAny?.get?.("x-total-count") ??
-      headersAny?.get?.("X-Total-Count");
-
-    const totalCount = Number.parseInt(String(headerValue ?? ""), 10);
-
-    if (!Number.isFinite(totalCount)) {
-      throw new Error("x-total-count header is missing or invalid");
-    }
+    const totalCount = readRequiredIntHeader(response.headers as HeaderMap, "x-total-count");
 
     return { content: response.data, totalCount };
   },

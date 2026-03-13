@@ -81,7 +81,7 @@ namespace Cotton.Server.Jobs
                     item.SmallFilePreviewHash = hash;
                     item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
 
-                    if (generator is ImagePreviewGenerator)
+                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator)
                     {
                         await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
                         byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);

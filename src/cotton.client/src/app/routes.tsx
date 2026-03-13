@@ -1,6 +1,9 @@
 import type { RouteConfig } from "./types";
-import { RequireAdmin, RequireAuth } from "../features/auth";
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { RequireAdmin, RequireAuth, useAuth } from "../features/auth";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useParams, useLocation, matchPath } from "react-router-dom";
+import Loader from "../shared/ui/Loader";
+import { useTranslation } from "react-i18next";
 
 const RedirectSToShare = () => {
   const { token } = useParams<{ token: string }>();
@@ -50,6 +53,48 @@ const publicRoutes: RouteConfig[] = [
 ];
 
 export function AppRoutes() {
+  const { t } = useTranslation(["login"]);
+  const location = useLocation();
+  const {
+    hydrated,
+    isInitializing,
+    isAuthenticated,
+    refreshEnabled,
+    hasChecked,
+    ensureAuth,
+  } = useAuth();
+
+  const isPublicRoute = publicRoutes.some((route) =>
+    Boolean(
+      matchPath(
+        { path: route.path, end: true },
+        location.pathname,
+      ),
+    ),
+  );
+
+  useEffect(() => {
+    if (isPublicRoute) return;
+    ensureAuth();
+  }, [ensureAuth, isPublicRoute]);
+
+  const isAuthBootstrapPending =
+    !isPublicRoute && (
+      !hydrated ||
+      isInitializing ||
+      (!isAuthenticated && refreshEnabled && !hasChecked)
+    );
+
+  if (isAuthBootstrapPending) {
+    return (
+      <Loader
+        overlay={true}
+        title={t("restoring.title", { ns: "login" })}
+        caption={t("restoring.caption", { ns: "login" })}
+      />
+    );
+  }
+
   const appRoutes: RouteConfig[] = [
     {
       path: "/",

@@ -199,6 +199,9 @@ export const FileSystemItemCard = ({
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       onClick={onClick}
+      onContextMenu={(e) => {
+        e.preventDefault();
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onKeyDown={(e) => {
@@ -221,6 +224,7 @@ export const FileSystemItemCard = ({
         }),
         cursor: clickable ? "pointer" : "default",
         userSelect: "none",
+        WebkitTapHighlightColor: "transparent",
         outline: "none",
         "&:hover": clickable ? { bgcolor: "action.hover" } : undefined,
         ...(hasActions

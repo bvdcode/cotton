@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
+import { useAuthStore } from "../../../shared/store/authStore";
 
 interface UseFilesDataParams {
   nodeId: string | null;
   layoutType: InterfaceLayoutType;
-  loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<unknown>;
+  loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<void>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
 }
 
@@ -23,14 +24,21 @@ export const useFilesData = ({
   const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
   const lastNodeIdRef = useRef<string | null>(null);
   const tilesLoadedNodeIdRef = useRef<string | null>(null);
+  const listRequestIdRef = useRef(0);
 
   const DEFAULT_PAGE_SIZE = 100;
   const clampPageSize = (pageSize: number) => Math.max(1, Math.min(100, pageSize));
 
   // Derive children count reactively from cached/loaded content
-  const cachedContent = useNodesStore(
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
+  const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
+  const rawCachedContent = useNodesStore(
     (s) => (nodeId ? s.contentByNodeId[nodeId] : undefined),
   );
+  const cachedContent =
+    cacheOwnerUserId === currentUserId
+      ? rawCachedContent
+      : undefined;
 
   const optimisticSetFilePreviewHash = useNodesStore(
     (s) => s.optimisticSetFilePreviewHash,
@@ -38,6 +46,26 @@ export const useFilesData = ({
   const childrenTotalCount = cachedContent
     ? cachedContent.nodes.length + cachedContent.files.length
     : null;
+
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) {
+      return;
+    }
+
+    if (!nodeId) {
+      setListContent(null);
+      setListTotalCount(0);
+      return;
+    }
+
+    if (!cachedContent) {
+      return;
+    }
+
+    setListError(null);
+    setListContent(cachedContent);
+    setListTotalCount(cachedContent.nodes.length + cachedContent.files.length);
+  }, [layoutType, nodeId, cachedContent]);
 
   // Tiles mode: single loadNode call — store handles SWR internally
   useEffect(() => {
@@ -76,30 +104,42 @@ export const useFilesData = ({
     lastNodeIdRef.current = nodeId ?? null;
   }, [nodeId, layoutType, currentPagination]);
 
-  const fetchListPage = useCallback(async (page: number, pageSize: number) => {
-    if (!nodeId) {
+  const fetchListPage = useCallback(async (targetNodeId: string, page: number, pageSize: number) => {
+    if (!targetNodeId) {
       return;
     }
 
+    const requestId = ++listRequestIdRef.current;
     setListLoading(true);
     try {
-      const response = await nodesApi.getChildren(nodeId, {
+      const response = await nodesApi.getChildren(targetNodeId, {
         page: page + 1,
         pageSize: clampPageSize(pageSize),
       });
+
+      if (requestId !== listRequestIdRef.current) {
+        return;
+      }
+
       setListContent(response.content);
       setListTotalCount(response.totalCount);
     } catch (err) {
+      if (requestId !== listRequestIdRef.current) {
+        return;
+      }
+
       console.error("Failed to load paged content", err);
       setListError("Failed to load list");
     } finally {
-      setListLoading(false);
+      if (requestId === listRequestIdRef.current) {
+        setListLoading(false);
+      }
     }
-  }, [nodeId]);
+  }, []);
 
   useEffect(() => {
     if (layoutType === InterfaceLayoutType.List && nodeId && currentPagination) {
-      void fetchListPage(currentPagination.page, currentPagination.pageSize);
+      void fetchListPage(nodeId, currentPagination.page, currentPagination.pageSize);
     }
   }, [nodeId, layoutType, currentPagination, fetchListPage]);
 
@@ -120,7 +160,7 @@ export const useFilesData = ({
     }
 
     if (layoutType === InterfaceLayoutType.List && currentPagination) {
-      void fetchListPage(currentPagination.page, currentPagination.pageSize);
+      void fetchListPage(nodeId, currentPagination.page, currentPagination.pageSize);
       return;
     }
 

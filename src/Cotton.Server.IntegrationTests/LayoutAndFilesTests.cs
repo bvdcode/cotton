@@ -159,6 +159,40 @@ public class LayoutAndFilesTests : IntegrationTestBase
         }
     }
 
+    [Test]
+    public async Task Shared_Folder_Page_Contains_Social_Preview_Meta_Tags()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var createNodeReq = new CreateNodeRequest { ParentId = root!.Id, Name = "shared-folder" };
+        var createNodeRes = await _client.PutAsJsonAsync("/api/v1/layouts/nodes", createNodeReq);
+        createNodeRes.EnsureSuccessStatusCode();
+
+        var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        Assert.That(child, Is.Not.Null);
+
+        var shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{child!.Id}/share-link");
+        shareLinkRes.EnsureSuccessStatusCode();
+        var shareLink = await shareLinkRes.Content.ReadAsStringAsync();
+        Assert.That(shareLink, Is.Not.Null.And.Not.Empty);
+
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var sharedPageRes = await _client.GetAsync(shareLink.Trim('"'));
+        sharedPageRes.EnsureSuccessStatusCode();
+
+        Assert.That(sharedPageRes.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
+
+        var html = await sharedPageRes.Content.ReadAsStringAsync();
+        Assert.That(html, Does.Contain("<meta property=\"og:image\""));
+        Assert.That(html, Does.Contain("<meta name=\"twitter:image\""));
+        Assert.That(html, Does.Contain("/assets/images/social-preview.jpg"));
+    }
+
     private async Task<string> LoginAsync()
     {
         var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequestDto()

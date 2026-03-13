@@ -111,4 +111,15 @@ export const layoutsApi = {
     );
     return response.data;
   },
+
+  getRecentFiles: async (
+    layoutId: Guid,
+    count = 3,
+  ): Promise<NodeFileManifestDto[]> => {
+    const response = await httpClient.get<NodeFileManifestDto[]>(
+      `/layouts/${layoutId}/recent`,
+      { params: { count } },
+    );
+    return response.data;
+  },
 };
