@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
-import { Alert, Box, IconButton, Snackbar, Typography } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 import {
   FileListViewFactory,
@@ -7,35 +7,37 @@ import {
   MediaLightbox,
   FilePreviewModal,
   FileConflictDialog,
+  DraggingOverlay,
 } from "./components";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../shared/store/nodesStore";
+import { useAuthStore } from "../../shared/store/authStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
-import { useFilePreview } from "./hooks/useFilePreview";
-import { useMediaLightbox } from "./hooks/useMediaLightbox";
+import { useFileInteractionHandlers } from "./hooks/useFileInteractionHandlers";
 import { useFilesLayout } from "./hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "./hooks/useFileSelection";
-import { downloadFile } from "./utils/fileHandlers";
+import { useDeleteSelectedItems } from "./hooks/useDeleteSelectedItems";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { getFileTypeInfo } from "./utils/fileTypes";
-import { getFileIcon } from "./utils/icons";
+import {
+  getDropPreparationCaption,
+  getDropPreparationTitle,
+} from "./utils/dropPreparation";
 import { useContentTiles } from "../../shared/hooks/useContentTiles";
-import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
-import { shareFile } from "../../shared/utils/shareFile";
 import { shareFolder } from "../../shared/utils/shareFolder";
-import { filesApi } from "../../shared/api/filesApi";
 import Loader from "../../shared/ui/Loader";
+import { AppToast } from "../../shared/ui/AppToast";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
@@ -44,159 +46,21 @@ import {
 
 const HUGE_FOLDER_THRESHOLD = 10_000;
 
-type TranslationFn = (
-  key: string,
-  options?: {
-    ns?: string;
-    count?: number;
-    processed?: number;
-    total?: number;
-  },
-) => string;
-
-type DropPreparationInfo = {
-  phase: "idle" | "scanning" | "preparing";
-  step: "idle" | "scanning" | "mapping" | "folders" | "conflicts" | "enqueue";
-  filesFound: number;
-  processed: number;
-};
-
-function getDropPreparationTitle(t: TranslationFn, info: DropPreparationInfo): string {
-  const { phase, step } = info;
-
-  if (phase === "scanning") {
-    return t("uploadDrop.scanning.title", { ns: "files" });
-  }
-
-  if (step === "mapping") {
-    return t("uploadDrop.preparing.mapping.title", { ns: "files" });
-  }
-  if (step === "folders") {
-    return t("uploadDrop.preparing.folders.title", { ns: "files" });
-  }
-  if (step === "conflicts") {
-    return t("uploadDrop.preparing.conflicts.title", { ns: "files" });
-  }
-  if (step === "enqueue") {
-    return t("uploadDrop.preparing.enqueue.title", { ns: "files" });
-  }
-
-  return t("uploadDrop.preparing.title", { ns: "files" });
-}
-
-function getDropPreparationCaption(
-  t: TranslationFn,
-  info: DropPreparationInfo,
-): string {
-  const { phase, filesFound, processed } = info;
-
-  const found = t("uploadDrop.captionFound", {
-    ns: "files",
-    count: filesFound,
-  });
-
-  if (phase === "scanning") return found;
-  if (filesFound <= 0) return found;
-
-  const progress = t("uploadDrop.captionProgress", {
-    ns: "files",
-    processed: Math.max(0, Math.min(filesFound, processed)),
-    total: filesFound,
-  });
-
-  return `${found} • ${progress}`;
-}
-
-type ShareToastState = {
-  open: boolean;
-  message: string;
-};
-
-type ShareToastSnackbarProps = {
-  toast: ShareToastState;
-  onClose: () => void;
-};
-
-const ShareToastSnackbar: React.FC<ShareToastSnackbarProps> = ({
-  toast,
-  onClose,
-}) => {
-  return (
-    <Snackbar
-      open={toast.open}
-      autoHideDuration={2500}
-      onClose={onClose}
-      message={toast.message}
-    />
-  );
-};
-
-type DraggingOverlayProps = {
-  open: boolean;
-  onDragEnter: React.DragEventHandler<HTMLDivElement>;
-  onDragOver: React.DragEventHandler<HTMLDivElement>;
-  onDragLeave: React.DragEventHandler<HTMLDivElement>;
-  onDrop: React.DragEventHandler<HTMLDivElement>;
-  label: string;
-};
-
-const DraggingOverlay: React.FC<DraggingOverlayProps> = ({
-  open,
-  onDragEnter,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  label,
-}) => {
-  if (!open) return null;
-
-  return (
-    <Box
-      onDragEnter={onDragEnter}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        bgcolor: "primary.main",
-        opacity: 0.15,
-        border: "4px dashed",
-        borderColor: "primary.main",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Typography
-        variant="h3"
-        sx={{
-          color: "primary.main",
-          fontWeight: "bold",
-          textShadow: "0 0 10px rgba(255,255,255,0.8)",
-          pointerEvents: "none",
-        }}
-      >
-        {label}
-      </Typography>
-    </Box>
-  );
-};
-
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const location = useLocation();
   const params = useParams<{ nodeId?: string }>();
+  const pendingSelectedFileIdRef = React.useRef<string | null>(
+    (location.state as { selectedFileId?: string } | null)?.selectedFileId ?? null,
+  );
 
   const {
     currentNode,
     ancestors,
     contentByNodeId,
+    cacheOwnerUserId,
     rootNodeId,
     loading,
     error,
@@ -207,6 +71,7 @@ export const FilesPage: React.FC = () => {
     deleteFolder,
     optimisticDeleteFile,
   } = useNodesStore();
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const routeNodeId = params.nodeId;
 
@@ -228,7 +93,8 @@ export const FilesPage: React.FC = () => {
   }, [routeNodeId, layoutType, resolveRootInBackground]);
 
   const nodeId = routeNodeId ?? rootNodeId ?? null;
-  const content = nodeId ? contentByNodeId[nodeId] : undefined;
+  const isUserCacheValid = cacheOwnerUserId === currentUserId;
+  const content = nodeId && isUserCacheValid ? contentByNodeId[nodeId] : undefined;
 
   const {
     childrenTotalCount,
@@ -291,36 +157,8 @@ export const FilesPage: React.FC = () => {
   const isContentTransitioning =
     !!effectiveContent && deferredContent !== effectiveContent;
 
-  useFolderFileList({
-    nodeId,
-    layoutType,
-    listContent,
-  });
-
   const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
 
-  const audioPlaylist = useMemo(
-    () =>
-      sortedFiles
-        .filter((file) => getFileTypeInfo(file.name, file.contentType ?? null).type === "audio")
-        .map((file) => {
-          const previewToken =
-            file.largeFilePreviewPresignedToken ??
-            file.previewHashEncryptedHex ??
-            null;
-          const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
-          const previewUrl = typeof icon === "string" ? icon : undefined;
-          return {
-            id: file.id,
-            name: file.name,
-            nodeId: nodeId ?? undefined,
-            previewUrl,
-          };
-        }),
-    [sortedFiles, nodeId],
-  );
-
-  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
   const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
 
   useEffect(() => {
@@ -328,29 +166,14 @@ export const FilesPage: React.FC = () => {
     setScanRootNodeId(nodeId);
   }, [nodeId, setScanRootNodeId]);
 
-  const [shareToast, setShareToast] = React.useState<ShareToastState>({
-    open: false,
-    message: "",
-  });
-
-  const showToast = React.useCallback(
-    (message: string) => setShareToast({ open: true, message }),
-    [],
-  );
-
-  const folderOps = useFolderOperations(nodeId, handleFolderChanged);
-  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
-    onToast: showToast,
-  });
-  const fileOps = useFileOperations(reloadCurrentNode);
-  const { previewState, openPreview, closePreview } = useFilePreview();
-  const fileSelection = useFileSelection();
-
-  const smoothGalleryTransitions = useLocalPreferencesStore(
-    selectGallerySmoothTransitions,
-  );
-
   const {
+    previewState,
+    closePreview,
+    handleFileClick,
+    handleDownloadFile,
+    handleShareFile,
+    shareToast,
+    setShareToast,
     lightboxOpen,
     lightboxIndex,
     mediaItems,
@@ -358,7 +181,45 @@ export const FilesPage: React.FC = () => {
     getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
-  } = useMediaLightbox(sortedFiles);
+  } = useFileInteractionHandlers({
+    sortedFiles,
+    audioFallbackNodeId: nodeId ?? undefined,
+  });
+
+  // Consume selectedFileId from router state (e.g. dashboard → open file)
+  React.useEffect(() => {
+    const targetId = pendingSelectedFileIdRef.current;
+    if (!targetId || sortedFiles.length === 0) return;
+
+    const file = sortedFiles.find((f) => f.id === targetId);
+    if (!file) return;
+
+    pendingSelectedFileIdRef.current = null;
+    window.history.replaceState({}, "");
+
+    const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null);
+    if (typeInfo.type === "image" || typeInfo.type === "video") {
+      handleMediaClick(file.id);
+    } else {
+      handleFileClick(file.id, file.name, file.sizeBytes);
+    }
+  }, [sortedFiles, handleFileClick, handleMediaClick]);
+
+  const showToast = React.useCallback(
+    (message: string) => setShareToast({ open: true, message }),
+    [setShareToast],
+  );
+
+  const folderOps = useFolderOperations(nodeId, handleFolderChanged);
+  const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
+    onToast: showToast,
+  });
+  const fileOps = useFileOperations(reloadCurrentNode);
+  const fileSelection = useFileSelection();
+
+  const smoothGalleryTransitions = useLocalPreferencesStore(
+    selectGallerySmoothTransitions,
+  );
 
   const stats = useMemo(
     () => calculateFolderStats(deferredContent?.nodes, deferredContent?.files),
@@ -381,38 +242,12 @@ export const FilesPage: React.FC = () => {
     }
   }, [ancestors, navigate]);
 
-  const handleDownloadFile = async (nodeFileId: string, fileName: string) => {
-    await downloadFile(nodeFileId, fileName);
-  };
-
-  const handleShareFile = React.useCallback(
-    async (nodeFileId: string, fileName: string) => {
-      await shareFile(nodeFileId, fileName, t, setShareToast);
-    },
-    [t],
-  );
-
   const handleShareFolder = React.useCallback(
     async (folderId: string, folderName: string) => {
       await shareFolder(folderId, folderName, t, setShareToast);
     },
-    [t],
+    [setShareToast, t],
   );
-
-  const handleFileClick = (
-    fileId: string,
-    fileName: string,
-    fileSizeBytes?: number,
-  ) => {
-    if (getFileTypeInfo(fileName, null).type === "audio") {
-      openAudio({ fileId, fileName, playlist: audioPlaylist });
-      return;
-    }
-    const opened = openPreview(fileId, fileName, fileSizeBytes);
-    if (!opened) {
-      void handleDownloadFile(fileId, fileName);
-    }
-  };
 
   const onPaginationModelChange = useMemo(
     () => (model: { page: number; pageSize: number }) => {
@@ -436,61 +271,7 @@ export const FilesPage: React.FC = () => {
     onMediaClick: handleMediaClick,
   });
 
-  const handleDeleteSelected = React.useCallback(async () => {
-    if (!nodeId) return;
-    if (!fileSelection.selectionMode) return;
-    if (fileSelection.selectedCount <= 0) return;
-
-    const selected = fileSelection.selectedIds;
-    const selectedTiles = tiles.filter((tile) => {
-      const id = tile.kind === "folder" ? tile.node.id : tile.file.id;
-      return selected.has(id);
-    });
-
-    if (selectedTiles.length === 0) return;
-
-    const result = await confirm({
-      title: t("deleteSelected.confirmTitle", {
-        ns: "files",
-        count: selectedTiles.length,
-      }),
-      description: t("deleteSelected.confirmDescription", { ns: "files" }),
-      confirmationText: t("common:actions.delete"),
-      cancellationText: t("common:actions.cancel"),
-      confirmationButtonProps: { color: "error" },
-    });
-
-    if (!result.confirmed) return;
-
-    let hadError = false;
-
-    for (const tile of selectedTiles) {
-      if (tile.kind === "folder") {
-        try {
-          await deleteFolder(tile.node.id, nodeId);
-        } catch (e) {
-          hadError = true;
-          console.error("Failed to delete selected folder", e);
-        }
-        continue;
-      }
-
-      try {
-        optimisticDeleteFile(nodeId, tile.file.id);
-        await filesApi.deleteFile(tile.file.id);
-      } catch (e) {
-        hadError = true;
-        console.error("Failed to delete selected file", e);
-      }
-    }
-
-    fileSelection.deselectAll();
-    if (hadError) {
-      reloadCurrentNode();
-      return;
-    }
-    reloadCurrentNode();
-  }, [
+  const handleDeleteSelected = useDeleteSelectedItems({
     nodeId,
     fileSelection,
     tiles,
@@ -499,7 +280,7 @@ export const FilesPage: React.FC = () => {
     deleteFolder,
     optimisticDeleteFile,
     reloadCurrentNode,
-  ]);
+  });
 
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
@@ -524,18 +305,20 @@ export const FilesPage: React.FC = () => {
       selectedCount: fileSelection.selectedCount,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
-      customActions:
+      customActionItems:
         fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
-          <IconButton
-            color="error"
-            onClick={() => {
-              void handleDeleteSelected();
-            }}
-            title={t("selection.deleteSelected", { ns: "files" })}
-            disabled={loading}
-          >
-            <Delete />
-          </IconButton>
+          [
+            {
+              key: "delete-selected",
+              icon: <Delete />,
+              title: t("selection.deleteSelected", { ns: "files" }),
+              onClick: () => {
+                void handleDeleteSelected();
+              },
+              disabled: loading,
+              color: "error" as const,
+            },
+          ]
         ) : undefined,
     }),
     [
@@ -644,7 +427,7 @@ export const FilesPage: React.FC = () => {
         />
       )}
 
-      <ShareToastSnackbar
+      <AppToast
         toast={shareToast}
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
       />

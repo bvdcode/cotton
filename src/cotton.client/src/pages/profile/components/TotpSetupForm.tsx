@@ -64,14 +64,24 @@ export const TotpSetupForm = ({
                 borderColor="divider"
                 sx={{ justifyContent: "center" }}
               >
-                <QRCode
-                  value={totpSetup.otpAuthUri}
-                  size={200}
-                  level="M"
-                  fgColor={theme.palette.common.black}
-                  bgColor={theme.palette.common.white}
-                  style={{ width: "100%", height: "auto" }}
-                />
+                <Box
+                  width="100%"
+                  sx={{
+                    "& > svg": {
+                      width: "100%",
+                      height: "auto",
+                      display: "block",
+                    },
+                  }}
+                >
+                  <QRCode
+                    value={totpSetup.otpAuthUri}
+                    size={200}
+                    level="M"
+                    fgColor={theme.palette.common.black}
+                    bgColor={theme.palette.common.white}
+                  />
+                </Box>
               </Box>
             </Box>
 

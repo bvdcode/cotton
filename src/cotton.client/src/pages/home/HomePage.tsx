@@ -4,14 +4,17 @@ import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
 import { formatBytes } from "../../shared/utils/formatBytes";
+import { RecentFilesCard } from "./components/RecentFilesCard";
 
 export const HomePage: React.FC = () => {
   const { t } = useTranslation(["home", "common"]);
   const {
     rootNode,
     statsByLayoutId,
+    recentFiles,
     loadingRoot,
     loadingStats,
+    loadingRecent,
     error,
     ensureHomeData,
   } = useLayoutsStore();
@@ -112,6 +115,8 @@ export const HomePage: React.FC = () => {
             </Typography>
           </CardContent>
         </Card>
+
+        <RecentFilesCard files={recentFiles} loading={loadingRecent} />
       </Box>
     </Box>
   );

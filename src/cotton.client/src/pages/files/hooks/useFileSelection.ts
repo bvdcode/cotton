@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { FileSystemTile } from "../types/FileListViewTypes";
 
 /** Extracts the unique ID from a tile (folder or file). */
@@ -39,38 +39,12 @@ export const useFileSelection = (): FileSelectionState => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const lastClickedIdRef = useRef<string | null>(null);
-  const hadSelectionRef = useRef(false);
-
-  useEffect(() => {
-    if (!selectionMode) {
-      hadSelectionRef.current = false;
-      return;
-    }
-
-    if (selectedIds.size > 0) {
-      hadSelectionRef.current = true;
-    }
-  }, [selectionMode, selectedIds]);
-
-  useEffect(() => {
-    if (!selectionMode) return;
-
-    // Auto-exit selection mode only after the user has actually selected something.
-    // This avoids immediately leaving selection mode right after entering it.
-    if (selectedIds.size === 0 && hadSelectionRef.current) {
-      hadSelectionRef.current = false;
-      lastClickedIdRef.current = null;
-      setSelectionMode(false);
-      setSelectedIds(new Set());
-    }
-  }, [selectionMode, selectedIds]);
 
   const toggleSelectionMode = useCallback(() => {
     setSelectionMode((prev) => {
       if (prev) {
         setSelectedIds(new Set());
         lastClickedIdRef.current = null;
-        hadSelectionRef.current = false;
       }
       return !prev;
     });
@@ -112,6 +86,10 @@ export const useFileSelection = (): FileSelectionState => {
         next.add(id);
       }
 
+      if (next.size === 0) {
+        setSelectionMode(false);
+      }
+
       lastClickedIdRef.current = id;
       return next;
     });
@@ -120,12 +98,12 @@ export const useFileSelection = (): FileSelectionState => {
   const selectAll = useCallback((tiles: FileSystemTile[]) => {
     setSelectedIds(new Set(tiles.map(getTileId)));
     lastClickedIdRef.current = null;
-    hadSelectionRef.current = true;
   }, []);
 
   const deselectAll = useCallback(() => {
     setSelectedIds(new Set());
     lastClickedIdRef.current = null;
+    setSelectionMode(false);
   }, []);
 
   const isSelected = useCallback(

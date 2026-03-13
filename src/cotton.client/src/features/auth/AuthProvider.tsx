@@ -47,8 +47,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     // Security: prevent cross-user cached data reuse.
     // When auth identity changes, clear all user-scoped caches.
+    // During initial auth bootstrap user can be temporarily null,
+    // so defer reset until the first auth check is completed.
+    if (!hydrated) return;
+    if (!hasChecked && refreshEnabled) return;
+
     resetUserScopedStores(userId);
-  }, [userId]);
+  }, [userId, hydrated, hasChecked, refreshEnabled]);
 
   useEffect(() => {
     if (!user) {
@@ -61,13 +66,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const ensureAuth = useCallback(async () => {
     if (isAuthenticated || isInitializing) return;
     if (!hydrated) return;
-    if (!refreshEnabled) return;
+    if (!refreshEnabled) {
+      setHasChecked(true);
+      return;
+    }
 
     setInitializing(true);
     try {
       const token = await authApi.refresh();
       if (token) {
         const userData = await authApi.me();
+
+        // Ensure stale persisted data from another identity is cleared
+        // before protected routes can render for this user.
+        resetUserScopedStores(userData.id);
         setAuthenticatedInStore(userData);
       } else {
         setUnauthenticated();
