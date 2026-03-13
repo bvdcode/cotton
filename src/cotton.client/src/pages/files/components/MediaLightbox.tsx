@@ -19,59 +19,17 @@ import {
 } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
-import {
-  isHeicFile,
-  convertHeicToJpeg,
-} from "../../../shared/utils/heicConverter";
-import { formatBytes } from "../../../shared/utils/formatBytes";
+import type {
+  MediaLightboxProps,
+  SlideWithTitle,
+} from "./mediaLightbox.types";
+import { useMediaLightboxUrls } from "../hooks/useMediaLightboxUrls";
 import { shareLinks } from "../../../shared/utils/shareLinks";
-
-const TRANSPARENT_PLACEHOLDER =
-  "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
 
-type SlideWithTitle = Slide & {
-  title?: string;
-};
-
-type MediaKind = "image" | "video";
-
-export interface MediaItem {
-  id: string;
-  kind: MediaKind;
-  name: string;
-  previewUrl: string;
-  width?: number;
-  height?: number;
-  mimeType: string;
-  sizeBytes?: number;
-}
-
-export interface MediaLightboxProps {
-  items: MediaItem[];
-  open: boolean;
-  initialIndex: number;
-  onClose: () => void;
-  getSignedMediaUrl: (id: string) => Promise<string>;
-  /**
-   * If false, disables swipe/fade animations.
-   * Defaults to true.
-   */
-  smoothTransitions?: boolean;
-  /**
-   * Optional separate download URL resolver.
-   * If not provided, the signed media URL is used for both viewing and downloading.
-   */
-  getDownloadUrl?: (id: string) => Promise<string>;
-}
-
-/**
- * MediaLightbox component
- * Displays media items (images/videos) as slides with lazy-loaded signed URLs
- */
 export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   items,
   open,
@@ -96,137 +54,106 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [isTouchDevice],
   );
 
-  // Auto-hide controls after 2.5 seconds of inactivity
   const isActive = useActivityDetection(TOUCH_CONTROLS_AUTOHIDE_MS);
-
   const [touchControlsVisible, setTouchControlsVisible] =
     React.useState<boolean>(true);
-
   const touchControlsTimerRef = React.useRef<number | null>(null);
 
-  const showTouchControls = React.useCallback(() => {
-    if (!isTouchDevice) {
-      return;
-    }
-
-    setTouchControlsVisible(true);
-
+  const clearTouchControlsTimer = React.useCallback(() => {
     if (touchControlsTimerRef.current !== null) {
       window.clearTimeout(touchControlsTimerRef.current);
       touchControlsTimerRef.current = null;
     }
+  }, []);
+
+  const showTouchControls = React.useCallback(() => {
+    if (!isTouchDevice) return;
+
+    setTouchControlsVisible(true);
+    clearTouchControlsTimer();
 
     touchControlsTimerRef.current = window.setTimeout(() => {
       setTouchControlsVisible(false);
       touchControlsTimerRef.current = null;
     }, TOUCH_CONTROLS_AUTOHIDE_MS);
-  }, [isTouchDevice]);
+  }, [clearTouchControlsTimer, isTouchDevice]);
+
+  const toggleTouchControls = React.useCallback(() => {
+    if (!isTouchDevice) return;
+
+    setTouchControlsVisible((previous) => {
+      const next = !previous;
+      clearTouchControlsTimer();
+
+      if (next) {
+        touchControlsTimerRef.current = window.setTimeout(() => {
+          setTouchControlsVisible(false);
+          touchControlsTimerRef.current = null;
+        }, TOUCH_CONTROLS_AUTOHIDE_MS);
+      }
+
+      return next;
+    });
+  }, [clearTouchControlsTimer, isTouchDevice]);
 
   React.useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    if (!isTouchDevice) {
+    if (!open || !isTouchDevice) {
       return;
     }
 
     showTouchControls();
 
     return () => {
-      if (touchControlsTimerRef.current !== null) {
-        window.clearTimeout(touchControlsTimerRef.current);
-        touchControlsTimerRef.current = null;
-      }
+      clearTouchControlsTimer();
     };
-  }, [open, isTouchDevice, showTouchControls]);
+  }, [open, isTouchDevice, showTouchControls, clearTouchControlsTimer]);
 
-  const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>(
-    {},
+  const {
+    slides,
+    ensureSlideHasOriginal,
+    handleSlideImageError,
+    resolveSlideDownloadUrl,
+  } = useMediaLightboxUrls({
+    items,
+    getSignedMediaUrl,
+    getDownloadUrl,
+  });
+
+  const handleCustomDownload = React.useCallback(
+    async ({
+      slide,
+      saveAs,
+    }: {
+      slide: Slide;
+      saveAs: (source: string | Blob, name?: string) => void;
+    }) => {
+      const lightboxSlide = slide as SlideWithTitle;
+      const downloadUrl = await resolveSlideDownloadUrl(slide);
+      if (!downloadUrl) return;
+      saveAs(downloadUrl, lightboxSlide.fileName);
+    },
+    [resolveSlideDownloadUrl],
   );
-  const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>(
-    {},
-  );
-  const [downloadUrls, setDownloadUrls] = React.useState<
-    Record<string, string>
-  >({});
 
-  const loadingRef = React.useRef<Set<string>>(new Set());
+  const handleCustomShare = React.useCallback(
+    async ({ slide }: { slide: Slide }) => {
+      const lightboxSlide = slide as SlideWithTitle;
+      if (!navigator.canShare) return;
 
-  // Rebuild slides when originalUrls or shareUrls change
-  const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, displayUrls, signedUrls, downloadUrls);
-  }, [items, displayUrls, signedUrls, downloadUrls]);
+      const downloadUrl = await resolveSlideDownloadUrl(slide);
+      if (!downloadUrl) return;
 
-  const preloadImage = React.useCallback(async (url: string): Promise<void> => {
-    await new Promise<void>((resolve, reject) => {
-      const img = new Image();
-      img.onload = async () => {
-        if (typeof img.decode === "function") {
-          try {
-            await img.decode();
-          } catch {
-            // ignore decode failures
-          }
-        }
-        resolve();
-      };
-      img.onerror = () => reject(new Error("Failed to preload image"));
-      img.src = url;
-    });
-  }, []);
+      const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadUrl);
+      const shareUrl = token ? shareLinks.buildShareUrl(token) : downloadUrl;
+      const sharePayload = { title: lightboxSlide.fileName, url: shareUrl };
 
-  const ensureSlideHasOriginal = React.useCallback(
-    async (targetIndex: number) => {
-      const item = items[targetIndex];
-      if (!item) return;
+      if (!navigator.canShare(sharePayload)) return;
 
-      if (loadingRef.current.has(item.id)) return;
-
-      setSignedUrls((prev) => {
-        if (prev[item.id]) return prev;
-
-        loadingRef.current.add(item.id);
-
-        (async () => {
-          try {
-            const url = await getSignedMediaUrl(item.id);
-            setSignedUrls((p) => ({ ...p, [item.id]: url }));
-
-            if (getDownloadUrl) {
-              try {
-                const dl = await getDownloadUrl(item.id);
-                setDownloadUrls((p) => ({ ...p, [item.id]: dl }));
-              } catch (e) {
-                console.error("Failed to load media download URL", e);
-              }
-            }
-
-            const nextDisplayUrl =
-              item.kind === "image" && isHeicFile(item.name)
-                ? await convertHeicToJpeg(url)
-                : url;
-
-            if (item.kind === "image") {
-              try {
-                await preloadImage(nextDisplayUrl);
-              } catch {
-                // Keep previewUrl if preloading fails
-              }
-            }
-
-            setDisplayUrls((p) => ({ ...p, [item.id]: nextDisplayUrl }));
-          } catch (e) {
-            console.error("Failed to load media original URL", e);
-          } finally {
-            loadingRef.current.delete(item.id);
-          }
-        })();
-
-        return prev;
+      navigator.share(sharePayload).catch(() => {
+        // Ignore dismissed share sheets.
       });
     },
-    [items, getSignedMediaUrl, getDownloadUrl, preloadImage],
+    [resolveSlideDownloadUrl],
   );
 
   React.useEffect(() => {
@@ -240,12 +167,187 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     }
   }, [open, index, ensureSlideHasOriginal]);
 
-  // Build className based on activity state
   const controlsVisible = isTouchDevice ? touchControlsVisible : isActive;
   const lightboxClassName = [
     "lightbox-autohide",
     controlsVisible ? "lightbox-autohide--active" : "lightbox-autohide--idle",
   ].join(" ");
+
+  const lightboxController = React.useMemo(
+    () => ({
+      closeOnPullDown: true,
+      closeOnPullUp: true,
+    }),
+    [],
+  );
+
+  const lightboxAnimation = React.useMemo(
+    () => ({
+      swipe: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+      fade: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+      navigation: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
+    }),
+    [smoothTransitions],
+  );
+
+  const lightboxEvents = React.useMemo(
+    () => ({
+      view: ({ index: currentIndex }: { index: number }) => {
+        setIndex(currentIndex);
+        showTouchControls();
+        for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
+          void ensureSlideHasOriginal(currentIndex + offset);
+        }
+      },
+      click: () => {
+        if (!isTouchDevice) return;
+        window.setTimeout(() => {
+          toggleTouchControls();
+        }, 0);
+      },
+    }),
+    [ensureSlideHasOriginal, isTouchDevice, showTouchControls, toggleTouchControls],
+  );
+
+  const lightboxRender = React.useMemo(
+    () => ({
+      buttonZoom: () => null,
+      iconZoomIn: () => null,
+      iconZoomOut: () => null,
+      iconLoading: () => <CircularProgress size={28} />,
+      iconClose: () => <Close />,
+      iconShare: () => <ShareIcon />,
+      iconDownload: () => <DownloadIcon />,
+      iconSlideshowPause: () => <PauseIcon />,
+      iconSlideshowPlay: () => <SlideshowIcon />,
+      slideHeader: ({ slide }: { slide: Slide }) => {
+        const maybeTitle = (slide as { title?: string }).title;
+        const title = typeof maybeTitle === "string" ? maybeTitle : "";
+        const parts = title
+          .split("•")
+          .map((p: string) => p.trim())
+          .filter((p: string) => p.length > 0);
+
+        const counter = parts[0] ?? "";
+        const size = parts.length >= 3 ? (parts[1] ?? "") : "";
+        const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
+
+        return (
+          <div className="media-lightbox__header" aria-label={title}>
+            <span className="media-lightbox__counter">{counter}</span>
+            <span className="media-lightbox__meta">
+              {size ? (
+                <>
+                  <span className="media-lightbox__sep">•</span>
+                  <span className="media-lightbox__size">{size}</span>
+                </>
+              ) : null}
+              {name ? (
+                <>
+                  <span className="media-lightbox__sep">•</span>
+                  <span className="media-lightbox__name">{name}</span>
+                </>
+              ) : null}
+            </span>
+          </div>
+        );
+      },
+      slideContainer: ({
+        children,
+        slide,
+      }: {
+        children?: React.ReactNode;
+        slide: Slide;
+      }) => {
+        return (
+          <div
+            className="media-lightbox__tap-area"
+            onErrorCapture={() => {
+              void handleSlideImageError(slide);
+            }}
+          >
+            {children}
+          </div>
+        );
+      },
+    }),
+    [handleSlideImageError],
+  );
+
+  const lightboxDownload = React.useMemo(
+    () => ({
+      download: handleCustomDownload,
+    }),
+    [handleCustomDownload],
+  );
+
+  const lightboxShare = React.useMemo(
+    () => ({
+      share: handleCustomShare,
+    }),
+    [handleCustomShare],
+  );
+
+  const lightboxZoom = React.useMemo(
+    () => ({
+      maxZoomPixelRatio: 3,
+      zoomInMultiplier: 1,
+      doubleTapDelay: 300,
+      doubleClickDelay: 300,
+      doubleClickMaxStops: 1,
+      keyboardMoveDistance: 50,
+      wheelZoomDistanceFactor: 500,
+      pinchZoomDistanceFactor: 100,
+      scrollToZoom: true,
+    }),
+    [],
+  );
+
+  const lightboxSlideshow = React.useMemo(
+    () => ({
+      autoplay: false,
+      delay: 5000,
+    }),
+    [],
+  );
+
+  const lightboxVideo = React.useMemo(
+    () => ({
+      controls: true,
+      playsInline: true,
+      autoPlay: true,
+    }),
+    [],
+  );
+
+  const lightboxCarousel = React.useMemo(
+    () => ({
+      finite: true,
+      preload: 2,
+      imageFit: "contain" as const,
+      padding: 0,
+      spacing: 0,
+    }),
+    [],
+  );
+
+  const lightboxThumbnails = React.useMemo(() => {
+    if (isTouchDevice) {
+      return undefined;
+    }
+
+    return {
+      position: "bottom" as const,
+      width: 120,
+      height: 80,
+      border: 0,
+      borderRadius: 4,
+      padding: 2,
+      gap: 4,
+      showToggle: false,
+      hidden: items[index]?.kind === "video",
+    };
+  }, [index, isTouchDevice, items]);
 
   return (
     <Lightbox
@@ -255,256 +357,17 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       plugins={plugins}
       slides={slides}
       index={index}
-      controller={{
-        closeOnPullDown: true,
-        closeOnPullUp: true,
-      }}
-      animation={{
-        swipe: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
-        fade: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
-        navigation: smoothTransitions ? LIGHTBOX_ANIMATION_MS : 0,
-      }}
-      on={{
-        view: ({ index: currentIndex }) => {
-          setIndex(currentIndex);
-          showTouchControls();
-          for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
-            void ensureSlideHasOriginal(currentIndex + offset);
-          }
-        },
-        click: () => {
-          if (!isTouchDevice) {
-            return;
-          }
-
-          // Mobile UX: a tap should reliably show the gallery overlay.
-          // We intentionally do NOT toggle off on tap to avoid interfering with video controls.
-          showTouchControls();
-        },
-      }}
-      render={{
-        buttonZoom: () => null,
-        iconZoomIn: () => null,
-        iconZoomOut: () => null,
-        iconLoading: () => <CircularProgress size={28} />,
-        iconClose: () => <Close />,
-        iconShare: () => <ShareIcon />,
-        iconDownload: () => <DownloadIcon />,
-        iconSlideshowPause: () => <PauseIcon />,
-        iconSlideshowPlay: () => <SlideshowIcon />,
-        slideHeader: ({ slide }) => {
-          const maybeTitle = (slide as { title?: string }).title;
-          const title = typeof maybeTitle === "string" ? maybeTitle : "";
-          const parts = title
-            .split("•")
-            .map((p: string) => p.trim())
-            .filter((p: string) => p.length > 0);
-
-          const counter = parts[0] ?? "";
-          const size = parts.length >= 3 ? (parts[1] ?? "") : "";
-          const name = parts.length >= 2 ? (parts[parts.length - 1] ?? "") : "";
-
-          return (
-            <div className="media-lightbox__header" aria-label={title}>
-              <span className="media-lightbox__counter">{counter}</span>
-              <span className="media-lightbox__meta">
-                {size ? (
-                  <>
-                    <span className="media-lightbox__sep">•</span>
-                    <span className="media-lightbox__size">{size}</span>
-                  </>
-                ) : null}
-                {name ? (
-                  <>
-                    <span className="media-lightbox__sep">•</span>
-                    <span className="media-lightbox__name">{name}</span>
-                  </>
-                ) : null}
-              </span>
-            </div>
-          );
-        },
-        slideContainer: ({ children, slide }) => {
-          const imageSrc =
-            slide.type === "image" ? (slide as { src?: string }).src : null;
-
-          return (
-            <div className="media-lightbox__tap-area">
-              {imageSrc ? (
-                <img
-                  className="media-lightbox__image-bg"
-                  src={imageSrc}
-                  alt=""
-                  aria-hidden="true"
-                />
-              ) : null}
-              {children}
-            </div>
-          );
-        },
-      }}
-      zoom={{
-        maxZoomPixelRatio: 3,
-        zoomInMultiplier: 1,
-        doubleTapDelay: 300,
-        doubleClickDelay: 300,
-        doubleClickMaxStops: 1,
-        keyboardMoveDistance: 50,
-        wheelZoomDistanceFactor: 500,
-        pinchZoomDistanceFactor: 100,
-        scrollToZoom: true,
-      }}
-      slideshow={{
-        autoplay: false,
-        delay: 5000,
-      }}
-      thumbnails={
-        isTouchDevice
-          ? undefined
-          : {
-              position: "bottom",
-              width: 120,
-              height: 80,
-              border: 0,
-              borderRadius: 4,
-              padding: 2,
-              gap: 4,
-              showToggle: false,
-              hidden: items[index]?.kind === "video",
-            }
-      }
-      video={{
-        controls: true,
-        playsInline: true,
-        autoPlay: true,
-      }}
-      carousel={{
-        finite: true,
-        preload: 2,
-        imageFit: "contain",
-        padding: 0,
-        spacing: 0,
-      }}
+      controller={lightboxController}
+      animation={lightboxAnimation}
+      on={lightboxEvents}
+      render={lightboxRender}
+      download={lightboxDownload}
+      share={lightboxShare}
+      zoom={lightboxZoom}
+      slideshow={lightboxSlideshow}
+      thumbnails={lightboxThumbnails}
+      video={lightboxVideo}
+      carousel={lightboxCarousel}
     />
   );
 };
-
-function buildSlidesFromItems(
-  items: MediaItem[],
-  displayUrls: Record<string, string>,
-  signedUrls: Record<string, string>,
-  downloadUrls: Record<string, string>,
-): SlideWithTitle[] {
-  const total = items.length;
-
-  const buildShareUrl = (candidateUrl: string | null): string | null => {
-    if (!candidateUrl) return null;
-    const token = shareLinks.tryExtractTokenFromDownloadUrl(candidateUrl);
-    return token ? shareLinks.buildShareUrl(token) : null;
-  };
-
-  const buildTitle = (position: number, item: MediaItem): string => {
-    const prefix = total > 0 ? `${position}/${total}` : "";
-    const sizeStr = item.sizeBytes ? formatBytes(item.sizeBytes) : "";
-    return sizeStr
-      ? `${prefix} • ${item.name} • ${sizeStr}`
-      : `${prefix} • ${item.name}`;
-  };
-
-  const buildImageSlide = (args: {
-    item: MediaItem;
-    title: string;
-    displayUrl: string | null;
-    signedUrl: string | null;
-    downloadUrl: string | null;
-    shareUrl: string | null;
-  }): SlideWithTitle => {
-    const { item, title, displayUrl, signedUrl, downloadUrl, shareUrl } = args;
-    const isLoading = !displayUrl && !item.previewUrl;
-    const src = displayUrl || item.previewUrl || TRANSPARENT_PLACEHOLDER;
-
-    return {
-      type: "image",
-      src,
-      width: isLoading ? 120 : item.width,
-      height: isLoading ? 120 : item.height,
-      title,
-      download:
-        downloadUrl || signedUrl
-          ? { url: downloadUrl || signedUrl || "", filename: item.name }
-          : undefined,
-      share: shareUrl || undefined,
-    };
-  };
-
-  const buildVideoSlide = (args: {
-    item: MediaItem;
-    title: string;
-    signedUrl: string | null;
-    downloadUrl: string | null;
-    shareUrl: string | null;
-  }): SlideWithTitle => {
-    const { item, title, signedUrl, downloadUrl, shareUrl } = args;
-    const poster = item.previewUrl || undefined;
-
-    if (!signedUrl) {
-      return {
-        type: "image",
-        src: poster || TRANSPARENT_PLACEHOLDER,
-        width: item.width,
-        height: item.height,
-        title,
-        share: undefined,
-      };
-    }
-
-    return {
-      type: "video",
-      poster,
-      width: item.width,
-      height: item.height,
-      title,
-      download: {
-        url: downloadUrl || signedUrl,
-        filename: item.name,
-      },
-      share: shareUrl || undefined,
-      sources: [
-        {
-          src: signedUrl,
-          type: item.mimeType,
-        },
-      ],
-    } as SlideWithTitle;
-  };
-
-  return items.map<SlideWithTitle>((item, idx) => {
-    const position = idx + 1;
-    const title = buildTitle(position, item);
-
-    const signedUrl = signedUrls[item.id] ?? null;
-    const displayUrl = displayUrls[item.id] ?? null;
-    const downloadUrl = downloadUrls[item.id] ?? null;
-    const shareCandidate = downloadUrl || signedUrl;
-    const shareUrl = buildShareUrl(shareCandidate);
-
-    if (item.kind === "image") {
-      return buildImageSlide({
-        item,
-        title,
-        displayUrl,
-        signedUrl,
-        downloadUrl,
-        shareUrl,
-      });
-    }
-
-    return buildVideoSlide({
-      item,
-      title,
-      signedUrl,
-      downloadUrl,
-      shareUrl,
-    });
-  });
-}

@@ -16,9 +16,13 @@ import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import type { Guid } from "../../../shared/api/layoutsApi";
 import type { SharedNodeContentDto } from "../../../shared/api/sharedFoldersApi";
 import type { MediaItem } from "../../files/components";
-import type { FileBrowserViewMode } from "../../files/hooks/useFilesLayout";
+import type { FileBrowserViewMode } from "../../files/utils/viewMode";
 import { useFilePreview } from "../../files/hooks/useFilePreview";
 import { SharedFilePreviewModal } from "./SharedFilePreviewModal";
+import {
+  cycleFileBrowserViewMode,
+  getFileBrowserViewMode,
+} from "../../files/utils/viewMode";
 
 interface BreadcrumbNode {
   id: Guid;
@@ -98,29 +102,14 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
   }, []);
 
-  const viewMode: "table" | "tiles-small" | "tiles-medium" | "tiles-large" = React.useMemo(() => {
-    if (layoutType === InterfaceLayoutType.List) return "table";
-    if (tilesSize === "small") return "tiles-small";
-    if (tilesSize === "large") return "tiles-large";
-    return "tiles-medium";
-  }, [layoutType, tilesSize]);
+  const viewMode: FileBrowserViewMode = React.useMemo(
+    () => getFileBrowserViewMode(layoutType, tilesSize),
+    [layoutType, tilesSize],
+  );
 
   const cycleViewMode = React.useCallback(() => {
-    switch (viewMode) {
-      case "table":
-        setLayoutType(InterfaceLayoutType.Tiles);
-        setTilesSize("small");
-        return;
-      case "tiles-small":
-        setTilesSize("medium");
-        return;
-      case "tiles-medium":
-        setTilesSize("large");
-        return;
-      case "tiles-large":
-        setLayoutType(InterfaceLayoutType.List);
-    }
-  }, [viewMode]);
+    cycleFileBrowserViewMode(viewMode, setLayoutType, setTilesSize);
+  }, [setLayoutType, setTilesSize, viewMode]);
 
   const { sortedFiles, tiles } = useContentTiles(content ?? undefined);
 

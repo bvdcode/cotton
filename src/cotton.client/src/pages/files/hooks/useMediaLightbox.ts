@@ -93,15 +93,15 @@ export const useMediaLightbox = (
   }, [sortedFiles]);
 
   // Get signed media URL for gallery viewing - uses lightweight server-side preview
-  const getSignedMediaUrl = async (fileId: string): Promise<string> => {
+  const getSignedMediaUrl = useCallback(async (fileId: string): Promise<string> => {
     const url = await filesApi.getDownloadLink(fileId, 60 * 24);
     return `${url}&preview=true`;
-  };
+  }, []);
 
   // Get download URL for the actual download button - full original file
-  const getDownloadUrl = async (fileId: string): Promise<string> => {
+  const getDownloadUrl = useCallback(async (fileId: string): Promise<string> => {
     return await filesApi.getDownloadLink(fileId, 60 * 24);
-  };
+  }, []);
 
   // Handler to open media lightbox
   const handleMediaClick = useCallback(

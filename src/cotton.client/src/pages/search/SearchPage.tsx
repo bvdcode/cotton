@@ -1,32 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { Box, Alert, Snackbar, Typography } from "@mui/material";
+import { Box, Alert, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
 import { SearchBar } from "./components/SearchBar";
 import { useLayoutSearch } from "./hooks/useLayoutSearch";
-import { downloadFile } from "../files/utils/fileHandlers";
-import { useFilePreview } from "../files/hooks/useFilePreview";
 import { FilePreviewModal } from "../files/components";
 import { FileListViewFactory } from "../files/components";
 import { MediaLightbox } from "../files/components";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
 import { useFileOperations } from "../files/hooks/useFileOperations";
-import { useMediaLightbox } from "../files/hooks/useMediaLightbox";
+import { useFileInteractionHandlers } from "../files/hooks/useFileInteractionHandlers";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
-import { shareFile } from "../../shared/utils/shareFile";
 import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
-import { getFileTypeInfo } from "../files/utils/fileTypes";
-import { getFileIcon } from "../files/utils/icons";
-import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
+import { AppToast } from "../../shared/ui/AppToast";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -73,32 +68,11 @@ export const SearchPage: React.FC = () => {
     setPage(1);
   }, [query, setPage]);
 
-  const { previewState, openPreview, closePreview } = useFilePreview();
-
   const handleFolderClick = useCallback(
     (nodeId: string) => {
       navigate(`/files/${nodeId}`);
     },
     [navigate],
-  );
-
-  const handleDownloadFile = useCallback(
-    async (fileId: string, fileName: string) => {
-      await downloadFile(fileId, fileName);
-    },
-    [],
-  );
-
-  const [shareToast, setShareToast] = React.useState<{
-    open: boolean;
-    message: string;
-  }>({ open: false, message: "" });
-
-  const handleShareFile = useCallback(
-    async (fileId: string, fileName: string) => {
-      await shareFile(fileId, fileName, t, setShareToast);
-    },
-    [t],
   );
 
   const sortedFiles = useMemo(() => {
@@ -111,46 +85,24 @@ export const SearchPage: React.FC = () => {
     return sorted;
   }, [results]);
 
-  const audioPlaylist = useMemo(
-    () =>
-      sortedFiles
-        .filter(
-          (file) =>
-            getFileTypeInfo(file.name, file.contentType ?? null).type ===
-            "audio",
-        )
-        .map((file) => {
-          const previewToken =
-            file.largeFilePreviewPresignedToken ??
-            file.previewHashEncryptedHex ??
-            null;
-          const icon = getFileIcon(previewToken, file.name, file.contentType ?? null);
-          const previewUrl = typeof icon === "string" ? icon : undefined;
-          return {
-            id: file.id,
-            name: file.name,
-            nodeId: file.nodeId ?? undefined,
-            previewUrl,
-          };
-        }),
-    [sortedFiles],
-  );
-
-  const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
-
-  const handleFileClick = useCallback(
-    (fileId: string, fileName: string, fileSizeBytes?: number) => {
-      if (getFileTypeInfo(fileName, null).type === "audio") {
-        openAudio({ fileId, fileName, playlist: audioPlaylist });
-        return;
-      }
-      const opened = openPreview(fileId, fileName, fileSizeBytes);
-      if (!opened) {
-        void handleDownloadFile(fileId, fileName);
-      }
-    },
-    [audioPlaylist, handleDownloadFile, openAudio, openPreview],
-  );
+  const {
+    previewState,
+    closePreview,
+    handleFileClick,
+    handleDownloadFile,
+    handleShareFile,
+    shareToast,
+    setShareToast,
+    lightboxOpen,
+    lightboxIndex,
+    mediaItems,
+    getSignedMediaUrl,
+    getDownloadUrl,
+    handleMediaClick,
+    setLightboxOpen,
+  } = useFileInteractionHandlers({
+    sortedFiles,
+  });
 
   const fileListSource = useSearchFileList({
     results,
@@ -160,16 +112,6 @@ export const SearchPage: React.FC = () => {
     hasQuery: !!query.trim(),
     rootNodeName: rootNode?.name,
   });
-
-  const {
-    lightboxOpen,
-    lightboxIndex,
-    mediaItems,
-    getSignedMediaUrl,
-    getDownloadUrl,
-    handleMediaClick,
-    setLightboxOpen,
-  } = useMediaLightbox(sortedFiles);
 
   const tiles = fileListSource.tiles;
 
@@ -203,11 +145,9 @@ export const SearchPage: React.FC = () => {
       width="100%"
       sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
     >
-      <Snackbar
-        open={shareToast.open}
-        autoHideDuration={2500}
+      <AppToast
+        toast={shareToast}
         onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-        message={shareToast.message}
       />
       <SearchBar
         value={query}

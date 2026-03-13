@@ -13,7 +13,6 @@ export function RequireAuth({ children }: Props) {
     isInitializing,
     hydrated,
     hasChecked,
-    refreshEnabled,
     ensureAuth,
   } = useAuth();
   const location = useLocation();
@@ -43,8 +42,8 @@ export function RequireAuth({ children }: Props) {
     );
   }
 
-  // If refresh is allowed and we haven't checked yet, show loader instead of flashing login.
-  if (!isAuthenticated && refreshEnabled && !hasChecked) {
+  // Wait for the first auth check to finish to avoid transient login flashes.
+  if (!isAuthenticated && !hasChecked) {
     return (
       <Loader
         overlay={true}

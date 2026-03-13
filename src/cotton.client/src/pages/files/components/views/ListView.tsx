@@ -216,7 +216,18 @@ export const ListView: React.FC<IFileListView> = ({
         </Box>
       )}
       <DataGrid
-        sx={{ height: autoHeight ? "auto" : "100%" }}
+        sx={{
+          height: autoHeight ? "auto" : "100%",
+          "& .MuiDataGrid-row.Mui-selected": {
+            backgroundColor: "action.hover",
+          },
+          "& .MuiDataGrid-row.Mui-selected:hover": {
+            backgroundColor: "action.selected",
+          },
+          "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within": {
+            outline: "none",
+          },
+        }}
         rows={rows}
         columns={columns}
         checkboxSelection={selectionMode}

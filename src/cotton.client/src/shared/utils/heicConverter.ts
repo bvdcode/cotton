@@ -6,31 +6,38 @@ export const isHeicFile = (fileName: string): boolean => {
   return fileName.toLowerCase().endsWith(".heic");
 };
 
+const canBrowserDecode = (url: string): Promise<boolean> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+
 export const convertHeicToJpeg = async (url: string): Promise<string> => {
-  if (heicUrlCache.has(url)) {
-    return heicUrlCache.get(url)!;
+  const cachedUrl = heicUrlCache.get(url);
+  if (cachedUrl) return cachedUrl;
+
+  if (await canBrowserDecode(url)) {
+    heicUrlCache.set(url, url);
+    return url;
   }
 
   const response = await fetch(url);
-  const heicBlob = await response.blob();
-
-  const jpegBlob = await heic2any({
-    blob: heicBlob,
-    toType: "image/jpeg",
-    quality: 0.92,
-  });
-
-  const resultBlob = Array.isArray(jpegBlob) ? jpegBlob[0] : jpegBlob;
+  const blob = await response.blob();
+  const converted = await heic2any({ blob, toType: "image/jpeg", quality: 0.92 });
+  const resultBlob = Array.isArray(converted) ? converted[0] : converted;
   const objectUrl = URL.createObjectURL(resultBlob);
-
   heicUrlCache.set(url, objectUrl);
-
   return objectUrl;
 };
 
 export const cleanupHeicUrl = (url: string): void => {
-  if (heicUrlCache.has(url)) {
-    URL.revokeObjectURL(heicUrlCache.get(url)!);
+  const cachedUrl = heicUrlCache.get(url);
+  if (!cachedUrl || cachedUrl === url) {
     heicUrlCache.delete(url);
+    return;
   }
+  URL.revokeObjectURL(cachedUrl);
+  heicUrlCache.delete(url);
 };
