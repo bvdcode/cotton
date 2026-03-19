@@ -8,8 +8,7 @@
 [![Docker Image Size](https://badgen.net/docker/size/bvdcode/cotton?icon=docker&label=size)](https://hub.docker.com/r/bvdcode/cotton)
 [![Github last-commit](https://img.shields.io/github/last-commit/bvdcode/cotton)](https://github.com/bvdcode/cotton/commits/main/)
 
-> ⚠️ **Project status: Beta.**  
-> Breaking changes and rough edges are expected.  
+> **[Using Cotton? Say hi here!](https://github.com/bvdcode/cotton/discussions/3)**  
 > Live demo: [cotton.splidex.com](https://cotton.splidex.com/)
 
 <div align="center">
