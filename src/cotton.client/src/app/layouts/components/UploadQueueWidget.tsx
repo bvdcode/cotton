@@ -97,19 +97,19 @@ export const UploadQueueWidget = () => {
             transition: "max-height 0.3s ease-in-out, opacity 0.3s ease-in-out",
             opacity: isCollapsed ? 0 : 1,
             pb: isCollapsed ? 0 : 1.5,
-            "& .upload-queue-widget__list": {
-              height: `${listHeight}px`,
-            },
           }}
         >
           {tasks.length > 0 && (
             <Virtuoso
+              key={`${tasks.length}-${tasks[0]?.id ?? "none"}-${isCollapsed ? "collapsed" : "expanded"}`}
               className="upload-queue-widget__list"
-              totalCount={tasks.length}
+              style={{ height: listHeight }}
+              data={tasks}
               overscan={5}
-              itemContent={(index) => (
+              computeItemKey={(_, task) => task.id}
+              itemContent={(index, task) => (
                 <Box px={1.5}>
-                  <UploadTaskRow task={tasks[index]} showDivider={index > 0} />
+                  <UploadTaskRow task={task} showDivider={index > 0} />
                 </Box>
               )}
             />
