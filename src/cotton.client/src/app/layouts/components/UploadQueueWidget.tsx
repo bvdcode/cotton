@@ -101,11 +101,12 @@ export const UploadQueueWidget = () => {
         >
           {tasks.length > 0 && (
             <Virtuoso
+              key={`${tasks.length}-${tasks[0]?.id ?? "none"}-${isCollapsed ? "collapsed" : "expanded"}`}
+              className="upload-queue-widget__list"
               style={{ height: listHeight }}
               data={tasks}
-              computeItemKey={(_index, task) => task.id}
-              totalCount={tasks.length}
               overscan={5}
+              computeItemKey={(_, task) => task.id}
               itemContent={(index, task) => (
                 <Box px={1.5}>
                   <UploadTaskRow task={task} showDivider={index > 0} />
