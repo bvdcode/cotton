@@ -24,6 +24,7 @@ export const useFilesData = ({
   const [currentPagination, setCurrentPagination] = useState<{ page: number; pageSize: number } | null>(null);
   const lastNodeIdRef = useRef<string | null>(null);
   const tilesLoadedNodeIdRef = useRef<string | null>(null);
+  const listMetadataLoadedNodeIdRef = useRef<string | null>(null);
   const listRequestIdRef = useRef(0);
 
   const DEFAULT_PAGE_SIZE = 100;
@@ -79,6 +80,26 @@ export const useFilesData = ({
 
     void loadNode(nodeId, { loadChildren: true });
   }, [nodeId, layoutType, loadNode]);
+
+  // List mode fetches children via pagination API, so we still need
+  // node metadata (current node + ancestors) for stable breadcrumbs.
+  useEffect(() => {
+    if (layoutType !== InterfaceLayoutType.List) {
+      listMetadataLoadedNodeIdRef.current = null;
+      return;
+    }
+
+    if (!nodeId) {
+      return;
+    }
+
+    if (listMetadataLoadedNodeIdRef.current === nodeId) {
+      return;
+    }
+
+    listMetadataLoadedNodeIdRef.current = nodeId;
+    void loadNode(nodeId, { loadChildren: false });
+  }, [layoutType, nodeId, loadNode]);
 
   useEffect(() => {
     if (layoutType !== InterfaceLayoutType.List) {
