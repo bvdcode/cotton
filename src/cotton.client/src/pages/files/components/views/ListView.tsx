@@ -235,17 +235,13 @@ export const ListView: React.FC<IFileListView> = ({
         onRowSelectionModelChange={selectionMode ? handleRowSelectionModelChange : undefined}
         disableRowSelectionOnClick
         onRowClick={handleRowClick}
-        hideFooter={!pagination}
+        hideFooter={false}
         paginationMode={pagination ? "server" : "client"}
-        initialState={
-          pagination
-            ? {
-                pagination: {
-                  paginationModel: { page: 0, pageSize: 100 },
-                },
-              }
-            : undefined
-        }
+        initialState={{
+          pagination: {
+            paginationModel: { page: 0, pageSize: 100 },
+          },
+        }}
         onPaginationModelChange={(model) => {
           if (!pagination) return;
           pagination.onPaginationModelChange({
