@@ -153,6 +153,45 @@ function buildPersistedContentSnapshot(state: {
   };
 }
 
+const CHILDREN_FETCH_PAGE_SIZE = 100_000;
+
+async function fetchAllNodeChildren(nodeId: string): Promise<NodeContentDto> {
+  const firstPage = await nodesApi.getChildren(nodeId, {
+    page: 1,
+    pageSize: CHILDREN_FETCH_PAGE_SIZE,
+  });
+
+  let merged: NodeContentDto = {
+    ...firstPage.content,
+    nodes: [...firstPage.content.nodes],
+    files: [...firstPage.content.files],
+  };
+
+  const totalCount = firstPage.totalCount;
+  let page = 2;
+
+  while (merged.nodes.length + merged.files.length < totalCount) {
+    const response = await nodesApi.getChildren(nodeId, {
+      page,
+      pageSize: CHILDREN_FETCH_PAGE_SIZE,
+    });
+
+    if (response.content.nodes.length === 0 && response.content.files.length === 0) {
+      break;
+    }
+
+    merged = {
+      ...merged,
+      nodes: [...merged.nodes, ...response.content.nodes],
+      files: [...merged.files, ...response.content.files],
+    };
+
+    page += 1;
+  }
+
+  return merged;
+}
+
 export const useNodesStore = create<NodesState>()(
   persist(
     (set, get) => {
@@ -254,11 +293,11 @@ export const useNodesStore = create<NodesState>()(
 
       void (async () => {
         try {
-          const fresh = await nodesApi.getChildren(nodeId);
+          const fresh = await fetchAllNodeChildren(nodeId);
           set((prev) => ({
             contentByNodeId: {
               ...prev.contentByNodeId,
-              [nodeId]: fresh.content,
+              [nodeId]: fresh,
             },
             lastUpdatedByNodeId: {
               ...prev.lastUpdatedByNodeId,
@@ -305,7 +344,7 @@ export const useNodesStore = create<NodesState>()(
     try {
       const resolved = await resolveNodeAndAncestors(nodeId, state);
       const content = loadChildren
-        ? (cachedContent ?? (await nodesApi.getChildren(nodeId)).content)
+        ? (cachedContent ?? (await fetchAllNodeChildren(nodeId)))
         : undefined;
 
       set((prev) => ({
@@ -353,11 +392,11 @@ export const useNodesStore = create<NodesState>()(
 
   refreshNodeContent: async (nodeId) => {
     try {
-      const content = await nodesApi.getChildren(nodeId);
+      const content = await fetchAllNodeChildren(nodeId);
       set((prev) => ({
         contentByNodeId: {
           ...prev.contentByNodeId,
-          [nodeId]: content.content,
+          [nodeId]: content,
         },
         lastUpdatedByNodeId: {
           ...prev.lastUpdatedByNodeId,
