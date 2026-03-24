@@ -98,11 +98,8 @@ export const FilesPage: React.FC = () => {
 
   const {
     childrenTotalCount,
-    listTotalCount,
-    listLoading,
     listError,
     listContent,
-    handlePaginationChange,
     handleFolderChanged,
     reloadCurrentNode,
     optimisticUpdateCurrentNodeFilePreviewHash,
@@ -249,13 +246,6 @@ export const FilesPage: React.FC = () => {
     [setShareToast, t],
   );
 
-  const onPaginationModelChange = useMemo(
-    () => (model: { page: number; pageSize: number }) => {
-      handlePaginationChange(model.page, model.pageSize);
-    },
-    [handlePaginationChange],
-  );
-
   // Build folder operations adapter
   const folderOperations = buildFolderOperations(
     folderOps,
@@ -383,13 +373,7 @@ export const FilesPage: React.FC = () => {
       selectedIds: fileSelection.selectedIds,
       onToggleItem: handleToggleItem,
       pagination:
-        layoutType === InterfaceLayoutType.List
-          ? {
-              totalCount: listTotalCount,
-              loading: listLoading,
-              onPaginationModelChange,
-            }
-          : undefined,
+        undefined,
     }),
     [
       content,
@@ -408,9 +392,6 @@ export const FilesPage: React.FC = () => {
       layoutType,
       listContent,
       listError,
-      listLoading,
-      listTotalCount,
-      onPaginationModelChange,
       t,
       tiles,
       tilesSize,
