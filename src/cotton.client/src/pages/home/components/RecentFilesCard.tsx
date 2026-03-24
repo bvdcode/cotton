@@ -12,8 +12,8 @@ import { useNavigate } from "react-router-dom";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 import { RecentFileItem } from "./RecentFileItem";
 
-const ROWS = 3;
 const SKELETON_COUNT = 5;
+const MAX_VISIBLE_FILES = 9;
 
 interface RecentFilesCardProps {
   files: NodeFileManifestDto[];
@@ -26,6 +26,10 @@ export const RecentFilesCard: React.FC<RecentFilesCardProps> = ({
 }) => {
   const { t } = useTranslation(["home", "common"]);
   const navigate = useNavigate();
+  const visibleFiles = React.useMemo(
+    () => files.slice(0, MAX_VISIBLE_FILES),
+    [files],
+  );
 
   const handleFileClick = React.useCallback(
     (file: NodeFileManifestDto) => {
@@ -38,43 +42,65 @@ export const RecentFilesCard: React.FC<RecentFilesCardProps> = ({
   );
 
   return (
-    <Card sx={{ gridColumn: { xs: "1", sm: "span 2", md: "span 5" } }}>
+    <Card sx={{ gridColumn: "1 / -1", minWidth: 0 }}>
       <CardContent>
         <Typography variant="overline" color="text.secondary">
           {t("cards.recentFiles.title")}
         </Typography>
 
-        {loading && files.length === 0 ? (
+        {loading && visibleFiles.length === 0 ? (
           <Box
-            display="grid"
-            gridTemplateRows={`repeat(${ROWS}, 1fr)`}
-            gridAutoFlow="column"
-            gridAutoColumns="1fr"
-            gap={0.5}
-            mt={1}
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+                md: "none",
+              },
+              gridTemplateRows: { md: "repeat(2, minmax(0, 1fr))" },
+              gridAutoFlow: { md: "column" },
+              gridAutoColumns: { md: "minmax(260px, 1fr)" },
+              gap: 1,
+              mt: 1,
+              minWidth: 0,
+              overflowX: { md: "auto" },
+              overflowY: "hidden",
+              pb: { md: 0.5 },
+            }}
           >
             {Array.from({ length: SKELETON_COUNT }, (_, i) => (
               <Skeleton key={i} variant="rounded" height={48} />
             ))}
           </Box>
-        ) : files.length === 0 ? (
+        ) : visibleFiles.length === 0 ? (
           <Typography variant="body2" color="text.secondary" mt={1}>
             {t("cards.recentFiles.empty")}
           </Typography>
         ) : (
           <Box
-            display="grid"
-            gridTemplateRows={`repeat(${ROWS}, 1fr)`}
-            gridAutoFlow="column"
-            gridAutoColumns="1fr"
-            gap={0.5}
-            mt={1}
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+                md: "none",
+              },
+              gridTemplateRows: { md: "repeat(2, minmax(0, 1fr))" },
+              gridAutoFlow: { md: "column" },
+              gridAutoColumns: { md: "minmax(280px, 1fr)" },
+              gap: 0.75,
+              mt: 1,
+              minWidth: 0,
+              overflowX: { md: "auto" },
+              overflowY: "hidden",
+              pb: { md: 0.5 },
+            }}
           >
-            {files.map((file) => (
+            {visibleFiles.map((file) => (
               <CardActionArea
                 key={file.id}
                 onClick={() => handleFileClick(file)}
-                sx={{ borderRadius: 1 }}
+                sx={{ borderRadius: 1, minWidth: 0, width: "100%" }}
               >
                 <RecentFileItem file={file} t={t} />
               </CardActionArea>
