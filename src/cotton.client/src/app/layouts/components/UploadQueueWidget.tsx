@@ -1,10 +1,9 @@
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { Box, Paper } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { Virtuoso } from "react-virtuoso";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import { WidgetHeader } from "./WidgetHeader";
-import { UploadTaskRow } from "./UploadTaskRow";
+import { UploadTaskList } from "./UploadTaskList";
 import {
   sortTasksByPriority,
   calculateUploadStats,
@@ -21,8 +20,8 @@ export const UploadQueueWidget = () => {
   const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  const tasks = sortTasksByPriority(snapshot.tasks);
-  const stats = calculateUploadStats(tasks);
+  const tasks = useMemo(() => sortTasksByPriority(snapshot.tasks), [snapshot.tasks]);
+  const stats = useMemo(() => calculateUploadStats(tasks), [tasks]);
   const totalSpeed = snapshot.overall.uploadSpeedBytesPerSec;
   const visible = snapshot.open && stats.total > 0;
 
@@ -100,19 +99,7 @@ export const UploadQueueWidget = () => {
           }}
         >
           {tasks.length > 0 && (
-            <Virtuoso
-              key={`${tasks.length}-${tasks[0]?.id ?? "none"}-${isCollapsed ? "collapsed" : "expanded"}`}
-              className="upload-queue-widget__list"
-              style={{ height: listHeight }}
-              data={tasks}
-              overscan={5}
-              computeItemKey={(_, task) => task.id}
-              itemContent={(index, task) => (
-                <Box px={1.5}>
-                  <UploadTaskRow task={task} showDivider={index > 0} />
-                </Box>
-              )}
-            />
+            <UploadTaskList tasks={tasks} listHeight={listHeight} />
           )}
         </Box>
       </Paper>
