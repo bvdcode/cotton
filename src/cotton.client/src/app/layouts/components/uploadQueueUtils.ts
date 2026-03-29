@@ -3,19 +3,37 @@ import { formatBytes } from "../../../shared/utils/formatBytes";
 export const sortTasksByPriority = <T extends { status: string }>(
   tasks: T[],
 ): T[] => {
-  const statusPriority: Record<string, number> = {
-    failed: 0,
-    uploading: 1,
-    finalizing: 1,
-    queued: 2,
-    completed: 3,
-  };
+  const failed: T[] = [];
+  const active: T[] = [];
+  const queued: T[] = [];
+  const completed: T[] = [];
+  const rest: T[] = [];
 
-  return [...tasks].sort((a, b) => {
-    const priorityA = statusPriority[a.status];
-    const priorityB = statusPriority[b.status];
-    return priorityA - priorityB;
-  });
+  for (const task of tasks) {
+    if (task.status === "failed") {
+      failed.push(task);
+      continue;
+    }
+
+    if (task.status === "uploading" || task.status === "finalizing") {
+      active.push(task);
+      continue;
+    }
+
+    if (task.status === "queued") {
+      queued.push(task);
+      continue;
+    }
+
+    if (task.status === "completed") {
+      completed.push(task);
+      continue;
+    }
+
+    rest.push(task);
+  }
+
+  return [...failed, ...active, ...queued, ...completed, ...rest];
 };
 
 export type UploadTask = {
@@ -32,14 +50,30 @@ export type UploadTask = {
 
 export const calculateUploadStats = (tasks: UploadTask[]) => {
   const total = tasks.length;
-  const completed = tasks.filter((t) => t.status === "completed").length;
-  const failed = tasks.filter((t) => t.status === "failed").length;
-  const activeTasks = tasks.filter(
-    (t) =>
-      t.status === "queued" ||
-      t.status === "uploading" ||
-      t.status === "finalizing",
-  );
+  let completed = 0;
+  let failed = 0;
+  const activeTasks: UploadTask[] = [];
+
+  for (const task of tasks) {
+    if (task.status === "completed") {
+      completed += 1;
+      continue;
+    }
+
+    if (task.status === "failed") {
+      failed += 1;
+      continue;
+    }
+
+    if (
+      task.status === "queued" ||
+      task.status === "uploading" ||
+      task.status === "finalizing"
+    ) {
+      activeTasks.push(task);
+    }
+  }
+
   const hasActive = activeTasks.length > 0;
   const allCompleted = total > 0 && completed + failed === total;
   const hasErrors = failed > 0;
