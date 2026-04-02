@@ -13,210 +13,174 @@
 
 <div align="center">
 
-# Cotton Cloud — self-hosted storage engine with real crypto
+# Cotton Cloud
 
+### Self-hosted file cloud built to stay fast, rollback-friendly, and operationally safe
 
-**All managed .NET/C#** core — crypto and storage engine are pure managed code.
-
+**All managed .NET/C#** core with content-addressed storage, streaming AES-GCM crypto, and a UI designed for real day-to-day use.
 
 </div>
 
-
-<img width="1379" height="846" alt="image" src="https://github.com/user-attachments/assets/35668eb2-049e-4be9-8739-6d603a026b9f" />
-
-
+![Cotton Cloud](src/cotton.client/public/assets/images/social-preview.jpg)
 
 ---
 
 ## What Is Cotton?
 
-Cotton Cloud is a self-hosted file cloud built around its **own content-addressed storage engine** and **streaming AES-GCM crypto**.
+Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficient, and predictable as your dataset grows. It is built around its own **content-addressed storage engine**, **streaming AES-GCM crypto**, and a layout model that keeps navigation, restore, sharing, and background maintenance practical instead of fragile.
 
-It is **not**:
+This is not just a storage engine with a web skin. Cotton is meant to feel good in real use:
 
-- a thin web UI over a flat filesystem;
-- a \*\*\*\*cloud-style "kitchen sink" with 50 random features.
+- folder and file listing stays fast on very large trees;
+- snapshots and restores are first-class operations, not a disaster-only afterthought;
+- uploads stream cleanly in the browser without freezing the UI;
+- integrity checks and storage consistency work happen in the background and surface real warnings;
+- sharing, previews, password reset, notifications, and setup behave like product features, not TODO items.
 
-Instead, Cotton separates:
-
-- **what you store** (chunks, manifests, ownership)
-- **how you see it** (layouts, folders, mounts)
-
-…with clean APIs and a UI that actually uses them.
-
-Designed to:
-
-- handle **folders with hundreds of thousands / millions of entries** without choking the UI;
-- feel instantaneous at scale — the UI and controls respond immediately (no dinosaur UI, no perceptible lag) even on large trees and modest NAS hardware;
-- stream **multi-GB uploads in a browser** without locking up;
-- keep crypto and storage performance-oriented, not "just good enough".
+If you want the architecture details, keep reading below. If you want the 30-second version, start with the next three sections.
 
 ---
 
-## Why Cotton (vs yet another self-hosted cloud)?
+## Why Cotton Feels Different
 
-Most self-hosted "clouds" are either:
+Most self-hosted file clouds can describe their internals. Fewer can explain why those internals make daily use feel better.
 
-- filesystem wrappers (no real storage model, weak crypto), or
-- huge PHP/JS monoliths that fall apart under load / big trees.
+Cotton is built around a different set of outcomes:
 
-Cotton is opinionated:
+- **Restore is normal, even at large scale**  
+  Snapshots record references instead of copying data. Restoring a large layout is an atomic layout switch, so rollback stays practical even when the dataset is huge.
 
-- **Content-addressed core**  
-  Files are manifests over chunks addressed by SHA-256. Same chunk, same hash, same storage blob — dedup is built in.
+- **Navigation stays fast because the metadata model is structural**  
+  Cotton separates content from layout and models trees explicitly. That avoids the path-string-heavy behavior that makes many systems feel sluggish or fragile once folders get large.
 
-- **Real crypto, not checkbox crypto**  
-  Streaming AES-GCM in pure C#, per-file wrapped keys, per-chunk authentication, proper nonces.
+- **Cleanup is cautious, not reckless**  
+  Unused data is scheduled, re-checked, and only then reclaimed. If something becomes live again before deletion, the reclaim is cancelled. Ingest also coordinates with GC so delete and re-upload do not fight each other.
 
-- **Engine‑first; polished, user‑centered UI**  
-  The React UI is minimalist by design **because** it was obsessively refined — not because it was an afterthought. Every page and control was iterated on for usability (many hours of design and testing); most common tasks are reachable in **1–2 clicks**. Virtualized folder views, carefully considered controls and native OS sharing hooks make the UI both fast and genuinely productive.
+- **Integrity is an active behavior**  
+  Cotton does more than store checksums. It computes manifest hashes in the background, runs storage consistency checks, and raises notifications when upload verification fails or stored file data is missing.
 
-- **Self-hosting friendly**  
-  Single .NET service, Postgres, filesystem (or other backends via processors). No exotic deps.
+- **Operational polish is part of the product**  
+  First-run setup is a guided wizard, SMTP is a first-class setting, forgot-password and email verification flows exist, notifications are built in, and setup includes explicit timezone selection instead of leaving operators to guess around server-local defaults.
 
-- **Practical alternative to cloud object storage**  
-  If you're evaluating hosted object storage (for example, Google Cloud Storage) but prefer self-hosting, Cotton is a practical alternative for many use-cases — from a single-user NAS to team and on‑prem deployments. It gives predictable costs, stronger data locality/privacy, and offline/air‑gapped options while still exposing APIs and integrations; it is not a drop‑in replacement for every managed cloud service (managed DBs, global CDNs, GCP-specific managed features, etc.). You can expand features via plugins or write your own.
+- **Sharing is meant to be used, not merely exposed**  
+  Cotton has share pages, rich previews, token expiry and cleanup, and native platform sharing hooks where the browser supports them.
 
-- **Easy for non-technical users; powerful for experts**  
-  First-run setup is a guided, in‑browser wizard that actually helps non-technical users — there are explicit “Not sure” buttons and safe defaults so an installer can finish setup with one click. If you prefer control, the same wizard exposes expert knobs (custom SMTP, S3, fine-grained encryption and threading options, or an optional NVIDIA/GPU runner for AI workloads) so power users and operators get full control up-front. In short: one UX for both audiences — friendly defaults for novices, explicit expert paths for administrators.
-
-If you want a **storage system** (engine‑first) rather than a thin filesystem wrapper, Cotton is meant for you — it provides first-class APIs (including a production-quality WebDAV v1 endpoint) while keeping the UI thin and focused.
+In short: unlike systems that are mostly a filesystem wrapper, Cotton is designed so storage behavior, UI behavior, and operational behavior reinforce each other.
 
 ---
 
-## Highlights
+## What You Can Actually Do With It
 
-Engine / protocol:
-
-- Content-addressed chunks and manifests with deduplication by design.
-- Chunk-first, idempotent upload protocol resilient to network hiccups and retries.
-- Storage pipeline with pluggable processors (crypto, filesystem backends, cache/replica planned).
-- All stored content is fully _seekable_ at the storage level (see ConcatenatedReadStream) — enables efficient `Range` reads, preview extraction and streaming without reassembling files.
-- Optional streaming Zstandard (zstd) compression — enabled by default, streaming via `ZstdSharp` (transparent to clients; effective because compression runs before encryption).
-- Production-quality WebDAV v1 (RFC 4918) support — core methods implemented: `OPTIONS`, `PROPFIND`, `GET`, `HEAD`, `PUT`, `DELETE`, `MKCOL`, `MOVE`, `COPY`; includes `Range`/`ETag` semantics and `DAV: 1` header. Optional WebDAV extensions (LOCK/UNLOCK, PROPPATCH) are not implemented; see `src/Cotton.Server/Controllers/WebDavController.cs`.
-- Streaming AES-GCM (pure C#) measured at **memory-bound** throughput on encrypt; decrypt on par with OpenSSL in our tests.
-- Instant, one‑click snapshots and restores — snapshots record references (not copies) so restoring a layout is an atomic pointer switch (works instantly even for millions of files).
-- Opt‑in performance telemetry + adaptive autotuning — with operator consent Cotton can collect anonymized measurements and recommend or apply safer, better defaults (chunk sizes, buffers, threading) based on real‑world signals.
-- GC‑safe ingest — the system prevents a concurrent re‑upload of a chunk that is currently being deleted, avoiding rare race conditions between deletes and ingests.
-- Postgres metadata with a clear split between **"what" (content)** and **"where" (layout)**.
-
-UX / behavior:
-
-- **Ultra‑responsive UI** — instant feedback and sub-second interactions even with very large folders; designed so the app never feels like a sluggish, legacy “dinosaur.”
-- Browser uploads of **large folders (tens of GB, thousands of files)** without freezing the UI.
-- Virtualized folder view tuned for very large directories.
-- Simple, focused file viewer: only the controls you actually use (share, download, etc.).
-- Time-limited share links backed by one-time / revocable tokens tied to file metadata, not raw paths.
-
-Self-hosting / ops:
-
-- All-managed .NET, easy to run under Docker.
-- Practical self-hosted alternative to cloud object storage (including Google Cloud) for teams that need control, predictable costs and stronger privacy — suitable for radically different users (home NAS → teams → on‑prem deployments). All features are expansible via plugins.
-- Optional telemetry (opt-in): enables Cotton Cloud-backed services (email/AI modes) and helps improve reliability and defaults over time.
-- Plugin safety & moderation: runtime extensions are sandboxed and supervised (resource limits, timeouts, crash isolation); an operator can disable or revoke plugins and the app‑store is moderated so problematic plugins are removed. This keeps third‑party innovation from impacting platform reliability.
-- Automatic EF Core migrations on startup.
-- Sensible defaults: modern password hashing, strict name validation, autoconfig from a single master key.
+- Roll back very large layouts in one action because snapshots are reference-based and restore is an atomic pointer switch.
+- Browse folders with hundreds of thousands or millions of entries without the UI collapsing into a sluggish legacy experience.
+- Upload multi-GB files and large folders from the browser while the UI stays responsive.
+- Re-send only missing chunks after interruptions instead of restarting an entire upload.
+- Use built-in deduplication, streaming compression, and streaming encryption in the main storage path.
+- Share files and folders with expiring links, share pages, previews, and native OS/browser share integration where available.
+- Generate previews for images, HEIC, PDF, text, audio, and video content.
+- Run background manifest verification and storage consistency checks that surface real integrity problems.
+- Receive useful notifications for failed logins, successful logins, TOTP events, WebDAV token resets, shared-file downloads, upload verification failures, and missing storage chunks.
+- Configure the instance through a setup wizard with safe defaults, custom SMTP support, storage choices, telemetry preferences, and timezone selection.
+- Offer email verification and a forgot-password flow instead of treating account recovery as somebody else's problem.
+- Start with a simple Docker + Postgres deployment and grow into filesystem or S3-backed storage.
+- Use WebDAV in addition to the web UI when you need protocol-level access.
 
 ---
 
-## Architecture Overview
+## Compared To The Usual Experience
 
-Separation of concerns is similar to git:
-
-- **Content ("what")**  
-  `Chunk`, `FileManifest`, `FileManifestChunk`, `ChunkOwnership`  
-  — see `src/Cotton.Database/Models`.
-
-- **Layout ("where")**  
-  `Layout`, `Node`, `NodeFile` manage user trees, mounts and projections.
-
-This enables:
-
-- instant, one‑click snapshots of layouts without copying content — snapshots record references and restores are an atomic pointer switch (fast even for millions of files);
-- content-level deduplication;
-- mounting the same file in multiple places with no duplication.
+- Unlike path-string-heavy metadata models, Cotton is built around structural relationships between layouts, nodes, files, manifests, and chunks.
+- Unlike systems where restore and cleanup can work against each other, Cotton delays reclaim, re-checks references before delete, and coordinates ingest with GC.
+- Unlike products where sharing is just a raw download URL, Cotton has share pages, previews, expiry, cleanup, and native-share integration.
+- Unlike setups that stop at "the server started", Cotton includes a guided setup flow, SMTP options, password reset, email verification, and built-in notifications.
 
 ---
 
-## Chunk-First Upload Model
+## Product Snapshots
 
-Client uploads independent chunks (size ≤ server limit) identified by **SHA-256**.
+Current screenshots from the shipped web client:
 
-1. **POST chunk** — server verifies hash, runs it through the pipeline, stores or replies "already have it".
-2. **POST file manifest** — client sends an ordered list of chunk hashes; server assembles a file at a target node.
+| Large-folder navigation                                                      | Gallery browsing                                                            | Search in the same workflow                                                |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ![Folder navigation](src/cotton.client/public/assets/images/screenshot1.jpg) | ![Gallery browsing](src/cotton.client/public/assets/images/screenshot2.jpg) | ![Search workflow](src/cotton.client/public/assets/images/screenshot5.jpg) |
 
-Effects:
-
-- Network drops do not corrupt state — partially uploaded chunks are simply cache until GC.
-- Retries only send **missing** chunks.
-- Different clients can choose small or large chunks; server still assembles the same file.
-
-Selected endpoints:
-
-- `POST /chunks` — upload a chunk with hex SHA-256; server verifies and stores via pipeline.
-- `POST /files/from-chunks` — create a file from an ordered list of chunk hashes at a layout node.
-
-See controllers under `src/Cotton.Server/Controllers`.
+The UI matters here because Cotton is not trying to prove a storage thesis in isolation. The engine is built so the product can stay responsive, preview-rich, and straightforward to operate.
 
 ---
 
-## Storage Pipeline
+## What This Enables In Practice
 
-`src/Cotton.Storage` composes a backend (`IStorageBackend`) with a set of streaming processors (`IStorageProcessor`) into a single pipeline:
+| Design choice                                                  | Practical outcome                                                                                               |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Layout graph/tree separated from content storage               | Fast listing, navigation, snapshotting, and remounting without turning every operation into string-path surgery |
+| Content-addressed chunks and manifests                         | Deduplication, safe content reuse, idempotent uploads, and restore that does not require re-copying data        |
+| Streaming pipeline ordered as compression -> crypto -> backend | Efficient storage and encryption without offline repack jobs or giant temporary files                           |
+| Chunk-first upload protocol                                    | Interrupted uploads recover cleanly and retries only send what the server still needs                           |
+| Background manifest hashing and storage consistency jobs       | Upload mismatches and missing stored data become visible operator events instead of silent corruption           |
+| Encrypted preview hashes plus dedicated preview generators     | Rich previews and share pages without exposing raw storage identifiers                                          |
+| Virtualized large-directory UI backed by structural metadata   | Folder browsing still feels immediate on large trees                                                            |
 
-- `CompressionProcessor` — Zstd (streaming).
-- `CryptoProcessor` — wraps streams with streaming AES-GCM encrypt/decrypt.
-- Storage backend — persists chunk blobs (e.g. `FileSystemStorageBackend` or `S3StorageBackend`).
-
-Write flows **forward** through processors; read flows **backwards**.  
-In practice, ordering is controlled by processor `Priority`, so writes run **compression → crypto → backend**, and reads run **backend → crypto → decompression**.
-This gives a real storage engine, not just `File.WriteAllBytes`.
-
----
-
-## Cryptography & Performance
-
-Crypto is powered by **EasyExtensions.Crypto** (NuGet) — a streaming AES-GCM engine (`AesGcmStreamCipher`) with:
-
-- Per-file wrapped keys and per-chunk authentication.
-- 12-byte nonce layout (4-byte file prefix + 8-byte chunk counter).
-- Parallel, chunked pipelines built on `System.IO.Pipelines`.
-
-Performance characteristics:
-
-- Decrypt throughput ~9–10 GB/s across large chunk sizes on typical dev hardware.
-- Encrypt scales to memory bandwidth (~14–16+ GB/s; up to ~16–17 GB/s in favorable benchmarks) around 1–2 threads with ~1 MiB chunks.
-- Scaling efficient up to 2–4 threads, then limited by shared resources (memory BW / caches).
-
-This isn’t “engineering overkill for bragging rights” — it’s deliberate headroom. When the crypto/compression pipeline is comfortably faster than your storage/network, the app stays responsive on NAS-class hardware, and you can throw very large trees and multi‑GB transfers at it without the system becoming fragile. Benchmarks include modest/NAS‑class machines — in my tests encryption and streaming compression remain faster than a typical 2.5 Gbit network link.
-
-Hashing for addressing uses SHA-256 from EasyExtensions.Crypto.
+This is the core difference from the usual bad experience: Cotton's architecture is not interesting for its own sake. It is interesting because it changes how restore, browsing, cleanup, sharing, and operations behave under real load.
 
 ---
 
-## Security & Validation
+## Performance Highlights
 
-- **Passwords**  
-  PBKDF2 service with modern PHC-style handling via `EasyExtensions` (see DI in `Cotton.Server`).
+- **Crypto headroom is deliberately high**  
+  Current measurements in this repo put decrypt around **9-10 GB/s** and encrypt around **14-16+ GB/s** on typical development hardware, with encryption scaling into memory-bandwidth limits rather than becoming the first bottleneck.
 
-- **Keys & settings**  
-  `Cotton.Autoconfig` derives `Pepper` and `MasterEncryptionKey` from a single `COTTON_MASTER_KEY` env var, exposes `CottonSettings`:
-  - `MasterEncryptionKeyId`
-  - `EncryptionThreads`
-  - `CipherChunkSizeBytes`
-  - `MaxChunkSizeBytes`
+- **Compression and encryption are in the main pipeline**  
+  Cotton compresses before encrypting, so storage savings happen inline instead of depending on a later maintenance job.
 
-- **Name hygiene**  
-  `Cotton.Validators/NameValidator`:
-  - enforces Unicode normalization;
-  - forbids `.` / `..`, control and zero-width chars;
-  - trims trailing dots/spaces;
-  - blocks Windows reserved names;
-  - provides a case-folded `NameKey` for CI lookups.
+- **Uploads are designed for sustained throughput**  
+  The client hashes chunks in a web worker, uploads chunks in parallel, and retries only missing chunks after interruptions.
+
+- **Large-tree UX is part of the performance story**  
+  The virtualized folder UI and structural metadata model are designed so listing and navigation remain responsive on ordinary hardware.
+
+- **Benchmarks use real production code**  
+  The dedicated benchmark suite exercises the real compression processor, crypto processor, filesystem backend, and full storage pipeline rather than mocks. See [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
+
+If you are comparing Cotton to the usual self-hosted stack, this matters: the engine is built with enough throughput headroom that storage and networking stay the dominant limits on normal hardware.
 
 ---
 
-## Quick Start (dev)
+## Reliability & Safety
+
+- **Restore-friendly delete model**  
+  Cotton does not immediately destroy unreferenced content. Orphaned manifests and chunks are scheduled for cleanup, re-checked before deletion, and left alone if they become live again.
+
+- **GC and ingest cooperate**  
+  If a chunk is being deleted, the ingest path waits instead of racing the delete. That closes an ugly class of "delete while re-uploading" edge cases.
+
+- **Background verification exists today**  
+  Manifest hashes are computed after upload. If the computed hash does not match the proposed one, Cotton raises a notification instead of silently trusting bad data.
+
+- **Storage consistency is checked against reality**  
+  Cotton periodically compares DB-tracked chunks against the actual storage backend. Missing preview-only blobs are cleared safely; missing real file data triggers explicit user notifications.
+
+- **Background jobs are built into normal operation**  
+  Preview generation, manifest hashing, token cleanup, temp cleanup, performance collection, MIME fixes, and storage consistency checks are all part of the system rather than manual maintenance scripts.
+
+- **Operator-facing details are treated explicitly**  
+  Setup captures storage mode, email mode, and timezone up front, because things like notifications, disk activity, and retention behavior should be deliberate.
+
+Cotton's current reclaim model is already cautious and restore-friendly. More advanced generational compaction is on the roadmap, but the shipped behavior is already designed around "do not reclaim first and ask questions later."
+
+---
+
+## Small Details That Matter
+
+- Share links can be invalidated in bulk, expire automatically, and be cleaned up in the background.
+- Public sharing is backed by real share pages and previews, not just raw opaque URLs.
+- Browsers that support the Web Share API get native sharing; everyone else gets a predictable clipboard fallback.
+- Password reset, email verification, and SMTP configuration are part of the main product flow.
+- Notifications cover real account and storage events, including failed logins, login success, TOTP lockouts, WebDAV token resets, and shared-file downloads.
+- The first-run experience is a guided setup wizard with safe defaults and expert paths instead of a half-documented config scavenger hunt.
+
+---
+
+## Quick Start
 
 Requires **Docker** and **Postgres**.
 
@@ -247,9 +211,106 @@ docker run -d --name cotton \
   bvdcode/cotton:latest
 ```
 
-On startup the app applies EF migrations automatically and serves the UI at `http://localhost:8080` (or whatever port you mapped).
+On startup the app applies EF migrations automatically, serves the UI at `http://localhost:8080` (or whatever port you mapped), and walks you through the in-browser setup wizard.
 
 Upload settings are returned by the server; the frontend (`src/cotton.client`) uses them for chunking.
+
+For deeper internals after the quick start, continue below. For benchmark details, see [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
+
+---
+
+## Architecture Overview
+
+Separation of concerns is similar to git:
+
+- **Content ("what")**  
+  `Chunk`, `FileManifest`, `FileManifestChunk`, `ChunkOwnership`  
+  — content-addressed storage, deduplication, hashing, and chunk ownership.
+
+- **Layout ("where")**  
+  `Layout`, `Node`, `NodeFile`  
+  — user-visible trees, mounts, projections, and restore points.
+
+This split is what gives Cotton several of its user-facing strengths:
+
+- snapshots record references instead of copying content;
+- restoring a layout is an atomic switch rather than a bulk copy;
+- the same content can be mounted in multiple places with no duplication;
+- layout operations stay fast because structure is modeled directly.
+
+---
+
+## Chunk-First Upload Model
+
+Clients upload independent chunks (size <= server limit) identified by **SHA-256**.
+
+1. **POST chunk** — server verifies the hash, runs the chunk through the storage pipeline, and stores it or replies that it already exists.
+2. **POST file manifest** — client sends the ordered list of chunk hashes and Cotton assembles the file at the target node.
+
+Practical effect:
+
+- interrupted uploads do not corrupt the dataset;
+- retries only send **missing** chunks;
+- different clients can choose different chunk sizes while still assembling the same file;
+- the server can verify content integrity before the file becomes part of the visible layout.
+
+Selected endpoints:
+
+- `POST /chunks` — upload a chunk with hex SHA-256.
+- `POST /files/from-chunks` — create a file from an ordered list of chunk hashes at a layout node.
+
+See controllers under `src/Cotton.Server/Controllers`.
+
+---
+
+## Storage Pipeline
+
+`src/Cotton.Storage` composes a backend (`IStorageBackend`) with streaming processors (`IStorageProcessor`) into a single pipeline:
+
+- `CompressionProcessor` — Zstd (streaming).
+- `CryptoProcessor` — streaming AES-GCM encrypt/decrypt.
+- Storage backend — persists chunk blobs, such as `FileSystemStorageBackend` or `S3StorageBackend`.
+
+Writes flow forward through processors, reads flow backward. In practice, ordering is controlled by processor `Priority`, so writes run **compression -> crypto -> backend**, and reads run **backend -> crypto -> decompression**.
+
+That is why Cotton can do compression, encryption, range reads, previews, and chunk reuse as one coherent storage engine instead of a stack of loosely-related afterthoughts.
+
+---
+
+## Cryptography & Performance
+
+Crypto is powered by **EasyExtensions.Crypto** (NuGet), a streaming AES-GCM engine (`AesGcmStreamCipher`) with:
+
+- per-file wrapped keys and per-chunk authentication;
+- a 12-byte nonce layout (4-byte file prefix + 8-byte chunk counter);
+- parallel chunked pipelines built on `System.IO.Pipelines`.
+
+Performance characteristics:
+
+- decrypt throughput around **9-10 GB/s** across large chunk sizes on typical development hardware;
+- encrypt throughput around **14-16+ GB/s**, often limited by memory bandwidth rather than the cipher itself;
+- efficient scaling up to a few threads before shared hardware limits take over.
+
+This headroom is deliberate. When crypto and compression stay comfortably faster than storage and network I/O, the system remains responsive on NAS-class hardware and under large transfers.
+
+Hashing for content addressing uses SHA-256.
+
+---
+
+## Security & Validation
+
+- **Passwords**  
+  PBKDF2 service with modern PHC-style handling via `EasyExtensions`.
+
+- **Keys & settings**  
+  `Cotton.Autoconfig` derives `Pepper` and `MasterEncryptionKey` from a single `COTTON_MASTER_KEY` environment variable and exposes `CottonSettings` such as:
+  - `MasterEncryptionKeyId`
+  - `EncryptionThreads`
+  - `CipherChunkSizeBytes`
+  - `MaxChunkSizeBytes`
+
+- **Name hygiene**  
+  `Cotton.Validators/NameValidator` enforces Unicode normalization, blocks `.` / `..`, control and zero-width characters, trims trailing dots and spaces, rejects Windows reserved names, and provides a case-folded `NameKey` for collision-safe lookups.
 
 ---
 
