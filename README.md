@@ -34,10 +34,19 @@ This is not just a storage engine with a web skin. Cotton is meant to feel good 
 - folder and file listing stays fast on very large trees;
 - snapshots and restores are first-class operations, not a disaster-only afterthought;
 - uploads stream cleanly in the browser without freezing the UI;
+- large files stay seekable, previewable, and streamable without full re-download or reassembly;
 - integrity checks and storage consistency work happen in the background and surface real warnings;
 - sharing, previews, password reset, notifications, and setup behave like product features, not TODO items.
 
 If you want the architecture details, keep reading below. If you want the 30-second version, start with the next three sections.
+
+---
+
+## What Happens To A File In Cotton?
+
+Upload -> chunked + hashed -> compressed + encrypted -> previewable -> shareable -> seekable -> restorable -> integrity-checked -> reclaim-safe.
+
+That is the product story in one line: a file should not become an opaque blob you are afraid to touch once it enters the system.
 
 ---
 
@@ -52,6 +61,12 @@ Cotton is built around a different set of outcomes:
 
 - **Navigation stays fast because the metadata model is structural**  
   Cotton separates content from layout and models trees explicitly. That avoids the path-string-heavy behavior that makes many systems feel sluggish or fragile once folders get large.
+
+- **Large media stays usable without a full download**  
+  Cotton can serve range reads, seek inside large files, and extract previews or video frames directly from chunked encrypted storage, including S3-backed storage, without reassembling the whole object first.
+
+- **Compression is in the main path, not an afterthought**  
+  Compressible data is reduced inline before encryption, so Cotton gets the storage benefit during the actual transfer instead of depending on a later maintenance pass.
 
 - **Cleanup is cautious, not reckless**  
   Unused data is scheduled, re-checked, and only then reclaimed. If something becomes live again before deletion, the reclaim is cancelled. Ingest also coordinates with GC so delete and re-upload do not fight each other.
@@ -75,13 +90,15 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Browse folders with hundreds of thousands or millions of entries without the UI collapsing into a sluggish legacy experience.
 - Upload multi-GB files and large folders from the browser while the UI stays responsive.
 - Re-send only missing chunks after interruptions instead of restarting an entire upload.
-- Use built-in deduplication, streaming compression, and streaming encryption in the main storage path.
+- Stream, seek, and partially download large media without reassembling the whole file first.
+- Extract previews and video frames from chunked encrypted storage without a full download, including when the backend is S3-backed.
+- Use built-in deduplication, inline compression, and streaming encryption in the main storage path.
 - Share files and folders with expiring links, share pages, previews, and native OS/browser share integration where available.
 - Generate previews for images, HEIC, PDF, text, audio, and video content.
 - Run background manifest verification and storage consistency checks that surface real integrity problems.
 - Receive useful notifications for failed logins, successful logins, TOTP events, WebDAV token resets, shared-file downloads, upload verification failures, and missing storage chunks.
 - Configure the instance through a setup wizard with safe defaults, custom SMTP support, storage choices, telemetry preferences, and timezone selection.
-- Offer email verification and a forgot-password flow instead of treating account recovery as somebody else's problem.
+- Offer email verification and a forgot-password flow as first-class product behavior.
 - Start with a simple Docker + Postgres deployment and grow into filesystem or S3-backed storage.
 - Use WebDAV in addition to the web UI when you need protocol-level access.
 
@@ -115,12 +132,13 @@ The UI matters here because Cotton is not trying to prove a storage thesis in is
 | Layout graph/tree separated from content storage               | Fast listing, navigation, snapshotting, and remounting without turning every operation into string-path surgery |
 | Content-addressed chunks and manifests                         | Deduplication, safe content reuse, idempotent uploads, and restore that does not require re-copying data        |
 | Streaming pipeline ordered as compression -> crypto -> backend | Efficient storage and encryption without offline repack jobs or giant temporary files                           |
+| Seekable stream assembly over chunked storage                  | Range reads, media scrubbing, poster extraction, and previews without full-file reassembly or full downloads    |
 | Chunk-first upload protocol                                    | Interrupted uploads recover cleanly and retries only send what the server still needs                           |
 | Background manifest hashing and storage consistency jobs       | Upload mismatches and missing stored data become visible operator events instead of silent corruption           |
 | Encrypted preview hashes plus dedicated preview generators     | Rich previews and share pages without exposing raw storage identifiers                                          |
 | Virtualized large-directory UI backed by structural metadata   | Folder browsing still feels immediate on large trees                                                            |
 
-This is the core difference from the usual bad experience: Cotton's architecture is not interesting for its own sake. It is interesting because it changes how restore, browsing, cleanup, sharing, and operations behave under real load.
+This is the core difference from the more common self-hosted experience: Cotton's architecture is not interesting for its own sake. It is interesting because it changes how restore, browsing, cleanup, sharing, media access, and operations behave under real load.
 
 ---
 
@@ -130,7 +148,10 @@ This is the core difference from the usual bad experience: Cotton's architecture
   Current measurements in this repo put decrypt around **9-10 GB/s** and encrypt around **14-16+ GB/s** on typical development hardware, with encryption scaling into memory-bandwidth limits rather than becoming the first bottleneck.
 
 - **Compression and encryption are in the main pipeline**  
-  Cotton compresses before encrypting, so storage savings happen inline instead of depending on a later maintenance job.
+  Cotton compresses before encrypting, so storage savings happen inline during the transfer instead of depending on a later maintenance job, while still aiming to stay comfortably ahead of ordinary network speeds.
+
+- **Partial reads are a first-class path**  
+  Range requests, media seeking, and preview extraction are designed into the storage engine, so users do not need to fetch a huge object just to read a slice, resume a transfer, or grab a poster frame.
 
 - **Uploads are designed for sustained throughput**  
   The client hashes chunks in a web worker, uploads chunks in parallel, and retries only missing chunks after interruptions.
