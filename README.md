@@ -29,10 +29,12 @@
 
 Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficient, and predictable as your dataset grows. It is built around its own **content-addressed storage engine**, **streaming AES-GCM crypto**, and a layout model that keeps navigation, restore, sharing, and background maintenance practical instead of fragile.
 
+The core product is intentionally focused rather than trying to be everything at once; custom behavior is meant to live in isolated plugins and marketplace-delivered extensions as that layer settles into place.
+
 This is not just a storage engine with a web skin. Cotton is meant to feel good in real use:
 
 - folder and file listing stays fast on very large trees;
-- snapshots and restores are first-class operations, not a disaster-only afterthought;
+- snapshots are first-class operations, with the same model carrying into instant tree rollback and restore workflows;
 - uploads stream cleanly in the browser without freezing the UI;
 - large files stay seekable, previewable, and streamable without full re-download or reassembly;
 - integrity checks and storage consistency work happen in the background and surface real warnings;
@@ -57,7 +59,7 @@ Most self-hosted file clouds can describe their internals. Fewer can explain why
 Cotton is built around a different set of outcomes:
 
 - **Restore is normal, even at large scale**  
-  Snapshots record references instead of copying data. Restoring a large layout is an atomic layout switch, so rollback stays practical even when the dataset is huge.
+  Snapshots record references instead of copying data. That keeps large-scale rollback practical and is the same model the instant tree rollback flow is being built around.
 
 - **Navigation stays fast because the metadata model is structural**  
   Cotton separates content from layout and models trees explicitly. That avoids the path-string-heavy behavior that makes many systems feel sluggish or fragile once folders get large.
@@ -86,7 +88,7 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 
 ## What You Can Actually Do With It
 
-- Roll back very large layouts in one action because snapshots are reference-based and restore is an atomic pointer switch.
+- Use reference-based snapshots designed for one-action large-layout rollback instead of copy-heavy recovery.
 - Browse folders with hundreds of thousands or millions of entries without the UI collapsing into a sluggish legacy experience.
 - Upload multi-GB files and large folders from the browser while the UI stays responsive.
 - Re-send only missing chunks after interruptions instead of restarting an entire upload.
@@ -110,6 +112,7 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Unlike systems where restore and cleanup can work against each other, Cotton delays reclaim, re-checks references before delete, and coordinates ingest with GC.
 - Unlike products where sharing is just a raw download URL, Cotton has share pages, previews, expiry, cleanup, and native-share integration.
 - Unlike setups that stop at "the server started", Cotton includes a guided setup flow, SMTP options, password reset, email verification, and built-in notifications.
+- Unlike products that try to ship every niche feature in-core, Cotton stays focused and extends outward through isolated plugins and marketplace distribution as that layer matures.
 
 ---
 
