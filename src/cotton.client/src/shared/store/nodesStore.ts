@@ -6,6 +6,8 @@ import { NODES_STORAGE_KEY } from "../config/storageKeys";
 import { isAxiosError } from "../api/httpClient";
 
 let rootResolvePromise: Promise<void> | null = null;
+let lastRootResolveStartedAt = 0;
+const ROOT_RESOLVE_MIN_INTERVAL_MS = 600_000;
 
 type NodesState = {
   cacheOwnerUserId: string | null;
@@ -24,7 +26,7 @@ type NodesState = {
     nodeId: string,
     options?: { loadChildren?: boolean; allowRootRecovery?: boolean },
   ) => Promise<void>;
-  resolveRootInBackground: (options?: { loadChildren?: boolean }) => void;
+  resolveRootInBackground: (options?: { loadChildren?: boolean; force?: boolean }) => void;
   refreshNodeContent: (nodeId: string) => Promise<void>;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
@@ -195,14 +197,26 @@ async function fetchAllNodeChildren(nodeId: string): Promise<NodeContentDto> {
 export const useNodesStore = create<NodesState>()(
   persist(
     (set, get) => {
-      const scheduleRootResolve = (options?: { loadChildren?: boolean }): void => {
+      const scheduleRootResolve = (options?: {
+        loadChildren?: boolean;
+        force?: boolean;
+      }): void => {
         // If we don't have a root yet, loadRoot() will resolve it.
         const existingRootId = get().rootNodeId;
         if (!existingRootId) return;
 
         if (rootResolvePromise) return;
 
+        const force = options?.force ?? false;
+        if (!force) {
+          const elapsedSinceLastResolve = Date.now() - lastRootResolveStartedAt;
+          if (elapsedSinceLastResolve < ROOT_RESOLVE_MIN_INTERVAL_MS) {
+            return;
+          }
+        }
+
         const loadChildren = options?.loadChildren ?? true;
+        lastRootResolveStartedAt = Date.now();
 
         rootResolvePromise = (async () => {
           try {
@@ -649,6 +663,7 @@ export const useNodesStore = create<NodesState>()(
 
   reset: (cacheOwnerUserId) => {
     rootResolvePromise = null;
+    lastRootResolveStartedAt = 0;
     set((prev) => ({
       cacheOwnerUserId: cacheOwnerUserId ?? prev.cacheOwnerUserId,
       currentNode: null,
