@@ -26,6 +26,11 @@ namespace Cotton.Server.Jobs
                 _logger.LogInformation("ComputeManifestHashesJob skipped: upload in progress.");
                 return;
             }
+            if (_perf.IsNightTime())
+            {
+                _logger.LogInformation("ComputeManifestHashesJob skipped: night time.");
+                return;
+            }
             var unprocessedManifests = _dbContext.FileManifests
                 .Include(fm => fm.FileManifestChunks)
                 .Where(fm => fm.ComputedContentHash == null)

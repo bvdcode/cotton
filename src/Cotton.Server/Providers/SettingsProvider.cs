@@ -59,6 +59,8 @@ namespace Cotton.Server.Providers
                 if (settings is not null)
                 {
                     _cache = settings;
+                    // TODO: Set Timezone somewhere more appropriate, and handle timezone changes
+                    Environment.SetEnvironmentVariable("TZ", settings.Timezone);
                     return _cache;
                 }
 

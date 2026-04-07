@@ -31,13 +31,17 @@ namespace Cotton.Server.Jobs
                     .ToListAsync(context.CancellationToken);
 
                 if (manifests.Count == 0)
+                {
                     break;
+                }
 
                 foreach (var manifest in manifests)
                 {
                     var fileName = manifest.NodeFiles.FirstOrDefault()?.Name;
                     if (string.IsNullOrWhiteSpace(fileName))
+                    {
                         continue;
+                    }
 
                     string contentType = FileManifestService.ResolveContentType(fileName, manifest.ContentType);
                     if (!string.Equals(manifest.ContentType, contentType, StringComparison.OrdinalIgnoreCase))
