@@ -17,6 +17,12 @@ namespace Cotton.Server.Jobs
     // fails after scheduling chunks for deletion but before actually deleting them.
     // TODO: WHAT!? Who wrote this... This job was good, I have no idea what the comment above is about.
     //[JobTrigger(days: 1)]
+
+    // TODO: Don't forget to check:
+    // 1. Files
+    // 2. Small previews
+    // 3. Large previews
+    // 4. Database backups
     public class GarbageCollectorJob(
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
