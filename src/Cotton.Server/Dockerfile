@@ -4,6 +4,10 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 # USER $APP_UID
 WORKDIR /app
+RUN set -eux \
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends postgresql-client \
+	&& rm -rf /var/lib/apt/lists/*
 EXPOSE 8080
 EXPOSE 8081
 

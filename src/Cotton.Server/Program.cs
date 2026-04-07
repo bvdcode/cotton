@@ -52,6 +52,7 @@ namespace Cotton.Server
                 .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
                 .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
+                .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
