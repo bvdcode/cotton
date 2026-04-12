@@ -191,7 +191,7 @@ If you are comparing Cotton to the usual self-hosted stack, this matters: the en
   Manifest hashes are computed after upload. If the computed hash does not match the proposed one, Cotton raises a notification instead of silently trusting bad data.
 
 - **Storage consistency is checked against reality**  
-  Cotton periodically re-checks stored data in the background (batch-by-batch) against the real storage backend. If a disk starts failing and real file chunks go missing or become unreadable, affected users get explicit notifications so operators can react immediately instead of discovering silent data loss later. Missing preview-only blobs are cleared safely.
+  Cotton periodically re-checks stored data in the background (batch-by-batch) against the real storage backend. If a disk starts failing and real file chunks go missing or become unreadable, affected users get explicit notifications so operators can react immediately instead of discovering silent data loss later.
 
 - **Background jobs are built into normal operation**  
   Preview generation, manifest hashing, token cleanup, temp cleanup, performance collection, MIME fixes, and storage consistency checks are all part of the system rather than manual maintenance scripts.
