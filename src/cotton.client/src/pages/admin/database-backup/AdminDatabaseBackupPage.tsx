@@ -3,6 +3,7 @@ import {
   Button,
   CircularProgress,
   Divider,
+  LinearProgress,
   Paper,
   Stack,
   Typography,
@@ -108,6 +109,8 @@ export const AdminDatabaseBackupPage = () => {
   const placeholder = t("placeholder", { ns: "common" });
   const isLoading = loadState.kind === "loading";
   const isTriggering = triggerFeedback.kind === "loading";
+  const isInitialLoading = isLoading && backup === null;
+  const isRefreshing = isLoading && backup !== null;
 
   const rows = useMemo(() => {
     if (!backup) {
@@ -214,7 +217,16 @@ export const AdminDatabaseBackupPage = () => {
         <Alert severity="success">{triggerFeedback.message}</Alert>
       )}
 
-      {isLoading && (
+      <Stack minHeight={4}>
+        <LinearProgress
+          sx={{
+            opacity: isRefreshing ? 1 : 0,
+            transition: "opacity 120ms ease",
+          }}
+        />
+      </Stack>
+
+      {isInitialLoading && (
         <Paper>
           <Stack spacing={1} p={2} direction="row" alignItems="center">
             <CircularProgress size={20} />
@@ -229,7 +241,7 @@ export const AdminDatabaseBackupPage = () => {
         <Alert severity="info">{t("databaseBackup.state.empty")}</Alert>
       )}
 
-      {!isLoading && backup !== null && (
+      {backup !== null && (
         <Paper>
           <Stack divider={<Divider />}>
             {rows.map((row) => (
