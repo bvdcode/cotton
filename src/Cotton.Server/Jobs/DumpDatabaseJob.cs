@@ -1,8 +1,4 @@
-﻿using System.Buffers;
-using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text.Json;
-using Cotton.Database;
+﻿using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Providers;
@@ -12,6 +8,10 @@ using Cotton.Storage.Pipelines;
 using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using System.Buffers;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Cotton.Server.Jobs
 {
