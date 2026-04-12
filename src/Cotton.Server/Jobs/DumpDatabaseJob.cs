@@ -1,10 +1,10 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Cotton.Database;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -22,10 +22,10 @@ namespace Cotton.Server.Jobs
         IStoragePipeline _storage,
         SettingsProvider _settings,
         CottonDbContext _dbContext,
+        DatabaseBackupKeyProvider _backupKeyProvider,
         IConfiguration _configuration,
         ILogger<DumpDatabaseJob> _logger) : IJob
     {
-        private const string ManifestPointerLogicalKey = "database.ctn";
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
         public async Task Execute(IJobExecutionContext context)
@@ -67,13 +67,13 @@ namespace Cotton.Server.Jobs
 
                 var pointer = new BackupManifestPointer(
                     SchemaVersion: 1,
-                    LogicalKey: ManifestPointerLogicalKey,
+                    LogicalKey: DatabaseBackupKeyProvider.ManifestPointerLogicalKey,
                     UpdatedAtUtc: DateTime.UtcNow,
                     LatestManifestStorageKey: manifestStorageKey,
                     LatestBackupId: backupId);
 
                 byte[] pointerBytes = JsonSerializer.SerializeToUtf8Bytes(pointer, JsonOptions);
-                string pointerStorageKey = GetLogicalStorageKey(ManifestPointerLogicalKey);
+                string pointerStorageKey = _backupKeyProvider.GetScopedPointerStorageKey();
                 await _storage.DeleteAsync(pointerStorageKey);
                 await WriteObjectAsync(pointerStorageKey, pointerBytes);
 
@@ -199,41 +199,10 @@ namespace Cotton.Server.Jobs
             return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
         }
 
-        private static string GetLogicalStorageKey(string logicalKey)
-        {
-            return Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(logicalKey)));
-        }
-
         private sealed record DumpUploadResult(
             long DumpSizeBytes,
             int ChunkSizeBytes,
             string DumpContentHash,
             IReadOnlyList<BackupChunkInfo> Chunks);
-
-        private sealed record BackupChunkInfo(int Order, string StorageKey, int SizeBytes);
-
-        private sealed record BackupManifest(
-            int SchemaVersion,
-            string BackupId,
-            DateTime CreatedAtUtc,
-            string Contains,
-            string DumpFormat,
-            string SourceDatabase,
-            string SourceHost,
-            string SourcePort,
-            string HashAlgorithm,
-            int ChunkSizeBytes,
-            long DumpSizeBytes,
-            string DumpContentHash,
-            int ChunkCount,
-            TimeSpan Elapsed,
-            IReadOnlyList<BackupChunkInfo> Chunks);
-
-        private sealed record BackupManifestPointer(
-            int SchemaVersion,
-            string LogicalKey,
-            DateTime UpdatedAtUtc,
-            string LatestManifestStorageKey,
-            string LatestBackupId);
     }
 }
