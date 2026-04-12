@@ -14,7 +14,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 type AdminMenuItem = {
-  id: "users";
+  id: "users" | "databaseBackup";
   to: string;
   title: string;
 };
@@ -29,6 +29,11 @@ export const AdminLayoutPage = () => {
       id: "users",
       to: "/admin/users",
       title: t("menu.users"),
+    },
+    {
+      id: "databaseBackup",
+      to: "/admin/database-backup",
+      title: t("menu.databaseBackup"),
     },
   ];
 
