@@ -11,11 +11,11 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import { LANGUAGE_STORAGE_KEY } from "./shared/config/storageKeys";
 
 const languageDetectorOptions = {
-  order: ["querystring", "localStorage", "navigator", "htmlTag"],
-  lookupLocalStorage: LANGUAGE_STORAGE_KEY,
+  order: ["querystring", "sessionStorage", "navigator", "htmlTag"],
+  lookupSessionStorage: LANGUAGE_STORAGE_KEY,
   convertDetectedLanguage: (lng: string): string =>
     lng.toLowerCase().split("-")[0],
-  caches: ["localStorage"],
+  caches: ["sessionStorage"],
 };
 
 i18n
