@@ -50,19 +50,20 @@ export const AdminDatabaseBackupPage = () => {
 
   const [backup, setBackup] = useState<LatestDatabaseBackupDto | null>(null);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
-  const [triggerFeedback, setTriggerFeedback] = useState<TriggerFeedback>({ kind: "idle" });
+  const [triggerFeedback, setTriggerFeedback] = useState<TriggerFeedback>({
+    kind: "idle",
+  });
 
-  const fetchLatestBackup = useCallback(async () => {
-    setLoadState({ kind: "loading" });
-
+  const loadLatestBackup = useCallback(async () => {
     try {
       const latest = await adminApi.getLatestDatabaseBackup();
       setBackup(latest);
       setLoadState({ kind: "idle" });
     } catch (error) {
       if (isAxiosError(error)) {
-        const message = (error.response?.data as { message?: string } | undefined)
-          ?.message;
+        const message = (
+          error.response?.data as { message?: string } | undefined
+        )?.message;
         if (typeof message === "string" && message.length > 0) {
           setLoadState({ kind: "error", message });
           return;
@@ -76,9 +77,44 @@ export const AdminDatabaseBackupPage = () => {
     }
   }, [t]);
 
+  const refreshLatestBackup = useCallback(async () => {
+    setLoadState({ kind: "loading" });
+    await loadLatestBackup();
+  }, [loadLatestBackup]);
+
   useEffect(() => {
-    void fetchLatestBackup();
-  }, [fetchLatestBackup]);
+    let cancelled = false;
+
+    adminApi
+      .getLatestDatabaseBackup()
+      .then((latest) => {
+        if (cancelled) return;
+        setBackup(latest);
+        setLoadState({ kind: "idle" });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+
+        if (isAxiosError(error)) {
+          const message = (
+            error.response?.data as { message?: string } | undefined
+          )?.message;
+          if (typeof message === "string" && message.length > 0) {
+            setLoadState({ kind: "error", message });
+            return;
+          }
+        }
+
+        setLoadState({
+          kind: "error",
+          message: t("databaseBackup.errors.loadFailed"),
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const handleTriggerBackup = useCallback(async () => {
     setTriggerFeedback({ kind: "loading" });
@@ -89,11 +125,12 @@ export const AdminDatabaseBackupPage = () => {
         kind: "success",
         message: t("databaseBackup.state.triggerSuccess"),
       });
-      await fetchLatestBackup();
+      await refreshLatestBackup();
     } catch (error) {
       if (isAxiosError(error)) {
-        const message = (error.response?.data as { message?: string } | undefined)
-          ?.message;
+        const message = (
+          error.response?.data as { message?: string } | undefined
+        )?.message;
         if (typeof message === "string" && message.length > 0) {
           setTriggerFeedback({ kind: "error", message });
           return;
@@ -105,7 +142,7 @@ export const AdminDatabaseBackupPage = () => {
         message: t("databaseBackup.errors.triggerFailed"),
       });
     }
-  }, [fetchLatestBackup, t]);
+  }, [refreshLatestBackup, t]);
 
   const placeholder = t("placeholder", { ns: "common" });
   const isLoading = loadState.kind === "loading";
@@ -168,40 +205,45 @@ export const AdminDatabaseBackupPage = () => {
   }, [backup, placeholder, t]);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={1}>
       <Paper>
-        <Stack spacing={2} p={2}>
-          <Typography variant="h6" fontWeight={700}>
-            {t("databaseBackup.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("databaseBackup.description")}
-          </Typography>
+        <Stack spacing={1} p={2}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={1}
+            flexWrap="wrap"
+          >
+            <Typography variant="h6" fontWeight={700}>
+              {t("databaseBackup.title")}
+            </Typography>
 
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              onClick={() => void fetchLatestBackup()}
-              disabled={isLoading || isTriggering}
-            >
-              {t("databaseBackup.actions.refresh")}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => void handleTriggerBackup()}
-              disabled={isTriggering}
-            >
-              {isTriggering ? (
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <CircularProgress size={16} color="inherit" />
-                  <Typography variant="button">
-                    {t("databaseBackup.actions.triggering")}
-                  </Typography>
-                </Stack>
-              ) : (
-                t("databaseBackup.actions.trigger")
-              )}
-            </Button>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                onClick={() => void refreshLatestBackup()}
+                disabled={isLoading || isTriggering}
+              >
+                {t("databaseBackup.actions.refresh")}
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => void handleTriggerBackup()}
+                disabled={isTriggering}
+              >
+                {isTriggering ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <CircularProgress size={16} color="inherit" />
+                    <Typography variant="button">
+                      {t("databaseBackup.actions.triggering")}
+                    </Typography>
+                  </Stack>
+                ) : (
+                  t("databaseBackup.actions.trigger")
+                )}
+              </Button>
+            </Stack>
           </Stack>
         </Stack>
       </Paper>
