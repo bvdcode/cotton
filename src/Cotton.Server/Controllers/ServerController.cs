@@ -3,6 +3,7 @@
 
 using Cotton.Models;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
@@ -10,8 +11,10 @@ using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Extensions;
 using EasyExtensions.Models.Enums;
+using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Quartz;
 
 namespace Cotton.Server.Controllers
 {
@@ -19,6 +22,7 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Server)]
     public class ServerController(
         SettingsProvider _settings,
+        ISchedulerFactory _scheduler,
         IDatabaseBackupManifestService _backupManifestService) : ControllerBase
     {
         [HttpPost("emergency-shutdown")]
@@ -79,6 +83,14 @@ namespace Cotton.Server.Controllers
                 settings = isAdmin ? _settings.GetServerSettings() : null,
             };
             return Ok(settings);
+        }
+
+        [HttpPatch("database-backup/trigger")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> TriggerDatabaseBackup()
+        {
+            await _scheduler.TriggerJobAsync<DumpDatabaseJob>();
+            return Ok();
         }
 
         [HttpGet("database-backup/latest")]
