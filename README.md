@@ -310,6 +310,8 @@ That is why Cotton can do compression, encryption, range reads, previews, and ch
 
 Crypto is powered by **EasyExtensions.Crypto** (NuGet), a streaming AES-GCM engine (`AesGcmStreamCipher`) with:
 
+The encryption core was conceived and built specifically for Cotton as the first architectural step. The broader storage pipeline was pushed forward only after throughput validation showed crypto could carry the workload without becoming the bottleneck.
+
 - per-file wrapped keys and per-chunk authentication;
 - a 12-byte nonce layout (4-byte file prefix + 8-byte chunk counter);
 - parallel chunked pipelines built on `System.IO.Pipelines`.
