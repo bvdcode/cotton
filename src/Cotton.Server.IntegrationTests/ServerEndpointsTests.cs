@@ -90,6 +90,17 @@ public class ServerEndpointsTests : IntegrationTestBase
         Assert.That(me!.Username, Is.EqualTo("testuser"));
     }
 
+    [Test]
+    public async Task Get_LatestDatabaseBackup_ReturnsNotFound_WhenNoBackupExists()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.GetAsync("/api/v1/server/database-backup/latest");
+
+        Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.NotFound));
+    }
+
     private async Task<string> LoginAsync()
     {
         var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequestDto()

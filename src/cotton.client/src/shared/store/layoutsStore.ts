@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { layoutsApi, type LayoutStatsDto, type NodeDto } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { LAYOUTS_STORAGE_KEY } from "../config/storageKeys";
@@ -162,6 +162,7 @@ export const useLayoutsStore = create<LayoutsState>()(
     }),
     {
       name: LAYOUTS_STORAGE_KEY,
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         cacheOwnerUserId: state.cacheOwnerUserId,
         rootNode: state.rootNode,

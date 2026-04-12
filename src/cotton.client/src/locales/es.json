@@ -896,7 +896,8 @@
     "title": "Administración",
     "menu": {
       "navigate": "Sección",
-      "users": "Usuarios"
+      "users": "Usuarios",
+      "databaseBackup": "Respaldo de base de datos"
     },
     "roles": {
       "user": "Usuario",
@@ -946,6 +947,35 @@
         "save": "Guardar",
         "saving": "Guardando...",
         "success": "Usuario actualizado."
+      }
+    },
+    "databaseBackup": {
+      "title": "Respaldo de base de datos",
+      "description": "Último manifiesto de respaldo reportado por el servidor.",
+      "actions": {
+        "refresh": "Actualizar",
+        "trigger": "Ejecutar respaldo",
+        "triggering": "Ejecutando..."
+      },
+      "state": {
+        "loading": "Cargando información del respaldo...",
+        "empty": "Aún no se encontraron respaldos.",
+        "triggerSuccess": "La tarea de respaldo fue iniciada."
+      },
+      "fields": {
+        "backupId": "ID de respaldo",
+        "createdAtUtc": "Creado (UTC)",
+        "pointerUpdatedAtUtc": "Puntero actualizado (UTC)",
+        "dumpSizeBytes": "Tamaño del volcado",
+        "chunkCount": "Cantidad de chunks",
+        "dumpContentHash": "Hash del contenido del volcado",
+        "sourceDatabase": "Base de datos origen",
+        "sourceHost": "Host origen",
+        "sourcePort": "Puerto origen"
+      },
+      "errors": {
+        "loadFailed": "No se pudo cargar la información del respaldo.",
+        "triggerFailed": "No se pudo ejecutar el respaldo."
       }
     }
   },
