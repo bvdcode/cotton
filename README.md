@@ -208,9 +208,14 @@ Cotton's current reclaim model is already cautious and restore-friendly. More ad
 - Share links can be invalidated in bulk, expire automatically, and be cleaned up in the background.
 - Public sharing is backed by real share pages and previews, not just raw opaque URLs.
 - Browsers that support the Web Share API get native sharing; everyone else gets a predictable clipboard fallback.
+- Preview extraction includes practical media details that quietly improve daily use: embedded cover art from audio tracks (including MP3) and attached cover art from containers like MKV when present.
+- Audio playback supports time-synced lyrics (karaoke-style) from a sidecar `.lrc` file located next to the track.
+- Search is tuned for responsiveness in normal workflows: debounced client queries with normalized key matching on the server keep lookup behavior fast and predictable.
 - Password reset, email verification, and email delivery modes are built into setup: use your own SMTP or use Cotton Cloud mail if you do not want to run mail infrastructure (cloud mode requires internet access and telemetry enabled).
 - Notifications cover real account and storage events, including failed logins, login success, TOTP lockouts, WebDAV token resets, and shared-file downloads.
 - The first-run experience is a guided setup wizard with safe defaults and expert paths instead of a half-documented config scavenger hunt.
+
+Cotton UX is intentional down to small interactions: it is normal here to spend serious design time reducing two buttons to one when that produces a cleaner, more obvious flow.
 
 ---
 
