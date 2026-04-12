@@ -892,7 +892,8 @@
     "title": "Администрирование",
     "menu": {
       "navigate": "Раздел",
-      "users": "Пользователи"
+      "users": "Пользователи",
+      "databaseBackup": "Бэкап базы данных"
     },
     "roles": {
       "user": "Пользователь",
@@ -942,6 +943,35 @@
         "save": "Сохранить",
         "saving": "Сохранение...",
         "success": "Пользователь обновлён."
+      }
+    },
+    "databaseBackup": {
+      "title": "Бэкап базы данных",
+      "description": "Информация о последнем бэкапе из манифеста сервера.",
+      "actions": {
+        "refresh": "Обновить",
+        "trigger": "Запустить бэкап",
+        "triggering": "Запуск..."
+      },
+      "state": {
+        "loading": "Загрузка информации о бэкапе...",
+        "empty": "Бэкапы пока не найдены.",
+        "triggerSuccess": "Задача бэкапа успешно запущена."
+      },
+      "fields": {
+        "backupId": "ID бэкапа",
+        "createdAtUtc": "Создан (UTC)",
+        "pointerUpdatedAtUtc": "Указатель обновлён (UTC)",
+        "dumpSizeBytes": "Размер дампа",
+        "chunkCount": "Количество чанков",
+        "dumpContentHash": "Хэш содержимого дампа",
+        "sourceDatabase": "Исходная БД",
+        "sourceHost": "Исходный хост",
+        "sourcePort": "Исходный порт"
+      },
+      "errors": {
+        "loadFailed": "Не удалось загрузить информацию о бэкапе.",
+        "triggerFailed": "Не удалось запустить бэкап."
       }
     }
   },
