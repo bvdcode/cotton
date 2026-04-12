@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -30,6 +31,7 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             CancellationToken ct = context.CancellationToken;
+            Stopwatch sw = Stopwatch.StartNew();
             DateTime startedAtUtc = DateTime.UtcNow;
             string backupId = Guid.NewGuid().ToString("N");
             string dumpPath = BuildDumpFilePath(startedAtUtc, backupId);
@@ -45,6 +47,7 @@ namespace Cotton.Server.Jobs
                 var manifest = new BackupManifest(
                     SchemaVersion: 1,
                     BackupId: backupId,
+                    Elapsed: sw.Elapsed,
                     CreatedAtUtc: startedAtUtc,
                     Contains: "postgres_database_dump",
                     DumpFormat: "pg_dump_custom",
@@ -75,11 +78,10 @@ namespace Cotton.Server.Jobs
                 await WriteObjectAsync(pointerStorageKey, pointerBytes);
 
                 _logger.LogInformation(
-                    "Database dump job completed. BackupId={BackupId}, DumpSizeBytes={DumpSizeBytes}, ChunkCount={ChunkCount}, ManifestKey={ManifestKey}",
+                    "Database dump job completed. BackupId={BackupId}, DumpSizeBytes={DumpSizeBytes}, elapsed: {elapsed}",
                     backupId,
                     uploadResult.DumpSizeBytes,
-                    uploadResult.Chunks.Count,
-                    manifestStorageKey);
+                    sw.Elapsed.ToString(@"hh\:mm\:ss"));
             }
             finally
             {
@@ -224,6 +226,7 @@ namespace Cotton.Server.Jobs
             long DumpSizeBytes,
             string DumpContentHash,
             int ChunkCount,
+            TimeSpan Elapsed,
             IReadOnlyList<BackupChunkInfo> Chunks);
 
         private sealed record BackupManifestPointer(
