@@ -2,6 +2,8 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Models;
+using Cotton.Server.Abstractions;
+using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -15,7 +17,9 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Server)]
-    public class ServerController(SettingsProvider _settings) : ControllerBase
+    public class ServerController(
+        SettingsProvider _settings,
+        IDatabaseBackupManifestService _backupManifestService) : ControllerBase
     {
         [HttpPost("emergency-shutdown")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -75,6 +79,30 @@ namespace Cotton.Server.Controllers
                 settings = isAdmin ? _settings.GetServerSettings() : null,
             };
             return Ok(settings);
+        }
+
+        [HttpGet("database-backup/latest")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> GetLatestDatabaseBackupInfo(CancellationToken cancellationToken)
+        {
+            ResolvedBackupManifest? backup = await _backupManifestService.TryGetLatestManifestAsync(cancellationToken);
+            if (backup is null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new LatestDatabaseBackupDto
+            {
+                BackupId = backup.Manifest.BackupId,
+                CreatedAtUtc = backup.Manifest.CreatedAtUtc,
+                PointerUpdatedAtUtc = backup.Pointer.UpdatedAtUtc,
+                DumpSizeBytes = backup.Manifest.DumpSizeBytes,
+                ChunkCount = backup.Manifest.ChunkCount,
+                DumpContentHash = backup.Manifest.DumpContentHash,
+                SourceDatabase = backup.Manifest.SourceDatabase,
+                SourceHost = backup.Manifest.SourceHost,
+                SourcePort = backup.Manifest.SourcePort,
+            });
         }
     }
 }
