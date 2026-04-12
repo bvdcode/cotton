@@ -31,6 +31,8 @@ Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficien
 
 The server core runs on a modern **ASP.NET Core + EF Core** stack and uses **Kestrel** for high-throughput HTTP streaming and API workloads.
 
+Cotton is intentionally built as one cohesive runtime: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET code inside the same ecosystem. That keeps execution flow seamless, reduces cross-environment glue, and helps the codebase behave as one coordinated system rather than many loosely-coupled runtimes. External process tooling is kept narrow on purpose: **FFmpeg/ffprobe** are used for audio/video preview extraction.
+
 The core product is intentionally focused rather than trying to be everything at once; custom behavior is meant to live in isolated plugins and marketplace-delivered extensions as that layer settles into place.
 
 This is not just a storage engine with a web skin. Cotton is meant to feel good in real use:
