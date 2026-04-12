@@ -205,15 +205,13 @@ export const AdminDatabaseBackupPage = () => {
   }, [backup, placeholder, t]);
 
   return (
-    <Stack spacing={1}>
+    <Stack spacing={2}>
       <Paper>
-        <Stack spacing={1} p={2}>
+        <Stack spacing={2} p={2}>
           <Stack
             direction="row"
             justifyContent="space-between"
             alignItems="center"
-            spacing={1}
-            flexWrap="wrap"
           >
             <Typography variant="h6" fontWeight={700}>
               {t("databaseBackup.title")}
@@ -245,74 +243,70 @@ export const AdminDatabaseBackupPage = () => {
               </Button>
             </Stack>
           </Stack>
+
+          {loadState.kind === "error" && (
+            <Alert severity="error">{loadState.message}</Alert>
+          )}
+
+          {triggerFeedback.kind === "error" && (
+            <Alert severity="error">{triggerFeedback.message}</Alert>
+          )}
+
+          {triggerFeedback.kind === "success" && (
+            <Alert severity="success">{triggerFeedback.message}</Alert>
+          )}
+
+          <Stack minHeight={4}>
+            <LinearProgress
+              sx={{
+                opacity: isRefreshing ? 1 : 0,
+                transition: "opacity 120ms ease",
+              }}
+            />
+          </Stack>
+
+          {isInitialLoading && (
+            <Stack divider={<Divider />}>
+              {Array.from({ length: 9 }).map((_, index) => (
+                <Stack key={index} spacing={0.75} p={2}>
+                  <Skeleton variant="text" width={140} height={16} />
+                  <Skeleton
+                    variant="text"
+                    width={index === 5 ? "80%" : "42%"}
+                    height={24}
+                  />
+                </Stack>
+              ))}
+            </Stack>
+          )}
+
+          {!isLoading && loadState.kind !== "error" && backup === null && (
+            <Alert severity="info">{t("databaseBackup.state.empty")}</Alert>
+          )}
+
+          {backup !== null && (
+            <Stack divider={<Divider />}>
+              {rows.map((row) => (
+                <Stack key={row.id} spacing={0.5} p={2}>
+                  <Typography variant="caption" color="text.secondary">
+                    {row.label}
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    sx={
+                      row.id === "dumpContentHash"
+                        ? { fontFamily: "monospace", wordBreak: "break-all" }
+                        : undefined
+                    }
+                  >
+                    {row.value}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          )}
         </Stack>
       </Paper>
-
-      {loadState.kind === "error" && (
-        <Alert severity="error">{loadState.message}</Alert>
-      )}
-
-      {triggerFeedback.kind === "error" && (
-        <Alert severity="error">{triggerFeedback.message}</Alert>
-      )}
-
-      {triggerFeedback.kind === "success" && (
-        <Alert severity="success">{triggerFeedback.message}</Alert>
-      )}
-
-      <Stack minHeight={4}>
-        <LinearProgress
-          sx={{
-            opacity: isRefreshing ? 1 : 0,
-            transition: "opacity 120ms ease",
-          }}
-        />
-      </Stack>
-
-      {isInitialLoading && (
-        <Paper>
-          <Stack divider={<Divider />}>
-            {Array.from({ length: 9 }).map((_, index) => (
-              <Stack key={index} spacing={0.75} p={2}>
-                <Skeleton variant="text" width={140} height={16} />
-                <Skeleton
-                  variant="text"
-                  width={index === 5 ? "80%" : "42%"}
-                  height={24}
-                />
-              </Stack>
-            ))}
-          </Stack>
-        </Paper>
-      )}
-
-      {!isLoading && loadState.kind !== "error" && backup === null && (
-        <Alert severity="info">{t("databaseBackup.state.empty")}</Alert>
-      )}
-
-      {backup !== null && (
-        <Paper>
-          <Stack divider={<Divider />}>
-            {rows.map((row) => (
-              <Stack key={row.id} spacing={0.5} p={2}>
-                <Typography variant="caption" color="text.secondary">
-                  {row.label}
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={
-                    row.id === "dumpContentHash"
-                      ? { fontFamily: "monospace", wordBreak: "break-all" }
-                      : undefined
-                  }
-                >
-                  {row.value}
-                </Typography>
-              </Stack>
-            ))}
-          </Stack>
-        </Paper>
-      )}
     </Stack>
   );
 };
