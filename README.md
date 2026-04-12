@@ -81,7 +81,7 @@ Cotton is built around a different set of outcomes:
   Cotton does more than store checksums. It computes manifest hashes in the background, runs storage consistency checks, and raises notifications when upload verification fails or stored file data is missing.
 
 - **Operational polish is part of the product**  
-  First-run setup is a guided wizard, SMTP is a first-class setting, forgot-password and email verification flows exist, notifications are built in, and setup includes explicit timezone selection instead of leaving operators to guess around server-local defaults.
+  First-run setup is a guided wizard with practical email modes (Cloud Cotton Mail gateway, custom SMTP, or disabled email), forgot-password and email verification flows exist, notifications are built in, and setup includes explicit timezone selection instead of leaving operators to guess around server-local defaults.
 
 - **Sharing is meant to be used, not merely exposed**  
   Cotton has share pages, rich previews, token expiry and cleanup, and native platform sharing hooks where the browser supports them.
@@ -103,7 +103,7 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Generate previews for images, HEIC, PDF, text, audio, and video content.
 - Run background manifest verification and storage consistency checks that surface real integrity problems.
 - Receive useful notifications for failed logins, successful logins, TOTP events, WebDAV token resets, shared-file downloads, upload verification failures, and missing storage chunks.
-- Configure the instance through a setup wizard with safe defaults, custom SMTP support, storage choices, telemetry preferences, and timezone selection.
+- Configure the instance through a setup wizard with safe defaults, cloud email or custom SMTP, storage choices, telemetry preferences, and timezone selection.
 - Offer email verification and a forgot-password flow as first-class product behavior.
 - Start with a simple Docker + Postgres deployment and grow into filesystem or S3-backed storage.
 - Use WebDAV in addition to the web UI when you need protocol-level access.
@@ -208,7 +208,7 @@ Cotton's current reclaim model is already cautious and restore-friendly. More ad
 - Share links can be invalidated in bulk, expire automatically, and be cleaned up in the background.
 - Public sharing is backed by real share pages and previews, not just raw opaque URLs.
 - Browsers that support the Web Share API get native sharing; everyone else gets a predictable clipboard fallback.
-- Password reset, email verification, and SMTP configuration are part of the main product flow.
+- Password reset, email verification, and email delivery modes are built into setup: use your own SMTP or use Cotton Cloud mail if you do not want to run mail infrastructure (cloud mode requires internet access and telemetry enabled).
 - Notifications cover real account and storage events, including failed logins, login success, TOTP lockouts, WebDAV token resets, and shared-file downloads.
 - The first-run experience is a guided setup wizard with safe defaults and expert paths instead of a half-documented config scavenger hunt.
 
@@ -250,6 +250,22 @@ On startup the app applies EF migrations automatically, serves the UI at `http:/
 Upload settings are returned by the server; the frontend (`src/cotton.client`) uses them for chunking.
 
 For deeper internals after the quick start, continue below. For benchmark details, see [src/Cotton.Benchmark/README.md](src/Cotton.Benchmark/README.md).
+
+---
+
+## Database Backup & Auto-Restore
+
+- **Backups are first-class and storage-native**  
+  Cotton periodically creates PostgreSQL dumps, chunks them, and stores backup artifacts in Cotton's own storage pipeline (with manifest + pointer metadata for latest backup discovery).
+
+- **Manual trigger exists for operators**  
+  Admins can trigger the backup job on demand from the server API when they need an immediate checkpoint.
+
+- **Auto-restore for empty instances is built in**  
+  If `COTTON_RESTORE_DATABASE_IF_EMPTY=true` is set, Cotton checks at startup whether the database is empty, finds the latest backup manifest, rebuilds the dump from stored chunks, verifies hash/size integrity, and restores automatically.
+
+- **Recovery is visible, not silent**  
+  After auto-restore, Cotton ensures required PostgreSQL extensions and sends high-priority admin notifications with backup metadata.
 
 ---
 
@@ -548,8 +564,8 @@ Derives `Pepper` + `MasterEncryptionKey` from `COTTON_MASTER_KEY`, then **wipes*
 _See: `src/Cotton.Autoconfig/Extensions/ConfigurationBuilderExtensions.cs`_
 
 **Bootstrap & setup**  
-Auto-applies EF migrations on startup. First admin creation has time-limited window (no eternal backdoor).  
-_See: `src/Cotton.Server/Program.cs`, `AuthController.cs`, `SetupController.cs`_
+Auto-applies EF migrations on startup. First admin creation has time-limited window (no eternal backdoor). If `COTTON_RESTORE_DATABASE_IF_EMPTY=true` is set and the DB is empty, startup also attempts automatic restore from the latest backup manifest in storage.  
+_See: `src/Cotton.Server/Program.cs`, `src/Cotton.Server/Controllers/AuthController.cs`, `src/Cotton.Server/Controllers/ServerController.cs`, `src/Cotton.Server/Services/DatabaseAutoRestoreService.cs`_
 
 ---
 
