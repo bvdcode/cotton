@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
@@ -680,6 +680,7 @@ export const useNodesStore = create<NodesState>()(
     },
     {
       name: NODES_STORAGE_KEY,
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => {
         const persistedSnapshot = buildPersistedContentSnapshot(state);
         return {

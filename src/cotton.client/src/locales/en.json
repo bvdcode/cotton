@@ -896,7 +896,8 @@
     "title": "Admin",
     "menu": {
       "navigate": "Section",
-      "users": "Users"
+      "users": "Users",
+      "databaseBackup": "Database backup"
     },
     "roles": {
       "user": "User",
@@ -946,6 +947,35 @@
         "save": "Save",
         "saving": "Saving...",
         "success": "User updated."
+      }
+    },
+    "databaseBackup": {
+      "title": "Database backup",
+      "description": "Latest backup manifest from the server.",
+      "actions": {
+        "refresh": "Refresh",
+        "trigger": "Trigger backup",
+        "triggering": "Triggering..."
+      },
+      "state": {
+        "loading": "Loading backup info...",
+        "empty": "No backups found yet.",
+        "triggerSuccess": "Backup job was triggered."
+      },
+      "fields": {
+        "backupId": "Backup ID",
+        "createdAtUtc": "Created (UTC)",
+        "pointerUpdatedAtUtc": "Pointer updated (UTC)",
+        "dumpSizeBytes": "Dump size",
+        "chunkCount": "Chunk count",
+        "dumpContentHash": "Dump content hash",
+        "sourceDatabase": "Source database",
+        "sourceHost": "Source host",
+        "sourcePort": "Source port"
+      },
+      "errors": {
+        "loadFailed": "Failed to load backup information.",
+        "triggerFailed": "Failed to trigger backup."
       }
     }
   },

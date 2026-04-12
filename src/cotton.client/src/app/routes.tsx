@@ -21,6 +21,7 @@ import {
   SharePage,
   AdminLayoutPage,
   AdminUsersPage,
+  AdminDatabaseBackupPage,
   ResetPasswordPage,
   VerifyEmailPage,
 } from "../pages";
@@ -161,6 +162,7 @@ export function AppRoutes() {
         >
           <Route index element={<Navigate to="users" replace />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="database-backup" element={<AdminDatabaseBackupPage />} />
         </Route>
 
         {/* Settings page (accessible from avatar menu) */}

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { InterfaceLayoutType } from "../api/layoutsApi";
 import { STORAGE_KEY_PREFIX } from "../config/storageKeys";
 
@@ -76,6 +76,7 @@ export const useLocalPreferencesStore = create<LocalPreferencesState>()(
     }),
     {
       name: `${STORAGE_KEY_PREFIX}local-prefs`,
+      storage: createJSONStorage(() => sessionStorage),
     },
   ),
 );

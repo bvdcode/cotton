@@ -5,6 +5,7 @@ import { useSettingsStore } from "./settingsStore";
 import { useTrashStore } from "./trashStore";
 import { useAudioPlayerStore } from "./audioPlayerStore";
 import { useUserPreferencesStore } from "./userPreferencesStore";
+import { LANGUAGE_STORAGE_KEY } from "../config/storageKeys";
 
 const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
   try {
@@ -25,6 +26,14 @@ const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
  * - Clears persisted caches (zustand persist) to prevent cross-user data leak
  */
 export const resetUserScopedStores = (nextUserId: string | null): void => {
+  if (nextUserId === null) {
+    try {
+      sessionStorage.removeItem(LANGUAGE_STORAGE_KEY);
+    } catch {
+      // best-effort: storage APIs can be unavailable in hardened environments
+    }
+  }
+
   const nodesOwner = useNodesStore.getState().cacheOwnerUserId;
   if (nodesOwner !== nextUserId) {
     safeClearPersisted(useNodesStore.persist.clearStorage);

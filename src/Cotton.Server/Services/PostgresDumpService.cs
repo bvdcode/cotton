@@ -58,6 +58,51 @@ namespace Cotton.Server.Services
             _logger.LogInformation("PostgreSQL dump created at {OutputFilePath}.", outputFilePath);
         }
 
+        public async Task RestoreFromFileAsync(string inputFilePath, CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(inputFilePath);
+
+            if (!File.Exists(inputFilePath))
+            {
+                throw new FileNotFoundException("PostgreSQL dump file not found.", inputFilePath);
+            }
+
+            DbSettings settings = ReadDbSettings();
+            var processStartInfo = CreateRestoreProcessStartInfo(settings, inputFilePath);
+
+            using var process = new Process { StartInfo = processStartInfo };
+            _logger.LogInformation("Restoring PostgreSQL database from {InputFilePath}.", inputFilePath);
+
+            if (!process.Start())
+            {
+                throw new InvalidOperationException("Failed to start pg_restore process.");
+            }
+
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                TryKillProcess(process);
+                throw;
+            }
+
+            string stderr = await stderrTask;
+            string stdout = await stdoutTask;
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"pg_restore failed with exit code {process.ExitCode}. stderr: {stderr}. stdout: {stdout}");
+            }
+
+            _logger.LogInformation("PostgreSQL database restored successfully from {InputFilePath}.", inputFilePath);
+        }
+
         private static ProcessStartInfo CreateProcessStartInfo(DbSettings settings, string outputFilePath)
         {
             var processStartInfo = new ProcessStartInfo
@@ -81,6 +126,36 @@ namespace Cotton.Server.Services
             processStartInfo.ArgumentList.Add(settings.Database);
             processStartInfo.ArgumentList.Add("--file");
             processStartInfo.ArgumentList.Add(outputFilePath);
+            processStartInfo.Environment["PGPASSWORD"] = settings.Password;
+
+            return processStartInfo;
+        }
+
+        private static ProcessStartInfo CreateRestoreProcessStartInfo(DbSettings settings, string inputFilePath)
+        {
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = "pg_restore",
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            processStartInfo.ArgumentList.Add("--clean");
+            processStartInfo.ArgumentList.Add("--if-exists");
+            processStartInfo.ArgumentList.Add("--no-owner");
+            processStartInfo.ArgumentList.Add("--no-privileges");
+            processStartInfo.ArgumentList.Add("--no-password");
+            processStartInfo.ArgumentList.Add("--host");
+            processStartInfo.ArgumentList.Add(settings.Host);
+            processStartInfo.ArgumentList.Add("--port");
+            processStartInfo.ArgumentList.Add(settings.Port.ToString(CultureInfo.InvariantCulture));
+            processStartInfo.ArgumentList.Add("--username");
+            processStartInfo.ArgumentList.Add(settings.Username);
+            processStartInfo.ArgumentList.Add("--dbname");
+            processStartInfo.ArgumentList.Add(settings.Database);
+            processStartInfo.ArgumentList.Add(inputFilePath);
             processStartInfo.Environment["PGPASSWORD"] = settings.Password;
 
             return processStartInfo;

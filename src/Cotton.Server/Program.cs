@@ -53,7 +53,10 @@ namespace Cotton.Server
                 .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
+                .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
+                .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
                 .AddScoped<FileManifestService>()
+                .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
@@ -82,6 +85,11 @@ namespace Cotton.Server
                 .UseExceptionHandler();
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
+            using (IServiceScope scope = app.Services.CreateScope())
+            {
+                var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
+                autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
+            }
             app.ApplyMigrations<CottonDbContext>();
             app.MapHub<EventHub>(Routes.V1.EventHub);
             app.Run();
