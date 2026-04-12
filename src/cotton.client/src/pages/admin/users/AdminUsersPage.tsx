@@ -1,10 +1,4 @@
-import {
-  Alert,
-  Button,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,10 +8,7 @@ import {
 } from "@mui/x-data-grid";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { isAxiosError } from "../../../shared/api/httpClient";
-import {
-  adminApi,
-  type AdminUserDto,
-} from "../../../shared/api/adminApi";
+import { adminApi, type AdminUserDto } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
 import { CreateUserForm } from "./CreateUserForm";
 import { EditUserDialog } from "./EditUserDialog";
@@ -170,25 +161,30 @@ export const AdminUsersPage = () => {
   useEffect(() => {
     let cancelled = false;
 
-    adminApi.getUsers().then((result) => {
-      if (!cancelled) {
-        setUsers(result);
-        setLoadState({ kind: "idle" });
-      }
-    }).catch((e: unknown) => {
-      if (cancelled) return;
-      if (isAxiosError(e)) {
-        const message = (e.response?.data as { message?: string } | undefined)
-          ?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setLoadState({ kind: "error", message });
-          return;
+    adminApi
+      .getUsers()
+      .then((result) => {
+        if (!cancelled) {
+          setUsers(result);
+          setLoadState({ kind: "idle" });
         }
-      }
-      setLoadState({ kind: "error", message: t("users.errors.loadFailed") });
-    });
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        if (isAxiosError(e)) {
+          const message = (e.response?.data as { message?: string } | undefined)
+            ?.message;
+          if (typeof message === "string" && message.length > 0) {
+            setLoadState({ kind: "error", message });
+            return;
+          }
+        }
+        setLoadState({ kind: "error", message: t("users.errors.loadFailed") });
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
 
   return (
