@@ -202,5 +202,12 @@
                    $"is missing from the underlying storage. " +
                    $"Please verify your storage integrity and re-upload this file.";
         }
+
+        public static string DatabaseRestoreCompletedTitle => "Database restored automatically";
+
+        public static string DatabaseRestoreCompletedContent(string backupId, DateTime createdAtUtc)
+        {
+            return $"The server restored the database automatically from backup '{backupId}' created at {createdAtUtc:O}.";
+        }
     }
 }

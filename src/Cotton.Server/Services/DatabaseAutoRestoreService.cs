@@ -2,9 +2,12 @@ using System.Buffers;
 using System.Data;
 using System.Security.Cryptography;
 using Cotton.Database;
+using Cotton.Database.Models.Enums;
+using Cotton.Localization;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
+using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
@@ -15,6 +18,7 @@ namespace Cotton.Server.Services
         IStoragePipeline storage,
         IPostgresDumpService postgresDump,
         IDatabaseBackupManifestService backupManifestService,
+        INotificationsProvider notificationsProvider,
         ILogger<DatabaseAutoRestoreService> logger) : IDatabaseAutoRestoreService
     {
         private const string RestoreEnvKey = "COTTON_RESTORE_DATABASE_IF_EMPTY";
@@ -50,6 +54,7 @@ namespace Cotton.Server.Services
                 await RebuildDumpFileAsync(backup.Manifest, dumpPath, cancellationToken);
                 await postgresDump.RestoreFromFileAsync(dumpPath, cancellationToken);
                 await EnsurePostgresExtensionsAsync(cancellationToken);
+                await NotifyAdminsAboutRestoreAsync(backup, cancellationToken);
                 logger.LogInformation(
                     "Automatic database restore finished successfully. BackupId={BackupId}",
                     backup.Manifest.BackupId);
@@ -213,6 +218,43 @@ namespace Cotton.Server.Services
         {
             await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
             await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
+        }
+
+        private async Task NotifyAdminsAboutRestoreAsync(ResolvedBackupManifest backup, CancellationToken cancellationToken)
+        {
+            List<Guid> adminIds = await dbContext.Users
+                .AsNoTracking()
+                .Where(x => x.Role == UserRole.Admin)
+                .Select(x => x.Id)
+                .ToListAsync(cancellationToken);
+
+            if (adminIds.Count == 0)
+            {
+                logger.LogWarning("Automatic database restore completed, but no admin users were found for notification.");
+                return;
+            }
+
+            string title = NotificationTemplates.DatabaseRestoreCompletedTitle;
+            string content = NotificationTemplates.DatabaseRestoreCompletedContent(
+                backup.Manifest.BackupId,
+                backup.Manifest.CreatedAtUtc);
+
+            Dictionary<string, string> metadata = new()
+            {
+                ["backupId"] = backup.Manifest.BackupId,
+                ["createdAtUtc"] = backup.Manifest.CreatedAtUtc.ToString("O"),
+                ["manifestStorageKey"] = backup.ManifestStorageKey
+            };
+
+            foreach (Guid adminId in adminIds)
+            {
+                await notificationsProvider.SendNotificationAsync(
+                    userId: adminId,
+                    title: title,
+                    content: content,
+                    priority: NotificationPriority.High,
+                    metadata: metadata);
+            }
         }
     }
 }
