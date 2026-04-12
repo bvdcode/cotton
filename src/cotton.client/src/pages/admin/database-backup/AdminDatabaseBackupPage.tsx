@@ -5,6 +5,7 @@ import {
   Divider,
   LinearProgress,
   Paper,
+  Skeleton,
   Stack,
   Typography,
 } from "@mui/material";
@@ -228,11 +229,17 @@ export const AdminDatabaseBackupPage = () => {
 
       {isInitialLoading && (
         <Paper>
-          <Stack spacing={1} p={2} direction="row" alignItems="center">
-            <CircularProgress size={20} />
-            <Typography variant="body2" color="text.secondary">
-              {t("databaseBackup.state.loading")}
-            </Typography>
+          <Stack divider={<Divider />}>
+            {Array.from({ length: 9 }).map((_, index) => (
+              <Stack key={index} spacing={0.75} p={2}>
+                <Skeleton variant="text" width={140} height={16} />
+                <Skeleton
+                  variant="text"
+                  width={index === 5 ? "80%" : "42%"}
+                  height={24}
+                />
+              </Stack>
+            ))}
           </Stack>
         </Paper>
       )}
