@@ -8,11 +8,11 @@ import {
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-import { STORAGE_KEY_PREFIX } from "./shared/config/storageKeys";
+import { LANGUAGE_STORAGE_KEY } from "./shared/config/storageKeys";
 
 const languageDetectorOptions = {
   order: ["querystring", "localStorage", "navigator", "htmlTag"],
-  lookupLocalStorage: STORAGE_KEY_PREFIX + "language",
+  lookupLocalStorage: LANGUAGE_STORAGE_KEY,
   convertDetectedLanguage: (lng: string): string =>
     lng.toLowerCase().split("-")[0],
   caches: ["localStorage"],
