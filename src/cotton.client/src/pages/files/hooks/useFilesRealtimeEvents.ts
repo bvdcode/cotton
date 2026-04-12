@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { eventHub } from "../../../shared/signalr";
 import { useAuth } from "../../../features/auth";
-import type { JsonValue } from "../../../shared/types/json";
+import { isJsonObject, type JsonValue } from "../../../shared/types/json";
 
 interface UseFilesRealtimeEventsOptions {
   nodeId: string | null;
@@ -22,6 +22,110 @@ const FILES_HUB_METHODS = [
 ] as const;
 
 const PREVIEW_GENERATED_METHOD = "PreviewGenerated";
+const GUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_PAYLOAD_SCAN_DEPTH = 4;
+
+const normalizeKey = (key: string): string =>
+  key.replace(/[^a-z]/gi, "").toLowerCase();
+
+const looksLikeNodeRelationKey = (key: string): boolean => {
+  const normalized = normalizeKey(key);
+
+  if (
+    normalized === "node" ||
+    normalized === "parent" ||
+    normalized === "folder"
+  ) {
+    return true;
+  }
+
+  return (
+    normalized.includes("nodeid") ||
+    normalized.includes("parentid") ||
+    normalized.includes("folderid") ||
+    normalized.includes("sourceid") ||
+    normalized.includes("targetid") ||
+    normalized.includes("destinationid") ||
+    normalized.includes("fromid") ||
+    normalized.includes("toid")
+  );
+};
+
+const isGuid = (value: string): boolean => GUID_REGEX.test(value);
+
+const collectAffectedNodeIdsFromValue = (
+  value: JsonValue,
+  depth: number,
+  relationContext: boolean,
+): string[] => {
+  if (depth > MAX_PAYLOAD_SCAN_DEPTH) {
+    return [];
+  }
+
+  if (typeof value === "string") {
+    return relationContext && isGuid(value) ? [value] : [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) =>
+      collectAffectedNodeIdsFromValue(entry, depth + 1, relationContext),
+    );
+  }
+
+  if (!isJsonObject(value)) {
+    return [];
+  }
+
+  const ids: string[] = [];
+
+  for (const [key, nested] of Object.entries(value)) {
+    const nextRelationContext = relationContext || looksLikeNodeRelationKey(key);
+    ids.push(
+      ...collectAffectedNodeIdsFromValue(
+        nested,
+        depth + 1,
+        nextRelationContext,
+      ),
+    );
+  }
+
+  return ids;
+};
+
+const collectAffectedNodeIds = (args: JsonValue[]): Set<string> => {
+  const ids = new Set<string>();
+
+  for (const arg of args) {
+    if (typeof arg === "string" && isGuid(arg)) {
+      ids.add(arg);
+    }
+
+    const nestedIds = collectAffectedNodeIdsFromValue(arg, 0, false);
+    for (const id of nestedIds) {
+      ids.add(id);
+    }
+  }
+
+  return ids;
+};
+
+const shouldInvalidateCurrentNode = (
+  args: JsonValue[],
+  currentNodeId: string | null,
+): boolean => {
+  if (!currentNodeId) {
+    return false;
+  }
+
+  const affectedNodeIds = collectAffectedNodeIds(args);
+  if (affectedNodeIds.size === 0) {
+    // Keep compatibility with events that do not include node identifiers.
+    return true;
+  }
+
+  return affectedNodeIds.has(currentNodeId);
+};
 
 const isPreviewGeneratedArgs = (
   args: JsonValue[],
@@ -85,7 +189,11 @@ export function useFilesRealtimeEvents({
 
     const invalidationMethods = FILES_HUB_METHODS.flatMap((m) => [m, m.toLowerCase()]);
     const unsubscribes = invalidationMethods.map((method) =>
-      eventHub.on(method, () => {
+      eventHub.on(method, (...args: JsonValue[]) => {
+        if (!shouldInvalidateCurrentNode(args, nodeIdRef.current)) {
+          return;
+        }
+
         scheduleInvalidate();
       }),
     );
