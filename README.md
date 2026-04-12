@@ -155,6 +155,9 @@ This is the core difference from the more common self-hosted experience: Cotton'
 - **Compression and encryption are in the main pipeline by default**  
   Cotton compresses before encrypting, so storage savings happen inline during the transfer instead of depending on a later maintenance job. Because content addressing and chunk identity are established independently of encrypted blob bytes, dedup remains effective even with crypto fully enabled; the server does not need semantic knowledge of "what the data is" for dedup to keep working. Compression tuning is intentionally chosen so the full pipeline stays out of the way of normal data throughput rather than fighting it.
 
+- **File processing is designed to be practically zero-allocation on the hot path**  
+  The streaming pipeline is tuned to reuse buffers and avoid unnecessary allocations, which keeps the process very thin in RAM even during sustained large transfers.
+
 - **Modern server stack with a very fast HTTP engine**  
   Cotton.Server is built on **ASP.NET Core** and **EF Core**, served by **Kestrel** - _One of the Fastest Web Servers in the World_ - so the API and streaming paths keep strong throughput under real transfer load.
 
@@ -296,7 +299,7 @@ See controllers under `src/Cotton.Server/Controllers`.
 
 `src/Cotton.Storage` composes a backend (`IStorageBackend`) with streaming processors (`IStorageProcessor`) into a single pipeline:
 
-- `CompressionProcessor` — Zstd (streaming).
+- `CompressionProcessor` — Zstd (streaming) via a managed C# implementation (no external native code).
 - `CryptoProcessor` — streaming AES-GCM encrypt/decrypt.
 - Storage backend — persists chunk blobs, such as `FileSystemStorageBackend` or `S3StorageBackend`.
 
@@ -434,7 +437,7 @@ In-memory cache (~100MB default) with per-object size limits. `StoreInMemoryCach
 _See: `src/Cotton.Storage/Pipelines/CachedStoragePipeline.cs`, used in `PreviewController.cs`_
 
 **Compression processor**  
-Zstandard (zstd) via `ZstdSharp` — streaming, enabled by default and integrated into the storage pipeline. Compression is applied _before_ encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). Dedup still works with encryption enabled because chunk/content identity is handled by the content-addressed model rather than by inspecting encrypted payload semantics. In practice this typically stays comfortably above multi‑gigabit networking speeds, so compression doesn’t turn into the bottleneck. The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI; ordering is controlled via processor `Priority`. Tests and benchmarks exercise compressible vs random data.  
+Zstandard (zstd) via `ZstdSharp` — a managed C# implementation with no external native code, streaming-enabled by default and integrated into the storage pipeline. Compression is applied _before_ encryption (so it is effective); default compression level is `2` (`CompressionProcessor.CompressionLevel`). Dedup still works with encryption enabled because chunk/content identity is handled by the content-addressed model rather than by inspecting encrypted payload semantics. In practice this typically stays comfortably above multi‑gigabit networking speeds, so compression doesn’t turn into the bottleneck. The processor is implemented as a streaming `Pipe`/`CompressionStream` (no full-file temp files) and is registered via DI; ordering is controlled via processor `Priority`. Tests and benchmarks exercise compressible vs random data.  
 _See: `src/Cotton.Storage/Processors/CompressionProcessor.cs` and `src/Cotton.Storage.Tests/Processors/CompressionProcessorTests.cs`._
 
 ---
