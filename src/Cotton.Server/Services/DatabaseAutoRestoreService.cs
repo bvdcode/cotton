@@ -1,6 +1,3 @@
-using System.Buffers;
-using System.Data;
-using System.Security.Cryptography;
 using Cotton.Database;
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
@@ -9,6 +6,10 @@ using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Storage.Abstractions;
 using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using System.Buffers;
+using System.Data;
+using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
 {
@@ -216,8 +217,25 @@ namespace Cotton.Server.Services
 
         private async Task EnsurePostgresExtensionsAsync(CancellationToken cancellationToken)
         {
-            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
-            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
+            bool shouldCloseConnection = dbContext.Database.GetDbConnection().State != ConnectionState.Open;
+            await EnsureConnectionOpenAsync(cancellationToken);
+            try
+            {
+                await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
+                await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
+
+                if (dbContext.Database.GetDbConnection() is NpgsqlConnection npgsqlConnection)
+                {
+                    await npgsqlConnection.ReloadTypesAsync(cancellationToken);
+                }
+            }
+            finally
+            {
+                if (shouldCloseConnection)
+                {
+                    await dbContext.Database.CloseConnectionAsync();
+                }
+            }
         }
 
         private async Task NotifyAdminsAboutRestoreAsync(ResolvedBackupManifest backup, CancellationToken cancellationToken)
