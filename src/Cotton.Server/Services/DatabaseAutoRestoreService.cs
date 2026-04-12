@@ -49,6 +49,7 @@ namespace Cotton.Server.Services
             {
                 await RebuildDumpFileAsync(backup.Manifest, dumpPath, cancellationToken);
                 await postgresDump.RestoreFromFileAsync(dumpPath, cancellationToken);
+                await EnsurePostgresExtensionsAsync(cancellationToken);
                 logger.LogInformation(
                     "Automatic database restore finished successfully. BackupId={BackupId}",
                     backup.Manifest.BackupId);
@@ -206,6 +207,12 @@ namespace Cotton.Server.Services
             catch
             {
             }
+        }
+
+        private async Task EnsurePostgresExtensionsAsync(CancellationToken cancellationToken)
+        {
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS citext;", cancellationToken);
+            await dbContext.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS hstore;", cancellationToken);
         }
     }
 }
