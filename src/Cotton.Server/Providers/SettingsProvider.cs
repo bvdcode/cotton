@@ -10,6 +10,7 @@ using Cotton.Server.Services;
 using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Cotton.Server.Providers
 {
@@ -52,10 +53,18 @@ namespace Cotton.Server.Providers
                     return _cache;
                 }
 
-                var settings = _dbContext.ServerSettings
-                    .AsNoTracking()
-                    .OrderByDescending(s => s.CreatedAt)
-                    .FirstOrDefault();
+                CottonServerSettings? settings;
+                try
+                {
+                    settings = _dbContext.ServerSettings
+                        .AsNoTracking()
+                        .OrderByDescending(s => s.CreatedAt)
+                        .FirstOrDefault();
+                }
+                catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+                {
+                    settings = null;
+                }
                 if (settings is not null)
                 {
                     _cache = settings;
