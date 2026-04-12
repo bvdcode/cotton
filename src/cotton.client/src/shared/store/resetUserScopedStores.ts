@@ -28,7 +28,7 @@ const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
 export const resetUserScopedStores = (nextUserId: string | null): void => {
   if (nextUserId === null) {
     try {
-      localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+      sessionStorage.removeItem(LANGUAGE_STORAGE_KEY);
     } catch {
       // best-effort: storage APIs can be unavailable in hardened environments
     }
