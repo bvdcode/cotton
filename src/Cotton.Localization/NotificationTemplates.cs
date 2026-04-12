@@ -205,9 +205,25 @@
 
         public static string DatabaseRestoreCompletedTitle => "Database restored automatically";
 
-        public static string DatabaseRestoreCompletedContent(string backupId, DateTime createdAtUtc)
+        public static string DatabaseRestoreCompletedContent(
+            string backupId,
+            string sourceDatabase,
+            string sourceHost,
+            string sourcePort,
+            string serverTimezone,
+            DateTime createdAtUtc,
+            DateTime createdAtLocal,
+            DateTime restoredAtUtc,
+            DateTime restoredAtLocal)
         {
-            return $"The server restored the database automatically from backup '{backupId}' created at {createdAtUtc:O}.";
+            return
+                $"Automatic database restore completed successfully.\n\n" +
+                $"Backup ID: {backupId}\n" +
+                $"Source database: {sourceDatabase} ({sourceHost}:{sourcePort})\n\n" +
+                $"Backup created (UTC): {createdAtUtc:yyyy-MM-dd HH:mm:ss} UTC\n" +
+                $"Backup created ({serverTimezone}): {createdAtLocal:yyyy-MM-dd HH:mm:ss}\n" +
+                $"Restore completed (UTC): {restoredAtUtc:yyyy-MM-dd HH:mm:ss} UTC\n" +
+                $"Restore completed ({serverTimezone}): {restoredAtLocal:yyyy-MM-dd HH:mm:ss}";
         }
     }
 }
