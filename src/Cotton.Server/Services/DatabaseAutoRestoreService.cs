@@ -252,15 +252,34 @@ namespace Cotton.Server.Services
                 return;
             }
 
+            TimeZoneInfo serverTimeZone = await ResolveServerTimeZoneAsync(cancellationToken);
+            DateTime restoreCompletedUtc = DateTime.UtcNow;
+            DateTime createdAtLocal = TimeZoneInfo.ConvertTimeFromUtc(backup.Manifest.CreatedAtUtc, serverTimeZone);
+            DateTime restoreCompletedLocal = TimeZoneInfo.ConvertTimeFromUtc(restoreCompletedUtc, serverTimeZone);
+
             string title = NotificationTemplates.DatabaseRestoreCompletedTitle;
             string content = NotificationTemplates.DatabaseRestoreCompletedContent(
                 backup.Manifest.BackupId,
-                backup.Manifest.CreatedAtUtc);
+                backup.Manifest.SourceDatabase,
+                backup.Manifest.SourceHost,
+                backup.Manifest.SourcePort,
+                serverTimeZone.Id,
+                backup.Manifest.CreatedAtUtc,
+                createdAtLocal,
+                restoreCompletedUtc,
+                restoreCompletedLocal);
 
             Dictionary<string, string> metadata = new()
             {
                 ["backupId"] = backup.Manifest.BackupId,
                 ["createdAtUtc"] = backup.Manifest.CreatedAtUtc.ToString("O"),
+                ["createdAtLocal"] = createdAtLocal.ToString("O"),
+                ["restoreCompletedUtc"] = restoreCompletedUtc.ToString("O"),
+                ["restoreCompletedLocal"] = restoreCompletedLocal.ToString("O"),
+                ["sourceDatabase"] = backup.Manifest.SourceDatabase,
+                ["sourceHost"] = backup.Manifest.SourceHost,
+                ["sourcePort"] = backup.Manifest.SourcePort,
+                ["serverTimezone"] = serverTimeZone.Id,
                 ["manifestStorageKey"] = backup.ManifestStorageKey
             };
 
@@ -273,6 +292,23 @@ namespace Cotton.Server.Services
                     priority: NotificationPriority.High,
                     metadata: metadata);
             }
+        }
+
+        private async Task<TimeZoneInfo> ResolveServerTimeZoneAsync(CancellationToken cancellationToken)
+        {
+            string? timezone = await dbContext.ServerSettings
+                .AsNoTracking()
+                .OrderByDescending(x => x.CreatedAt)
+                .Select(x => x.Timezone)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(timezone)
+                && TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out TimeZoneInfo? zone))
+            {
+                return zone;
+            }
+
+            return TimeZoneInfo.Utc;
         }
     }
 }
