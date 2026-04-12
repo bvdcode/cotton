@@ -17,6 +17,8 @@ namespace Cotton.Server.Jobs
                 return;
             }
             _logger.LogInformation("CollectPerformanceJob started at {Time}", DateTimeOffset.Now);
+
+            // TODO: Collect metrics and send to monitoring system, if user has opted in to telemetry.
         }
     }
 }

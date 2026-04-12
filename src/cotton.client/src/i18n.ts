@@ -10,11 +10,10 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 const languageDetectorOptions = {
-  // Do not use localStorage (project rule). Language persistence is handled
-  // by the server-backed user preferences store.
   order: ["querystring", "cookie", "navigator", "htmlTag"],
+  lookupCookie: "cotton_lng",
   lookupFromNavigatorLanguage: true,
-  caches: [],
+  caches: ["cookie"],
 };
 
 i18n

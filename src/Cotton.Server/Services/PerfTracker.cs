@@ -18,5 +18,11 @@
             }
             return (DateTime.UtcNow - _lastChunkCreated.Value).TotalSeconds < ChunkTimeoutSeconds;
         }
+
+        public bool IsNightTime()
+        {
+            int hour = DateTime.UtcNow.Hour;
+            return hour < 6 || hour >= 22;
+        }
     }
 }
