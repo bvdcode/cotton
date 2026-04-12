@@ -13,6 +13,8 @@ import { STORAGE_KEY_PREFIX } from "./shared/config/storageKeys";
 const languageDetectorOptions = {
   order: ["querystring", "localStorage", "navigator", "htmlTag"],
   lookupLocalStorage: STORAGE_KEY_PREFIX + "language",
+  convertDetectedLanguage: (lng: string): string =>
+    lng.toLowerCase().split("-")[0],
   caches: ["localStorage"],
 };
 
@@ -24,6 +26,8 @@ i18n
     resources: i18nResources,
     fallbackLng,
     supportedLngs: supportedLanguages,
+    nonExplicitSupportedLngs: true,
+    load: "languageOnly",
     ns: allNamespaces,
     defaultNS,
     debug: false,
