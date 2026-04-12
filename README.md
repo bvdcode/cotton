@@ -29,6 +29,8 @@
 
 Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficient, and predictable as your dataset grows. It is built around its own **content-addressed storage engine**, **streaming AES-GCM crypto**, and a layout model that keeps navigation, restore, sharing, and background maintenance practical instead of fragile.
 
+The server core runs on a modern **ASP.NET Core + EF Core** stack and uses **Kestrel** for high-throughput HTTP streaming and API workloads.
+
 The core product is intentionally focused rather than trying to be everything at once; custom behavior is meant to live in isolated plugins and marketplace-delivered extensions as that layer settles into place.
 
 This is not just a storage engine with a web skin. Cotton is meant to feel good in real use:
@@ -147,11 +149,14 @@ This is the core difference from the more common self-hosted experience: Cotton'
 
 ## Performance Highlights
 
-- **Crypto headroom is deliberately high**  
-  Current measurements in this repo put decrypt around **9-10 GB/s** and encrypt around **14-16+ GB/s** on typical development hardware, with encryption scaling into memory-bandwidth limits rather than becoming the first bottleneck.
+- **Crypto headroom is deliberately high and memory-bound on modern hardware**  
+  Current measurements in this repo put decrypt around **9-10 GB/s** and encrypt around **14-16+ GB/s** (Intel 13th Gen and DDR5 4200 MT/s) on typical development hardware, with encryption scaling into memory-bandwidth limits rather than becoming the first bottleneck. In practice, crypto is strong enough to stay enabled as a default core behavior instead of a feature operators have to disable for throughput.
 
-- **Compression and encryption are in the main pipeline**  
-  Cotton compresses before encrypting, so storage savings happen inline during the transfer instead of depending on a later maintenance job, while still aiming to stay comfortably ahead of ordinary network speeds.
+- **Compression and encryption are in the main pipeline by default**  
+  Cotton compresses before encrypting, so storage savings happen inline during the transfer instead of depending on a later maintenance job. Compression tuning is intentionally chosen so the full pipeline stays out of the way of normal data throughput rather than fighting it.
+
+- **Modern server stack with a very fast HTTP engine**  
+  Cotton.Server is built on **ASP.NET Core** and **EF Core**, served by **Kestrel** - _One of the Fastest Web Servers in the World_ - so the API and streaming paths keep strong throughput under real transfer load.
 
 - **Partial reads are a first-class path**  
   Range requests, media seeking, and preview extraction are designed into the storage engine, so users do not need to fetch a huge object just to read a slice, resume a transfer, or grab a poster frame.
