@@ -205,9 +205,9 @@ export const AdminDatabaseBackupPage = () => {
   }, [backup, placeholder, t]);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={1}>
       <Paper>
-        <Stack spacing={2} p={2}>
+        <Stack p={2}>
           <Stack
             direction="row"
             justifyContent="space-between"
