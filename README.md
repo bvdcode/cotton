@@ -68,6 +68,9 @@ Cotton is built around a different set of outcomes:
 - **Navigation stays fast because the metadata model is structural**  
   Cotton separates content from layout and models trees explicitly. That avoids the path-string-heavy behavior that makes many systems feel sluggish or fragile once folders get large.
 
+- **Wide ecosystems are good, but throughput still decides daily usability**  
+  A broad app ecosystem looks great on paper, but what is the point if the native client cannot upload faster than a few MB/s. Cotton treats ingest throughput as a first-class product requirement: parallel chunk upload, missing-chunk retry, and sustained large-transfer behavior are in the main path.
+
 - **Large media stays usable without a full download**  
   Cotton can serve range reads, seek inside large files, and extract previews or video frames directly from chunked encrypted storage, including S3-backed storage, without reassembling the whole object first.
 
@@ -86,6 +89,9 @@ Cotton is built around a different set of outcomes:
 - **Sharing is meant to be used, not merely exposed**  
   Cotton has share pages, rich previews, token expiry and cleanup, and native platform sharing hooks where the browser supports them.
 
+- **Real-time sync is built in, not bolted on later**  
+  File and folder changes, preview readiness, notifications, and user preference updates are pushed over SignalR so active clients stay aligned without brute-force polling.
+
 In short: unlike systems that are mostly a filesystem wrapper, Cotton is designed so storage behavior, UI behavior, and operational behavior reinforce each other.
 
 ---
@@ -96,8 +102,10 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Browse folders with hundreds of thousands or millions of entries without the UI collapsing into a sluggish legacy experience.
 - Upload multi-GB files and large folders from the browser while the UI stays responsive.
 - Re-send only missing chunks after interruptions instead of restarting an entire upload.
+- Inspect active sessions (device/IP/location metadata) and revoke individual sessions without terminating every login.
 - Stream, seek, and partially download large media without reassembling the whole file first.
 - Extract previews and video frames from chunked encrypted storage without a full download, including when the backend is S3-backed.
+- Update file content while preserving previous content versions in a restore-friendly lineage.
 - Use built-in deduplication, inline compression, and streaming encryption in the main storage path.
 - Share files and folders with expiring links, share pages, previews, and native OS/browser share integration where available.
 - Generate previews for images, HEIC, PDF, text, audio, and video content.
@@ -196,6 +204,9 @@ If you are comparing Cotton to the usual self-hosted stack, this matters: the en
 - **Background jobs are built into normal operation**  
   Preview generation, manifest hashing, token cleanup, temp cleanup, performance collection, MIME fixes, and storage consistency checks are all part of the system rather than manual maintenance scripts.
 
+- **Maintenance work is load-aware**  
+  Cotton tracks active upload activity and quiet-hour windows, and uses that signal to skip, delay, or pace heavier jobs so background work does not sabotage foreground transfers.
+
 - **Operator-facing details are treated explicitly**  
   Setup captures storage mode, email mode, and timezone up front, because things like notifications, disk activity, and retention behavior should be deliberate.
 
@@ -211,6 +222,8 @@ Cotton's current reclaim model is already cautious and restore-friendly. More ad
 - Preview extraction includes practical media details that quietly improve daily use: embedded cover art from audio tracks (including MP3) and attached cover art from containers like MKV when present.
 - Audio playback supports time-synced lyrics (karaoke-style) from a sidecar `.lrc` file located next to the track.
 - Search is tuned for responsiveness in normal workflows: debounced client queries with normalized key matching on the server keep lookup behavior fast and predictable.
+- WebDAV token reset is immediate in practice: auth cache versioning invalidates old token paths quickly, and failed WebDAV token attempts trigger account notifications.
+- User preferences changed in one active client are propagated to other active clients in near real time.
 - Password reset, email verification, and email delivery modes are built into setup: use your own SMTP or use Cotton Cloud mail if you do not want to run mail infrastructure (cloud mode requires internet access and telemetry enabled).
 - Notifications cover real account and storage events, including failed logins, login success, TOTP lockouts, WebDAV token resets, and shared-file downloads.
 - The first-run experience is a guided setup wizard with safe defaults and expert paths instead of a half-documented config scavenger hunt.
@@ -402,6 +415,12 @@ Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/c
 
 **Client-side upload pipeline**  
 Browser uploads hash chunks in a Web Worker (one pass for both chunk-hash and rolling file-hash), parallelize uploads (default 4 in-flight), send only missing chunks on retry. UI stays responsive even with 10k+ file folders.
+
+**Session management with actionable telemetry**  
+Session inspection groups refresh-token activity by session and surfaces practical metadata (device, IP, location, current-session flag, effective session duration), so users can revoke exactly the session they do not trust instead of forcing a global logout.
+
+**SignalR hub with resilient client behavior**  
+Realtime updates are delivered through a dedicated event hub, with client reconnect strategy and transport fallback to keep file/tree/preview/notification flows in sync under imperfect network conditions.
 
 ---
 
