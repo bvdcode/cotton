@@ -5,7 +5,6 @@ export interface PublicServerInfo {
   uptime: string;
   serverHasUsers: boolean;
   product: string;
-  isServerInitialized: boolean;
 }
 
 export interface ServerSettings {
