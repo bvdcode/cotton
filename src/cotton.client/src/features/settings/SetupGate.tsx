@@ -38,7 +38,7 @@ export function SetupGate({ children }: Props) {
     );
   }
 
-  const isInitialized = data?.isServerInitialized ?? false;
+  const isInitialized = data?.isServerInitialized ?? true;
   const onSetupPage = location.pathname === "/setup";
 
   if (!isInitialized && !onSetupPage) {
