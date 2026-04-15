@@ -3,11 +3,8 @@ import type { JsonValue } from "../types/json";
 
 export interface PublicServerInfo {
   uptime: string;
-  version: string;
-  currentTime: string;
   serverHasUsers: boolean;
   product: string;
-  instanceIdHash: string;
   isServerInitialized: boolean;
 }
 

@@ -46,10 +46,15 @@ namespace Cotton.Server.Controllers
             {
                 Uptime = uptime,
                 Version = version,
-                CurrentTime = DateTime.UtcNow,
+
+                // TODO: Remove and return bad request when user tries to login if server is not initialized
                 ServerHasUsers = serverHasUsers,
                 Product = Constants.ProductName,
+
+                // TODO: Change to token-based approach
                 InstanceIdHash = instanceIdHash,
+
+                // Move to authorized endpoint
                 IsServerInitialized = isServerInitialized,
             });
         }
