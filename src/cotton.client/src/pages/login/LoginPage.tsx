@@ -253,7 +253,7 @@ const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({
         color="text.secondary"
         sx={{ display: "flex", alignItems: "center" }}
       >
-        <GitHub fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+        <GitHub fontSize="small" sx={{ mr: 0.5 }} />
       </Link>
       <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
       <Link
@@ -468,10 +468,11 @@ export const LoginPage = () => {
       )}
       <Box
         sx={{
-          height: "100%",
+          minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          py: { xs: 2, sm: 4 },
         }}
       >
         <Container
@@ -479,22 +480,21 @@ export const LoginPage = () => {
           sx={{
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
-            width: "100%",
             px: { xs: 2, sm: 3 },
           }}
         >
           <Paper
             sx={{
-              p: { xs: 2.5, sm: 4 },
+              p: { xs: 3, sm: 4 },
             }}
           >
             <Box
               display="flex"
               justifyContent="space-between"
               alignItems="center"
+              sx={{ mb: 3 }}
             >
-              <Typography variant="h4" component="h1" gutterBottom>
+              <Typography variant="h4" component="h1">
                 {requiresTwoFactor ? t("twoFactor.title") : t("title")}
               </Typography>
               <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
@@ -525,7 +525,7 @@ export const LoginPage = () => {
                 />
               )}
 
-              <Stack spacing={2} sx={{ mt: 2.5 }}>
+              <Stack spacing={2.5}>
                 <LoginAlerts
                   error={error}
                   forgotPasswordMessage={forgotPasswordMessage}
