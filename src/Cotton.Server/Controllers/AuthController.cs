@@ -29,6 +29,7 @@ using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -432,12 +433,14 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            var uptime = DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
-            if (uptime.TotalMinutes > 5)
+            var uptime = DateTimeOffset.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
+            if (uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay)
             {
-                _logger.LogWarning("Attempt to create initial admin user after uptime of {Uptime}. " +
-                    "Please restart the application to enable initial admin user creation.", uptime);
-                return null;
+                string errorMessage = $"Initial admin user creation is disabled after " + 
+                    Constants.AdminAutocreateMinutesDelay + " minutes of uptime. " +
+                    "Please restart the application/container to enable it.";
+                _logger.LogWarning("{msg}", errorMessage);
+                throw new BadRequestException<User>(errorMessage);
             }
             User user = new()
             {
