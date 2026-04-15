@@ -171,7 +171,7 @@
     },
     "firstRun": {
       "title": "Configuración inicial",
-      "message": "Este servidor todavía no tiene usuarios. Las credenciales que introduzcas se usarán para crear la primera cuenta de administrador. Esto solo es posible durante los primeros minutos después de que se inicie la instancia. Tiempo en línea del servidor: {{uptime}}. Si se ha pasado la ventana de tiempo, reinicia el servidor e inténtalo de nuevo."
+      "message": "Este servidor todavía no tiene usuarios. Las credenciales que introduzcas se usarán para crear la primera cuenta de administrador. Esto solo es posible durante los primeros minutos después de que se inicie la instancia. Si se ha pasado la ventana de tiempo, reinicia el servidor e inténtalo de nuevo."
     }
   },
   "notFound": {

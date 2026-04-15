@@ -15,6 +15,7 @@ namespace Cotton.Models
         /// <summary>
         /// Gets or sets the hashed instance identifier.
         /// </summary>
+        [Obsolete("This property is deprecated and should not be used. It may be removed in future versions.")]
         public string InstanceIdHash { get; set; } = null!;
 
         /// <summary>
