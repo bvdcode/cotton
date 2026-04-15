@@ -457,94 +457,112 @@ export const LoginPage = () => {
           caption={t("restoring.caption")}
         />
       )}
-      <Container maxWidth="sm">
-        <Paper
+      <Box
+        sx={{
+          minHeight: "100dvh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          py: { xs: 2, sm: 4 },
+        }}
+      >
+        <Container
+          maxWidth="sm"
           sx={{
-            mt: 8,
-            p: 4,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            width: "100%",
+            px: { xs: 2, sm: 3 },
           }}
         >
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
+          <Paper
+            sx={{
+              p: { xs: 2.5, sm: 4 },
+            }}
           >
-            <Typography variant="h4" component="h1" gutterBottom>
-              {requiresTwoFactor ? t("twoFactor.title") : t("title")}
-            </Typography>
-            <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
-          </Box>
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            noValidate
-            autoComplete="off"
-          >
-            {!requiresTwoFactor ? (
-              <CredentialsFields
-                username={username}
-                password={password}
-                onUsernameChange={setUsername}
-                onPasswordChange={setPassword}
-                disabled={loading}
-                usernameLabel={t("usernameLabel")}
-                passwordLabel={t("passwordLabel")}
-              />
-            ) : (
-              <TwoFactorFields
-                caption={t("twoFactor.caption")}
-                digitAriaLabel={t("twoFactor.digit")}
-                value={twoFactorCode}
-                onChange={setTwoFactorCode}
-                disabled={loading}
-              />
-            )}
-
-            <Stack spacing={2} sx={{ mt: 2.5 }}>
-              <LoginAlerts
-                error={error}
-                forgotPasswordMessage={forgotPasswordMessage}
-              />
-              {showFirstRunAlert && (
-                <FirstRunAlert
-                  title={t("firstRun.title")}
-                  message={t("firstRun.message")}
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography variant="h4" component="h1" gutterBottom>
+                {requiresTwoFactor ? t("twoFactor.title") : t("title")}
+              </Typography>
+              <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
+            </Box>
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+              noValidate
+              autoComplete="off"
+            >
+              {!requiresTwoFactor ? (
+                <CredentialsFields
+                  username={username}
+                  password={password}
+                  onUsernameChange={setUsername}
+                  onPasswordChange={setPassword}
+                  disabled={loading}
+                  usernameLabel={t("usernameLabel")}
+                  passwordLabel={t("passwordLabel")}
+                />
+              ) : (
+                <TwoFactorFields
+                  caption={t("twoFactor.caption")}
+                  digitAriaLabel={t("twoFactor.digit")}
+                  value={twoFactorCode}
+                  onChange={setTwoFactorCode}
+                  disabled={loading}
                 />
               )}
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  disabled={loading}
-                  fullWidth
-                >
-                  {loading ? t("loggingIn") : t("loginButton")}
-                </Button>
-                {!requiresTwoFactor && (
-                  <TrustDeviceToggle
-                    active={trustDevice}
-                    onToggle={() => setTrustDevice((v) => !v)}
-                    disabled={loading}
-                    tooltip={t("rememberMe")}
+
+              <Stack spacing={2} sx={{ mt: 2.5 }}>
+                <LoginAlerts
+                  error={error}
+                  forgotPasswordMessage={forgotPasswordMessage}
+                />
+                {showFirstRunAlert && (
+                  <FirstRunAlert
+                    title={t("firstRun.title")}
+                    message={t("firstRun.message")}
                   />
                 )}
-              </Box>
-            </Stack>
-          </Box>
-        </Paper>
-        {!requiresTwoFactor && (
-          <ForgotPasswordLink
-            onClick={handleForgotPassword}
-            disabled={loading || forgotPasswordSending}
-            label={
-              forgotPasswordSending
-                ? t("forgotPassword.sending")
-                : t("forgotPassword.link")
-            }
-          />
-        )}
-      </Container>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    disabled={loading}
+                    fullWidth
+                  >
+                    {loading ? t("loggingIn") : t("loginButton")}
+                  </Button>
+                  {!requiresTwoFactor && (
+                    <TrustDeviceToggle
+                      active={trustDevice}
+                      onToggle={() => setTrustDevice((v) => !v)}
+                      disabled={loading}
+                      tooltip={t("rememberMe")}
+                    />
+                  )}
+                </Box>
+              </Stack>
+            </Box>
+          </Paper>
+          {!requiresTwoFactor && (
+            <ForgotPasswordLink
+              onClick={handleForgotPassword}
+              disabled={loading || forgotPasswordSending}
+              label={
+                forgotPasswordSending
+                  ? t("forgotPassword.sending")
+                  : t("forgotPassword.link")
+              }
+            />
+          )}
+        </Container>
+      </Box>
     </>
   );
 };
