@@ -29,6 +29,7 @@ using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -52,6 +53,7 @@ namespace Cotton.Server.Controllers
         public const int RefreshTokenLength = 32;
         public const string CookieAccessTokenKey = "access_token";
         public const string CookieRefreshTokenKey = "refresh_token";
+        private static readonly EmailAddressAttribute EmailValidator = new();
 
         [Authorize]
         [HttpGet("webdav/token")]
@@ -208,6 +210,12 @@ namespace Cotton.Server.Controllers
 
         private async Task<User?> GetUserOrTryGetNewAsync(LoginRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.Username))
+            {
+                return null;
+            }
+
+            request.Username = request.Username.Trim();
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.Username == request.Username || x.Email == request.Username);
             if (user != null)
@@ -406,7 +414,16 @@ namespace Cotton.Server.Controllers
 
         private async Task<User?> TryGetNewUserAsync(LoginRequest request)
         {
-            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out var username, out _))
+            string login = request.Username.Trim();
+            string? email = null;
+            string username;
+
+            if (EmailValidator.IsValid(login))
+            {
+                email = login;
+                username = await BuildAvailableUsernameFromEmailAsync(login);
+            }
+            else if (!UsernameValidator.TryNormalizeAndValidate(login, out username, out _))
             {
                 return null;
             }
@@ -418,6 +435,7 @@ namespace Cotton.Server.Controllers
                 {
                     Role = UserRole.User,
                     Username = username,
+                    Email = email,
                     PasswordPhc = _hasher.Hash(request.Password),
                     WebDavTokenPhc = _hasher.Hash(request.Password),
                 };
@@ -446,6 +464,7 @@ namespace Cotton.Server.Controllers
             {
                 Role = UserRole.Admin,
                 Username = username,
+                Email = email,
                 PasswordPhc = _hasher.Hash(request.Password),
                 WebDavTokenPhc = _hasher.Hash(request.Password),
             };
@@ -453,6 +472,54 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Created initial admin user: {Username}", user.Username);
             return user;
+        }
+
+        private async Task<string> BuildAvailableUsernameFromEmailAsync(string email)
+        {
+            string localPart = email.Split('@', 2)[0].Trim().ToLowerInvariant();
+            var raw = localPart.Where(static c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')).ToArray();
+            string candidate = raw.Length == 0 ? "user" : new string(raw);
+
+            if (candidate[0] >= '0' && candidate[0] <= '9')
+            {
+                candidate = $"u{candidate}";
+            }
+
+            if (candidate.Length < UsernameValidator.MinLength)
+            {
+                candidate = candidate.PadRight(UsernameValidator.MinLength, '0');
+            }
+
+            if (candidate.Length > UsernameValidator.MaxLength)
+            {
+                candidate = candidate[..UsernameValidator.MaxLength];
+            }
+
+            if (!UsernameValidator.TryNormalizeAndValidate(candidate, out var normalized, out _))
+            {
+                normalized = "user";
+            }
+
+            if (!await _dbContext.Users.AnyAsync(x => x.Username == normalized))
+            {
+                return normalized;
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                string suffix = Guid.NewGuid().ToString("N")[..6];
+                int maxBaseLength = UsernameValidator.MaxLength - suffix.Length;
+                string basePart = normalized[..Math.Min(normalized.Length, maxBaseLength)];
+                string withSuffix = $"{basePart}{suffix}";
+                if (await _dbContext.Users.AnyAsync(x => x.Username == withSuffix))
+                {
+                    continue;
+                }
+
+                return withSuffix;
+            }
+
+            return $"user{Guid.NewGuid():N}"[..UsernameValidator.MaxLength];
         }
 
         private async Task<ExtendedRefreshToken> CreateRefreshTokenAsync(
