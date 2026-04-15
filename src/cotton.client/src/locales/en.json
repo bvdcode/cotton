@@ -143,7 +143,7 @@
     }
   },
   "login": {
-    "title": "Sign in to your account",
+    "title": "Cotton Cloud",
     "usernameLabel": "Username",
     "passwordLabel": "Password",
     "rememberMe": "Trust this device",
@@ -171,7 +171,7 @@
     },
     "firstRun": {
       "title": "Initial Setup",
-      "message": "This server has no users yet. The credentials you enter will be used to create the first administrator account. This is only possible during the first few minutes after the instance starts. If the time window has passed, restart the server and try again."
+      "message": "No users exist yet. The credentials you enter will create the first administrator account. This is only available shortly after startup. Restart the instance if needed."
     }
   },
   "notFound": {
