@@ -14,7 +14,12 @@ import {
   Link,
   Divider,
 } from "@mui/material";
-import { GitHub, Shield, ShieldOutlined } from "@mui/icons-material";
+import {
+  GitHub,
+  Shield,
+  ShieldOutlined,
+  KeyboardArrowRight,
+} from "@mui/icons-material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
 import {
@@ -463,15 +468,14 @@ export const LoginPage = () => {
       )}
       <Box
         sx={{
-          minHeight: "100dvh",
+          height: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          py: { xs: 2, sm: 4 },
         }}
       >
         <Container
-          maxWidth="sm"
+          maxWidth="xs"
           sx={{
             display: "flex",
             flexDirection: "column",
@@ -532,16 +536,14 @@ export const LoginPage = () => {
                     message={t("firstRun.message")}
                   />
                 )}
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    disabled={loading}
-                    fullWidth
-                  >
-                    {submitButtonLabel}
-                  </Button>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
                   {!requiresTwoFactor && (
                     <TrustDeviceToggle
                       active={trustDevice}
@@ -550,6 +552,15 @@ export const LoginPage = () => {
                       tooltip={t("rememberMe")}
                     />
                   )}
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    disabled={loading}
+                    endIcon={<KeyboardArrowRight />}
+                  >
+                    {submitButtonLabel}
+                  </Button>
                 </Box>
               </Stack>
             </Box>
