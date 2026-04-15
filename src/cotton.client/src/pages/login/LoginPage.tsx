@@ -33,6 +33,7 @@ import {
   type FormEvent,
 } from "react";
 import { authApi } from "../../shared/api/authApi";
+import { hasApiErrorToastBeenDispatched } from "../../shared/api/httpClient";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import Loader from "../../shared/ui/Loader";
 import axios from "axios";
@@ -359,6 +360,10 @@ export const LoginPage = () => {
         if (hint === "locked") {
           setRequiresTwoFactor(true);
           showToast(t("twoFactor.locked"), "error");
+          return;
+        }
+
+        if (hasApiErrorToastBeenDispatched(e)) {
           return;
         }
       }
