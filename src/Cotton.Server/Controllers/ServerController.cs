@@ -44,7 +44,7 @@ namespace Cotton.Server.Controllers
             return Ok(new PublicServerInfo()
             {
                 // TODO: Remove and return bad request when user tries to login if server is not initialized
-                ServerHasUsers = serverHasUsers,
+                CanCreateInitialAdmin = serverHasUsers,
                 // TODO: Remove and return bad request when user tries to login if server is not initialized
                 Uptime = uptime,
 

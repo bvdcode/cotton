@@ -16,13 +16,15 @@
         public const char DefaultPathSeparator = '/';
 
         /// <summary>
-        /// Gets the short name of the product, which is "Cotton".
+        /// Gets the short name of the product, which is "cotton".
         /// </summary>
-        public const string ShortProductName = "Cotton";
+        public const string ShortProductName = "cotton";
 
         /// <summary>
         /// Gets the name of the product, which is "Cotton Cloud".
         /// </summary>
         public const string ProductName = "Cotton Cloud";
+
+        public const int AdminAutocreateMinutesDelay = 5;
     }
 }
