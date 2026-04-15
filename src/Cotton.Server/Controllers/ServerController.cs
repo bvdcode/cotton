@@ -15,6 +15,7 @@ using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quartz;
+using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
@@ -36,11 +37,11 @@ namespace Cotton.Server.Controllers
         [HttpGet("info")]
         public async Task<IActionResult> GetServerInfo()
         {
-            string instanceIdHash = _settings.GetServerSettings().InstanceId.ToString().Sha256();
+            string instanceIdHash = _settings.GetServerSettings().GetInstanceIdHash();
             string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
             bool serverHasUsers = await _settings.ServerHasUsersAsync();
             bool isServerInitialized = await _settings.IsServerInitializedAsync();
-            TimeSpan uptime = DateTime.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
+            TimeSpan uptime = DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
             return Ok(new PublicServerInfo()
             {
                 Uptime = uptime,
