@@ -75,6 +75,7 @@ namespace Cotton.Server
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
+            builder.Services.AddHostedService<AppVersionTrackerService>();
 
             var app = builder.Build();
             app.UseForwardedHeaders();
