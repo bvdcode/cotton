@@ -166,25 +166,18 @@ const TwoFactorFields: React.FC<TwoFactorFieldsProps> = ({
   disabled,
 }) => {
   return (
-    <Box sx={{ mt: 3 }}>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ mb: 3 }}
-        align="center"
-      >
+    <Stack spacing={2.5}>
+      <Typography variant="body2" color="text.secondary" align="center">
         {caption}
       </Typography>
-      <Box sx={{ mb: 2 }}>
-        <OneTimeCodeInput
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-          autoFocus={true}
-          inputAriaLabel={digitAriaLabel}
-        />
-      </Box>
-    </Box>
+      <OneTimeCodeInput
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        autoFocus={true}
+        inputAriaLabel={digitAriaLabel}
+      />
+    </Stack>
   );
 };
 
@@ -512,27 +505,26 @@ export const LoginPage = () => {
               noValidate
               autoComplete="off"
             >
-              {!requiresTwoFactor ? (
-                <CredentialsFields
-                  username={username}
-                  password={password}
-                  onUsernameChange={setUsername}
-                  onPasswordChange={setPassword}
-                  disabled={loading}
-                  usernameLabel={t("usernameLabel")}
-                  passwordLabel={t("passwordLabel")}
-                />
-              ) : (
-                <TwoFactorFields
-                  caption={t("twoFactor.caption")}
-                  digitAriaLabel={t("twoFactor.digit")}
-                  value={twoFactorCode}
-                  onChange={setTwoFactorCode}
-                  disabled={loading}
-                />
-              )}
-
               <Stack spacing={2.5}>
+                {!requiresTwoFactor ? (
+                  <CredentialsFields
+                    username={username}
+                    password={password}
+                    onUsernameChange={setUsername}
+                    onPasswordChange={setPassword}
+                    disabled={loading}
+                    usernameLabel={t("usernameLabel")}
+                    passwordLabel={t("passwordLabel")}
+                  />
+                ) : (
+                  <TwoFactorFields
+                    caption={t("twoFactor.caption")}
+                    digitAriaLabel={t("twoFactor.digit")}
+                    value={twoFactorCode}
+                    onChange={setTwoFactorCode}
+                    disabled={loading}
+                  />
+                )}
                 {showFirstRunAlert && (
                   <FirstRunAlert
                     title={t("firstRun.title")}
@@ -601,7 +593,11 @@ export const LoginPage = () => {
                         }}
                       >
                         {loading ? (
-                          <CircularProgress color="inherit" size={18} thickness={5} />
+                          <CircularProgress
+                            color="inherit"
+                            size={18}
+                            thickness={5}
+                          />
                         ) : (
                           <KeyboardArrowRight />
                         )}
