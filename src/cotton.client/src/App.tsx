@@ -6,6 +6,7 @@ import { ConfirmProvider } from "material-ui-confirm";
 import { useEventHub } from "./features/notifications";
 import { useEffect } from "react";
 import i18n from "./i18n";
+import { useTheme } from "./app/providers";
 import {
   selectUiLanguage,
   useUserPreferencesStore,
@@ -33,6 +34,20 @@ const LanguageBootstrap = () => {
   return null;
 };
 
+const ToastBootstrap = () => {
+  const { resolvedMode } = useTheme();
+
+  return (
+    <ToastContainer
+      theme={(resolvedMode as "light" | "dark" | "colored") ?? "colored"}
+      autoClose={4500}
+      newestOnTop
+      closeOnClick
+      pauseOnHover
+    />
+  );
+};
+
 function App() {
   return (
     <ThemeContextProvider>
@@ -40,13 +55,7 @@ function App() {
         <AuthProvider>
           <EventHubBootstrap />
           <LanguageBootstrap />
-          <ToastContainer
-            position="top-center"
-            autoClose={4500}
-            newestOnTop
-            closeOnClick
-            pauseOnHover
-          />
+          <ToastBootstrap />
           <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>
