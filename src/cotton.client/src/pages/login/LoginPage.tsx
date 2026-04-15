@@ -2,6 +2,7 @@ import {
   Box,
   Paper,
   Button,
+  CircularProgress,
   TextField,
   Container,
   Typography,
@@ -9,6 +10,8 @@ import {
   Alert,
   AlertTitle,
   Stack,
+  Snackbar,
+  Grow,
   IconButton,
   Tooltip,
   Link,
@@ -39,6 +42,15 @@ import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 type LoginErrorData = {
   message?: string;
   detail?: string;
+};
+
+type ToastSeverity = "error" | "success";
+
+type ToastState = {
+  key: number;
+  open: boolean;
+  severity: ToastSeverity;
+  message: string;
 };
 
 type TwoFactorServerHint = "required" | "invalid" | "locked";
@@ -91,27 +103,6 @@ const FirstRunAlert: React.FC<FirstRunAlertProps> = ({ title, message }) => {
       <AlertTitle>{title}</AlertTitle>
       {message}
     </Alert>
-  );
-};
-
-type LoginAlertsProps = {
-  error: string;
-  forgotPasswordMessage: string;
-};
-
-const LoginAlerts: React.FC<LoginAlertsProps> = ({
-  error,
-  forgotPasswordMessage,
-}) => {
-  if (!error && !forgotPasswordMessage) return null;
-
-  return (
-    <Stack spacing={2}>
-      {error && <Alert color="error">{error}</Alert>}
-      {forgotPasswordMessage && (
-        <Alert color="success">{forgotPasswordMessage}</Alert>
-      )}
-    </Stack>
   );
 };
 
@@ -278,7 +269,6 @@ export const LoginPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation("login");
-  const [error, setError] = useState("");
   const {
     isAuthenticated,
     isInitializing,
@@ -296,7 +286,12 @@ export const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const autoSubmitTriggeredRef = useRef(false);
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
-  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
+  const [toast, setToast] = useState<ToastState>({
+    key: 0,
+    open: false,
+    severity: "error",
+    message: "",
+  });
 
   const serverInfo = useServerInfoStore((s) => s.data);
   const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
@@ -305,8 +300,27 @@ export const LoginPage = () => {
     fetchServerInfo();
   }, [fetchServerInfo]);
 
+  const showToast = useCallback((message: string, severity: ToastSeverity) => {
+    setToast({
+      key: Date.now(),
+      open: true,
+      severity,
+      message,
+    });
+  }, []);
+
+  const handleToastClose = useCallback(
+    (_event?: React.SyntheticEvent | Event, reason?: string) => {
+      if (reason === "clickaway") return;
+      setToast((prev) => ({
+        ...prev,
+        open: false,
+      }));
+    },
+    [],
+  );
+
   const submitLogin = useCallback(async () => {
-    setError("");
     setLoading(true);
 
     try {
@@ -314,7 +328,7 @@ export const LoginPage = () => {
         requiresTwoFactor &&
         normalizeTwoFactorCode(twoFactorCode).length < 6
       ) {
-        setError(t("twoFactor.required"));
+        showToast(t("twoFactor.required"), "error");
         return;
       }
 
@@ -340,24 +354,23 @@ export const LoginPage = () => {
         if (hint === "required") {
           setRequiresTwoFactor(true);
           setTwoFactorCode("");
-          setError("");
           return;
         }
 
         if (hint === "invalid") {
           setRequiresTwoFactor(true);
-          setError(t("twoFactor.invalid"));
+          showToast(t("twoFactor.invalid"), "error");
           return;
         }
 
         if (hint === "locked") {
           setRequiresTwoFactor(true);
-          setError(t("twoFactor.locked"));
+          showToast(t("twoFactor.locked"), "error");
           return;
         }
       }
 
-      setError(t("errorMessage"));
+      showToast(t("errorMessage"), "error");
     } finally {
       setLoading(false);
     }
@@ -368,6 +381,7 @@ export const LoginPage = () => {
     password,
     trustDevice,
     t,
+    showToast,
     setAuthenticated,
     navigate,
   ]);
@@ -381,25 +395,22 @@ export const LoginPage = () => {
   );
 
   const handleForgotPassword = useCallback(async () => {
-    setError("");
-    setForgotPasswordMessage("");
-
     const trimmed = username.trim();
     if (!trimmed || !isEmail(trimmed)) {
-      setError(t("forgotPassword.enterEmail"));
+      showToast(t("forgotPassword.enterEmail"), "error");
       return;
     }
 
     setForgotPasswordSending(true);
     try {
       await authApi.forgotPassword(trimmed);
-      setForgotPasswordMessage(t("forgotPassword.sent"));
+      showToast(t("forgotPassword.sent"), "success");
     } catch {
-      setForgotPasswordMessage(t("forgotPassword.sent"));
+      showToast(t("forgotPassword.sent"), "success");
     } finally {
       setForgotPasswordSending(false);
     }
-  }, [username, t]);
+  }, [username, t, showToast]);
 
   useEffect(() => {
     // If we can silently restore a session, do it and keep loader overlay while it runs.
@@ -449,13 +460,9 @@ export const LoginPage = () => {
 
   const isFirstRunMode = showFirstRunAlert && !requiresTwoFactor;
 
-  const submitButtonLabel = loading
-    ? isFirstRunMode
-      ? t("firstRun.continuing")
-      : t("loggingIn")
-    : isFirstRunMode
-      ? t("firstRun.continueButton")
-      : t("loginButton");
+  const submitButtonLabel = isFirstRunMode
+    ? t("firstRun.continueButton")
+    : t("loginButton");
 
   return (
     <>
@@ -526,10 +533,6 @@ export const LoginPage = () => {
               )}
 
               <Stack spacing={2.5}>
-                <LoginAlerts
-                  error={error}
-                  forgotPasswordMessage={forgotPasswordMessage}
-                />
                 {showFirstRunAlert && (
                   <FirstRunAlert
                     title={t("firstRun.title")}
@@ -557,9 +560,53 @@ export const LoginPage = () => {
                     variant="contained"
                     color="primary"
                     disabled={loading}
-                    endIcon={<KeyboardArrowRight />}
+                    sx={{
+                      minWidth: loading ? 44 : 0,
+                      px: loading ? 0.75 : 2.25,
+                      transition: (theme) =>
+                        theme.transitions.create(["min-width", "padding"], {
+                          duration: theme.transitions.duration.shorter,
+                        }),
+                    }}
                   >
-                    {submitButtonLabel}
+                    <Box
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Box
+                        component="span"
+                        sx={{
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          maxWidth: loading ? 0 : 220,
+                          opacity: loading ? 0 : 1,
+                          transition: (theme) =>
+                            theme.transitions.create(["max-width", "opacity"], {
+                              duration: theme.transitions.duration.shorter,
+                            }),
+                        }}
+                      >
+                        {submitButtonLabel}
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 20,
+                          height: 20,
+                        }}
+                      >
+                        {loading ? (
+                          <CircularProgress color="inherit" size={18} thickness={5} />
+                        ) : (
+                          <KeyboardArrowRight />
+                        )}
+                      </Box>
+                    </Box>
                   </Button>
                 </Box>
               </Stack>
@@ -578,6 +625,23 @@ export const LoginPage = () => {
           )}
         </Container>
       </Box>
+      <Snackbar
+        key={toast.key}
+        open={toast.open}
+        onClose={handleToastClose}
+        autoHideDuration={5000}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        TransitionComponent={Grow}
+        transitionDuration={{ enter: 260, exit: 220 }}
+      >
+        <Alert
+          severity={toast.severity}
+          variant="filled"
+          onClose={handleToastClose}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
