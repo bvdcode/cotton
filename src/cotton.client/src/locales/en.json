@@ -173,7 +173,7 @@
       "title": "Initial Setup",
       "message": "No users exist yet. The credentials you enter will create the first administrator account. This is only available shortly after startup. Restart the instance if needed.",
       "continueButton": "Continue",
-      "continuing": "Continuing..."
+      "continuing": "Creating first user..."
     }
   },
   "notFound": {
