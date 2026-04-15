@@ -11,6 +11,7 @@ import {
   useUserPreferencesStore,
 } from "./shared/store/userPreferencesStore";
 import { useUserPreferencesRealtimeEvents } from "./shared/store/useUserPreferencesRealtimeEvents";
+import { ToastContainer } from "react-toastify";
 
 const EventHubBootstrap = () => {
   useEventHub();
@@ -39,6 +40,13 @@ function App() {
         <AuthProvider>
           <EventHubBootstrap />
           <LanguageBootstrap />
+          <ToastContainer
+            position="top-center"
+            autoClose={4500}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+          />
           <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>
