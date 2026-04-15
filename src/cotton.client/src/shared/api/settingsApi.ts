@@ -2,7 +2,6 @@ import { httpClient } from "./httpClient";
 import type { JsonValue } from "../types/json";
 
 export interface PublicServerInfo {
-  uptime: string;
   canCreateInitialAdmin: boolean;
   product: string;
 }
