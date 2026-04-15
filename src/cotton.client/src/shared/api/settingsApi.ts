@@ -3,7 +3,7 @@ import type { JsonValue } from "../types/json";
 
 export interface PublicServerInfo {
   uptime: string;
-  serverHasUsers: boolean;
+  canCreateInitialAdmin: boolean;
   product: string;
 }
 
