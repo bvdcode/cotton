@@ -107,10 +107,7 @@ type FirstRunAlertProps = {
   message: string;
 };
 
-const FirstRunAlert: React.FC<FirstRunAlertProps> = ({
-  title,
-  message,
-}) => {
+const FirstRunAlert: React.FC<FirstRunAlertProps> = ({ title, message }) => {
   return (
     <Alert severity="info" sx={{ mb: 2 }}>
       <AlertTitle>{title}</AlertTitle>
@@ -476,7 +473,7 @@ export const LoginPage = () => {
     hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
 
   const showFirstRunAlert =
-    serverInfo !== null && !serverInfo.serverHasUsers;
+    serverInfo !== null && serverInfo.canCreateInitialAdmin;
 
   return (
     <>
