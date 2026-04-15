@@ -40,23 +40,27 @@ namespace Cotton.Server.Controllers
             string instanceIdHash = _settings.GetServerSettings().GetInstanceIdHash();
             string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
             bool serverHasUsers = await _settings.ServerHasUsersAsync();
-            bool isServerInitialized = await _settings.IsServerInitializedAsync();
             TimeSpan uptime = DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
             return Ok(new PublicServerInfo()
             {
-                Uptime = uptime,
-                Version = version,
-
                 // TODO: Remove and return bad request when user tries to login if server is not initialized
                 ServerHasUsers = serverHasUsers,
-                Product = Constants.ProductName,
+                // TODO: Remove and return bad request when user tries to login if server is not initialized
+                Uptime = uptime,
 
                 // TODO: Change to token-based approach
                 InstanceIdHash = instanceIdHash,
 
-                // Move to authorized endpoint
-                IsServerInitialized = isServerInitialized,
+                Product = Constants.ProductName,
             });
+        }
+
+        [HttpGet("settings/is-setup-complete")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> IsServerInitialized()
+        {
+            bool isServerInitialized = await _settings.IsServerInitializedAsync();
+            return Ok(new { IsServerInitialized = isServerInitialized });
         }
 
         [HttpPost("settings")]
