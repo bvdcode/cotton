@@ -74,34 +74,6 @@ function tryGetTwoFactorHint(args: {
   return null;
 }
 
-function formatUptime(uptimeStr: string): string {
-  const match = /^(\d+)\.?(\d{2}):(\d{2}):(\d{2})/.exec(uptimeStr);
-  if (match) {
-    const days = parseInt(match[1], 10);
-    const hours = parseInt(match[2], 10);
-    const minutes = parseInt(match[3], 10);
-    const seconds = parseInt(match[4], 10);
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (parts.length === 0) parts.push(`${seconds}s`);
-    return parts.join(" ");
-  }
-  const hmMatch = /^(\d{2}):(\d{2}):(\d{2})/.exec(uptimeStr);
-  if (hmMatch) {
-    const hours = parseInt(hmMatch[1], 10);
-    const minutes = parseInt(hmMatch[2], 10);
-    const seconds = parseInt(hmMatch[3], 10);
-    const parts: string[] = [];
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (parts.length === 0) parts.push(`${seconds}s`);
-    return parts.join(" ");
-  }
-  return uptimeStr;
-}
-
 type FirstRunAlertProps = {
   title: string;
   message: string;
@@ -494,9 +466,7 @@ export const LoginPage = () => {
           {showFirstRunAlert && (
             <FirstRunAlert
               title={t("firstRun.title")}
-              message={t("firstRun.message", {
-                uptime: formatUptime(serverInfo.uptime),
-              })}
+              message={t("firstRun.message")}
             />
           )}
           <Box
