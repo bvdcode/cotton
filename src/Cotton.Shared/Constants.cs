@@ -25,6 +25,12 @@
         /// </summary>
         public const string ProductName = "Cotton Cloud";
 
+        /// <summary>
+        /// Specifies the delay, in minutes, before an administrator account is automatically created.
+        /// </summary>
+        /// <remarks>Adjust this value to control the timing of automatic admin account creation.
+        /// Modifying the delay can help coordinate account provisioning in different deployment or initialization
+        /// scenarios.</remarks>
         public const int AdminAutocreateMinutesDelay = 5;
     }
 }
