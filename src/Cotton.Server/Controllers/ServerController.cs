@@ -38,19 +38,13 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> GetServerInfo()
         {
             string instanceIdHash = _settings.GetServerSettings().GetInstanceIdHash();
-            string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
             bool serverHasUsers = await _settings.ServerHasUsersAsync();
-            TimeSpan uptime = DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
             return Ok(new PublicServerInfo()
             {
-                // TODO: Remove and return bad request when user tries to login if server is not initialized
-                CanCreateInitialAdmin = serverHasUsers,
-                // TODO: Remove and return bad request when user tries to login if server is not initialized
-                Uptime = uptime,
-
                 // TODO: Change to token-based approach
                 InstanceIdHash = instanceIdHash,
 
+                CanCreateInitialAdmin = !serverHasUsers,
                 Product = Constants.ProductName,
             });
         }
