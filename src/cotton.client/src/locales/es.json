@@ -171,7 +171,9 @@
     },
     "firstRun": {
       "title": "Configuración inicial",
-      "message": "Aún no existen usuarios. Las credenciales que introduzcas crearán la primera cuenta de administrador. Esto solo está disponible poco después del inicio. Reinicia la instancia si es necesario."
+      "message": "Aún no existen usuarios. Las credenciales que introduzcas crearán la primera cuenta de administrador. Esto solo está disponible poco después del inicio. Reinicia la instancia si es necesario.",
+      "continueButton": "Continue",
+      "continuing": "Continuing..."
     }
   },
   "notFound": {

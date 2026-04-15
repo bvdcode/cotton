@@ -102,15 +102,9 @@ const LoginAlerts: React.FC<LoginAlertsProps> = ({
 
   return (
     <Stack spacing={2}>
-      {error && (
-        <Alert color="error">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert color="error">{error}</Alert>}
       {forgotPasswordMessage && (
-        <Alert color="success">
-          {forgotPasswordMessage}
-        </Alert>
+        <Alert color="success">{forgotPasswordMessage}</Alert>
       )}
     </Stack>
   );
@@ -448,6 +442,16 @@ export const LoginPage = () => {
   const showFirstRunAlert =
     serverInfo !== null && serverInfo.canCreateInitialAdmin;
 
+  const isFirstRunMode = showFirstRunAlert && !requiresTwoFactor;
+
+  const submitButtonLabel = loading
+    ? isFirstRunMode
+      ? t("firstRun.continuing")
+      : t("loggingIn")
+    : isFirstRunMode
+      ? t("firstRun.continueButton")
+      : t("loginButton");
+
   return (
     <>
       {(isInitializing || showRestoreOverlay) && (
@@ -536,7 +540,7 @@ export const LoginPage = () => {
                     disabled={loading}
                     fullWidth
                   >
-                    {loading ? t("loggingIn") : t("loginButton")}
+                    {submitButtonLabel}
                   </Button>
                   {!requiresTwoFactor && (
                     <TrustDeviceToggle
@@ -550,7 +554,7 @@ export const LoginPage = () => {
               </Stack>
             </Box>
           </Paper>
-          {!requiresTwoFactor && (
+          {!requiresTwoFactor && !showFirstRunAlert && (
             <ForgotPasswordLink
               onClick={handleForgotPassword}
               disabled={loading || forgotPasswordSending}
