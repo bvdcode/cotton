@@ -463,12 +463,6 @@ export const LoginPage = () => {
             p: 4,
           }}
         >
-          {showFirstRunAlert && (
-            <FirstRunAlert
-              title={t("firstRun.title")}
-              message={t("firstRun.message")}
-            />
-          )}
           <Box
             display="flex"
             justifyContent="space-between"
@@ -509,6 +503,13 @@ export const LoginPage = () => {
               error={error}
               forgotPasswordMessage={forgotPasswordMessage}
             />
+            {showFirstRunAlert && (
+              <FirstRunAlert
+              
+                title={t("firstRun.title")}
+                message={t("firstRun.message")}
+              />
+            )}
             <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
               <Button
                 type="submit"
