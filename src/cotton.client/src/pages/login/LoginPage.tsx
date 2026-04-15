@@ -10,8 +10,6 @@ import {
   Alert,
   AlertTitle,
   Stack,
-  Snackbar,
-  Grow,
   IconButton,
   Tooltip,
   Link,
@@ -39,6 +37,7 @@ import Loader from "../../shared/ui/Loader";
 import axios from "axios";
 import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
+import { toast } from "react-toastify";
 
 type LoginErrorData = {
   message?: string;
@@ -46,13 +45,6 @@ type LoginErrorData = {
 };
 
 type ToastSeverity = "error" | "success";
-
-type ToastState = {
-  key: number;
-  open: boolean;
-  severity: ToastSeverity;
-  message: string;
-};
 
 type TwoFactorServerHint = "required" | "invalid" | "locked";
 
@@ -280,12 +272,6 @@ export const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const autoSubmitTriggeredRef = useRef(false);
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
-  const [toast, setToast] = useState<ToastState>({
-    key: 0,
-    open: false,
-    severity: "error",
-    message: "",
-  });
 
   const serverInfo = useServerInfoStore((s) => s.data);
   const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
@@ -295,24 +281,15 @@ export const LoginPage = () => {
   }, [fetchServerInfo]);
 
   const showToast = useCallback((message: string, severity: ToastSeverity) => {
-    setToast({
-      key: Date.now(),
-      open: true,
-      severity,
-      message,
-    });
-  }, []);
+    const toastId = `login:${severity}:${message}`;
 
-  const handleToastClose = useCallback(
-    (_event?: React.SyntheticEvent | Event, reason?: string) => {
-      if (reason === "clickaway") return;
-      setToast((prev) => ({
-        ...prev,
-        open: false,
-      }));
-    },
-    [],
-  );
+    if (severity === "success") {
+      toast.success(message, { toastId });
+      return;
+    }
+
+    toast.error(message, { toastId });
+  }, []);
 
   const submitLogin = useCallback(async () => {
     setLoading(true);
@@ -626,23 +603,6 @@ export const LoginPage = () => {
           )}
         </Container>
       </Box>
-      <Snackbar
-        key={toast.key}
-        open={toast.open}
-        onClose={handleToastClose}
-        autoHideDuration={5000}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        TransitionComponent={Grow}
-        transitionDuration={{ enter: 260, exit: 220 }}
-      >
-        <Alert
-          severity={toast.severity}
-          variant="filled"
-          onClose={handleToastClose}
-        >
-          {toast.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 };
