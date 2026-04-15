@@ -8,6 +8,7 @@ import {
   Avatar,
   Alert,
   AlertTitle,
+  Stack,
   IconButton,
   Tooltip,
   Link,
@@ -81,7 +82,7 @@ type FirstRunAlertProps = {
 
 const FirstRunAlert: React.FC<FirstRunAlertProps> = ({ title, message }) => {
   return (
-    <Alert severity="info" sx={{ mb: 2 }}>
+    <Alert severity="info">
       <AlertTitle>{title}</AlertTitle>
       {message}
     </Alert>
@@ -100,18 +101,18 @@ const LoginAlerts: React.FC<LoginAlertsProps> = ({
   if (!error && !forgotPasswordMessage) return null;
 
   return (
-    <>
+    <Stack spacing={2}>
       {error && (
-        <Alert color="error" sx={{ mt: 2 }}>
+        <Alert color="error">
           {error}
         </Alert>
       )}
       {forgotPasswordMessage && (
-        <Alert color="success" sx={{ mt: 2 }}>
+        <Alert color="success">
           {forgotPasswordMessage}
         </Alert>
       )}
-    </>
+    </Stack>
   );
 };
 
@@ -135,11 +136,11 @@ const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
   passwordLabel,
 }) => {
   return (
-    <>
+    <Stack spacing={2}>
       <TextField
         fullWidth
         label={usernameLabel}
-        margin="normal"
+        margin="none"
         variant="outlined"
         value={username}
         onChange={(e) => onUsernameChange(e.target.value)}
@@ -149,13 +150,13 @@ const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
         fullWidth
         label={passwordLabel}
         type="password"
-        margin="normal"
+        margin="none"
         variant="outlined"
         value={password}
         onChange={(e) => onPasswordChange(e.target.value)}
         disabled={disabled}
       />
-    </>
+    </Stack>
   );
 };
 
@@ -499,36 +500,37 @@ export const LoginPage = () => {
               />
             )}
 
-            <LoginAlerts
-              error={error}
-              forgotPasswordMessage={forgotPasswordMessage}
-            />
-            {showFirstRunAlert && (
-              <FirstRunAlert
-              
-                title={t("firstRun.title")}
-                message={t("firstRun.message")}
+            <Stack spacing={2} sx={{ mt: 2.5 }}>
+              <LoginAlerts
+                error={error}
+                forgotPasswordMessage={forgotPasswordMessage}
               />
-            )}
-            <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={loading}
-                fullWidth
-              >
-                {loading ? t("loggingIn") : t("loginButton")}
-              </Button>
-              {!requiresTwoFactor && (
-                <TrustDeviceToggle
-                  active={trustDevice}
-                  onToggle={() => setTrustDevice((v) => !v)}
-                  disabled={loading}
-                  tooltip={t("rememberMe")}
+              {showFirstRunAlert && (
+                <FirstRunAlert
+                  title={t("firstRun.title")}
+                  message={t("firstRun.message")}
                 />
               )}
-            </Box>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={loading}
+                  fullWidth
+                >
+                  {loading ? t("loggingIn") : t("loginButton")}
+                </Button>
+                {!requiresTwoFactor && (
+                  <TrustDeviceToggle
+                    active={trustDevice}
+                    onToggle={() => setTrustDevice((v) => !v)}
+                    disabled={loading}
+                    tooltip={t("rememberMe")}
+                  />
+                )}
+              </Box>
+            </Stack>
           </Box>
         </Paper>
         {!requiresTwoFactor && (
