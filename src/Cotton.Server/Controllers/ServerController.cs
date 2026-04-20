@@ -15,6 +15,7 @@ using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quartz;
+using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
@@ -36,21 +37,24 @@ namespace Cotton.Server.Controllers
         [HttpGet("info")]
         public async Task<IActionResult> GetServerInfo()
         {
-            string instanceIdHash = _settings.GetServerSettings().InstanceId.ToString().Sha256();
-            string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
+            string instanceIdHash = _settings.GetServerSettings().GetInstanceIdHash();
             bool serverHasUsers = await _settings.ServerHasUsersAsync();
-            bool isServerInitialized = await _settings.IsServerInitializedAsync();
-            TimeSpan uptime = DateTime.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
             return Ok(new PublicServerInfo()
             {
-                Uptime = uptime,
-                Version = version,
-                CurrentTime = DateTime.UtcNow,
-                ServerHasUsers = serverHasUsers,
-                Product = Constants.ProductName,
+                // TODO: Change to token-based approach
                 InstanceIdHash = instanceIdHash,
-                IsServerInitialized = isServerInitialized,
+
+                CanCreateInitialAdmin = !serverHasUsers,
+                Product = Constants.ProductName,
             });
+        }
+
+        [HttpGet("settings/is-setup-complete")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> IsServerInitialized()
+        {
+            bool isServerInitialized = await _settings.IsServerInitializedAsync();
+            return Ok(new { IsServerInitialized = isServerInitialized });
         }
 
         [HttpPost("settings")]

@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           id: "/",
           name: "Cotton Cloud",
-          short_name: "Cotton Cloud",
+          short_name: "Cotton",
           description: "Fast and reliable cloud service for your needs.",
           categories: ["cloud", "storage", "productivity"],
           lang: "en-US",
