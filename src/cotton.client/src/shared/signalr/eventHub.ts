@@ -81,44 +81,44 @@ class EventHubService {
 
     let lastError: Error | null = null;
 
-      for (const spec of attemptSpecs) {
-        try {
-          this.connection = new HubConnectionBuilder()
-            .withUrl("/api/v1/hub/events", {
-              accessTokenFactory,
-              transport: spec.transport,
-              skipNegotiation: spec.skipNegotiation,
-            })
-            .withAutomaticReconnect(reconnectPolicy)
-            .configureLogging(LogLevel.Warning)
-            .build();
+    for (const spec of attemptSpecs) {
+      try {
+        this.connection = new HubConnectionBuilder()
+          .withUrl("/api/v1/hub/events", {
+            accessTokenFactory,
+            transport: spec.transport,
+            skipNegotiation: spec.skipNegotiation,
+          })
+          .withAutomaticReconnect(reconnectPolicy)
+          .configureLogging(LogLevel.Warning)
+          .build();
 
-          // Some server versions emit lowercased method names.
-          // Registering no-op handlers prevents SignalR warnings on pages
-          // that don't subscribe to file-related events.
-          for (const method of SILENCED_METHODS) {
-            this.connection.on(method, () => {
-              // no-op
-            });
-          }
-
-          this.connection.onreconnected(() => {
-            this.resubscribeAll();
+        // Some server versions emit lowercased method names.
+        // Registering no-op handlers prevents SignalR warnings on pages
+        // that don't subscribe to file-related events.
+        for (const method of SILENCED_METHODS) {
+          this.connection.on(method, () => {
+            // no-op
           });
-
-          for (const [method, callbacks] of this.listeners) {
-            for (const cb of callbacks) {
-              this.connection.on(method, cb);
-            }
-          }
-
-          await this.connection.start();
-          this.started = true;
-          return;
-        } catch (e) {
-          lastError = e instanceof Error ? e : new Error("Failed to start hub");
-          this.dispose();
         }
+
+        this.connection.onreconnected(() => {
+          this.resubscribeAll();
+        });
+
+        for (const [method, callbacks] of this.listeners) {
+          for (const cb of callbacks) {
+            this.connection.on(method, cb);
+          }
+        }
+
+        await this.connection.start();
+        this.started = true;
+        return;
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error("Failed to start hub");
+        this.dispose();
+      }
     }
 
     throw lastError ?? new Error("Failed to start hub");

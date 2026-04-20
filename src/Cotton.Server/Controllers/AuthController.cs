@@ -29,6 +29,8 @@ using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -51,6 +53,7 @@ namespace Cotton.Server.Controllers
         public const int RefreshTokenLength = 32;
         public const string CookieAccessTokenKey = "access_token";
         public const string CookieRefreshTokenKey = "refresh_token";
+        private static readonly EmailAddressAttribute EmailValidator = new();
 
         [Authorize]
         [HttpGet("webdav/token")]
@@ -207,6 +210,12 @@ namespace Cotton.Server.Controllers
 
         private async Task<User?> GetUserOrTryGetNewAsync(LoginRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.Username))
+            {
+                return null;
+            }
+
+            request.Username = request.Username.Trim();
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.Username == request.Username || x.Email == request.Username);
             if (user != null)
@@ -405,7 +414,16 @@ namespace Cotton.Server.Controllers
 
         private async Task<User?> TryGetNewUserAsync(LoginRequest request)
         {
-            if (!UsernameValidator.TryNormalizeAndValidate(request.Username, out var username, out _))
+            string login = request.Username.Trim();
+            string? email = null;
+            string username;
+
+            if (EmailValidator.IsValid(login))
+            {
+                email = login;
+                username = await UsernameHelpers.BuildAvailableUsernameFromEmailAsync(_dbContext, login);
+            }
+            else if (!UsernameValidator.TryNormalizeAndValidate(login, out username, out _))
             {
                 return null;
             }
@@ -415,8 +433,9 @@ namespace Cotton.Server.Controllers
             {
                 User guest = new()
                 {
-                    Role = UserRole.User,
+                    Email = email,
                     Username = username,
+                    Role = UserRole.User,
                     PasswordPhc = _hasher.Hash(request.Password),
                     WebDavTokenPhc = _hasher.Hash(request.Password),
                 };
@@ -432,17 +451,20 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            var uptime = DateTimeOffset.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
-            if (uptime.TotalMinutes > 5)
+            var uptime = DateTimeOffset.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
+            if (uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay)
             {
-                _logger.LogWarning("Attempt to create initial admin user after uptime of {Uptime}. " +
-                    "Please restart the application to enable initial admin user creation.", uptime);
-                return null;
+                string errorMessage = $"Initial admin user creation is disabled after " + 
+                    Constants.AdminAutocreateMinutesDelay + " minutes of uptime. " +
+                    "Please restart the application/container to enable it.";
+                _logger.LogWarning("{msg}", errorMessage);
+                throw new BadRequestException<User>(errorMessage);
             }
             User user = new()
             {
-                Role = UserRole.Admin,
+                Email = email,
                 Username = username,
+                Role = UserRole.Admin,
                 PasswordPhc = _hasher.Hash(request.Password),
                 WebDavTokenPhc = _hasher.Hash(request.Password),
             };
