@@ -2,18 +2,25 @@ import {
   Box,
   Paper,
   Button,
+  CircularProgress,
   TextField,
   Container,
   Typography,
   Avatar,
   Alert,
   AlertTitle,
+  Stack,
   IconButton,
   Tooltip,
   Link,
   Divider,
 } from "@mui/material";
-import { GitHub, Shield, ShieldOutlined } from "@mui/icons-material";
+import {
+  GitHub,
+  Shield,
+  ShieldOutlined,
+  KeyboardArrowRight,
+} from "@mui/icons-material";
 import { useAuth } from "../../features/auth";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,16 +31,20 @@ import {
   type FormEvent,
 } from "react";
 import { authApi } from "../../shared/api/authApi";
+import { hasApiErrorToastBeenDispatched } from "../../shared/api/httpClient";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import Loader from "../../shared/ui/Loader";
 import axios from "axios";
 import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
+import { toast } from "react-toastify";
 
 type LoginErrorData = {
   message?: string;
   detail?: string;
 };
+
+type ToastSeverity = "error" | "success";
 
 type TwoFactorServerHint = "required" | "invalid" | "locked";
 
@@ -74,75 +85,17 @@ function tryGetTwoFactorHint(args: {
   return null;
 }
 
-function formatUptime(uptimeStr: string): string {
-  const match = /^(\d+)\.?(\d{2}):(\d{2}):(\d{2})/.exec(uptimeStr);
-  if (match) {
-    const days = parseInt(match[1], 10);
-    const hours = parseInt(match[2], 10);
-    const minutes = parseInt(match[3], 10);
-    const seconds = parseInt(match[4], 10);
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (parts.length === 0) parts.push(`${seconds}s`);
-    return parts.join(" ");
-  }
-  const hmMatch = /^(\d{2}):(\d{2}):(\d{2})/.exec(uptimeStr);
-  if (hmMatch) {
-    const hours = parseInt(hmMatch[1], 10);
-    const minutes = parseInt(hmMatch[2], 10);
-    const seconds = parseInt(hmMatch[3], 10);
-    const parts: string[] = [];
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (parts.length === 0) parts.push(`${seconds}s`);
-    return parts.join(" ");
-  }
-  return uptimeStr;
-}
-
 type FirstRunAlertProps = {
   title: string;
   message: string;
 };
 
-const FirstRunAlert: React.FC<FirstRunAlertProps> = ({
-  title,
-  message,
-}) => {
+const FirstRunAlert: React.FC<FirstRunAlertProps> = ({ title, message }) => {
   return (
-    <Alert severity="info" sx={{ mb: 2 }}>
+    <Alert severity="info">
       <AlertTitle>{title}</AlertTitle>
       {message}
     </Alert>
-  );
-};
-
-type LoginAlertsProps = {
-  error: string;
-  forgotPasswordMessage: string;
-};
-
-const LoginAlerts: React.FC<LoginAlertsProps> = ({
-  error,
-  forgotPasswordMessage,
-}) => {
-  if (!error && !forgotPasswordMessage) return null;
-
-  return (
-    <>
-      {error && (
-        <Alert color="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {forgotPasswordMessage && (
-        <Alert color="success" sx={{ mt: 2 }}>
-          {forgotPasswordMessage}
-        </Alert>
-      )}
-    </>
   );
 };
 
@@ -166,11 +119,11 @@ const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
   passwordLabel,
 }) => {
   return (
-    <>
+    <Stack spacing={2}>
       <TextField
         fullWidth
         label={usernameLabel}
-        margin="normal"
+        margin="none"
         variant="outlined"
         value={username}
         onChange={(e) => onUsernameChange(e.target.value)}
@@ -180,13 +133,13 @@ const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
         fullWidth
         label={passwordLabel}
         type="password"
-        margin="normal"
+        margin="none"
         variant="outlined"
         value={password}
         onChange={(e) => onPasswordChange(e.target.value)}
         disabled={disabled}
       />
-    </>
+    </Stack>
   );
 };
 
@@ -206,25 +159,18 @@ const TwoFactorFields: React.FC<TwoFactorFieldsProps> = ({
   disabled,
 }) => {
   return (
-    <Box sx={{ mt: 3 }}>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ mb: 3 }}
-        align="center"
-      >
+    <Stack spacing={2.5}>
+      <Typography variant="body2" color="text.secondary" align="center">
         {caption}
       </Typography>
-      <Box sx={{ mb: 2 }}>
-        <OneTimeCodeInput
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-          autoFocus={true}
-          inputAriaLabel={digitAriaLabel}
-        />
-      </Box>
-    </Box>
+      <OneTimeCodeInput
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        autoFocus={true}
+        inputAriaLabel={digitAriaLabel}
+      />
+    </Stack>
   );
 };
 
@@ -284,7 +230,7 @@ const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({
         color="text.secondary"
         sx={{ display: "flex", alignItems: "center" }}
       >
-        <GitHub fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+        <GitHub fontSize="small" sx={{ mr: 0.5 }} />
       </Link>
       <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
       <Link
@@ -309,7 +255,6 @@ export const LoginPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation("login");
-  const [error, setError] = useState("");
   const {
     isAuthenticated,
     isInitializing,
@@ -327,7 +272,6 @@ export const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const autoSubmitTriggeredRef = useRef(false);
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
-  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
 
   const serverInfo = useServerInfoStore((s) => s.data);
   const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
@@ -336,8 +280,18 @@ export const LoginPage = () => {
     fetchServerInfo();
   }, [fetchServerInfo]);
 
+  const showToast = useCallback((message: string, severity: ToastSeverity) => {
+    const toastId = `login:${severity}:${message}`;
+
+    if (severity === "success") {
+      toast.success(message, { toastId });
+      return;
+    }
+
+    toast.error(message, { toastId });
+  }, []);
+
   const submitLogin = useCallback(async () => {
-    setError("");
     setLoading(true);
 
     try {
@@ -345,7 +299,7 @@ export const LoginPage = () => {
         requiresTwoFactor &&
         normalizeTwoFactorCode(twoFactorCode).length < 6
       ) {
-        setError(t("twoFactor.required"));
+        showToast(t("twoFactor.required"), "error");
         return;
       }
 
@@ -371,24 +325,27 @@ export const LoginPage = () => {
         if (hint === "required") {
           setRequiresTwoFactor(true);
           setTwoFactorCode("");
-          setError("");
           return;
         }
 
         if (hint === "invalid") {
           setRequiresTwoFactor(true);
-          setError(t("twoFactor.invalid"));
+          showToast(t("twoFactor.invalid"), "error");
           return;
         }
 
         if (hint === "locked") {
           setRequiresTwoFactor(true);
-          setError(t("twoFactor.locked"));
+          showToast(t("twoFactor.locked"), "error");
+          return;
+        }
+
+        if (hasApiErrorToastBeenDispatched(e)) {
           return;
         }
       }
 
-      setError(t("errorMessage"));
+      showToast(t("errorMessage"), "error");
     } finally {
       setLoading(false);
     }
@@ -399,6 +356,7 @@ export const LoginPage = () => {
     password,
     trustDevice,
     t,
+    showToast,
     setAuthenticated,
     navigate,
   ]);
@@ -412,25 +370,22 @@ export const LoginPage = () => {
   );
 
   const handleForgotPassword = useCallback(async () => {
-    setError("");
-    setForgotPasswordMessage("");
-
     const trimmed = username.trim();
     if (!trimmed || !isEmail(trimmed)) {
-      setError(t("forgotPassword.enterEmail"));
+      showToast(t("forgotPassword.enterEmail"), "error");
       return;
     }
 
     setForgotPasswordSending(true);
     try {
       await authApi.forgotPassword(trimmed);
-      setForgotPasswordMessage(t("forgotPassword.sent"));
+      showToast(t("forgotPassword.sent"), "success");
     } catch {
-      setForgotPasswordMessage(t("forgotPassword.sent"));
+      showToast(t("forgotPassword.sent"), "success");
     } finally {
       setForgotPasswordSending(false);
     }
-  }, [username, t]);
+  }, [username, t, showToast]);
 
   useEffect(() => {
     // If we can silently restore a session, do it and keep loader overlay while it runs.
@@ -476,7 +431,13 @@ export const LoginPage = () => {
     hydrated && refreshEnabled && !isAuthenticated && !hasChecked;
 
   const showFirstRunAlert =
-    serverInfo !== null && !serverInfo.serverHasUsers;
+    serverInfo !== null && serverInfo.canCreateInitialAdmin;
+
+  const isFirstRunMode = showFirstRunAlert && !requiresTwoFactor;
+
+  const submitButtonLabel = isFirstRunMode
+    ? t("firstRun.continueButton")
+    : t("loginButton");
 
   return (
     <>
@@ -487,94 +448,161 @@ export const LoginPage = () => {
           caption={t("restoring.caption")}
         />
       )}
-      <Container maxWidth="sm">
-        <Paper
+      <Box
+        sx={{
+          minHeight: "100dvh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          py: { xs: 2, sm: 4 },
+        }}
+      >
+        <Container
+          maxWidth="xs"
           sx={{
-            mt: 8,
-            p: 4,
+            display: "flex",
+            flexDirection: "column",
+            px: { xs: 2, sm: 3 },
           }}
         >
-          {showFirstRunAlert && (
-            <FirstRunAlert
-              title={t("firstRun.title")}
-              message={t("firstRun.message", {
-                uptime: formatUptime(serverInfo.uptime),
-              })}
+          <Paper
+            sx={{
+              p: { xs: 3, sm: 4 },
+            }}
+          >
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ mb: 3 }}
+            >
+              <Typography variant="h4" component="h1">
+                {requiresTwoFactor ? t("twoFactor.title") : t("title")}
+              </Typography>
+              <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
+            </Box>
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+              noValidate
+              autoComplete="off"
+            >
+              <Stack spacing={2.5}>
+                {!requiresTwoFactor ? (
+                  <CredentialsFields
+                    username={username}
+                    password={password}
+                    onUsernameChange={setUsername}
+                    onPasswordChange={setPassword}
+                    disabled={loading}
+                    usernameLabel={t("usernameLabel")}
+                    passwordLabel={t("passwordLabel")}
+                  />
+                ) : (
+                  <TwoFactorFields
+                    caption={t("twoFactor.caption")}
+                    digitAriaLabel={t("twoFactor.digit")}
+                    value={twoFactorCode}
+                    onChange={setTwoFactorCode}
+                    disabled={loading}
+                  />
+                )}
+                {showFirstRunAlert && (
+                  <FirstRunAlert
+                    title={t("firstRun.title")}
+                    message={t("firstRun.message")}
+                  />
+                )}
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  {!requiresTwoFactor && (
+                    <TrustDeviceToggle
+                      active={trustDevice}
+                      onToggle={() => setTrustDevice((v) => !v)}
+                      disabled={loading}
+                      tooltip={t("rememberMe")}
+                    />
+                  )}
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    disabled={loading}
+                    sx={{
+                      minWidth: loading ? 44 : 0,
+                      px: loading ? 0.75 : 2.25,
+                      transition: (theme) =>
+                        theme.transitions.create(["min-width", "padding"], {
+                          duration: theme.transitions.duration.shorter,
+                        }),
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <Box
+                        component="span"
+                        sx={{
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          maxWidth: loading ? 0 : 220,
+                          opacity: loading ? 0 : 1,
+                          transition: (theme) =>
+                            theme.transitions.create(["max-width", "opacity"], {
+                              duration: theme.transitions.duration.shorter,
+                            }),
+                        }}
+                      >
+                        {submitButtonLabel}
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 20,
+                          height: 20,
+                        }}
+                      >
+                        {loading ? (
+                          <CircularProgress
+                            color="inherit"
+                            size={18}
+                            thickness={5}
+                          />
+                        ) : (
+                          <KeyboardArrowRight />
+                        )}
+                      </Box>
+                    </Box>
+                  </Button>
+                </Box>
+              </Stack>
+            </Box>
+          </Paper>
+          {!requiresTwoFactor && !showFirstRunAlert && (
+            <ForgotPasswordLink
+              onClick={handleForgotPassword}
+              disabled={loading || forgotPasswordSending}
+              label={
+                forgotPasswordSending
+                  ? t("forgotPassword.sending")
+                  : t("forgotPassword.link")
+              }
             />
           )}
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Typography variant="h4" component="h1" gutterBottom>
-              {requiresTwoFactor ? t("twoFactor.title") : t("title")}
-            </Typography>
-            <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
-          </Box>
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            noValidate
-            autoComplete="off"
-          >
-            {!requiresTwoFactor ? (
-              <CredentialsFields
-                username={username}
-                password={password}
-                onUsernameChange={setUsername}
-                onPasswordChange={setPassword}
-                disabled={loading}
-                usernameLabel={t("usernameLabel")}
-                passwordLabel={t("passwordLabel")}
-              />
-            ) : (
-              <TwoFactorFields
-                caption={t("twoFactor.caption")}
-                digitAriaLabel={t("twoFactor.digit")}
-                value={twoFactorCode}
-                onChange={setTwoFactorCode}
-                disabled={loading}
-              />
-            )}
-
-            <LoginAlerts
-              error={error}
-              forgotPasswordMessage={forgotPasswordMessage}
-            />
-            <Box sx={{ mt: 3, display: "flex", gap: 1 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={loading}
-                fullWidth
-              >
-                {loading ? t("loggingIn") : t("loginButton")}
-              </Button>
-              {!requiresTwoFactor && (
-                <TrustDeviceToggle
-                  active={trustDevice}
-                  onToggle={() => setTrustDevice((v) => !v)}
-                  disabled={loading}
-                  tooltip={t("rememberMe")}
-                />
-              )}
-            </Box>
-          </Box>
-        </Paper>
-        {!requiresTwoFactor && (
-          <ForgotPasswordLink
-            onClick={handleForgotPassword}
-            disabled={loading || forgotPasswordSending}
-            label={
-              forgotPasswordSending
-                ? t("forgotPassword.sending")
-                : t("forgotPassword.link")
-            }
-          />
-        )}
-      </Container>
+        </Container>
+      </Box>
     </>
   );
 };

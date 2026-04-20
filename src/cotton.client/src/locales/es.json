@@ -143,7 +143,7 @@
     }
   },
   "login": {
-    "title": "Inicia sesión en tu cuenta",
+    "title": "Cotton Cloud",
     "usernameLabel": "Usuario",
     "passwordLabel": "Contraseña",
     "rememberMe": "Confiar en este dispositivo",
@@ -171,7 +171,9 @@
     },
     "firstRun": {
       "title": "Configuración inicial",
-      "message": "Este servidor todavía no tiene usuarios. Las credenciales que introduzcas se usarán para crear la primera cuenta de administrador. Esto solo es posible durante los primeros minutos después de que se inicie la instancia. Tiempo en línea del servidor: {{uptime}}. Si se ha pasado la ventana de tiempo, reinicia el servidor e inténtalo de nuevo."
+      "message": "Aún no existen usuarios. Las credenciales que introduzcas crearán la primera cuenta de administrador. Esto solo está disponible poco después del inicio. Reinicia la instancia si es necesario.",
+      "continueButton": "Continue",
+      "continuing": "Creando primer usuario..."
     }
   },
   "notFound": {
