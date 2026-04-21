@@ -2,6 +2,7 @@ import {
   Alert,
   Box,
   Button,
+  LinearProgress,
   Paper,
   Stack,
   ToggleButton,
@@ -351,7 +352,14 @@ export const AdminStorageStatisticsPage = () => {
             <Alert severity="error">{loadState.message}</Alert>
           )}
 
-          {isLoading && <Typography>{t("storageStatistics.state.loading")}</Typography>}
+          <Box minHeight={4}>
+            <LinearProgress
+              sx={{
+                opacity: isLoading ? 1 : 0,
+                transition: "opacity 120ms ease",
+              }}
+            />
+          </Box>
 
           {timeline !== null && (
             <Stack spacing={2}>
@@ -367,10 +375,14 @@ export const AdminStorageStatisticsPage = () => {
                 }}
               >
                 {summaryCards.map((card) => (
-                  <Paper
+                  <Box
                     key={card.id}
-                    variant="outlined"
-                    sx={{ p: 1.5, minWidth: 0 }}
+                    sx={{
+                      p: 1.5,
+                      minWidth: 0,
+                      bgcolor: "action.hover",
+                      borderRadius: 1,
+                    }}
                   >
                     <Stack spacing={0.5}>
                       <Typography variant="caption" color="text.secondary" noWrap>
@@ -383,11 +395,11 @@ export const AdminStorageStatisticsPage = () => {
                         {card.extra}
                       </Typography>
                     </Stack>
-                  </Paper>
+                  </Box>
                 ))}
               </Box>
 
-              <Paper variant="outlined">
+              <Box sx={{ bgcolor: "action.hover", borderRadius: 1, p: 2 }}>
                 <Stack p={2} spacing={2}>
                   <Stack
                     direction={{ xs: "column", md: "row" }}
@@ -485,7 +497,7 @@ export const AdminStorageStatisticsPage = () => {
                     {t("storageStatistics.summary.generatedAtUtc")}: {formatDateTime(timeline.generatedAt)}
                   </Typography>
                 </Stack>
-              </Paper>
+              </Box>
             </Stack>
           )}
         </Stack>
