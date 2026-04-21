@@ -279,7 +279,7 @@ export const AdminDatabaseBackupPage = () => {
               }}
             >
               {Array.from({ length: 6 }).map((_, index) => (
-                <Box key={index} sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 1 }}>
+                <Box key={index} sx={{ p: 1.5 }}>
                   <Skeleton variant="text" width={140} height={16} />
                   <Skeleton
                     variant="text"
@@ -311,7 +311,7 @@ export const AdminDatabaseBackupPage = () => {
               {cards.map((card) => (
                 <Box
                   key={card.id}
-                  sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 1, minWidth: 0 }}
+                  sx={{ p: 1.5, minWidth: 0 }}
                 >
                   <Typography variant="caption" color="text.secondary" noWrap>
                     {card.label}
