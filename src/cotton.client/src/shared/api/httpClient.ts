@@ -79,6 +79,22 @@ export const hasApiErrorToastBeenDispatched = (error: AxiosError): boolean => {
   return toastAwareError._apiErrorToastDispatched === true;
 };
 
+const resolveBrowserTimeZone = (): string | null => {
+  if (typeof Intl === "undefined" || typeof Intl.DateTimeFormat !== "function") {
+    return null;
+  }
+
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (typeof timeZone !== "string") {
+    return null;
+  }
+
+  const normalizedTimeZone = timeZone.trim();
+  return normalizedTimeZone.length > 0 ? normalizedTimeZone : null;
+};
+
+const browserTimeZone = resolveBrowserTimeZone();
+
 let accessToken: string | null = null;
 export const getAccessToken = () => accessToken;
 export const setAccessToken = (token: string | null) => {
@@ -141,6 +157,11 @@ httpClient.interceptors.request.use(
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+
+    if (browserTimeZone && config.headers) {
+      config.headers["X-Timezone"] = browserTimeZone;
+    }
+
     return config;
   },
   (error) => Promise.reject(error),

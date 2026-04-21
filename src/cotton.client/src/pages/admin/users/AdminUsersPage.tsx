@@ -188,11 +188,11 @@ export const AdminUsersPage = () => {
   }, [t]);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} height="100%" minHeight={0}>
       <CreateUserForm onUserCreated={fetchUsers} />
 
-      <Paper>
-        <Stack spacing={2} p={2}>
+      <Paper sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+        <Stack spacing={2} p={2} width="100%" height="100%" minHeight={0}>
           <Stack
             direction="row"
             justifyContent="space-between"
@@ -214,17 +214,27 @@ export const AdminUsersPage = () => {
             <Alert severity="error">{loadState.message}</Alert>
           )}
 
-          <DataGrid
-            rows={users}
-            columns={columns}
-            getRowId={(row) => row.id}
-            loading={isLoading}
-            disableColumnMenu
-            disableColumnFilter
-            disableRowSelectionOnClick
-            hideFooter
-            autoHeight
-          />
+          <Stack flex={1} minHeight={0}>
+            <DataGrid
+              rows={users}
+              columns={columns}
+              getRowId={(row) => row.id}
+              loading={isLoading}
+              disableRowSelectionOnClick
+              showToolbar
+              pageSizeOptions={[10, 25, 50, 100]}
+              initialState={{
+                pagination: {
+                  paginationModel: {
+                    pageSize: 25,
+                    page: 0,
+                  },
+                },
+              }}
+              pagination
+              sx={{ height: "100%" }}
+            />
+          </Stack>
         </Stack>
       </Paper>
 
