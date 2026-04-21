@@ -90,7 +90,6 @@ export interface GetGcChunksTimelineRequest {
   bucket?: GcTimelineBucketKind;
   fromUtc?: string;
   toUtc?: string;
-  timezoneOffsetMinutes?: number;
 }
 
 export const adminApi = {
@@ -143,7 +142,6 @@ export const adminApi = {
           bucket: request?.bucket,
           fromUtc: request?.fromUtc,
           toUtc: request?.toUtc,
-          timezoneOffsetMinutes: request?.timezoneOffsetMinutes,
         },
       },
     );
