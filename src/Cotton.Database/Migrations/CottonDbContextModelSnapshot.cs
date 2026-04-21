@@ -106,9 +106,13 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("gc_scheduled_after");
 
-                    b.Property<long>("SizeBytes")
+                    b.Property<long>("PlainSizeBytes")
                         .HasColumnType("bigint")
-                        .HasColumnName("size_bytes");
+                        .HasColumnName("plain_size_bytes");
+
+                    b.Property<long>("StoredSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("stored_size_bytes");
 
                     b.HasKey("Hash");
 
