@@ -69,7 +69,6 @@ export const AdminStorageStatisticsPage = () => {
       try {
         const result = await adminApi.getGcChunksTimeline({
           bucket,
-          timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
         });
 
         if (!isActive) {

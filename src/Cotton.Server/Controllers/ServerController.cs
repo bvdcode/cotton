@@ -132,7 +132,6 @@ namespace Cotton.Server.Controllers
             [FromQuery] DateTime? fromUtc,
             [FromQuery] DateTime? toUtc,
             [FromQuery] string bucket = "hour",
-            [FromQuery] int timezoneOffsetMinutes = 0,
             CancellationToken cancellationToken = default)
         {
             string normalizedBucket = bucket.Trim().ToLowerInvariant();
@@ -141,10 +140,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiBadRequest("Invalid bucket value. Supported values: 'hour', 'day'.");
             }
 
-            if (timezoneOffsetMinutes is < -840 or > 840)
-            {
-                return this.ApiBadRequest("timezoneOffsetMinutes must be between -840 and 840.");
-            }
+            TimeZoneInfo effectiveTimeZone = ResolveTimelineTimeZone();
 
             DateTime now = DateTime.UtcNow;
             DateTime rangeStartUtc = (fromUtc ?? now).ToUniversalTime();
@@ -177,11 +173,12 @@ namespace Cotton.Server.Controllers
             await foreach (var item in gcChunksQuery.WithCancellation(cancellationToken))
             {
                 DateTime clamped = item.ScheduledAfter < rangeStartUtc ? rangeStartUtc : item.ScheduledAfter;
-                DateTime local = clamped.AddMinutes(timezoneOffsetMinutes);
+                DateTime local = TimeZoneInfo.ConvertTimeFromUtc(clamped, effectiveTimeZone);
                 DateTime localBucketStart = normalizedBucket == "day"
                     ? new DateTime(local.Year, local.Month, local.Day, 0, 0, 0, DateTimeKind.Unspecified)
                     : new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
-                DateTime bucketUtc = DateTime.SpecifyKind(localBucketStart.AddMinutes(-timezoneOffsetMinutes), DateTimeKind.Utc);
+                TimeSpan bucketOffset = effectiveTimeZone.GetUtcOffset(localBucketStart);
+                DateTime bucketUtc = new DateTimeOffset(localBucketStart, bucketOffset).UtcDateTime;
 
                 if (!bucketsMap.TryGetValue(bucketUtc, out var existing))
                 {
@@ -209,7 +206,7 @@ namespace Cotton.Server.Controllers
             return Ok(new GcChunkTimelineDto
             {
                 Bucket = normalizedBucket,
-                TimezoneOffsetMinutes = timezoneOffsetMinutes,
+                TimezoneOffsetMinutes = (int)effectiveTimeZone.GetUtcOffset(now).TotalMinutes,
                 FromUtc = rangeStartUtc,
                 ToUtc = rangeEndUtc,
                 GeneratedAtUtc = now,
@@ -298,6 +295,19 @@ namespace Cotton.Server.Controllers
                 OverdueGcChunkCount = overdueGcChunkCount,
                 OverdueGcStoredSizeBytes = overdueGcStoredSizeBytes,
             };
+        }
+
+        private TimeZoneInfo ResolveTimelineTimeZone()
+        {
+            const string timezoneHeaderName = "X-Timezone";
+            string? timezoneId = Request.Headers[timezoneHeaderName].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(timezoneId)
+                && TimeZoneInfo.TryFindSystemTimeZoneById(timezoneId.Trim(), out TimeZoneInfo? headerTimeZone))
+            {
+                return headerTimeZone;
+            }
+
+            return TimeZoneInfo.Local;
         }
     }
 }
