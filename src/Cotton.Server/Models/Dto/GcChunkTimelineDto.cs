@@ -10,5 +10,6 @@ namespace Cotton.Server.Models.Dto
         public long TotalChunks { get; init; }
         public long TotalSizeBytes { get; init; }
         public IReadOnlyList<GcChunkTimelineBucketDto> Buckets { get; init; } = [];
+        public StorageUsageStatsDto Storage { get; init; } = new();
     }
 }
