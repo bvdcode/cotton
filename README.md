@@ -33,7 +33,11 @@ The server core runs on a modern **ASP.NET Core + EF Core** stack and uses **Kes
 
 Cotton is intentionally built as one cohesive runtime: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET code inside the same ecosystem. That keeps execution flow seamless, reduces cross-environment glue, and helps the codebase behave as one coordinated system rather than many loosely-coupled runtimes. External process tooling is kept narrow on purpose: **FFmpeg/ffprobe** are used for audio/video preview extraction.
 
+This is not architecture for architecture's sake. Cotton is built this way because the design shows up directly in real behavior: the system is more predictable under load, easier to reason about operationally, and less likely to inherit strange edge cases from decades of layered legacy glued around older technology stacks. From web server to storage path, it is meant to behave like one platform.
+
 The core product is intentionally focused rather than trying to be everything at once; custom behavior is meant to live in isolated plugins and marketplace-delivered extensions as that layer settles into place.
+
+Cotton is also an actively developing open-source project. Like any serious storage system, it still needs time to accumulate broader real-world mileage, more operators, and more long-tail edge-case exposure. That should be read as a normal maturity curve, not as "there is no reason to trust it": the core is deliberate, cohesive, and built around stable storage principles rather than accidental behavior.
 
 This is not just a storage engine with a web skin. Cotton is meant to feel good in real use:
 
@@ -61,6 +65,9 @@ That is the product story in one line: a file should not become an opaque blob y
 Most self-hosted file clouds can describe their internals. Fewer can explain why those internals make daily use feel better.
 
 Cotton is built around a different set of outcomes:
+
+- **The system is designed to stay predictable end-to-end**  
+  Cotton is not a patchwork of many runtimes with years of historical baggage pulling in different directions. The same design philosophy runs from HTTP handling to storage layout, which is why behavior under load, cleanup, sharing, and recovery can stay consistent instead of feeling incidental.
 
 - **Restore is normal, even at large scale**  
   Snapshots record references instead of copying data. That keeps large-scale rollback practical and is the same model the instant tree rollback flow is being built around.
