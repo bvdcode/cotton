@@ -126,6 +126,15 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Unlike setups that stop at "the server started", Cotton includes a guided setup flow, SMTP options, password reset, email verification, and built-in notifications.
 - Unlike products that try to ship every niche feature in-core, Cotton stays focused and extends outward through isolated plugins and marketplace distribution as that layer matures.
 
+| Area | Cotton | More typical self-hosted stack |
+| --- | --- | --- |
+| Web runtime | ASP.NET Core on **Kestrel** with a single app process and built-in SignalR path. Kestrel is commonly regarded as one of the highest-performance modern web servers / web stacks, with that reputation showing up repeatedly in independent [TechEmpower Benchmarks](https://www.techempower.com/benchmarks/#section=data-r23) and Microsoft's own [ASP.NET Core performance notes](https://learn.microsoft.com/en-us/aspnet/core/release-notes/aspnetcore-7.0?view=aspnetcore-10.0). | A more typical self-hosted stack is layered around PHP + Apache or Nginx + FPM, often with Redis and separate workers added as supporting infrastructure |
+| Storage model | Content-addressed chunks + manifests + explicit layout graph | Often path-centric metadata over a conventional filesystem view |
+| Large media access | Seekable reads, `Range` responses, and preview extraction from chunked encrypted storage without full reassembly | Large-file access is more often optimized around whole-file reads, temp files, or less direct preview paths |
+| Compression and encryption | Inline in the main storage pipeline | More often absent, optional, or handled outside the main ingest path |
+| Restore and cleanup | Snapshot-first model with reclaim checks designed to coexist with rollback | Cleanup and restore are more likely to be separate concerns that need careful operator coordination |
+| Product surface | Focused core with WebDAV, sharing, previews, notifications, and setup built in | Feature breadth is often higher, but the operational surface is also broader and less uniform |
+
 ---
 
 ## Product Snapshots
