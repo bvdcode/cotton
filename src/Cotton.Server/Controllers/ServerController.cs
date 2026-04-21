@@ -206,10 +206,9 @@ namespace Cotton.Server.Controllers
             return Ok(new GcChunkTimelineDto
             {
                 Bucket = normalizedBucket,
-                TimezoneOffsetMinutes = (int)effectiveTimeZone.GetUtcOffset(now).TotalMinutes,
-                FromUtc = rangeStartUtc,
-                ToUtc = rangeEndUtc,
-                GeneratedAtUtc = now,
+                From = rangeStartUtc,
+                To = rangeEndUtc,
+                GeneratedAt = now,
                 TotalChunks = totalChunks,
                 TotalSizeBytes = totalSizeBytes,
                 Buckets = buckets,
