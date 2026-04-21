@@ -258,13 +258,13 @@ export const AdminStorageStatisticsPage = () => {
                     <Typography variant="caption" color="text.secondary">
                       {t("storageStatistics.summary.fromUtc")}
                     </Typography>
-                    <Typography>{formatDateTime(timeline.fromUtc)}</Typography>
+                    <Typography>{formatDateTime(timeline.from)}</Typography>
                   </Stack>
                   <Stack p={2} spacing={0.5}>
                     <Typography variant="caption" color="text.secondary">
                       {t("storageStatistics.summary.toUtc")}
                     </Typography>
-                    <Typography>{formatDateTime(timeline.toUtc)}</Typography>
+                    <Typography>{formatDateTime(timeline.to)}</Typography>
                   </Stack>
                   <Stack p={2} spacing={0.5}>
                     <Typography variant="caption" color="text.secondary">
@@ -282,7 +282,7 @@ export const AdminStorageStatisticsPage = () => {
                     <Typography variant="caption" color="text.secondary">
                       {t("storageStatistics.summary.generatedAtUtc")}
                     </Typography>
-                    <Typography>{formatDateTime(timeline.generatedAtUtc)}</Typography>
+                    <Typography>{formatDateTime(timeline.generatedAt)}</Typography>
                   </Stack>
                 </Stack>
               </Paper>
