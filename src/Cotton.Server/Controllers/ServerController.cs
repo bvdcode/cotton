@@ -156,24 +156,32 @@ namespace Cotton.Server.Controllers
                 return this.ApiBadRequest($"Requested range is too large. Maximum is {MaxGcTimelineHorizonDays} days.");
             }
 
-            var hourlyAggregates = await _dbContext.Chunks
+            var gcBaseQuery = _dbContext.Chunks
                 .AsNoTracking()
                 .Where(c => c.GCScheduledAfter != null
                     && c.GCScheduledAfter < rangeEndUtc
                     && !c.FileManifestChunks.Any()
                     && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
-                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash))
-                .Select(c => new
+                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash));
+
+            var overdueAggregate = await gcBaseQuery
+                .Where(c => c.GCScheduledAfter < rangeStartUtc)
+                .GroupBy(_ => 1)
+                .Select(g => new
                 {
-                    ClampedUtc = c.GCScheduledAfter!.Value < rangeStartUtc ? rangeStartUtc : c.GCScheduledAfter!.Value,
-                    c.StoredSizeBytes,
+                    ChunkCount = g.LongCount(),
+                    SizeBytes = g.Sum(x => x.StoredSizeBytes),
                 })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var hourlyAggregates = await gcBaseQuery
+                .Where(c => c.GCScheduledAfter >= rangeStartUtc)
                 .GroupBy(x => new
                 {
-                    x.ClampedUtc.Year,
-                    x.ClampedUtc.Month,
-                    x.ClampedUtc.Day,
-                    x.ClampedUtc.Hour,
+                    x.GCScheduledAfter!.Value.Year,
+                    x.GCScheduledAfter!.Value.Month,
+                    x.GCScheduledAfter!.Value.Day,
+                    x.GCScheduledAfter!.Value.Hour,
                 })
                 .Select(g => new
                 {
@@ -187,6 +195,20 @@ namespace Cotton.Server.Controllers
                 .ToListAsync(cancellationToken);
 
             Dictionary<DateTime, (long ChunkCount, long SizeBytes)> bucketsMap = [];
+
+            if (overdueAggregate is not null && overdueAggregate.ChunkCount > 0)
+            {
+                hourlyAggregates.Add(new
+                {
+                    rangeStartUtc.Year,
+                    rangeStartUtc.Month,
+                    rangeStartUtc.Day,
+                    rangeStartUtc.Hour,
+                    overdueAggregate.ChunkCount,
+                    overdueAggregate.SizeBytes,
+                });
+            }
+
             foreach (var item in hourlyAggregates)
             {
                 DateTime hourStartUtc = new(item.Year, item.Month, item.Day, item.Hour, 0, 0, DateTimeKind.Utc);
