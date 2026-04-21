@@ -119,6 +119,7 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Use built-in deduplication, inline compression, and streaming encryption in the main storage path.
 - Share files and folders with expiring links, share pages, previews, and native OS/browser share integration where available.
 - Generate previews for images, HEIC, PDF, text, audio, and video content.
+- Use the existing **WebDAV v1** implementation today for standard sync clients, phone auto-sync, and other protocol-level workflows while native Cotton clients are still in development. In Cotton, WebDAV is an important compatibility path for the early stage, not the long-term center of gravity for the product.
 - Run background manifest verification and storage consistency checks that surface real integrity problems.
 - Receive useful notifications for failed logins, successful logins, TOTP events, WebDAV token resets, shared-file downloads, upload verification failures, and missing storage chunks.
 - Configure the instance through a setup wizard with safe defaults, cloud email or custom SMTP, storage choices, telemetry preferences, and timezone selection.
@@ -168,6 +169,7 @@ The UI matters here because Cotton is not trying to prove a storage thesis in is
 | Streaming pipeline ordered as compression -> crypto -> backend | Efficient storage and encryption without offline repack jobs or giant temporary files                           |
 | Seekable stream assembly over chunked storage                  | Range reads, media scrubbing, poster extraction, and previews without full-file reassembly or full downloads    |
 | Chunk-first upload protocol                                    | Interrupted uploads recover cleanly and retries only send what the server still needs                           |
+| Standards-oriented WebDAV v1 as a compatibility path           | Standard sync tools already work today; WebDAV PUT streams directly into chunk storage without full buffering, so small and large files still follow the same ingest model. Retry behavior is naturally narrower than the native chunk protocol because WebDAV PUT is a long-lived protocol request rather than Cotton's own resumable upload flow. In Cotton this is a compatibility bridge, whereas in some other systems WebDAV can end up acting like the primary working path |
 | Background manifest hashing and storage consistency jobs       | Upload mismatches and missing stored data become visible operator events instead of silent corruption           |
 | Encrypted preview hashes plus dedicated preview generators     | Rich previews and share pages without exposing raw storage identifiers                                          |
 | Virtualized large-directory UI backed by structural metadata   | Folder browsing still feels immediate on large trees                                                            |
