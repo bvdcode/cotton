@@ -127,7 +127,7 @@ namespace Cotton.Server.Jobs
                     fileHasher.AppendData(buffer, 0, bytesRead);
 
                     var chunk = await _chunkIngest.UpsertChunkAsync(ownerId, buffer, bytesRead, ct);
-                    chunks.Add(new BackupChunkInfo(order, Hasher.ToHexStringHash(chunk.Hash), (int)chunk.SizeBytes));
+                    chunks.Add(new BackupChunkInfo(order, Hasher.ToHexStringHash(chunk.Hash), (int)chunk.PlainSizeBytes));
                     order++;
                 }
 

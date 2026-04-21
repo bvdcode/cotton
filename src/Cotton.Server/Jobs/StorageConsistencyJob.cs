@@ -195,7 +195,8 @@ namespace Cotton.Server.Jobs
                 _dbContext.Chunks.Add(new Chunk
                 {
                     Hash = hash,
-                    SizeBytes = sizeBytes,
+                    PlainSizeBytes = sizeBytes,
+                    StoredSizeBytes = sizeBytes,
                     CompressionAlgorithm = CompressionProcessor.Algorithm,
                     GCScheduledAfter = deleteAfter
                 });

@@ -9,7 +9,6 @@ using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
-using Cotton.Storage.Abstractions;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Extensions;
 using EasyExtensions.Models.Enums;
@@ -18,7 +17,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
-using System.Diagnostics;
 
 namespace Cotton.Server.Controllers
 {
@@ -26,7 +24,6 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Server)]
     public class ServerController(
         CottonDbContext _dbContext,
-        IStoragePipeline _storage,
         SettingsProvider _settings,
         ISchedulerFactory _scheduler,
         IDatabaseBackupManifestService _backupManifestService) : ControllerBase
@@ -136,7 +133,6 @@ namespace Cotton.Server.Controllers
             [FromQuery] DateTime? toUtc,
             [FromQuery] string bucket = "hour",
             [FromQuery] int timezoneOffsetMinutes = 0,
-            [FromQuery] bool includePhysicalStorageScan = false,
             CancellationToken cancellationToken = default)
         {
             string normalizedBucket = bucket.Trim().ToLowerInvariant();
@@ -173,7 +169,7 @@ namespace Cotton.Server.Controllers
                 .Select(c => new
                 {
                     ScheduledAfter = c.GCScheduledAfter!.Value,
-                    c.SizeBytes,
+                    c.StoredSizeBytes,
                 })
                 .AsAsyncEnumerable();
 
@@ -189,27 +185,26 @@ namespace Cotton.Server.Controllers
 
                 if (!bucketsMap.TryGetValue(bucketUtc, out var existing))
                 {
-                    bucketsMap[bucketUtc] = (1, item.SizeBytes);
+                    bucketsMap[bucketUtc] = (1, item.StoredSizeBytes);
                 }
                 else
                 {
-                    bucketsMap[bucketUtc] = (existing.ChunkCount + 1, existing.SizeBytes + item.SizeBytes);
+                    bucketsMap[bucketUtc] = (existing.ChunkCount + 1, existing.SizeBytes + item.StoredSizeBytes);
                 }
             }
 
-            List<GcChunkTimelineBucketDto> buckets = bucketsMap
+            List<GcChunkTimelineBucketDto> buckets = [.. bucketsMap
                 .OrderBy(x => x.Key)
                 .Select(x => new GcChunkTimelineBucketDto
                 {
                     BucketStartUtc = x.Key,
                     ChunkCount = x.Value.ChunkCount,
                     SizeBytes = x.Value.SizeBytes,
-                })
-                .ToList();
+                })];
 
             long totalChunks = buckets.Sum(x => x.ChunkCount);
             long totalSizeBytes = buckets.Sum(x => x.SizeBytes);
-            var storageStats = await GetStorageUsageStatsAsync(now, includePhysicalStorageScan, cancellationToken);
+            var storageStats = await GetStorageUsageStatsAsync(now, cancellationToken);
 
             return Ok(new GcChunkTimelineDto
             {
@@ -227,13 +222,13 @@ namespace Cotton.Server.Controllers
 
         private async Task<StorageUsageStatsDto> GetStorageUsageStatsAsync(
             DateTime nowUtc,
-            bool includePhysicalStorageScan,
             CancellationToken cancellationToken)
         {
             var chunks = _dbContext.Chunks.AsNoTracking();
 
             long totalUniqueChunkCount = await chunks.LongCountAsync(cancellationToken);
-            long totalUniqueChunkPlainSizeBytes = await chunks.SumAsync(x => (long?)x.SizeBytes, cancellationToken) ?? 0L;
+            long totalUniqueChunkPlainSizeBytes = await chunks.SumAsync(x => (long?)x.PlainSizeBytes, cancellationToken) ?? 0L;
+            long totalUniqueChunkStoredSizeBytes = await chunks.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
 
             var referenced = _dbContext.FileManifestChunks
                 .AsNoTracking()
@@ -251,13 +246,19 @@ namespace Cotton.Server.Controllers
             long referencedUniqueChunkPlainSizeBytes = await (
                 from c in chunks
                 join r in referenced on c.Hash equals r.ChunkHash
-                select (long?)c.SizeBytes)
+                select (long?)c.PlainSizeBytes)
+                .SumAsync(cancellationToken) ?? 0L;
+
+            long referencedUniqueChunkStoredSizeBytes = await (
+                from c in chunks
+                join r in referenced on c.Hash equals r.ChunkHash
+                select (long?)c.StoredSizeBytes)
                 .SumAsync(cancellationToken) ?? 0L;
 
             long referencedLogicalPlainSizeBytes = await (
                 from c in chunks
                 join r in referenced on c.Hash equals r.ChunkHash
-                select (long?)(c.SizeBytes * r.RefCount))
+                select (long?)(c.PlainSizeBytes * r.RefCount))
                 .SumAsync(cancellationToken) ?? 0L;
 
             var pendingGc = chunks
@@ -266,88 +267,37 @@ namespace Cotton.Server.Controllers
                     && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash));
 
             long pendingGcChunkCount = await pendingGc.LongCountAsync(cancellationToken);
-            long pendingGcSizeBytes = await pendingGc.SumAsync(x => (long?)x.SizeBytes, cancellationToken) ?? 0L;
+            long pendingGcStoredSizeBytes = await pendingGc.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
 
             long overdueGcChunkCount = await pendingGc
                 .Where(c => c.GCScheduledAfter <= nowUtc)
                 .LongCountAsync(cancellationToken);
-            long overdueGcSizeBytes = await pendingGc
+            long overdueGcStoredSizeBytes = await pendingGc
                 .Where(c => c.GCScheduledAfter <= nowUtc)
-                .SumAsync(x => (long?)x.SizeBytes, cancellationToken) ?? 0L;
+                .SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
 
             long dedupSavedBytes = Math.Max(0, referencedLogicalPlainSizeBytes - referencedUniqueChunkPlainSizeBytes);
-
-            long? physicalStoredObjectCount = null;
-            long? physicalStoredSizeBytes = null;
-            long? compressionGainBytes = null;
-            long? physicalStorageScanDurationMs = null;
-            int physicalStorageScanErrors = 0;
-
-            if (includePhysicalStorageScan)
-            {
-                var stopwatch = Stopwatch.StartNew();
-                var (ObjectCount, SizeBytes, Errors) = await ScanPhysicalStorageAsync(cancellationToken);
-                stopwatch.Stop();
-
-                physicalStoredObjectCount = ObjectCount;
-                physicalStoredSizeBytes = SizeBytes;
-                physicalStorageScanErrors = Errors;
-                physicalStorageScanDurationMs = stopwatch.ElapsedMilliseconds;
-                compressionGainBytes = totalUniqueChunkPlainSizeBytes - SizeBytes;
-            }
+            long compressionSavedBytes = Math.Max(0, totalUniqueChunkPlainSizeBytes - totalUniqueChunkStoredSizeBytes);
 
             return new StorageUsageStatsDto
             {
                 StorageType = _settings.GetServerSettings().StorageType.ToString(),
                 TotalUniqueChunkCount = totalUniqueChunkCount,
                 TotalUniqueChunkPlainSizeBytes = totalUniqueChunkPlainSizeBytes,
+                TotalUniqueChunkStoredSizeBytes = totalUniqueChunkStoredSizeBytes,
                 ReferencedUniqueChunkCount = referencedUniqueChunkCount,
                 ReferencedUniqueChunkPlainSizeBytes = referencedUniqueChunkPlainSizeBytes,
+                ReferencedUniqueChunkStoredSizeBytes = referencedUniqueChunkStoredSizeBytes,
                 ReferencedLogicalChunkCount = referencedLogicalChunkCount,
                 ReferencedLogicalPlainSizeBytes = referencedLogicalPlainSizeBytes,
                 DeduplicatedUniqueChunkCount = deduplicatedUniqueChunkCount,
                 DedupSavedBytes = dedupSavedBytes,
+                CompressionSavedBytes = compressionSavedBytes,
                 PendingGcChunkCount = pendingGcChunkCount,
-                PendingGcSizeBytes = pendingGcSizeBytes,
+                PendingGcStoredSizeBytes = pendingGcStoredSizeBytes,
                 OverdueGcChunkCount = overdueGcChunkCount,
-                OverdueGcSizeBytes = overdueGcSizeBytes,
-                PhysicalStorageScanCompleted = includePhysicalStorageScan,
-                PhysicalStoredObjectCount = physicalStoredObjectCount,
-                PhysicalStoredSizeBytes = physicalStoredSizeBytes,
-                CompressionGainBytes = compressionGainBytes,
-                PhysicalStorageScanDurationMs = physicalStorageScanDurationMs,
-                PhysicalStorageScanErrors = physicalStorageScanErrors,
+                OverdueGcStoredSizeBytes = overdueGcStoredSizeBytes,
             };
-        }
-
-        private async Task<(long ObjectCount, long SizeBytes, int Errors)> ScanPhysicalStorageAsync(CancellationToken cancellationToken)
-        {
-            long objectCount = 0;
-            long sizeBytes = 0;
-            int errors = 0;
-
-            int maxDegree = Math.Clamp(Environment.ProcessorCount, 4, 32);
-            ParallelOptions options = new()
-            {
-                CancellationToken = cancellationToken,
-                MaxDegreeOfParallelism = maxDegree,
-            };
-
-            await Parallel.ForEachAsync(_storage.ListAllKeysAsync(cancellationToken), options, async (uid, ct) =>
-            {
-                try
-                {
-                    long size = await _storage.GetSizeAsync(uid);
-                    Interlocked.Increment(ref objectCount);
-                    Interlocked.Add(ref sizeBytes, size);
-                }
-                catch
-                {
-                    Interlocked.Increment(ref errors);
-                }
-            });
-
-            return (objectCount, sizeBytes, errors);
         }
     }
 }
