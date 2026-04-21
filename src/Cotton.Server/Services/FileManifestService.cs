@@ -66,7 +66,7 @@ namespace Cotton.Server.Services
             var newFileManifest = new FileManifest()
             {
                 ContentType = ResolveContentType(fileName, contentType),
-                SizeBytes = chunks.Sum(x => x.SizeBytes),
+                SizeBytes = chunks.Sum(x => x.PlainSizeBytes),
                 ProposedContentHash = proposedContentHash,
             };
 
