@@ -895,7 +895,8 @@
     "menu": {
       "navigate": "Раздел",
       "users": "Пользователи",
-      "databaseBackup": "Бэкап базы данных"
+      "databaseBackup": "Бэкап базы данных",
+      "storageStatistics": "Статистика хранилища"
     },
     "roles": {
       "user": "Пользователь",
@@ -974,6 +975,57 @@
       "errors": {
         "loadFailed": "Не удалось загрузить информацию о бэкапе.",
         "triggerFailed": "Не удалось запустить бэкап."
+      }
+    },
+    "storageStatistics": {
+      "title": "Статистика хранилища",
+      "description": "Текущее использование хранилища и таймлайн запланированного освобождения через GC.",
+      "actions": {
+        "refresh": "Обновить"
+      },
+      "bucket": {
+        "hour": "Час",
+        "day": "День"
+      },
+      "state": {
+        "loading": "Загрузка статистики хранилища...",
+        "empty": "В выбранном периоде нет запланированных бакетов GC."
+      },
+      "summary": {
+        "fromUtc": "Начало",
+        "toUtc": "Конец",
+        "totalChunks": "Всего чанков к освобождению",
+        "totalSizeBytes": "Всего объём к освобождению",
+        "generatedAtUtc": "Сформировано"
+      },
+      "storage": {
+        "title": "Общая статистика использования",
+        "fields": {
+          "storageType": "Тип хранилища",
+          "totalUniqueChunkCount": "Всего уникальных чанков",
+          "totalUniqueChunkPlainSizeBytes": "Общий исходный объём (уникальные)",
+          "totalUniqueChunkStoredSizeBytes": "Общий хранимый объём (уникальные)",
+          "referencedUniqueChunkCount": "Уникальных чанков в ссылках",
+          "referencedLogicalChunkCount": "Логических чанков в ссылках",
+          "deduplicatedUniqueChunkCount": "Уникальных дедуплицированных чанков",
+          "dedupSavedBytes": "Экономия за счёт дедупликации",
+          "compressionSavedBytes": "Экономия за счёт сжатия",
+          "pendingGcChunkCount": "Чанков в очереди GC",
+          "pendingGcStoredSizeBytes": "Объём чанков в очереди GC",
+          "overdueGcChunkCount": "Просроченных чанков GC",
+          "overdueGcStoredSizeBytes": "Объём просроченных чанков GC"
+        }
+      },
+      "timeline": {
+        "title": "Таймлайн освобождения через GC",
+        "columns": {
+          "bucketStartUtc": "Время освобождения",
+          "chunkCount": "Чанки",
+          "sizeBytes": "Объём"
+        }
+      },
+      "errors": {
+        "loadFailed": "Не удалось загрузить статистику хранилища."
       }
     }
   },
