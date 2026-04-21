@@ -76,7 +76,6 @@ export interface GcChunkTimelineBucketDto {
 
 export interface GcChunkTimelineDto {
   bucket: GcTimelineBucketKind;
-  timezoneOffsetMinutes: number;
   fromUtc: string;
   toUtc: string;
   generatedAtUtc: string;
