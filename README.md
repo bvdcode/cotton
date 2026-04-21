@@ -190,7 +190,7 @@ This is the core difference from the more common self-hosted experience: Cotton'
   The streaming pipeline is tuned to reuse buffers and avoid unnecessary allocations, which keeps the process very thin in RAM even during sustained large transfers.
 
 - **Modern server stack with a very fast HTTP engine**  
-  Cotton.Server is built on **ASP.NET Core** and **EF Core**, served by **Kestrel** - _One of the Fastest Web Servers in the World_ - so the API and streaming paths keep strong throughput under real transfer load.
+  Cotton.Server is built on **ASP.NET Core** and **EF Core**, served by **Kestrel** - _One of the highest-performance and most efficient modern web servers._ - so the API and streaming paths keep strong throughput under real transfer load.
 
 - **Partial reads are a first-class path**  
   Range requests, media seeking, and preview extraction are designed into the storage engine, so users do not need to fetch a huge object just to read a slice, resume a transfer, or grab a poster frame. For content-addressed storage systems, having this level of partial-read behavior in the main path is still a notable rarity, because it's really hard to implement efficiently and requires careful coordination between the storage layout, indexing, and streaming logic.
