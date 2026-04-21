@@ -17,7 +17,7 @@ namespace Cotton.Database.Models
         /// <summary>
         /// Plain size of the chunk in bytes before transformations like compression or encryption.
         /// </summary>
-        [Column("size_bytes")]
+        [Column("plain_size_bytes")]
         public long PlainSizeBytes { get; set; }
 
         [Column("stored_size_bytes")]
