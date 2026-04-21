@@ -14,7 +14,13 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   adminApi,
@@ -89,7 +95,7 @@ export const AdminStorageStatisticsPage = () => {
   }, [loadTimeline]);
 
   const handleBucketChange = (
-    _: React.MouseEvent<HTMLElement>,
+    _: MouseEvent<HTMLElement>,
     nextBucket: GcTimelineBucketKind | null,
   ) => {
     if (!nextBucket || nextBucket === bucket) {
