@@ -69,7 +69,7 @@ Cotton is built around a different set of outcomes:
   Cotton separates content from layout and models trees explicitly. That avoids the path-string-heavy behavior that makes many systems feel sluggish or fragile once folders get large.
 
 - **Wide ecosystems are good, but throughput still decides daily usability**  
-  A broad app ecosystem looks great on paper, but what is the point if the native client cannot upload faster than a few MB/s. Cotton treats ingest throughput as a first-class product requirement: parallel chunk upload, missing-chunk retry, and sustained large-transfer behavior are in the main path.
+  A broad app ecosystem looks great on paper, but what is the point if the native client cannot upload fast and keep that speed. Cotton treats ingest throughput as a first-class product requirement: parallel chunk upload, missing-chunk retry, and sustained large-transfer behavior are in the main path so uploads are meant to run against the practical ceiling of the server for the full transfer, not just spike early and sag halfway through.
 
 - **Large media stays usable without a full download**  
   Cotton can serve range reads, seek inside large files, and extract previews or video frames directly from chunked encrypted storage, including S3-backed storage, without reassembling the whole object first.
@@ -184,7 +184,10 @@ This is the core difference from the more common self-hosted experience: Cotton'
   Range requests, media seeking, and preview extraction are designed into the storage engine, so users do not need to fetch a huge object just to read a slice, resume a transfer, or grab a poster frame. For content-addressed storage systems, having this level of partial-read behavior in the main path is still a notable rarity, because it's really hard to implement efficiently and requires careful coordination between the storage layout, indexing, and streaming logic.
 
 - **Uploads are designed for sustained throughput**  
-  The client hashes chunks in a web worker, uploads chunks in parallel, and retries only missing chunks after interruptions.
+  The client hashes chunks in a web worker, uploads chunks in parallel, and retries only missing chunks after interruptions. The goal is simple: once a large upload starts, throughput should stay pinned near the real limits of the server's network, storage, and CPU budget for most of the transfer instead of oscillating wildly under load.
+
+- **This project was shaped by the opposite experience**  
+  In the author's personal experience, some other self-hosted file cloud setups can fluctuate badly during large uploads and, at times, even collapse to a few hundred KB/s on native desktop clients. Cotton exists partly as a reaction to that: stable near-ceiling throughput matters more than pretty peak numbers for the first few seconds.
 
 - **Large-tree UX is part of the performance story**  
   The virtualized folder UI and structural metadata model are designed so listing and navigation remain responsive on ordinary hardware.
