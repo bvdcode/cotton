@@ -1,7 +1,99 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { getRefreshEnabled } from "../store";
+import { isJsonObject, type JsonValue } from "../types/json";
+import { toast } from "react-toastify";
 
 export { isAxiosError } from "axios";
+
+type ToastAwareAxiosError = AxiosError & {
+  _apiErrorToastDispatched?: boolean;
+};
+
+const collectStringMessages = (value: JsonValue, output: string[]): void => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      output.push(trimmed);
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectStringMessages(entry, output));
+    return;
+  }
+
+  if (!isJsonObject(value)) {
+    return;
+  }
+
+  Object.values(value).forEach((entry) => collectStringMessages(entry, output));
+};
+
+const extractApiErrorMessage = (
+  responseData: JsonValue | null | undefined,
+): string | null => {
+  if (!responseData || !isJsonObject(responseData)) {
+    return null;
+  }
+
+  const errorsPayload = responseData.errors;
+  if (!errorsPayload) {
+    return null;
+  }
+
+  const messages: string[] = [];
+  collectStringMessages(errorsPayload, messages);
+  return messages[0] ?? null;
+};
+
+const tryDispatchApiErrorToast = (error: AxiosError): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const toastAwareError = error as ToastAwareAxiosError;
+  if (toastAwareError._apiErrorToastDispatched) {
+    return;
+  }
+
+  const requestUrl = error.config?.url ?? "";
+  if (requestUrl.includes("auth/refresh")) {
+    return;
+  }
+
+  const responseData = error.response?.data as JsonValue | null | undefined;
+  const message = extractApiErrorMessage(responseData);
+  if (!message) {
+    return;
+  }
+
+  const responseStatus = error.response?.status ?? "unknown";
+  const toastId = `api-error:${responseStatus}:${requestUrl}:${message}`;
+  toast.error(message, { toastId });
+  toastAwareError._apiErrorToastDispatched = true;
+};
+
+export const hasApiErrorToastBeenDispatched = (error: AxiosError): boolean => {
+  const toastAwareError = error as ToastAwareAxiosError;
+  return toastAwareError._apiErrorToastDispatched === true;
+};
+
+const resolveBrowserTimeZone = (): string | null => {
+  if (typeof Intl === "undefined" || typeof Intl.DateTimeFormat !== "function") {
+    return null;
+  }
+
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (typeof timeZone !== "string") {
+    return null;
+  }
+
+  const normalizedTimeZone = timeZone.trim();
+  return normalizedTimeZone.length > 0 ? normalizedTimeZone : null;
+};
+
+const browserTimeZone = resolveBrowserTimeZone();
 
 let accessToken: string | null = null;
 export const getAccessToken = () => accessToken;
@@ -65,6 +157,11 @@ httpClient.interceptors.request.use(
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+
+    if (browserTimeZone && config.headers) {
+      config.headers["X-Timezone"] = browserTimeZone;
+    }
+
     return config;
   },
   (error) => Promise.reject(error),
@@ -83,11 +180,13 @@ httpClient.interceptors.response.use(
       // Don't retry on auth endpoints themselves
       const url = originalRequest.url || "";
       if (url.includes("auth/login") || url.includes("auth/refresh")) {
+        tryDispatchApiErrorToast(error);
         return Promise.reject(error);
       }
 
       // Public share links are anonymous and must not trigger auth refresh/logout loops.
       if (url.includes("/layouts/shared/")) {
+        tryDispatchApiErrorToast(error);
         return Promise.reject(error);
       }
 
@@ -97,6 +196,7 @@ httpClient.interceptors.response.use(
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("auth:logout"));
         }
+        tryDispatchApiErrorToast(error);
         return Promise.reject(error);
       }
 
@@ -150,6 +250,7 @@ httpClient.interceptors.response.use(
       }
     }
 
+    tryDispatchApiErrorToast(error);
     return Promise.reject(error);
   },
 );

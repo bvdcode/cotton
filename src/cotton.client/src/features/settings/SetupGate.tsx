@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import Loader from "../../shared/ui/Loader";
-import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 import { useAuth } from "../auth";
+import { UserRole } from "../auth/types";
+import { useSetupStatusStore } from "../../shared/store/setupStatusStore";
 
 type Props = {
   children: React.ReactNode;
@@ -10,25 +11,26 @@ type Props = {
 
 /**
  * Guards routes based on server initialization state.
- * - Fetches public server info (no auth required)
+ * - Fetches setup completion status via protected endpoint for admins
  * - Redirects to /setup if server is not initialized
  * - Redirects from /setup to home when server is initialized
  */
 export function SetupGate({ children }: Props) {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
-  const data = useServerInfoStore((s) => s.data);
-  const loaded = useServerInfoStore((s) => s.loaded);
-  const loading = useServerInfoStore((s) => s.loading);
-  const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
+  const { isAuthenticated, user } = useAuth();
+  const isInitialized = useSetupStatusStore((s) => s.isInitialized);
+  const loaded = useSetupStatusStore((s) => s.loaded);
+  const loading = useSetupStatusStore((s) => s.loading);
+  const fetchSetupStatus = useSetupStatusStore((s) => s.fetchSetupStatus);
+
+  const isAdmin = user?.role === UserRole.Admin;
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    if (loaded || loading) return;
-    fetchServerInfo();
-  }, [isAuthenticated, loaded, loading, fetchServerInfo]);
+    if (!isAuthenticated || !isAdmin) return;
+    void fetchSetupStatus({ force: true });
+  }, [isAuthenticated, isAdmin, fetchSetupStatus]);
 
-  if (!loaded || loading) {
+  if (isAdmin && (!loaded || loading)) {
     return (
       <Loader
         overlay={true}
@@ -38,14 +40,14 @@ export function SetupGate({ children }: Props) {
     );
   }
 
-  const isInitialized = data?.isServerInitialized ?? false;
+  const setupCompleted = isAdmin ? (isInitialized ?? true) : true;
   const onSetupPage = location.pathname === "/setup";
 
-  if (!isInitialized && !onSetupPage) {
+  if (!setupCompleted && !onSetupPage) {
     return <Navigate to="/setup" replace />;
   }
 
-  if (isInitialized && onSetupPage) {
+  if (setupCompleted && onSetupPage) {
     return <Navigate to="/" replace />;
   }
 

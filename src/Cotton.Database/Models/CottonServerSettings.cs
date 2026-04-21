@@ -3,6 +3,7 @@
 
 using Cotton.Database.Models.Enums;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
+using EasyExtensions.Extensions;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
@@ -90,5 +91,10 @@ namespace Cotton.Database.Models
 
         [Column("totp_max_failed_attempts")]
         public int TotpMaxFailedAttempts { get; set; }
+
+        public string GetInstanceIdHash()
+        {
+            return InstanceId.ToString().Sha256();
+        }
     }
 }
