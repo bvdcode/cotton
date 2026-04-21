@@ -899,7 +899,8 @@
     "menu": {
       "navigate": "Sección",
       "users": "Usuarios",
-      "databaseBackup": "Respaldo de base de datos"
+      "databaseBackup": "Respaldo de base de datos",
+      "storageStatistics": "Estadísticas de almacenamiento"
     },
     "roles": {
       "user": "Usuario",
@@ -978,6 +979,57 @@
       "errors": {
         "loadFailed": "No se pudo cargar la información del respaldo.",
         "triggerFailed": "No se pudo ejecutar el respaldo."
+      }
+    },
+    "storageStatistics": {
+      "title": "Estadísticas de almacenamiento",
+      "description": "Uso actual del almacenamiento y cronograma de liberación por GC.",
+      "actions": {
+        "refresh": "Actualizar"
+      },
+      "bucket": {
+        "hour": "Hora",
+        "day": "Día"
+      },
+      "state": {
+        "loading": "Cargando estadísticas de almacenamiento...",
+        "empty": "No hay intervalos de GC programados en el período seleccionado."
+      },
+      "summary": {
+        "fromUtc": "Desde",
+        "toUtc": "Hasta",
+        "totalChunks": "Total de chunks a liberar",
+        "totalSizeBytes": "Tamaño total a liberar",
+        "generatedAtUtc": "Generado el"
+      },
+      "storage": {
+        "title": "Uso general del almacenamiento",
+        "fields": {
+          "storageType": "Tipo de almacenamiento",
+          "totalUniqueChunkCount": "Total de chunks únicos",
+          "totalUniqueChunkPlainSizeBytes": "Tamaño plano total (únicos)",
+          "totalUniqueChunkStoredSizeBytes": "Tamaño almacenado total (únicos)",
+          "referencedUniqueChunkCount": "Chunks únicos referenciados",
+          "referencedLogicalChunkCount": "Chunks lógicos referenciados",
+          "deduplicatedUniqueChunkCount": "Chunks únicos deduplicados",
+          "dedupSavedBytes": "Ahorro por deduplicación",
+          "compressionSavedBytes": "Ahorro por compresión",
+          "pendingGcChunkCount": "Chunks pendientes de GC",
+          "pendingGcStoredSizeBytes": "Tamaño pendiente de GC",
+          "overdueGcChunkCount": "Chunks de GC vencidos",
+          "overdueGcStoredSizeBytes": "Tamaño de GC vencido"
+        }
+      },
+      "timeline": {
+        "title": "Cronograma de liberación por GC",
+        "columns": {
+          "bucketStartUtc": "Hora de liberación",
+          "chunkCount": "Chunks",
+          "sizeBytes": "Tamaño"
+        }
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar las estadísticas de almacenamiento."
       }
     }
   },

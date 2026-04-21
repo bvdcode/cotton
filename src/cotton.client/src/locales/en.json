@@ -899,7 +899,8 @@
     "menu": {
       "navigate": "Section",
       "users": "Users",
-      "databaseBackup": "Database backup"
+      "databaseBackup": "Database backup",
+      "storageStatistics": "Storage statistics"
     },
     "roles": {
       "user": "User",
@@ -978,6 +979,57 @@
       "errors": {
         "loadFailed": "Failed to load backup information.",
         "triggerFailed": "Failed to trigger backup."
+      }
+    },
+    "storageStatistics": {
+      "title": "Storage statistics",
+      "description": "Current storage usage and scheduled GC release timeline.",
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "bucket": {
+        "hour": "Hour",
+        "day": "Day"
+      },
+      "state": {
+        "loading": "Loading storage statistics...",
+        "empty": "No scheduled GC buckets in the selected period."
+      },
+      "summary": {
+        "fromUtc": "From",
+        "toUtc": "To",
+        "totalChunks": "Total chunks to release",
+        "totalSizeBytes": "Total size to release",
+        "generatedAtUtc": "Generated at"
+      },
+      "storage": {
+        "title": "Overall storage usage",
+        "fields": {
+          "storageType": "Storage type",
+          "totalUniqueChunkCount": "Total unique chunks",
+          "totalUniqueChunkPlainSizeBytes": "Total plain size (unique)",
+          "totalUniqueChunkStoredSizeBytes": "Total stored size (unique)",
+          "referencedUniqueChunkCount": "Referenced unique chunks",
+          "referencedLogicalChunkCount": "Referenced logical chunks",
+          "deduplicatedUniqueChunkCount": "Deduplicated unique chunks",
+          "dedupSavedBytes": "Saved by deduplication",
+          "compressionSavedBytes": "Saved by compression",
+          "pendingGcChunkCount": "Pending GC chunks",
+          "pendingGcStoredSizeBytes": "Pending GC stored size",
+          "overdueGcChunkCount": "Overdue GC chunks",
+          "overdueGcStoredSizeBytes": "Overdue GC stored size"
+        }
+      },
+      "timeline": {
+        "title": "GC release timeline",
+        "columns": {
+          "bucketStartUtc": "Release time",
+          "chunkCount": "Chunks",
+          "sizeBytes": "Size"
+        }
+      },
+      "errors": {
+        "loadFailed": "Failed to load storage statistics."
       }
     }
   },
