@@ -133,14 +133,36 @@ namespace Cotton.Server.Jobs
         private async Task EnsureChunkExistsAsync(byte[] hash, long sizeBytes)
         {
             var existing = await _dbContext.Chunks.FindAsync([(object?)hash]);
+            string storageKey = Hasher.ToHexStringHash(hash);
+            long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
             if (existing == null)
             {
                 _dbContext.Chunks.Add(new Chunk
                 {
                     Hash = hash,
-                    SizeBytes = sizeBytes,
+                    PlainSizeBytes = sizeBytes,
+                    StoredSizeBytes = storedSizeBytes,
                     CompressionAlgorithm = CompressionProcessor.Algorithm
                 });
+                return;
+            }
+
+            bool updated = false;
+            if (existing.PlainSizeBytes <= 0)
+            {
+                existing.PlainSizeBytes = sizeBytes;
+                updated = true;
+            }
+
+            if (existing.StoredSizeBytes <= 0)
+            {
+                existing.StoredSizeBytes = storedSizeBytes;
+                updated = true;
+            }
+
+            if (updated)
+            {
+                _dbContext.Chunks.Update(existing);
             }
         }
     }

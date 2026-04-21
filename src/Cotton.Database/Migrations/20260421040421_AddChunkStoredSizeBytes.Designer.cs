@@ -5,6 +5,7 @@ using System.Net;
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    partial class CottonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260421040421_AddChunkStoredSizeBytes")]
+    partial class AddChunkStoredSizeBytes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -108,15 +111,13 @@ namespace Cotton.Database.Migrations
 
                     b.Property<long>("PlainSizeBytes")
                         .HasColumnType("bigint")
-                        .HasColumnName("plain_size_bytes");
+                        .HasColumnName("size_bytes");
 
                     b.Property<long>("StoredSizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("stored_size_bytes");
 
                     b.HasKey("Hash");
-
-                    b.HasIndex("GCScheduledAfter");
 
                     b.ToTable("chunks");
                 });
@@ -393,12 +394,8 @@ namespace Cotton.Database.Migrations
                     b.HasIndex("ComputedContentHash")
                         .IsUnique();
 
-                    b.HasIndex("LargeFilePreviewHash");
-
                     b.HasIndex("ProposedContentHash")
                         .IsUnique();
-
-                    b.HasIndex("SmallFilePreviewHash");
 
                     b.ToTable("file_manifests");
                 });

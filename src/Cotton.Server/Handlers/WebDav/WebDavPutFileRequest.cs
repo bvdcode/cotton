@@ -225,7 +225,7 @@ public class WebDavPutFileRequestHandler(
         long totalBytes = 0;
         for (int i = 0; i < chunks.Count; i++)
         {
-            totalBytes += chunks[i].SizeBytes;
+            totalBytes += chunks[i].PlainSizeBytes;
         }
 
         if (request.ContentLength.HasValue && request.ContentLength.Value > 0)

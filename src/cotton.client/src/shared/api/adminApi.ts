@@ -47,6 +47,50 @@ export interface LatestDatabaseBackupDto {
   sourcePort: number;
 }
 
+export type GcTimelineBucketKind = "hour" | "day";
+
+export interface StorageUsageStatsDto {
+  storageType: string;
+  totalUniqueChunkCount: number;
+  totalUniqueChunkPlainSizeBytes: number;
+  totalUniqueChunkStoredSizeBytes: number;
+  referencedUniqueChunkCount: number;
+  referencedUniqueChunkPlainSizeBytes: number;
+  referencedUniqueChunkStoredSizeBytes: number;
+  referencedLogicalChunkCount: number;
+  referencedLogicalPlainSizeBytes: number;
+  deduplicatedUniqueChunkCount: number;
+  dedupSavedBytes: number;
+  compressionSavedBytes: number;
+  pendingGcChunkCount: number;
+  pendingGcStoredSizeBytes: number;
+  overdueGcChunkCount: number;
+  overdueGcStoredSizeBytes: number;
+}
+
+export interface GcChunkTimelineBucketDto {
+  bucketStartUtc: string;
+  chunkCount: number;
+  sizeBytes: number;
+}
+
+export interface GcChunkTimelineDto {
+  bucket: GcTimelineBucketKind;
+  from: string;
+  to: string;
+  generatedAt: string;
+  totalChunks: number;
+  totalSizeBytes: number;
+  buckets: GcChunkTimelineBucketDto[];
+  storage: StorageUsageStatsDto;
+}
+
+export interface GetGcChunksTimelineRequest {
+  bucket?: GcTimelineBucketKind;
+  fromUtc?: string;
+  toUtc?: string;
+}
+
 export const adminApi = {
   getUsers: async (): Promise<AdminUserDto[]> => {
     const response = await httpClient.get<AdminUserDto[]>("users");
@@ -85,5 +129,22 @@ export const adminApi = {
 
   triggerDatabaseBackup: async (): Promise<void> => {
     await httpClient.patch("server/database-backup/trigger");
+  },
+
+  getGcChunksTimeline: async (
+    request?: GetGcChunksTimelineRequest,
+  ): Promise<GcChunkTimelineDto> => {
+    const response = await httpClient.get<GcChunkTimelineDto>(
+      "server/gc/chunks/timeline",
+      {
+        params: {
+          bucket: request?.bucket,
+          fromUtc: request?.fromUtc,
+          toUtc: request?.toUtc,
+        },
+      },
+    );
+
+    return response.data;
   },
 };

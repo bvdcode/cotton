@@ -10,6 +10,8 @@ namespace Cotton.Database.Models
     [Table("file_manifests")]
     [Index(nameof(ProposedContentHash), IsUnique = true)]
     [Index(nameof(ComputedContentHash), IsUnique = true)]
+    [Index(nameof(SmallFilePreviewHash))]
+    [Index(nameof(LargeFilePreviewHash))]
     public class FileManifest : BaseEntity<Guid>
     {
         [Column("computed_content_hash")]

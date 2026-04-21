@@ -14,7 +14,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 type AdminMenuItem = {
-  id: "users" | "databaseBackup";
+  id: "users" | "databaseBackup" | "storageStatistics";
   to: string;
   title: string;
 };
@@ -35,6 +35,11 @@ export const AdminLayoutPage = () => {
       to: "/admin/database-backup",
       title: t("menu.databaseBackup"),
     },
+    {
+      id: "storageStatistics",
+      to: "/admin/storage-statistics",
+      title: t("menu.storageStatistics"),
+    },
   ];
 
   const isActive = (to: string) => location.pathname === to;
@@ -52,9 +57,15 @@ export const AdminLayoutPage = () => {
         xs: 1,
         md: 3,
       }}
+      pb={{
+        xs: 0,
+        md: 2,
+      }}
       width="100%"
       display="flex"
       flexDirection="column"
+      height="100%"
+      minHeight={0}
     >
       <Paper sx={{ display: { xs: "block", md: "none" }, p: 2, mb: 2 }}>
         <FormControl fullWidth size="small">
@@ -79,13 +90,28 @@ export const AdminLayoutPage = () => {
       <Box
         display="grid"
         flex={1}
+        minHeight={0}
         sx={{
           gridTemplateColumns: { xs: "1fr", md: "260px 1fr" },
           gap: 2,
         }}
       >
-        <Paper sx={{ display: { xs: "none", md: "block" } }}>
-          <List sx={{ pt: 1 }}>
+        <Paper
+          sx={{
+            display: { xs: "none", md: "flex" },
+            flexDirection: "column",
+            minHeight: 0,
+            height: "100%",
+          }}
+        >
+          <List
+            sx={{
+              pt: 1,
+              overflowY: "auto",
+              minHeight: 0,
+              flex: 1,
+            }}
+          >
             {items.map((item) => (
               <ListItemButton
                 key={item.id}
@@ -101,7 +127,12 @@ export const AdminLayoutPage = () => {
           </List>
         </Paper>
 
-        <Box overflow="hidden">
+        <Box
+          sx={{ overflowY: "auto", overflowX: "hidden" }}
+          minHeight={0}
+          display="flex"
+          flexDirection="column"
+        >
           <Outlet />
         </Box>
       </Box>

@@ -1,8 +1,8 @@
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
-  Divider,
   LinearProgress,
   Paper,
   Skeleton,
@@ -41,7 +41,6 @@ const formatDateTime = (value: string): string => {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
   }).format(parsed);
 };
 
@@ -150,7 +149,7 @@ export const AdminDatabaseBackupPage = () => {
   const isInitialLoading = isLoading && backup === null;
   const isRefreshing = isLoading && backup !== null;
 
-  const rows = useMemo(() => {
+  const cards = useMemo(() => {
     if (!backup) {
       return [];
     }
@@ -160,6 +159,7 @@ export const AdminDatabaseBackupPage = () => {
         id: "backupId",
         label: t("databaseBackup.fields.backupId"),
         value: backup.backupId || placeholder,
+        mono: true,
       },
       {
         id: "createdAtUtc",
@@ -185,6 +185,7 @@ export const AdminDatabaseBackupPage = () => {
         id: "dumpContentHash",
         label: t("databaseBackup.fields.dumpContentHash"),
         value: backup.dumpContentHash || placeholder,
+        mono: true,
       },
       {
         id: "sourceDatabase",
@@ -266,18 +267,29 @@ export const AdminDatabaseBackupPage = () => {
           </Stack>
 
           {isInitialLoading && (
-            <Stack divider={<Divider />}>
-              {Array.from({ length: 9 }).map((_, index) => (
-                <Stack key={index} spacing={0.75} p={2}>
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1,
+                gridTemplateColumns: {
+                  xs: "repeat(1, minmax(0, 1fr))",
+                  sm: "repeat(2, minmax(0, 1fr))",
+                  md: "repeat(3, minmax(0, 1fr))",
+                },
+              }}
+            >
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Box key={index} sx={{ p: 1.5 }}>
                   <Skeleton variant="text" width={140} height={16} />
                   <Skeleton
                     variant="text"
-                    width={index === 5 ? "80%" : "42%"}
-                    height={24}
+                    width={index % 2 === 0 ? "54%" : "72%"}
+                    height={28}
                   />
-                </Stack>
+                  <Skeleton variant="text" width="66%" height={14} />
+                </Box>
               ))}
-            </Stack>
+            </Box>
           )}
 
           {!isLoading && loadState.kind !== "error" && backup === null && (
@@ -285,25 +297,39 @@ export const AdminDatabaseBackupPage = () => {
           )}
 
           {backup !== null && (
-            <Stack divider={<Divider />}>
-              {rows.map((row) => (
-                <Stack key={row.id} spacing={0.5} p={2}>
-                  <Typography variant="caption" color="text.secondary">
-                    {row.label}
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1,
+                gridTemplateColumns: {
+                  xs: "repeat(1, minmax(0, 1fr))",
+                  sm: "repeat(2, minmax(0, 1fr))",
+                  md: "repeat(3, minmax(0, 1fr))",
+                },
+              }}
+            >
+              {cards.map((card) => (
+                <Box
+                  key={card.id}
+                  sx={{ p: 1.5, minWidth: 0 }}
+                >
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {card.label}
                   </Typography>
                   <Typography
-                    variant="body1"
+                    variant="h6"
+                    fontWeight={700}
                     sx={
-                      row.id === "dumpContentHash"
+                      card.mono
                         ? { fontFamily: "monospace", wordBreak: "break-all" }
                         : undefined
                     }
                   >
-                    {row.value}
+                    {card.value}
                   </Typography>
-                </Stack>
+                </Box>
               ))}
-            </Stack>
+            </Box>
           )}
         </Stack>
       </Paper>

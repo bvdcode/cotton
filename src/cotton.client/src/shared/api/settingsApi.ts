@@ -2,18 +2,18 @@ import { httpClient } from "./httpClient";
 import type { JsonValue } from "../types/json";
 
 export interface PublicServerInfo {
-  uptime: string;
-  version: string;
-  currentTime: string;
-  serverHasUsers: boolean;
+  canCreateInitialAdmin: boolean;
   product: string;
-  instanceIdHash: string;
-  isServerInitialized: boolean;
 }
 
 export interface ServerSettings {
   maxChunkSizeBytes: number;
   supportedHashAlgorithm: string;
+}
+
+interface SetupStatusRaw {
+  isServerInitialized?: boolean;
+  IsServerInitialized?: boolean;
 }
 
 interface ServerSettingsRaw {
@@ -26,6 +26,18 @@ export const settingsApi = {
   getPublicInfo: async (): Promise<PublicServerInfo> => {
     const response = await httpClient.get<PublicServerInfo>("server/info");
     return response.data;
+  },
+
+  getIsSetupComplete: async (): Promise<boolean> => {
+    const response = await httpClient.get<SetupStatusRaw>(
+      "server/settings/is-setup-complete",
+    );
+
+    return (
+      response.data.isServerInitialized ??
+      response.data.IsServerInitialized ??
+      true
+    );
   },
 
   get: async (): Promise<ServerSettings> => {

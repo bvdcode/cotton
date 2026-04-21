@@ -16,13 +16,21 @@
         public const char DefaultPathSeparator = '/';
 
         /// <summary>
-        /// Gets the short name of the product, which is "Cotton".
+        /// Gets the short name of the product, which is "cotton".
         /// </summary>
-        public const string ShortProductName = "Cotton";
+        public const string ShortProductName = "cotton";
 
         /// <summary>
         /// Gets the name of the product, which is "Cotton Cloud".
         /// </summary>
         public const string ProductName = "Cotton Cloud";
+
+        /// <summary>
+        /// Specifies the delay, in minutes, before an administrator account is automatically created.
+        /// </summary>
+        /// <remarks>Adjust this value to control the timing of automatic admin account creation.
+        /// Modifying the delay can help coordinate account provisioning in different deployment or initialization
+        /// scenarios.</remarks>
+        public const int AdminAutocreateMinutesDelay = 5;
     }
 }

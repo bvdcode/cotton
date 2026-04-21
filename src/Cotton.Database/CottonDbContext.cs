@@ -15,6 +15,7 @@ namespace Cotton.Database
         public DbSet<Layout> UserLayouts => Set<Layout>();
         public DbSet<NodeFile> NodeFiles => Set<NodeFile>();
         public DbSet<Benchmark> Benchmarks => Set<Benchmark>();
+        public DbSet<AppVersion> AppVersions => Set<AppVersion>();
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<FileManifest> FileManifests => Set<FileManifest>();
         public DbSet<DownloadToken> DownloadTokens => Set<DownloadToken>();

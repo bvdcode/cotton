@@ -5,6 +5,7 @@ import { useSettingsStore } from "./settingsStore";
 import { useTrashStore } from "./trashStore";
 import { useAudioPlayerStore } from "./audioPlayerStore";
 import { useUserPreferencesStore } from "./userPreferencesStore";
+import { useSetupStatusStore } from "./setupStatusStore";
 import { LANGUAGE_STORAGE_KEY } from "../config/storageKeys";
 
 const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
@@ -52,4 +53,5 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   useSettingsStore.getState().reset();
   useUserPreferencesStore.getState().reset();
   useAudioPlayerStore.getState().reset();
+  useSetupStatusStore.getState().reset();
 };

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Models;
+using Cotton.Database;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.DatabaseBackup;
@@ -14,6 +15,7 @@ using EasyExtensions.Models.Enums;
 using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Quartz;
 
 namespace Cotton.Server.Controllers
@@ -21,10 +23,14 @@ namespace Cotton.Server.Controllers
     [ApiController]
     [Route(Routes.V1.Server)]
     public class ServerController(
+        CottonDbContext _dbContext,
         SettingsProvider _settings,
         ISchedulerFactory _scheduler,
         IDatabaseBackupManifestService _backupManifestService) : ControllerBase
     {
+        private const int DefaultGcTimelineHorizonDays = 30;
+        private const int MaxGcTimelineHorizonDays = 365;
+
         [HttpPost("emergency-shutdown")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public IActionResult EmergencyShutdown()
@@ -36,21 +42,24 @@ namespace Cotton.Server.Controllers
         [HttpGet("info")]
         public async Task<IActionResult> GetServerInfo()
         {
-            string instanceIdHash = _settings.GetServerSettings().InstanceId.ToString().Sha256();
-            string version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev";
+            string instanceIdHash = _settings.GetServerSettings().GetInstanceIdHash();
             bool serverHasUsers = await _settings.ServerHasUsersAsync();
-            bool isServerInitialized = await _settings.IsServerInitializedAsync();
-            TimeSpan uptime = DateTime.UtcNow - System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime();
             return Ok(new PublicServerInfo()
             {
-                Uptime = uptime,
-                Version = version,
-                CurrentTime = DateTime.UtcNow,
-                ServerHasUsers = serverHasUsers,
-                Product = Constants.ProductName,
+                // TODO: Change to token-based approach
                 InstanceIdHash = instanceIdHash,
-                IsServerInitialized = isServerInitialized,
+
+                CanCreateInitialAdmin = !serverHasUsers,
+                Product = Constants.ProductName,
             });
+        }
+
+        [HttpGet("settings/is-setup-complete")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> IsServerInitialized()
+        {
+            bool isServerInitialized = await _settings.IsServerInitializedAsync();
+            return Ok(new { IsServerInitialized = isServerInitialized });
         }
 
         [HttpPost("settings")]
@@ -115,6 +124,229 @@ namespace Cotton.Server.Controllers
                 SourceHost = backup.Manifest.SourceHost,
                 SourcePort = backup.Manifest.SourcePort,
             });
+        }
+
+        [HttpGet("gc/chunks/timeline")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> GetGcChunksTimeline(
+            [FromQuery] DateTime? fromUtc,
+            [FromQuery] DateTime? toUtc,
+            [FromQuery] string bucket = "hour",
+            CancellationToken cancellationToken = default)
+        {
+            string normalizedBucket = bucket.Trim().ToLowerInvariant();
+            if (normalizedBucket is not ("hour" or "day"))
+            {
+                return this.ApiBadRequest("Invalid bucket value. Supported values: 'hour', 'day'.");
+            }
+
+            TimeZoneInfo effectiveTimeZone = ResolveTimelineTimeZone();
+
+            DateTime now = DateTime.UtcNow;
+            DateTime rangeStartUtc = (fromUtc ?? now).ToUniversalTime();
+            DateTime rangeEndUtc = (toUtc ?? rangeStartUtc.AddDays(DefaultGcTimelineHorizonDays)).ToUniversalTime();
+
+            if (rangeEndUtc <= rangeStartUtc)
+            {
+                return this.ApiBadRequest("toUtc must be greater than fromUtc.");
+            }
+
+            if (rangeEndUtc > rangeStartUtc.AddDays(MaxGcTimelineHorizonDays))
+            {
+                return this.ApiBadRequest($"Requested range is too large. Maximum is {MaxGcTimelineHorizonDays} days.");
+            }
+
+            var gcBaseQuery = _dbContext.Chunks
+                .AsNoTracking()
+                .Where(c => c.GCScheduledAfter != null
+                    && c.GCScheduledAfter < rangeEndUtc
+                    && !c.FileManifestChunks.Any()
+                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
+                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash));
+
+            var overdueAggregate = await gcBaseQuery
+                .Where(c => c.GCScheduledAfter < rangeStartUtc)
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    ChunkCount = g.LongCount(),
+                    SizeBytes = g.Sum(x => x.StoredSizeBytes),
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var hourlyAggregates = await gcBaseQuery
+                .Where(c => c.GCScheduledAfter >= rangeStartUtc)
+                .GroupBy(x => new
+                {
+                    x.GCScheduledAfter!.Value.Year,
+                    x.GCScheduledAfter!.Value.Month,
+                    x.GCScheduledAfter!.Value.Day,
+                    x.GCScheduledAfter!.Value.Hour,
+                })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    g.Key.Day,
+                    g.Key.Hour,
+                    ChunkCount = g.LongCount(),
+                    SizeBytes = g.Sum(x => x.StoredSizeBytes),
+                })
+                .ToListAsync(cancellationToken);
+
+            Dictionary<DateTime, (long ChunkCount, long SizeBytes)> bucketsMap = [];
+
+            if (overdueAggregate is not null && overdueAggregate.ChunkCount > 0)
+            {
+                hourlyAggregates.Add(new
+                {
+                    rangeStartUtc.Year,
+                    rangeStartUtc.Month,
+                    rangeStartUtc.Day,
+                    rangeStartUtc.Hour,
+                    overdueAggregate.ChunkCount,
+                    overdueAggregate.SizeBytes,
+                });
+            }
+
+            foreach (var item in hourlyAggregates)
+            {
+                DateTime hourStartUtc = new(item.Year, item.Month, item.Day, item.Hour, 0, 0, DateTimeKind.Utc);
+                DateTime local = TimeZoneInfo.ConvertTimeFromUtc(hourStartUtc, effectiveTimeZone);
+                DateTime localBucketStart = normalizedBucket == "day"
+                    ? new DateTime(local.Year, local.Month, local.Day, 0, 0, 0, DateTimeKind.Unspecified)
+                    : new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
+                TimeSpan bucketOffset = effectiveTimeZone.GetUtcOffset(localBucketStart);
+                DateTime bucketUtc = new DateTimeOffset(localBucketStart, bucketOffset).UtcDateTime;
+
+                if (!bucketsMap.TryGetValue(bucketUtc, out var existing))
+                {
+                    bucketsMap[bucketUtc] = (item.ChunkCount, item.SizeBytes);
+                }
+                else
+                {
+                    bucketsMap[bucketUtc] = (existing.ChunkCount + item.ChunkCount, existing.SizeBytes + item.SizeBytes);
+                }
+            }
+
+            List<GcChunkTimelineBucketDto> buckets = [.. bucketsMap
+                .OrderBy(x => x.Key)
+                .Select(x => new GcChunkTimelineBucketDto
+                {
+                    BucketStartUtc = x.Key,
+                    ChunkCount = x.Value.ChunkCount,
+                    SizeBytes = x.Value.SizeBytes,
+                })];
+
+            long totalChunks = buckets.Sum(x => x.ChunkCount);
+            long totalSizeBytes = buckets.Sum(x => x.SizeBytes);
+            var storageStats = await GetStorageUsageStatsAsync(now, cancellationToken);
+
+            return Ok(new GcChunkTimelineDto
+            {
+                Bucket = normalizedBucket,
+                From = rangeStartUtc,
+                To = rangeEndUtc,
+                GeneratedAt = now,
+                TotalChunks = totalChunks,
+                TotalSizeBytes = totalSizeBytes,
+                Buckets = buckets,
+                Storage = storageStats,
+            });
+        }
+
+        private async Task<StorageUsageStatsDto> GetStorageUsageStatsAsync(
+            DateTime nowUtc,
+            CancellationToken cancellationToken)
+        {
+            var chunks = _dbContext.Chunks.AsNoTracking();
+
+            long totalUniqueChunkCount = await chunks.LongCountAsync(cancellationToken);
+            long totalUniqueChunkPlainSizeBytes = await chunks.SumAsync(x => (long?)x.PlainSizeBytes, cancellationToken) ?? 0L;
+            long totalUniqueChunkStoredSizeBytes = await chunks.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
+
+            var referenced = _dbContext.FileManifestChunks
+                .AsNoTracking()
+                .GroupBy(x => x.ChunkHash)
+                .Select(g => new
+                {
+                    ChunkHash = g.Key,
+                    RefCount = g.LongCount(),
+                });
+
+            long referencedUniqueChunkCount = await referenced.LongCountAsync(cancellationToken);
+            long referencedLogicalChunkCount = await referenced.SumAsync(x => (long?)x.RefCount, cancellationToken) ?? 0L;
+            long deduplicatedUniqueChunkCount = await referenced.Where(x => x.RefCount > 1).LongCountAsync(cancellationToken);
+
+            long referencedUniqueChunkPlainSizeBytes = await (
+                from c in chunks
+                join r in referenced on c.Hash equals r.ChunkHash
+                select (long?)c.PlainSizeBytes)
+                .SumAsync(cancellationToken) ?? 0L;
+
+            long referencedUniqueChunkStoredSizeBytes = await (
+                from c in chunks
+                join r in referenced on c.Hash equals r.ChunkHash
+                select (long?)c.StoredSizeBytes)
+                .SumAsync(cancellationToken) ?? 0L;
+
+            long referencedLogicalPlainSizeBytes = await (
+                from c in chunks
+                join r in referenced on c.Hash equals r.ChunkHash
+                select (long?)(c.PlainSizeBytes * r.RefCount))
+                .SumAsync(cancellationToken) ?? 0L;
+
+            var pendingGc = chunks
+                .Where(c => c.GCScheduledAfter != null
+                    && !c.FileManifestChunks.Any()
+                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
+                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash));
+
+            long pendingGcChunkCount = await pendingGc.LongCountAsync(cancellationToken);
+            long pendingGcStoredSizeBytes = await pendingGc.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
+
+            long overdueGcChunkCount = await pendingGc
+                .Where(c => c.GCScheduledAfter <= nowUtc)
+                .LongCountAsync(cancellationToken);
+            long overdueGcStoredSizeBytes = await pendingGc
+                .Where(c => c.GCScheduledAfter <= nowUtc)
+                .SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
+
+            long dedupSavedBytes = Math.Max(0, referencedLogicalPlainSizeBytes - referencedUniqueChunkPlainSizeBytes);
+            long compressionSavedBytes = Math.Max(0, totalUniqueChunkPlainSizeBytes - totalUniqueChunkStoredSizeBytes);
+
+            return new StorageUsageStatsDto
+            {
+                StorageType = _settings.GetServerSettings().StorageType.ToString(),
+                TotalUniqueChunkCount = totalUniqueChunkCount,
+                TotalUniqueChunkPlainSizeBytes = totalUniqueChunkPlainSizeBytes,
+                TotalUniqueChunkStoredSizeBytes = totalUniqueChunkStoredSizeBytes,
+                ReferencedUniqueChunkCount = referencedUniqueChunkCount,
+                ReferencedUniqueChunkPlainSizeBytes = referencedUniqueChunkPlainSizeBytes,
+                ReferencedUniqueChunkStoredSizeBytes = referencedUniqueChunkStoredSizeBytes,
+                ReferencedLogicalChunkCount = referencedLogicalChunkCount,
+                ReferencedLogicalPlainSizeBytes = referencedLogicalPlainSizeBytes,
+                DeduplicatedUniqueChunkCount = deduplicatedUniqueChunkCount,
+                DedupSavedBytes = dedupSavedBytes,
+                CompressionSavedBytes = compressionSavedBytes,
+                PendingGcChunkCount = pendingGcChunkCount,
+                PendingGcStoredSizeBytes = pendingGcStoredSizeBytes,
+                OverdueGcChunkCount = overdueGcChunkCount,
+                OverdueGcStoredSizeBytes = overdueGcStoredSizeBytes,
+            };
+        }
+
+        private TimeZoneInfo ResolveTimelineTimeZone()
+        {
+            const string timezoneHeaderName = "X-Timezone";
+            string? timezoneId = Request.Headers[timezoneHeaderName].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(timezoneId)
+                && TimeZoneInfo.TryFindSystemTimeZoneById(timezoneId.Trim(), out TimeZoneInfo? headerTimeZone))
+            {
+                return headerTimeZone;
+            }
+
+            return TimeZoneInfo.Local;
         }
     }
 }
