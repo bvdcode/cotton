@@ -16,7 +16,6 @@ import {
 } from "@mui/material";
 import {
   type MouseEvent,
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -61,38 +60,52 @@ export const AdminStorageStatisticsPage = () => {
   const [bucket, setBucket] = useState<GcTimelineBucketKind>("day");
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
 
-  const loadTimeline = useCallback(async () => {
-    setLoadState({ kind: "loading" });
-
-    try {
-      const result = await adminApi.getGcChunksTimeline({
-        bucket,
-        timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
-      });
-
-      setTimeline(result);
-      setLoadState({ kind: "idle" });
-    } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setLoadState({ kind: "error", message });
-          return;
-        }
-      }
-
-      setLoadState({
-        kind: "error",
-        message: t("storageStatistics.errors.loadFailed"),
-      });
-    }
-  }, [bucket, t]);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
+    let isActive = true;
+
+    const loadTimeline = async () => {
+      try {
+        const result = await adminApi.getGcChunksTimeline({
+          bucket,
+          timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        setTimeline(result);
+        setLoadState({ kind: "idle" });
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        if (isAxiosError(error)) {
+          const message = (
+            error.response?.data as { message?: string } | undefined
+          )?.message;
+          if (typeof message === "string" && message.length > 0) {
+            setLoadState({ kind: "error", message });
+            return;
+          }
+        }
+
+        setLoadState({
+          kind: "error",
+          message: t("storageStatistics.errors.loadFailed"),
+        });
+      }
+    };
+
     void loadTimeline();
-  }, [loadTimeline]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [bucket, refreshVersion, t]);
 
   const handleBucketChange = (
     _: MouseEvent<HTMLElement>,
@@ -102,6 +115,7 @@ export const AdminStorageStatisticsPage = () => {
       return;
     }
 
+    setLoadState({ kind: "loading" });
     setBucket(nextBucket);
   };
 
@@ -221,7 +235,8 @@ export const AdminStorageStatisticsPage = () => {
               <Button
                 variant="outlined"
                 onClick={() => {
-                  void loadTimeline();
+                  setLoadState({ kind: "loading" });
+                  setRefreshVersion((value) => value + 1);
                 }}
                 disabled={isLoading}
               >
