@@ -76,9 +76,9 @@ export interface GcChunkTimelineBucketDto {
 
 export interface GcChunkTimelineDto {
   bucket: GcTimelineBucketKind;
-  fromUtc: string;
-  toUtc: string;
-  generatedAtUtc: string;
+  from: string;
+  to: string;
+  generatedAt: string;
   totalChunks: number;
   totalSizeBytes: number;
   buckets: GcChunkTimelineBucketDto[];
