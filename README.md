@@ -78,6 +78,9 @@ Cotton is built around a different set of outcomes:
 - **Wide ecosystems are good, but throughput still decides daily usability**  
   A broad app ecosystem looks great on paper, but what is the point if the native client cannot upload fast and keep that speed. Cotton treats ingest throughput as a first-class product requirement: parallel chunk upload, missing-chunk retry, and sustained large-transfer behavior are in the main path so uploads are meant to run against the practical ceiling of the server for the full transfer, not just spike early and sag halfway through.
 
+- **Huge files are not treated like a separate crisis path**  
+  By design, a tiny file and a huge file go through the same chunk-plus-manifest model. Size mostly changes transfer duration and chunk count, not the fundamental shape of the operation or the kind of load the system has to invent a special path for.
+
 - **Large media stays usable without a full download**  
   Cotton can serve range reads, seek inside large files, and extract previews or video frames directly from chunked encrypted storage, including S3-backed storage, without reassembling the whole object first.
 
