@@ -16,7 +16,7 @@ namespace Cotton.Validators
         /// - only lowercase latin letters, digits, underscores, dots and dashes
         /// - length: 2..32
         /// - must start with a letter
-        /// - can use underscores and dots as separators, but not consecutively or at the start/end
+        /// - can use underscores, dots and dashes as separators, but not consecutively or at the start/end
         /// </summary>
         public static bool TryNormalizeAndValidate(
             string input,
