@@ -41,6 +41,12 @@ public class ChunkIngestService(
 
         if (chunk is not null && settings.AllowCrossUserDeduplication && existsInStorage)
         {
+            if (chunk.StoredSizeBytes <= 0)
+            {
+                chunk.StoredSizeBytes = await _storage.GetSizeAsync(storageKey);
+                _dbContext.Chunks.Update(chunk);
+            }
+
             if (chunk.GCScheduledAfter.HasValue)
             {
                 chunk.GCScheduledAfter = null;
@@ -58,20 +64,44 @@ public class ChunkIngestService(
             await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
         }
 
+        long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
+
         if (chunk is null)
         {
             chunk = new Chunk
             {
                 Hash = chunkHash,
-                SizeBytes = length,
+                PlainSizeBytes = length,
+                StoredSizeBytes = storedSizeBytes,
                 CompressionAlgorithm = CompressionProcessor.Algorithm
             };
             await _dbContext.Chunks.AddAsync(chunk, ct);
         }
-        else if (chunk.GCScheduledAfter.HasValue)
+        else
         {
-            chunk.GCScheduledAfter = null;
-            _dbContext.Chunks.Update(chunk);
+            bool updated = false;
+            if (chunk.GCScheduledAfter.HasValue)
+            {
+                chunk.GCScheduledAfter = null;
+                updated = true;
+            }
+
+            if (chunk.PlainSizeBytes <= 0)
+            {
+                chunk.PlainSizeBytes = length;
+                updated = true;
+            }
+
+            if (chunk.StoredSizeBytes <= 0)
+            {
+                chunk.StoredSizeBytes = storedSizeBytes;
+                updated = true;
+            }
+
+            if (updated)
+            {
+                _dbContext.Chunks.Update(chunk);
+            }
         }
 
         await EnsureOwnershipAsync(chunkHash, userId, ct);
