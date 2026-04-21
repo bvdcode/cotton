@@ -1,15 +1,9 @@
 import {
   Alert,
+  Box,
   Button,
-  Divider,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -34,6 +28,17 @@ type LoadState =
   | { kind: "loading" }
   | { kind: "error"; message: string };
 
+type TimelinePoint = {
+  bucketStartUtc: string;
+  chunkCount: number;
+  sizeBytes: number;
+};
+
+const MIN_SLOT_COUNT_BY_BUCKET: Record<GcTimelineBucketKind, number> = {
+  day: 7,
+  hour: 24,
+};
+
 const formatDateTime = (value: string): string => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -52,6 +57,75 @@ const formatDateTime = (value: string): string => {
 
 const formatCount = (value: number): string =>
   new Intl.NumberFormat().format(value);
+
+const alignUtcToBucketStart = (
+  value: Date,
+  bucket: GcTimelineBucketKind,
+): Date => {
+  if (bucket === "day") {
+    return new Date(
+      Date.UTC(
+        value.getUTCFullYear(),
+        value.getUTCMonth(),
+        value.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+  }
+
+  return new Date(
+    Date.UTC(
+      value.getUTCFullYear(),
+      value.getUTCMonth(),
+      value.getUTCDate(),
+      value.getUTCHours(),
+      0,
+      0,
+      0,
+    ),
+  );
+};
+
+const addUtcBuckets = (
+  value: Date,
+  bucket: GcTimelineBucketKind,
+  amount: number,
+): Date => {
+  const next = new Date(value);
+
+  if (bucket === "day") {
+    next.setUTCDate(next.getUTCDate() + amount);
+    return next;
+  }
+
+  next.setUTCHours(next.getUTCHours() + amount);
+  return next;
+};
+
+const formatSlotLabel = (
+  value: string,
+  bucket: GcTimelineBucketKind,
+): string => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  if (bucket === "day") {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "2-digit",
+    }).format(parsed);
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+};
 
 export const AdminStorageStatisticsPage = () => {
   const { t } = useTranslation(["admin", "common"]);
@@ -121,80 +195,112 @@ export const AdminStorageStatisticsPage = () => {
   const placeholder = t("placeholder", { ns: "common" });
   const isLoading = loadState.kind === "loading";
 
-  const storageRows = useMemo(() => {
+  const summaryCards = useMemo(() => {
     if (!timeline) {
       return [];
     }
 
     const storage = timeline.storage;
+
     return [
       {
-        id: "storageType",
-        label: t("storageStatistics.storage.fields.storageType"),
-        value: storage.storageType || placeholder,
-      },
-      {
-        id: "totalUniqueChunkCount",
-        label: t("storageStatistics.storage.fields.totalUniqueChunkCount"),
-        value: formatCount(storage.totalUniqueChunkCount),
-      },
-      {
-        id: "totalUniqueChunkPlainSizeBytes",
-        label: t("storageStatistics.storage.fields.totalUniqueChunkPlainSizeBytes"),
-        value: formatBytes(storage.totalUniqueChunkPlainSizeBytes),
-      },
-      {
-        id: "totalUniqueChunkStoredSizeBytes",
-        label: t("storageStatistics.storage.fields.totalUniqueChunkStoredSizeBytes"),
-        value: formatBytes(storage.totalUniqueChunkStoredSizeBytes),
-      },
-      {
-        id: "referencedUniqueChunkCount",
-        label: t("storageStatistics.storage.fields.referencedUniqueChunkCount"),
-        value: formatCount(storage.referencedUniqueChunkCount),
-      },
-      {
-        id: "referencedLogicalChunkCount",
-        label: t("storageStatistics.storage.fields.referencedLogicalChunkCount"),
-        value: formatCount(storage.referencedLogicalChunkCount),
-      },
-      {
-        id: "deduplicatedUniqueChunkCount",
-        label: t("storageStatistics.storage.fields.deduplicatedUniqueChunkCount"),
-        value: formatCount(storage.deduplicatedUniqueChunkCount),
-      },
-      {
-        id: "dedupSavedBytes",
-        label: t("storageStatistics.storage.fields.dedupSavedBytes"),
-        value: formatBytes(storage.dedupSavedBytes),
-      },
-      {
-        id: "compressionSavedBytes",
-        label: t("storageStatistics.storage.fields.compressionSavedBytes"),
-        value: formatBytes(storage.compressionSavedBytes),
-      },
-      {
-        id: "pendingGcChunkCount",
-        label: t("storageStatistics.storage.fields.pendingGcChunkCount"),
-        value: formatCount(storage.pendingGcChunkCount),
+        id: "totalSizeBytes",
+        label: t("storageStatistics.summary.totalSizeBytes"),
+        value: formatBytes(timeline.totalSizeBytes),
+        extra: `${t("storageStatistics.summary.totalChunks")}: ${formatCount(timeline.totalChunks)}`,
       },
       {
         id: "pendingGcStoredSizeBytes",
         label: t("storageStatistics.storage.fields.pendingGcStoredSizeBytes"),
         value: formatBytes(storage.pendingGcStoredSizeBytes),
-      },
-      {
-        id: "overdueGcChunkCount",
-        label: t("storageStatistics.storage.fields.overdueGcChunkCount"),
-        value: formatCount(storage.overdueGcChunkCount),
+        extra: `${t("storageStatistics.storage.fields.pendingGcChunkCount")}: ${formatCount(storage.pendingGcChunkCount)}`,
       },
       {
         id: "overdueGcStoredSizeBytes",
         label: t("storageStatistics.storage.fields.overdueGcStoredSizeBytes"),
         value: formatBytes(storage.overdueGcStoredSizeBytes),
+        extra: `${t("storageStatistics.storage.fields.overdueGcChunkCount")}: ${formatCount(storage.overdueGcChunkCount)}`,
+      },
+      {
+        id: "dedupSavedBytes",
+        label: t("storageStatistics.storage.fields.dedupSavedBytes"),
+        value: formatBytes(storage.dedupSavedBytes),
+        extra: `${t("storageStatistics.storage.fields.deduplicatedUniqueChunkCount")}: ${formatCount(storage.deduplicatedUniqueChunkCount)}`,
+      },
+      {
+        id: "compressionSavedBytes",
+        label: t("storageStatistics.storage.fields.compressionSavedBytes"),
+        value: formatBytes(storage.compressionSavedBytes),
+        extra: `${t("storageStatistics.storage.fields.storageType")}: ${storage.storageType || placeholder}`,
+      },
+      {
+        id: "totalUniqueChunkStoredSizeBytes",
+        label: t("storageStatistics.storage.fields.totalUniqueChunkStoredSizeBytes"),
+        value: formatBytes(storage.totalUniqueChunkStoredSizeBytes),
+        extra: `${t("storageStatistics.storage.fields.totalUniqueChunkCount")}: ${formatCount(storage.totalUniqueChunkCount)}`,
       },
     ];
   }, [timeline, placeholder, t]);
+
+  const timelinePoints = useMemo<TimelinePoint[]>(() => {
+    if (!timeline) {
+      return [];
+    }
+
+    const sortedBackendPoints = [...timeline.buckets]
+      .map((item) => ({
+        bucketStartUtc: new Date(item.bucketStartUtc).toISOString(),
+        chunkCount: item.chunkCount,
+        sizeBytes: item.sizeBytes,
+      }))
+      .sort((a, b) =>
+        new Date(a.bucketStartUtc).getTime() -
+        new Date(b.bucketStartUtc).getTime(),
+      );
+
+    const pointsByStart = new Map<string, TimelinePoint>();
+    sortedBackendPoints.forEach((item) => {
+      const normalizedStart = item.bucketStartUtc;
+      pointsByStart.set(normalizedStart, {
+        bucketStartUtc: normalizedStart,
+        chunkCount: item.chunkCount,
+        sizeBytes: item.sizeBytes,
+      });
+    });
+
+    const minSlotCount = MIN_SLOT_COUNT_BY_BUCKET[bucket];
+
+    // If backend returned enough buckets, show them all (minimum acts only as a floor).
+    if (sortedBackendPoints.length >= minSlotCount) {
+      return sortedBackendPoints;
+    }
+
+    const rangeStart = alignUtcToBucketStart(new Date(timeline.from), bucket);
+
+    return Array.from({ length: minSlotCount }, (_, index) => {
+      const slotStart = addUtcBuckets(rangeStart, bucket, index).toISOString();
+      const existing = pointsByStart.get(slotStart);
+
+      if (existing) {
+        return existing;
+      }
+
+      return {
+        bucketStartUtc: slotStart,
+        chunkCount: 0,
+        sizeBytes: 0,
+      };
+    });
+  }, [bucket, timeline]);
+
+  const maxTimelinePointSize = useMemo(() => {
+    if (timelinePoints.length === 0) {
+      return 1;
+    }
+
+    const maxValue = Math.max(...timelinePoints.map((item) => item.sizeBytes));
+    return maxValue > 0 ? maxValue : 1;
+  }, [timelinePoints]);
 
   return (
     <Stack spacing={2}>
@@ -252,99 +358,125 @@ export const AdminStorageStatisticsPage = () => {
 
           {timeline !== null && (
             <Stack spacing={2}>
-              <Paper variant="outlined">
-                <Stack divider={<Divider />}>
-                  <Stack p={2} spacing={0.5}>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("storageStatistics.summary.fromUtc")}
-                    </Typography>
-                    <Typography>{formatDateTime(timeline.from)}</Typography>
-                  </Stack>
-                  <Stack p={2} spacing={0.5}>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("storageStatistics.summary.toUtc")}
-                    </Typography>
-                    <Typography>{formatDateTime(timeline.to)}</Typography>
-                  </Stack>
-                  <Stack p={2} spacing={0.5}>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("storageStatistics.summary.totalChunks")}
-                    </Typography>
-                    <Typography>{formatCount(timeline.totalChunks)}</Typography>
-                  </Stack>
-                  <Stack p={2} spacing={0.5}>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("storageStatistics.summary.totalSizeBytes")}
-                    </Typography>
-                    <Typography>{formatBytes(timeline.totalSizeBytes)}</Typography>
-                  </Stack>
-                  <Stack p={2} spacing={0.5}>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("storageStatistics.summary.generatedAtUtc")}
-                    </Typography>
-                    <Typography>{formatDateTime(timeline.generatedAt)}</Typography>
-                  </Stack>
-                </Stack>
-              </Paper>
+              <Box sx={{ display: "flex", gap: 1, overflowX: "auto", pb: 0.5 }}>
+                {summaryCards.map((card) => (
+                  <Paper
+                    key={card.id}
+                    variant="outlined"
+                    sx={{ p: 1.5, minWidth: 210, flex: "0 0 auto" }}
+                  >
+                    <Stack spacing={0.5}>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {card.label}
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {card.value}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {card.extra}
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Box>
 
               <Paper variant="outlined">
-                <Stack p={2} spacing={1}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    {t("storageStatistics.storage.title")}
-                  </Typography>
-                  <Stack divider={<Divider />}>
-                    {storageRows.map((row) => (
-                      <Stack key={row.id} p={1.5} spacing={0.5}>
-                        <Typography variant="caption" color="text.secondary">
-                          {row.label}
-                        </Typography>
-                        <Typography>{row.value}</Typography>
-                      </Stack>
-                    ))}
+                <Stack p={2} spacing={2}>
+                  <Stack
+                    direction={{ xs: "column", md: "row" }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: "flex-start", md: "center" }}
+                    spacing={0.5}
+                  >
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {t("storageStatistics.timeline.title")}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDateTime(timeline.from)} - {formatDateTime(timeline.to)}
+                    </Typography>
                   </Stack>
-                </Stack>
-              </Paper>
 
-              <Paper variant="outlined">
-                <Stack p={2} spacing={1}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    {t("storageStatistics.timeline.title")}
-                  </Typography>
+                  <Box sx={{ overflowX: "auto", pb: 1 }}>
+                    <Box
+                      sx={{
+                        minWidth: `${timelinePoints.length * 84}px`,
+                        position: "relative",
+                        pt: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          left: 0,
+                          right: 0,
+                          top: 50,
+                          height: 2,
+                          bgcolor: "divider",
+                        }}
+                      />
 
-                  {timeline.buckets.length === 0 ? (
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: `repeat(${timelinePoints.length}, minmax(0, 1fr))`,
+                          gap: 1,
+                          position: "relative",
+                          zIndex: 1,
+                        }}
+                      >
+                        {timelinePoints.map((point) => {
+                          const relativeSize = point.sizeBytes / maxTimelinePointSize;
+                          const dotSize = point.sizeBytes > 0
+                            ? 10 + Math.round(relativeSize * 16)
+                            : 8;
+
+                          return (
+                            <Stack
+                              key={point.bucketStartUtc}
+                              alignItems="center"
+                              spacing={0.5}
+                              minWidth={0}
+                            >
+                              <Typography variant="caption" noWrap>
+                                {formatBytes(point.sizeBytes)}
+                              </Typography>
+
+                              <Box height={28} display="flex" alignItems="center">
+                                <Box
+                                  sx={{
+                                    width: dotSize,
+                                    height: dotSize,
+                                    borderRadius: "50%",
+                                    bgcolor:
+                                      point.sizeBytes > 0
+                                        ? "primary.main"
+                                        : "divider",
+                                    border: "2px solid",
+                                    borderColor: "background.paper",
+                                  }}
+                                />
+                              </Box>
+
+                              <Typography variant="caption" color="text.secondary" noWrap>
+                                {formatSlotLabel(point.bucketStartUtc, bucket)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" noWrap>
+                                {formatCount(point.chunkCount)}
+                              </Typography>
+                            </Stack>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {timeline.buckets.length === 0 && (
                     <Alert severity="info">{t("storageStatistics.state.empty")}</Alert>
-                  ) : (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>
-                              {t("storageStatistics.timeline.columns.bucketStartUtc")}
-                            </TableCell>
-                            <TableCell align="right">
-                              {t("storageStatistics.timeline.columns.chunkCount")}
-                            </TableCell>
-                            <TableCell align="right">
-                              {t("storageStatistics.timeline.columns.sizeBytes")}
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {timeline.buckets.map((item) => (
-                            <TableRow key={item.bucketStartUtc}>
-                              <TableCell>{formatDateTime(item.bucketStartUtc)}</TableCell>
-                              <TableCell align="right">
-                                {formatCount(item.chunkCount)}
-                              </TableCell>
-                              <TableCell align="right">
-                                {formatBytes(item.sizeBytes)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
                   )}
+
+                  <Typography variant="caption" color="text.secondary">
+                    {t("storageStatistics.summary.generatedAtUtc")}: {formatDateTime(timeline.generatedAt)}
+                  </Typography>
                 </Stack>
               </Paper>
             </Stack>
