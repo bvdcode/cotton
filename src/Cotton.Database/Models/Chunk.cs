@@ -18,7 +18,10 @@ namespace Cotton.Database.Models
         /// Plain size of the chunk in bytes before transformations like compression or encryption.
         /// </summary>
         [Column("size_bytes")]
-        public long SizeBytes { get; set; }
+        public long PlainSizeBytes { get; set; }
+
+        [Column("stored_size_bytes")]
+        public long StoredSizeBytes { get; set; }
 
         [Column("gc_scheduled_after")]
         public DateTime? GCScheduledAfter { get; set; }
