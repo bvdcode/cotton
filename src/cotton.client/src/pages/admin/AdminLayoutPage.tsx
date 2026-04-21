@@ -128,7 +128,7 @@ export const AdminLayoutPage = () => {
         </Paper>
 
         <Box
-          overflow="hidden"
+          sx={{ overflowY: "auto", overflowX: "hidden" }}
           minHeight={0}
           display="flex"
           flexDirection="column"
