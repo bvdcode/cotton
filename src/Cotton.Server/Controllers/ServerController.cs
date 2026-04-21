@@ -161,7 +161,8 @@ namespace Cotton.Server.Controllers
                 .Where(c => c.GCScheduledAfter != null
                     && c.GCScheduledAfter < rangeEndUtc
                     && !c.FileManifestChunks.Any()
-                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash))
+                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
+                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash))
                 .Select(c => new
                 {
                     ClampedUtc = c.GCScheduledAfter!.Value < rangeStartUtc ? rangeStartUtc : c.GCScheduledAfter!.Value,
@@ -276,7 +277,8 @@ namespace Cotton.Server.Controllers
             var pendingGc = chunks
                 .Where(c => c.GCScheduledAfter != null
                     && !c.FileManifestChunks.Any()
-                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash));
+                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
+                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash));
 
             long pendingGcChunkCount = await pendingGc.LongCountAsync(cancellationToken);
             long pendingGcStoredSizeBytes = await pendingGc.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
