@@ -51,59 +51,44 @@ const formatDateTime = (value: string): string => {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
   }).format(parsed);
 };
 
 const formatCount = (value: number): string =>
   new Intl.NumberFormat().format(value);
 
-const alignUtcToBucketStart = (
-  value: Date,
-  bucket: GcTimelineBucketKind,
-): Date => {
-  if (bucket === "day") {
-    return new Date(
-      Date.UTC(
-        value.getUTCFullYear(),
-        value.getUTCMonth(),
-        value.getUTCDate(),
-        0,
-        0,
-        0,
-        0,
-      ),
-    );
+const parseDateToUtc = (value: string): Date => {
+  const withZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
+    ? value
+    : `${value}Z`;
+  const parsed = new Date(withZone);
+
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed;
   }
 
-  return new Date(
-    Date.UTC(
-      value.getUTCFullYear(),
-      value.getUTCMonth(),
-      value.getUTCDate(),
-      value.getUTCHours(),
-      0,
-      0,
-      0,
-    ),
-  );
+  return new Date(value);
 };
 
-const addUtcBuckets = (
-  value: Date,
-  bucket: GcTimelineBucketKind,
-  amount: number,
-): Date => {
-  const next = new Date(value);
+const bucketStepMs = (bucket: GcTimelineBucketKind): number =>
+  bucket === "day" ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000;
 
-  if (bucket === "day") {
-    next.setUTCDate(next.getUTCDate() + amount);
-    return next;
+const toBucketIndex = (
+  value: string,
+  bucket: GcTimelineBucketKind,
+): number | null => {
+  const parsed = parseDateToUtc(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
   }
 
-  next.setUTCHours(next.getUTCHours() + amount);
-  return next;
+  return Math.floor(parsed.getTime() / bucketStepMs(bucket));
 };
+
+const fromBucketIndexToIso = (
+  index: number,
+  bucket: GcTimelineBucketKind,
+): string => new Date(index * bucketStepMs(bucket)).toISOString();
 
 const formatSlotLabel = (
   value: string,
@@ -247,26 +232,33 @@ export const AdminStorageStatisticsPage = () => {
       return [];
     }
 
-    const sortedBackendPoints = [...timeline.buckets]
-      .map((item) => ({
-        bucketStartUtc: new Date(item.bucketStartUtc).toISOString(),
-        chunkCount: item.chunkCount,
-        sizeBytes: item.sizeBytes,
-      }))
-      .sort((a, b) =>
-        new Date(a.bucketStartUtc).getTime() -
-        new Date(b.bucketStartUtc).getTime(),
-      );
+    const pointsByIndex = new Map<number, TimelinePoint>();
 
-    const pointsByStart = new Map<string, TimelinePoint>();
-    sortedBackendPoints.forEach((item) => {
-      const normalizedStart = item.bucketStartUtc;
-      pointsByStart.set(normalizedStart, {
-        bucketStartUtc: normalizedStart,
+    timeline.buckets.forEach((item) => {
+      const bucketIndex = toBucketIndex(item.bucketStartUtc, bucket);
+      if (bucketIndex === null) {
+        return;
+      }
+
+      const existing = pointsByIndex.get(bucketIndex);
+      if (existing) {
+        pointsByIndex.set(bucketIndex, {
+          bucketStartUtc: existing.bucketStartUtc,
+          chunkCount: existing.chunkCount + item.chunkCount,
+          sizeBytes: existing.sizeBytes + item.sizeBytes,
+        });
+        return;
+      }
+
+      pointsByIndex.set(bucketIndex, {
+        bucketStartUtc: fromBucketIndexToIso(bucketIndex, bucket),
         chunkCount: item.chunkCount,
         sizeBytes: item.sizeBytes,
       });
     });
+
+    const sortedEntries = [...pointsByIndex.entries()].sort((a, b) => a[0] - b[0]);
+    const sortedBackendPoints = sortedEntries.map((entry) => entry[1]);
 
     const minSlotCount = MIN_SLOT_COUNT_BY_BUCKET[bucket];
 
@@ -275,18 +267,23 @@ export const AdminStorageStatisticsPage = () => {
       return sortedBackendPoints;
     }
 
-    const rangeStart = alignUtcToBucketStart(new Date(timeline.from), bucket);
+    const startIndex = sortedEntries[0]?.[0]
+      ?? toBucketIndex(timeline.from, bucket)
+      ?? toBucketIndex(new Date().toISOString(), bucket)
+      ?? 0;
+    const endIndex = sortedEntries[sortedEntries.length - 1]?.[0] ?? startIndex;
+    const slotCount = Math.max(minSlotCount, endIndex - startIndex + 1);
 
-    return Array.from({ length: minSlotCount }, (_, index) => {
-      const slotStart = addUtcBuckets(rangeStart, bucket, index).toISOString();
-      const existing = pointsByStart.get(slotStart);
+    return Array.from({ length: slotCount }, (_, indexOffset) => {
+      const index = startIndex + indexOffset;
+      const existing = pointsByIndex.get(index);
 
       if (existing) {
         return existing;
       }
 
       return {
-        bucketStartUtc: slotStart,
+        bucketStartUtc: fromBucketIndexToIso(index, bucket),
         chunkCount: 0,
         sizeBytes: 0,
       };
@@ -358,12 +355,22 @@ export const AdminStorageStatisticsPage = () => {
 
           {timeline !== null && (
             <Stack spacing={2}>
-              <Box sx={{ display: "flex", gap: 1, overflowX: "auto", pb: 0.5 }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 1,
+                  gridTemplateColumns: {
+                    xs: "repeat(1, minmax(0, 1fr))",
+                    sm: "repeat(2, minmax(0, 1fr))",
+                    md: `repeat(${Math.max(summaryCards.length, 1)}, minmax(0, 1fr))`,
+                  },
+                }}
+              >
                 {summaryCards.map((card) => (
                   <Paper
                     key={card.id}
                     variant="outlined"
-                    sx={{ p: 1.5, minWidth: 210, flex: "0 0 auto" }}
+                    sx={{ p: 1.5, minWidth: 0 }}
                   >
                     <Stack spacing={0.5}>
                       <Typography variant="caption" color="text.secondary" noWrap>
