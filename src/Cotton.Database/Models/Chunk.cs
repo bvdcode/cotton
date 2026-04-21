@@ -2,12 +2,14 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using EasyExtensions.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
 {
     [Table("chunks")]
+    [Index(nameof(GCScheduledAfter))]
     public class Chunk
     {
         [Key]
