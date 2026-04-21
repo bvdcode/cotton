@@ -378,10 +378,8 @@ export const AdminStorageStatisticsPage = () => {
                   <Box
                     key={card.id}
                     sx={{
-                      p: 1.5,
+                      p: 1,
                       minWidth: 0,
-                      bgcolor: "action.hover",
-                      borderRadius: 1,
                     }}
                   >
                     <Stack spacing={0.5}>
@@ -399,7 +397,7 @@ export const AdminStorageStatisticsPage = () => {
                 ))}
               </Box>
 
-              <Box sx={{ bgcolor: "action.hover", borderRadius: 1, p: 2 }}>
+              <Box sx={{ p: 1 }}>
                 <Stack p={2} spacing={2}>
                   <Stack
                     direction={{ xs: "column", md: "row" }}
@@ -466,10 +464,8 @@ export const AdminStorageStatisticsPage = () => {
                                     width: dotSize,
                                     height: dotSize,
                                     borderRadius: "50%",
-                                    bgcolor:
-                                      point.sizeBytes > 0
-                                        ? "primary.main"
-                                        : "divider",
+                                    bgcolor: "primary.main",
+                                    opacity: point.sizeBytes > 0 ? 1 : 0.3,
                                     border: "2px solid",
                                     borderColor: "background.paper",
                                   }}
