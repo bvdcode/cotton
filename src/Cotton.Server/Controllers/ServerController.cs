@@ -156,7 +156,7 @@ namespace Cotton.Server.Controllers
                 return this.ApiBadRequest($"Requested range is too large. Maximum is {MaxGcTimelineHorizonDays} days.");
             }
 
-            var gcChunksQuery = _dbContext.Chunks
+            var hourlyAggregates = await _dbContext.Chunks
                 .AsNoTracking()
                 .Where(c => c.GCScheduledAfter != null
                     && c.GCScheduledAfter < rangeEndUtc
@@ -164,16 +164,32 @@ namespace Cotton.Server.Controllers
                     && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash))
                 .Select(c => new
                 {
-                    ScheduledAfter = c.GCScheduledAfter!.Value,
+                    ClampedUtc = c.GCScheduledAfter!.Value < rangeStartUtc ? rangeStartUtc : c.GCScheduledAfter!.Value,
                     c.StoredSizeBytes,
                 })
-                .AsAsyncEnumerable();
+                .GroupBy(x => new
+                {
+                    x.ClampedUtc.Year,
+                    x.ClampedUtc.Month,
+                    x.ClampedUtc.Day,
+                    x.ClampedUtc.Hour,
+                })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    g.Key.Day,
+                    g.Key.Hour,
+                    ChunkCount = g.LongCount(),
+                    SizeBytes = g.Sum(x => x.StoredSizeBytes),
+                })
+                .ToListAsync(cancellationToken);
 
             Dictionary<DateTime, (long ChunkCount, long SizeBytes)> bucketsMap = [];
-            await foreach (var item in gcChunksQuery.WithCancellation(cancellationToken))
+            foreach (var item in hourlyAggregates)
             {
-                DateTime clamped = item.ScheduledAfter < rangeStartUtc ? rangeStartUtc : item.ScheduledAfter;
-                DateTime local = TimeZoneInfo.ConvertTimeFromUtc(clamped, effectiveTimeZone);
+                DateTime hourStartUtc = new(item.Year, item.Month, item.Day, item.Hour, 0, 0, DateTimeKind.Utc);
+                DateTime local = TimeZoneInfo.ConvertTimeFromUtc(hourStartUtc, effectiveTimeZone);
                 DateTime localBucketStart = normalizedBucket == "day"
                     ? new DateTime(local.Year, local.Month, local.Day, 0, 0, 0, DateTimeKind.Unspecified)
                     : new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
@@ -182,11 +198,11 @@ namespace Cotton.Server.Controllers
 
                 if (!bucketsMap.TryGetValue(bucketUtc, out var existing))
                 {
-                    bucketsMap[bucketUtc] = (1, item.StoredSizeBytes);
+                    bucketsMap[bucketUtc] = (item.ChunkCount, item.SizeBytes);
                 }
                 else
                 {
-                    bucketsMap[bucketUtc] = (existing.ChunkCount + 1, existing.SizeBytes + item.StoredSizeBytes);
+                    bucketsMap[bucketUtc] = (existing.ChunkCount + item.ChunkCount, existing.SizeBytes + item.SizeBytes);
                 }
             }
 
