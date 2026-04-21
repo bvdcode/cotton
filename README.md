@@ -623,3 +623,8 @@ _See: `src/Cotton.Server/Program.cs`, `src/Cotton.Server/Controllers/AuthControl
 ---
 
 Built as a cohesive storage system: clean model, careful crypto, pragmatic performance — with a UI that actually takes advantage of it.
+
+<p>
+  <img src="https://raw.githubusercontent.com/dotnet/brand/refs/heads/main/logo/dotnet-logo.svg" alt=".NET" width="14" />
+  <strong>Built with .NET</strong>
+</p>
