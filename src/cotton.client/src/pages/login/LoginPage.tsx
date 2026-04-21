@@ -38,6 +38,7 @@ import axios from "axios";
 import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 import { toast } from "react-toastify";
+import { getUsernameError } from "../../shared/validation/username";
 
 type LoginErrorData = {
   message?: string;
@@ -107,6 +108,7 @@ type CredentialsFieldsProps = {
   disabled: boolean;
   usernameLabel: string;
   passwordLabel: string;
+  usernameErrorText?: string;
 };
 
 const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
@@ -117,6 +119,7 @@ const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
   disabled,
   usernameLabel,
   passwordLabel,
+  usernameErrorText,
 }) => {
   return (
     <Stack spacing={2}>
@@ -128,6 +131,8 @@ const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
         value={username}
         onChange={(e) => onUsernameChange(e.target.value)}
         disabled={disabled}
+        error={Boolean(usernameErrorText)}
+        helperText={usernameErrorText ?? ""}
       />
       <TextField
         fullWidth
@@ -295,6 +300,17 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
+      const trimmedUsername = username.trim();
+      const usernameFormatError =
+        trimmedUsername.length > 0 && !isEmail(trimmedUsername)
+          ? getUsernameError(trimmedUsername)
+          : null;
+
+      if (usernameFormatError) {
+        showToast(usernameFormatError, "error");
+        return;
+      }
+
       if (
         requiresTwoFactor &&
         normalizeTwoFactorCode(twoFactorCode).length < 6
@@ -304,7 +320,7 @@ export const LoginPage = () => {
       }
 
       await authApi.login({
-        username,
+        username: trimmedUsername,
         password,
         twoFactorCode: requiresTwoFactor
           ? normalizeTwoFactorCode(twoFactorCode)
@@ -439,6 +455,19 @@ export const LoginPage = () => {
     ? t("firstRun.continueButton")
     : t("loginButton");
 
+  const usernameErrorText = (() => {
+    if (requiresTwoFactor) {
+      return undefined;
+    }
+
+    const trimmedUsername = username.trim();
+    if (trimmedUsername.length === 0 || isEmail(trimmedUsername)) {
+      return undefined;
+    }
+
+    return getUsernameError(trimmedUsername) ?? undefined;
+  })();
+
   return (
     <>
       {(isInitializing || showRestoreOverlay) && (
@@ -497,6 +526,7 @@ export const LoginPage = () => {
                     disabled={loading}
                     usernameLabel={t("usernameLabel")}
                     passwordLabel={t("passwordLabel")}
+                    usernameErrorText={usernameErrorText}
                   />
                 ) : (
                   <TwoFactorFields
