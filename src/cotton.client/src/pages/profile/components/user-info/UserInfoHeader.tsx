@@ -8,6 +8,7 @@ import { getRoleTranslationKey } from "./userInfoCardFormatters";
 
 interface UserInfoHeaderProps {
   title: string;
+  username: string;
   pictureUrl?: string;
   avatarInitials: string;
   avatarUploadInputId: string;
@@ -78,6 +79,7 @@ const EmailVerificationAction = ({
 
 export const UserInfoHeader = ({
   title,
+  username,
   pictureUrl,
   avatarInitials,
   avatarUploadInputId,
@@ -132,6 +134,11 @@ export const UserInfoHeader = ({
             useFlexGap
             justifyContent={{ xs: "center", sm: "flex-end" }}
           >
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`@${username}`}
+            />
             <Chip
               size="small"
               color={role === UserRole.Admin ? "warning" : "default"}

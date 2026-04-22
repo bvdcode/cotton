@@ -1,12 +1,10 @@
 import {
   Alert,
-  Divider,
   Paper,
 } from "@mui/material";
 import type { User } from "../../../features/auth/types";
 import { useUserInfoCard } from "./user-info/useUserInfoCard";
 import { UserInfoHeader } from "./user-info/UserInfoHeader";
-import { UserInfoMetadata } from "./user-info/UserInfoMetadata";
 
 interface UserInfoCardProps {
   user: User;
@@ -42,6 +40,7 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
 
       <UserInfoHeader
         title={title}
+        username={user.username}
         pictureUrl={user.pictureUrl}
         avatarInitials={avatarInitials}
         avatarUploadInputId={avatarUploadInputId}
@@ -54,14 +53,6 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
         onAvatarFileSelected={handleAvatarFileSelected}
         onSendEmailVerification={handleSendEmailVerification}
         emailVerificationSending={emailVerificationSending}
-      />
-
-      <Divider sx={{ mb: 2 }} />
-
-      <UserInfoMetadata
-        userId={user.id}
-        username={user.username}
-        createdAt={user.createdAt}
       />
     </Paper>
   );
