@@ -30,6 +30,7 @@ export const EditProfileCard = ({
 }: EditProfileCardProps) => {
   const { t } = useTranslation("profile");
 
+  const [username, setUsername] = useState(user.username ?? "");
   const [email, setEmail] = useState(user.email ?? "");
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
@@ -44,12 +45,13 @@ export const EditProfileCard = ({
 
   const hasChanges = useMemo(() => {
     return (
+      (username || null) !== (user.username || null) ||
       emailChanged ||
       (firstName || null) !== (user.firstName || null) ||
       (lastName || null) !== (user.lastName || null) ||
       (birthDate || null) !== (user.birthDate || null)
     );
-  }, [firstName, lastName, birthDate, user, emailChanged]);
+  }, [username, firstName, lastName, birthDate, user, emailChanged]);
 
   const canSubmit = hasChanges && !loading;
 
@@ -59,6 +61,7 @@ export const EditProfileCard = ({
 
     try {
       const updated = await authApi.updateProfile({
+        username: username || null,
         email: email || null,
         firstName: firstName || null,
         lastName: lastName || null,
@@ -81,7 +84,7 @@ export const EditProfileCard = ({
     } finally {
       setLoading(false);
     }
-  }, [email, firstName, lastName, birthDate, onUserUpdate, t]);
+  }, [username, email, firstName, lastName, birthDate, onUserUpdate, t]);
 
   return (
     <ProfileAccordionCard
@@ -104,6 +107,13 @@ export const EditProfileCard = ({
         )}
 
         <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2}>
+          <TextField
+            label={t("fields.username")}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            fullWidth
+          />
+
           <TextField
             label={t("editProfile.firstName")}
             value={firstName}
