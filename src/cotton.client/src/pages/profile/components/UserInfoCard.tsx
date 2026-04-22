@@ -1,4 +1,14 @@
-import { Alert, Box, Chip, Divider, Paper, Stack, Tooltip, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Chip,
+  CircularProgress,
+  Divider,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { useCallback, useId, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { UserRole, type User } from "../../../features/auth/types";
@@ -326,18 +336,47 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
                 {user.email}
               </Typography>
               {!user.isEmailVerified && (
-                <Chip
-                  size="small"
-                  color="warning"
-                  variant="outlined"
-                  label={
-                    emailVerificationSending
-                      ? t("emailVerification.sending")
-                      : t("fields.verify")
-                  }
-                  onClick={handleSendEmailVerification}
-                  disabled={emailVerificationSending}
-                />
+                <Box
+                  sx={{
+                    display: "grid",
+                    alignItems: "center",
+                    justifyItems: "start",
+                  }}
+                >
+                  <Chip
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                    label={t("fields.verify")}
+                    onClick={
+                      emailVerificationSending
+                        ? undefined
+                        : handleSendEmailVerification
+                    }
+                    sx={{
+                      gridArea: "1 / 1",
+                      opacity: emailVerificationSending ? 0 : 1,
+                      transform: emailVerificationSending
+                        ? "scale(0.9)"
+                        : "scale(1)",
+                      transition: "opacity 220ms ease, transform 220ms ease",
+                      pointerEvents: emailVerificationSending ? "none" : "auto",
+                    }}
+                  />
+                  <CircularProgress
+                    size={18}
+                    color="warning"
+                    sx={{
+                      gridArea: "1 / 1",
+                      opacity: emailVerificationSending ? 1 : 0,
+                      transform: emailVerificationSending
+                        ? "scale(1)"
+                        : "scale(0.9)",
+                      transition: "opacity 220ms ease, transform 220ms ease",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </Box>
               )}
             </Stack>
           )}
@@ -359,18 +398,13 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
               </Tooltip>
             }
           />
-          <InfoRow
-            label={t("fields.email")}
-            value={
-              user.email && user.email.trim().length > 0
-                ? user.email
-                : placeholder
-            }
-          />
         </Stack>
 
         <Stack spacing={1.25} flex={1}>
           <InfoRow label={t("fields.birthDate")} value={birthDateValue} />
+        </Stack>
+
+        <Stack spacing={1.25} flex={1}>
           <InfoRow
             label={t("fields.createdAt")}
             value={formatDateTime(user.createdAt)}
