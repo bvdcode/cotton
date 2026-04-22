@@ -1,5 +1,12 @@
-import { Cake, Email } from "@mui/icons-material";
-import { Box, Chip, CircularProgress, Stack, Typography } from "@mui/material";
+import { Cake, Check, Email } from "@mui/icons-material";
+import {
+  Box,
+  Chip,
+  CircularProgress,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import type { ChangeEventHandler } from "react";
 import { useTranslation } from "react-i18next";
 import { UserRole } from "../../../../features/auth/types";
@@ -172,6 +179,11 @@ export const UserInfoHeader = ({
                 onSend={onSendEmailVerification}
                 label={t("fields.verify")}
               />
+              {isEmailVerified && (
+                <Tooltip title={t("email.verified")}>
+                  <Check color="success" fontSize="small" />
+                </Tooltip>
+              )}
             </Stack>
           )}
 
