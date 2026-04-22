@@ -1,3 +1,5 @@
+import heic2any from "heic2any";
+
 const AVATAR_PREFERRED_CHUNK_RATIO = 0.6;
 const AVATAR_MIN_DIMENSION = 64;
 const AVATAR_RESIZE_ATTEMPTS = 6;
@@ -5,6 +7,7 @@ const AVATAR_RESIZE_SCALE_STEP = 0.84;
 const AVATAR_START_QUALITY = 0.92;
 const AVATAR_MIN_QUALITY = 0.46;
 const AVATAR_QUALITY_STEP = 0.1;
+const HEIC_EXTENSION_REGEX = /\.(heic|heif)$/i;
 
 export const AVATAR_FILE_ACCEPT =
   ".bmp,.gif,.heic,.heif,.jpeg,.jpg,.pbm,.png,.tiff,.tif,.tga,.webp,.qoi,image/bmp,image/gif,image/heic,image/heif,image/heic-sequence,image/heif-sequence,image/jpeg,image/png,image/tiff,image/webp";
@@ -21,10 +24,28 @@ interface PreparedAvatar {
   fileName: string;
 }
 
+const isHeicLikeFile = (file: File): boolean => {
+  const normalizedType = file.type.toLowerCase();
+  return (
+    HEIC_EXTENSION_REGEX.test(file.name) ||
+    normalizedType.startsWith("image/heic") ||
+    normalizedType.startsWith("image/heif")
+  );
+};
+
 const buildAvatarFileName = (sourceName: string): string => {
   const nameWithoutExt = sourceName.replace(/\.[^.]+$/, "").trim();
   const safeBaseName = nameWithoutExt.length > 0 ? nameWithoutExt : "avatar";
   return `${safeBaseName}.webp`;
+};
+
+const buildAvatarFileNameWithExtension = (
+  sourceName: string,
+  extension: string,
+): string => {
+  const nameWithoutExt = sourceName.replace(/\.[^.]+$/, "").trim();
+  const safeBaseName = nameWithoutExt.length > 0 ? nameWithoutExt : "avatar";
+  return `${safeBaseName}.${extension}`;
 };
 
 const loadImageFromBlob = async (blob: Blob): Promise<HTMLImageElement> => {
@@ -44,6 +65,50 @@ const loadImageFromBlob = async (blob: Blob): Promise<HTMLImageElement> => {
 
     image.src = objectUrl;
   });
+};
+
+const convertHeicBlobToJpeg = async (blob: Blob): Promise<Blob> => {
+  const convertedUnknown: unknown = await heic2any({
+    blob,
+    toType: "image/jpeg",
+    quality: AVATAR_START_QUALITY,
+  });
+
+  const converted = Array.isArray(convertedUnknown)
+    ? convertedUnknown[0]
+    : convertedUnknown;
+
+  if (converted instanceof Blob) {
+    return converted;
+  }
+
+  throw new AvatarImageDecodeError();
+};
+
+const decodeImageWithHeicFallback = async (
+  file: File,
+): Promise<{ blob: Blob; image: HTMLImageElement; fileName: string }> => {
+  try {
+    const image = await loadImageFromBlob(file);
+    return {
+      blob: file,
+      image,
+      fileName: file.name,
+    };
+  } catch (error) {
+    if (!(error instanceof AvatarImageDecodeError) || !isHeicLikeFile(file)) {
+      throw error;
+    }
+
+    const convertedBlob = await convertHeicBlobToJpeg(file);
+    const image = await loadImageFromBlob(convertedBlob);
+
+    return {
+      blob: convertedBlob,
+      image,
+      fileName: buildAvatarFileNameWithExtension(file.name, "jpg"),
+    };
+  }
 };
 
 const canvasToWebpBlob = async (
@@ -122,16 +187,32 @@ export const prepareAvatarForUpload = async (
   file: File,
   maxChunkSizeBytes: number,
 ): Promise<PreparedAvatar | null> => {
-  const image = await loadImageFromBlob(file);
+  if (file.size <= maxChunkSizeBytes && !isHeicLikeFile(file)) {
+    return {
+      blob: file,
+      fileName: file.name,
+    };
+  }
+
+  const decoded = await decodeImageWithHeicFallback(file);
+  if (decoded.blob.size <= maxChunkSizeBytes) {
+    return {
+      blob: decoded.blob,
+      fileName: decoded.fileName,
+    };
+  }
+
   const preferredTargetBytes = Math.max(
     AVATAR_MIN_DIMENSION,
     Math.floor(maxChunkSizeBytes * AVATAR_PREFERRED_CHUNK_RATIO),
   );
 
   const primaryTargetBytes =
-    file.size > preferredTargetBytes ? preferredTargetBytes : maxChunkSizeBytes;
+    decoded.blob.size > preferredTargetBytes
+      ? preferredTargetBytes
+      : maxChunkSizeBytes;
 
-  const primaryBlob = await tryFitAvatarToLimit(image, primaryTargetBytes);
+  const primaryBlob = await tryFitAvatarToLimit(decoded.image, primaryTargetBytes);
   if (primaryBlob) {
     return {
       blob: primaryBlob,
@@ -140,7 +221,10 @@ export const prepareAvatarForUpload = async (
   }
 
   if (primaryTargetBytes !== maxChunkSizeBytes) {
-    const maxSizeBlob = await tryFitAvatarToLimit(image, maxChunkSizeBytes);
+    const maxSizeBlob = await tryFitAvatarToLimit(
+      decoded.image,
+      maxChunkSizeBytes,
+    );
     if (!maxSizeBlob) {
       return null;
     }
