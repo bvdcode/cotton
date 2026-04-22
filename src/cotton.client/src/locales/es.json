@@ -194,7 +194,12 @@
       "admin": "Administrador"
     },
     "avatar": {
-      "upload": "Subir avatar"
+      "upload": "Subir avatar",
+      "errors": {
+        "settingsNotLoaded": "La configuración del servidor aún no está cargada.",
+        "fileTooLarge": "El avatar es demasiado grande. El tamaño máximo es {{maxSize}}.",
+        "failed": "No se pudo actualizar el avatar."
+      }
     },
     "editProfile": {
       "title": "Editar perfil",
