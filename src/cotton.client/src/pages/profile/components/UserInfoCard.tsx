@@ -32,6 +32,7 @@ import {
   AvatarImageDecodeError,
   prepareAvatarForUpload,
 } from "./user-info/avatarUploadUtils";
+import { Cake, Email } from "@mui/icons-material";
 
 type AvatarStatus = { kind: "idle" } | { kind: "error"; message: string };
 
@@ -93,7 +94,9 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
   const avatarUploadInputId = useId();
 
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>({ kind: "idle" });
+  const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>({
+    kind: "idle",
+  });
   const [emailVerificationSending, setEmailVerificationSending] =
     useState(false);
 
@@ -104,7 +107,10 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
   const placeholder = t("common:placeholder");
 
   const fullName = [user.firstName, user.lastName]
-    .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+    .filter(
+      (part): part is string =>
+        typeof part === "string" && part.trim().length > 0,
+    )
     .join(" ");
 
   const title = fullName || user.username;
@@ -181,7 +187,8 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
           fileName: preparedAvatar.fileName,
           server: {
             maxChunkSizeBytes: effectiveServerSettings.maxChunkSizeBytes,
-            supportedHashAlgorithm: effectiveServerSettings.supportedHashAlgorithm,
+            supportedHashAlgorithm:
+              effectiveServerSettings.supportedHashAlgorithm,
           },
         });
 
@@ -323,63 +330,81 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
             </Stack>
           </Stack>
 
-          {user.email && (
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              justifyContent={{ xs: "center", sm: "flex-start" }}
-              flexWrap="wrap"
-              useFlexGap
-            >
-              <Typography variant="body2" color="text.secondary">
-                {user.email}
-              </Typography>
-              {!user.isEmailVerified && (
-                <Box
-                  sx={{
-                    display: "grid",
-                    alignItems: "center",
-                    justifyItems: "start",
-                  }}
-                >
-                  <Chip
-                    size="small"
-                    color="warning"
-                    variant="outlined"
-                    label={t("fields.verify")}
-                    onClick={
-                      emailVerificationSending
-                        ? undefined
-                        : handleSendEmailVerification
-                    }
+          <Stack
+            spacing={0.5}
+            alignItems={{ xs: "center", sm: "flex-start" }}
+            mt={0.5}
+          >
+            {user.email && (
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                justifyContent={{ xs: "center", sm: "flex-start" }}
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Email fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  {user.email}
+                </Typography>
+                {!user.isEmailVerified && (
+                  <Box
                     sx={{
-                      gridArea: "1 / 1",
-                      opacity: emailVerificationSending ? 0 : 1,
-                      transform: emailVerificationSending
-                        ? "scale(0.9)"
-                        : "scale(1)",
-                      transition: "opacity 220ms ease, transform 220ms ease",
-                      pointerEvents: emailVerificationSending ? "none" : "auto",
+                      display: "grid",
+                      alignItems: "center",
+                      justifyItems: "start",
                     }}
-                  />
-                  <CircularProgress
-                    size={18}
-                    color="warning"
-                    sx={{
-                      gridArea: "1 / 1",
-                      opacity: emailVerificationSending ? 1 : 0,
-                      transform: emailVerificationSending
-                        ? "scale(1)"
-                        : "scale(0.9)",
-                      transition: "opacity 220ms ease, transform 220ms ease",
-                      pointerEvents: "none",
-                    }}
-                  />
-                </Box>
-              )}
-            </Stack>
-          )}
+                  >
+                    <Chip
+                      size="small"
+                      color="warning"
+                      variant="outlined"
+                      label={t("fields.verify")}
+                      onClick={
+                        emailVerificationSending
+                          ? undefined
+                          : handleSendEmailVerification
+                      }
+                      sx={{
+                        gridArea: "1 / 1",
+                        opacity: emailVerificationSending ? 0 : 1,
+                        transform: emailVerificationSending
+                          ? "scale(0.9)"
+                          : "scale(1)",
+                        transition: "opacity 220ms ease, transform 220ms ease",
+                        pointerEvents: emailVerificationSending
+                          ? "none"
+                          : "auto",
+                      }}
+                    />
+                    <CircularProgress
+                      size={18}
+                      color="warning"
+                      sx={{
+                        gridArea: "1 / 1",
+                        opacity: emailVerificationSending ? 1 : 0,
+                        transform: emailVerificationSending
+                          ? "scale(1)"
+                          : "scale(0.9)",
+                        transition: "opacity 220ms ease, transform 220ms ease",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  </Box>
+                )}
+              </Stack>
+            )}
+
+            {birthDateValue && (
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Cake fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  {birthDateValue}
+                </Typography>
+              </Box>
+            )}
+          </Stack>
         </Box>
       </Stack>
 
@@ -398,10 +423,6 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
               </Tooltip>
             }
           />
-        </Stack>
-
-        <Stack spacing={1.25} flex={1}>
-          <InfoRow label={t("fields.birthDate")} value={birthDateValue} />
         </Stack>
 
         <Stack spacing={1.25} flex={1}>
