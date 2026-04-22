@@ -5,21 +5,6 @@ export type RoleTranslationKey =
   | "roles.admin"
   | "roles.unknown";
 
-export const formatDateTime = (iso: string): string => {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return iso;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
 export const getRoleTranslationKey = (role: number): RoleTranslationKey => {
   switch (role) {
     case UserRole.Admin:
