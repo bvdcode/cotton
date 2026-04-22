@@ -50,9 +50,9 @@ export const SettingsPage = () => {
       justifyContent="center"
     >
       <Stack spacing={{ xs: 2, sm: 3 }} width="100%" maxWidth={800}>
-        <UserInfoCard user={user} />
-        <AppearanceSettingsCard />
+        <UserInfoCard user={user} onUserUpdate={handleUserUpdate} />
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
+        <AppearanceSettingsCard />
         <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />
         <ShareLinkSettingsCard />

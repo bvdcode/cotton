@@ -1,8 +1,8 @@
 export const USERNAME_MIN_LENGTH = 2;
 export const USERNAME_MAX_LENGTH = 32;
 
-// Must start with a letter; only lowercase latin letters and digits; total length 2..32
-export const USERNAME_REGEX = /^[a-z][a-z0-9]{1,31}$/;
+// Must start with a letter; separators '_', '.' and '-' are allowed only between alphanumeric characters; total length 2..32
+export const USERNAME_REGEX = /^[a-z](?:[a-z0-9]|[._-](?=[a-z0-9])){1,31}$/;
 
 export const normalizeUsername = (value: string): string =>
   value.trim().toLowerCase();
@@ -19,7 +19,7 @@ export const getUsernameError = (value: string): string | null => {
   }
 
   if (!USERNAME_REGEX.test(normalized)) {
-    return "Username must start with a letter and contain only lowercase latin letters and digits.";
+    return "Username must start with a letter and may contain lowercase latin letters and digits, using '_', '.' or '-' only as non-consecutive separators between characters.";
   }
 
   return null;
