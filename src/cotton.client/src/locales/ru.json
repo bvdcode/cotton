@@ -266,6 +266,7 @@
       "email": "E-mail",
       "emailVerified": "Подтверждена",
       "emailNotVerified": "Не подтверждена",
+      "verify": "Подтвердить",
       "createdAt": "Создан",
       "updatedAt": "Обновлён"
     },
