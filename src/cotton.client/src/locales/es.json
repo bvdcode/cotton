@@ -978,8 +978,8 @@
       },
       "fields": {
         "backupId": "ID de respaldo",
-        "createdAtUtc": "Creado (UTC)",
-        "pointerUpdatedAtUtc": "Puntero actualizado (UTC)",
+        "createdAtUtc": "Creado",
+        "pointerUpdatedAtUtc": "Puntero actualizado",
         "dumpSizeBytes": "Tamaño del volcado",
         "chunkCount": "Cantidad de chunks",
         "dumpContentHash": "Hash del contenido del volcado",
