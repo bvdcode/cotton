@@ -14,7 +14,10 @@ import {
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { AvatarUploadControl } from "./user-info/AvatarUploadControl";
 import { InfoRow } from "./user-info/InfoRow";
-import { prepareAvatarForUpload } from "./user-info/avatarUploadUtils";
+import {
+  AvatarImageDecodeError,
+  prepareAvatarForUpload,
+} from "./user-info/avatarUploadUtils";
 
 type AvatarStatus = { kind: "idle" } | { kind: "error"; message: string };
 
@@ -187,6 +190,14 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
 
         onUserUpdate(updatedUser);
       } catch (error) {
+        if (error instanceof AvatarImageDecodeError) {
+          setAvatarStatus({
+            kind: "error",
+            message: t("avatar.errors.unsupportedFormat"),
+          });
+          return;
+        }
+
         if (isAxiosError(error)) {
           const data = error.response?.data as
             | { message?: string; title?: string }
