@@ -89,6 +89,7 @@ namespace Cotton.Server.Controllers
             var command = new UpdateCurrentUserRequest(
                 userId,
                 request.Email,
+                request.Username,
                 request.FirstName,
                 request.LastName,
                 request.BirthDate);
