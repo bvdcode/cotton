@@ -237,7 +237,18 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
         setAvatarUploading(false);
       }
     },
-    [avatarUploading, fetchServerSettings, onUserUpdate, serverSettings, t],
+    [
+      avatarUploading,
+      fetchServerSettings,
+      onUserUpdate,
+      serverSettings,
+      t,
+      user.birthDate,
+      user.email,
+      user.firstName,
+      user.lastName,
+      user.username,
+    ],
   );
 
   const handleSendEmailVerification = useCallback(async (): Promise<void> => {
