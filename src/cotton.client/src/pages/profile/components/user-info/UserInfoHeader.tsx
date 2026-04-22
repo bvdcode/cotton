@@ -134,11 +134,7 @@ export const UserInfoHeader = ({
             useFlexGap
             justifyContent={{ xs: "center", sm: "flex-end" }}
           >
-            <Chip
-              size="small"
-              variant="outlined"
-              label={`@${username}`}
-            />
+            <Chip size="small" label={`@${username}`} />
             <Chip
               size="small"
               color={role === UserRole.Admin ? "warning" : "default"}
@@ -153,7 +149,11 @@ export const UserInfoHeader = ({
           </Stack>
         </Stack>
 
-        <Stack spacing={0.5} alignItems={{ xs: "center", sm: "flex-start" }} mt={0.5}>
+        <Stack
+          spacing={0.5}
+          alignItems={{ xs: "center", sm: "flex-start" }}
+          mt={0.5}
+        >
           {email && (
             <Stack
               direction="row"
