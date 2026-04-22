@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Divider,
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
@@ -89,49 +88,64 @@ export const ShareLinkSettingsCard = () => {
       description={t("shareLinks.description")}
     >
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={selectedPreset}
-          onChange={(_, value: PresetKey | null) => {
-            if (!value) return;
-            const preset = presets.find((p) => p.key === value);
-            if (!preset) return;
-            void updatePreferences({
-              [USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes]: `${preset.minutes}`,
-            });
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 1.5,
+            alignItems: { sm: "center" },
           }}
         >
-          <ToggleButton value="oneDay">
-            {t("shareLinks.presets.oneDay")}
-          </ToggleButton>
-          <ToggleButton value="week">
-            {t("shareLinks.presets.week")}
-          </ToggleButton>
-          <ToggleButton value="month">
-            {t("shareLinks.presets.month")}
-          </ToggleButton>
-          <ToggleButton value="threeMonths">
-            {t("shareLinks.presets.threeMonths")}
-          </ToggleButton>
-          <ToggleButton value="year">
-            {t("shareLinks.presets.year")}
-          </ToggleButton>
-        </ToggleButtonGroup>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={selectedPreset}
+            onChange={(_, value: PresetKey | null) => {
+              if (!value) return;
+              const preset = presets.find((p) => p.key === value);
+              if (!preset) return;
+              void updatePreferences({
+                [USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes]: `${preset.minutes}`,
+              });
+            }}
+            sx={{
+              width: { xs: "100%", sm: "auto" },
+              flexWrap: "wrap",
+              "& .MuiToggleButton-root": {
+                flex: { xs: "1 1 auto", sm: "0 0 auto" },
+                whiteSpace: "nowrap",
+              },
+            }}
+          >
+            <ToggleButton value="oneDay">
+              {t("shareLinks.presets.oneDay")}
+            </ToggleButton>
+            <ToggleButton value="week">
+              {t("shareLinks.presets.week")}
+            </ToggleButton>
+            <ToggleButton value="month">
+              {t("shareLinks.presets.month")}
+            </ToggleButton>
+            <ToggleButton value="threeMonths">
+              {t("shareLinks.presets.threeMonths")}
+            </ToggleButton>
+            <ToggleButton value="year">
+              {t("shareLinks.presets.year")}
+            </ToggleButton>
+          </ToggleButtonGroup>
 
-        <Divider />
-
-        <Button
-          variant="outlined"
-          color="error"
-          size="small"
-          onClick={handleInvalidateAll}
-          disabled={invalidating}
-        >
-          {invalidating
-            ? t("shareLinks.invalidating")
-            : t("shareLinks.invalidateAll")}
-        </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleInvalidateAll}
+            disabled={invalidating}
+            sx={{ width: { xs: "100%", sm: "auto" }, whiteSpace: "nowrap" }}
+          >
+            {invalidating
+              ? t("shareLinks.invalidating")
+              : t("shareLinks.invalidateAll")}
+          </Button>
+        </Box>
 
         {invalidated && (
           <Alert severity="success">{t("shareLinks.invalidated")}</Alert>
