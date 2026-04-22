@@ -27,6 +27,10 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
                 .Map(d => d.PreviewHashEncryptedHex, s => s.FileManifest.GetPreviewHashEncryptedHex());
 
+            TypeAdapterConfig<User, UserDto>
+                .NewConfig()
+                .Map(dest => dest.AvatarHashEncryptedHex, src => src.GetAvatarHashEncryptedHex());
+
             _isConfigured = true;
         }
     }

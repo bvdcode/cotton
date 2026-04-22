@@ -4,8 +4,11 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
+using EasyExtensions.Abstractions;
+using EasyExtensions.Extensions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
@@ -19,7 +22,8 @@ namespace Cotton.Server.Handlers.Users
         string? username,
         string? firstName,
         string? lastName,
-        DateOnly? birthDate) : IRequest<UserDto>
+        DateOnly? birthDate,
+        string? avatarHash) : IRequest<UserDto>
     {
         public Guid UserId { get; } = userId;
         public string? Email { get; } = email;
@@ -27,9 +31,12 @@ namespace Cotton.Server.Handlers.Users
         public string? FirstName { get; } = firstName;
         public string? LastName { get; } = lastName;
         public DateOnly? BirthDate { get; } = birthDate;
+        public string? AvatarHash { get; } = avatarHash;
     }
 
-    public class UpdateCurrentUserRequestHandler(CottonDbContext _dbContext) : IRequestHandler<UpdateCurrentUserRequest, UserDto>
+    public class UpdateCurrentUserRequestHandler(
+        CottonDbContext _dbContext,
+        IStreamCipher _crypto) : IRequestHandler<UpdateCurrentUserRequest, UserDto>
     {
         public async Task<UserDto> Handle(UpdateCurrentUserRequest request, CancellationToken cancellationToken)
         {
@@ -75,6 +82,36 @@ namespace Cotton.Server.Handlers.Users
                 }
             }
 
+            byte[]? avatarHashBytes = null;
+            bool avatarHashUpdated = false;
+            if (request.AvatarHash is not null)
+            {
+                if (string.IsNullOrWhiteSpace(request.AvatarHash))
+                {
+                    avatarHashUpdated = user.AvatarHash is not null || user.AvatarHashEncrypted is not null;
+                }
+                else
+                {
+                    try
+                    {
+                        avatarHashBytes = Hasher.FromHexStringHash(request.AvatarHash);
+                    }
+                    catch (ArgumentException)
+                    {
+                        throw new BadRequestException<User>("Invalid avatar hash format");
+                    }
+
+                    bool hasChunkOwnership = await _dbContext.ChunkOwnerships
+                        .AnyAsync(x => x.OwnerId == user.Id && x.ChunkHash == avatarHashBytes, cancellationToken);
+                    if (!hasChunkOwnership)
+                    {
+                        throw new BadRequestException<User>("Avatar chunk not found or not owned by user");
+                    }
+
+                    avatarHashUpdated = user.AvatarHash is null || !user.AvatarHash.SequenceEqual(avatarHashBytes);
+                }
+            }
+
             user.FirstName = string.IsNullOrWhiteSpace(request.FirstName) ? null : request.FirstName.Trim();
             user.LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName.Trim();
             user.BirthDate = request.BirthDate;
@@ -90,6 +127,14 @@ namespace Cotton.Server.Handlers.Users
             if (usernameChanged)
             {
                 user.Username = newUsername!;
+            }
+
+            if (avatarHashUpdated)
+            {
+                user.AvatarHash = avatarHashBytes;
+                user.AvatarHashEncrypted = avatarHashBytes is null
+                    ? null
+                    : _crypto.Encrypt(avatarHashBytes);
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);

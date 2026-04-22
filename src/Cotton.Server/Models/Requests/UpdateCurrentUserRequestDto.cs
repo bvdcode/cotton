@@ -10,5 +10,6 @@ namespace Cotton.Server.Models.Requests
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public DateOnly? BirthDate { get; set; }
+        public string? AvatarHash { get; set; }
     }
 }

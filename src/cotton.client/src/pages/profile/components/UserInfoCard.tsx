@@ -153,6 +153,10 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             height: { xs: 84, sm: 104 },
             borderRadius: "50%",
             overflow: "hidden",
+            cursor: "pointer",
+            "&:hover .avatar-upload-overlay": {
+              transform: "translateY(0)",
+            },
           }}
         >
           <Avatar
@@ -168,6 +172,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
           </Avatar>
 
           <Box
+            className="avatar-upload-overlay"
             component="label"
             htmlFor={avatarUploadInputId}
             aria-label={t("avatar.upload")}
@@ -183,7 +188,8 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
               color: "common.white",
               bgcolor: "rgba(0, 0, 0, 0.58)",
               cursor: "pointer",
-              transition: "background-color 0.2s ease",
+              transform: "translateY(100%)",
+              transition: "transform 0.2s ease, background-color 0.2s ease",
               "&:hover": {
                 bgcolor: "rgba(0, 0, 0, 0.72)",
               },
