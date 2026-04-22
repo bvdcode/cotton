@@ -92,7 +92,8 @@ namespace Cotton.Server.Controllers
                 request.Username,
                 request.FirstName,
                 request.LastName,
-                request.BirthDate);
+                request.BirthDate,
+                request.AvatarHash);
 
             UserDto updated = await _mediator.Send(command, cancellationToken);
             return Ok(updated);

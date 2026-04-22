@@ -18,6 +18,7 @@ namespace Cotton.Server.Models.Dto
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public DateOnly? BirthDate { get; set; }
+        public string? AvatarHashEncryptedHex { get; set; }
         public Dictionary<string, string> Preferences { get; set; } = [];
     }
 }
