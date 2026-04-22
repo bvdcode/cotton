@@ -178,6 +178,11 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
 
         const updatedUser = await authApi.updateProfile({
           avatarHash: chunkHashes[0],
+          username: user.username,
+          email: user.email ?? null,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          birthDate: user.birthDate ?? null,
         });
 
         onUserUpdate(updatedUser);
