@@ -6,7 +6,6 @@ import {
   Divider,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
 } from "@mui/material";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -59,11 +58,6 @@ export const ShareLinkSettingsCard = () => {
     [expireAfterMinutes],
   );
 
-  const currentDays = Math.max(
-    1,
-    Math.round(expireAfterMinutes / MINUTES_IN_DAY),
-  );
-
   const handleInvalidateAll = useCallback(async () => {
     await confirm({
       title: t("shareLinks.invalidateConfirmTitle"),
@@ -95,10 +89,6 @@ export const ShareLinkSettingsCard = () => {
       description={t("shareLinks.description")}
     >
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-        <Typography variant="body2" color="text.secondary">
-          {t("shareLinks.current", { days: currentDays })}
-        </Typography>
-
         <ToggleButtonGroup
           exclusive
           size="small"
