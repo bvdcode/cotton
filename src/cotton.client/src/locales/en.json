@@ -963,7 +963,8 @@
       "state": {
         "loading": "Loading backup info...",
         "empty": "No backups found yet.",
-        "triggerSuccess": "Backup job was triggered."
+        "triggerSuccess": "Backup job was triggered.",
+        "restoreIfEmptyHint": "If the database is lost and you want it to restore automatically, set COTTON_RESTORE_DATABASE_IF_EMPTY=true in the container environment."
       },
       "fields": {
         "backupId": "Backup ID",
