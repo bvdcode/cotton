@@ -15,12 +15,14 @@ namespace Cotton.Server.Handlers.Users
     public class UpdateCurrentUserRequest(
         Guid userId,
         string? email,
+        string? username,
         string? firstName,
         string? lastName,
         DateOnly? birthDate) : IRequest<UserDto>
     {
         public Guid UserId { get; } = userId;
         public string? Email { get; } = email;
+        public string? UserName { get; } = username;
         public string? FirstName { get; } = firstName;
         public string? LastName { get; } = lastName;
         public DateOnly? BirthDate { get; } = birthDate;
