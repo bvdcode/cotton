@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -22,7 +23,7 @@ namespace Cotton.Server.Handlers.Users
     {
         public Guid UserId { get; } = userId;
         public string? Email { get; } = email;
-        public string? UserName { get; } = username;
+        public string? Username { get; } = username;
         public string? FirstName { get; } = firstName;
         public string? LastName { get; } = lastName;
         public DateOnly? BirthDate { get; } = birthDate;
@@ -34,10 +35,35 @@ namespace Cotton.Server.Handlers.Users
         {
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken)
-                ?? throw new EntityNotFoundException<User>();
+                    ?? throw new EntityNotFoundException<User>();
 
             string? newEmail = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
             bool emailChanged = !string.Equals(user.Email, newEmail, StringComparison.OrdinalIgnoreCase);
+
+            string? newUsername = null;
+            bool usernameChanged = false;
+
+            if (!string.IsNullOrWhiteSpace(request.Username))
+            {
+                bool isValid = UsernameValidator.TryNormalizeAndValidate(request.Username, out string normalizedUsername, out string error);
+                if (!isValid)
+                {
+                    throw new BadRequestException<User>(error);
+                }
+
+                usernameChanged = !string.Equals(user.Username, normalizedUsername, StringComparison.Ordinal);
+                newUsername = normalizedUsername;
+
+                if (usernameChanged)
+                {
+                    bool usernameTaken = await _dbContext.Users
+                        .AnyAsync(x => x.Id != user.Id && x.Username == normalizedUsername, cancellationToken);
+                    if (usernameTaken)
+                    {
+                        throw new BadRequestException<User>("Username is already taken");
+                    }
+                }
+            }
 
             if (emailChanged && newEmail != null)
             {
@@ -59,6 +85,11 @@ namespace Cotton.Server.Handlers.Users
                 user.IsEmailVerified = false;
                 user.EmailVerificationToken = null;
                 user.EmailVerificationTokenSentAt = null;
+            }
+
+            if (usernameChanged)
+            {
+                user.Username = newUsername!;
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
