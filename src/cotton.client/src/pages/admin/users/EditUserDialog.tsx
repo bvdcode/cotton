@@ -117,7 +117,6 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
             fullWidth
             autoComplete="off"
             error={Boolean(usernameError)}
-            helperText={usernameError ?? ""}
           />
           <TextField
             label={t("users.create.email")}
