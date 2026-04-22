@@ -67,6 +67,21 @@ namespace Cotton.Database.Models
         [Column("totp_failed_attempts")]
         public int TotpFailedAttempts { get; set; }
 
+        [Column("avatar_hash_encrypted")]
+        public byte[]? AvatarHashEncrypted { get; set; }
+
+        [Column("avatar_hash")]
+        public byte[]? AvatarHash { get; set; }
+
+        public string? GetAvatarHashEncryptedHex()
+        {
+            if (AvatarHashEncrypted is null)
+            {
+                return null;
+            }
+            return Convert.ToHexStringLower(AvatarHashEncrypted);
+        }
+
         [Column("preferences")]
         public Dictionary<string, string> Preferences { get; set; } = [];
 
