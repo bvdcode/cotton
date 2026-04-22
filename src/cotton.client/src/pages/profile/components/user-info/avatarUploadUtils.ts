@@ -7,7 +7,14 @@ const AVATAR_MIN_QUALITY = 0.46;
 const AVATAR_QUALITY_STEP = 0.1;
 
 export const AVATAR_FILE_ACCEPT =
-  ".bmp,.gif,.jpeg,.jpg,.pbm,.png,.tiff,.tif,.tga,.webp,.qoi";
+  ".bmp,.gif,.heic,.heif,.jpeg,.jpg,.pbm,.png,.tiff,.tif,.tga,.webp,.qoi,image/bmp,image/gif,image/heic,image/heif,image/heic-sequence,image/heif-sequence,image/jpeg,image/png,image/tiff,image/webp";
+
+export class AvatarImageDecodeError extends Error {
+  constructor() {
+    super("Failed to decode image in browser.");
+    this.name = "AvatarImageDecodeError";
+  }
+}
 
 interface PreparedAvatar {
   blob: Blob;
@@ -32,7 +39,7 @@ const loadImageFromBlob = async (blob: Blob): Promise<HTMLImageElement> => {
 
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error("Failed to load image."));
+      reject(new AvatarImageDecodeError());
     };
 
     image.src = objectUrl;
@@ -115,34 +122,34 @@ export const prepareAvatarForUpload = async (
   file: File,
   maxChunkSizeBytes: number,
 ): Promise<PreparedAvatar | null> => {
-  if (file.size <= maxChunkSizeBytes) {
-    return {
-      blob: file,
-      fileName: file.name,
-    };
-  }
-
   const image = await loadImageFromBlob(file);
   const preferredTargetBytes = Math.max(
     AVATAR_MIN_DIMENSION,
     Math.floor(maxChunkSizeBytes * AVATAR_PREFERRED_CHUNK_RATIO),
   );
 
-  const preferredBlob = await tryFitAvatarToLimit(image, preferredTargetBytes);
-  if (preferredBlob) {
+  const primaryTargetBytes =
+    file.size > preferredTargetBytes ? preferredTargetBytes : maxChunkSizeBytes;
+
+  const primaryBlob = await tryFitAvatarToLimit(image, primaryTargetBytes);
+  if (primaryBlob) {
     return {
-      blob: preferredBlob,
+      blob: primaryBlob,
       fileName: buildAvatarFileName(file.name),
     };
   }
 
-  const maxSizeBlob = await tryFitAvatarToLimit(image, maxChunkSizeBytes);
-  if (!maxSizeBlob) {
-    return null;
+  if (primaryTargetBytes !== maxChunkSizeBytes) {
+    const maxSizeBlob = await tryFitAvatarToLimit(image, maxChunkSizeBytes);
+    if (!maxSizeBlob) {
+      return null;
+    }
+
+    return {
+      blob: maxSizeBlob,
+      fileName: buildAvatarFileName(file.name),
+    };
   }
 
-  return {
-    blob: maxSizeBlob,
-    fileName: buildAvatarFileName(file.name),
-  };
+  return null;
 };

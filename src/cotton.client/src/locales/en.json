@@ -198,6 +198,7 @@
       "errors": {
         "settingsNotLoaded": "Server settings are not loaded yet.",
         "fileTooLarge": "Avatar is too large. Maximum size is {{maxSize}}.",
+        "unsupportedFormat": "This image format is not supported by your browser. Please use JPG, PNG or WEBP.",
         "failed": "Failed to update avatar."
       }
     },
