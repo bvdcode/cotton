@@ -51,8 +51,8 @@ export const SettingsPage = () => {
     >
       <Stack spacing={{ xs: 2, sm: 3 }} width="100%" maxWidth={800}>
         <UserInfoCard user={user} onUserUpdate={handleUserUpdate} />
-        <AppearanceSettingsCard />
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
+        <AppearanceSettingsCard />
         <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />
         <ShareLinkSettingsCard />
