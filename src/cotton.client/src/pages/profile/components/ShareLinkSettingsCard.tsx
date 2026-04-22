@@ -93,6 +93,7 @@ export const ShareLinkSettingsCard = () => {
             display: "flex",
             flexDirection: { xs: "column", sm: "row" },
             gap: 1.5,
+            justifyContent: "space-between",
             alignItems: { sm: "center" },
           }}
         >
