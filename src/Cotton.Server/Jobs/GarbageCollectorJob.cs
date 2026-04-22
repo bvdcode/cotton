@@ -4,6 +4,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
+using EasyExtensions.Quartz.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 using System.Collections.Concurrent;
@@ -17,7 +18,6 @@ namespace Cotton.Server.Jobs
     // e.g. if the job is triggered multiple times in quick succession or if the job
     // fails after scheduling chunks for deletion but before actually deleting them.
     // TODO: WHAT!? Who wrote this... This job was good, I have no idea what the comment above is about.
-    //[JobTrigger(days: 1)]
 
     // TODO: Don't forget to check:
     // 1. Files
@@ -26,6 +26,7 @@ namespace Cotton.Server.Jobs
     // 4. Database backups
     // 5. User avatars
 
+    [JobTrigger(days: 1)]
     public class GarbageCollectorJob(
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
@@ -34,6 +35,7 @@ namespace Cotton.Server.Jobs
         SettingsProvider _settingsProvider,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
+        private readonly bool DryRunEnabled = true;
         private const int ManifestBatchSize = 1000;
         private const int ChunkBatchSize = 1000;
         private const int ChunkGcDelayDays = 7;
@@ -44,6 +46,11 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            if (DryRunEnabled)
+            {
+                _logger.LogWarning("GarbageCollectorJob is running in DRY-RUN mode. No DB rows or storage objects will be deleted/updated.");
+            }
+
             _logger.LogInformation(
                 "Waiting {InitialDelayMs} seconds before starting garbage collection to allow any ongoing operations to complete...",
                 InitialDelayMs / 1000);
@@ -69,6 +76,12 @@ namespace Cotton.Server.Jobs
 
             if (manifestIds.Count == 0)
             {
+                return;
+            }
+
+            if (DryRunEnabled)
+            {
+                _logger.LogInformation("[DRY-RUN] Would remove {Count} orphaned file manifests.", manifestIds.Count);
                 return;
             }
 
@@ -123,6 +136,15 @@ namespace Cotton.Server.Jobs
                 scheduledCount++;
             }
 
+            if (DryRunEnabled)
+            {
+                if (scheduledCount > 0)
+                {
+                    _logger.LogInformation("[DRY-RUN] Would schedule {Count} orphaned chunks for garbage collection.", scheduledCount);
+                }
+                return;
+            }
+
             if (scheduledCount > 0)
             {
                 await _dbContext.SaveChangesAsync(ct);
@@ -148,6 +170,13 @@ namespace Cotton.Server.Jobs
 
             if (chunksToDelete.Count == 0)
             {
+                return;
+            }
+
+            if (DryRunEnabled)
+            {
+                int deletableCount = chunksToDelete.Count(c => !protectedStorageKeys.Contains(Hasher.ToHexStringHash(c.Hash)));
+                _logger.LogInformation("[DRY-RUN] Would delete up to {Count} scheduled chunks in this run.", deletableCount);
                 return;
             }
 
