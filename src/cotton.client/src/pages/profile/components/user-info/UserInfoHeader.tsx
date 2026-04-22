@@ -102,7 +102,6 @@ export const UserInfoHeader = ({
       direction={{ xs: "column", sm: "row" }}
       spacing={2.5}
       alignItems={{ xs: "center", sm: "flex-start" }}
-      sx={{ mb: 3 }}
     >
       <AvatarUploadControl
         alt={title}
@@ -137,7 +136,7 @@ export const UserInfoHeader = ({
             <Chip size="small" label={`@${username}`} />
             <Chip
               size="small"
-              color={role === UserRole.Admin ? "warning" : "default"}
+              color={role === UserRole.Admin ? "secondary" : "primary"}
               label={t(getRoleTranslationKey(role))}
             />
             <Chip
