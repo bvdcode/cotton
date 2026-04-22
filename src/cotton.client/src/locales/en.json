@@ -978,8 +978,8 @@
       },
       "fields": {
         "backupId": "Backup ID",
-        "createdAtUtc": "Created (UTC)",
-        "pointerUpdatedAtUtc": "Pointer updated (UTC)",
+        "createdAtUtc": "Created",
+        "pointerUpdatedAtUtc": "Pointer updated",
         "dumpSizeBytes": "Dump size",
         "chunkCount": "Chunk count",
         "dumpContentHash": "Dump content hash",
