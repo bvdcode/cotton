@@ -30,7 +30,9 @@ type TriggerFeedback =
   | { kind: "error"; message: string };
 
 const formatDateTime = (value: string): string => {
-  const parsed = new Date(value);
+  const hasExplicitTimeZone = /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
+  const normalizedValue = hasExplicitTimeZone ? value : `${value}Z`;
+  const parsed = new Date(normalizedValue);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
@@ -41,6 +43,7 @@ const formatDateTime = (value: string): string => {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZoneName: "short",
   }).format(parsed);
 };
 
