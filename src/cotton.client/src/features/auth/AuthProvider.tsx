@@ -95,8 +95,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const setAuthenticated = useCallback((value: boolean, u?: User | null) => {
     if (value && u) {
-      // If user changed (or we are coming from unauth state), clear caches first.
-      resetUserScopedStores(u.id);
+      const authState = useAuthStore.getState();
+      const currentUserId = authState.user?.id ?? null;
+      const shouldResetUserScopedStores = !authState.isAuthenticated || currentUserId !== u.id;
+
+      // Keep user-scoped caches when only profile fields are updated for the same identity.
+      if (shouldResetUserScopedStores) {
+        resetUserScopedStores(u.id);
+      }
+
       setAuthenticatedInStore(u);
       return;
     }

@@ -32,12 +32,18 @@ namespace Cotton.Server.Jobs
         private const int ManifestBatchSize = 1000;
         private const int ChunkBatchSize = 1000;
         private const int ChunkGcDelayDays = 7;
+        private const int InitialDelayMs = 60_000;
         private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
         public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
 
         public async Task Execute(IJobExecutionContext context)
         {
+            _logger.LogInformation(
+                "Waiting {InitialDelayMs} seconds before starting garbage collection to allow any ongoing operations to complete...",
+                InitialDelayMs / 1000);
+            await Task.Delay(InitialDelayMs);
+
             DateTime now = DateTime.UtcNow;
             CancellationToken ct = context.CancellationToken;
 

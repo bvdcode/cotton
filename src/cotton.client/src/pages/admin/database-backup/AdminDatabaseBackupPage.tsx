@@ -331,6 +331,10 @@ export const AdminDatabaseBackupPage = () => {
               ))}
             </Box>
           )}
+
+          <Alert severity="info">
+            {t("databaseBackup.state.restoreIfEmptyHint")}
+          </Alert>
         </Stack>
       </Paper>
     </Stack>

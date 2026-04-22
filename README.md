@@ -33,7 +33,11 @@ The server core runs on a modern **ASP.NET Core + EF Core** stack and uses **Kes
 
 Cotton is intentionally built as one cohesive runtime: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET code inside the same ecosystem. That keeps execution flow seamless, reduces cross-environment glue, and helps the codebase behave as one coordinated system rather than many loosely-coupled runtimes. External process tooling is kept narrow on purpose: **FFmpeg/ffprobe** are used for audio/video preview extraction.
 
+This is not architecture for architecture's sake. Cotton is built this way because the design shows up directly in real behavior: the system is more predictable under load, easier to reason about operationally, and less likely to inherit strange edge cases from decades of layered legacy glued around older technology stacks. From web server to storage path, it is meant to behave like one platform.
+
 The core product is intentionally focused rather than trying to be everything at once; custom behavior is meant to live in isolated plugins and marketplace-delivered extensions as that layer settles into place.
+
+Cotton is also an actively developing open-source project. Like any serious storage system, it still needs time to accumulate broader real-world mileage, more operators, and more long-tail edge-case exposure. That should be read as a normal maturity curve, not as "there is no reason to trust it": the core is deliberate, cohesive, and built around stable storage principles rather than accidental behavior.
 
 This is not just a storage engine with a web skin. Cotton is meant to feel good in real use:
 
@@ -62,6 +66,9 @@ Most self-hosted file clouds can describe their internals. Fewer can explain why
 
 Cotton is built around a different set of outcomes:
 
+- **The system is designed to stay predictable end-to-end**  
+  Cotton is not a patchwork of many runtimes with years of historical baggage pulling in different directions. The same design philosophy runs from HTTP handling to storage layout, which is why behavior under load, cleanup, sharing, and recovery can stay consistent instead of feeling incidental.
+
 - **Restore is normal, even at large scale**  
   Snapshots record references instead of copying data. That keeps large-scale rollback practical and is the same model the instant tree rollback flow is being built around.
 
@@ -69,7 +76,10 @@ Cotton is built around a different set of outcomes:
   Cotton separates content from layout and models trees explicitly. That avoids the path-string-heavy behavior that makes many systems feel sluggish or fragile once folders get large.
 
 - **Wide ecosystems are good, but throughput still decides daily usability**  
-  A broad app ecosystem looks great on paper, but what is the point if the native client cannot upload faster than a few MB/s. Cotton treats ingest throughput as a first-class product requirement: parallel chunk upload, missing-chunk retry, and sustained large-transfer behavior are in the main path.
+  A broad app ecosystem looks great on paper, but what is the point if the native client cannot upload fast and keep that speed. Cotton treats ingest throughput as a first-class product requirement: parallel chunk upload, missing-chunk retry, and sustained large-transfer behavior are in the main path so uploads are meant to run against the practical ceiling of the server for the full transfer, not just spike early and sag halfway through.
+
+- **Huge files are not treated like a separate crisis path**  
+  By design, a tiny file and a huge file go through the same chunk-plus-manifest model. Size mostly changes transfer duration and chunk count, not the fundamental shape of the operation or the kind of load the system has to invent a special path for.
 
 - **Large media stays usable without a full download**  
   Cotton can serve range reads, seek inside large files, and extract previews or video frames directly from chunked encrypted storage, including S3-backed storage, without reassembling the whole object first.
@@ -109,6 +119,7 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Use built-in deduplication, inline compression, and streaming encryption in the main storage path.
 - Share files and folders with expiring links, share pages, previews, and native OS/browser share integration where available.
 - Generate previews for images, HEIC, PDF, text, audio, and video content.
+- Use the existing **WebDAV v1** implementation today for standard sync clients, phone auto-sync, and other protocol-level workflows while native Cotton clients are still in development. In Cotton, WebDAV is an important compatibility path for the early stage, not the long-term center of gravity for the product.
 - Run background manifest verification and storage consistency checks that surface real integrity problems.
 - Receive useful notifications for failed logins, successful logins, TOTP events, WebDAV token resets, shared-file downloads, upload verification failures, and missing storage chunks.
 - Configure the instance through a setup wizard with safe defaults, cloud email or custom SMTP, storage choices, telemetry preferences, and timezone selection.
@@ -125,6 +136,15 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Unlike products where sharing is just a raw download URL, Cotton has share pages, previews, expiry, cleanup, and native-share integration.
 - Unlike setups that stop at "the server started", Cotton includes a guided setup flow, SMTP options, password reset, email verification, and built-in notifications.
 - Unlike products that try to ship every niche feature in-core, Cotton stays focused and extends outward through isolated plugins and marketplace distribution as that layer matures.
+
+| Area | Cotton | More typical self-hosted stack |
+| --- | --- | --- |
+| Web runtime | ASP.NET Core on **Kestrel** with a single app process and built-in SignalR path. Kestrel is commonly regarded as one of the highest-performance modern web servers / web stacks, with that reputation showing up repeatedly in independent [TechEmpower Benchmarks](https://www.techempower.com/benchmarks/#section=data-r23) and Microsoft's own [ASP.NET Core performance notes](https://learn.microsoft.com/en-us/aspnet/core/release-notes/aspnetcore-7.0?view=aspnetcore-10.0). | A more typical self-hosted stack is layered around PHP + Apache or Nginx + FPM, often with Redis and separate workers added as supporting infrastructure |
+| Storage model | Content-addressed chunks + manifests + explicit layout graph | Often path-centric metadata over a conventional filesystem view |
+| Large media access | Seekable reads, `Range` responses, and preview extraction from chunked encrypted storage without full reassembly | Large-file access is more often optimized around whole-file reads, temp files, or less direct preview paths |
+| Compression and encryption | Inline in the main storage pipeline | More often absent, optional, or handled outside the main ingest path |
+| Restore and cleanup | Snapshot-first model with reclaim checks designed to coexist with rollback | Cleanup and restore are more likely to be separate concerns that need careful operator coordination |
+| Product surface | Focused core with WebDAV, sharing, previews, notifications, and setup built in | Feature breadth is often higher, but the operational surface is also broader and less uniform |
 
 ---
 
@@ -149,6 +169,7 @@ The UI matters here because Cotton is not trying to prove a storage thesis in is
 | Streaming pipeline ordered as compression -> crypto -> backend | Efficient storage and encryption without offline repack jobs or giant temporary files                           |
 | Seekable stream assembly over chunked storage                  | Range reads, media scrubbing, poster extraction, and previews without full-file reassembly or full downloads    |
 | Chunk-first upload protocol                                    | Interrupted uploads recover cleanly and retries only send what the server still needs                           |
+| Standards-oriented WebDAV v1 as a compatibility path           | Standard sync tools already work today; WebDAV PUT streams directly into chunk storage without full buffering, so small and large files still follow the same ingest model. Retry behavior is naturally narrower than the native chunk protocol because WebDAV PUT is a long-lived protocol request rather than Cotton's own resumable upload flow. In Cotton this is a compatibility bridge, whereas in some other systems WebDAV can end up acting like the primary working path |
 | Background manifest hashing and storage consistency jobs       | Upload mismatches and missing stored data become visible operator events instead of silent corruption           |
 | Encrypted preview hashes plus dedicated preview generators     | Rich previews and share pages without exposing raw storage identifiers                                          |
 | Virtualized large-directory UI backed by structural metadata   | Folder browsing still feels immediate on large trees                                                            |
@@ -169,13 +190,16 @@ This is the core difference from the more common self-hosted experience: Cotton'
   The streaming pipeline is tuned to reuse buffers and avoid unnecessary allocations, which keeps the process very thin in RAM even during sustained large transfers.
 
 - **Modern server stack with a very fast HTTP engine**  
-  Cotton.Server is built on **ASP.NET Core** and **EF Core**, served by **Kestrel** - _One of the Fastest Web Servers in the World_ - so the API and streaming paths keep strong throughput under real transfer load.
+  Cotton.Server is built on **ASP.NET Core** and **EF Core**, served by **Kestrel** - _One of the highest-performance and most efficient modern web servers._ - so the API and streaming paths keep strong throughput under real transfer load.
 
 - **Partial reads are a first-class path**  
   Range requests, media seeking, and preview extraction are designed into the storage engine, so users do not need to fetch a huge object just to read a slice, resume a transfer, or grab a poster frame. For content-addressed storage systems, having this level of partial-read behavior in the main path is still a notable rarity, because it's really hard to implement efficiently and requires careful coordination between the storage layout, indexing, and streaming logic.
 
 - **Uploads are designed for sustained throughput**  
-  The client hashes chunks in a web worker, uploads chunks in parallel, and retries only missing chunks after interruptions.
+  The client hashes chunks in a web worker, uploads chunks in parallel, and retries only missing chunks after interruptions. The goal is simple: once a large upload starts, throughput should stay pinned near the real limits of the server's network, storage, and CPU budget for most of the transfer instead of oscillating wildly under load.
+
+- **This project was shaped by the opposite experience**  
+  In the author's personal experience, some other self-hosted file cloud setups can fluctuate badly during large uploads and, at times, even collapse to a few hundred KB/s on native desktop clients. Cotton exists partly as a reaction to that: stable near-ceiling throughput matters more than pretty peak numbers for the first few seconds.
 
 - **Large-tree UX is part of the performance story**  
   The virtualized folder UI and structural metadata model are designed so listing and navigation remain responsive on ordinary hardware.
