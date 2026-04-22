@@ -193,6 +193,9 @@
       "user": "User",
       "admin": "Admin"
     },
+    "avatar": {
+      "upload": "Upload avatar"
+    },
     "editProfile": {
       "title": "Edit profile",
       "description": "Update your personal information.",

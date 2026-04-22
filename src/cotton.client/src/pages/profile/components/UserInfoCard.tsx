@@ -8,6 +8,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import { useTranslation } from "react-i18next";
 import { UserRole, type User } from "../../../features/auth/types";
 import {
@@ -72,6 +73,7 @@ const InfoRow = ({ label, value }: InfoRowProps) => {
 
 export const UserInfoCard = ({ user }: UserInfoCardProps) => {
   const { t } = useTranslation(["profile", "common"]);
+  const avatarUploadInputId = "profile-avatar-upload-input";
 
   const getAvatarInitials = (args: {
     firstName?: string | null;
@@ -126,6 +128,10 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
     return `${formatted} (${t("ageYears", { count: ageYears })})`;
   })();
 
+  const handleAvatarFileSelected = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    event.target.value = "";
+  };
+
   return (
     <Paper
       sx={{
@@ -140,17 +146,60 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         alignItems={{ xs: "center", sm: "flex-start" }}
         sx={{ mb: 3 }}
       >
-        <Avatar
-          alt={displayName}
-          src={user.pictureUrl}
+        <Box
           sx={{
+            position: "relative",
             width: { xs: 84, sm: 104 },
             height: { xs: 84, sm: 104 },
-            bgcolor: "primary.main",
+            borderRadius: "50%",
+            overflow: "hidden",
           }}
         >
-          {!user.pictureUrl && avatarInitials}
-        </Avatar>
+          <Avatar
+            alt={displayName}
+            src={user.pictureUrl}
+            sx={{
+              width: "100%",
+              height: "100%",
+              bgcolor: "primary.main",
+            }}
+          >
+            {!user.pictureUrl && avatarInitials}
+          </Avatar>
+
+          <Box
+            component="label"
+            htmlFor={avatarUploadInputId}
+            aria-label={t("avatar.upload")}
+            sx={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "common.white",
+              bgcolor: "rgba(0, 0, 0, 0.58)",
+              cursor: "pointer",
+              transition: "background-color 0.2s ease",
+              "&:hover": {
+                bgcolor: "rgba(0, 0, 0, 0.72)",
+              },
+            }}
+          >
+            <PhotoCameraIcon fontSize="small" />
+          </Box>
+
+          <input
+            id={avatarUploadInputId}
+            type="file"
+            accept=".bmp,.gif,.jpeg,.jpg,.pbm,.png,.tiff,.tif,.tga,.webp,.qoi"
+            hidden
+            onChange={handleAvatarFileSelected}
+          />
+        </Box>
 
         <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>
           <Stack
