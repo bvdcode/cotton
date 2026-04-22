@@ -10,7 +10,6 @@ import {
   Switch,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
 } from "@mui/material";
 import {
   Brightness4,
@@ -31,10 +30,7 @@ import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../../shared/store/localPreferencesStore";
-import {
-  supportedLanguages,
-  type SupportedLanguage,
-} from "../../../locales";
+import { supportedLanguages, type SupportedLanguage } from "../../../locales";
 
 export const AppearanceSettingsCard = () => {
   const { t } = useTranslation("profile");
@@ -51,7 +47,9 @@ export const AppearanceSettingsCard = () => {
     (s) => s.setGallerySmoothTransitions,
   );
 
-  const selectedLanguage = (preferredLanguage ?? i18n.language ?? "en") as SupportedLanguage;
+  const selectedLanguage = (preferredLanguage ??
+    i18n.language ??
+    "en") as SupportedLanguage;
 
   return (
     <ProfileAccordionCard
@@ -62,23 +60,7 @@ export const AppearanceSettingsCard = () => {
       description={t("appearance.description")}
     >
       <Stack spacing={2} paddingY={2}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={smoothGalleryTransitions}
-              onChange={(e) => setSmoothGalleryTransitions(e.target.checked)}
-            />
-          }
-          label={t("appearance.gallerySmoothTransitions")}
-        />
-
-        <Divider />
-
         <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            {t("appearance.themeMode.label")}
-          </Typography>
-
           <ToggleButtonGroup
             fullWidth
             exclusive
@@ -89,19 +71,25 @@ export const AppearanceSettingsCard = () => {
             }}
             aria-label={t("appearance.themeMode.label")}
           >
-            <ToggleButton value="light" aria-label={t("appearance.themeMode.light")}
+            <ToggleButton
+              value="light"
+              aria-label={t("appearance.themeMode.light")}
               sx={{ display: "flex", gap: 1 }}
             >
               <Brightness7 fontSize="small" />
               {t("appearance.themeMode.light")}
             </ToggleButton>
-            <ToggleButton value="system" aria-label={t("appearance.themeMode.system")}
+            <ToggleButton
+              value="system"
+              aria-label={t("appearance.themeMode.system")}
               sx={{ display: "flex", gap: 1 }}
             >
               <SettingsBrightness fontSize="small" />
               {t("appearance.themeMode.system")}
             </ToggleButton>
-            <ToggleButton value="dark" aria-label={t("appearance.themeMode.dark")}
+            <ToggleButton
+              value="dark"
+              aria-label={t("appearance.themeMode.dark")}
               sx={{ display: "flex", gap: 1 }}
             >
               <Brightness4 fontSize="small" />
@@ -127,6 +115,18 @@ export const AppearanceSettingsCard = () => {
             ))}
           </Select>
         </FormControl>
+
+        <Divider />
+
+        <FormControlLabel
+          control={
+            <Switch
+              checked={smoothGalleryTransitions}
+              onChange={(e) => setSmoothGalleryTransitions(e.target.checked)}
+            />
+          }
+          label={t("appearance.gallerySmoothTransitions")}
+        />
       </Stack>
     </ProfileAccordionCard>
   );
