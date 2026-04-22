@@ -10,7 +10,7 @@ const AVATAR_QUALITY_STEP = 0.1;
 const HEIC_EXTENSION_REGEX = /\.(heic|heif)$/i;
 
 export const AVATAR_FILE_ACCEPT =
-  ".bmp,.gif,.heic,.heif,.jpeg,.jpg,.pbm,.png,.tiff,.tif,.tga,.webp,.qoi,image/bmp,image/gif,image/heic,image/heif,image/heic-sequence,image/heif-sequence,image/jpeg,image/png,image/tiff,image/webp";
+  ".bmp,.gif,.heic,.heif,.jpeg,.jpg,.pbm,.png,.tiff,.tif,.tga,.webp,.qoi";
 
 export class AvatarImageDecodeError extends Error {
   constructor() {
