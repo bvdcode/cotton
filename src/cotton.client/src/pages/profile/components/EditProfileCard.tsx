@@ -8,16 +8,12 @@ import {
 } from "@mui/material";
 import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { isAxiosError } from "../../../shared/api/httpClient";
 import { authApi } from "../../../shared/api/authApi";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import EditIcon from "@mui/icons-material/Edit";
 import type { User } from "../../../features/auth/types";
 
-type EditProfileStatus =
-  | { kind: "idle" }
-  | { kind: "success" }
-  | { kind: "error"; message: string };
+type EditProfileStatus = { kind: "idle" } | { kind: "success" };
 
 interface EditProfileCardProps {
   user: User;
@@ -69,18 +65,8 @@ export const EditProfileCard = ({
       });
       onUserUpdate(updated);
       setStatus({ kind: "success" });
-    } catch (e) {
-      if (isAxiosError(e)) {
-        const data = e.response?.data as
-          | { message?: string; title?: string }
-          | undefined;
-        const message = data?.message ?? data?.title;
-        if (message) {
-          setStatus({ kind: "error", message });
-          return;
-        }
-      }
-      setStatus({ kind: "error", message: t("editProfile.errors.failed") });
+    } catch {
+      // Error details are surfaced via global toast notifications.
     } finally {
       setLoading(false);
     }
@@ -97,9 +83,6 @@ export const EditProfileCard = ({
       <Stack spacing={2} paddingY={2}>
         {status.kind === "success" && (
           <Alert severity="success">{t("editProfile.success")}</Alert>
-        )}
-        {status.kind === "error" && (
-          <Alert severity="error">{status.message}</Alert>
         )}
 
         {emailChanged && (
