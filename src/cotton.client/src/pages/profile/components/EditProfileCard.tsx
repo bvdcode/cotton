@@ -1,4 +1,8 @@
 import {
+  hasApiErrorToastBeenDispatched,
+  isAxiosError,
+} from "../../../shared/api/httpClient";
+import {
   Alert,
   Box,
   Button,
@@ -12,8 +16,7 @@ import { authApi } from "../../../shared/api/authApi";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import EditIcon from "@mui/icons-material/Edit";
 import type { User } from "../../../features/auth/types";
-
-type EditProfileStatus = { kind: "idle" } | { kind: "success" };
+import { toast } from "react-toastify";
 
 interface EditProfileCardProps {
   user: User;
@@ -32,7 +35,6 @@ export const EditProfileCard = ({
   const [lastName, setLastName] = useState(user.lastName ?? "");
   const [birthDate, setBirthDate] = useState(user.birthDate ?? "");
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<EditProfileStatus>({ kind: "idle" });
 
   const emailChanged = useMemo(
     () => (email || null) !== (user.email || null),
@@ -52,7 +54,6 @@ export const EditProfileCard = ({
   const canSubmit = hasChanges && !loading;
 
   const handleSubmit = useCallback(async () => {
-    setStatus({ kind: "idle" });
     setLoading(true);
 
     try {
@@ -64,9 +65,17 @@ export const EditProfileCard = ({
         birthDate: birthDate || null,
       });
       onUserUpdate(updated);
-      setStatus({ kind: "success" });
-    } catch {
-      // Error details are surfaced via global toast notifications.
+      toast.success(t("editProfile.success"), {
+        toastId: "profile:edit:success",
+      });
+    } catch (error) {
+      if (isAxiosError(error) && hasApiErrorToastBeenDispatched(error)) {
+        return;
+      }
+
+      toast.error(t("editProfile.errors.failed"), {
+        toastId: "profile:edit:error:generic",
+      });
     } finally {
       setLoading(false);
     }
@@ -81,10 +90,6 @@ export const EditProfileCard = ({
       description={t("editProfile.description")}
     >
       <Stack spacing={2} paddingY={2}>
-        {status.kind === "success" && (
-          <Alert severity="success">{t("editProfile.success")}</Alert>
-        )}
-
         {emailChanged && (
           <Alert severity="warning">{t("editProfile.emailWarning")}</Alert>
         )}
