@@ -106,6 +106,7 @@ namespace Cotton.Server.Jobs
                     && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
                     && !_dbContext.Users.Any(u => u.AvatarHash == c.Hash)
                     && c.GCScheduledAfter == null)
+                .OrderBy(c => c.Hash)
                 .Take(ChunkBatchSize)
                 .ToListAsync(ct);
 
@@ -141,6 +142,7 @@ namespace Cotton.Server.Jobs
                     && !c.FileManifestChunks.Any()
                     && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash)
                     && !_dbContext.Users.Any(u => u.AvatarHash == c.Hash))
+                .OrderBy(c => c.Hash)
                 .Take(ChunkBatchSize)
                 .ToListAsync(ct);
 
@@ -163,6 +165,11 @@ namespace Cotton.Server.Jobs
                 deletingNow.Add(uid);
             }
 
+            if (deletingNow.Count == 0)
+            {
+                return;
+            }
+
             int deletedChunksCounter = 0;
             try
             {
@@ -177,23 +184,30 @@ namespace Cotton.Server.Jobs
                         continue;
                     }
 
-                    if (!await IsStillEligibleForDeletionAsync(chunk.Hash, now, protectedStorageKeys, ct))
+                    try
                     {
-                        continue;
+                        if (!await IsStillEligibleForDeletionAsync(chunk.Hash, now, protectedStorageKeys, ct))
+                        {
+                            continue;
+                        }
+
+                        await _dbContext.ChunkOwnerships
+                            .Where(o => o.ChunkHash == chunk.Hash)
+                            .ExecuteDeleteAsync(ct);
+
+                        _dbContext.Chunks.Remove(chunk);
+                        await _dbContext.SaveChangesAsync(ct);
+                        deletedChunksCounter++;
+
+                        bool deleted = await _storage.DeleteAsync(uid);
+                        if (!deleted)
+                        {
+                            _logger.LogDebug("Chunk {ChunkId} storage delete returned false.", uid);
+                        }
                     }
-
-                    await _dbContext.ChunkOwnerships
-                        .Where(o => o.ChunkHash == chunk.Hash)
-                        .ExecuteDeleteAsync(ct);
-
-                    _dbContext.Chunks.Remove(chunk);
-                    await _dbContext.SaveChangesAsync(ct);
-                    deletedChunksCounter++;
-
-                    bool deleted = await _storage.DeleteAsync(uid);
-                    if (!deleted)
+                    catch (Exception ex)
                     {
-                        _logger.LogDebug("Chunk {ChunkId} storage delete returned false.", uid);
+                        _logger.LogWarning(ex, "Failed to delete scheduled chunk {ChunkId}.", uid);
                     }
                 }
             }
