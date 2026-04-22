@@ -193,6 +193,15 @@
       "user": "User",
       "admin": "Admin"
     },
+    "avatar": {
+      "upload": "Upload avatar",
+      "errors": {
+        "settingsNotLoaded": "Server settings are not loaded yet.",
+        "fileTooLarge": "Avatar is too large. Maximum size is {{maxSize}}.",
+        "unsupportedFormat": "This image format is not supported by your browser. Please use JPG, PNG or WEBP.",
+        "failed": "Failed to update avatar."
+      }
+    },
     "editProfile": {
       "title": "Edit profile",
       "description": "Update your personal information.",
@@ -203,7 +212,7 @@
       "save": "Save",
       "saving": "Saving...",
       "success": "Profile updated.",
-      "emailWarning": "Changing your email will reset verification status.",
+      "emailWarning": "Changing your email will reset email verification status.",
       "errors": {
         "failed": "Failed to update profile."
       }
@@ -963,7 +972,8 @@
       "state": {
         "loading": "Loading backup info...",
         "empty": "No backups found yet.",
-        "triggerSuccess": "Backup job was triggered."
+        "triggerSuccess": "Backup job was triggered.",
+        "restoreIfEmptyHint": "If the database is lost and you want it to restore automatically, set COTTON_RESTORE_DATABASE_IF_EMPTY=true in the container environment."
       },
       "fields": {
         "backupId": "Backup ID",

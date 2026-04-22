@@ -193,6 +193,15 @@
       "user": "Usuario",
       "admin": "Administrador"
     },
+    "avatar": {
+      "upload": "Subir avatar",
+      "errors": {
+        "settingsNotLoaded": "La configuración del servidor aún no está cargada.",
+        "fileTooLarge": "El avatar es demasiado grande. El tamaño máximo es {{maxSize}}.",
+        "unsupportedFormat": "Este formato de imagen no es compatible con tu navegador. Usa JPG, PNG o WEBP.",
+        "failed": "No se pudo actualizar el avatar."
+      }
+    },
     "editProfile": {
       "title": "Editar perfil",
       "description": "Actualiza tu información personal.",
@@ -963,7 +972,8 @@
       "state": {
         "loading": "Cargando información del respaldo...",
         "empty": "Aún no se encontraron respaldos.",
-        "triggerSuccess": "La tarea de respaldo fue iniciada."
+        "triggerSuccess": "La tarea de respaldo fue iniciada.",
+        "restoreIfEmptyHint": "Si la base de datos se pierde y quieres que se restaure automáticamente, establece COTTON_RESTORE_DATABASE_IF_EMPTY=true en el entorno del contenedor."
       },
       "fields": {
         "backupId": "ID de respaldo",

@@ -1,26 +1,32 @@
-import {
-  Avatar,
-  Box,
-  Paper,
-  Chip,
-  Divider,
-  Stack,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Chip, Divider, Paper, Stack, Tooltip, Typography } from "@mui/material";
+import { useCallback, useId, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { UserRole, type User } from "../../../features/auth/types";
+import { authApi } from "../../../shared/api/authApi";
+import { isAxiosError } from "../../../shared/api/httpClient";
+import { useSettingsStore } from "../../../shared/store/settingsStore";
+import { uploadBlobToChunks } from "../../../shared/upload";
 import {
   formatDateOnly,
   getAgeYears,
   tryParseDateOnly,
 } from "../../../shared/utils/dateOnly";
+import { formatBytes } from "../../../shared/utils/formatBytes";
+import { AvatarUploadControl } from "./user-info/AvatarUploadControl";
+import { InfoRow } from "./user-info/InfoRow";
+import {
+  AvatarImageDecodeError,
+  prepareAvatarForUpload,
+} from "./user-info/avatarUploadUtils";
+
+type AvatarStatus = { kind: "idle" } | { kind: "error"; message: string };
 
 const formatDateTime = (iso: string): string => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
     return iso;
   }
+
   return new Intl.DateTimeFormat(undefined, {
     year: "numeric",
     month: "short",
@@ -43,63 +49,49 @@ const getRoleTranslationKey = (
   }
 };
 
+const getAvatarInitials = (args: {
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  email?: string | null;
+}): string => {
+  const first = (args.firstName ?? "").trim();
+  const last = (args.lastName ?? "").trim();
+  if (first && last) {
+    return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+  }
+
+  const fallback = (args.username ?? args.email ?? "").trim();
+  if (!fallback) {
+    return "";
+  }
+
+  return fallback.slice(0, 2).toUpperCase();
+};
+
 interface UserInfoCardProps {
   user: User;
+  onUserUpdate: (updatedUser: User) => void;
 }
 
-type InfoRowProps = {
-  label: string;
-  value: React.ReactNode;
-};
-
-const InfoRow = ({ label, value }: InfoRowProps) => {
-  return (
-    <Box display="flex" justifyContent="space-between" gap={2}>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography
-        variant="body2"
-        fontWeight={600}
-        textAlign="right"
-        sx={{ wordBreak: "break-word" }}
-      >
-        {value}
-      </Typography>
-    </Box>
-  );
-};
-
-export const UserInfoCard = ({ user }: UserInfoCardProps) => {
+export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
   const { t } = useTranslation(["profile", "common"]);
+  const avatarUploadInputId = useId();
 
-  const getAvatarInitials = (args: {
-    firstName?: string | null;
-    lastName?: string | null;
-    username?: string | null;
-    email?: string | null;
-  }): string => {
-    const first = (args.firstName ?? "").trim();
-    const last = (args.lastName ?? "").trim();
-    if (first && last) {
-      return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
-    }
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>({ kind: "idle" });
 
-    const fallback = (args.username ?? args.email ?? "").trim();
-    if (!fallback) return "";
-    return fallback.slice(0, 2).toUpperCase();
-  };
+  const serverSettings = useSettingsStore((state) => state.data);
+  const fetchServerSettings = useSettingsStore((state) => state.fetchSettings);
 
   const totpEnabled = Boolean(user.isTotpEnabled);
   const placeholder = t("common:placeholder");
 
   const fullName = [user.firstName, user.lastName]
-    .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+    .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
     .join(" ");
 
-  // title is full name if present, otherwise username
   const title = fullName || user.username;
-  const displayName = title; // for avatar alt
   const avatarInitials = getAvatarInitials({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -126,6 +118,105 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
     return `${formatted} (${t("ageYears", { count: ageYears })})`;
   })();
 
+  const handleAvatarFileSelected = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+      const selectedFile = event.target.files?.[0];
+      event.target.value = "";
+
+      if (!selectedFile || avatarUploading) {
+        return;
+      }
+
+      setAvatarStatus({ kind: "idle" });
+      setAvatarUploading(true);
+
+      try {
+        let effectiveServerSettings = serverSettings;
+        if (!effectiveServerSettings) {
+          await fetchServerSettings({ force: false });
+          effectiveServerSettings = useSettingsStore.getState().data;
+        }
+
+        if (!effectiveServerSettings) {
+          setAvatarStatus({
+            kind: "error",
+            message: t("avatar.errors.settingsNotLoaded"),
+          });
+          return;
+        }
+
+        const preparedAvatar = await prepareAvatarForUpload(
+          selectedFile,
+          effectiveServerSettings.maxChunkSizeBytes,
+        );
+
+        if (!preparedAvatar) {
+          setAvatarStatus({
+            kind: "error",
+            message: t("avatar.errors.fileTooLarge", {
+              maxSize: formatBytes(effectiveServerSettings.maxChunkSizeBytes),
+            }),
+          });
+          return;
+        }
+
+        const { chunkHashes } = await uploadBlobToChunks({
+          blob: preparedAvatar.blob,
+          fileName: preparedAvatar.fileName,
+          server: {
+            maxChunkSizeBytes: effectiveServerSettings.maxChunkSizeBytes,
+            supportedHashAlgorithm: effectiveServerSettings.supportedHashAlgorithm,
+          },
+        });
+
+        if (chunkHashes.length !== 1) {
+          setAvatarStatus({
+            kind: "error",
+            message: t("avatar.errors.fileTooLarge", {
+              maxSize: formatBytes(effectiveServerSettings.maxChunkSizeBytes),
+            }),
+          });
+          return;
+        }
+
+        const updatedUser = await authApi.updateProfile({
+          avatarHash: chunkHashes[0],
+          username: user.username,
+          email: user.email ?? null,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          birthDate: user.birthDate ?? null,
+        });
+
+        onUserUpdate(updatedUser);
+      } catch (error) {
+        if (error instanceof AvatarImageDecodeError) {
+          setAvatarStatus({
+            kind: "error",
+            message: t("avatar.errors.unsupportedFormat"),
+          });
+          return;
+        }
+
+        if (isAxiosError(error)) {
+          const data = error.response?.data as
+            | { message?: string; title?: string }
+            | undefined;
+          const message = data?.message ?? data?.title;
+          if (message) {
+            setAvatarStatus({ kind: "error", message });
+            return;
+          }
+        }
+
+        setAvatarStatus({ kind: "error", message: t("avatar.errors.failed") });
+      } finally {
+        setAvatarUploading(false);
+      }
+    },
+    [avatarUploading, fetchServerSettings, onUserUpdate, serverSettings, t],
+  );
+
   return (
     <Paper
       sx={{
@@ -134,23 +225,27 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         p: { xs: 2, sm: 3 },
       }}
     >
+      {avatarStatus.kind === "error" && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {avatarStatus.message}
+        </Alert>
+      )}
+
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2.5}
         alignItems={{ xs: "center", sm: "flex-start" }}
         sx={{ mb: 3 }}
       >
-        <Avatar
-          alt={displayName}
+        <AvatarUploadControl
+          alt={title}
           src={user.pictureUrl}
-          sx={{
-            width: { xs: 84, sm: 104 },
-            height: { xs: 84, sm: 104 },
-            bgcolor: "primary.main",
-          }}
-        >
-          {!user.pictureUrl && avatarInitials}
-        </Avatar>
+          initials={avatarInitials}
+          inputId={avatarUploadInputId}
+          uploadLabel={t("avatar.upload")}
+          isUploading={avatarUploading}
+          onFileSelected={handleAvatarFileSelected}
+        />
 
         <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>
           <Stack
@@ -199,6 +294,7 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
               )}
             </Stack>
           </Stack>
+
           {user.email && (
             <Typography
               variant="body2"

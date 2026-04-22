@@ -26,9 +26,9 @@ export function SetupGate({ children }: Props) {
   const isAdmin = user?.role === UserRole.Admin;
 
   useEffect(() => {
-    if (!isAuthenticated || !isAdmin) return;
-    void fetchSetupStatus({ force: true });
-  }, [isAuthenticated, isAdmin, fetchSetupStatus]);
+    if (!isAuthenticated || !isAdmin || loaded || loading) return;
+    void fetchSetupStatus();
+  }, [isAuthenticated, isAdmin, loaded, loading, fetchSetupStatus]);
 
   if (isAdmin && (!loaded || loading)) {
     return (

@@ -24,6 +24,8 @@ interface ChangePasswordRequest {
 }
 
 interface UpdateProfileRequest {
+  avatarHash?: string | null;
+  username?: string | null;
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
@@ -40,6 +42,7 @@ interface UserInfoResponse extends BaseDto<string> {
   role: UserRole;
   displayName?: string;
   pictureUrl?: string;
+  avatarHashEncryptedHex?: string | null;
 
   preferences?: Record<string, string>;
 
@@ -52,6 +55,37 @@ interface UserInfoResponse extends BaseDto<string> {
   totpEnabledAt?: string | null;
   totpFailedAttempts?: number;
 }
+
+const buildAvatarUrl = (response: UserInfoResponse): string | undefined => {
+  const avatarHashEncryptedHex = response.avatarHashEncryptedHex?.trim();
+  if (avatarHashEncryptedHex) {
+    return `/api/v1/preview/${encodeURIComponent(avatarHashEncryptedHex)}.webp`;
+  }
+
+  return response.pictureUrl;
+};
+
+const mapUserResponse = (response: UserInfoResponse): User => {
+  return {
+    id: response.id,
+    role: response.role,
+    username: response.username,
+    email: response.email ?? null,
+    isEmailVerified: response.isEmailVerified ?? false,
+    displayName: response.displayName ?? response.username,
+    pictureUrl: buildAvatarUrl(response),
+    avatarHashEncryptedHex: response.avatarHashEncryptedHex ?? null,
+    preferences: response.preferences,
+    firstName: response.firstName ?? null,
+    lastName: response.lastName ?? null,
+    birthDate: response.birthDate ?? null,
+    createdAt: response.createdAt,
+    updatedAt: response.updatedAt,
+    isTotpEnabled: response.isTotpEnabled,
+    totpEnabledAt: response.totpEnabledAt ?? null,
+    totpFailedAttempts: response.totpFailedAttempts ?? 0,
+  };
+};
 
 export const authApi = {
   /**
@@ -81,25 +115,7 @@ export const authApi = {
       );
     }
 
-    return {
-      id: response.data.id,
-      role: response.data.role,
-      username: response.data.username,
-      email: response.data.email ?? null,
-      isEmailVerified: response.data.isEmailVerified ?? false,
-      displayName: response.data.displayName ?? response.data.username,
-      pictureUrl: response.data.pictureUrl,
-      preferences: response.data.preferences,
-      firstName: response.data.firstName ?? null,
-      lastName: response.data.lastName ?? null,
-      birthDate: response.data.birthDate ?? null,
-      createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt,
-
-      isTotpEnabled: response.data.isTotpEnabled,
-      totpEnabledAt: response.data.totpEnabledAt ?? null,
-      totpFailedAttempts: response.data.totpFailedAttempts ?? 0,
-    };
+    return mapUserResponse(response.data);
   },
 
   /**
@@ -133,24 +149,7 @@ export const authApi = {
       "users/me",
       request,
     );
-    return {
-      id: response.data.id,
-      role: response.data.role,
-      username: response.data.username,
-      email: response.data.email ?? null,
-      isEmailVerified: response.data.isEmailVerified ?? false,
-      displayName: response.data.displayName ?? response.data.username,
-      pictureUrl: response.data.pictureUrl,
-      preferences: response.data.preferences,
-      firstName: response.data.firstName ?? null,
-      lastName: response.data.lastName ?? null,
-      birthDate: response.data.birthDate ?? null,
-      createdAt: response.data.createdAt,
-      updatedAt: response.data.updatedAt,
-      isTotpEnabled: response.data.isTotpEnabled,
-      totpEnabledAt: response.data.totpEnabledAt ?? null,
-      totpFailedAttempts: response.data.totpFailedAttempts ?? 0,
-    };
+    return mapUserResponse(response.data);
   },
 
   forgotPassword: async (usernameOrEmail: string): Promise<void> => {

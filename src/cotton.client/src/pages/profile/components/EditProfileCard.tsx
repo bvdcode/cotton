@@ -8,16 +8,12 @@ import {
 } from "@mui/material";
 import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { isAxiosError } from "../../../shared/api/httpClient";
 import { authApi } from "../../../shared/api/authApi";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import EditIcon from "@mui/icons-material/Edit";
 import type { User } from "../../../features/auth/types";
 
-type EditProfileStatus =
-  | { kind: "idle" }
-  | { kind: "success" }
-  | { kind: "error"; message: string };
+type EditProfileStatus = { kind: "idle" } | { kind: "success" };
 
 interface EditProfileCardProps {
   user: User;
@@ -30,6 +26,7 @@ export const EditProfileCard = ({
 }: EditProfileCardProps) => {
   const { t } = useTranslation("profile");
 
+  const [username, setUsername] = useState(user.username ?? "");
   const [email, setEmail] = useState(user.email ?? "");
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
@@ -44,12 +41,13 @@ export const EditProfileCard = ({
 
   const hasChanges = useMemo(() => {
     return (
+      (username || null) !== (user.username || null) ||
       emailChanged ||
       (firstName || null) !== (user.firstName || null) ||
       (lastName || null) !== (user.lastName || null) ||
       (birthDate || null) !== (user.birthDate || null)
     );
-  }, [firstName, lastName, birthDate, user, emailChanged]);
+  }, [username, firstName, lastName, birthDate, user, emailChanged]);
 
   const canSubmit = hasChanges && !loading;
 
@@ -59,6 +57,7 @@ export const EditProfileCard = ({
 
     try {
       const updated = await authApi.updateProfile({
+        username: username || null,
         email: email || null,
         firstName: firstName || null,
         lastName: lastName || null,
@@ -66,22 +65,12 @@ export const EditProfileCard = ({
       });
       onUserUpdate(updated);
       setStatus({ kind: "success" });
-    } catch (e) {
-      if (isAxiosError(e)) {
-        const data = e.response?.data as
-          | { message?: string; title?: string }
-          | undefined;
-        const message = data?.message ?? data?.title;
-        if (message) {
-          setStatus({ kind: "error", message });
-          return;
-        }
-      }
-      setStatus({ kind: "error", message: t("editProfile.errors.failed") });
+    } catch {
+      // Error details are surfaced via global toast notifications.
     } finally {
       setLoading(false);
     }
-  }, [email, firstName, lastName, birthDate, onUserUpdate, t]);
+  }, [username, email, firstName, lastName, birthDate, onUserUpdate, t]);
 
   return (
     <ProfileAccordionCard
@@ -95,15 +84,19 @@ export const EditProfileCard = ({
         {status.kind === "success" && (
           <Alert severity="success">{t("editProfile.success")}</Alert>
         )}
-        {status.kind === "error" && (
-          <Alert severity="error">{status.message}</Alert>
-        )}
 
         {emailChanged && (
           <Alert severity="warning">{t("editProfile.emailWarning")}</Alert>
         )}
 
         <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} gap={2}>
+          <TextField
+            label={t("fields.username")}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            fullWidth
+          />
+
           <TextField
             label={t("editProfile.firstName")}
             value={firstName}
