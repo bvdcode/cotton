@@ -169,7 +169,9 @@ export const UserInfoHeader = ({
               flexWrap="wrap"
               useFlexGap
             >
-              <Email fontSize="small" />
+              <Tooltip title={t("fields.email")} placement="left">
+                <Email fontSize="small" />
+              </Tooltip>
               <Typography variant="body2" color="text.secondary">
                 {email}
               </Typography>
@@ -180,19 +182,23 @@ export const UserInfoHeader = ({
                 label={t("fields.verify")}
               />
               {isEmailVerified && (
-                <Tooltip title={t("email.verified")}>
+                <Tooltip title={t("email.verified")} placement="right">
                   <Check color="success" fontSize="small" />
                 </Tooltip>
               )}
             </Stack>
           )}
 
-          <Box display="flex" alignItems="center" gap={0.5}>
-            <Cake fontSize="small" />
-            <Typography variant="body2" color="text.secondary">
-              {birthDateValue}
-            </Typography>
-          </Box>
+          {birthDateValue && (
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Tooltip title={t("fields.birthDate")} placement="left">
+                <Cake fontSize="small" />
+              </Tooltip>
+              <Typography variant="body2" color="text.secondary">
+                {birthDateValue}
+              </Typography>
+            </Box>
+          )}
         </Stack>
       </Box>
     </Stack>
