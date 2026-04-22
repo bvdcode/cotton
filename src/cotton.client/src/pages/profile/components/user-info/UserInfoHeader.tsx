@@ -114,12 +114,10 @@ export const UserInfoHeader = ({
 
       <Box minWidth={0} flex={1} textAlign={{ xs: "center", sm: "left" }}>
         <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          justifyContent={{ xs: "center", sm: "space-between" }}
-          flexWrap="wrap"
-          useFlexGap
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 0.75, sm: 1 }}
+          alignItems={{ xs: "center", sm: "center" }}
+          justifyContent={{ sm: "space-between" }}
         >
           <Box flexGrow={1} minWidth={0}>
             <Typography variant="h5" fontWeight={800} height="100%">
