@@ -133,7 +133,6 @@ export const EditProfileCard = ({
             fullWidth
             autoComplete="off"
             error={Boolean(usernameError)}
-            helperText={usernameError ?? ""}
           />
 
           <TextField

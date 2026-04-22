@@ -121,7 +121,6 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({
             fullWidth
             autoComplete="off"
             error={Boolean(usernameError)}
-            helperText={usernameError ?? ""}
           />
           <TextField
             label={t("users.create.email")}
