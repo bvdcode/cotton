@@ -1,7 +1,4 @@
-import {
-  Alert,
-  Paper,
-} from "@mui/material";
+import { Alert, Paper } from "@mui/material";
 import type { User } from "../../../features/auth/types";
 import { useUserInfoCard } from "./user-info/useUserInfoCard";
 import { UserInfoHeader } from "./user-info/UserInfoHeader";
