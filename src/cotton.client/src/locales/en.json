@@ -974,7 +974,7 @@
         "loading": "Loading backup info...",
         "empty": "No backups found yet.",
         "triggerSuccess": "Backup job was triggered.",
-        "restoreIfEmptyHint": "If the database is lost and you want it to restore automatically, set COTTON_RESTORE_DATABASE_IF_EMPTY=true in the container environment."
+        "restoreIfEmptyHint": "If the database is lost and you want it to restore automatically, set COTTON_RESTORE_DATABASE_IF_EMPTY=true in the container environment. Database must be empty without any tables for this to work."
       },
       "fields": {
         "backupId": "Backup ID",
