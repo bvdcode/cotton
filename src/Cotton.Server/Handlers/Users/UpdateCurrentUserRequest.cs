@@ -3,8 +3,11 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Previews;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Storage.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Abstractions;
@@ -36,8 +39,12 @@ namespace Cotton.Server.Handlers.Users
 
     public class UpdateCurrentUserRequestHandler(
         CottonDbContext _dbContext,
-        IStreamCipher _crypto) : IRequestHandler<UpdateCurrentUserRequest, UserDto>
+        IStreamCipher _crypto,
+        IStoragePipeline _storage,
+        IChunkIngestService _chunkIngest) : IRequestHandler<UpdateCurrentUserRequest, UserDto>
     {
+        private static readonly ImagePreviewGenerator _avatarGenerator = new();
+
         public async Task<UserDto> Handle(UpdateCurrentUserRequest request, CancellationToken cancellationToken)
         {
             var user = await _dbContext.Users
@@ -92,9 +99,10 @@ namespace Cotton.Server.Handlers.Users
                 }
                 else
                 {
+                    byte[] sourceAvatarHashBytes;
                     try
                     {
-                        avatarHashBytes = Hasher.FromHexStringHash(request.AvatarHash);
+                        sourceAvatarHashBytes = Hasher.FromHexStringHash(request.AvatarHash);
                     }
                     catch (ArgumentException)
                     {
@@ -102,12 +110,34 @@ namespace Cotton.Server.Handlers.Users
                     }
 
                     bool hasChunkOwnership = await _dbContext.ChunkOwnerships
-                        .AnyAsync(x => x.OwnerId == user.Id && x.ChunkHash == avatarHashBytes, cancellationToken);
+                        .AnyAsync(x => x.OwnerId == user.Id && x.ChunkHash == sourceAvatarHashBytes, cancellationToken);
                     if (!hasChunkOwnership)
                     {
                         throw new BadRequestException<User>("Avatar chunk not found or not owned by user");
                     }
 
+                    string sourceAvatarHash = Hasher.ToHexStringHash(sourceAvatarHashBytes);
+                    bool sourceChunkExists = await _storage.ExistsAsync(sourceAvatarHash);
+                    if (!sourceChunkExists)
+                    {
+                        throw new BadRequestException<User>("Avatar chunk not found");
+                    }
+
+                    byte[] avatarPreviewWebP;
+                    try
+                    {
+                        await using Stream sourceAvatarStream = await _storage.ReadAsync(sourceAvatarHash);
+                        avatarPreviewWebP = await _avatarGenerator.GeneratePreviewWebPAsync(
+                            sourceAvatarStream,
+                            PreviewGeneratorProvider.DefaultSmallPreviewSize);
+                    }
+                    catch (Exception)
+                    {
+                        throw new BadRequestException<User>("Avatar source must be a valid image");
+                    }
+
+                    Chunk avatarChunk = await _chunkIngest.UpsertChunkAsync(user.Id, avatarPreviewWebP, avatarPreviewWebP.Length, cancellationToken);
+                    avatarHashBytes = avatarChunk.Hash;
                     avatarHashUpdated = user.AvatarHash is null || !user.AvatarHash.SequenceEqual(avatarHashBytes);
                 }
             }
