@@ -403,6 +403,9 @@
       "errors": {
         "failed": "Failed to generate WebDAV token."
       }
+    },
+    "email": {
+      "verified": "Email verified"
     }
   },
   "setup": {
