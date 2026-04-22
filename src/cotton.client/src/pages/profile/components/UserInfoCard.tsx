@@ -3,7 +3,10 @@ import { useCallback, useId, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { UserRole, type User } from "../../../features/auth/types";
 import { authApi } from "../../../shared/api/authApi";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import {
+  hasApiErrorToastBeenDispatched,
+  isAxiosError,
+} from "../../../shared/api/httpClient";
 import { useSettingsStore } from "../../../shared/store/settingsStore";
 import { uploadBlobToChunks } from "../../../shared/upload";
 import {
@@ -12,6 +15,7 @@ import {
   tryParseDateOnly,
 } from "../../../shared/utils/dateOnly";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { toast } from "react-toastify";
 import { AvatarUploadControl } from "./user-info/AvatarUploadControl";
 import { InfoRow } from "./user-info/InfoRow";
 import {
@@ -80,6 +84,8 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>({ kind: "idle" });
+  const [emailVerificationSending, setEmailVerificationSending] =
+    useState(false);
 
   const serverSettings = useSettingsStore((state) => state.data);
   const fetchServerSettings = useSettingsStore((state) => state.fetchSettings);
@@ -217,6 +223,30 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
     [avatarUploading, fetchServerSettings, onUserUpdate, serverSettings, t],
   );
 
+  const handleSendEmailVerification = useCallback(async (): Promise<void> => {
+    if (emailVerificationSending || !user.email || user.isEmailVerified) {
+      return;
+    }
+
+    setEmailVerificationSending(true);
+    try {
+      await authApi.sendEmailVerification();
+      toast.success(t("emailVerification.sent"), {
+        toastId: "profile:email-verification:sent",
+      });
+    } catch (error) {
+      if (isAxiosError(error) && hasApiErrorToastBeenDispatched(error)) {
+        return;
+      }
+
+      toast.error(t("emailVerification.errors.failed"), {
+        toastId: "profile:email-verification:error:generic",
+      });
+    } finally {
+      setEmailVerificationSending(false);
+    }
+  }, [emailVerificationSending, t, user.email, user.isEmailVerified]);
+
   return (
     <Paper
       sx={{
@@ -280,30 +310,36 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
                 variant="filled"
                 label={totpEnabled ? t("totp.enabled") : t("totp.disabled")}
               />
-              {user.email && (
-                <Chip
-                  size="small"
-                  color={user.isEmailVerified ? "success" : "warning"}
-                  variant="filled"
-                  label={
-                    user.isEmailVerified
-                      ? t("fields.emailVerified")
-                      : t("fields.emailNotVerified")
-                  }
-                />
-              )}
             </Stack>
           </Stack>
 
           {user.email && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              noWrap
-              display={{ xs: "none", sm: "block" }}
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              justifyContent={{ xs: "center", sm: "flex-start" }}
+              flexWrap="wrap"
+              useFlexGap
             >
-              {user.email}
-            </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {user.email}
+              </Typography>
+              {!user.isEmailVerified && (
+                <Chip
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  label={
+                    emailVerificationSending
+                      ? t("emailVerification.sending")
+                      : t("fields.verify")
+                  }
+                  onClick={handleSendEmailVerification}
+                  disabled={emailVerificationSending}
+                />
+              )}
+            </Stack>
           )}
         </Box>
       </Stack>
