@@ -1,6 +1,8 @@
 import {
+  Alert,
   Avatar,
   Box,
+  CircularProgress,
   Paper,
   Chip,
   Divider,
@@ -9,13 +11,21 @@ import {
   Typography,
 } from "@mui/material";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { UserRole, type User } from "../../../features/auth/types";
+import { authApi } from "../../../shared/api/authApi";
+import { isAxiosError } from "../../../shared/api/httpClient";
+import { useSettingsStore } from "../../../shared/store/settingsStore";
+import { uploadBlobToChunks } from "../../../shared/upload";
 import {
   formatDateOnly,
   getAgeYears,
   tryParseDateOnly,
 } from "../../../shared/utils/dateOnly";
+import { formatBytes } from "../../../shared/utils/formatBytes";
+
+type AvatarStatus = { kind: "idle" } | { kind: "error"; message: string };
 
 const formatDateTime = (iso: string): string => {
   const date = new Date(iso);
@@ -46,6 +56,7 @@ const getRoleTranslationKey = (
 
 interface UserInfoCardProps {
   user: User;
+  onUserUpdate: (updatedUser: User) => void;
 }
 
 type InfoRowProps = {
@@ -71,9 +82,14 @@ const InfoRow = ({ label, value }: InfoRowProps) => {
   );
 };
 
-export const UserInfoCard = ({ user }: UserInfoCardProps) => {
+export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
   const { t } = useTranslation(["profile", "common"]);
   const avatarUploadInputId = "profile-avatar-upload-input";
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>({ kind: "idle" });
+
+  const serverSettings = useSettingsStore((state) => state.data);
+  const fetchServerSettings = useSettingsStore((state) => state.fetchSettings);
 
   const getAvatarInitials = (args: {
     firstName?: string | null;
@@ -128,9 +144,83 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
     return `${formatted} (${t("ageYears", { count: ageYears })})`;
   })();
 
-  const handleAvatarFileSelected = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    event.target.value = "";
-  };
+  const handleAvatarFileSelected = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+      const selectedFile = event.target.files?.[0];
+      event.target.value = "";
+
+      if (!selectedFile || avatarUploading) {
+        return;
+      }
+
+      setAvatarStatus({ kind: "idle" });
+      setAvatarUploading(true);
+
+      try {
+        let effectiveServerSettings = serverSettings;
+        if (!effectiveServerSettings) {
+          await fetchServerSettings({ force: false });
+          effectiveServerSettings = useSettingsStore.getState().data;
+        }
+
+        if (!effectiveServerSettings) {
+          setAvatarStatus({ kind: "error", message: t("avatar.errors.settingsNotLoaded") });
+          return;
+        }
+
+        if (selectedFile.size > effectiveServerSettings.maxChunkSizeBytes) {
+          setAvatarStatus({
+            kind: "error",
+            message: t("avatar.errors.fileTooLarge", {
+              maxSize: formatBytes(effectiveServerSettings.maxChunkSizeBytes),
+            }),
+          });
+          return;
+        }
+
+        const { chunkHashes } = await uploadBlobToChunks({
+          blob: selectedFile,
+          fileName: selectedFile.name,
+          server: {
+            maxChunkSizeBytes: effectiveServerSettings.maxChunkSizeBytes,
+            supportedHashAlgorithm: effectiveServerSettings.supportedHashAlgorithm,
+          },
+        });
+
+        if (chunkHashes.length !== 1) {
+          setAvatarStatus({
+            kind: "error",
+            message: t("avatar.errors.fileTooLarge", {
+              maxSize: formatBytes(effectiveServerSettings.maxChunkSizeBytes),
+            }),
+          });
+          return;
+        }
+
+        const updatedUser = await authApi.updateProfile({
+          avatarHash: chunkHashes[0],
+        });
+
+        onUserUpdate(updatedUser);
+      } catch (error) {
+        if (isAxiosError(error)) {
+          const data = error.response?.data as
+            | { message?: string; title?: string }
+            | undefined;
+          const message = data?.message ?? data?.title;
+          if (message) {
+            setAvatarStatus({ kind: "error", message });
+            return;
+          }
+        }
+
+        setAvatarStatus({ kind: "error", message: t("avatar.errors.failed") });
+      } finally {
+        setAvatarUploading(false);
+      }
+    },
+    [avatarUploading, fetchServerSettings, onUserUpdate, serverSettings, t],
+  );
 
   return (
     <Paper
@@ -140,6 +230,12 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
         p: { xs: 2, sm: 3 },
       }}
     >
+      {avatarStatus.kind === "error" && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {avatarStatus.message}
+        </Alert>
+      )}
+
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2.5}
@@ -171,38 +267,55 @@ export const UserInfoCard = ({ user }: UserInfoCardProps) => {
             {!user.pictureUrl && avatarInitials}
           </Avatar>
 
-          <Box
-            className="avatar-upload-overlay"
-            component="label"
-            htmlFor={avatarUploadInputId}
-            aria-label={t("avatar.upload")}
-            sx={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "common.white",
-              bgcolor: "rgba(0, 0, 0, 0.58)",
-              cursor: "pointer",
-              transform: "translateY(100%)",
-              transition: "transform 0.2s ease, background-color 0.2s ease",
-              "&:hover": {
-                bgcolor: "rgba(0, 0, 0, 0.72)",
-              },
-            }}
-          >
-            <PhotoCameraIcon fontSize="small" />
-          </Box>
+          {avatarUploading ? (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "common.white",
+                bgcolor: "rgba(0, 0, 0, 0.58)",
+              }}
+            >
+              <CircularProgress size={28} sx={{ color: "common.white" }} />
+            </Box>
+          ) : (
+            <Box
+              className="avatar-upload-overlay"
+              component="label"
+              htmlFor={avatarUploadInputId}
+              aria-label={t("avatar.upload")}
+              sx={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "common.white",
+                bgcolor: "rgba(0, 0, 0, 0.58)",
+                cursor: "pointer",
+                transform: "translateY(100%)",
+                transition: "transform 0.2s ease, background-color 0.2s ease",
+                "&:hover": {
+                  bgcolor: "rgba(0, 0, 0, 0.72)",
+                },
+              }}
+            >
+              <PhotoCameraIcon fontSize="small" />
+            </Box>
+          )}
 
           <input
             id={avatarUploadInputId}
             type="file"
             accept=".bmp,.gif,.jpeg,.jpg,.pbm,.png,.tiff,.tif,.tga,.webp,.qoi"
             hidden
+            disabled={avatarUploading}
             onChange={handleAvatarFileSelected}
           />
         </Box>

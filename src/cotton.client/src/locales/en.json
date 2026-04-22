@@ -194,7 +194,12 @@
       "admin": "Admin"
     },
     "avatar": {
-      "upload": "Upload avatar"
+      "upload": "Upload avatar",
+      "errors": {
+        "settingsNotLoaded": "Server settings are not loaded yet.",
+        "fileTooLarge": "Avatar is too large. Maximum size is {{maxSize}}.",
+        "failed": "Failed to update avatar."
+      }
     },
     "editProfile": {
       "title": "Edit profile",
