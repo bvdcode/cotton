@@ -301,6 +301,7 @@
       "email": "E-mail",
       "emailVerified": "Verified",
       "emailNotVerified": "Not verified",
+      "verify": "Verify",
       "createdAt": "Created at",
       "updatedAt": "Updated at"
     },
