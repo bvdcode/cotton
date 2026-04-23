@@ -23,15 +23,25 @@ public class ChunkIngestService(
     ILogger<ChunkIngestService> _logger)
     : IChunkIngestService
 {
+    private const int GcWaitStepMs = 100;
+    private const int GcWaitMaxMs = 30_000;
+
     public async Task<Chunk> UpsertChunkAsync(Guid userId, byte[] buffer, int length, CancellationToken ct = default)
     {
         byte[] chunkHash = SHA256.HashData(buffer.AsSpan(0, length));
         string storageKey = Hasher.ToHexStringHash(chunkHash);
 
-        if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
+        int waitedMs = 0;
+        while (GarbageCollectorJob.IsChunkBeingDeleted(storageKey) && waitedMs < GcWaitMaxMs)
         {
             _logger.LogInformation("Chunk {Hash} is being GC'd, waiting...", storageKey);
-            await Task.Delay(100, ct);
+            await Task.Delay(GcWaitStepMs, ct);
+            waitedMs += GcWaitStepMs;
+        }
+
+        if (GarbageCollectorJob.IsChunkBeingDeleted(storageKey))
+        {
+            throw new InvalidOperationException($"Chunk {storageKey} is currently being garbage collected. Please retry.");
         }
 
         var settings = _settingsProvider.GetServerSettings();
