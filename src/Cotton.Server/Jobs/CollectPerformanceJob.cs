@@ -9,6 +9,8 @@ namespace Cotton.Server.Jobs
         PerfTracker _perf,
         ILogger<CollectPerformanceJob> _logger) : IJob
     {
+        private const string CloudTelemetryUrl = "https://cotton-gateway.splidex.com/telemetry";
+
         public async Task Execute(IJobExecutionContext context)
         {
             if (_perf.IsUploading())
