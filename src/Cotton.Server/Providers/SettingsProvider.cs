@@ -127,7 +127,7 @@ namespace Cotton.Server.Providers
             return value;
         }
 
-        public async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
+        public async Task<string?> ValidateServerSettingsAsync(InitialServerSettingsRequestDto request)
         {
             if (!IsTimezoneValid(request.Timezone))
             {
@@ -160,7 +160,7 @@ namespace Cotton.Server.Providers
             return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
         }
 
-        private static string? ValidateTelemetryConstraints(ServerSettingsRequestDto request)
+        private static string? ValidateTelemetryConstraints(InitialServerSettingsRequestDto request)
         {
             if (request.Telemetry)
             {
@@ -180,7 +180,7 @@ namespace Cotton.Server.Providers
             return null;
         }
 
-        private static async Task<string?> ValidateEmailConstraintsAsync(ServerSettingsRequestDto request)
+        private static async Task<string?> ValidateEmailConstraintsAsync(InitialServerSettingsRequestDto request)
         {
             if (request.Email == EmailMode.Cloud)
             {
@@ -227,7 +227,7 @@ namespace Cotton.Server.Providers
             }
         }
 
-        private static async Task<string?> ValidateStorageConstraintsAsync(ServerSettingsRequestDto request)
+        private static async Task<string?> ValidateStorageConstraintsAsync(InitialServerSettingsRequestDto request)
         {
             if (request.Storage != StorageType.S3)
             {
@@ -303,7 +303,7 @@ namespace Cotton.Server.Providers
             await s3.DeleteObjectAsync(s3Config.Bucket, testKey);
         }
 
-        public async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
+        public async Task SaveServerSettingsAsync(InitialServerSettingsRequestDto request)
         {
             int? smtpPort = TryParseInt(request.EmailConfig?.Port);
             var lastSettings = await _dbContext.ServerSettings

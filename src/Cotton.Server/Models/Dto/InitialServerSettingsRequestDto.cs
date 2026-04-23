@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Models.Dto
 {
-    public class ServerSettingsRequestDto
+    public class InitialServerSettingsRequestDto
     {
         /// <summary>
         /// Gets or sets the trusted mode flag which determines if the server can share chunks between users and use global indexing.
