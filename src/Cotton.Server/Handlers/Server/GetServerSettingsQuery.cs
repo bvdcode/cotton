@@ -18,6 +18,7 @@ namespace Cotton.Server.Handlers.Server
             var serverSettings = _settings.GetServerSettings();
             return Task.FromResult(new ServerSettingsEnvelopeDto
             {
+                // TODO: Unify settings and remove model duplicates
                 MaxChunkSizeBytes = serverSettings.MaxChunkSizeBytes,
                 SupportedHashAlgorithm = Hasher.SupportedHashAlgorithm,
                 Settings = request.IsAdmin ? serverSettings : null,

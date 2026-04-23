@@ -22,8 +22,16 @@ namespace Cotton.Models
         /// <summary>
         /// Gets or sets the number of users associated with the current instance.
         /// </summary>
-        public int NumberOfUsers { get; set; }
+        public int Users { get; set; }
 
-        public 
+        /// <summary>
+        /// Gets or sets the number of nodes.
+        /// </summary>
+        public int Nodes { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of files associated with the current instance.
+        /// </summary>
+        public int Files { get; set; }
     }
 }
