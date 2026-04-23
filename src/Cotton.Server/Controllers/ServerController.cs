@@ -44,10 +44,10 @@ namespace Cotton.Server.Controllers
 
         [HttpPost("settings")]
         [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> CreateSettings(ServerSettingsRequestDto request, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateSettings(InitialServerSettingsRequestDto request, CancellationToken cancellationToken)
         {
             string fallbackPublicBaseUrl = $"{Request.Scheme}://{Request.Host.Value}";
-            await _mediator.Send(new CreateServerSettingsRequest(request, fallbackPublicBaseUrl), cancellationToken);
+            await _mediator.Send(new CreateInitialServerSettingsRequest(request, fallbackPublicBaseUrl), cancellationToken);
             return Ok();
         }
 

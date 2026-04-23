@@ -6,15 +6,16 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Server
 {
-    public class CreateServerSettingsRequest(ServerSettingsRequestDto settings, string fallbackPublicBaseUrl) : IRequest
+    public class CreateInitialServerSettingsRequest(InitialServerSettingsRequestDto settings, string fallbackPublicBaseUrl) : IRequest
     {
-        public ServerSettingsRequestDto Settings { get; } = settings;
+        public InitialServerSettingsRequestDto Settings { get; } = settings;
         public string FallbackPublicBaseUrl { get; } = fallbackPublicBaseUrl;
     }
 
-    public class CreateServerSettingsRequestHandler(SettingsProvider _settings) : IRequestHandler<CreateServerSettingsRequest>
+    public class CreateInitialServerSettingsRequestHandler(SettingsProvider _settings)
+        : IRequestHandler<CreateInitialServerSettingsRequest>
     {
-        public async Task Handle(CreateServerSettingsRequest request, CancellationToken cancellationToken)
+        public async Task Handle(CreateInitialServerSettingsRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Settings.PublicBaseUrl))
             {
