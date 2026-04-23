@@ -8,10 +8,14 @@ using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.Extensions.Logging;
 
 namespace Cotton.Database
 {
-    public class CottonDbContext(DbContextOptions options, IStreamCipher? streamCipher = null) : AuditedDbContext(options)
+    public class CottonDbContext(
+        DbContextOptions options,
+        IStreamCipher? streamCipher = null,
+        ILogger<CottonDbContext>? logger = null) : AuditedDbContext(options)
     {
         public DbSet<Node> Nodes => Set<Node>();
         public DbSet<User> Users => Set<User>();
@@ -91,6 +95,8 @@ namespace Cotton.Database
             }
             catch
             {
+                logger?.LogWarning(
+                    "Failed to decrypt value in encrypted EF converter. Falling back to raw database value.");
                 return value;
             }
         }
