@@ -335,7 +335,8 @@ namespace Cotton.Server.Providers
                 S3Region = request.S3Config?.Region,
                 S3EndpointUrl = request.S3Config?.Endpoint,
                 InstanceId = instanceId,
-                PublicBaseUrl = request.PublicBaseUrl.TrimEnd('/'),
+                // TODO: Double check if public base url is not null
+                PublicBaseUrl = request.PublicBaseUrl!.TrimEnd('/'),
                 ServerUsage = request.Usage,
                 StorageSpaceMode = request.StorageSpace,
                 TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
