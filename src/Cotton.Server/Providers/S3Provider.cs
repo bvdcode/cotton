@@ -45,12 +45,12 @@ namespace Cotton.Server.Providers
                 MaxErrorRetry = 3,
                 Timeout = TimeSpan.FromMinutes(5),
             };
-            string? decryptedSecretKey = _settingsProvider.DecryptValue(settings.S3SecretAccessKeyEncrypted);
-            if (string.IsNullOrEmpty(decryptedSecretKey))
+            string? secretAccessKey = settings.S3SecretAccessKeyEncrypted;
+            if (string.IsNullOrEmpty(secretAccessKey))
             {
-                throw new InvalidOperationException("Failed to decrypt S3 secret access key.");
+                throw new InvalidOperationException("S3 secret access key is not configured.");
             }
-            var credentials = new BasicAWSCredentials(settings.S3AccessKeyId, decryptedSecretKey);
+            var credentials = new BasicAWSCredentials(settings.S3AccessKeyId, secretAccessKey);
             _s3Client = new AmazonS3Client(credentials, config);
             return _s3Client;
         }

@@ -105,12 +105,12 @@ namespace Cotton.Database.Models
         // TODO: Add EF Core value converter for encryption/decryption of sensitive fields, and apply it to the following properties.
         // [EncryptionEnabled]
         [Column("s3_secret_access_key_encrypted")]
-        public string? S3SecretAccessKeyEncrypted { get; init; }
+        public string? S3SecretAccessKeyEncrypted { get; set; }
 
         // TODO: Add EF Core value converter for encryption/decryption of sensitive fields, and apply it to the following properties.
         // [EncryptionEnabled]
         [Column("smtp_password_encrypted")]
-        public string? SmtpPasswordEncrypted { get; init; }
+        public string? SmtpPasswordEncrypted { get; set; }
 
         public string GetInstanceIdHash()
         {
