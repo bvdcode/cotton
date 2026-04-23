@@ -84,8 +84,15 @@ namespace Cotton.Database
                 return value;
             }
 
-            byte[] encryptedBytes = Convert.FromBase64String(value);
-            return streamCipher.DecryptString(encryptedBytes);
+            try
+            {
+                byte[] encryptedBytes = Convert.FromBase64String(value);
+                return streamCipher.DecryptString(encryptedBytes);
+            }
+            catch
+            {
+                return value;
+            }
         }
     }
 }
