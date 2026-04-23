@@ -155,7 +155,7 @@ namespace Cotton.Server.Services
             return firstName + " " + lastName;
         }
 
-        private void SendSmtpEmail(
+        private static void SendSmtpEmail(
             string recipientEmail,
             string recipientName,
             string subject,
@@ -170,7 +170,11 @@ namespace Cotton.Server.Services
                 ?? throw new InvalidOperationException("SMTP username is not configured.");
             string senderEmail = settings.SmtpSenderEmail
                 ?? throw new InvalidOperationException("SMTP sender email is not configured.");
-            string? password = _settingsProvider.DecryptValue(settings.SmtpPasswordEncrypted);
+            string? password = settings.SmtpPasswordEncrypted;
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                throw new InvalidOperationException("SMTP password is not configured.");
+            }
 
             using SmtpClient client = new()
             {
