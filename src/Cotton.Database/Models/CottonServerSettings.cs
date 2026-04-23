@@ -50,9 +50,6 @@ namespace Cotton.Database.Models
         [Column("smtp_username")]
         public string? SmtpUsername { get; init; }
 
-        [Column("smtp_password_encrypted")]
-        public string? SmtpPasswordEncrypted { get; init; }
-
         [Column("smtp_sender_email")]
         public string? SmtpSenderEmail { get; init; }
 
@@ -61,9 +58,6 @@ namespace Cotton.Database.Models
 
         [Column("s3_access_key_id")]
         public string? S3AccessKeyId { get; init; }
-
-        [Column("s3_secret_access_key_encrypted")]
-        public string? S3SecretAccessKeyEncrypted { get; init; }
 
         [Column("s3_bucket_name")]
         public string? S3BucketName { get; init; }
@@ -91,6 +85,24 @@ namespace Cotton.Database.Models
 
         [Column("totp_max_failed_attempts")]
         public int TotpMaxFailedAttempts { get; set; }
+
+        [Column("oidc_client_id")]
+        public string? OidcClientId { get; set; }
+
+        [Column("oidc_issuer")]
+        public string? OidcIssuer { get; set; }
+
+        // [EncryptionEnabled]
+        [Column("oidc_client_secret_encrypted")]
+        public string? OidcClientSecretEncrypted { get; set; }
+
+        // [EncryptionEnabled]
+        [Column("s3_secret_access_key_encrypted")]
+        public string? S3SecretAccessKeyEncrypted { get; init; }
+
+        // [EncryptionEnabled]
+        [Column("smtp_password_encrypted")]
+        public string? SmtpPasswordEncrypted { get; init; }
 
         public string GetInstanceIdHash()
         {
