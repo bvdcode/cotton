@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
+using Cotton.Database.Models.Attributes;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using EasyExtensions.Extensions;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -92,23 +93,19 @@ namespace Cotton.Database.Models
         [Column("oidc_issuer")]
         public string? OidcIssuer { get; set; }
 
-        // TODO: Add EF Core value converter for encryption/decryption of sensitive fields, and apply it to the following properties.
-        // [EncryptionEnabled]
+        [Encrypted]
         [Column("cloud_services_token_encrypted")]
         public string? CloudServicesTokenEncrypted { get; set; }
 
-        // TODO: Add EF Core value converter for encryption/decryption of sensitive fields, and apply it to the following properties.
-        // [EncryptionEnabled]
+        [Encrypted]
         [Column("oidc_client_secret_encrypted")]
         public string? OidcClientSecretEncrypted { get; set; }
 
-        // TODO: Add EF Core value converter for encryption/decryption of sensitive fields, and apply it to the following properties.
-        // [EncryptionEnabled]
+        [Encrypted]
         [Column("s3_secret_access_key_encrypted")]
         public string? S3SecretAccessKeyEncrypted { get; set; }
 
-        // TODO: Add EF Core value converter for encryption/decryption of sensitive fields, and apply it to the following properties.
-        // [EncryptionEnabled]
+        [Encrypted]
         [Column("smtp_password_encrypted")]
         public string? SmtpPasswordEncrypted { get; set; }
 
