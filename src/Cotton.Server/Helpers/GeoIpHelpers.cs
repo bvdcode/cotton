@@ -16,7 +16,7 @@ namespace Cotton.Server.Helpers
 
         public static async Task<GeoIpInfo> LookupAsync(string ip)
         {
-            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
+            bool isPublicInstance = Constants.IsPublicInstance();
             if (isPublicInstance)
             {
                 return new GeoIpInfo
