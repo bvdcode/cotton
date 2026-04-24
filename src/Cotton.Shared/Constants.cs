@@ -43,10 +43,8 @@ namespace Cotton
         /// <summary>
         /// Indicates whether the current process is running as a public/demo instance.
         /// </summary>
-        public static bool IsPublicInstance()
-        {
-            return bool.TryParse(Environment.GetEnvironmentVariable(PublicInstanceEnvironmentVariable), out bool isPublic)
-                && isPublic;
-        }
+        public static readonly bool IsPublicInstance =
+            bool.TryParse(Environment.GetEnvironmentVariable(PublicInstanceEnvironmentVariable), out bool isPublic)
+            && isPublic;
     }
 }
