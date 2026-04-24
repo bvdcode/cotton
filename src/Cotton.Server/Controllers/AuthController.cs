@@ -68,7 +68,7 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             _webDavAuthCache.BumpUsernameCacheVersion(user.Username);
             await _notifications.SendWebDavTokenResetAsync(userId,
-                Request.GetRemoteIPAddress(),
+                GetRequestIpAddress(),
                 Request.Headers.UserAgent);
             return Ok(token);
         }
@@ -129,7 +129,7 @@ namespace Cotton.Server.Controllers
             user.TotpEnabledAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync();
             await _notifications.SendOtpEnabledAsync(userId,
-                Request.GetRemoteIPAddress(),
+                GetRequestIpAddress(),
                 Request.Headers.UserAgent);
             return Ok();
         }
@@ -199,9 +199,8 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token, request.TrustDevice);
             AddAccessTokenToCookies(accessToken);
-            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
             await _notifications.SendSuccessfulLoginAsync(user.Id,
-                isPublicInstance ? IPAddress.Loopback : Request.GetRemoteIPAddress(),
+                GetRequestIpAddress(),
                 Request.Headers.UserAgent);
             return Ok(new TokenPairResponseDto()
             {
@@ -235,7 +234,7 @@ namespace Cotton.Server.Controllers
                 await _notifications.SendFailedLoginAttemptAsync(
                     user.Id,
                     request.Username,
-                    Request.GetRemoteIPAddress(),
+                    GetRequestIpAddress(),
                     Request.Headers.UserAgent);
                 return false;
             }
@@ -266,7 +265,7 @@ namespace Cotton.Server.Controllers
                 await _notifications.SendTotpLockoutAsync(
                     user.Id,
                     maxFailedAttempts,
-                    Request.GetRemoteIPAddress(),
+                    GetRequestIpAddress(),
                     Request.Headers.UserAgent);
                 return this.ApiForbidden("Maximum number of TOTP verification attempts exceeded");
             }
@@ -280,7 +279,7 @@ namespace Cotton.Server.Controllers
                 await _notifications.SendTotpFailedAttemptAsync(
                     user.Id,
                     user.TotpFailedAttempts,
-                    Request.GetRemoteIPAddress(),
+                    GetRequestIpAddress(),
                     Request.Headers.UserAgent);
                 return this.ApiForbidden("Invalid two-factor authentication code");
             }
@@ -390,6 +389,13 @@ namespace Cotton.Server.Controllers
             });
         }
 
+        private IPAddress GetRequestIpAddress()
+        {
+            return Constants.IsPublicInstance()
+                ? IPAddress.Loopback
+                : Request.GetRemoteIPAddress();
+        }
+
         private void AddRefreshTokenToCookies(string refreshToken, bool trustDevice)
         {
             const int yearHours = 24 * 365;
@@ -430,7 +436,7 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
+            bool isPublicInstance = Constants.IsPublicInstance();
             if (isPublicInstance)
             {
                 User guest = new()
@@ -481,7 +487,8 @@ namespace Cotton.Server.Controllers
             bool trustDevice,
             string? sessionId = null)
         {
-            var lookup = await GeoIpHelpers.LookupAsync(Request.GetRemoteAddress());
+            IPAddress ipAddress = GetRequestIpAddress();
+            var lookup = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
             sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
             return new()
             {
@@ -493,7 +500,7 @@ namespace Cotton.Server.Controllers
                 IsTrusted = trustDevice,
                 Country = lookup.Country,
                 AuthType = AuthType.Credentials,
-                IpAddress = Request.GetRemoteIPAddress(),
+                IpAddress = ipAddress,
                 UserAgent = Request.Headers.UserAgent.ToString(),
                 Token = StringHelpers.CreateRandomString(RefreshTokenLength),
                 Device = UserAgentHelpers.GetDevice(Request.Headers.UserAgent.ToString()),

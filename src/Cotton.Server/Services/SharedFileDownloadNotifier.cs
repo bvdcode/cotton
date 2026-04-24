@@ -5,6 +5,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using EasyExtensions.AspNetCore.Extensions;
 using Microsoft.Extensions.Caching.Memory;
+using System.Net;
 
 namespace Cotton.Server.Services
 {
@@ -12,12 +13,20 @@ namespace Cotton.Server.Services
         IMemoryCache _cache,
         INotificationsProvider _notifications) : ISharedFileDownloadNotifier
     {
+        private static IPAddress GetRequestIpAddress(HttpContext httpContext)
+        {
+            return Constants.IsPublicInstance()
+                ? IPAddress.Loopback
+                : httpContext.Request.GetRemoteIPAddress();
+        }
+
         private static string BuildKey(Guid ownerId, Guid tokenId, string ip, string userAgent) =>
             $"shared-download:{ownerId:N}:{tokenId:N}:{ip}:{userAgent}";
 
         public async Task NotifyOnceAsync(Guid ownerId, Guid tokenId, string fileName, HttpContext httpContext, CancellationToken ct)
         {
-            string ip = httpContext.Request.GetRemoteIPAddress().ToString();
+            IPAddress requestIp = GetRequestIpAddress(httpContext);
+            string ip = requestIp.ToString();
             string userAgent = httpContext.Request.Headers.UserAgent.ToString();
 
             string cacheKey = BuildKey(ownerId, tokenId, ip, userAgent);
@@ -35,7 +44,7 @@ namespace Cotton.Server.Services
             await _notifications.SendSharedFileDownloadedNotificationAsync(
                 ownerId,
                 fileName,
-                httpContext.Request.GetRemoteIPAddress(),
+                requestIp,
                 httpContext.Request.Headers.UserAgent);
         }
     }
