@@ -391,7 +391,7 @@ namespace Cotton.Server.Controllers
 
         private IPAddress GetRequestIpAddress()
         {
-            return Constants.IsPublicInstance()
+            return Constants.IsPublicInstance
                 ? IPAddress.Loopback
                 : Request.GetRemoteIPAddress();
         }
@@ -436,7 +436,7 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            bool isPublicInstance = Constants.IsPublicInstance();
+            bool isPublicInstance = Constants.IsPublicInstance;
             if (isPublicInstance)
             {
                 User guest = new()

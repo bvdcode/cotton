@@ -15,7 +15,7 @@ namespace Cotton.Server.Services
     {
         private static IPAddress GetRequestIpAddress(HttpContext httpContext)
         {
-            return Constants.IsPublicInstance()
+            return Constants.IsPublicInstance
                 ? IPAddress.Loopback
                 : httpContext.Request.GetRemoteIPAddress();
         }

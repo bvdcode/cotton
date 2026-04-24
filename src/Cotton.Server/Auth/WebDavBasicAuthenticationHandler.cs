@@ -36,7 +36,7 @@ public sealed class WebDavBasicAuthenticationHandler(
 
     private IPAddress GetRequestIpAddress()
     {
-        return Constants.IsPublicInstance()
+        return Constants.IsPublicInstance
             ? IPAddress.Loopback
             : Request.GetRemoteIPAddress();
     }
