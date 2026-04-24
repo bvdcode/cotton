@@ -16,6 +16,16 @@ namespace Cotton.Server.Helpers
 
         public static async Task<GeoIpInfo> LookupAsync(string ip)
         {
+            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
+            if (isPublicInstance)
+            {
+                return new GeoIpInfo
+                {
+                    Country = "Unknown",
+                    Region = "Unknown",
+                    City = "Unknown"
+                };
+            }
             if (_cache.TryGetValue(ip, out GeoIpInfo? cachedInfo) && cachedInfo != null)
             {
                 return cachedInfo;

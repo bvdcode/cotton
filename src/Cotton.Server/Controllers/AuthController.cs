@@ -32,6 +32,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 
 namespace Cotton.Server.Controllers
@@ -198,8 +199,9 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token, request.TrustDevice);
             AddAccessTokenToCookies(accessToken);
+            bool isPublicInstance = Environment.GetEnvironmentVariable("COTTON_PUBLIC_INSTANCE") == "true";
             await _notifications.SendSuccessfulLoginAsync(user.Id,
-                Request.GetRemoteIPAddress(),
+                isPublicInstance ? IPAddress.Loopback : Request.GetRemoteIPAddress(),
                 Request.Headers.UserAgent);
             return Ok(new TokenPairResponseDto()
             {
