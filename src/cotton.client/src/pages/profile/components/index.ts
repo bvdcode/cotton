@@ -5,6 +5,5 @@ export { TotpSetupForm } from "./TotpSetupForm";
 export { WebDavTokenCard } from "./WebDavTokenCard";
 export { ChangePasswordCard } from "./ChangePasswordCard";
 export { ShareLinkSettingsCard } from "./ShareLinkSettingsCard";
-export { EmailVerificationCard } from "./EmailVerificationCard";
 export { EditProfileCard } from "./EditProfileCard";
 export { AppearanceSettingsCard } from "./AppearanceSettingsCard";

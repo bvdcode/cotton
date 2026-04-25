@@ -7,7 +7,6 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
-using EasyExtensions.Abstractions;
 using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -15,7 +14,6 @@ using Npgsql;
 namespace Cotton.Server.Providers
 {
     public class SettingsProvider(
-        IStreamCipher _crypto,
         CottonDbContext _dbContext)
     {
         private static readonly Lock _cacheLock = new();
@@ -28,16 +26,6 @@ namespace Cotton.Server.Providers
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
-
-        public string? DecryptValue(string? encryptedValue)
-        {
-            if (string.IsNullOrWhiteSpace(encryptedValue))
-            {
-                return null;
-            }
-            byte[] encryptedBytes = Convert.FromBase64String(encryptedValue);
-            return _crypto.DecryptString(encryptedBytes);
-        }
 
         public CottonServerSettings GetServerSettings()
         {
@@ -127,7 +115,7 @@ namespace Cotton.Server.Providers
             return value;
         }
 
-        public async Task<string?> ValidateServerSettingsAsync(ServerSettingsRequestDto request)
+        public async Task<string?> ValidateServerSettingsAsync(InitialServerSettingsRequestDto request)
         {
             if (!IsTimezoneValid(request.Timezone))
             {
@@ -160,7 +148,7 @@ namespace Cotton.Server.Providers
             return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
         }
 
-        private static string? ValidateTelemetryConstraints(ServerSettingsRequestDto request)
+        private static string? ValidateTelemetryConstraints(InitialServerSettingsRequestDto request)
         {
             if (request.Telemetry)
             {
@@ -180,7 +168,7 @@ namespace Cotton.Server.Providers
             return null;
         }
 
-        private static async Task<string?> ValidateEmailConstraintsAsync(ServerSettingsRequestDto request)
+        private static async Task<string?> ValidateEmailConstraintsAsync(InitialServerSettingsRequestDto request)
         {
             if (request.Email == EmailMode.Cloud)
             {
@@ -227,7 +215,7 @@ namespace Cotton.Server.Providers
             }
         }
 
-        private static async Task<string?> ValidateStorageConstraintsAsync(ServerSettingsRequestDto request)
+        private static async Task<string?> ValidateStorageConstraintsAsync(InitialServerSettingsRequestDto request)
         {
             if (request.Storage != StorageType.S3)
             {
@@ -303,7 +291,7 @@ namespace Cotton.Server.Providers
             await s3.DeleteObjectAsync(s3Config.Bucket, testKey);
         }
 
-        public async Task SaveServerSettingsAsync(ServerSettingsRequestDto request)
+        public async Task SaveServerSettingsAsync(InitialServerSettingsRequestDto request)
         {
             int? smtpPort = TryParseInt(request.EmailConfig?.Port);
             var lastSettings = await _dbContext.ServerSettings
@@ -326,16 +314,17 @@ namespace Cotton.Server.Providers
                 SmtpServerAddress = request.EmailConfig?.SmtpServer,
                 SmtpServerPort = smtpPort,
                 SmtpUsername = request.EmailConfig?.Username,
-                SmtpPasswordEncrypted = TryEncrypt(request.EmailConfig?.Password),
+                SmtpPasswordEncrypted = request.EmailConfig?.Password,
                 SmtpSenderEmail = request.EmailConfig?.FromAddress,
                 SmtpUseSsl = request.EmailConfig?.UseSSL ?? false,
                 S3AccessKeyId = request.S3Config?.AccessKey,
-                S3SecretAccessKeyEncrypted = TryEncrypt(request.S3Config?.SecretKey),
+                S3SecretAccessKeyEncrypted = request.S3Config?.SecretKey,
                 S3BucketName = request.S3Config?.Bucket,
                 S3Region = request.S3Config?.Region,
                 S3EndpointUrl = request.S3Config?.Endpoint,
                 InstanceId = instanceId,
-                PublicBaseUrl = request.PublicBaseUrl.TrimEnd('/'),
+                // TODO: Double check if public base url is not null
+                PublicBaseUrl = request.PublicBaseUrl!.TrimEnd('/'),
                 ServerUsage = request.Usage,
                 StorageSpaceMode = request.StorageSpace,
                 TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
@@ -352,16 +341,6 @@ namespace Cotton.Server.Providers
         private static int? TryParseInt(string? value)
         {
             return int.TryParse(value, out int i) ? i : null;
-        }
-
-        private string? TryEncrypt(string? password)
-        {
-            if (password is null)
-            {
-                return null;
-            }
-            byte[] passwordBytes = _crypto.EncryptString(password);
-            return Convert.ToBase64String(passwordBytes);
         }
     }
 }
