@@ -20,6 +20,8 @@ using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
+using EasyExtensions.Clients;
+using EasyExtensions.Clients.Models;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Extensions;
 using EasyExtensions.Helpers;
@@ -488,7 +490,7 @@ namespace Cotton.Server.Controllers
             string? sessionId = null)
         {
             IPAddress ipAddress = GetRequestIpAddress();
-            var lookup = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo lookup = await GeoIpClient.LookupAsync(ipAddress.ToString());
             sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
             return new()
             {
