@@ -15,6 +15,8 @@ public class TestAppFactory(Dictionary<string, string?> _overrides) : WebApplica
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        Quartz.Logging.LogProvider.IsDisabled = true;
+
         builder.ConfigureAppConfiguration((context, config) =>
         {
             config.AddInMemoryCollection(_overrides);
@@ -34,6 +36,15 @@ public class TestAppFactory(Dictionary<string, string?> _overrides) : WebApplica
             {
                 services.Remove(d);
             }
+
+            var schedulerFactoryDescriptors = services
+                .Where(d => d.ServiceType == typeof(ISchedulerFactory))
+                .ToList();
+            foreach (var d in schedulerFactoryDescriptors)
+            {
+                services.Remove(d);
+            }
+            services.AddSingleton<ISchedulerFactory, NoOpSchedulerFactory>();
 
             services.AddSingleton(new CottonServerSettings
             {
