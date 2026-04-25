@@ -2,6 +2,8 @@ using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Helpers;
+using EasyExtensions.Clients;
+using EasyExtensions.Clients.Models;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Primitives;
 using System.Net;
@@ -20,7 +22,7 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(notifications);
 
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
@@ -65,7 +67,7 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(notifications);
 
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
@@ -107,7 +109,7 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(notifications);
 
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
@@ -120,23 +122,23 @@ namespace Cotton.Server.Extensions
                     ? NotificationTemplates.SuccessfulLoginContent(
                         ipAddress.ToString(),
                         deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown")
                     : NotificationTemplates.SuccessfulLoginContentNoDevice(
                         ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown"),
                 priority: NotificationPriority.None,
                 metadata: new Dictionary<string, string>
                 {
                     ["ip"] = ipAddress.ToString(),
                     ["userAgent"] = userAgent.ToString(),
                     ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
+                    ["country"] = ipInfo.Country ?? "Unknown",
+                    ["region"] = ipInfo.Region ?? "Unknown",
+                    ["city"] = ipInfo.City ?? "Unknown"
                 });
         }
 
@@ -150,7 +152,7 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(notifications);
 
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
@@ -164,15 +166,15 @@ namespace Cotton.Server.Extensions
                         totpFailedAttempts,
                         ipAddress.ToString(),
                         deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown")
                     : NotificationTemplates.TotpFailedAttemptContentNoDevice(
                         totpFailedAttempts,
                         ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown"),
                 priority: NotificationPriority.Medium,
                 metadata: new Dictionary<string, string>
                 {
@@ -180,9 +182,9 @@ namespace Cotton.Server.Extensions
                     ["ip"] = ipAddress.ToString(),
                     ["userAgent"] = userAgent.ToString(),
                     ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
+                    ["country"] = ipInfo.Country ?? "Unknown",
+                    ["region"] = ipInfo.Region ?? "Unknown",
+                    ["city"] = ipInfo.City ?? "Unknown"
                 });
         }
 
@@ -196,7 +198,7 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(notifications);
 
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
@@ -210,15 +212,15 @@ namespace Cotton.Server.Extensions
                         maxFailedAttempts,
                         ipAddress.ToString(),
                         deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown")
                     : NotificationTemplates.TotpLockoutContentNoDevice(
                         maxFailedAttempts,
                         ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown"),
                 priority: NotificationPriority.High,
                 metadata: new Dictionary<string, string>
                 {
@@ -226,9 +228,9 @@ namespace Cotton.Server.Extensions
                     ["ip"] = ipAddress.ToString(),
                     ["userAgent"] = userAgent.ToString(),
                     ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
+                    ["country"] = ipInfo.Country ?? "Unknown",
+                    ["region"] = ipInfo.Region ?? "Unknown",
+                    ["city"] = ipInfo.City ?? "Unknown"
                 });
         }
 
@@ -241,36 +243,43 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(notifications);
 
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
+            string ip = ipAddress.ToString();
+            string country = ipInfo.Country ?? "Unknown";
+            string region = ipInfo.Region ?? "Unknown";
+            string city = ipInfo.City ?? "Unknown";
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
                              && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
 
+            string content = BuildContent(
+                hasDevice,
+                withDevice: () => NotificationTemplates.WebDavTokenResetContent(
+                    ip,
+                    deviceName,
+                    country,
+                    region,
+                    city),
+                withoutDevice: () => NotificationTemplates.WebDavTokenResetContentNoDevice(
+                    ip,
+                    country,
+                    region,
+                    city));
+
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.WebDavTokenResetTitle,
-                content: hasDevice
-                    ? NotificationTemplates.WebDavTokenResetContent(
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
-                    : NotificationTemplates.WebDavTokenResetContentNoDevice(
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                content: content,
                 priority: NotificationPriority.Medium,
                 metadata: new Dictionary<string, string>
                 {
-                    ["ip"] = ipAddress.ToString(),
+                    ["ip"] = ip,
                     ["userAgent"] = userAgent.ToString(),
                     ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
+                    ["country"] = country,
+                    ["region"] = region,
+                    ["city"] = city
                 });
         }
 
@@ -284,7 +293,7 @@ namespace Cotton.Server.Extensions
             ArgumentNullException.ThrowIfNull(notifications);
 
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
@@ -298,15 +307,15 @@ namespace Cotton.Server.Extensions
                         fileName,
                         ipAddress.ToString(),
                         deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown")
                     : NotificationTemplates.SharedFileDownloadedContentNoDevice(
                         fileName,
                         ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown"),
                 priority: NotificationPriority.None,
                 metadata: new Dictionary<string, string>
                 {
@@ -314,9 +323,9 @@ namespace Cotton.Server.Extensions
                     ["ip"] = ipAddress.ToString(),
                     ["userAgent"] = userAgent.ToString(),
                     ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
+                    ["country"] = ipInfo.Country ?? "Unknown",
+                    ["region"] = ipInfo.Region ?? "Unknown",
+                    ["city"] = ipInfo.City ?? "Unknown"
                 });
         }
 
