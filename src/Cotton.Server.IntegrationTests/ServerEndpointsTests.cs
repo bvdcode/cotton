@@ -72,7 +72,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var res = await _client!.GetAsync("/api/v1/settings");
+        var res = await _client!.GetAsync("/api/v1/server/settings");
         res.EnsureSuccessStatusCode();
         var settings = await res.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         Assert.That(settings, Is.Not.Null);
