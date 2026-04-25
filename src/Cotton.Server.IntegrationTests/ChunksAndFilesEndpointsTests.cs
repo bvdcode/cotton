@@ -160,8 +160,13 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var nodeFile = list!.Files.FirstOrDefault(f => f.Name == "download.txt");
         Assert.That(nodeFile, Is.Not.Null);
 
-        // download file
-        var dl = await _client.GetAsync($"/api/v1/files/{nodeFile!.Id}/download");
+        // obtain tokenized download link and download file
+        var linkResponse = await _client.GetAsync($"/api/v1/files/{nodeFile!.Id}/download-link");
+        linkResponse.EnsureSuccessStatusCode();
+        var downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        Assert.That(downloadLink, Is.Not.Null.And.Not.Empty);
+
+        var dl = await _client.GetAsync(downloadLink);
         dl.EnsureSuccessStatusCode();
         var bytes = await dl.Content.ReadAsByteArrayAsync();
         Assert.That(Encoding.UTF8.GetString(bytes), Is.EqualTo("download me"));
@@ -204,9 +209,11 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
 
-        var manifest = await createFileRes.Content.ReadFromJsonAsync<NodeFileManifestDto>();
-        Assert.That(manifest, Is.Not.Null);
-        Assert.That(manifest!.ContentType, Is.EqualTo("text/plain"));
+        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        Assert.That(list, Is.Not.Null);
+        var file = list!.Files.FirstOrDefault(x => x.Name == "auto-detect.txt");
+        Assert.That(file, Is.Not.Null);
+        Assert.That(file!.ContentType, Is.EqualTo("text/plain"));
     }
 
     private async Task<string> LoginAsync()
