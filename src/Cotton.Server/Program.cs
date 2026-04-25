@@ -86,12 +86,12 @@ namespace Cotton.Server
                 .UseExceptionHandler();
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
+            app.ApplyMigrations<CottonDbContext>();
             using (IServiceScope scope = app.Services.CreateScope())
             {
                 var autoRestore = scope.ServiceProvider.GetRequiredService<IDatabaseAutoRestoreService>();
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
             }
-            app.ApplyMigrations<CottonDbContext>();
             app.MapHub<EventHub>(Routes.V1.EventHub);
             app.Run();
         }

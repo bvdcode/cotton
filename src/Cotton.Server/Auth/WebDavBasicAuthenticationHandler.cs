@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -32,6 +33,13 @@ public sealed class WebDavBasicAuthenticationHandler(
     public const string PolicyName = "WebDav";
     public const string SchemeName = "WebDavBasic";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
+
+    private IPAddress GetRequestIpAddress()
+    {
+        return Constants.IsPublicInstance
+            ? IPAddress.Loopback
+            : Request.GetRemoteIPAddress();
+    }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -217,14 +225,14 @@ public sealed class WebDavBasicAuthenticationHandler(
             "WebDAV auth: invalid token for user '{Username}' ({UserId}). Remote IP: {RemoteIp}",
             user.Username,
             user.Id,
-            Request.GetRemoteIPAddress());
+            GetRequestIpAddress());
 
         try
         {
             await notifications.SendFailedLoginAttemptAsync(
                 user.Id,
                 username,
-                Request.GetRemoteIPAddress(),
+                GetRequestIpAddress(),
                 Request.Headers.UserAgent);
         }
         catch (Exception ex)

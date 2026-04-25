@@ -104,22 +104,24 @@ type CredentialsFieldsProps = {
   username: string;
   password: string;
   onUsernameChange: (value: string) => void;
+  onUsernameBlur: () => void;
   onPasswordChange: (value: string) => void;
   disabled: boolean;
   usernameLabel: string;
   passwordLabel: string;
-  usernameErrorText?: string;
+  usernameHasError: boolean;
 };
 
 const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
   username,
   password,
   onUsernameChange,
+  onUsernameBlur,
   onPasswordChange,
   disabled,
   usernameLabel,
   passwordLabel,
-  usernameErrorText,
+  usernameHasError,
 }) => {
   return (
     <Stack spacing={2}>
@@ -130,9 +132,9 @@ const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
         variant="outlined"
         value={username}
         onChange={(e) => onUsernameChange(e.target.value)}
+        onBlur={onUsernameBlur}
         disabled={disabled}
-        error={Boolean(usernameErrorText)}
-        helperText={usernameErrorText ?? ""}
+        error={usernameHasError}
       />
       <TextField
         fullWidth
@@ -271,6 +273,7 @@ export const LoginPage = () => {
   } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isUsernameBlurred, setIsUsernameBlurred] = useState(false);
   const [trustDevice, setTrustDevice] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -468,6 +471,8 @@ export const LoginPage = () => {
     return getUsernameError(trimmedUsername) ?? undefined;
   })();
 
+  const usernameHasError = isUsernameBlurred && Boolean(usernameErrorText);
+
   return (
     <>
       {(isInitializing || showRestoreOverlay) && (
@@ -522,11 +527,12 @@ export const LoginPage = () => {
                     username={username}
                     password={password}
                     onUsernameChange={setUsername}
+                    onUsernameBlur={() => setIsUsernameBlurred(true)}
                     onPasswordChange={setPassword}
                     disabled={loading}
                     usernameLabel={t("usernameLabel")}
                     passwordLabel={t("passwordLabel")}
-                    usernameErrorText={usernameErrorText}
+                    usernameHasError={usernameHasError}
                   />
                 ) : (
                   <TwoFactorFields

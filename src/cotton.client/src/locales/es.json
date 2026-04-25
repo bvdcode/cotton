@@ -301,6 +301,7 @@
       "email": "Correo electrónico",
       "emailVerified": "Verificado",
       "emailNotVerified": "No verificado",
+      "verify": "Verificar",
       "createdAt": "Creado el",
       "updatedAt": "Actualizado el"
     },
@@ -402,6 +403,9 @@
       "errors": {
         "failed": "No se pudo generar el token de WebDAV."
       }
+    },
+    "email": {
+      "verified": "Correo electrónico verificado"
     }
   },
   "setup": {
@@ -977,8 +981,8 @@
       },
       "fields": {
         "backupId": "ID de respaldo",
-        "createdAtUtc": "Creado (UTC)",
-        "pointerUpdatedAtUtc": "Puntero actualizado (UTC)",
+        "createdAtUtc": "Creado",
+        "pointerUpdatedAtUtc": "Puntero actualizado",
         "dumpSizeBytes": "Tamaño del volcado",
         "chunkCount": "Cantidad de chunks",
         "dumpContentHash": "Hash del contenido del volcado",

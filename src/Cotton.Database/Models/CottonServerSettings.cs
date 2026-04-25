@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models.Enums;
+using Cotton.Database.Models.Attributes;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using EasyExtensions.Extensions;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -50,9 +51,6 @@ namespace Cotton.Database.Models
         [Column("smtp_username")]
         public string? SmtpUsername { get; init; }
 
-        [Column("smtp_password_encrypted")]
-        public string? SmtpPasswordEncrypted { get; init; }
-
         [Column("smtp_sender_email")]
         public string? SmtpSenderEmail { get; init; }
 
@@ -61,9 +59,6 @@ namespace Cotton.Database.Models
 
         [Column("s3_access_key_id")]
         public string? S3AccessKeyId { get; init; }
-
-        [Column("s3_secret_access_key_encrypted")]
-        public string? S3SecretAccessKeyEncrypted { get; init; }
 
         [Column("s3_bucket_name")]
         public string? S3BucketName { get; init; }
@@ -91,6 +86,28 @@ namespace Cotton.Database.Models
 
         [Column("totp_max_failed_attempts")]
         public int TotpMaxFailedAttempts { get; set; }
+
+        [Column("oidc_client_id")]
+        public string? OidcClientId { get; set; }
+
+        [Column("oidc_issuer")]
+        public string? OidcIssuer { get; set; }
+
+        [Encrypted]
+        [Column("cloud_services_token_encrypted")]
+        public string? CloudServicesTokenEncrypted { get; set; }
+
+        [Encrypted]
+        [Column("oidc_client_secret_encrypted")]
+        public string? OidcClientSecretEncrypted { get; set; }
+
+        [Encrypted]
+        [Column("s3_secret_access_key_encrypted")]
+        public string? S3SecretAccessKeyEncrypted { get; set; }
+
+        [Encrypted]
+        [Column("smtp_password_encrypted")]
+        public string? SmtpPasswordEncrypted { get; set; }
 
         public string GetInstanceIdHash()
         {

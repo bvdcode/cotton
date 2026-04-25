@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Models.Dto
 {
-    public class ServerSettingsRequestDto
+    public class InitialServerSettingsRequestDto
     {
         /// <summary>
         /// Gets or sets the trusted mode flag which determines if the server can share chunks between users and use global indexing.
@@ -35,8 +35,6 @@ namespace Cotton.Server.Models.Dto
         public S3Config? S3Config { get; init; }
 
         public EmailConfig? EmailConfig { get; init; }
-
-        public RemoteServiceConfig? WebdavConfig { get; init; }
     }
 
     public class S3Config
@@ -56,12 +54,5 @@ namespace Cotton.Server.Models.Dto
         public string Port { get; init; } = null!;
         public string FromAddress { get; init; } = null!;
         public bool UseSSL { get; init; }
-    }
-
-    public class RemoteServiceConfig
-    {
-        public string Username { get; init; } = null!;
-        public string Password { get; init; } = null!;
-        public string ServerUrl { get; init; } = null!;
     }
 }
