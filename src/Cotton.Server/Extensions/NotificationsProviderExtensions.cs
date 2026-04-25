@@ -245,41 +245,34 @@ namespace Cotton.Server.Extensions
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
             GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ipAddress.ToString());
             string deviceName = device.FriendlyName ?? device.Type.ToString();
-            string ip = ipAddress.ToString();
-            string country = ipInfo.Country ?? "Unknown";
-            string region = ipInfo.Region ?? "Unknown";
-            string city = ipInfo.City ?? "Unknown";
 
             bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
                              && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
 
-            string content = BuildContent(
-                hasDevice,
-                withDevice: () => NotificationTemplates.WebDavTokenResetContent(
-                    ip,
-                    deviceName,
-                    country,
-                    region,
-                    city),
-                withoutDevice: () => NotificationTemplates.WebDavTokenResetContentNoDevice(
-                    ip,
-                    country,
-                    region,
-                    city));
-
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.WebDavTokenResetTitle,
-                content: content,
+                content: hasDevice
+                    ? NotificationTemplates.WebDavTokenResetContent(
+                        ipAddress.ToString(),
+                        deviceName,
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown")
+                    : NotificationTemplates.WebDavTokenResetContentNoDevice(
+                        ipAddress.ToString(),
+                        ipInfo.Country ?? "Unknown",
+                        ipInfo.Region ?? "Unknown",
+                        ipInfo.City ?? "Unknown"),
                 priority: NotificationPriority.Medium,
                 metadata: new Dictionary<string, string>
                 {
-                    ["ip"] = ip,
+                    ["ip"] = ipAddress.ToString(),
                     ["userAgent"] = userAgent.ToString(),
                     ["device"] = deviceName,
-                    ["country"] = country,
-                    ["region"] = region,
-                    ["city"] = city
+                    ["country"] = ipInfo.Country,
+                    ["region"] = ipInfo.Region,
+                    ["city"] = ipInfo.City
                 });
         }
 
