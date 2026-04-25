@@ -102,11 +102,16 @@ public class AuthSmokeTests : IntegrationTestBase
     {
         Assert.That(_client, Is.Not.Null);
 
-        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequestDto()
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
-            Username = "testuser",
-            Password = "testpassword"
-        });
+            Content = JsonContent.Create(new LoginRequestDto()
+            {
+                Username = "testuser",
+                Password = "testpassword"
+            })
+        };
+        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
+        var response = await _client!.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
