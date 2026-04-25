@@ -1,4 +1,6 @@
-﻿namespace Cotton
+﻿using System;
+
+namespace Cotton
 {
     /// <summary>
     /// Provides application-wide constant values for path separators and product names.
@@ -32,5 +34,17 @@
         /// Modifying the delay can help coordinate account provisioning in different deployment or initialization
         /// scenarios.</remarks>
         public const int AdminAutocreateMinutesDelay = 5;
+
+        /// <summary>
+        /// Gets the environment variable key that marks the instance as public/demo.
+        /// </summary>
+        public const string PublicInstanceEnvironmentVariable = "COTTON_PUBLIC_INSTANCE";
+
+        /// <summary>
+        /// Indicates whether the current process is running as a public/demo instance.
+        /// </summary>
+        public static readonly bool IsPublicInstance =
+            bool.TryParse(Environment.GetEnvironmentVariable(PublicInstanceEnvironmentVariable), out bool isPublic)
+            && isPublic;
     }
 }

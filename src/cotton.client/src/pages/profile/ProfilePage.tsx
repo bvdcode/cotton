@@ -7,7 +7,6 @@ import {
   SessionsCard,
   WebDavTokenCard,
   ShareLinkSettingsCard,
-  EmailVerificationCard,
   EditProfileCard,
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
@@ -56,9 +55,6 @@ export const SettingsPage = () => {
         <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />
         <ShareLinkSettingsCard />
-        {user.email && !user.isEmailVerified && (
-          <EmailVerificationCard user={user} />
-        )}
         <ChangePasswordCard />
         <WebDavTokenCard />
       </Stack>

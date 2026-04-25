@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import {
   adminApi,
   type LatestDatabaseBackupDto,
@@ -26,11 +27,12 @@ type LoadState =
 type TriggerFeedback =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "success"; message: string }
   | { kind: "error"; message: string };
 
 const formatDateTime = (value: string): string => {
-  const parsed = new Date(value);
+  const hasExplicitTimeZone = /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
+  const normalizedValue = hasExplicitTimeZone ? value : `${value}Z`;
+  const parsed = new Date(normalizedValue);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
@@ -120,9 +122,9 @@ export const AdminDatabaseBackupPage = () => {
 
     try {
       await adminApi.triggerDatabaseBackup();
-      setTriggerFeedback({
-        kind: "success",
-        message: t("databaseBackup.state.triggerSuccess"),
+      setTriggerFeedback({ kind: "idle" });
+      toast.success(t("databaseBackup.state.triggerSuccess"), {
+        toastId: "admin:database-backup:trigger:success",
       });
       await refreshLatestBackup();
     } catch (error) {
@@ -251,10 +253,6 @@ export const AdminDatabaseBackupPage = () => {
 
           {triggerFeedback.kind === "error" && (
             <Alert severity="error">{triggerFeedback.message}</Alert>
-          )}
-
-          {triggerFeedback.kind === "success" && (
-            <Alert severity="success">{triggerFeedback.message}</Alert>
           )}
 
           <Stack minHeight={4}>

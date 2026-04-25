@@ -266,6 +266,7 @@
       "email": "E-mail",
       "emailVerified": "Подтверждена",
       "emailNotVerified": "Не подтверждена",
+      "verify": "Подтвердить",
       "createdAt": "Создан",
       "updatedAt": "Обновлён"
     },
@@ -382,6 +383,9 @@
       "errors": {
         "invalidateFailed": "Не удалось отозвать ссылки."
       }
+    },
+    "email": {
+      "verified": "Адрес электронной почты подтвержден"
     }
   },
   "setup": {
@@ -969,12 +973,12 @@
         "loading": "Загрузка информации о бэкапе...",
         "empty": "Бэкапы пока не найдены.",
         "triggerSuccess": "Задача бэкапа успешно запущена.",
-        "restoreIfEmptyHint": "Если база данных потеряна и вы хотите, чтобы она восстановилась автоматически, установите COTTON_RESTORE_DATABASE_IF_EMPTY=true в окружении контейнера."
+        "restoreIfEmptyHint": "Если база данных потеряна и вы хотите, чтобы она восстановилась автоматически, установите COTTON_RESTORE_DATABASE_IF_EMPTY=true в окружении контейнера. База должна быть пустой и без таблиц, чтобы это сработало."
       },
       "fields": {
         "backupId": "ID бэкапа",
-        "createdAtUtc": "Создан (UTC)",
-        "pointerUpdatedAtUtc": "Указатель обновлён (UTC)",
+        "createdAtUtc": "Создан",
+        "pointerUpdatedAtUtc": "Указатель обновлён",
         "dumpSizeBytes": "Размер дампа",
         "chunkCount": "Количество чанков",
         "dumpContentHash": "Хэш содержимого дампа",

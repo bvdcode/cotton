@@ -18,10 +18,6 @@ namespace Cotton.Server.Handlers.Users
 {
     public class AdminCreateUserRequest(string username, string? email, string password, UserRole role) : IRequest<UserDto>
     {
-        [Required]
-        [MinLength(2)]
-        [MaxLength(32)]
-        [RegularExpression("^[a-z][a-z0-9]{1,31}$")]
         public string Username { get; } = username;
         public string? Email { get; } = email;
         [Required]
