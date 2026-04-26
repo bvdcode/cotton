@@ -238,7 +238,9 @@ export const FileSystemItemCard = ({
           : undefined),
         "&:focus-visible": clickable
           ? {
-              boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
+              borderColor: "primary.main",
+              boxShadow: "none",
+              bgcolor: "action.hover",
             }
           : undefined,
         ...sx,
