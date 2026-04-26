@@ -39,7 +39,7 @@ namespace Cotton.Database.Models
         public string? PreviewGenerationError { get; set; }
 
         [Column("preview_generator_version")]
-        public int PreviewGeneratorVersion { get; set; }
+        public int PreviewGeneratorVersion { get; set; } = 0;
 
         public string? GetPreviewHashEncryptedHex()
         {
