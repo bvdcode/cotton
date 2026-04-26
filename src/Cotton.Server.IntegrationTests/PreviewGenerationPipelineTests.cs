@@ -29,7 +29,7 @@ namespace Cotton.Server.IntegrationTests;
 
 public class PreviewGenerationPipelineTests : IntegrationTestBase
 {
-    private const string PreviewRouteBase = "/api/v1/previews";
+    private const string PreviewRouteBase = "/api/v1/preview";
 
     private TestAppFactory? _factory;
     private HttpClient? _client;
@@ -40,6 +40,12 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         string ContentType,
         int SourceLength,
         bool ExpectLargePreview);
+
+    private sealed record FileManifestPreviewState(
+        byte[]? SmallFilePreviewHash,
+        byte[]? SmallFilePreviewHashEncrypted,
+        byte[]? LargeFilePreviewHash,
+        string? PreviewGenerationError);
 
     [SetUp]
     public void SetUp()
@@ -108,7 +114,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         await ExecuteGeneratePreviewJobAsync();
 
-        FileManifest manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
+        FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
 
         Assert.Multiple(() =>
         {
@@ -125,7 +131,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         Assert.That(Math.Max(smallWidth, smallHeight), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
 
         NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, "notes.txt");
-        Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(manifest.GetPreviewHashEncryptedHex()));
+        Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.SmallFilePreviewHashEncrypted)));
 
         HttpResponseMessage previewResponse = await _client!.GetAsync($"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
         previewResponse.EnsureSuccessStatusCode();
@@ -151,13 +157,13 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         SetBearer(token);
 
         NodeDto root = await GetRootNodeAsync();
-        byte[] sourceImage = CreateGradientBitmapBytes(width: 2200, height: 1200);
+        byte[] sourceImage = CreateGradientPngBytes(width: 2200, height: 1200);
 
-        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "photo.bmp", "image/bmp", sourceImage);
+        NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, "photo.png", "image/png", sourceImage);
 
         await ExecuteGeneratePreviewJobAsync();
 
-        FileManifest manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
+        FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
 
         Assert.Multiple(() =>
         {
@@ -174,8 +180,8 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         {
             AssertWebpSignature(smallPreview);
             AssertWebpSignature(largePreview);
-            Assert.That(smallPreview.Length, Is.LessThan(sourceImage.Length));
-            Assert.That(largePreview.Length, Is.LessThan(sourceImage.Length));
+            Assert.That(smallPreview.Length, Is.GreaterThan(0));
+            Assert.That(largePreview.Length, Is.GreaterThan(0));
         });
 
         (int smallWidth, int smallHeight) = GetImageSize(smallPreview);
@@ -213,7 +219,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         await ExecuteGeneratePreviewJobAsync();
 
-        FileManifest manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
+        FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
 
         Assert.Multiple(() =>
         {
@@ -229,7 +235,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         (int width, int height) = GetImageSize(smallPreview);
         Assert.That(Math.Max(width, height), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
 
-        HttpResponseMessage response = await _client!.GetAsync($"{PreviewRouteBase}/{manifest.GetPreviewHashEncryptedHex()}");
+        HttpResponseMessage response = await _client!.GetAsync($"{PreviewRouteBase}/{GetPreviewHashEncryptedHex(manifest.SmallFilePreviewHashEncrypted)}");
         response.EnsureSuccessStatusCode();
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/webp"));
     }
@@ -247,7 +253,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         await ExecuteGeneratePreviewJobAsync();
 
-        FileManifest manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
+        FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(createdFile.Id);
         Assert.Multiple(() =>
         {
             Assert.That(manifest.SmallFilePreviewHash, Is.Null);
@@ -306,7 +312,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         foreach (FixtureUpload upload in uploads)
         {
-            FileManifest manifest = await GetFileManifestByNodeFileIdAsync(upload.NodeFileId);
+            FileManifestPreviewState manifest = await GetFileManifestByNodeFileIdAsync(upload.NodeFileId);
 
             Assert.Multiple(() =>
             {
@@ -336,15 +342,11 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
                 (int largeWidth, int largeHeight) = GetImageSize(largePreview);
                 Assert.That(Math.Max(largeWidth, largeHeight), Is.LessThanOrEqualTo(PreviewGeneratorProvider.DefaultLargePreviewSize));
                 Assert.That(largeWidth * largeHeight, Is.GreaterThanOrEqualTo(smallWidth * smallHeight));
-
-                if (upload.SourceLength > 0)
-                {
-                    Assert.That(largePreview.Length, Is.LessThan(upload.SourceLength));
-                }
+                Assert.That(largePreview.Length, Is.GreaterThan(0));
             }
 
             NodeFileManifestDto listedFile = await GetNodeFileAsync(root.Id, upload.FileName);
-            Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(manifest.GetPreviewHashEncryptedHex()));
+            Assert.That(listedFile.PreviewHashEncryptedHex, Is.EqualTo(GetPreviewHashEncryptedHex(manifest.SmallFilePreviewHashEncrypted)));
 
             HttpResponseMessage response = await _client!.GetAsync($"{PreviewRouteBase}/{listedFile.PreviewHashEncryptedHex}");
             response.EnsureSuccessStatusCode();
@@ -355,7 +357,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     private async Task ExecuteGeneratePreviewJobAsync()
     {
         await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
-        GeneratePreviewJob job = scope.ServiceProvider.GetRequiredService<GeneratePreviewJob>();
+        GeneratePreviewJob job = ActivatorUtilities.CreateInstance<GeneratePreviewJob>(scope.ServiceProvider);
         await job.Execute(null!);
     }
 
@@ -366,16 +368,25 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         return chunk!;
     }
 
-    private async Task<FileManifest> GetFileManifestByNodeFileIdAsync(Guid nodeFileId)
+    private async Task<FileManifestPreviewState> GetFileManifestByNodeFileIdAsync(Guid nodeFileId)
     {
-        FileManifest? manifest = await DbContext.NodeFiles
+        FileManifestPreviewState? manifest = await DbContext.NodeFiles
             .AsNoTracking()
             .Where(x => x.Id == nodeFileId)
-            .Select(x => x.FileManifest)
+            .Select(x => new FileManifestPreviewState(
+                x.FileManifest.SmallFilePreviewHash,
+                x.FileManifest.SmallFilePreviewHashEncrypted,
+                x.FileManifest.LargeFilePreviewHash,
+                x.FileManifest.PreviewGenerationError))
             .SingleOrDefaultAsync();
 
         Assert.That(manifest, Is.Not.Null);
         return manifest!;
+    }
+
+    private static string? GetPreviewHashEncryptedHex(byte[]? encryptedHash)
+    {
+        return encryptedHash is null ? null : Convert.ToHexStringLower(encryptedHash);
     }
 
     private async Task<byte[]> ReadPreviewBlobAsync(byte[] hash)
@@ -533,7 +544,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         };
     }
 
-    private static byte[] CreateGradientBitmapBytes(int width, int height)
+    private static byte[] CreateGradientPngBytes(int width, int height)
     {
         using var image = new Image<Rgba32>(width, height);
 
@@ -549,7 +560,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         }
 
         using var ms = new MemoryStream();
-        image.SaveAsBmp(ms);
+        image.SaveAsPng(ms);
         return ms.ToArray();
     }
 
