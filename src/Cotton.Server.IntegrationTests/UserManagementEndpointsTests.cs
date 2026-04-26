@@ -213,8 +213,13 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         Assert.That(updated!.Username, Is.EqualTo(validUsername));
     }
 
-    [Test]
-    public async Task Admin_UpdateUser_WithUnderscoreUsername_ReturnsBadRequest_FromDtoValidation()
+    [TestCase("user_name", "user_name")]
+    [TestCase("user.name", "user.name")]
+    [TestCase("user-name", "user-name")]
+    [TestCase("  MiXeD_Name.1  ", "mixed_name.1")]
+    public async Task Admin_UpdateUser_WithValidUsernameSeparators_ReturnsSuccess(
+        string username,
+        string expectedNormalized)
     {
         string token = await LoginAsync();
         SetBearer(token);
@@ -225,7 +230,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
             $"/api/v1/users/{created.Id}",
             new
             {
-                Username = "user_name",
+                Username = username,
                 Email = "underscore.target@example.com",
                 Role = UserRole.User,
                 FirstName = "Under",
@@ -234,15 +239,11 @@ public class UserManagementEndpointsTests : IntegrationTestBase
                 IsEmailVerified = false
             });
 
-        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        updateResponse.EnsureSuccessStatusCode();
 
-        string payload = await updateResponse.Content.ReadAsStringAsync();
-        Assert.Multiple(() =>
-        {
-            Assert.That(payload, Does.Contain("\"errors\""));
-            Assert.That(payload, Does.Contain("Username"));
-            Assert.That(payload, Does.Contain("^[a-z][a-z0-9]{1,31}$"));
-        });
+        AdminUserDto? updated = await updateResponse.Content.ReadFromJsonAsync<AdminUserDto>();
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Username, Is.EqualTo(expectedNormalized));
     }
 
     [TestCase("user_name", "user_name")]
