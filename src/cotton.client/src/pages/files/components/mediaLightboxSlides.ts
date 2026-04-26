@@ -4,6 +4,31 @@ import { formatBytes } from "../../../shared/utils/formatBytes";
 export const TRANSPARENT_PLACEHOLDER =
   "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
+const EXPLICIT_VIDEO_SOURCE_MIME_TYPES = new Set<string>([
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+]);
+
+const normalizeMimeType = (mimeType: string): string => {
+  return mimeType.toLowerCase().split(";")[0]?.trim() ?? "";
+};
+
+const buildVideoSources = (
+  signedUrl: string,
+  mimeType: string,
+): Array<{ src: string; type?: string }> => {
+  const normalizedMimeType = normalizeMimeType(mimeType);
+
+  if (EXPLICIT_VIDEO_SOURCE_MIME_TYPES.has(normalizedMimeType)) {
+    return [{ src: signedUrl, type: normalizedMimeType }];
+  }
+
+  // Some browsers reject strict QuickTime/MOV MIME types before probing the media stream.
+  // Omitting `type` lets the browser sniff the container and attempt playback.
+  return [{ src: signedUrl }];
+};
+
 export function buildSlidesFromItems(
   items: MediaItem[],
   displayUrls: Record<string, string>,
@@ -68,12 +93,7 @@ export function buildSlidesFromItems(
       title,
       download: true,
       share: true,
-      sources: [
-        {
-          src: signedUrl,
-          type: item.mimeType,
-        },
-      ],
+      sources: buildVideoSources(signedUrl, item.mimeType),
     } as SlideWithTitle;
   });
 }

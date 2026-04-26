@@ -31,7 +31,7 @@ const IMAGE_EXTENSIONS = [
 const PDF_EXTENSIONS = ["pdf"];
 // Only include formats that are generally playable inline in modern browsers.
 // Keep this list conservative to avoid opening the media lightbox for files the browser can't play.
-const VIDEO_EXTENSIONS = ["mp4", "m4v", "webm"];
+const VIDEO_EXTENSIONS = ["mp4", "m4v", "webm", "mov"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "ogg", "flac", "m4a"];
 const TEXT_EXTENSIONS = [
   "txt",
@@ -54,6 +54,10 @@ const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
 const SUPPORTED_INLINE_VIDEO_MIME_TYPES = new Set<string>([
   "video/mp4",
   "video/webm",
+  "video/quicktime",
+  "video/x-quicktime",
+  "video/mov",
+  "video/x-mov",
 ]);
 
 export const getFileExtension = (fileName: string): string => {
