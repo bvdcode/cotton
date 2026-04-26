@@ -22,7 +22,7 @@ internal sealed class NoOpSchedulerFactory : ISchedulerFactory
         return Task.FromResult(_scheduler);
     }
 
-    public Task<IScheduler> GetScheduler(string schedName, CancellationToken cancellationToken = default)
+    public Task<IScheduler?> GetScheduler(string schedName, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(_scheduler);
     }
