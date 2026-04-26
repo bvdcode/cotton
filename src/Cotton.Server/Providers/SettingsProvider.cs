@@ -7,7 +7,6 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
-using EasyExtensions.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
