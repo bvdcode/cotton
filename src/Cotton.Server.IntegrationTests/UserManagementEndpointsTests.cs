@@ -98,6 +98,33 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         });
     }
 
+    [TestCase("ab", "ab")]
+    [TestCase("john_doe", "john_doe")]
+    [TestCase("john.doe", "john.doe")]
+    [TestCase("john-doe", "john-doe")]
+    [TestCase("  MiXeD.Name-1  ", "mixed.name-1")]
+    public async Task Admin_CreateUser_WithValidUsername_ReturnsSuccess(string username, string expectedNormalized)
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        var createResponse = await _client!.PostAsJsonAsync(
+            "/api/v1/users",
+            new
+            {
+                Username = username,
+                Email = $"{Guid.NewGuid():N}@example.com",
+                Password = "UserPass_123",
+                Role = UserRole.User
+            });
+
+        createResponse.EnsureSuccessStatusCode();
+
+        UserDto? created = await createResponse.Content.ReadFromJsonAsync<UserDto>();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.Username, Is.EqualTo(expectedNormalized));
+    }
+
     [TestCase("1bad")]
     [TestCase("ab__cd")]
     [TestCase("a")]
@@ -154,6 +181,59 @@ public class UserManagementEndpointsTests : IntegrationTestBase
             Assert.That(updated.BirthDate, Is.EqualTo(new DateOnly(1990, 5, 10)));
             Assert.That(updated.Role, Is.EqualTo(UserRole.User));
         });
+    }
+
+    [TestCase("validuser2")]
+    [TestCase("john99")]
+    [TestCase("az")]
+    public async Task Admin_UpdateUser_WithValidUsername_ReturnsSuccess(string validUsername)
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        UserDto created = await CreateUserAsync("updatebase", "update.base@example.com");
+
+        var updateResponse = await _client!.PutAsJsonAsync(
+            $"/api/v1/users/{created.Id}",
+            new
+            {
+                Username = validUsername,
+                Email = "updated.valid@example.com",
+                Role = UserRole.User,
+                FirstName = "Valid",
+                LastName = "Name",
+                BirthDate = new DateOnly(1999, 1, 1),
+                IsEmailVerified = false
+            });
+
+        updateResponse.EnsureSuccessStatusCode();
+
+        AdminUserDto? updated = await updateResponse.Content.ReadFromJsonAsync<AdminUserDto>();
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Username, Is.EqualTo(validUsername));
+    }
+
+    [TestCase("user_name", "user_name")]
+    [TestCase("user.name", "user.name")]
+    [TestCase("user-name", "user-name")]
+    [TestCase("  MiXeD_Name.1  ", "mixed_name.1")]
+    public async Task UpdateCurrentUser_WithValidUsernameSeparators_ReturnsSuccess(string username, string expectedNormalized)
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        var updateResponse = await _client!.PutAsJsonAsync(
+            "/api/v1/users/me",
+            new
+            {
+                Username = username
+            });
+
+        updateResponse.EnsureSuccessStatusCode();
+
+        UserDto? updated = await updateResponse.Content.ReadFromJsonAsync<UserDto>();
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Username, Is.EqualTo(expectedNormalized));
     }
 
     [TestCase("1bad")]
