@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Previews;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -123,6 +124,7 @@ namespace Cotton.Server.Services
                 ContentType = ResolveContentType(fileName, contentType),
                 SizeBytes = chunks.Sum(x => x.PlainSizeBytes),
                 ProposedContentHash = proposedContentHash,
+                PreviewGeneratorVersion = PreviewGeneratorProvider.DefaultGeneratorVersion,
             };
 
             await _dbContext.FileManifests.AddAsync(newFileManifest, cancellationToken);
