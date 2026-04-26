@@ -16,8 +16,10 @@ import {
   Pause as PauseIcon,
   Download as DownloadIcon,
   Slideshow as SlideshowIcon,
+  HighQuality,
 } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { useActivityDetection } from "../hooks/useActivityDetection";
 import type {
   MediaLightboxProps,
@@ -25,6 +27,10 @@ import type {
 } from "./mediaLightbox.types";
 import { useMediaLightboxUrls } from "../hooks/useMediaLightboxUrls";
 import { shareLinks } from "../../../shared/utils/shareLinks";
+import {
+  selectGalleryPreferPreview,
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
@@ -40,6 +46,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   getDownloadUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
+  const { t } = useTranslation(["files"]);
+  const preferPreview = useLocalPreferencesStore(selectGalleryPreferPreview);
+  const setGalleryPreferPreview = useLocalPreferencesStore(
+    (s) => s.setGalleryPreferPreview,
+  );
 
   const isTouchDevice = React.useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -117,7 +128,62 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     items,
     getSignedMediaUrl,
     getDownloadUrl,
+    preferPreview,
   });
+
+  const toggleQualityMode = React.useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      setGalleryPreferPreview(!preferPreview);
+      showTouchControls();
+    },
+    [preferPreview, setGalleryPreferPreview, showTouchControls],
+  );
+
+  const qualityModeLabel = React.useMemo(
+    () =>
+      t(
+        preferPreview
+          ? "preview.mediaQuality.previewMode"
+          : "preview.mediaQuality.originalMode",
+        { ns: "files" },
+      ),
+    [preferPreview, t],
+  );
+
+  const qualityToggleLabel = React.useMemo(
+    () =>
+      t(
+        preferPreview
+          ? "preview.mediaQuality.switchToOriginal"
+          : "preview.mediaQuality.switchToPreview",
+        { ns: "files" },
+      ),
+    [preferPreview, t],
+  );
+
+  const qualityToggleButton = React.useMemo(
+    () => (
+      <button
+        key="quality-toggle"
+        type="button"
+        className={[
+          "yarl__button",
+          "media-lightbox__quality-toggle",
+          preferPreview
+            ? "media-lightbox__quality-toggle--preview"
+            : "media-lightbox__quality-toggle--original",
+        ].join(" ")}
+        aria-label={qualityToggleLabel}
+        title={`${qualityModeLabel}. ${qualityToggleLabel}`}
+        aria-pressed={!preferPreview}
+        onClick={toggleQualityMode}
+      >
+        <HighQuality className="yarl__icon" />
+      </button>
+    ),
+    [preferPreview, qualityModeLabel, qualityToggleLabel, toggleQualityMode],
+  );
 
   const handleCustomDownload = React.useCallback(
     async ({
@@ -288,6 +354,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [handleCustomShare],
   );
 
+  const lightboxToolbar = React.useMemo(
+    () => ({
+      buttons: ["slideshow", "download", "share", qualityToggleButton, "close"],
+    }),
+    [qualityToggleButton],
+  );
+
   const lightboxZoom = React.useMemo(
     () => ({
       maxZoomPixelRatio: 3,
@@ -361,6 +434,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       animation={lightboxAnimation}
       on={lightboxEvents}
       render={lightboxRender}
+      toolbar={lightboxToolbar}
       download={lightboxDownload}
       share={lightboxShare}
       zoom={lightboxZoom}

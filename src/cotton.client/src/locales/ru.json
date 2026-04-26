@@ -810,6 +810,12 @@
       "language": {
         "label": "Язык"
       },
+      "mediaQuality": {
+        "previewMode": "Режим: превью",
+        "originalMode": "Режим: оригинал",
+        "switchToOriginal": "Переключить на оригинал",
+        "switchToPreview": "Переключить на превью"
+      },
       "errors": {
         "loadFailed": "Не удалось загрузить файл{{error}}",
         "saveFailed": "Не удалось сохранить содержимое файла",
