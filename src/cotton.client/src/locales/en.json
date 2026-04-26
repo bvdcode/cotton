@@ -816,6 +816,12 @@
       "language": {
         "label": "Language"
       },
+      "mediaQuality": {
+        "previewMode": "Mode: preview",
+        "originalMode": "Mode: original",
+        "switchToOriginal": "Switch to original",
+        "switchToPreview": "Switch to preview"
+      },
       "errors": {
         "loadFailed": "Failed to load file{{error}}",
         "saveFailed": "Failed to save file content",

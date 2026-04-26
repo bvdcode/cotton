@@ -816,6 +816,12 @@
       "language": {
         "label": "Idioma"
       },
+      "mediaQuality": {
+        "previewMode": "Modo: vista previa",
+        "originalMode": "Modo: original",
+        "switchToOriginal": "Cambiar a original",
+        "switchToPreview": "Cambiar a vista previa"
+      },
       "errors": {
         "loadFailed": "No se pudo cargar el archivo{{error}}",
         "saveFailed": "No se pudo guardar el contenido del archivo",
