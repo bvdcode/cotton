@@ -221,7 +221,7 @@
       "title": "Apariencia",
       "description": "Preferencias de la interfaz y personalización.",
       "gallerySmoothTransitions": "Transiciones suaves en la galería",
-      "galleryPreferPreview": "Usar modo de vista previa en la galería multimedia",
+      "galleryPreferPreview": "Cargar originales (off/on)",
       "themeMode": {
         "label": "Tema",
         "light": "Claro",
