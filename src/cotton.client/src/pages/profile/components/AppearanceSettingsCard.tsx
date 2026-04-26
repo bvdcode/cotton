@@ -27,6 +27,7 @@ import {
 } from "../../../shared/store/userPreferencesStore";
 import type { ThemeMode } from "../../../shared/theme";
 import {
+  selectGalleryPreferPreview,
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../../shared/store/localPreferencesStore";
@@ -45,6 +46,12 @@ export const AppearanceSettingsCard = () => {
   );
   const setSmoothGalleryTransitions = useLocalPreferencesStore(
     (s) => s.setGallerySmoothTransitions,
+  );
+  const galleryPreferPreview = useLocalPreferencesStore(
+    selectGalleryPreferPreview,
+  );
+  const setGalleryPreferPreview = useLocalPreferencesStore(
+    (s) => s.setGalleryPreferPreview,
   );
 
   const selectedLanguage = (preferredLanguage ??
@@ -126,6 +133,16 @@ export const AppearanceSettingsCard = () => {
             />
           }
           label={t("appearance.gallerySmoothTransitions")}
+        />
+
+        <FormControlLabel
+          control={
+            <Switch
+              checked={galleryPreferPreview}
+              onChange={(e) => setGalleryPreferPreview(e.target.checked)}
+            />
+          }
+          label={t("appearance.galleryPreferPreview")}
         />
       </Stack>
     </ProfileAccordionCard>
