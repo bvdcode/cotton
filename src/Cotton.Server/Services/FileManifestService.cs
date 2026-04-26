@@ -41,22 +41,29 @@ namespace Cotton.Server.Services
 
                 [".md"] = "text/markdown",
                 [".markdown"] = "text/markdown",
+
+                [".stl"] = "model/stl",
+                [".obj"] = "model/obj",
+                [".3mf"] = "model/3mf",
             };
 
         public static string ResolveContentType(string? fileName, string? contentType)
         {
             string normalizedContentType = NormalizeContentType(contentType);
+            string extension = Path.GetExtension(fileName ?? string.Empty);
+            if (!string.IsNullOrWhiteSpace(extension)
+                && extensionContentTypeOverrides.TryGetValue(extension, out string? overriddenContentType)
+                && (ShouldForceExtensionContentType(extension)
+                    || string.IsNullOrWhiteSpace(normalizedContentType)
+                    || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase)))
+            {
+                return overriddenContentType;
+            }
+
             if (!string.IsNullOrWhiteSpace(normalizedContentType)
                 && !string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
             {
                 return normalizedContentType;
-            }
-
-            string extension = Path.GetExtension(fileName ?? string.Empty);
-            if (!string.IsNullOrWhiteSpace(extension)
-                && extensionContentTypeOverrides.TryGetValue(extension, out string? overriddenContentType))
-            {
-                return overriddenContentType;
             }
 
             if (!string.IsNullOrWhiteSpace(fileName)
@@ -69,6 +76,11 @@ namespace Cotton.Server.Services
             return string.IsNullOrWhiteSpace(normalizedContentType)
                 ? DefaultContentType
                 : normalizedContentType;
+        }
+
+        private static bool ShouldForceExtensionContentType(string extension)
+        {
+            return extension is ".stl" or ".obj" or ".3mf";
         }
 
         private static string NormalizeContentType(string? contentType)
