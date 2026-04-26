@@ -3,6 +3,7 @@
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
+ARG STL_THUMB_VERSION=0.5.0
 
 RUN set -eux \
     && apt-get update \
@@ -15,7 +16,14 @@ RUN set -eux \
     && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-18 \
+    && apt-get install -y --no-install-recommends postgresql-client-18 libgl1 libegl1 libosmesa6 libfontconfig1 \
+    && case "$(dpkg --print-architecture)" in amd64|arm64|armhf) STL_THUMB_DEB_ARCH="$(dpkg --print-architecture)" ;; *) echo "Unsupported architecture for stl-thumb .deb"; exit 1 ;; esac \
+    && STL_THUMB_DEB_URL="https://github.com/unlimitedbacon/stl-thumb/releases/download/v${STL_THUMB_VERSION}/stl-thumb_${STL_THUMB_VERSION}_${STL_THUMB_DEB_ARCH}.deb" \
+    && curl -fsSL "$STL_THUMB_DEB_URL" -o /tmp/stl-thumb.deb \
+    && apt-get install -y --no-install-recommends /tmp/stl-thumb.deb \
+    && test -f /usr/lib/libstl_thumb.so \
+    && ldconfig \
+    && rm -f /tmp/stl-thumb.deb \
     && apt-get purge -y --auto-remove curl gnupg \
     && rm -rf /var/lib/apt/lists/*
 

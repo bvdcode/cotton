@@ -8,6 +8,11 @@ public class PreviewGeneratorProviderTests
     [TestCase("text/plain", typeof(TextPreviewGenerator))]
     [TestCase("application/pdf", typeof(PdfPreviewGenerator))]
     [TestCase("image/heic", typeof(HeicPreviewGenerator))]
+    [TestCase("model/stl", typeof(StlThumbPreviewGenerator))]
+    [TestCase("application/sla", typeof(StlThumbPreviewGenerator))]
+    [TestCase("model/obj", typeof(StlThumbPreviewGenerator))]
+    [TestCase("model/3mf", typeof(StlThumbPreviewGenerator))]
+    [TestCase("application/vnd.ms-package.3dmanufacturing-3dmodel+xml", typeof(StlThumbPreviewGenerator))]
     [TestCase("video/mp4", typeof(VideoPreviewGenerator))]
     [TestCase("audio/mpeg", typeof(AudioPreviewGenerator))]
     [TestCase("image/png", typeof(ImagePreviewGenerator))]
@@ -54,6 +59,11 @@ public class PreviewGeneratorProviderTests
             Assert.That(mimeTypes, Does.Contain("image/png"));
             Assert.That(mimeTypes, Does.Contain("audio/mpeg"));
             Assert.That(mimeTypes, Does.Contain("video/mp4"));
+            Assert.That(mimeTypes, Does.Contain("model/stl"));
+            Assert.That(mimeTypes, Does.Contain("application/sla"));
+            Assert.That(mimeTypes, Does.Contain("model/obj"));
+            Assert.That(mimeTypes, Does.Contain("model/3mf"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.ms-package.3dmanufacturing-3dmodel+xml"));
         });
 
         int distinctCount = mimeTypes.Distinct(StringComparer.OrdinalIgnoreCase).Count();

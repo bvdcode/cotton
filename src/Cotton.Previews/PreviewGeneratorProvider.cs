@@ -10,6 +10,9 @@
         [
             new PdfPreviewGenerator(),
             new HeicPreviewGenerator(),
+            new StlThumbPreviewGenerator(),
+            StlThumbPreviewGenerator.CreateObjGenerator(),
+            StlThumbPreviewGenerator.CreateThreeMfGenerator(),
             new TextPreviewGenerator(),
             new AudioPreviewGenerator(),
             new VideoPreviewGenerator(),

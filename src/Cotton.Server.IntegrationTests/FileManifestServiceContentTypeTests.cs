@@ -19,6 +19,12 @@ public class FileManifestServiceContentTypeTests
     [TestCase("AUDIO_1.flac", "application/octet-stream", "audio/flac")]
     [TestCase("AUDIO_1.m4b", "application/octet-stream", "audio/mp4")]
     [TestCase("README.md", "application/octet-stream", "text/markdown")]
+    [TestCase("MODEL_1.stl", "application/octet-stream", "model/stl")]
+    [TestCase("MODEL_1.obj", "application/octet-stream", "model/obj")]
+    [TestCase("MODEL_1.3mf", "application/octet-stream", "model/3mf")]
+    [TestCase("MODEL_2.stl", "text/plain", "model/stl")]
+    [TestCase("MODEL_2.obj", "application/json", "model/obj")]
+    [TestCase("MODEL_2.3mf", "application/zip", "model/3mf")]
     [TestCase("IMG_1.png", "application/octet-stream", "image/png")]
     public void ResolveContentType_OctetStreamOrEmpty_UsesExtensionFallback(
         string fileName,
