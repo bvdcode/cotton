@@ -9,9 +9,6 @@ namespace Cotton.Server.Models.Requests
     public class AdminUpdateUserRequestDto
     {
         [Required]
-        [MinLength(2)]
-        [MaxLength(32)]
-        [RegularExpression("^[a-z][a-z0-9]{1,31}$")]
         public string Username { get; set; } = null!;
         public string? Email { get; set; }
         public bool IsEmailVerified { get; set; }
