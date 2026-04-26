@@ -274,11 +274,10 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         Directory.CreateDirectory(fixturesDir);
         EnsureDefaultFixturesExist(fixturesDir);
 
-        string[] files = Directory
+        string[] files = [.. Directory
             .GetFiles(fixturesDir)
             .Where(filePath => ResolveContentType(filePath) is not null)
-            .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)];
 
         if (files.Length == 0)
         {
@@ -362,7 +361,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
     private async Task<Chunk> GetChunkByHashAsync(byte[] hash)
     {
-        Chunk? chunk = await DbContext.Chunks.FindAsync(new object?[] { hash });
+        Chunk? chunk = await DbContext.Chunks.FindAsync([hash]);
         Assert.That(chunk, Is.Not.Null, "Preview chunk row is missing in DB.");
         return chunk!;
     }
