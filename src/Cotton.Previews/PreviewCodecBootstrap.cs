@@ -72,6 +72,8 @@ namespace Cotton.Previews
         }
 
         [DllImport("heif", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
         private static extern IntPtr heif_get_global_security_limits();
+#pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
     }
 }
