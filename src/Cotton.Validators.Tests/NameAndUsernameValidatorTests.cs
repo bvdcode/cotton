@@ -7,6 +7,58 @@ namespace Cotton.Validators.Tests;
 
 public class NameAndUsernameValidatorTests
 {
+    private static IEnumerable<string> ValidUsernames()
+    {
+        yield return "ab";
+        yield return "a1";
+        yield return "john_doe";
+        yield return "john.doe";
+        yield return "john-doe";
+        yield return "a_b-c.d9";
+        yield return "a" + new string('b', UsernameValidator.MaxLength - 1);
+    }
+
+    private static IEnumerable<string> InvalidUsernames()
+    {
+        yield return string.Empty;
+        yield return " ";
+        yield return "a";
+        yield return "1john";
+        yield return "_john";
+        yield return "john_";
+        yield return "john.";
+        yield return "john-";
+        yield return "john__doe";
+        yield return "john..doe";
+        yield return "john--doe";
+        yield return "john_-doe";
+        yield return "john.-doe";
+        yield return "john doe";
+        yield return "john@doe";
+        yield return "йцукен";
+        yield return "a" + new string('b', UsernameValidator.MaxLength);
+    }
+
+    [TestCaseSource(nameof(ValidUsernames))]
+    public void Username_TryNormalizeAndValidate_AcceptsAllowedUsernames(string input)
+    {
+        bool isValid = UsernameValidator.TryNormalizeAndValidate(input, out string normalized, out string error);
+
+        Assert.That(isValid, Is.True);
+        Assert.That(normalized, Is.EqualTo(input.ToLowerInvariant()));
+        Assert.That(error, Is.Empty);
+    }
+
+    [TestCaseSource(nameof(InvalidUsernames))]
+    public void Username_TryNormalizeAndValidate_RejectsForbiddenUsernames(string input)
+    {
+        bool isValid = UsernameValidator.TryNormalizeAndValidate(input, out string normalized, out string error);
+
+        Assert.That(isValid, Is.False);
+        Assert.That(normalized, Is.Empty);
+        Assert.That(error, Is.Not.Empty);
+    }
+
     [Test]
     public void Username_TryNormalizeAndValidate_TrimsAndLowercases()
     {
