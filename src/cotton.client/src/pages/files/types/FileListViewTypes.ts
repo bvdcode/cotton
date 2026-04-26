@@ -119,6 +119,12 @@ export interface IFileListView {
   fileOperations: FileOperations;
 
   /**
+   * Optional handler for keyboard-driven "go up" navigation.
+   * Used in tiles mode for Backspace behavior.
+   */
+  onNavigateBack?: () => void;
+
+  /**
    * When true, the view must not expose write actions (rename/delete/share/create).
    * Intended for public/shared browsing.
    */

@@ -351,6 +351,7 @@ export const FilesPage: React.FC = () => {
       tiles,
       folderOperations,
       fileOperations,
+      onNavigateBack: handleGoUp,
       isCreatingFolder: isCreatingInThisFolder,
       tileSize: tilesSize,
       loading:
@@ -382,6 +383,7 @@ export const FilesPage: React.FC = () => {
       fileSelection.selectionMode,
       fileSelection.selectedIds,
       handleToggleItem,
+      handleGoUp,
       folderOperations,
       folderOps.handleCancelNewFolder,
       folderOps.handleConfirmNewFolder,

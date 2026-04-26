@@ -350,6 +350,7 @@ export const TrashPage: React.FC = () => {
       tiles,
       folderOperations,
       fileOperations,
+      onNavigateBack: handleGoUp,
       isCreatingFolder: isCreatingInThisFolder,
       tileSize: tilesSize,
       loading:
@@ -385,6 +386,7 @@ export const TrashPage: React.FC = () => {
       fileSelection.selectionMode,
       folderOperations,
       handleToggleItem,
+      handleGoUp,
       isCreatingInThisFolder,
       layoutType,
       listContent,
