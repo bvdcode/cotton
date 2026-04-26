@@ -34,11 +34,11 @@ namespace Cotton.Server.Jobs
             var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
 
             var processableItemsQuery = _dbContext.FileManifests
-                .Where(fm => fm.PreviewGenerationError == null)
                 .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
 
             var itemsToProcessQuery = processableItemsQuery
-                .Where(fm => fm.SmallFilePreviewHash == null);
+                .Where(fm => fm.SmallFilePreviewHash == null)
+                .Where(fm => fm.PreviewGenerationError == null);
 
             foreach (var versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
             {
@@ -65,7 +65,7 @@ namespace Cotton.Server.Jobs
                 .ToListAsync();
 
             var itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);
-            itemsToProcess = [.. itemIds.Select(id => itemsToProcessById[id])];
+            itemsToProcess = [.. itemIds.Where(itemsToProcessById.ContainsKey).Select(id => itemsToProcessById[id])];
 
             if (itemsToProcess.Count > 0)
             {
@@ -106,6 +106,7 @@ namespace Cotton.Server.Jobs
                     await EnsureChunkExistsAsync(hash, previewImage.Length);
                     item.SmallFilePreviewHash = hash;
                     item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
+                    item.PreviewGenerationError = null;
                     item.PreviewGeneratorVersion = generator.Version;
 
                     if (generator is ImagePreviewGenerator or HeicPreviewGenerator)
@@ -139,6 +140,7 @@ namespace Cotton.Server.Jobs
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
                     item.PreviewGenerationError = ex.Message;
+                    item.PreviewGeneratorVersion = generator.Version;
                     await _dbContext.SaveChangesAsync();
                 }
 
