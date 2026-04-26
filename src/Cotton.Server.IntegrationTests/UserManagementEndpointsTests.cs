@@ -186,7 +186,7 @@ public class UserManagementEndpointsTests : IntegrationTestBase
     [TestCase("validuser2")]
     [TestCase("john99")]
     [TestCase("az")]
-    public async Task Admin_UpdateUser_WithValidUsername_ReturnsSuccess(string validUsername)
+    public async Task Admin_UpdateUser_WithAlphanumericUsername_ReturnsSuccess(string validUsername)
     {
         string token = await LoginAsync();
         SetBearer(token);
@@ -211,6 +211,38 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         AdminUserDto? updated = await updateResponse.Content.ReadFromJsonAsync<AdminUserDto>();
         Assert.That(updated, Is.Not.Null);
         Assert.That(updated!.Username, Is.EqualTo(validUsername));
+    }
+
+    [Test]
+    public async Task Admin_UpdateUser_WithUnderscoreUsername_ReturnsBadRequest_FromDtoValidation()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        UserDto created = await CreateUserAsync("underscoretarget", "underscore.target@example.com");
+
+        var updateResponse = await _client!.PutAsJsonAsync(
+            $"/api/v1/users/{created.Id}",
+            new
+            {
+                Username = "user_name",
+                Email = "underscore.target@example.com",
+                Role = UserRole.User,
+                FirstName = "Under",
+                LastName = "Score",
+                BirthDate = new DateOnly(1996, 6, 6),
+                IsEmailVerified = false
+            });
+
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        string payload = await updateResponse.Content.ReadAsStringAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload, Does.Contain("\"errors\""));
+            Assert.That(payload, Does.Contain("Username"));
+            Assert.That(payload, Does.Contain("^[a-z][a-z0-9]{1,31}$"));
+        });
     }
 
     [TestCase("user_name", "user_name")]
