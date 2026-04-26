@@ -221,7 +221,7 @@
       "title": "Appearance",
       "description": "UI preferences and personalization.",
       "gallerySmoothTransitions": "Smooth transitions in gallery",
-      "galleryPreferPreview": "Use preview mode in media gallery",
+      "galleryPreferPreview": "Show originals instead of previews",
       "themeMode": {
         "label": "Theme",
         "light": "Light",

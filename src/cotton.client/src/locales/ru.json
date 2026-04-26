@@ -207,7 +207,7 @@
       "title": "Интерфейс",
       "description": "Настройки отображения и поведения интерфейса.",
       "gallerySmoothTransitions": "Плавная прокрутка в галерее",
-      "galleryPreferPreview": "Использовать превью в медиагалерее",
+      "galleryPreferPreview": "Загружать оригиналы (выкл/вкл)",
       "themeMode": {
         "label": "Тема",
         "light": "Светлая",

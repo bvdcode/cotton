@@ -53,6 +53,7 @@ export const AppearanceSettingsCard = () => {
   const setGalleryPreferPreview = useLocalPreferencesStore(
     (s) => s.setGalleryPreferPreview,
   );
+  const loadOriginalsEnabled = !galleryPreferPreview;
 
   const selectedLanguage = (preferredLanguage ??
     i18n.language ??
@@ -125,25 +126,27 @@ export const AppearanceSettingsCard = () => {
 
         <Divider />
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={smoothGalleryTransitions}
-              onChange={(e) => setSmoothGalleryTransitions(e.target.checked)}
-            />
-          }
-          label={t("appearance.gallerySmoothTransitions")}
-        />
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={smoothGalleryTransitions}
+                onChange={(e) => setSmoothGalleryTransitions(e.target.checked)}
+              />
+            }
+            label={t("appearance.gallerySmoothTransitions")}
+          />
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={galleryPreferPreview}
-              onChange={(e) => setGalleryPreferPreview(e.target.checked)}
-            />
-          }
-          label={t("appearance.galleryPreferPreview")}
-        />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={loadOriginalsEnabled}
+                onChange={(e) => setGalleryPreferPreview(!e.target.checked)}
+              />
+            }
+            label={t("appearance.galleryPreferPreview")}
+          />
+        </Stack>
       </Stack>
     </ProfileAccordionCard>
   );
