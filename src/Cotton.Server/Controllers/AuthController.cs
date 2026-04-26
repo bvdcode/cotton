@@ -464,7 +464,7 @@ namespace Cotton.Server.Controllers
             var uptime = DateTimeOffset.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
             if (uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay)
             {
-                string errorMessage = $"Initial admin user creation is disabled after " + 
+                string errorMessage = $"Initial admin user creation is disabled after " +
                     Constants.AdminAutocreateMinutesDelay + " minutes of uptime. " +
                     "Please restart the application/container to enable it.";
                 _logger.LogWarning("{msg}", errorMessage);

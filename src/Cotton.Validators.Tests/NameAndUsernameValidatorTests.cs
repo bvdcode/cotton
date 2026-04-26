@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-using Cotton.Validators;
 using NUnit.Framework;
 
 namespace Cotton.Validators.Tests;

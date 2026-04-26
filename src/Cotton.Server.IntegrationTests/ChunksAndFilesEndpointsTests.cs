@@ -4,7 +4,6 @@
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
-using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;

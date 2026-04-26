@@ -13,7 +13,7 @@ internal sealed class NoOpSchedulerFactory : ISchedulerFactory
 
     public Task<IReadOnlyList<IScheduler>> GetAllSchedulers(CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<IScheduler> schedulers = new[] { _scheduler };
+        IReadOnlyList<IScheduler> schedulers = [_scheduler];
         return Task.FromResult(schedulers);
     }
 
@@ -24,7 +24,7 @@ internal sealed class NoOpSchedulerFactory : ISchedulerFactory
 
     public Task<IScheduler?> GetScheduler(string schedName, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(_scheduler);
+        return Task.FromResult((IScheduler?)_scheduler);
     }
 }
 
@@ -64,7 +64,7 @@ public class SchedulerDispatchProxy : DispatchProxy
                 MethodInfo fromResultMethod = typeof(Task)
                     .GetMethod(nameof(Task.FromResult))!
                     .MakeGenericMethod(genericArgument);
-                return fromResultMethod.Invoke(null, new[] { defaultValue });
+                return fromResultMethod.Invoke(null, [defaultValue]);
             }
 
             if (genericType == typeof(ValueTask<>))

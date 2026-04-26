@@ -1,5 +1,4 @@
 using Cotton.Models;
-using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;

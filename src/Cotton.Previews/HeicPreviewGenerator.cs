@@ -1,12 +1,11 @@
-﻿using HeyRed.ImageSharp.Heif;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+﻿using PhotoSauce.MagicScaler;
 
 namespace Cotton.Previews
 {
     public class HeicPreviewGenerator : IPreviewGenerator
     {
+        public int Version => 1;
+
         public IEnumerable<string> SupportedContentTypes =>
         [
             "image/heic",
@@ -15,18 +14,29 @@ namespace Cotton.Previews
             "image/heif-sequence"
         ];
 
-        public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
+        public Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
-            var options = new HeifDecoderOptions();
-            using Image<Rgba32> image = HeifDecoder.Instance.Decode<Rgba32>(options, stream);
-            image.Mutate(x => x.Resize(new ResizeOptions
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+            PreviewCodecBootstrap.EnsureInitialized();
+
+            if (stream.CanSeek)
             {
-                Size = new Size(size, size),
-                Mode = ResizeMode.Max
-            }));
+                stream.Position = 0;
+            }
+
             using var outputStream = new MemoryStream();
-            await image.SaveAsWebpAsync(outputStream);
-            return outputStream.ToArray();
+            var settings = new ProcessImageSettings
+            {
+                Width = size,
+                Height = size,
+                ResizeMode = CropScaleMode.Max
+            };
+
+            settings.TrySetEncoderFormat(ImageMimeTypes.Webp);
+            MagicImageProcessor.ProcessImage(stream, outputStream, settings);
+
+            return Task.FromResult(outputStream.ToArray());
         }
     }
 }
