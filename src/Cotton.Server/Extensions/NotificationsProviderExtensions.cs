@@ -1,7 +1,6 @@
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Helpers;
 using EasyExtensions.Clients;
 using EasyExtensions.Clients.Models;
 using EasyExtensions.Helpers;

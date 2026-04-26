@@ -38,6 +38,9 @@ namespace Cotton.Database.Models
         [Column("preview_generation_error")]
         public string? PreviewGenerationError { get; set; }
 
+        [Column("preview_generator_version")]
+        public int PreviewGeneratorVersion { get; set; }
+
         public string? GetPreviewHashEncryptedHex()
         {
             if (SmallFilePreviewHashEncrypted is null)
