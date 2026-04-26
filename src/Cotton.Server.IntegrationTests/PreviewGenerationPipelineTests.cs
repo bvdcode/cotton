@@ -30,6 +30,7 @@ namespace Cotton.Server.IntegrationTests;
 public class PreviewGenerationPipelineTests : IntegrationTestBase
 {
     private const string PreviewRouteBase = "/api/v1/preview";
+    private const string DefaultExternalFixturesDir = @"C:\Temp\cotton-tests";
 
     private TestAppFactory? _factory;
     private HttpClient? _client;
@@ -269,20 +270,19 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
     [Test]
     public async Task PreviewPipeline_ExternalFixtures_GeneratesPreviewsForAllProvidedFiles_WhenDirectoryConfigured()
     {
-        string? fixturesDir = Environment.GetEnvironmentVariable("COTTON_PREVIEW_FIXTURES_DIR");
-        if (string.IsNullOrWhiteSpace(fixturesDir) || !Directory.Exists(fixturesDir))
-        {
-            Assert.Ignore("Set COTTON_PREVIEW_FIXTURES_DIR to run external preview fixture coverage.");
-        }
+        string fixturesDir = ResolveExternalFixturesDir();
+        Directory.CreateDirectory(fixturesDir);
+        EnsureDefaultFixturesExist(fixturesDir);
 
         string[] files = Directory
             .GetFiles(fixturesDir)
+            .Where(filePath => ResolveContentType(filePath) is not null)
             .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         if (files.Length == 0)
         {
-            Assert.Ignore("No fixtures found in COTTON_PREVIEW_FIXTURES_DIR.");
+            Assert.Ignore($"No supported fixtures found in '{fixturesDir}'.");
         }
 
         string token = await LoginAsync();
@@ -294,18 +294,17 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
         foreach (string filePath in files)
         {
             string fileName = Path.GetFileName(filePath);
-            string? contentType = ResolveContentType(filePath);
-            Assert.That(contentType, Is.Not.Null, $"Unsupported fixture extension for {fileName}.");
+            string contentType = ResolveContentType(filePath)!;
 
             byte[] source = await File.ReadAllBytesAsync(filePath);
-            NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, fileName, contentType!, source);
+            NodeFileManifestDto createdFile = await UploadAndCreateFileAsync(root.Id, fileName, contentType, source);
 
             uploads.Add(new FixtureUpload(
                 NodeFileId: createdFile.Id,
                 FileName: fileName,
-                ContentType: contentType!,
+                ContentType: contentType,
                 SourceLength: source.Length,
-                ExpectLargePreview: ExpectsLargePreview(contentType!)));
+                ExpectLargePreview: ExpectsLargePreview(contentType)));
         }
 
         await ExecuteGeneratePreviewJobAsync();
@@ -542,6 +541,46 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
             ".avi" => "video/avi",
             _ => null
         };
+    }
+
+    private static string ResolveExternalFixturesDir()
+    {
+        string? fromEnvironment = Environment.GetEnvironmentVariable("COTTON_PREVIEW_FIXTURES_DIR");
+        return string.IsNullOrWhiteSpace(fromEnvironment)
+            ? DefaultExternalFixturesDir
+            : fromEnvironment;
+    }
+
+    private static void EnsureDefaultFixturesExist(string fixturesDir)
+    {
+        if (Directory.EnumerateFiles(fixturesDir).Any())
+        {
+            return;
+        }
+
+        File.WriteAllText(
+            Path.Combine(fixturesDir, "01_text.txt"),
+            "Cotton preview fixture: plain text file for generator coverage.");
+
+        File.WriteAllText(
+            Path.Combine(fixturesDir, "02_markdown.md"),
+            "# Cotton Preview Fixture\n\nThis file validates markdown preview rendering.");
+
+        File.WriteAllText(
+            Path.Combine(fixturesDir, "03_data.json"),
+            "{\"name\":\"cotton\",\"kind\":\"preview-fixture\"}");
+
+        File.WriteAllText(
+            Path.Combine(fixturesDir, "04_data.xml"),
+            "<root><name>cotton</name><kind>preview-fixture</kind></root>");
+
+        File.WriteAllBytes(
+            Path.Combine(fixturesDir, "05_image.png"),
+            CreateGradientPngBytes(width: 1600, height: 900));
+
+        File.WriteAllBytes(
+            Path.Combine(fixturesDir, "06_document.pdf"),
+            CreateSinglePagePdfBytes("Cotton preview fixture PDF"));
     }
 
     private static byte[] CreateGradientPngBytes(int width, int height)
