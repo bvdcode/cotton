@@ -40,21 +40,20 @@ public class AudioPreviewGeneratorTests
         string artifactsDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "artifacts");
         Directory.CreateDirectory(artifactsDirectory);
 
-        (string Name, int LowFreq, int HighFreq, double EnvelopeHz)[] cases =
+        (string Name, int LowFreq, int HighFreq)[] cases =
         [
-            ("case-a", 180, 540, 0.55),
-            ("case-b", 220, 660, 0.70),
-            ("case-c", 300, 900, 0.95),
+            ("case-a", 180, 540),
+            ("case-b", 220, 660),
+            ("case-c", 300, 900),
         ];
 
-        foreach (var (Name, LowFreq, HighFreq, EnvelopeHz) in cases)
+        foreach (var (Name, LowFreq, HighFreq) in cases)
         {
             byte[] wavBytes = CreatePcm16MonoWavBytes(
                 sampleRate: 8000,
                 durationSeconds: 2,
                 lowFreq: LowFreq,
-                highFreq: HighFreq,
-                envelopeHz: EnvelopeHz);
+                highFreq: HighFreq);
 
             using var stream = new MemoryStream(wavBytes);
             byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 200);
