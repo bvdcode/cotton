@@ -9,6 +9,7 @@ import { filesApi } from "../../../../shared/api/filesApi";
 import { resolveModelFormat, type ModelFormat } from "../../utils/modelFormats";
 
 const EXPIRE_AFTER_MINUTES = 60 * 24;
+const LARGE_MODEL_FILE_THRESHOLD_BYTES = 20 * 1024 * 1024;
 const TARGET_MODEL_MAX_DIMENSION = 4;
 const MIN_GRID_SIZE = 6;
 const MAX_GRID_SIZE = 48;
@@ -16,6 +17,9 @@ const GRID_SIZE_MULTIPLIER = 2.4;
 const GRID_DENSITY_FACTOR = 4;
 const MIN_GRID_DIVISIONS = 20;
 const MAX_GRID_DIVISIONS = 120;
+const LOW_QUALITY_REDUCTION_RATIO = 0.45;
+const LOW_QUALITY_TARGET_MAX_VERTICES = 450_000;
+const LOW_QUALITY_MIN_TARGET_VERTICES = 120_000;
 
 type ModelPreviewSource =
   | {
@@ -27,16 +31,20 @@ type ModelPreviewSource =
       url: string;
     };
 
+type PreviewQualityMode = "normal" | "reduced";
+
 interface ModelPreviewProps {
   source: ModelPreviewSource;
   fileName: string;
   contentType?: string | null;
+  fileSizeBytes?: number | null;
 }
 
 interface PreparedModelScene {
   object: THREE.Object3D;
   gridSize: number;
   gridDivisions: number;
+  qualityMode: PreviewQualityMode;
 }
 
 const toAbsoluteUrl = (url: string): string => {
@@ -87,6 +95,73 @@ const disposeObject3D = (object: THREE.Object3D): void => {
 
 const clamp = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max);
+};
+
+const resolveQualityMode = (
+  fileSizeBytes?: number | null,
+): PreviewQualityMode => {
+  return typeof fileSizeBytes === "number" &&
+    fileSizeBytes >= LARGE_MODEL_FILE_THRESHOLD_BYTES
+    ? "reduced"
+    : "normal";
+};
+
+const simplifyObjectGeometry = async (
+  object: THREE.Object3D,
+  qualityMode: PreviewQualityMode,
+): Promise<void> => {
+  if (qualityMode !== "reduced") {
+    return;
+  }
+
+  const { SimplifyModifier } = await import(
+    "three/examples/jsm/modifiers/SimplifyModifier.js"
+  );
+  const modifier = new SimplifyModifier();
+
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh) || node instanceof THREE.SkinnedMesh) {
+      return;
+    }
+
+    const geometry = node.geometry;
+    if (!(geometry instanceof THREE.BufferGeometry)) {
+      return;
+    }
+
+    const position = geometry.getAttribute("position");
+    if (!position) {
+      return;
+    }
+
+    const currentVertexCount = position.count;
+    if (currentVertexCount <= LOW_QUALITY_TARGET_MAX_VERTICES) {
+      return;
+    }
+
+    const targetVertexCount = Math.max(
+      LOW_QUALITY_MIN_TARGET_VERTICES,
+      Math.min(
+        LOW_QUALITY_TARGET_MAX_VERTICES,
+        Math.floor(currentVertexCount * LOW_QUALITY_REDUCTION_RATIO),
+      ),
+    );
+
+    const verticesToRemove = currentVertexCount - targetVertexCount;
+    if (verticesToRemove <= 0) {
+      return;
+    }
+
+    try {
+      const simplified = modifier.modify(geometry, verticesToRemove);
+      simplified.computeVertexNormals();
+
+      geometry.dispose();
+      node.geometry = simplified;
+    } catch {
+      // Keep original geometry if simplification fails for a specific mesh.
+    }
+  });
 };
 
 const normalizeModelScale = (object: THREE.Object3D): void => {
@@ -184,7 +259,10 @@ const alignModelToGround = (object: THREE.Object3D): void => {
   object.updateMatrixWorld(true);
 };
 
-const buildGridMetrics = (object: THREE.Object3D): {
+const buildGridMetrics = (
+  object: THREE.Object3D,
+  qualityMode: PreviewQualityMode,
+): {
   gridSize: number;
   gridDivisions: number;
 } => {
@@ -200,15 +278,24 @@ const buildGridMetrics = (object: THREE.Object3D): {
 
   const size = bounds.getSize(new THREE.Vector3());
   const footprint = Math.max(size.x, size.z);
+  const gridSizeMultiplier =
+    qualityMode === "reduced"
+      ? GRID_SIZE_MULTIPLIER * 1.2
+      : GRID_SIZE_MULTIPLIER;
+  const densityFactor =
+    qualityMode === "reduced"
+      ? GRID_DENSITY_FACTOR * 0.7
+      : GRID_DENSITY_FACTOR;
+
   const gridSize = clamp(
-    footprint * GRID_SIZE_MULTIPLIER,
+    footprint * gridSizeMultiplier,
     MIN_GRID_SIZE,
     MAX_GRID_SIZE,
   );
 
   const gridDivisions = Math.round(
     clamp(
-      gridSize * GRID_DENSITY_FACTOR,
+      gridSize * densityFactor,
       MIN_GRID_DIVISIONS,
       MAX_GRID_DIVISIONS,
     ),
@@ -220,15 +307,20 @@ const buildGridMetrics = (object: THREE.Object3D): {
   };
 };
 
-const prepareModelScene = (object: THREE.Object3D): PreparedModelScene => {
+const prepareModelScene = async (
+  object: THREE.Object3D,
+  qualityMode: PreviewQualityMode,
+): Promise<PreparedModelScene> => {
+  await simplifyObjectGeometry(object, qualityMode);
   normalizeModelScale(object);
   alignModelToGround(object);
 
-  const metrics = buildGridMetrics(object);
+  const metrics = buildGridMetrics(object, qualityMode);
   return {
     object,
     gridSize: metrics.gridSize,
     gridDivisions: metrics.gridDivisions,
+    qualityMode,
   };
 };
 
@@ -236,12 +328,18 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   source,
   fileName,
   contentType,
+  fileSizeBytes,
 }) => {
   const { t } = useTranslation(["files"]);
   const theme = useTheme();
+
   const modelFormat = React.useMemo(
     () => resolveModelFormat(fileName, contentType),
     [contentType, fileName],
+  );
+  const qualityMode = React.useMemo(
+    () => resolveQualityMode(fileSizeBytes),
+    [fileSizeBytes],
   );
 
   const [isLoading, setIsLoading] = React.useState<boolean>(Boolean(modelFormat));
@@ -264,7 +362,10 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       try {
         const url = await resolveSourceUrl(source);
         const loadedObject = await loadModelObject(modelFormat, url);
-        const nextPreparedModel = prepareModelScene(loadedObject);
+        const nextPreparedModel = await prepareModelScene(
+          loadedObject,
+          qualityMode,
+        );
 
         if (cancelled) {
           disposeObject3D(loadedObject);
@@ -288,7 +389,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [modelFormat, source]);
+  }, [modelFormat, qualityMode, source]);
 
   React.useEffect(() => {
     return () => {
@@ -369,7 +470,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
             near: 0.01,
             far: 1000,
           }}
-          dpr={[1, 2]}
+          dpr={
+            preparedModel.qualityMode === "reduced"
+              ? [1, 1]
+              : [1, 2]
+          }
         >
           <color attach="background" args={[theme.palette.background.default]} />
           <ambientLight intensity={0.75} />
