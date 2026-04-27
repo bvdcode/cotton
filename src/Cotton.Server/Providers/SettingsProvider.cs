@@ -338,7 +338,7 @@ namespace Cotton.Server.Providers
             }
         }
 
-        public async Task SetProperty<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
+        public async Task SetPropertyAsync<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
         {
             var memberExpression = selector.Body as MemberExpression;
             if (memberExpression is null && selector.Body is UnaryExpression unaryExpression)
@@ -353,12 +353,8 @@ namespace Cotton.Server.Providers
 
             CottonServerSettings? settings = await _dbContext.ServerSettings
                 .OrderByDescending(s => s.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (settings is null)
-            {
-                throw new InvalidOperationException("Server settings are not initialized.");
-            }
+                .FirstOrDefaultAsync(cancellationToken)
+                    ?? throw new InvalidOperationException("Server settings are not initialized.");
 
             _dbContext.Entry(settings).Property(propertyName).CurrentValue = value;
             await _dbContext.SaveChangesAsync(cancellationToken);

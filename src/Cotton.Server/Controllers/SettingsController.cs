@@ -49,6 +49,7 @@ namespace Cotton.Server.Controllers
             return Ok(new { supportedHashAlgorithms = new string[] { Hasher.SupportedHashAlgorithm } });
         }
 
+        [Obsolete("This endpoint is deprecated. Use separate endpoints for each setting instead.")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet]
         public async Task<CottonServerSettingsDto> GetSettings()
@@ -60,16 +61,48 @@ namespace Cotton.Server.Controllers
         [HttpPatch("geoip-lookup-mode/{mode}")]
         public async Task<IActionResult> SetGeoIpLookupMode([FromRoute] GeoIpLookupMode mode, CancellationToken cancellationToken)
         {
-            await _settings.SetProperty(x => x.GeoIpLookupMode, mode, cancellationToken);
+            await _settings.SetPropertyAsync(x => x.GeoIpLookupMode, mode, cancellationToken);
             return NoContent();
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("geoip-lookup-mode")]
-        public async Task<IActionResult> GetGeoIpLookupMode()
+        public IActionResult GetGeoIpLookupMode()
         {
             GeoIpLookupMode geoIpLookupMode = _settings.GetServerSettings().GeoIpLookupMode;
             return Ok(new { geoIpLookupMode });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("custom-geoip-lookup-url")]
+        public async Task<IActionResult> SetCustomGeoIpLookupUrl([FromBody] string url, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.CustomGeoIpLookupUrl, url, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("custom-geoip-lookup-url")]
+        public IActionResult GetCustomGeoIpLookupUrl()
+        {
+            string? customGeoIpLookupUrl = _settings.GetServerSettings().CustomGeoIpLookupUrl;
+            return Ok(new { customGeoIpLookupUrl });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("server-usage")]
+        public async Task<IActionResult> SetServerUsage([FromBody] ServerUsage[] usage, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.ServerUsage, usage, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("server-usage")]
+        public IActionResult GetServerUsage()
+        {
+            ServerUsage[] serverUsage = _settings.GetServerSettings().ServerUsage;
+            return Ok(new { serverUsage });
         }
     }
 }
