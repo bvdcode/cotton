@@ -13,6 +13,7 @@ import type {
   FileSystemTile,
   FolderOperations,
   FileOperations,
+  TilesSize,
 } from "../../types/FileListViewTypes";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
@@ -159,6 +160,7 @@ interface TileItemProps {
   folderOperations: FolderOperations;
   fileOperations: FileOperations;
   fileNamePlaceholder: string;
+  tileSize?: TilesSize;
   readOnly?: boolean;
   selectionMode?: boolean;
   selected?: boolean;
@@ -170,7 +172,7 @@ interface TileItemProps {
  * Extracted for reuse by both plain and virtualized grid.
  */
 export const TileItem: React.FC<TileItemProps> = React.memo(
-  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, readOnly = false, selectionMode = false, selected = false, onToggle }) => {
+  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, tileSize = "medium", readOnly = false, selectionMode = false, selected = false, onToggle }) => {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
@@ -340,6 +342,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         extensionLabelMaxLength: 4,
         hideLongExtensionLabel: true,
         hideInvalidExtensionLabel: true,
+        hideExtensionLabel: tileSize === "small",
       },
     );
     const previewUrl = typeof preview === "string" ? preview : null;
