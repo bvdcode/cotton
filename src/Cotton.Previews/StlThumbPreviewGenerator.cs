@@ -9,7 +9,7 @@ namespace Cotton.Previews
 {
     public class StlThumbPreviewGenerator : IPreviewGenerator
     {
-        public int Version => 2;
+        public int Version => 3;
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
         private readonly string _modelExtension;
@@ -79,19 +79,46 @@ namespace Cotton.Previews
                     }
                 }
 
-                bool rendered = RenderToBuffer(rgbaBuffer, size, modelFilePath);
+                bool rendered = false;
+                Exception? renderException = null;
+
+                try
+                {
+                    rendered = RenderToBuffer(rgbaBuffer, size, modelFilePath);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    renderException = ex;
+                }
 
                 if (!rendered && string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
                 {
                     normalizedThreeMfPath = await TryNormalizeThreeMfArchiveAsync(modelFilePath).ConfigureAwait(false);
                     if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
                     {
-                        rendered = RenderToBuffer(rgbaBuffer, size, normalizedThreeMfPath);
+                        try
+                        {
+                            rendered = RenderToBuffer(rgbaBuffer, size, normalizedThreeMfPath);
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            renderException = ex;
+                        }
                     }
                 }
 
                 if (!rendered)
                 {
+                    if (string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return await GenerateFallbackPreviewWebPAsync(size).ConfigureAwait(false);
+                    }
+
+                    if (renderException is not null)
+                    {
+                        throw renderException;
+                    }
+
                     throw new InvalidOperationException("stl-thumb failed to render model preview.");
                 }
 
@@ -329,6 +356,14 @@ namespace Cotton.Previews
             {
                 throw new InvalidOperationException("stl-thumb native library architecture is incompatible.", ex);
             }
+        }
+
+        private static async Task<byte[]> GenerateFallbackPreviewWebPAsync(int size)
+        {
+            using Image<Rgba32> image = new(size, size, new Rgba32(34, 34, 38, 255));
+            using var outputStream = new MemoryStream();
+            await image.SaveAsWebpAsync(outputStream).ConfigureAwait(false);
+            return outputStream.ToArray();
         }
 
         private static async Task<string?> TryNormalizeThreeMfArchiveAsync(string sourcePath)
