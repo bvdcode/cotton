@@ -34,32 +34,6 @@ namespace Cotton.Server.Controllers
             return Ok(result);
         }
 
-        [HttpGet("settings/is-setup-complete")]
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> IsServerInitialized()
-        {
-            bool isServerInitialized = await _settings.IsServerInitializedAsync();
-            return Ok(new { IsServerInitialized = isServerInitialized });
-        }
-
-        [HttpPost("settings")]
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> CreateSettings(InitialServerSettingsRequestDto request, CancellationToken cancellationToken)
-        {
-            string fallbackPublicBaseUrl = $"{Request.Scheme}://{Request.Host.Value}";
-            await _mediator.Send(new CreateInitialServerSettingsRequest(request, fallbackPublicBaseUrl), cancellationToken);
-            return Ok();
-        }
-
-        [Authorize]
-        [HttpGet("settings")]
-        public async Task<IActionResult> GetSettings()
-        {
-            bool isAdmin = User.IsInRole(nameof(UserRole.Admin));
-            ServerSettingsEnvelopeDto settings = await _mediator.Send(new GetServerSettingsQuery(isAdmin));
-            return Ok(settings);
-        }
-
         [HttpPatch("database-backup/trigger")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> TriggerDatabaseBackup(CancellationToken cancellationToken)
