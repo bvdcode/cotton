@@ -20,6 +20,14 @@ const MAX_GRID_DIVISIONS = 120;
 const LOW_QUALITY_REDUCTION_RATIO = 0.45;
 const LOW_QUALITY_TARGET_MAX_VERTICES = 450_000;
 const LOW_QUALITY_MIN_TARGET_VERTICES = 120_000;
+const MANUAL_AXIS_UP_ROTATIONS: ReadonlyArray<{ x: number; z: number }> = [
+  { x: 0, z: 0 },
+  { x: Math.PI / 2, z: 0 },
+  { x: -Math.PI / 2, z: 0 },
+  { x: Math.PI, z: 0 },
+  { x: 0, z: Math.PI / 2 },
+  { x: 0, z: -Math.PI / 2 },
+];
 
 type ModelPreviewSource =
   | {
@@ -41,6 +49,7 @@ interface ModelPreviewProps {
   materialColor?: string | null;
   autoAlignToken?: number;
   autoOrientToken?: number;
+  cycleOrientationToken?: number;
 }
 
 interface PreparedModelScene {
@@ -174,11 +183,75 @@ const hasColorProperty = (
     (material as { color?: unknown }).color instanceof THREE.Color;
 };
 
+const resolveCssVariableColor = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("var(") || typeof window === "undefined") {
+    return trimmed;
+  }
+
+  const match = trimmed.match(/^var\((--[^,\s)]+)(?:,\s*([^)]*))?\)$/);
+  if (!match) {
+    return trimmed;
+  }
+
+  const variableName = match[1];
+  const fallbackValue = match[2]?.trim();
+  const resolved = window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue(variableName)
+    .trim();
+
+  if (resolved) {
+    return resolved;
+  }
+
+  return fallbackValue && fallbackValue.length > 0 ? fallbackValue : trimmed;
+};
+
+const resolveComputedCssColor = (value: string): string => {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return value;
+  }
+
+  if (!document.body) {
+    return value;
+  }
+
+  const probe = document.createElement("span");
+  probe.style.color = "";
+  probe.style.color = value;
+
+  if (!probe.style.color) {
+    return value;
+  }
+
+  document.body.appendChild(probe);
+  const computed = window.getComputedStyle(probe).color.trim();
+  probe.remove();
+
+  return computed || value;
+};
+
+const toThreeColor = (colorValue: string): THREE.Color | null => {
+  const resolvedColor = resolveCssVariableColor(colorValue);
+  const computedColor = resolveComputedCssColor(resolvedColor);
+  const parsedColor = new THREE.Color();
+
+  try {
+    parsedColor.set(computedColor);
+    return parsedColor;
+  } catch {
+    return null;
+  }
+};
+
 const applyMaterialColor = (
   object: THREE.Object3D,
   color: string | null | undefined,
   originalColors: WeakMap<THREE.Material, THREE.Color>,
 ): void => {
+  const overrideColor = color ? toThreeColor(color) : null;
+
   object.traverse((node) => {
     if (!(node instanceof THREE.Mesh)) {
       return;
@@ -193,8 +266,8 @@ const applyMaterialColor = (
         originalColors.set(material, material.color.clone());
       }
 
-      if (color) {
-        material.color.set(color);
+      if (overrideColor) {
+        material.color.copy(overrideColor);
       } else {
         const original = originalColors.get(material);
         if (original) {
@@ -303,6 +376,19 @@ const autoOrientModelUpright = (object: THREE.Object3D): void => {
     object.quaternion.copy(baseQuaternion);
     object.updateMatrixWorld(true);
   }
+};
+
+const applyAxisUpRotation = (
+  object: THREE.Object3D,
+  baseQuaternion: THREE.Quaternion,
+  rotationVariant: { x: number; z: number },
+): void => {
+  const variantQuaternion = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(rotationVariant.x, 0, rotationVariant.z),
+  );
+
+  object.quaternion.copy(baseQuaternion).multiply(variantQuaternion);
+  object.updateMatrixWorld(true);
 };
 
 const normalizeModelScale = (object: THREE.Object3D): void => {
@@ -475,6 +561,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   materialColor,
   autoAlignToken,
   autoOrientToken,
+  cycleOrientationToken,
 }) => {
   const { t } = useTranslation(["files"]);
   const theme = useTheme();
@@ -500,15 +587,22 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   const previousAutoOrientTokenRef = React.useRef<number | undefined>(
     autoOrientToken,
   );
+  const previousCycleOrientationTokenRef = React.useRef<number | undefined>(
+    cycleOrientationToken,
+  );
   const originalColorsRef = React.useRef<WeakMap<THREE.Material, THREE.Color>>(
     new WeakMap(),
   );
+  const manualOrientationBaseRef = React.useRef<THREE.Quaternion | null>(null);
+  const manualOrientationStepRef = React.useRef<number>(0);
 
   React.useEffect(() => {
     if (!modelFormat) {
       setIsLoading(false);
       setHasLoadError(false);
       setPreparedModel(null);
+      manualOrientationBaseRef.current = null;
+      manualOrientationStepRef.current = 0;
       return;
     }
 
@@ -530,6 +624,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
           return;
         }
 
+        manualOrientationBaseRef.current = nextPreparedModel.object.quaternion.clone();
+        manualOrientationStepRef.current = 0;
         setPreparedModel(nextPreparedModel);
         setHasLoadError(false);
       } catch {
@@ -607,6 +703,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       autoOrientModelUpright(previous.object);
       alignModelToGround(previous.object);
       const metrics = buildGridMetrics(previous.object, previous.qualityMode);
+      manualOrientationBaseRef.current = previous.object.quaternion.clone();
+      manualOrientationStepRef.current = 0;
 
       return {
         ...previous,
@@ -615,6 +713,50 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       };
     });
   }, [autoOrientToken]);
+
+  React.useEffect(() => {
+    if (cycleOrientationToken === undefined) {
+      return;
+    }
+
+    if (cycleOrientationToken === previousCycleOrientationTokenRef.current) {
+      return;
+    }
+
+    previousCycleOrientationTokenRef.current = cycleOrientationToken;
+
+    setPreparedModel((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      const baseQuaternion =
+        manualOrientationBaseRef.current ?? previous.object.quaternion.clone();
+
+      if (!manualOrientationBaseRef.current) {
+        manualOrientationBaseRef.current = baseQuaternion.clone();
+      }
+
+      const nextRotationIndex =
+        (manualOrientationStepRef.current + 1) % MANUAL_AXIS_UP_ROTATIONS.length;
+      manualOrientationStepRef.current = nextRotationIndex;
+
+      applyAxisUpRotation(
+        previous.object,
+        baseQuaternion,
+        MANUAL_AXIS_UP_ROTATIONS[nextRotationIndex],
+      );
+      alignModelToGround(previous.object);
+
+      const metrics = buildGridMetrics(previous.object, previous.qualityMode);
+
+      return {
+        ...previous,
+        gridSize: metrics.gridSize,
+        gridDivisions: metrics.gridDivisions,
+      };
+    });
+  }, [cycleOrientationToken]);
 
   React.useEffect(() => {
     return () => {

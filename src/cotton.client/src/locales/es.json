@@ -819,6 +819,7 @@
         "actions": {
           "autoAlign": "Alinear al suelo",
           "autoOrient": "Orientación automática",
+          "cycleRotation": "Rotar / voltear",
           "resetColor": "Usar colores originales",
           "togglePalette": "Paleta de colores"
         }

@@ -813,6 +813,7 @@
         "actions": {
           "autoAlign": "Выровнять по земле",
           "autoOrient": "Автоориентация",
+          "cycleRotation": "Повернуть / перевернуть",
           "resetColor": "Исходные цвета",
           "togglePalette": "Палитра цветов"
         }

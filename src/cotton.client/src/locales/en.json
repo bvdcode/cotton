@@ -819,6 +819,7 @@
         "actions": {
           "autoAlign": "Align to ground",
           "autoOrient": "Auto orient",
+          "cycleRotation": "Rotate / flip",
           "resetColor": "Use original colors",
           "togglePalette": "Color palette"
         }
