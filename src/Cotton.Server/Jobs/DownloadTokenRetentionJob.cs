@@ -12,6 +12,8 @@ namespace Cotton.Server.Jobs
     {
         public async Task Execute(IJobExecutionContext context)
         {
+            await Task.Delay(240_000); // Wait for 4 minutes for the server to start up and stabilize
+
             DateTime now = DateTime.UtcNow;
             DateTime removalThreshold = now.AddDays(-30);
             var expiredTokens = await _dbContext.DownloadTokens

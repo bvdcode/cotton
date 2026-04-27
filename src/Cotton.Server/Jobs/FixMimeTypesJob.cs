@@ -15,6 +15,8 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            await Task.Delay(120_000); // Wait for 2 minutes for the server to start up and stabilize
+
             long totalUpdated = 0;
             Guid lastId = Guid.Empty;
 

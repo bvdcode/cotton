@@ -4,7 +4,7 @@
     {
         public const int DefaultGeneratorVersion = 0;
         public const int DefaultSmallPreviewSize = 200;
-        public const int DefaultLargePreviewSize = 1600;
+        public const int DefaultLargePreviewSize = 2000;
 
         private static readonly IPreviewGenerator[] Generators =
         [
