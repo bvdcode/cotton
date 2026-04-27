@@ -47,7 +47,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("supported-hash-algorithms")]
         public async Task<IActionResult> GetSupportedHashAlgorithms()
         {
-            return Ok(new { supportedHashAlgorithms = Hasher.SupportedHashAlgorithm });
+            return Ok(new { supportedHashAlgorithms = new string[] { Hasher.SupportedHashAlgorithm } });
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
