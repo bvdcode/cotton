@@ -9,6 +9,7 @@ import {
   Menu,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Notifications as NotificationsIcon,
@@ -21,6 +22,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "@mui/material/styles";
 import { useNotificationsStore } from "../../../shared/store/notificationsStore";
 import {
   selectNotificationSoundEnabled,
@@ -32,6 +34,8 @@ import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 export const NotificationsMenu = () => {
   const { t } = useTranslation(["notifications", "common"]);
   const confirm = useConfirm();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -108,10 +112,22 @@ export const NotificationsMenu = () => {
 
   const menuListSx = useMemo(
     () => ({
-      maxHeight: 420,
+      maxHeight: isMobile ? "calc(100dvh - 140px)" : 420,
       overflowY: "auto" as const,
     }),
-    [],
+    [isMobile],
+  );
+
+  const menuPaperSx = useMemo(
+    () => ({
+      width: isMobile ? "100dvw" : 340,
+      maxWidth: isMobile ? "100dvw" : 340,
+      borderRadius: isMobile ? 0 : 2,
+      left: isMobile ? "0 !important" : undefined,
+      right: isMobile ? "0 !important" : undefined,
+      mt: isMobile ? 0.5 : 0,
+    }),
+    [isMobile],
   );
 
   const maxTextLength = 128;
@@ -130,9 +146,17 @@ export const NotificationsMenu = () => {
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-        slotProps={{ paper: { sx: { width: 340 } } }}
+        anchorOrigin={
+          isMobile
+            ? { vertical: "bottom", horizontal: "left" }
+            : { vertical: "bottom", horizontal: "right" }
+        }
+        transformOrigin={
+          isMobile
+            ? { vertical: "top", horizontal: "left" }
+            : { vertical: "top", horizontal: "right" }
+        }
+        slotProps={{ paper: { sx: menuPaperSx } }}
       >
         <Box
           display="flex"
