@@ -80,7 +80,7 @@ public class PreviewGeneratorProviderTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(PreviewGeneratorProvider.DefaultSmallPreviewSize, Is.EqualTo(200));
-            Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.EqualTo(1600));
+            Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.EqualTo(2000));
             Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.GreaterThan(PreviewGeneratorProvider.DefaultSmallPreviewSize));
         }
     }
