@@ -27,16 +27,16 @@ namespace Cotton.Server.Extensions
             string ip = ipAddress.ToString();
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
             string deviceName = device.FriendlyName ?? device.Type.ToString();
-            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ip);
+            GeoIpInfo? ipInfo = await GeoIpClient.TryLookupAsync(ip);
 
             return new ClientNotificationContext(
                 Ip: ip,
                 UserAgent: userAgent.ToString(),
                 DeviceName: deviceName,
                 HasDevice: HasKnownDevice(deviceName),
-                Country: NormalizeGeoField(ipInfo.Country),
-                Region: NormalizeGeoField(ipInfo.Region),
-                City: NormalizeGeoField(ipInfo.City));
+                Country: NormalizeGeoField(ipInfo?.Country),
+                Region: NormalizeGeoField(ipInfo?.Region),
+                City: NormalizeGeoField(ipInfo?.City));
         }
 
         private static bool HasKnownDevice(string deviceName)
