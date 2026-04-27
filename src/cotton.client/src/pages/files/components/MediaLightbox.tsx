@@ -25,6 +25,10 @@ import type {
 } from "./mediaLightbox.types";
 import { useMediaLightboxUrls } from "../hooks/useMediaLightboxUrls";
 import { shareLinks } from "../../../shared/utils/shareLinks";
+import {
+  selectGalleryPreferPreview,
+  useLocalPreferencesStore,
+} from "../../../shared/store/localPreferencesStore";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
@@ -40,6 +44,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   getDownloadUrl,
 }) => {
   const [index, setIndex] = React.useState(initialIndex);
+  const preferPreview = useLocalPreferencesStore(selectGalleryPreferPreview);
 
   const isTouchDevice = React.useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -117,6 +122,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     items,
     getSignedMediaUrl,
     getDownloadUrl,
+    preferPreview,
   });
 
   const handleCustomDownload = React.useCallback(

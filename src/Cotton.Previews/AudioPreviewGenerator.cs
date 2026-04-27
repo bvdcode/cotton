@@ -6,6 +6,8 @@ namespace Cotton.Previews
 {
     public class AudioPreviewGenerator : IPreviewGenerator
     {
+        public int Version => 0;
+
         public IEnumerable<string> SupportedContentTypes =>
         [
             "audio/mpeg",

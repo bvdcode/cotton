@@ -1,8 +1,9 @@
 import React from "react";
-import { Box, Checkbox, TextField } from "@mui/material";
+import { Box, Checkbox } from "@mui/material";
 import { Folder, Download, Edit, Delete, Share } from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
+import { InlineRenameField } from "../InlineRenameField";
 import { getFileIcon } from "../../utils/icons";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
@@ -142,21 +143,12 @@ export const NewFolderCard: React.FC<NewFolderCardProps> = ({
       <Folder sx={{ color: "primary.main" }} />
     </Box>
     <Box display="flex" alignItems="center" gap={0.5}>
-      <TextField
-        autoFocus
-        fullWidth
-        size="small"
+      <InlineRenameField
         value={newFolderName}
-        onChange={(e) => onNewFolderNameChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") void onConfirmNewFolder();
-          else if (e.key === "Escape") onCancelNewFolder();
-        }}
-        onBlur={onConfirmNewFolder}
+        onChange={onNewFolderNameChange}
+        onConfirm={onConfirmNewFolder}
+        onCancel={onCancelNewFolder}
         placeholder={folderNamePlaceholder}
-        slotProps={{
-          input: { sx: { fontSize: { xs: "0.8rem", md: "0.85rem" } } },
-        }}
       />
     </Box>
   </Box>

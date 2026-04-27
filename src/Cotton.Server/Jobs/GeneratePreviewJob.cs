@@ -31,15 +31,41 @@ namespace Cotton.Server.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             var allSupportedMimeTypes = PreviewGeneratorProvider.GetAllSupportedMimeTypes();
+            var generatorVersionsByContentType = PreviewGeneratorProvider.GetGeneratorVersionsByContentType();
+
+            var processableItemsQuery = _dbContext.FileManifests
+                .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType));
+
+            var itemsToProcessQuery = processableItemsQuery
+                .Where(fm => fm.SmallFilePreviewHash == null)
+                .Where(fm => fm.PreviewGenerationError == null);
+
+            foreach (var versionGroup in generatorVersionsByContentType.GroupBy(x => x.Value))
+            {
+                int generatorVersion = versionGroup.Key;
+                string[] contentTypes = [.. versionGroup.Select(x => x.Key)];
+
+                itemsToProcessQuery = itemsToProcessQuery
+                    .Union(processableItemsQuery
+                        .Where(fm => contentTypes.Contains(fm.ContentType))
+                        .Where(fm => fm.PreviewGeneratorVersion != generatorVersion));
+            }
+
+            var itemIds = await itemsToProcessQuery
+                .OrderBy(fm => fm.CreatedAt)
+                .Select(fm => fm.Id)
+                .Take(MaxItemsPerRun)
+                .ToListAsync();
+
             var itemsToProcess = await _dbContext.FileManifests
-                .Where(fm => fm.SmallFilePreviewHash == null && fm.PreviewGenerationError == null)
-                .Where(fm => allSupportedMimeTypes.Contains(fm.ContentType))
+                .Where(fm => itemIds.Contains(fm.Id))
                 .Include(fm => fm.NodeFiles)
                 .Include(fm => fm.FileManifestChunks)
                 .ThenInclude(fmc => fmc.Chunk)
-                .OrderBy(fm => fm.CreatedAt)
-                .Take(MaxItemsPerRun)
                 .ToListAsync();
+
+            var itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);
+            itemsToProcess = [.. itemIds.Where(itemsToProcessById.ContainsKey).Select(id => itemsToProcessById[id])];
 
             if (itemsToProcess.Count > 0)
             {
@@ -80,8 +106,10 @@ namespace Cotton.Server.Jobs
                     await EnsureChunkExistsAsync(hash, previewImage.Length);
                     item.SmallFilePreviewHash = hash;
                     item.SmallFilePreviewHashEncrypted = _crypto.Encrypt(hash);
+                    item.PreviewGenerationError = null;
+                    item.PreviewGeneratorVersion = generator.Version;
 
-                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator)
+                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator or SvgPreviewGenerator)
                     {
                         await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
                         byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
@@ -112,6 +140,7 @@ namespace Cotton.Server.Jobs
                 {
                     _logger.LogWarning(ex, "Failed to generate preview for file manifest {FileManifestId}", item.Id);
                     item.PreviewGenerationError = ex.Message;
+                    item.PreviewGeneratorVersion = generator.Version;
                     await _dbContext.SaveChangesAsync();
                 }
 

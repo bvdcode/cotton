@@ -72,7 +72,7 @@ public class ServerEndpointsTests : IntegrationTestBase
     {
         var token = await LoginAsync();
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var res = await _client!.GetAsync("/api/v1/settings");
+        var res = await _client!.GetAsync("/api/v1/server/settings");
         res.EnsureSuccessStatusCode();
         var settings = await res.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         Assert.That(settings, Is.Not.Null);
@@ -103,11 +103,16 @@ public class ServerEndpointsTests : IntegrationTestBase
 
     private async Task<string> LoginAsync()
     {
-        var res = await _client!.PostAsJsonAsync("/api/v1/auth/login", new LoginRequestDto()
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
-            Username = "testuser",
-            Password = "testpassword"
-        });
+            Content = JsonContent.Create(new LoginRequestDto()
+            {
+                Username = "testuser",
+                Password = "testpassword"
+            })
+        };
+        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
+        var res = await _client!.SendAsync(request);
         res.EnsureSuccessStatusCode();
         var login = await res.Content.ReadFromJsonAsync<TokenPairResponseDto>();
         Assert.That(login, Is.Not.Null);

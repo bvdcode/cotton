@@ -19,7 +19,7 @@ namespace Cotton.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
@@ -382,6 +382,12 @@ namespace Cotton.Database.Migrations
                     b.Property<string>("PreviewGenerationError")
                         .HasColumnType("text")
                         .HasColumnName("preview_generation_error");
+
+                    b.Property<int>("PreviewGeneratorVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("preview_generator_version");
 
                     b.Property<byte[]>("ProposedContentHash")
                         .IsRequired()

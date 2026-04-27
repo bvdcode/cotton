@@ -2,6 +2,7 @@
 {
     public static class PreviewGeneratorProvider
     {
+        public const int DefaultGeneratorVersion = 0;
         public const int DefaultSmallPreviewSize = 200;
         public const int DefaultLargePreviewSize = 1600;
 
@@ -9,9 +10,13 @@
         [
             new PdfPreviewGenerator(),
             new HeicPreviewGenerator(),
+            new StlThumbPreviewGenerator(),
+            StlThumbPreviewGenerator.CreateObjGenerator(),
+            StlThumbPreviewGenerator.CreateThreeMfGenerator(),
             new TextPreviewGenerator(),
             new AudioPreviewGenerator(),
             new VideoPreviewGenerator(),
+            new SvgPreviewGenerator(),
             new ImagePreviewGenerator(),
         ];
 
@@ -23,6 +28,13 @@
                 .ToDictionary(
                     x => x.ContentType,
                     x => x.Generator,
+                    StringComparer.OrdinalIgnoreCase);
+
+        private static readonly Dictionary<string, int> GeneratorVersionsByContentType =
+            GeneratorsByContentType
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.Value.Version,
                     StringComparer.OrdinalIgnoreCase);
 
         public static string[] GetAllSupportedMimeTypes()
@@ -38,6 +50,11 @@
             }
             return GeneratorsByContentType
                 .TryGetValue(contentType, out var generator) ? generator : null;
+        }
+
+        public static IReadOnlyDictionary<string, int> GetGeneratorVersionsByContentType()
+        {
+            return GeneratorVersionsByContentType;
         }
     }
 }

@@ -207,6 +207,7 @@
       "title": "Интерфейс",
       "description": "Настройки отображения и поведения интерфейса.",
       "gallerySmoothTransitions": "Плавная прокрутка в галерее",
+      "galleryPreferPreview": "Загружать оригиналы (выкл/вкл)",
       "themeMode": {
         "label": "Тема",
         "light": "Светлая",
@@ -807,8 +808,44 @@
           "render": "Рендер PDF..."
         }
       },
+      "model": {
+        "loading": "Загрузка 3D-модели...",
+        "actions": {
+          "autoAlign": "Выровнять по земле",
+          "autoOrient": "Автоориентация",
+          "cycleLighting": "Свет: {{preset}}",
+          "cycleSurface": "Поверхность: {{preset}}",
+          "flipModel": "Перевернуть",
+          "resetColor": "Исходные цвета",
+          "toggleShadows": "Тени: {{state}}",
+          "togglePalette": "Палитра цветов"
+        },
+        "lighting": {
+          "balanced": "Сбалансированный",
+          "studio": "Студийный",
+          "dramatic": "Драматичный"
+        },
+        "surface": {
+          "original": "Исходная",
+          "matte": "Матовая",
+          "glossy": "Глянцевая",
+          "metal": "Металл",
+          "satin": "Сатин",
+          "smooth": "Сглаженная"
+        },
+        "states": {
+          "on": "Вкл",
+          "off": "Выкл"
+        }
+      },
       "language": {
         "label": "Язык"
+      },
+      "mediaQuality": {
+        "previewMode": "Режим: превью",
+        "originalMode": "Режим: оригинал",
+        "switchToOriginal": "Переключить на оригинал",
+        "switchToPreview": "Переключить на превью"
       },
       "errors": {
         "loadFailed": "Не удалось загрузить файл{{error}}",
@@ -816,6 +853,8 @@
         "downloadFailed": "Не удалось загрузить",
         "pdfLoadFailed": "Не удалось загрузить PDF",
         "pdfDisplayFailed": "Не удалось отобразить PDF",
+        "modelLoadFailed": "Не удалось загрузить 3D-модель",
+        "modelUnsupportedType": "Этот формат 3D-файла не поддерживается для предпросмотра в браузере",
         "pdfTooLarge": "PDF слишком большой для предпросмотра ({{size}}). Максимальный размер — {{maxSize}}. Пожалуйста, скачайте файл.",
         "fileTooLarge": "Файл слишком большой для предпросмотра ({{size}}). Максимальный размер для текстового предпросмотра — {{maxSize}}. Пожалуйста, скачайте файл для просмотра."
       }

@@ -221,6 +221,7 @@
       "title": "Appearance",
       "description": "UI preferences and personalization.",
       "gallerySmoothTransitions": "Smooth transitions in gallery",
+      "galleryPreferPreview": "Show originals instead of previews",
       "themeMode": {
         "label": "Theme",
         "light": "Light",
@@ -813,8 +814,44 @@
           "render": "Rendering PDF..."
         }
       },
+      "model": {
+        "loading": "Loading 3D model...",
+        "actions": {
+          "autoAlign": "Align to ground",
+          "autoOrient": "Auto orient",
+          "cycleLighting": "Lighting: {{preset}}",
+          "cycleSurface": "Surface: {{preset}}",
+          "flipModel": "Flip model",
+          "resetColor": "Use original colors",
+          "toggleShadows": "Shadows: {{state}}",
+          "togglePalette": "Color palette"
+        },
+        "lighting": {
+          "balanced": "Balanced",
+          "studio": "Studio",
+          "dramatic": "Dramatic"
+        },
+        "surface": {
+          "original": "Original",
+          "matte": "Matte",
+          "glossy": "Glossy",
+          "metal": "Metal",
+          "satin": "Satin",
+          "smooth": "Smooth"
+        },
+        "states": {
+          "on": "On",
+          "off": "Off"
+        }
+      },
       "language": {
         "label": "Language"
+      },
+      "mediaQuality": {
+        "previewMode": "Mode: preview",
+        "originalMode": "Mode: original",
+        "switchToOriginal": "Switch to original",
+        "switchToPreview": "Switch to preview"
       },
       "errors": {
         "loadFailed": "Failed to load file{{error}}",
@@ -822,6 +859,8 @@
         "downloadFailed": "Download failed",
         "pdfLoadFailed": "Failed to load PDF",
         "pdfDisplayFailed": "Failed to display PDF",
+        "modelLoadFailed": "Failed to load 3D model",
+        "modelUnsupportedType": "This 3D file format is not supported for in-browser preview",
         "pdfTooLarge": "PDF is too large to preview ({{size}}). Maximum size is {{maxSize}}. Please download the file to view it.",
         "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for text preview is {{maxSize}}. Please download the file to view it."
       }

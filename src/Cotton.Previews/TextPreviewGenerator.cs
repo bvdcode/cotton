@@ -9,6 +9,7 @@ namespace Cotton.Previews
 {
     public class TextPreviewGenerator : IPreviewGenerator
     {
+        public int Version => 0;
         public IEnumerable<string> SupportedContentTypes =>
         [
             "text/plain",

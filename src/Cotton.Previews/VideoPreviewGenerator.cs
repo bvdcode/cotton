@@ -6,6 +6,7 @@ namespace Cotton.Previews
 {
     public class VideoPreviewGenerator : IPreviewGenerator
     {
+        public int Version => 0;
         public IEnumerable<string> SupportedContentTypes =>
         [
             "video/mp4",
@@ -13,6 +14,8 @@ namespace Cotton.Previews
             "video/ogg",
             "video/avi",
             "video/mov",
+            "video/quicktime",
+            "video/x-quicktime",
             "video/mkv",
             "video/x-msvideo",
             "video/x-matroska",

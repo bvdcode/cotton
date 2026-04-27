@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, ButtonBase, IconButton, TextField, Typography } from "@mui/material";
+import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import {
   Article,
   Delete,
@@ -20,6 +20,7 @@ import {
   isTextFile,
   isVideoFile,
 } from "../../utils/fileTypes";
+import { InlineRenameField } from "../InlineRenameField";
 
 export interface FileListRow {
   id: string;
@@ -181,22 +182,12 @@ export const createNameColumn = (
             width: "100%",
           }}
         >
-          <TextField
-            autoFocus
-            fullWidth
-            size="small"
+          <InlineRenameField
             value={options.newFolderName}
-            onChange={(e) => options.onNewFolderNameChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                void options.onConfirmNewFolder();
-              } else if (e.key === "Escape") {
-                options.onCancelNewFolder();
-              }
-            }}
-            onBlur={options.onConfirmNewFolder}
+            onChange={options.onNewFolderNameChange}
+            onConfirm={options.onConfirmNewFolder}
+            onCancel={options.onCancelNewFolder}
             placeholder={options.folderNamePlaceholder}
-            variant="standard"
           />
         </Box>
       );
@@ -212,24 +203,11 @@ export const createNameColumn = (
             width: "100%",
           }}
         >
-          <TextField
-            autoFocus
-            fullWidth
-            size="small"
+          <InlineRenameField
             value={options.folderOperations.getRenamingName()}
-            onChange={(e) =>
-              options.folderOperations.onRenamingNameChange(e.target.value)
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                options.folderOperations.onConfirmRename?.();
-              } else if (e.key === "Escape") {
-                options.folderOperations.onCancelRename?.();
-              }
-            }}
-            onBlur={() => options.folderOperations.onConfirmRename?.()}
-            variant="standard"
-            onClick={(e) => e.stopPropagation()}
+            onChange={options.folderOperations.onRenamingNameChange}
+            onConfirm={() => options.folderOperations.onConfirmRename?.()}
+            onCancel={() => options.folderOperations.onCancelRename?.()}
           />
         </Box>
       );
@@ -245,27 +223,12 @@ export const createNameColumn = (
             width: "100%",
           }}
         >
-          <TextField
-            autoFocus
-            fullWidth
-            size="small"
+          <InlineRenameField
             value={options.fileOperations.getRenamingName()}
-            onChange={(e) =>
-              options.fileOperations.onRenamingNameChange(e.target.value)
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                void options.fileOperations.onConfirmRename?.();
-              } else if (e.key === "Escape") {
-                options.fileOperations.onCancelRename?.();
-              }
-            }}
-            onBlur={() => {
-              void options.fileOperations.onConfirmRename?.();
-            }}
+            onChange={options.fileOperations.onRenamingNameChange}
+            onConfirm={() => options.fileOperations.onConfirmRename?.()}
+            onCancel={() => options.fileOperations.onCancelRename?.()}
             placeholder={options.fileNamePlaceholder}
-            variant="standard"
-            onClick={(e) => e.stopPropagation()}
           />
         </Box>
       );
