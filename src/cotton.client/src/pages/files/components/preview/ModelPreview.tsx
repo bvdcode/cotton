@@ -57,18 +57,7 @@ const AUTO_ORIENT_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
   ];
 
 const MANUAL_FLIP_ORIENTATION_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
-  AUTO_ORIENT_VARIANTS.flatMap((orientationVariant) => {
-    return [0, QUARTER_TURN, Math.PI, -QUARTER_TURN].map((yawRotation) => ({
-      quaternion: orientationVariant.quaternion
-        .clone()
-        .multiply(
-          new THREE.Quaternion().setFromAxisAngle(
-            new THREE.Vector3(0, 1, 0),
-            yawRotation,
-          ),
-        ),
-    }));
-  });
+  AUTO_ORIENT_VARIANTS;
 
 const LIGHTING_PRESET_CONFIG: Record<ModelLightingPreset, LightingPresetConfig> = {
   balanced: {
@@ -785,11 +774,22 @@ const calculateSupportScore = (object: THREE.Object3D): number => {
   }
 
   const height = Math.max(bounds.max.y - bounds.min.y, 0.0001);
+  const footprintWidth = Math.max(bounds.max.x - bounds.min.x, 0.0001);
+  const footprintDepth = Math.max(bounds.max.z - bounds.min.z, 0.0001);
+  const footprintArea = footprintWidth * footprintDepth;
+  const footprintDiagonal = Math.hypot(footprintWidth, footprintDepth);
   const floorThreshold = bounds.min.y + Math.max(height * 0.02, 0.0005);
+  const boundsCenter = bounds.getCenter(new THREE.Vector3());
 
   const vertex = new THREE.Vector3();
   let sampledVertices = 0;
   let supportVertices = 0;
+  let supportMinX = Number.POSITIVE_INFINITY;
+  let supportMaxX = Number.NEGATIVE_INFINITY;
+  let supportMinZ = Number.POSITIVE_INFINITY;
+  let supportMaxZ = Number.NEGATIVE_INFINITY;
+  let supportSumX = 0;
+  let supportSumZ = 0;
 
   object.traverse((node) => {
     if (!(node instanceof THREE.Mesh)) {
@@ -815,15 +815,39 @@ const calculateSupportScore = (object: THREE.Object3D): number => {
       sampledVertices += 1;
       if (vertex.y <= floorThreshold) {
         supportVertices += 1;
+        supportMinX = Math.min(supportMinX, vertex.x);
+        supportMaxX = Math.max(supportMaxX, vertex.x);
+        supportMinZ = Math.min(supportMinZ, vertex.z);
+        supportMaxZ = Math.max(supportMaxZ, vertex.z);
+        supportSumX += vertex.x;
+        supportSumZ += vertex.z;
       }
     }
   });
 
-  if (sampledVertices === 0) {
+  if (sampledVertices === 0 || supportVertices === 0) {
     return 0;
   }
 
-  return supportVertices / sampledVertices;
+  const supportRatio = supportVertices / sampledVertices;
+  const supportWidth = Math.max(supportMaxX - supportMinX, 0);
+  const supportDepth = Math.max(supportMaxZ - supportMinZ, 0);
+  const supportAreaRatio = clamp(
+    (supportWidth * supportDepth) / footprintArea,
+    0,
+    1,
+  );
+  const supportCenterOffset = Math.hypot(
+    supportSumX / supportVertices - boundsCenter.x,
+    supportSumZ / supportVertices - boundsCenter.z,
+  );
+  const supportCenterScore = 1 - clamp(
+    supportCenterOffset / Math.max(footprintDiagonal * 0.5, 0.0001),
+    0,
+    1,
+  );
+
+  return supportRatio * 0.5 + supportAreaRatio * 0.35 + supportCenterScore * 0.15;
 };
 
 const autoOrientModelUpright = (object: THREE.Object3D): void => {
