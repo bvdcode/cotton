@@ -63,13 +63,17 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const theme = useTheme();
   const isModel = fileType === "model";
 
-  const [paletteAnchorEl, setPaletteAnchorEl] = React.useState<HTMLElement | null>(null);
+  const [paletteAnchorEl, setPaletteAnchorEl] =
+    React.useState<HTMLElement | null>(null);
   const [materialColor, setMaterialColor] = React.useState<string | null>(null);
   const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
   const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
-  const [cycleOrientationToken, setCycleOrientationToken] = React.useState<number>(0);
-  const [lightingPreset, setLightingPreset] = React.useState<LightingPreset>("balanced");
-  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("original");
+  const [cycleOrientationToken, setCycleOrientationToken] =
+    React.useState<number>(0);
+  const [lightingPreset, setLightingPreset] =
+    React.useState<LightingPreset>("balanced");
+  const [surfacePreset, setSurfacePreset] =
+    React.useState<SurfacePreset>("original");
   const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
@@ -147,78 +151,80 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     return null;
   }
 
-  const modelHeaderActions = isModel
-    ? (
-      <Stack direction="row" spacing={0.5} alignItems="center">
-        <Tooltip
-          title={t("preview.model.actions.cycleLighting", {
-            preset: t(`preview.model.lighting.${lightingPreset}`),
-          })}
+  const modelHeaderActions = isModel ? (
+    <Stack direction="row" spacing={0.5} alignItems="center">
+      <Tooltip
+        title={t("preview.model.actions.cycleLighting", {
+          preset: t(`preview.model.lighting.${lightingPreset}`),
+        })}
+      >
+        <IconButton onClick={cycleLightingPreset}>
+          <WbSunny />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip
+        title={t("preview.model.actions.toggleShadows", {
+          state: t(
+            shadowsEnabled
+              ? "preview.model.states.on"
+              : "preview.model.states.off",
+          ),
+        })}
+      >
+        <IconButton
+          color={shadowsEnabled ? "primary" : "default"}
+          onClick={() => setShadowsEnabled((currentState) => !currentState)}
         >
-          <IconButton onClick={cycleLightingPreset}>
-            <WbSunny />
-          </IconButton>
-        </Tooltip>
+          <FilterDrama />
+        </IconButton>
+      </Tooltip>
 
-        <Tooltip
-          title={t("preview.model.actions.toggleShadows", {
-            state: t(
-              shadowsEnabled
-                ? "preview.model.states.on"
-                : "preview.model.states.off",
-            ),
-          })}
+      <Tooltip
+        title={t("preview.model.actions.cycleSurface", {
+          preset: t(`preview.model.surface.${surfacePreset}`),
+        })}
+      >
+        <IconButton onClick={cycleSurfacePreset}>
+          <Texture />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title={t("preview.model.actions.cycleRotation")}>
+        <IconButton
+          onClick={() => setCycleOrientationToken((value) => value + 1)}
         >
-          <IconButton
-            color={shadowsEnabled ? "primary" : "default"}
-            onClick={() => setShadowsEnabled((currentState) => !currentState)}
-          >
-            <FilterDrama />
-          </IconButton>
-        </Tooltip>
+          <Rotate90DegreesCw />
+        </IconButton>
+      </Tooltip>
 
-        <Tooltip
-          title={t("preview.model.actions.cycleSurface", {
-            preset: t(`preview.model.surface.${surfacePreset}`),
-          })}
+      <Tooltip title={t("preview.model.actions.autoOrient")}>
+        <IconButton onClick={() => setAutoOrientToken((value) => value + 1)}>
+          <AutoFixHigh />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title={t("preview.model.actions.autoAlign")}>
+        <IconButton onClick={() => setAutoAlignToken((value) => value + 1)}>
+          <VerticalAlignBottom />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title={t("preview.model.actions.togglePalette")}>
+        <IconButton
+          onClick={(event) => {
+            setPaletteAnchorEl((current) =>
+              current ? null : event.currentTarget,
+            );
+          }}
         >
-          <IconButton onClick={cycleSurfacePreset}>
-            <Texture />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title={t("preview.model.actions.cycleRotation")}>
-          <IconButton onClick={() => setCycleOrientationToken((value) => value + 1)}>
-            <Rotate90DegreesCw />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title={t("preview.model.actions.autoOrient")}>
-          <IconButton onClick={() => setAutoOrientToken((value) => value + 1)}>
-            <AutoFixHigh />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title={t("preview.model.actions.autoAlign")}>
-          <IconButton onClick={() => setAutoAlignToken((value) => value + 1)}>
-            <VerticalAlignBottom />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title={t("preview.model.actions.togglePalette")}>
-          <IconButton
-            onClick={(event) => {
-              setPaletteAnchorEl((current) => (current ? null : event.currentTarget));
-            }}
-          >
-            <ColorLens
-              sx={{ color: materialColor ?? theme.palette.text.primary }}
-            />
-          </IconButton>
-        </Tooltip>
-      </Stack>
-    )
-    : undefined;
+          <ColorLens
+            sx={{ color: materialColor ?? theme.palette.text.primary }}
+          />
+        </IconButton>
+      </Tooltip>
+    </Stack>
+  ) : undefined;
 
   return (
     <PreviewModal
@@ -246,7 +252,14 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       )}
 
       {isModel && fileSource && (
-        <Box sx={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flex: 1,
+            flexDirection: "column",
+            minHeight: 0,
+          }}
+        >
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <ModelPreview
               source={fileSource}
@@ -286,6 +299,10 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           >
             <Tooltip title={t("preview.model.actions.resetColor")}>
               <IconButton
+                sx={{
+                  height: 34,
+                  width: 34,
+                }}
                 onClick={() => {
                   setMaterialColor(null);
                   setPaletteAnchorEl(null);
@@ -308,7 +325,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                     backgroundColor: paletteOption.color,
                     border: 1,
                     borderColor:
-                      materialColor === paletteOption.color ? "text.primary" : "divider",
+                      materialColor === paletteOption.color
+                        ? "text.primary"
+                        : "divider",
                     borderRadius: "50%",
                     height: 18,
                     width: 18,

@@ -425,12 +425,17 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
           >
             <Tooltip title={t("preview.model.actions.resetColor", { ns: "files" })}>
               <IconButton
+                size="small"
+                sx={{
+                  height: 30,
+                  width: 30,
+                }}
                 onClick={() => {
                   setMaterialColor(null);
                   setPaletteAnchorEl(null);
                 }}
               >
-                <FormatColorReset />
+                <FormatColorReset fontSize="small" />
               </IconButton>
             </Tooltip>
 
