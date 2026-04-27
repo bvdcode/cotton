@@ -21,7 +21,7 @@ namespace Cotton.Previews
         private StlThumbPreviewGenerator(string modelExtension, string[] supportedContentTypes)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(modelExtension);
-            _modelExtension = modelExtension.StartsWith(".", StringComparison.Ordinal)
+            _modelExtension = modelExtension.StartsWith('.')
                 ? modelExtension
                 : "." + modelExtension;
             _supportedContentTypes = supportedContentTypes;
@@ -408,7 +408,7 @@ namespace Cotton.Previews
                 byte[] buffer,
                 uint width,
                 uint height,
-                [MarshalAs(UnmanagedType.LPUTF8Str)] string modelFilename);
+                [MarshalAs(UnmanagedType.LPWStr)] string modelFilename);
 #pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
         }
     }

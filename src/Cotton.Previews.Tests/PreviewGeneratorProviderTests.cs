@@ -15,6 +15,7 @@ public class PreviewGeneratorProviderTests
     [TestCase("application/vnd.ms-package.3dmanufacturing-3dmodel+xml", typeof(StlThumbPreviewGenerator))]
     [TestCase("video/mp4", typeof(VideoPreviewGenerator))]
     [TestCase("audio/mpeg", typeof(AudioPreviewGenerator))]
+    [TestCase("image/svg+xml", typeof(SvgPreviewGenerator))]
     [TestCase("image/png", typeof(ImagePreviewGenerator))]
     public void GetGeneratorByContentType_KnownTypes_ReturnsExpectedGenerator(string contentType, Type expectedType)
     {
@@ -36,12 +37,12 @@ public class PreviewGeneratorProviderTests
     [Test]
     public void GetGeneratorByContentType_UnknownOrBlank_ReturnsNull()
     {
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(PreviewGeneratorProvider.GetGeneratorByContentType("application/x-unknown"), Is.Null);
             Assert.That(PreviewGeneratorProvider.GetGeneratorByContentType(string.Empty), Is.Null);
             Assert.That(PreviewGeneratorProvider.GetGeneratorByContentType("   "), Is.Null);
-        });
+        }
     }
 
     [Test]
@@ -51,11 +52,12 @@ public class PreviewGeneratorProviderTests
 
         Assert.That(mimeTypes, Is.Not.Empty);
 
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(mimeTypes, Does.Contain("text/plain"));
             Assert.That(mimeTypes, Does.Contain("application/pdf"));
             Assert.That(mimeTypes, Does.Contain("image/heic"));
+            Assert.That(mimeTypes, Does.Contain("image/svg+xml"));
             Assert.That(mimeTypes, Does.Contain("image/png"));
             Assert.That(mimeTypes, Does.Contain("audio/mpeg"));
             Assert.That(mimeTypes, Does.Contain("video/mp4"));
@@ -64,7 +66,7 @@ public class PreviewGeneratorProviderTests
             Assert.That(mimeTypes, Does.Contain("model/obj"));
             Assert.That(mimeTypes, Does.Contain("model/3mf"));
             Assert.That(mimeTypes, Does.Contain("application/vnd.ms-package.3dmanufacturing-3dmodel+xml"));
-        });
+        }
 
         int distinctCount = mimeTypes.Distinct(StringComparer.OrdinalIgnoreCase).Count();
         Assert.That(distinctCount, Is.EqualTo(mimeTypes.Length));
@@ -73,11 +75,11 @@ public class PreviewGeneratorProviderTests
     [Test]
     public void DefaultPreviewSizes_AreStableAndOrdered()
     {
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(PreviewGeneratorProvider.DefaultSmallPreviewSize, Is.EqualTo(200));
             Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.EqualTo(1600));
             Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.GreaterThan(PreviewGeneratorProvider.DefaultSmallPreviewSize));
-        });
+        }
     }
 }
