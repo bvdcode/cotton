@@ -23,22 +23,22 @@ const LOW_QUALITY_MIN_TARGET_VERTICES = 120_000;
 
 const LIGHTING_PRESET_CONFIG: Record<ModelLightingPreset, LightingPresetConfig> = {
   balanced: {
-    ambientIntensity: 0.72,
-    keyIntensity: 0.95,
-    fillIntensity: 0.5,
-    rimIntensity: 0.42,
+    ambientIntensity: 0.52,
+    keyIntensity: 0.72,
+    fillIntensity: 0.24,
+    rimIntensity: 0.22,
   },
   studio: {
-    ambientIntensity: 0.86,
-    keyIntensity: 1.2,
-    fillIntensity: 0.62,
-    rimIntensity: 0.56,
+    ambientIntensity: 0.62,
+    keyIntensity: 0.88,
+    fillIntensity: 0.36,
+    rimIntensity: 0.3,
   },
   dramatic: {
-    ambientIntensity: 0.45,
-    keyIntensity: 1.45,
-    fillIntensity: 0.22,
-    rimIntensity: 0.78,
+    ambientIntensity: 0.32,
+    keyIntensity: 1.02,
+    fillIntensity: 0.12,
+    rimIntensity: 0.44,
   },
 };
 
@@ -56,10 +56,7 @@ type PreviewQualityMode = "normal" | "reduced";
 type ModelLightingPreset = "balanced" | "studio" | "dramatic";
 type ModelSurfacePreset =
   | "original"
-  | "matte"
-  | "glossy"
   | "metal"
-  | "satin"
   | "smooth";
 
 interface ModelPreviewProps {
@@ -436,25 +433,13 @@ const applyMaterialSurfacePreset = (
 
       if (hasStandardSurfaceProperties(material)) {
         switch (surfacePreset) {
-          case "matte":
-            material.metalness = 0;
-            material.roughness = 1;
-            break;
-          case "glossy":
-            material.metalness = 0.06;
-            material.roughness = 0.08;
-            break;
           case "metal":
-            material.metalness = 1;
-            material.roughness = 0.16;
-            break;
-          case "satin":
-            material.metalness = 0.12;
-            material.roughness = 0.62;
+            material.metalness = 0.82;
+            material.roughness = 0.38;
             break;
           case "smooth":
-            material.metalness = 0;
-            material.roughness = 0.26;
+            material.metalness = 0.02;
+            material.roughness = 0.52;
             break;
           case "original":
           default:
@@ -470,20 +455,11 @@ const applyMaterialSurfacePreset = (
 
       if (hasEnvMapIntensity(material)) {
         switch (surfacePreset) {
-          case "matte":
-            material.envMapIntensity = 0.18;
-            break;
-          case "glossy":
-            material.envMapIntensity = 1.65;
-            break;
           case "metal":
-            material.envMapIntensity = 2.8;
-            break;
-          case "satin":
-            material.envMapIntensity = 0.82;
+            material.envMapIntensity = 0.78;
             break;
           case "smooth":
-            material.envMapIntensity = 1.2;
+            material.envMapIntensity = 0.22;
             break;
           case "original":
           default:
@@ -496,20 +472,11 @@ const applyMaterialSurfacePreset = (
 
       if (hasPhongShininess(material)) {
         switch (surfacePreset) {
-          case "matte":
-            material.shininess = 2;
-            break;
-          case "glossy":
-            material.shininess = 160;
-            break;
           case "metal":
-            material.shininess = 280;
-            break;
-          case "satin":
-            material.shininess = 30;
+            material.shininess = 120;
             break;
           case "smooth":
-            material.shininess = 88;
+            material.shininess = 36;
             break;
           case "original":
           default:
@@ -522,20 +489,11 @@ const applyMaterialSurfacePreset = (
 
       if (hasPhongReflectivity(material)) {
         switch (surfacePreset) {
-          case "matte":
-            material.reflectivity = 0.05;
-            break;
-          case "glossy":
-            material.reflectivity = 0.9;
-            break;
           case "metal":
-            material.reflectivity = 1;
-            break;
-          case "satin":
-            material.reflectivity = 0.38;
+            material.reflectivity = 0.58;
             break;
           case "smooth":
-            material.reflectivity = 0.62;
+            material.reflectivity = 0.2;
             break;
           case "original":
           default:
@@ -548,25 +506,13 @@ const applyMaterialSurfacePreset = (
 
       if (hasPhysicalSurfaceProperties(material)) {
         switch (surfacePreset) {
-          case "matte":
-            material.clearcoat = 0;
-            material.clearcoatRoughness = 1;
-            break;
-          case "glossy":
-            material.clearcoat = 0.95;
-            material.clearcoatRoughness = 0.08;
-            break;
           case "metal":
-            material.clearcoat = 0.35;
-            material.clearcoatRoughness = 0.18;
-            break;
-          case "satin":
-            material.clearcoat = 0.22;
-            material.clearcoatRoughness = 0.55;
+            material.clearcoat = 0.14;
+            material.clearcoatRoughness = 0.42;
             break;
           case "smooth":
-            material.clearcoat = 0.55;
-            material.clearcoatRoughness = 0.28;
+            material.clearcoat = 0.08;
+            material.clearcoatRoughness = 0.58;
             break;
           case "original":
           default:
@@ -582,15 +528,10 @@ const applyMaterialSurfacePreset = (
 
       if (hasFlatShadingProperty(material)) {
         switch (surfacePreset) {
-          case "matte":
-            material.flatShading = true;
-            break;
           case "smooth":
             material.flatShading = false;
             break;
-          case "glossy":
           case "metal":
-          case "satin":
             if (typeof originalState.flatShading === "boolean") {
               material.flatShading = originalState.flatShading;
             }
@@ -976,6 +917,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       ? defaultDarkModelColor
       : materialColor;
   }, [defaultDarkModelColor, materialColor]);
+  const lightIntensityMultiplier = effectiveMaterialColor
+      ? 0.76
+      : 1;
 
   const sourceKey = source.kind === "fileId"
     ? `file:${source.fileId}`
@@ -1257,22 +1201,22 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
             args={[
               theme.palette.common.white,
               theme.palette.grey[900],
-              lightingConfig.ambientIntensity,
+              lightingConfig.ambientIntensity * lightIntensityMultiplier,
             ]}
           />
           <directionalLight
             position={[9, 11, 8]}
-            intensity={lightingConfig.keyIntensity}
+            intensity={lightingConfig.keyIntensity * lightIntensityMultiplier}
             castShadow={shadowsEnabled}
           />
           <directionalLight
             position={[-7, 5, -6]}
-            intensity={lightingConfig.fillIntensity}
+            intensity={lightingConfig.fillIntensity * lightIntensityMultiplier}
             castShadow={false}
           />
           <directionalLight
             position={[0, 7, -10]}
-            intensity={lightingConfig.rimIntensity}
+            intensity={lightingConfig.rimIntensity * lightIntensityMultiplier}
             castShadow={false}
           />
 
