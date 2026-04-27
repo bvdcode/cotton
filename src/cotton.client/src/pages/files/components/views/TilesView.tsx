@@ -556,6 +556,7 @@ export const TilesView: React.FC<IFileListView> = ({
             fileOperations={fileOperations}
             readOnly={readOnly}
             fileNamePlaceholder={fileNamePlaceholder}
+            tileSize={tileSize}
             selectionMode={selectionMode}
             selected={selectedIds?.has(tileId)}
             onToggle={
@@ -580,6 +581,7 @@ export const TilesView: React.FC<IFileListView> = ({
       readOnly,
       selectedIds,
       selectionMode,
+      tileSize,
     ],
   );
 
