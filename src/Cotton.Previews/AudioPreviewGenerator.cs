@@ -1,10 +1,10 @@
 using Cotton.Previews.Http;
-using System.Diagnostics;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using System.Diagnostics;
 using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
