@@ -37,5 +37,7 @@ namespace Cotton.Server.Models.Dto
         public S3Config? S3Config { get; init; }
 
         public EmailConfig? EmailConfig { get; init; }
+
+        public string? CustomGeoIpLookupUrl { get; set; }
     }
 }
