@@ -109,7 +109,7 @@ namespace Cotton.Server.Jobs
                     item.PreviewGenerationError = null;
                     item.PreviewGeneratorVersion = generator.Version;
 
-                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator)
+                    if (generator is ImagePreviewGenerator or HeicPreviewGenerator or SvgPreviewGenerator)
                     {
                         await using var fsLarge = _storage.GetBlobStream(uids, pipelineContext);
                         byte[] previewImageLarge = await generator.GeneratePreviewWebPAsync(fsLarge, PreviewGeneratorProvider.DefaultLargePreviewSize);
