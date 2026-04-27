@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Models.Dto
 {
-    public class InitialServerSettingsRequestDto
+    public class CottonServerSettingsDto
     {
         /// <summary>
         /// Gets or sets the trusted mode flag which determines if the server can share chunks between users and use global indexing.
@@ -39,5 +39,9 @@ namespace Cotton.Server.Models.Dto
         public EmailConfig? EmailConfig { get; init; }
 
         public string? CustomGeoIpLookupUrl { get; set; }
+
+        public int MaxChunkSizeBytes { get; init; }
+
+        public string SupportedHashAlgorithm { get; init; } = null!;
     }
 }

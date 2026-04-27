@@ -6,9 +6,9 @@ using EasyExtensions.Mediator.Contracts;
 
 namespace Cotton.Server.Handlers.Server
 {
-    public class CreateInitialServerSettingsRequest(InitialServerSettingsRequestDto settings, string fallbackPublicBaseUrl) : IRequest
+    public class CreateInitialServerSettingsRequest(CottonServerSettingsDto settings, string fallbackPublicBaseUrl) : IRequest
     {
-        public InitialServerSettingsRequestDto Settings { get; } = settings;
+        public CottonServerSettingsDto Settings { get; } = settings;
         public string FallbackPublicBaseUrl { get; } = fallbackPublicBaseUrl;
     }
 
