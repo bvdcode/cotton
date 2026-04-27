@@ -82,7 +82,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const [lightingPreset, setLightingPreset] =
     React.useState<LightingPreset>("balanced");
   const [surfacePreset, setSurfacePreset] =
-    React.useState<SurfacePreset>("metal");
+    React.useState<SurfacePreset>("original");
   const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
@@ -144,7 +144,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       setPaletteAnchorEl(null);
       setMaterialColor(defaultModelColor);
       setLightingPreset("balanced");
-      setSurfacePreset("metal");
+      setSurfacePreset("original");
       setShadowsEnabled(true);
       return;
     }
@@ -152,7 +152,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     setPaletteAnchorEl(null);
     setMaterialColor(defaultModelColor);
     setLightingPreset("balanced");
-    setSurfacePreset("metal");
+    setSurfacePreset("original");
     setShadowsEnabled(true);
   }, [defaultModelColor, fileId, isModel, isOpen]);
 
