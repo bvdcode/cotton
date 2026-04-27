@@ -22,15 +22,14 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            CancellationToken ct = context.CancellationToken;
+            await Task.Delay(300_000); // Wait for 5 minutes for the server to start up and stabilize
 
             _logger.LogInformation("Storage consistency check started.");
-
-            HashSet<string> storageKeys = await CollectStorageKeysAsync(ct);
+            HashSet<string> storageKeys = await CollectStorageKeysAsync(context.CancellationToken);
             _logger.LogInformation("Found {Count} keys in storage.", storageKeys.Count);
 
-            await CheckDbChunksAgainstStorageAsync(storageKeys, ct);
-            await RegisterOrphanedStorageKeysAsync(storageKeys, ct);
+            await CheckDbChunksAgainstStorageAsync(storageKeys, context.CancellationToken);
+            await RegisterOrphanedStorageKeysAsync(storageKeys, context.CancellationToken);
 
             _logger.LogInformation("Storage consistency check completed.");
         }
