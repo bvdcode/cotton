@@ -339,6 +339,7 @@ namespace Cotton.Previews
                 process.StartInfo.ArgumentList.Add(modelFilePath);
                 process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
                 process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
+                process.StartInfo.ArgumentList.Add($"--max-size={PreviewGeneratorProvider.DefaultSmallPreviewSize}");
                 process.StartInfo.ArgumentList.Add("--no-background");
 
                 process.Start();
