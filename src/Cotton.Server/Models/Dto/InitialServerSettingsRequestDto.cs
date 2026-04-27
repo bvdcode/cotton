@@ -30,29 +30,12 @@ namespace Cotton.Server.Models.Dto
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public StorageSpaceMode StorageSpace { get; init; }
 
+        public GeoIpLookupMode GeoIpLookupMode { get; init; }
+
         public string? PublicBaseUrl { get; set; }
 
         public S3Config? S3Config { get; init; }
 
         public EmailConfig? EmailConfig { get; init; }
-    }
-
-    public class S3Config
-    {
-        public string AccessKey { get; init; } = null!;
-        public string SecretKey { get; init; } = null!;
-        public string Endpoint { get; init; } = null!;
-        public string Region { get; init; } = null!;
-        public string Bucket { get; init; } = null!;
-    }
-
-    public class EmailConfig
-    {
-        public string Username { get; init; } = null!;
-        public string Password { get; init; } = null!;
-        public string SmtpServer { get; init; } = null!;
-        public string Port { get; init; } = null!;
-        public string FromAddress { get; init; } = null!;
-        public bool UseSSL { get; init; }
     }
 }
