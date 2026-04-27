@@ -38,6 +38,9 @@ interface ModelPreviewProps {
   fileName: string;
   contentType?: string | null;
   fileSizeBytes?: number | null;
+  materialColor?: string | null;
+  autoAlignToken?: number;
+  autoOrientToken?: number;
 }
 
 interface PreparedModelScene {
@@ -164,6 +167,144 @@ const simplifyObjectGeometry = async (
   });
 };
 
+const hasColorProperty = (
+  material: THREE.Material,
+): material is THREE.Material & { color: THREE.Color } => {
+  return "color" in material &&
+    (material as { color?: unknown }).color instanceof THREE.Color;
+};
+
+const applyMaterialColor = (
+  object: THREE.Object3D,
+  color: string | null | undefined,
+  originalColors: WeakMap<THREE.Material, THREE.Color>,
+): void => {
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    const applyToMaterial = (material: THREE.Material): void => {
+      if (!hasColorProperty(material)) {
+        return;
+      }
+
+      if (!originalColors.has(material)) {
+        originalColors.set(material, material.color.clone());
+      }
+
+      if (color) {
+        material.color.set(color);
+      } else {
+        const original = originalColors.get(material);
+        if (original) {
+          material.color.copy(original);
+        }
+      }
+
+      material.needsUpdate = true;
+    };
+
+    if (Array.isArray(node.material)) {
+      node.material.forEach(applyToMaterial);
+      return;
+    }
+
+    if (node.material) {
+      applyToMaterial(node.material);
+    }
+  });
+};
+
+const orientLongestAxisUp = (object: THREE.Object3D): void => {
+  object.updateMatrixWorld(true);
+
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) {
+    return;
+  }
+
+  const size = bounds.getSize(new THREE.Vector3());
+
+  if (size.x > size.y && size.x >= size.z) {
+    object.rotateZ(Math.PI / 2);
+  } else if (size.z > size.y && size.z >= size.x) {
+    object.rotateX(-Math.PI / 2);
+  }
+
+  object.updateMatrixWorld(true);
+};
+
+const calculateSupportScore = (object: THREE.Object3D): number => {
+  object.updateMatrixWorld(true);
+
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) {
+    return 0;
+  }
+
+  const height = Math.max(bounds.max.y - bounds.min.y, 0.0001);
+  const floorThreshold = bounds.min.y + Math.max(height * 0.02, 0.0005);
+
+  const vertex = new THREE.Vector3();
+  let sampledVertices = 0;
+  let supportVertices = 0;
+
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    const geometry = node.geometry;
+    if (!(geometry instanceof THREE.BufferGeometry)) {
+      return;
+    }
+
+    const position = geometry.getAttribute("position");
+    if (!position) {
+      return;
+    }
+
+    const step = Math.max(1, Math.floor(position.count / 2000));
+    for (let index = 0; index < position.count; index += step) {
+      vertex
+        .fromBufferAttribute(position, index)
+        .applyMatrix4(node.matrixWorld);
+
+      sampledVertices += 1;
+      if (vertex.y <= floorThreshold) {
+        supportVertices += 1;
+      }
+    }
+  });
+
+  if (sampledVertices === 0) {
+    return 0;
+  }
+
+  return supportVertices / sampledVertices;
+};
+
+const autoOrientModelUpright = (object: THREE.Object3D): void => {
+  orientLongestAxisUp(object);
+
+  const baseQuaternion = object.quaternion.clone();
+  const baseSupportScore = calculateSupportScore(object);
+
+  const flippedQuaternion = baseQuaternion.clone().multiply(
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)),
+  );
+
+  object.quaternion.copy(flippedQuaternion);
+  object.updateMatrixWorld(true);
+  const flippedSupportScore = calculateSupportScore(object);
+
+  if (flippedSupportScore <= baseSupportScore) {
+    object.quaternion.copy(baseQuaternion);
+    object.updateMatrixWorld(true);
+  }
+};
+
 const normalizeModelScale = (object: THREE.Object3D): void => {
   object.updateMatrixWorld(true);
 
@@ -230,13 +371,15 @@ const loadModelObject = async (
   }
 };
 
-const resolveSourceUrl = async (source: ModelPreviewSource): Promise<string> => {
-  if (source.kind === "url") {
-    return toAbsoluteUrl(source.url);
+const resolveSourceUrlByKey = async (sourceKey: string): Promise<string> => {
+  if (sourceKey.startsWith("url:")) {
+    return toAbsoluteUrl(sourceKey.slice(4));
   }
 
+  const fileId = sourceKey.slice(5);
+
   const downloadUrl = await filesApi.getDownloadLink(
-    source.fileId,
+    fileId,
     EXPIRE_AFTER_MINUTES,
   );
   return toInlineDownloadUrl(downloadUrl);
@@ -329,6 +472,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   fileName,
   contentType,
   fileSizeBytes,
+  materialColor,
+  autoAlignToken,
+  autoOrientToken,
 }) => {
   const { t } = useTranslation(["files"]);
   const theme = useTheme();
@@ -341,10 +487,22 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     () => resolveQualityMode(fileSizeBytes),
     [fileSizeBytes],
   );
+  const sourceKey = source.kind === "fileId"
+    ? `file:${source.fileId}`
+    : `url:${source.url}`;
 
   const [isLoading, setIsLoading] = React.useState<boolean>(Boolean(modelFormat));
   const [hasLoadError, setHasLoadError] = React.useState<boolean>(false);
   const [preparedModel, setPreparedModel] = React.useState<PreparedModelScene | null>(null);
+  const previousAutoAlignTokenRef = React.useRef<number | undefined>(
+    autoAlignToken,
+  );
+  const previousAutoOrientTokenRef = React.useRef<number | undefined>(
+    autoOrientToken,
+  );
+  const originalColorsRef = React.useRef<WeakMap<THREE.Material, THREE.Color>>(
+    new WeakMap(),
+  );
 
   React.useEffect(() => {
     if (!modelFormat) {
@@ -360,7 +518,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
 
     void (async () => {
       try {
-        const url = await resolveSourceUrl(source);
+        const url = await resolveSourceUrlByKey(sourceKey);
         const loadedObject = await loadModelObject(modelFormat, url);
         const nextPreparedModel = await prepareModelScene(
           loadedObject,
@@ -389,7 +547,74 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [modelFormat, qualityMode, source]);
+  }, [modelFormat, qualityMode, sourceKey]);
+
+  React.useEffect(() => {
+    if (!preparedModel) {
+      return;
+    }
+
+    applyMaterialColor(
+      preparedModel.object,
+      materialColor,
+      originalColorsRef.current,
+    );
+  }, [materialColor, preparedModel]);
+
+  React.useEffect(() => {
+    if (autoAlignToken === undefined) {
+      return;
+    }
+
+    if (autoAlignToken === previousAutoAlignTokenRef.current) {
+      return;
+    }
+
+    previousAutoAlignTokenRef.current = autoAlignToken;
+
+    setPreparedModel((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      alignModelToGround(previous.object);
+      const metrics = buildGridMetrics(previous.object, previous.qualityMode);
+
+      return {
+        ...previous,
+        gridSize: metrics.gridSize,
+        gridDivisions: metrics.gridDivisions,
+      };
+    });
+  }, [autoAlignToken]);
+
+  React.useEffect(() => {
+    if (autoOrientToken === undefined) {
+      return;
+    }
+
+    if (autoOrientToken === previousAutoOrientTokenRef.current) {
+      return;
+    }
+
+    previousAutoOrientTokenRef.current = autoOrientToken;
+
+    setPreparedModel((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      autoOrientModelUpright(previous.object);
+      alignModelToGround(previous.object);
+      const metrics = buildGridMetrics(previous.object, previous.qualityMode);
+
+      return {
+        ...previous,
+        gridSize: metrics.gridSize,
+        gridDivisions: metrics.gridDivisions,
+      };
+    });
+  }, [autoOrientToken]);
 
   React.useEffect(() => {
     return () => {
