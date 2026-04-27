@@ -813,9 +813,26 @@
         "actions": {
           "autoAlign": "Выровнять по земле",
           "autoOrient": "Автоориентация",
+          "cycleLighting": "Свет: {{preset}}",
           "cycleRotation": "Повернуть / перевернуть",
+          "cycleSurface": "Поверхность: {{preset}}",
           "resetColor": "Исходные цвета",
+          "toggleShadows": "Тени: {{state}}",
           "togglePalette": "Палитра цветов"
+        },
+        "lighting": {
+          "balanced": "Сбалансированный",
+          "studio": "Студийный",
+          "dramatic": "Драматичный"
+        },
+        "surface": {
+          "original": "Исходная",
+          "matte": "Матовая",
+          "glossy": "Глянцевая"
+        },
+        "states": {
+          "on": "Вкл",
+          "off": "Выкл"
         }
       },
       "language": {
