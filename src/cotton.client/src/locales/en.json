@@ -814,6 +814,9 @@
           "render": "Rendering PDF..."
         }
       },
+      "model": {
+        "loading": "Loading 3D model..."
+      },
       "language": {
         "label": "Language"
       },
@@ -829,6 +832,8 @@
         "downloadFailed": "Download failed",
         "pdfLoadFailed": "Failed to load PDF",
         "pdfDisplayFailed": "Failed to display PDF",
+        "modelLoadFailed": "Failed to load 3D model",
+        "modelUnsupportedType": "This 3D file format is not supported for in-browser preview",
         "pdfTooLarge": "PDF is too large to preview ({{size}}). Maximum size is {{maxSize}}. Please download the file to view it.",
         "fileTooLarge": "File is too large to preview ({{size}}). Maximum size for text preview is {{maxSize}}. Please download the file to view it."
       }

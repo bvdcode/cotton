@@ -1,5 +1,5 @@
 import React from "react";
-import { PreviewModal, PdfPreview, TextPreview } from "./preview";
+import { PreviewModal, PdfPreview, TextPreview, ModelPreview } from "./preview";
 import type { FileType } from "../utils/fileTypes";
 
 interface FilePreviewModalProps {
@@ -49,6 +49,13 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           fileName={fileName}
           fileSizeBytes={fileSizeBytes}
           onSaved={onSaved}
+        />
+      )}
+
+      {fileType === "model" && (
+        <ModelPreview
+          source={{ kind: "fileId", fileId }}
+          fileName={fileName}
         />
       )}
     </PreviewModal>

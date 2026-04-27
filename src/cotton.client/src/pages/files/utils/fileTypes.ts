@@ -2,8 +2,11 @@
  * File type detection utilities for preview system
  */
 
+import { resolveModelFormat } from "./modelFormats";
+
 export type FileType =
   | "image"
+  | "model"
   | "pdf"
   | "video"
   | "audio"
@@ -94,6 +97,7 @@ const getFileTypeFromContentType = (contentType?: string): FileType | null => {
   const normalized = contentType.toLowerCase().split(";")[0]?.trim() ?? "";
 
   if (normalized.startsWith("image/")) return "image";
+  if (resolveModelFormat("", normalized)) return "model";
   if (SUPPORTED_INLINE_VIDEO_MIME_TYPES.has(normalized)) return "video";
   if (normalized.startsWith("audio/")) return "audio";
   if (normalized.startsWith("text/")) return "text";
@@ -142,6 +146,8 @@ export const getFileTypeInfo = (
     switch (contentTypeMatch) {
       case "image":
         return { type: "image", supportsPreview: true, supportsInlineView: true };
+      case "model":
+        return { type: "model", supportsPreview: true, supportsInlineView: true };
       case "pdf":
         return { type: "pdf", supportsPreview: true, supportsInlineView: true };
       case "video":
@@ -161,6 +167,9 @@ export const getFileTypeInfo = (
 
   if (IMAGE_EXTENSIONS.includes(ext)) {
     return { type: "image", supportsPreview: true, supportsInlineView: true };
+  }
+  if (resolveModelFormat(fileName, contentType)) {
+    return { type: "model", supportsPreview: true, supportsInlineView: true };
   }
   if (PDF_EXTENSIONS.includes(ext)) {
     return { type: "pdf", supportsPreview: true, supportsInlineView: true };
