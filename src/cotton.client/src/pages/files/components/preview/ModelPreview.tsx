@@ -9,6 +9,13 @@ import { filesApi } from "../../../../shared/api/filesApi";
 import { resolveModelFormat, type ModelFormat } from "../../utils/modelFormats";
 
 const EXPIRE_AFTER_MINUTES = 60 * 24;
+const TARGET_MODEL_MAX_DIMENSION = 4;
+const MIN_GRID_SIZE = 6;
+const MAX_GRID_SIZE = 48;
+const GRID_SIZE_MULTIPLIER = 2.4;
+const GRID_DENSITY_FACTOR = 4;
+const MIN_GRID_DIVISIONS = 20;
+const MAX_GRID_DIVISIONS = 120;
 
 type ModelPreviewSource =
   | {
@@ -24,6 +31,12 @@ interface ModelPreviewProps {
   source: ModelPreviewSource;
   fileName: string;
   contentType?: string | null;
+}
+
+interface PreparedModelScene {
+  object: THREE.Object3D;
+  gridSize: number;
+  gridDivisions: number;
 }
 
 const toAbsoluteUrl = (url: string): string => {
@@ -70,6 +83,29 @@ const disposeObject3D = (object: THREE.Object3D): void => {
       disposeMaterial(node.material);
     }
   });
+};
+
+const clamp = (value: number, min: number, max: number): number => {
+  return Math.min(Math.max(value, min), max);
+};
+
+const normalizeModelScale = (object: THREE.Object3D): void => {
+  object.updateMatrixWorld(true);
+
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) {
+    return;
+  }
+
+  const size = bounds.getSize(new THREE.Vector3());
+  const maxDimension = Math.max(size.x, size.y, size.z);
+  if (!Number.isFinite(maxDimension) || maxDimension <= 0) {
+    return;
+  }
+
+  const normalizedScale = TARGET_MODEL_MAX_DIMENSION / maxDimension;
+  object.scale.multiplyScalar(normalizedScale);
+  object.updateMatrixWorld(true);
 };
 
 const loadModelObject = async (
@@ -148,6 +184,54 @@ const alignModelToGround = (object: THREE.Object3D): void => {
   object.updateMatrixWorld(true);
 };
 
+const buildGridMetrics = (object: THREE.Object3D): {
+  gridSize: number;
+  gridDivisions: number;
+} => {
+  object.updateMatrixWorld(true);
+
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) {
+    return {
+      gridSize: MIN_GRID_SIZE,
+      gridDivisions: MIN_GRID_DIVISIONS,
+    };
+  }
+
+  const size = bounds.getSize(new THREE.Vector3());
+  const footprint = Math.max(size.x, size.z);
+  const gridSize = clamp(
+    footprint * GRID_SIZE_MULTIPLIER,
+    MIN_GRID_SIZE,
+    MAX_GRID_SIZE,
+  );
+
+  const gridDivisions = Math.round(
+    clamp(
+      gridSize * GRID_DENSITY_FACTOR,
+      MIN_GRID_DIVISIONS,
+      MAX_GRID_DIVISIONS,
+    ),
+  );
+
+  return {
+    gridSize,
+    gridDivisions,
+  };
+};
+
+const prepareModelScene = (object: THREE.Object3D): PreparedModelScene => {
+  normalizeModelScale(object);
+  alignModelToGround(object);
+
+  const metrics = buildGridMetrics(object);
+  return {
+    object,
+    gridSize: metrics.gridSize,
+    gridDivisions: metrics.gridDivisions,
+  };
+};
+
 export const ModelPreview: React.FC<ModelPreviewProps> = ({
   source,
   fileName,
@@ -162,13 +246,13 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
 
   const [isLoading, setIsLoading] = React.useState<boolean>(Boolean(modelFormat));
   const [hasLoadError, setHasLoadError] = React.useState<boolean>(false);
-  const [modelObject, setModelObject] = React.useState<THREE.Object3D | null>(null);
+  const [preparedModel, setPreparedModel] = React.useState<PreparedModelScene | null>(null);
 
   React.useEffect(() => {
     if (!modelFormat) {
       setIsLoading(false);
       setHasLoadError(false);
-      setModelObject(null);
+      setPreparedModel(null);
       return;
     }
 
@@ -180,18 +264,18 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       try {
         const url = await resolveSourceUrl(source);
         const loadedObject = await loadModelObject(modelFormat, url);
-        alignModelToGround(loadedObject);
+        const nextPreparedModel = prepareModelScene(loadedObject);
 
         if (cancelled) {
           disposeObject3D(loadedObject);
           return;
         }
 
-        setModelObject(loadedObject);
+        setPreparedModel(nextPreparedModel);
         setHasLoadError(false);
       } catch {
         if (!cancelled) {
-          setModelObject(null);
+          setPreparedModel(null);
           setHasLoadError(true);
         }
       } finally {
@@ -208,11 +292,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
 
   React.useEffect(() => {
     return () => {
-      if (modelObject) {
-        disposeObject3D(modelObject);
+      if (preparedModel) {
+        disposeObject3D(preparedModel.object);
       }
     };
-  }, [modelObject]);
+  }, [preparedModel]);
 
   if (!modelFormat) {
     return (
@@ -242,7 +326,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
         position: "relative",
       }}
     >
-      {(isLoading || hasLoadError || !modelObject) && (
+      {(isLoading || hasLoadError || !preparedModel) && (
         <Box
           sx={{
             position: "absolute",
@@ -277,7 +361,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
         </Box>
       )}
 
-      {!hasLoadError && modelObject && (
+      {!hasLoadError && preparedModel && (
         <Canvas
           camera={{
             position: [2.5, 2.5, 2.5],
@@ -294,8 +378,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
 
           <gridHelper
             args={[
-              10,
-              20,
+              preparedModel.gridSize,
+              preparedModel.gridDivisions,
               theme.palette.divider,
               theme.palette.action.disabled,
             ]}
@@ -303,7 +387,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
           />
 
           <Bounds fit clip observe margin={1.2}>
-            <primitive object={modelObject} />
+            <primitive object={preparedModel.object} />
           </Bounds>
 
           <OrbitControls makeDefault enableDamping dampingFactor={0.08} />
