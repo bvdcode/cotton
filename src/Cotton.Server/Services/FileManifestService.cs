@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Previews;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,55 @@ namespace Cotton.Server.Services
     {
         public const string DefaultContentType = "application/octet-stream";
         private static readonly FileExtensionContentTypeProvider fileExtensionContentTypeProvider = new();
+        private static readonly IReadOnlyDictionary<string, string> extensionContentTypeOverrides =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [".heic"] = "image/heic",
+                [".heif"] = "image/heif",
+                [".heics"] = "image/heic-sequence",
+                [".heifs"] = "image/heif-sequence",
+                [".hif"] = "image/heif",
+                [".hifc"] = "image/heif-sequence",
+                [".avifs"] = "image/avif-sequence",
+
+                [".mov"] = "video/quicktime",
+                [".qt"] = "video/quicktime",
+                [".mkv"] = "video/x-matroska",
+                [".mka"] = "audio/x-matroska",
+
+                [".opus"] = "audio/opus",
+                [".flac"] = "audio/flac",
+                [".oga"] = "audio/ogg",
+                [".weba"] = "audio/webm",
+                [".aac"] = "audio/aac",
+                [".m4b"] = "audio/mp4",
+                [".m4p"] = "audio/mp4",
+                [".m4r"] = "audio/mp4",
+
+                [".md"] = "text/markdown",
+                [".markdown"] = "text/markdown",
+
+                [".svg"] = "image/svg+xml",
+                [".svgz"] = "image/svg+xml",
+
+                [".stl"] = "model/stl",
+                [".obj"] = "model/obj",
+                [".3mf"] = "model/3mf",
+            };
 
         public static string ResolveContentType(string? fileName, string? contentType)
         {
-            string normalizedContentType = contentType?.Trim() ?? string.Empty;
+            string normalizedContentType = NormalizeContentType(contentType);
+            string extension = Path.GetExtension(fileName ?? string.Empty);
+            if (!string.IsNullOrWhiteSpace(extension)
+                && extensionContentTypeOverrides.TryGetValue(extension, out string? overriddenContentType)
+                && (ShouldForceExtensionContentType(extension)
+                    || string.IsNullOrWhiteSpace(normalizedContentType)
+                    || string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase)))
+            {
+                return overriddenContentType;
+            }
+
             if (!string.IsNullOrWhiteSpace(normalizedContentType)
                 && !string.Equals(normalizedContentType, DefaultContentType, StringComparison.OrdinalIgnoreCase))
             {
@@ -27,12 +73,37 @@ namespace Cotton.Server.Services
                 && fileExtensionContentTypeProvider.TryGetContentType(fileName, out string? detectedContentType)
                 && !string.IsNullOrWhiteSpace(detectedContentType))
             {
-                return detectedContentType;
+                return NormalizeContentType(detectedContentType);
             }
 
             return string.IsNullOrWhiteSpace(normalizedContentType)
                 ? DefaultContentType
                 : normalizedContentType;
+        }
+
+        private static bool ShouldForceExtensionContentType(string extension)
+        {
+            return extension is ".stl" or ".obj" or ".3mf";
+        }
+
+        private static string NormalizeContentType(string? contentType)
+        {
+            if (string.IsNullOrWhiteSpace(contentType))
+            {
+                return string.Empty;
+            }
+
+            string normalized = contentType.Split(';', 2)[0].Trim().ToLowerInvariant();
+            return normalized switch
+            {
+                "video/mov" => "video/quicktime",
+                "video/x-quicktime" => "video/quicktime",
+                "image/x-heic" => "image/heic",
+                "image/x-heif" => "image/heif",
+                "audio/x-flac" => "audio/flac",
+                "audio/x-wav" => "audio/wav",
+                _ => normalized,
+            };
         }
 
         public async Task<List<Chunk>> GetChunksAsync(string[] chunkHashes, Guid userId, CancellationToken cancellationToken = default)
@@ -68,6 +139,7 @@ namespace Cotton.Server.Services
                 ContentType = ResolveContentType(fileName, contentType),
                 SizeBytes = chunks.Sum(x => x.PlainSizeBytes),
                 ProposedContentHash = proposedContentHash,
+                PreviewGeneratorVersion = PreviewGeneratorProvider.DefaultGeneratorVersion,
             };
 
             await _dbContext.FileManifests.AddAsync(newFileManifest, cancellationToken);

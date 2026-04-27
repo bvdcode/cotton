@@ -221,6 +221,7 @@
       "title": "Apariencia",
       "description": "Preferencias de la interfaz y personalización.",
       "gallerySmoothTransitions": "Transiciones suaves en la galería",
+      "galleryPreferPreview": "Cargar originales (off/on)",
       "themeMode": {
         "label": "Tema",
         "light": "Claro",
@@ -813,8 +814,44 @@
           "render": "Renderizando PDF..."
         }
       },
+      "model": {
+        "loading": "Cargando modelo 3D...",
+        "actions": {
+          "autoAlign": "Alinear al suelo",
+          "autoOrient": "Orientación automática",
+          "cycleLighting": "Luz: {{preset}}",
+          "cycleSurface": "Superficie: {{preset}}",
+          "flipModel": "Voltear modelo",
+          "resetColor": "Usar colores originales",
+          "toggleShadows": "Sombras: {{state}}",
+          "togglePalette": "Paleta de colores"
+        },
+        "lighting": {
+          "balanced": "Equilibrada",
+          "studio": "Estudio",
+          "dramatic": "Dramática"
+        },
+        "surface": {
+          "original": "Original",
+          "matte": "Mate",
+          "glossy": "Brillante",
+          "metal": "Metal",
+          "satin": "Satinado",
+          "smooth": "Suavizado"
+        },
+        "states": {
+          "on": "Activado",
+          "off": "Desactivado"
+        }
+      },
       "language": {
         "label": "Idioma"
+      },
+      "mediaQuality": {
+        "previewMode": "Modo: vista previa",
+        "originalMode": "Modo: original",
+        "switchToOriginal": "Cambiar a original",
+        "switchToPreview": "Cambiar a vista previa"
       },
       "errors": {
         "loadFailed": "No se pudo cargar el archivo{{error}}",
@@ -822,6 +859,8 @@
         "downloadFailed": "La descarga falló",
         "pdfLoadFailed": "No se pudo cargar el PDF",
         "pdfDisplayFailed": "No se pudo mostrar el PDF",
+        "modelLoadFailed": "No se pudo cargar el modelo 3D",
+        "modelUnsupportedType": "Este formato de archivo 3D no es compatible con la vista previa en el navegador",
         "pdfTooLarge": "El PDF es demasiado grande para la vista previa ({{size}}). El tamaño máximo es {{maxSize}}. Descarga el archivo para verlo.",
         "fileTooLarge": "El archivo es demasiado grande para la vista previa ({{size}}). El tamaño máximo para la vista previa de texto es {{maxSize}}. Descarga el archivo para verlo."
       }

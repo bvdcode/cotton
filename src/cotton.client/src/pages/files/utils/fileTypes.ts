@@ -2,8 +2,11 @@
  * File type detection utilities for preview system
  */
 
+import { resolveModelFormat } from "./modelFormats";
+
 export type FileType =
   | "image"
+  | "model"
   | "pdf"
   | "video"
   | "audio"
@@ -26,12 +29,14 @@ const IMAGE_EXTENSIONS = [
   "webp",
   "bmp",
   "svg",
+  "svgz",
   "heic",
 ];
+const SVG_EXTENSIONS = ["svg", "svgz"];
 const PDF_EXTENSIONS = ["pdf"];
 // Only include formats that are generally playable inline in modern browsers.
 // Keep this list conservative to avoid opening the media lightbox for files the browser can't play.
-const VIDEO_EXTENSIONS = ["mp4", "m4v", "webm"];
+const VIDEO_EXTENSIONS = ["mp4", "m4v", "webm", "mov"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "ogg", "flac", "m4a"];
 const TEXT_EXTENSIONS = [
   "txt",
@@ -54,6 +59,10 @@ const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
 const SUPPORTED_INLINE_VIDEO_MIME_TYPES = new Set<string>([
   "video/mp4",
   "video/webm",
+  "video/quicktime",
+  "video/x-quicktime",
+  "video/mov",
+  "video/x-mov",
 ]);
 
 export const getFileExtension = (fileName: string): string => {
@@ -90,6 +99,7 @@ const getFileTypeFromContentType = (contentType?: string): FileType | null => {
   const normalized = contentType.toLowerCase().split(";")[0]?.trim() ?? "";
 
   if (normalized.startsWith("image/")) return "image";
+  if (resolveModelFormat("", normalized)) return "model";
   if (SUPPORTED_INLINE_VIDEO_MIME_TYPES.has(normalized)) return "video";
   if (normalized.startsWith("audio/")) return "audio";
   if (normalized.startsWith("text/")) return "text";
@@ -132,12 +142,19 @@ export const getFileTypeInfo = (
     return { type: "other", supportsPreview: false, supportsInlineView: false };
   }
 
+  // SVGs can arrive with XML/text MIME aliases, but they should still open in the image gallery.
+  if (SVG_EXTENSIONS.includes(ext)) {
+    return { type: "image", supportsPreview: true, supportsInlineView: true };
+  }
+
   const contentTypeMatch = getFileTypeFromContentType(contentType ?? undefined);
 
   if (contentTypeMatch) {
     switch (contentTypeMatch) {
       case "image":
         return { type: "image", supportsPreview: true, supportsInlineView: true };
+      case "model":
+        return { type: "model", supportsPreview: true, supportsInlineView: true };
       case "pdf":
         return { type: "pdf", supportsPreview: true, supportsInlineView: true };
       case "video":
@@ -157,6 +174,9 @@ export const getFileTypeInfo = (
 
   if (IMAGE_EXTENSIONS.includes(ext)) {
     return { type: "image", supportsPreview: true, supportsInlineView: true };
+  }
+  if (resolveModelFormat(fileName, contentType)) {
+    return { type: "model", supportsPreview: true, supportsInlineView: true };
   }
   if (PDF_EXTENSIONS.includes(ext)) {
     return { type: "pdf", supportsPreview: true, supportsInlineView: true };

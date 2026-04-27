@@ -1,7 +1,26 @@
 import * as React from "react";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  IconButton,
+  Popover,
+  Stack,
+  Tooltip,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import {
+  AutoFixHigh,
+  ColorLens,
+  FilterDrama,
+  FormatColorReset,
+  SwapVert,
+  Texture,
+  VerticalAlignBottom,
+  WbSunny,
+} from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { PreviewModal, PdfPreview } from "../../files/components/preview";
+import { PreviewModal, PdfPreview, ModelPreview } from "../../files/components/preview";
 import type { FileType } from "../../files/utils/fileTypes";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import { previewConfig } from "../../../shared/config/previewConfig";
@@ -18,6 +37,24 @@ interface SharedFilePreviewModalProps {
   onClose: () => void;
 }
 
+type LightingPreset = "balanced" | "studio" | "dramatic";
+type SurfacePreset =
+  | "original"
+  | "metal"
+  | "smooth";
+
+const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
+  "balanced",
+  "studio",
+  "dramatic",
+];
+
+const SURFACE_PRESET_ORDER: ReadonlyArray<SurfacePreset> = [
+  "original",
+  "metal",
+  "smooth",
+];
+
 export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   open,
   token,
@@ -29,10 +66,102 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(["files", "share", "common"]);
+  const theme = useTheme();
+  const isModel = fileType === "model";
+  const defaultModelColor = React.useMemo<string | null>(() => {
+    return theme.palette.error.main;
+  }, [theme]);
 
   const [textContent, setTextContent] = React.useState<string | null>(null);
   const [loadingText, setLoadingText] = React.useState<boolean>(false);
   const [textError, setTextError] = React.useState<string | null>(null);
+  const [paletteAnchorEl, setPaletteAnchorEl] = React.useState<HTMLElement | null>(null);
+  const [materialColor, setMaterialColor] = React.useState<string | null>(
+    defaultModelColor,
+  );
+  const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
+  const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
+  const [flipToken, setFlipToken] = React.useState<number>(0);
+  const [lightingPreset, setLightingPreset] = React.useState<LightingPreset>("dramatic");
+  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("metal");
+  const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
+
+  const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
+    () => [
+      { id: "grey-300", color: theme.palette.grey[300] },
+      { id: "grey-500", color: theme.palette.grey[500] },
+      { id: "grey-700", color: theme.palette.grey[700] },
+
+      { id: "primary-light", color: theme.palette.primary.light },
+      { id: "primary-main", color: theme.palette.primary.main },
+      { id: "primary-dark", color: theme.palette.primary.dark },
+
+      { id: "secondary-light", color: theme.palette.secondary.light },
+      { id: "secondary-main", color: theme.palette.secondary.main },
+      { id: "secondary-dark", color: theme.palette.secondary.dark },
+
+      { id: "info-light", color: theme.palette.info.light },
+      { id: "info-main", color: theme.palette.info.main },
+      { id: "info-dark", color: theme.palette.info.dark },
+
+      { id: "success-light", color: theme.palette.success.light },
+      { id: "success-main", color: theme.palette.success.main },
+      { id: "success-dark", color: theme.palette.success.dark },
+
+      { id: "warning-light", color: theme.palette.warning.light },
+      { id: "warning-main", color: theme.palette.warning.main },
+      { id: "warning-dark", color: theme.palette.warning.dark },
+
+      { id: "error-light", color: theme.palette.error.light },
+      { id: "error-main", color: theme.palette.error.main },
+      { id: "error-dark", color: theme.palette.error.dark },
+    ],
+    [theme],
+  );
+
+  const modelSource = React.useMemo(() => {
+    if (!fileId) {
+      return null;
+    }
+
+    return {
+      kind: "url" as const,
+      url: sharedFoldersApi.buildFileContentUrl(token, fileId, "inline"),
+    };
+  }, [fileId, token]);
+
+  const cycleLightingPreset = React.useCallback(() => {
+    setLightingPreset((currentPreset) => {
+      const currentIndex = LIGHTING_PRESET_ORDER.indexOf(currentPreset);
+      const nextIndex = (currentIndex + 1) % LIGHTING_PRESET_ORDER.length;
+      return LIGHTING_PRESET_ORDER[nextIndex];
+    });
+  }, []);
+
+  const cycleSurfacePreset = React.useCallback(() => {
+    setSurfacePreset((currentPreset) => {
+      const currentIndex = SURFACE_PRESET_ORDER.indexOf(currentPreset);
+      const nextIndex = (currentIndex + 1) % SURFACE_PRESET_ORDER.length;
+      return SURFACE_PRESET_ORDER[nextIndex];
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (!open || !isModel) {
+      setPaletteAnchorEl(null);
+      setMaterialColor(defaultModelColor);
+      setLightingPreset("dramatic");
+      setSurfacePreset("metal");
+      setShadowsEnabled(true);
+      return;
+    }
+
+    setPaletteAnchorEl(null);
+    setMaterialColor(defaultModelColor);
+    setLightingPreset("dramatic");
+    setSurfacePreset("metal");
+    setShadowsEnabled(true);
+  }, [defaultModelColor, fileId, isModel, open]);
 
   React.useEffect(() => {
     if (!open || fileType !== "text" || !fileId || !fileName) {
@@ -107,16 +236,93 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     return null;
   }
 
-  if (fileType !== "pdf" && fileType !== "text") {
+  if (fileType !== "pdf" && fileType !== "text" && fileType !== "model") {
     return null;
   }
+
+  const modelHeaderActions = isModel
+    ? (
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <Tooltip
+          title={t("preview.model.actions.cycleLighting", {
+            ns: "files",
+            preset: t(`preview.model.lighting.${lightingPreset}`, { ns: "files" }),
+          })}
+        >
+          <IconButton onClick={cycleLightingPreset}>
+            <WbSunny />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip
+          title={t("preview.model.actions.toggleShadows", {
+            ns: "files",
+            state: t(
+              shadowsEnabled
+                ? "preview.model.states.on"
+                : "preview.model.states.off",
+              { ns: "files" },
+            ),
+          })}
+        >
+          <IconButton
+            color={shadowsEnabled ? "primary" : "default"}
+            onClick={() => setShadowsEnabled((currentState) => !currentState)}
+          >
+            <FilterDrama />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip
+          title={t("preview.model.actions.cycleSurface", {
+            ns: "files",
+            preset: t(`preview.model.surface.${surfacePreset}`, { ns: "files" }),
+          })}
+        >
+          <IconButton onClick={cycleSurfacePreset}>
+            <Texture />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={t("preview.model.actions.flipModel", { ns: "files" })}>
+          <IconButton onClick={() => setFlipToken((value) => value + 1)}>
+            <SwapVert />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={t("preview.model.actions.autoOrient", { ns: "files" })}>
+          <IconButton onClick={() => setAutoOrientToken((value) => value + 1)}>
+            <AutoFixHigh />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={t("preview.model.actions.autoAlign", { ns: "files" })}>
+          <IconButton onClick={() => setAutoAlignToken((value) => value + 1)}>
+            <VerticalAlignBottom />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={t("preview.model.actions.togglePalette", { ns: "files" })}>
+          <IconButton
+            onClick={(event) => {
+              setPaletteAnchorEl((current) => (current ? null : event.currentTarget));
+            }}
+          >
+            <ColorLens />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    )
+    : undefined;
 
   return (
     <PreviewModal
       open={open}
       onClose={onClose}
-      layout={fileType === "pdf" ? "header" : "overlay"}
-      title={fileType === "pdf" ? fileName : undefined}
+      layout={fileType === "pdf" || isModel ? "header" : "overlay"}
+      title={fileType === "pdf" || isModel ? fileName : undefined}
+      forceFullScreen={isModel}
+      headerActions={modelHeaderActions}
     >
       {fileType === "pdf" && (
         <PdfPreview
@@ -181,6 +387,87 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
             />
           )}
         </Box>
+      )}
+
+      {isModel && modelSource && (
+        <Box sx={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <ModelPreview
+              source={modelSource}
+              fileName={fileName}
+              contentType={contentType}
+              fileSizeBytes={fileSizeBytes}
+              materialColor={materialColor}
+              autoAlignToken={autoAlignToken}
+              autoOrientToken={autoOrientToken}
+              flipToken={flipToken}
+              lightingPreset={lightingPreset}
+              shadowsEnabled={shadowsEnabled}
+              surfacePreset={surfacePreset}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {isModel && (
+        <Popover
+          open={Boolean(paletteAnchorEl)}
+          anchorEl={paletteAnchorEl}
+          onClose={() => setPaletteAnchorEl(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+          sx={{ mt: 0.5 }}
+        >
+          <Box
+            sx={{
+              alignItems: "center",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 0.5,
+              maxWidth: 360,
+              px: 1,
+              py: 0.75,
+            }}
+          >
+            <Tooltip title={t("preview.model.actions.resetColor", { ns: "files" })}>
+              <IconButton
+                size="small"
+                sx={{
+                  height: 30,
+                  width: 30,
+                }}
+                onClick={() => {
+                  setMaterialColor(null);
+                  setPaletteAnchorEl(null);
+                }}
+              >
+                <FormatColorReset fontSize="small" />
+              </IconButton>
+            </Tooltip>
+
+            {paletteColors.map((paletteOption) => (
+              <IconButton
+                key={paletteOption.id}
+                onClick={() => {
+                  setMaterialColor(paletteOption.color);
+                  setPaletteAnchorEl(null);
+                }}
+              >
+                <Box
+                  sx={{
+                    backgroundColor: paletteOption.color,
+                    border: 1,
+                    borderColor:
+                      materialColor === paletteOption.color ? "text.primary" : "divider",
+                    borderRadius: "50%",
+                    height: 18,
+                    width: 18,
+                  }}
+                />
+              </IconButton>
+            ))}
+          </Box>
+        </Popover>
       )}
     </PreviewModal>
   );

@@ -17,6 +17,8 @@ export interface MediaHandlers {
 
 const LIGHTBOX_HISTORY_STATE = "lightbox";
 
+type MediaKind = MediaItem["kind"];
+
 /**
  * Hook for managing media lightbox state and handlers.
  * Pushes a history entry when opening so that mobile swipe-back
@@ -92,11 +94,25 @@ export const useMediaLightbox = (
       });
   }, [sortedFiles]);
 
-  // Get signed media URL for gallery viewing - uses lightweight server-side preview
+  const mediaKindsById = useMemo(() => {
+    const map = new Map<string, MediaKind>();
+    for (const item of mediaItems) {
+      map.set(item.id, item.kind);
+    }
+    return map;
+  }, [mediaItems]);
+
+  // Get signed media URL for gallery viewing.
+  // Images use preview links, videos use original links for browser streaming compatibility.
   const getSignedMediaUrl = useCallback(async (fileId: string): Promise<string> => {
     const url = await filesApi.getDownloadLink(fileId, 60 * 24);
-    return `${url}&preview=true`;
-  }, []);
+    if (mediaKindsById.get(fileId) === "video") {
+      return url;
+    }
+
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}preview=true`;
+  }, [mediaKindsById]);
 
   // Get download URL for the actual download button - full original file
   const getDownloadUrl = useCallback(async (fileId: string): Promise<string> => {
