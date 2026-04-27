@@ -1281,17 +1281,19 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   }, [flipToken, preparedModel]);
 
   React.useEffect(() => {
+    const preparedObject = preparedModel?.object;
+
     return () => {
-      if (preparedModel) {
+      if (preparedObject) {
         applyPreviewOverrideMaterials(
-          preparedModel.object,
+          preparedObject,
           false,
           originalMeshMaterialsRef.current,
         );
-        disposeObject3D(preparedModel.object);
+        disposeObject3D(preparedObject);
       }
     };
-  }, [preparedModel]);
+  }, [preparedModel?.object]);
 
   if (!modelFormat) {
     return (
