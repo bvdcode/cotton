@@ -21,16 +21,40 @@ const LOW_QUALITY_REDUCTION_RATIO = 0.45;
 const LOW_QUALITY_TARGET_MAX_VERTICES = 450_000;
 const LOW_QUALITY_MIN_TARGET_VERTICES = 120_000;
 const QUARTER_TURN = Math.PI / 2;
-const FLIP_ROTATION_STEPS: ReadonlyArray<number> = [
-  0,
-  QUARTER_TURN,
-  Math.PI,
-  QUARTER_TURN * 3,
-];
 const FLIP_ORIENTATION_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
-  FLIP_ROTATION_STEPS.flatMap((x) => {
-    return FLIP_ROTATION_STEPS.map((z) => ({ x, z }));
-  });
+  [
+    { quaternion: new THREE.Quaternion() },
+    {
+      quaternion: new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        Math.PI,
+      ),
+    },
+    {
+      quaternion: new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, 1),
+        QUARTER_TURN,
+      ),
+    },
+    {
+      quaternion: new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, 1),
+        -QUARTER_TURN,
+      ),
+    },
+    {
+      quaternion: new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        QUARTER_TURN,
+      ),
+    },
+    {
+      quaternion: new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        -QUARTER_TURN,
+      ),
+    },
+  ];
 
 const LIGHTING_PRESET_CONFIG: Record<ModelLightingPreset, LightingPresetConfig> = {
   balanced: {
@@ -99,8 +123,7 @@ interface LightingPresetConfig {
 }
 
 interface FlipOrientationVariant {
-  x: number;
-  z: number;
+  quaternion: THREE.Quaternion;
 }
 
 interface MaterialSurfaceState {
@@ -403,6 +426,8 @@ const applyMaterialSurfacePreset = (
   object: THREE.Object3D,
   surfacePreset: ModelSurfacePreset,
   originalSurfaceMap: WeakMap<THREE.Material, MaterialSurfaceState>,
+  hasColorOverride: boolean,
+  overrideLuminance: number | null,
 ): void => {
   object.traverse((node) => {
     if (!(node instanceof THREE.Mesh)) {
@@ -561,6 +586,107 @@ const applyMaterialSurfacePreset = (
         }
       }
 
+      // Keep selected palette colors visually faithful by reducing strong reflections.
+      if (hasColorOverride) {
+        const normalizedLuminance = overrideLuminance ?? 0.5;
+
+        if (hasStandardSurfaceProperties(material)) {
+          if (surfacePreset === "metal") {
+            material.metalness = 0.58;
+            material.roughness = THREE.MathUtils.lerp(
+              0.44,
+              0.56,
+              1 - normalizedLuminance,
+            );
+          } else if (surfacePreset === "smooth") {
+            material.metalness = 0.08;
+            material.roughness = 0.76;
+          } else {
+            material.metalness = 0.02;
+            material.roughness = 0.88;
+          }
+        }
+
+        if (hasEnvMapIntensity(material)) {
+          if (surfacePreset === "metal") {
+            material.envMapIntensity = THREE.MathUtils.lerp(
+              0.18,
+              0.28,
+              normalizedLuminance,
+            );
+          } else if (surfacePreset === "smooth") {
+            material.envMapIntensity = THREE.MathUtils.lerp(
+              0.08,
+              0.14,
+              normalizedLuminance,
+            );
+          } else {
+            material.envMapIntensity = THREE.MathUtils.lerp(
+              0.04,
+              0.08,
+              normalizedLuminance,
+            );
+          }
+        }
+
+        if (hasPhongShininess(material)) {
+          if (surfacePreset === "metal") {
+            material.shininess = THREE.MathUtils.lerp(
+              72,
+              96,
+              normalizedLuminance,
+            );
+          } else if (surfacePreset === "smooth") {
+            material.shininess = THREE.MathUtils.lerp(
+              26,
+              40,
+              normalizedLuminance,
+            );
+          } else {
+            material.shininess = THREE.MathUtils.lerp(
+              10,
+              18,
+              normalizedLuminance,
+            );
+          }
+        }
+
+        if (hasPhongReflectivity(material)) {
+          if (surfacePreset === "metal") {
+            material.reflectivity = THREE.MathUtils.lerp(
+              0.24,
+              0.35,
+              normalizedLuminance,
+            );
+          } else if (surfacePreset === "smooth") {
+            material.reflectivity = THREE.MathUtils.lerp(
+              0.1,
+              0.14,
+              normalizedLuminance,
+            );
+          } else {
+            material.reflectivity = THREE.MathUtils.lerp(
+              0.04,
+              0.08,
+              normalizedLuminance,
+            );
+          }
+        }
+
+        if (hasPhysicalSurfaceProperties(material)) {
+          if (surfacePreset === "metal") {
+            material.clearcoat = 0.18;
+            material.clearcoatRoughness = 0.64;
+          } else if (surfacePreset === "smooth") {
+            material.clearcoat = 0.07;
+            material.clearcoatRoughness = 0.76;
+          } else {
+            material.clearcoat = 0;
+            material.clearcoatRoughness = 1;
+          }
+        }
+      }
+
       material.needsUpdate = true;
     };
 
@@ -700,11 +826,7 @@ const applyFlipOrientation = (
   baseQuaternion: THREE.Quaternion,
   orientationVariant: FlipOrientationVariant,
 ): void => {
-  const variantQuaternion = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(orientationVariant.x, 0, orientationVariant.z),
-  );
-
-  object.quaternion.copy(baseQuaternion).multiply(variantQuaternion);
+  object.quaternion.copy(baseQuaternion).multiply(orientationVariant.quaternion);
 
   object.updateMatrixWorld(true);
 };
@@ -934,9 +1056,24 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       ? defaultDarkModelColor
       : materialColor;
   }, [defaultDarkModelColor, materialColor]);
-  const lightIntensityMultiplier = effectiveMaterialColor
-      ? 0.68
-      : 1;
+  const hasColorOverride =
+    effectiveMaterialColor !== null &&
+    effectiveMaterialColor !== undefined;
+  const colorLuminance = React.useMemo<number | null>(() => {
+    if (!hasColorOverride || !effectiveMaterialColor) {
+      return null;
+    }
+
+    const parsedColor = new THREE.Color(effectiveMaterialColor);
+    return (
+      parsedColor.r * 0.2126 +
+      parsedColor.g * 0.7152 +
+      parsedColor.b * 0.0722
+    );
+  }, [effectiveMaterialColor, hasColorOverride]);
+  const lightIntensityMultiplier = colorLuminance === null
+      ? 1
+      : THREE.MathUtils.lerp(0.24, 0.42, colorLuminance);
 
   const sourceKey = source.kind === "fileId"
     ? `file:${source.fileId}`
@@ -1023,25 +1160,27 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       return;
     }
 
+    applyMaterialSurfacePreset(
+      preparedModel.object,
+      surfacePreset,
+      originalSurfaceRef.current,
+      hasColorOverride,
+      colorLuminance,
+    );
+    applyShadowPreferences(preparedModel.object, shadowsEnabled);
     applyMaterialColor(
       preparedModel.object,
       effectiveMaterialColor,
       originalColorsRef.current,
     );
-  }, [effectiveMaterialColor, preparedModel]);
-
-  React.useEffect(() => {
-    if (!preparedModel) {
-      return;
-    }
-
-    applyMaterialSurfacePreset(
-      preparedModel.object,
-      surfacePreset,
-      originalSurfaceRef.current,
-    );
-    applyShadowPreferences(preparedModel.object, shadowsEnabled);
-  }, [preparedModel, shadowsEnabled, surfacePreset]);
+  }, [
+    colorLuminance,
+    effectiveMaterialColor,
+    hasColorOverride,
+    preparedModel,
+    shadowsEnabled,
+    surfacePreset,
+  ]);
 
   React.useEffect(() => {
     if (autoAlignToken === undefined) {
