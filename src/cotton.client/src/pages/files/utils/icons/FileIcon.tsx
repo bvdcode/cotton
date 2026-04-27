@@ -20,12 +20,14 @@ interface FileIconOptions {
   extensionLabelMaxLength?: number;
   hideLongExtensionLabel?: boolean;
   hideInvalidExtensionLabel?: boolean;
+  hideExtensionLabel?: boolean;
 }
 
 interface ExtensionLabelOptions {
   extensionLabelMaxLength: number;
   hideLongExtensionLabel: boolean;
   hideInvalidExtensionLabel: boolean;
+  hideExtensionLabel: boolean;
 }
 
 /**
@@ -73,6 +75,7 @@ export function getFileIcon(
       options?.extensionLabelMaxLength ?? MAX_EXTENSION_LENGTH,
     hideLongExtensionLabel: options?.hideLongExtensionLabel ?? false,
     hideInvalidExtensionLabel: options?.hideInvalidExtensionLabel ?? false,
+    hideExtensionLabel: options?.hideExtensionLabel ?? false,
   });
 }
 
@@ -165,6 +168,10 @@ function formatExtensionLabel(
   extension: string,
   options: ExtensionLabelOptions,
 ): string | null {
+  if (options.hideExtensionLabel) {
+    return null;
+  }
+
   const normalizedExtension = extension.trim().toLowerCase();
 
   if (normalizedExtension.length === 0) {
