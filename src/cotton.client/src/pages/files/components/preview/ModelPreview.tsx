@@ -20,6 +20,17 @@ const MAX_GRID_DIVISIONS = 120;
 const LOW_QUALITY_REDUCTION_RATIO = 0.45;
 const LOW_QUALITY_TARGET_MAX_VERTICES = 450_000;
 const LOW_QUALITY_MIN_TARGET_VERTICES = 120_000;
+const QUARTER_TURN = Math.PI / 2;
+const FLIP_ROTATION_STEPS: ReadonlyArray<number> = [
+  0,
+  QUARTER_TURN,
+  Math.PI,
+  QUARTER_TURN * 3,
+];
+const FLIP_ORIENTATION_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
+  FLIP_ROTATION_STEPS.flatMap((x) => {
+    return FLIP_ROTATION_STEPS.map((z) => ({ x, z }));
+  });
 
 const LIGHTING_PRESET_CONFIG: Record<ModelLightingPreset, LightingPresetConfig> = {
   balanced: {
@@ -85,6 +96,11 @@ interface LightingPresetConfig {
   keyIntensity: number;
   fillIntensity: number;
   rimIntensity: number;
+}
+
+interface FlipOrientationVariant {
+  x: number;
+  z: number;
 }
 
 interface MaterialSurfaceState {
@@ -434,12 +450,12 @@ const applyMaterialSurfacePreset = (
       if (hasStandardSurfaceProperties(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.metalness = 0.82;
-            material.roughness = 0.38;
+            material.metalness = 1;
+            material.roughness = 0.08;
             break;
           case "smooth":
-            material.metalness = 0.02;
-            material.roughness = 0.52;
+            material.metalness = 0.04;
+            material.roughness = 0.6;
             break;
           case "original":
           default:
@@ -456,10 +472,10 @@ const applyMaterialSurfacePreset = (
       if (hasEnvMapIntensity(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.envMapIntensity = 0.78;
+            material.envMapIntensity = 1.8;
             break;
           case "smooth":
-            material.envMapIntensity = 0.22;
+            material.envMapIntensity = 0.16;
             break;
           case "original":
           default:
@@ -473,10 +489,10 @@ const applyMaterialSurfacePreset = (
       if (hasPhongShininess(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.shininess = 120;
+            material.shininess = 300;
             break;
           case "smooth":
-            material.shininess = 36;
+            material.shininess = 28;
             break;
           case "original":
           default:
@@ -490,10 +506,10 @@ const applyMaterialSurfacePreset = (
       if (hasPhongReflectivity(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.reflectivity = 0.58;
+            material.reflectivity = 1;
             break;
           case "smooth":
-            material.reflectivity = 0.2;
+            material.reflectivity = 0.12;
             break;
           case "original":
           default:
@@ -507,12 +523,12 @@ const applyMaterialSurfacePreset = (
       if (hasPhysicalSurfaceProperties(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.clearcoat = 0.14;
-            material.clearcoatRoughness = 0.42;
+            material.clearcoat = 0.65;
+            material.clearcoatRoughness = 0.08;
             break;
           case "smooth":
-            material.clearcoat = 0.08;
-            material.clearcoatRoughness = 0.58;
+            material.clearcoat = 0.06;
+            material.clearcoatRoughness = 0.72;
             break;
           case "original":
           default:
@@ -681,13 +697,14 @@ const autoOrientModelUpright = (object: THREE.Object3D): void => {
 
 const applyFlipOrientation = (
   object: THREE.Object3D,
-  axis: "x" | "z",
+  baseQuaternion: THREE.Quaternion,
+  orientationVariant: FlipOrientationVariant,
 ): void => {
-  if (axis === "x") {
-    object.rotateX(Math.PI);
-  } else {
-    object.rotateZ(Math.PI);
-  }
+  const variantQuaternion = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(orientationVariant.x, 0, orientationVariant.z),
+  );
+
+  object.quaternion.copy(baseQuaternion).multiply(variantQuaternion);
 
   object.updateMatrixWorld(true);
 };
@@ -918,7 +935,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       : materialColor;
   }, [defaultDarkModelColor, materialColor]);
   const lightIntensityMultiplier = effectiveMaterialColor
-      ? 0.76
+      ? 0.68
       : 1;
 
   const sourceKey = source.kind === "fileId"
@@ -943,7 +960,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   const originalSurfaceRef = React.useRef<WeakMap<THREE.Material, MaterialSurfaceState>>(
     new WeakMap(),
   );
-  const nextFlipAxisRef = React.useRef<"x" | "z">("x");
+  const flipBaseQuaternionRef = React.useRef<THREE.Quaternion | null>(null);
+  const flipOrientationIndexRef = React.useRef<number>(0);
 
   React.useEffect(() => {
     if (!modelFormat) {
@@ -952,7 +970,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       setPreparedModel(null);
       originalColorsRef.current = new WeakMap();
       originalSurfaceRef.current = new WeakMap();
-      nextFlipAxisRef.current = "x";
+      flipBaseQuaternionRef.current = null;
+      flipOrientationIndexRef.current = 0;
       return;
     }
 
@@ -961,7 +980,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     setHasLoadError(false);
     originalColorsRef.current = new WeakMap();
     originalSurfaceRef.current = new WeakMap();
-    nextFlipAxisRef.current = "x";
+    flipBaseQuaternionRef.current = null;
+    flipOrientationIndexRef.current = 0;
 
     void (async () => {
       try {
@@ -977,6 +997,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
           return;
         }
 
+        flipBaseQuaternionRef.current = nextPreparedModel.object.quaternion.clone();
+        flipOrientationIndexRef.current = 0;
         setPreparedModel(nextPreparedModel);
         setHasLoadError(false);
       } catch {
@@ -1067,7 +1089,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       autoOrientModelUpright(previous.object);
       alignModelToGround(previous.object);
       const metrics = buildGridMetrics(previous.object, previous.qualityMode);
-      nextFlipAxisRef.current = "x";
+      flipBaseQuaternionRef.current = previous.object.quaternion.clone();
+      flipOrientationIndexRef.current = 0;
 
       return {
         ...previous,
@@ -1088,26 +1111,26 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
 
     previousFlipTokenRef.current = flipToken;
 
-    setPreparedModel((previous) => {
-      if (!previous) {
-        return previous;
-      }
+    if (!preparedModel) {
+      return;
+    }
 
-      const nextFlipAxis = nextFlipAxisRef.current;
-      nextFlipAxisRef.current = nextFlipAxis === "x" ? "z" : "x";
+    if (!flipBaseQuaternionRef.current) {
+      flipBaseQuaternionRef.current = preparedModel.object.quaternion.clone();
+      flipOrientationIndexRef.current = 0;
+    }
 
-      applyFlipOrientation(previous.object, nextFlipAxis);
-      alignModelToGround(previous.object);
+    const nextOrientationIndex =
+      (flipOrientationIndexRef.current + 1) % FLIP_ORIENTATION_VARIANTS.length;
+    flipOrientationIndexRef.current = nextOrientationIndex;
 
-      const metrics = buildGridMetrics(previous.object, previous.qualityMode);
-
-      return {
-        ...previous,
-        gridSize: metrics.gridSize,
-        gridDivisions: metrics.gridDivisions,
-      };
-    });
-  }, [flipToken]);
+    applyFlipOrientation(
+      preparedModel.object,
+      flipBaseQuaternionRef.current,
+      FLIP_ORIENTATION_VARIANTS[nextOrientationIndex],
+    );
+    alignModelToGround(preparedModel.object);
+  }, [flipToken, preparedModel]);
 
   React.useEffect(() => {
     return () => {
