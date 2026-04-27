@@ -131,6 +131,23 @@ const resolveSourceUrl = async (source: ModelPreviewSource): Promise<string> => 
   return toInlineDownloadUrl(downloadUrl);
 };
 
+const alignModelToGround = (object: THREE.Object3D): void => {
+  object.updateMatrixWorld(true);
+
+  const bounds = new THREE.Box3().setFromObject(object);
+  if (bounds.isEmpty()) {
+    return;
+  }
+
+  const center = bounds.getCenter(new THREE.Vector3());
+  const minY = bounds.min.y;
+
+  object.position.x -= center.x;
+  object.position.z -= center.z;
+  object.position.y -= minY;
+  object.updateMatrixWorld(true);
+};
+
 export const ModelPreview: React.FC<ModelPreviewProps> = ({
   source,
   fileName,
@@ -163,6 +180,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       try {
         const url = await resolveSourceUrl(source);
         const loadedObject = await loadModelObject(modelFormat, url);
+        alignModelToGround(loadedObject);
 
         if (cancelled) {
           disposeObject3D(loadedObject);
