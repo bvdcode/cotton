@@ -21,7 +21,7 @@ const LOW_QUALITY_REDUCTION_RATIO = 0.45;
 const LOW_QUALITY_TARGET_MAX_VERTICES = 450_000;
 const LOW_QUALITY_MIN_TARGET_VERTICES = 120_000;
 const QUARTER_TURN = Math.PI / 2;
-const FLIP_ORIENTATION_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
+const AUTO_ORIENT_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
   [
     { quaternion: new THREE.Quaternion() },
     {
@@ -55,6 +55,20 @@ const FLIP_ORIENTATION_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
       ),
     },
   ];
+
+const MANUAL_FLIP_ORIENTATION_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
+  AUTO_ORIENT_VARIANTS.flatMap((orientationVariant) => {
+    return [0, QUARTER_TURN, Math.PI, -QUARTER_TURN].map((yawRotation) => ({
+      quaternion: orientationVariant.quaternion
+        .clone()
+        .multiply(
+          new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            yawRotation,
+          ),
+        ),
+    }));
+  });
 
 const LIGHTING_PRESET_CONFIG: Record<ModelLightingPreset, LightingPresetConfig> = {
   balanced: {
@@ -819,7 +833,7 @@ const autoOrientModelUpright = (object: THREE.Object3D): void => {
   let bestSupportScore = Number.NEGATIVE_INFINITY;
   const bestQuaternion = baseQuaternion.clone();
 
-  for (const orientationVariant of FLIP_ORIENTATION_VARIANTS) {
+  for (const orientationVariant of AUTO_ORIENT_VARIANTS) {
     object.quaternion
       .copy(baseQuaternion)
       .multiply(orientationVariant.quaternion);
@@ -1269,13 +1283,13 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     }
 
     const nextOrientationIndex =
-      (flipOrientationIndexRef.current + 1) % FLIP_ORIENTATION_VARIANTS.length;
+      (flipOrientationIndexRef.current + 1) % MANUAL_FLIP_ORIENTATION_VARIANTS.length;
     flipOrientationIndexRef.current = nextOrientationIndex;
 
     applyFlipOrientation(
       preparedModel.object,
       flipBaseQuaternionRef.current,
-      FLIP_ORIENTATION_VARIANTS[nextOrientationIndex],
+      MANUAL_FLIP_ORIENTATION_VARIANTS[nextOrientationIndex],
     );
     alignModelToGround(preparedModel.object);
   }, [flipToken, preparedModel]);
