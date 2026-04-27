@@ -308,6 +308,7 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
           }}
           fileName={fileName ?? title}
           contentType={contentType}
+          fileSizeBytes={contentLength}
         />
       </Box>
     );
