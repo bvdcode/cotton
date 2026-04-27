@@ -7,7 +7,7 @@ namespace Cotton.Previews
 {
     public class StlThumbPreviewGenerator : IPreviewGenerator
     {
-        public int Version => 4;
+        public int Version => 5;
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
         private readonly string _modelExtension;
