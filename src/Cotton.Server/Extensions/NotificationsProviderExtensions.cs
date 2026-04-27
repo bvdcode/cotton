@@ -1,7 +1,6 @@
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
-using EasyExtensions.Clients.Models;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Primitives;
 using System.Net;
@@ -27,7 +26,7 @@ namespace Cotton.Server.Extensions
             string ip = ipAddress.ToString();
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
             string deviceName = device.FriendlyName ?? device.Type.ToString();
-            GeoIpInfo? ipInfo = await geoLookup.TryLookupAsync(ipAddress);
+            var ipInfo = await geoLookup.TryLookupAsync(ipAddress);
 
             return new ClientNotificationContext(
                 Ip: ip,

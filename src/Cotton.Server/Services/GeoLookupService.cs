@@ -1,14 +1,14 @@
 using Cotton.Server.Abstractions;
+using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using EasyExtensions.Clients;
-using EasyExtensions.Clients.Models;
 using System.Net;
 
 namespace Cotton.Server.Services
 {
     public sealed class GeoLookupService(SettingsProvider _settings) : IGeoLookupService
     {
-        public async Task<GeoIpInfo?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
+        public async Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
         {
             // TODO: Hotfix - just use cloud resolver when telemetry is opt in
 
@@ -18,7 +18,16 @@ namespace Cotton.Server.Services
                 return null;
             }
             ArgumentNullException.ThrowIfNull(ipAddress);
-            return await GeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
+            var geo = await GeoIpClient.TryLookupAsync(ipAddress.ToString(), cancellationToken);
+            if (geo is null)
+            {
+                return null;
+            }
+
+            return new GeoLookupResult(
+                Country: geo.Country,
+                Region: geo.Region,
+                City: geo.City);
         }
     }
 }
