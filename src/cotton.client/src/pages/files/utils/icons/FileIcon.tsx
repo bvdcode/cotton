@@ -1,4 +1,4 @@
-import { Article, Image, InsertDriveFile, Inventory } from "@mui/icons-material";
+import { Article, Image, InsertDriveFile, Inventory, VpnKey } from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
 import type { IconResult } from "./types";
 import { ICON_SIZE } from "./FolderIcon";
@@ -8,6 +8,13 @@ import { getFileTypeInfo } from "../fileTypes";
  * Maximum length for extension display on icon
  */
 const MAX_EXTENSION_LENGTH = 6;
+const CREDENTIAL_FILE_EXTENSIONS = new Set<string>([
+  "ppk",
+  "key",
+  "crt",
+  "cer",
+  "pem",
+]);
 
 interface FileIconOptions {
   extensionLabelMaxLength?: number;
@@ -44,6 +51,10 @@ export function getFileIcon(
   const extension = extractExtension(fileName);
   const fileType = getFileTypeInfo(fileName, contentType ?? undefined).type;
 
+  if (isCredentialFileExtension(extension)) {
+    return <VpnKey sx={{ fontSize: ICON_SIZE }} />;
+  }
+
   if (fileType === "image") {
     return getImageFileIcon();
   }
@@ -71,6 +82,10 @@ export function getFileIcon(
  */
 function extractExtension(fileName: string): string {
   return fileName.toLowerCase().split(".").pop() || "";
+}
+
+function isCredentialFileExtension(extension: string): boolean {
+  return CREDENTIAL_FILE_EXTENSIONS.has(extension);
 }
 
 /**
