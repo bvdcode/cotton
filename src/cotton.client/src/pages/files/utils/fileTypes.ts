@@ -32,6 +32,7 @@ const IMAGE_EXTENSIONS = [
   "svgz",
   "heic",
 ];
+const SVG_EXTENSIONS = ["svg", "svgz"];
 const PDF_EXTENSIONS = ["pdf"];
 // Only include formats that are generally playable inline in modern browsers.
 // Keep this list conservative to avoid opening the media lightbox for files the browser can't play.
@@ -139,6 +140,11 @@ export const getFileTypeInfo = (
     !VIDEO_EXTENSIONS.includes(ext)
   ) {
     return { type: "other", supportsPreview: false, supportsInlineView: false };
+  }
+
+  // SVGs can arrive with XML/text MIME aliases, but they should still open in the image gallery.
+  if (SVG_EXTENSIONS.includes(ext)) {
+    return { type: "image", supportsPreview: true, supportsInlineView: true };
   }
 
   const contentTypeMatch = getFileTypeFromContentType(contentType ?? undefined);
