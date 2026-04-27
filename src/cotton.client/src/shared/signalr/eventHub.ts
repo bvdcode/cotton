@@ -6,6 +6,7 @@ import {
   HttpTransportType,
 } from "@microsoft/signalr";
 import { getAccessToken, refreshAccessToken } from "../api/httpClient";
+import { getRefreshEnabled } from "../store/authStore";
 import type { JsonValue } from "../types/json";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
@@ -54,9 +55,20 @@ class EventHubService {
 
     const accessTokenFactory = async (): Promise<string> => {
       const token = getAccessToken();
-      if (token) return token;
+      if (token) {
+        return token;
+      }
+
+      if (!getRefreshEnabled()) {
+        throw new Error("Hub auth refresh is disabled");
+      }
+
       const refreshed = await refreshAccessToken();
-      return refreshed ?? "";
+      if (!refreshed) {
+        throw new Error("Hub auth token is unavailable");
+      }
+
+      return refreshed;
     };
 
     const reconnectPolicy = {
