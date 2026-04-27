@@ -9,6 +9,8 @@ interface PreviewModalProps {
   children: ReactNode;
   title?: ReactNode;
   layout?: "overlay" | "header";
+  forceFullScreen?: boolean;
+  headerActions?: ReactNode;
 }
 
 export const PreviewModal = ({
@@ -17,22 +19,31 @@ export const PreviewModal = ({
   children,
   title,
   layout = "overlay",
+  forceFullScreen = false,
+  headerActions,
 }: PreviewModalProps) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isFullScreen = isMobile || forceFullScreen;
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="lg"
+      maxWidth={forceFullScreen ? false : "lg"}
       fullWidth
-      fullScreen={isMobile}
+      fullScreen={isFullScreen}
       PaperProps={{
         sx: {
-          height: { xs: "100dvh", sm: "90dvh", md: "90vh" },
-          maxHeight: { xs: "100dvh", sm: "90dvh", md: "90vh" },
-          borderRadius: { xs: 0, sm: 2, md: 2 },
+          height: isFullScreen
+            ? "100dvh"
+            : { xs: "100dvh", sm: "90dvh", md: "90vh" },
+          maxHeight: isFullScreen
+            ? "100dvh"
+            : { xs: "100dvh", sm: "90dvh", md: "90vh" },
+          width: forceFullScreen ? "100vw" : undefined,
+          maxWidth: forceFullScreen ? "100vw" : undefined,
+          borderRadius: isFullScreen ? 0 : { xs: 0, sm: 2, md: 2 },
         },
       }}
     >
@@ -83,6 +94,7 @@ export const PreviewModal = ({
             <Typography variant="subtitle2" sx={{ flex: 1, minWidth: 0 }} noWrap>
               {title}
             </Typography>
+            {headerActions}
             <IconButton
               onClick={onClose}
               sx={{

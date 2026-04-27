@@ -815,7 +815,13 @@
         }
       },
       "model": {
-        "loading": "Cargando modelo 3D..."
+        "loading": "Cargando modelo 3D...",
+        "actions": {
+          "autoAlign": "Alinear al suelo",
+          "autoOrient": "Orientación automática",
+          "resetColor": "Usar colores originales",
+          "togglePalette": "Paleta de colores"
+        }
       },
       "language": {
         "label": "Idioma"
