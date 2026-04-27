@@ -16,10 +16,36 @@ interface SetupStatusRaw {
   IsServerInitialized?: boolean;
 }
 
-interface ServerSettingsRaw {
+interface ChunkSizeRaw {
   maxChunkSizeBytes: number;
-  SupportedHashAlgorithm?: string;
-  supportedHashAlgorithm?: string;
+}
+
+interface SupportedHashAlgorithmsRaw {
+  supportedHashAlgorithms?: string | string[];
+  SupportedHashAlgorithms?: string | string[];
+}
+
+const DEFAULT_SUPPORTED_HASH_ALGORITHM = "SHA-256";
+
+const pickSupportedHashAlgorithm = (
+  raw: SupportedHashAlgorithmsRaw,
+): string => {
+  const candidates = raw.supportedHashAlgorithms ?? raw.SupportedHashAlgorithms;
+
+  if (typeof candidates === "string" && candidates.trim().length > 0) {
+    return candidates;
+  }
+
+  if (Array.isArray(candidates)) {
+    const first = candidates.find(
+      (algorithm) => typeof algorithm === "string" && algorithm.trim().length > 0,
+    );
+    if (first) {
+      return first;
+    }
+  }
+
+  return DEFAULT_SUPPORTED_HASH_ALGORITHM;
 }
 
 export const settingsApi = {
@@ -41,15 +67,20 @@ export const settingsApi = {
   },
 
   get: async (): Promise<ServerSettings> => {
-    const response = await httpClient.get<ServerSettingsRaw>("server/settings");
+    const [chunkSizeResponse, supportedHashAlgorithmsResponse] =
+      await Promise.all([
+        httpClient.get<ChunkSizeRaw>("server/settings/chunk-size"),
+        httpClient.get<SupportedHashAlgorithmsRaw>(
+          "server/settings/supported-hash-algorithms",
+        ),
+      ]);
 
-    const supportedHashAlgorithm =
-      response.data.supportedHashAlgorithm ??
-      response.data.SupportedHashAlgorithm ??
-      "Unknown";
+    const supportedHashAlgorithm = pickSupportedHashAlgorithm(
+      supportedHashAlgorithmsResponse.data,
+    );
 
     return {
-      maxChunkSizeBytes: response.data.maxChunkSizeBytes,
+      maxChunkSizeBytes: chunkSizeResponse.data.maxChunkSizeBytes,
       supportedHashAlgorithm,
     };
   },
