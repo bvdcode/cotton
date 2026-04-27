@@ -809,7 +809,13 @@
         }
       },
       "model": {
-        "loading": "Загрузка 3D-модели..."
+        "loading": "Загрузка 3D-модели...",
+        "actions": {
+          "autoAlign": "Выровнять по земле",
+          "autoOrient": "Автоориентация",
+          "resetColor": "Исходные цвета",
+          "togglePalette": "Палитра цветов"
+        }
       },
       "language": {
         "label": "Язык"

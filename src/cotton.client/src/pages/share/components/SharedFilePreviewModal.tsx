@@ -1,5 +1,20 @@
 import * as React from "react";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Collapse,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import {
+  AutoFixHigh,
+  ColorLens,
+  FormatColorReset,
+  VerticalAlignBottom,
+} from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { PreviewModal, PdfPreview, ModelPreview } from "../../files/components/preview";
 import type { FileType } from "../../files/utils/fileTypes";
@@ -29,10 +44,50 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(["files", "share", "common"]);
+  const theme = useTheme();
+  const isModel = fileType === "model";
 
   const [textContent, setTextContent] = React.useState<string | null>(null);
   const [loadingText, setLoadingText] = React.useState<boolean>(false);
   const [textError, setTextError] = React.useState<string | null>(null);
+  const [isPaletteOpen, setIsPaletteOpen] = React.useState<boolean>(false);
+  const [materialColor, setMaterialColor] = React.useState<string | null>(null);
+  const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
+  const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
+
+  const paletteColors = React.useMemo<string[]>(
+    () => [
+      theme.palette.grey[400],
+      theme.palette.primary.main,
+      theme.palette.info.main,
+      theme.palette.success.main,
+      theme.palette.warning.main,
+      theme.palette.error.main,
+    ],
+    [theme],
+  );
+
+  const modelSource = React.useMemo(() => {
+    if (!fileId) {
+      return null;
+    }
+
+    return {
+      kind: "url" as const,
+      url: sharedFoldersApi.buildFileContentUrl(token, fileId, "inline"),
+    };
+  }, [fileId, token]);
+
+  React.useEffect(() => {
+    if (!open || !isModel) {
+      setIsPaletteOpen(false);
+      setMaterialColor(null);
+      return;
+    }
+
+    setIsPaletteOpen(false);
+    setMaterialColor(null);
+  }, [fileId, isModel, open]);
 
   React.useEffect(() => {
     if (!open || fileType !== "text" || !fileId || !fileName) {
@@ -111,12 +166,50 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     return null;
   }
 
+  const modelHeaderActions = isModel
+    ? (
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <Tooltip title={t("preview.model.actions.autoOrient", { ns: "files" })}>
+          <IconButton
+            size="small"
+            onClick={() => setAutoOrientToken((value) => value + 1)}
+          >
+            <AutoFixHigh fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={t("preview.model.actions.autoAlign", { ns: "files" })}>
+          <IconButton
+            size="small"
+            onClick={() => setAutoAlignToken((value) => value + 1)}
+          >
+            <VerticalAlignBottom fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={t("preview.model.actions.togglePalette", { ns: "files" })}>
+          <IconButton
+            size="small"
+            onClick={() => setIsPaletteOpen((isOpenValue) => !isOpenValue)}
+          >
+            <ColorLens
+              fontSize="small"
+              sx={{ color: materialColor ?? theme.palette.text.primary }}
+            />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    )
+    : undefined;
+
   return (
     <PreviewModal
       open={open}
       onClose={onClose}
-      layout={fileType === "pdf" ? "header" : "overlay"}
-      title={fileType === "pdf" ? fileName : undefined}
+      layout={fileType === "pdf" || isModel ? "header" : "overlay"}
+      title={fileType === "pdf" || isModel ? fileName : undefined}
+      forceFullScreen={isModel}
+      headerActions={modelHeaderActions}
     >
       {fileType === "pdf" && (
         <PdfPreview
@@ -183,16 +276,64 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
         </Box>
       )}
 
-      {fileType === "model" && (
-        <ModelPreview
-          source={{
-            kind: "url",
-            url: sharedFoldersApi.buildFileContentUrl(token, fileId, "inline"),
-          }}
-          fileName={fileName}
-          contentType={contentType}
-          fileSizeBytes={fileSizeBytes}
-        />
+      {isModel && modelSource && (
+        <Box sx={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <ModelPreview
+              source={modelSource}
+              fileName={fileName}
+              contentType={contentType}
+              fileSizeBytes={fileSizeBytes}
+              materialColor={materialColor}
+              autoAlignToken={autoAlignToken}
+              autoOrientToken={autoOrientToken}
+            />
+          </Box>
+
+          <Collapse in={isPaletteOpen} timeout="auto" unmountOnExit>
+            <Box
+              sx={{
+                alignItems: "center",
+                backgroundColor: "background.paper",
+                borderTop: 1,
+                borderColor: "divider",
+                display: "flex",
+                justifyContent: "center",
+                minHeight: 56,
+                px: 1.5,
+                py: 1,
+              }}
+            >
+              <Stack direction="row" spacing={1}>
+                <Tooltip title={t("preview.model.actions.resetColor", { ns: "files" })}>
+                  <IconButton size="small" onClick={() => setMaterialColor(null)}>
+                    <FormatColorReset fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+
+                {paletteColors.map((color) => (
+                  <IconButton
+                    key={color}
+                    size="small"
+                    onClick={() => setMaterialColor(color)}
+                  >
+                    <Box
+                      sx={{
+                        backgroundColor: color,
+                        border: 1,
+                        borderColor:
+                          materialColor === color ? "text.primary" : "divider",
+                        borderRadius: "50%",
+                        height: 18,
+                        width: 18,
+                      }}
+                    />
+                  </IconButton>
+                ))}
+              </Stack>
+            </Box>
+          </Collapse>
+        </Box>
       )}
     </PreviewModal>
   );
