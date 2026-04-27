@@ -7,7 +7,7 @@ namespace Cotton.Previews
 {
     public class ImagePreviewGenerator : IPreviewGenerator
     {
-        public int Version => 1;
+        public int Version => 2;
         public const int SmallPreviewQuality = 75;
         public const int LargePreviewQuality = 82;
 
