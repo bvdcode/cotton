@@ -5,10 +5,9 @@ import { readRequiredIntHeader, type HeaderMap } from "./utils/headerUtils";
 export interface NodeFileManifestDto extends BaseDto {
   /**
    * Container node id (folder) where this file is located.
-   * Present in search results; may be omitted in other endpoints.
    */
-  nodeId?: Guid;
-  ownerId?: Guid;
+  nodeId: Guid;
+  ownerId: Guid;
   name: string;
   contentType: string;
   sizeBytes: number;
