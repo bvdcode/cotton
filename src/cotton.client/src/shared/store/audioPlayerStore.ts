@@ -233,10 +233,10 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
           playlist.push({
             id: file.id,
             name: file.name,
-            nodeId: file.nodeId ?? undefined,
+            nodeId: file.nodeId,
             folderPath: folderPath ?? undefined,
             previewUrl: tryBuildPreviewUrl(
-              file.previewHashEncryptedHex ?? undefined,
+              file.previewHashEncryptedHex,
             ),
           });
         }
