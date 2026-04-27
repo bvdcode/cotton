@@ -22,7 +22,7 @@ namespace Cotton.Database.Migrations
                 name: "metadata",
                 table: "node_files",
                 type: "hstore",
-                nullable: false);
+                nullable: true);
         }
 
         /// <inheritdoc />

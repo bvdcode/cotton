@@ -14,7 +14,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    [Migration("20260427163305_AddMetadataAndIsClientEncryptedFlag")]
+    [Migration("20260427171821_AddMetadataAndIsClientEncryptedFlag")]
     partial class AddMetadataAndIsClientEncryptedFlag
     {
         /// <inheritdoc />
@@ -569,7 +569,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnName("is_client_encrypted");
 
                     b.Property<Dictionary<string, string>>("Metadata")
-                        .IsRequired()
                         .HasColumnType("hstore")
                         .HasColumnName("metadata");
 
