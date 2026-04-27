@@ -46,6 +46,11 @@
             public const string Layouts = Base + "/layouts";
 
             /// <summary>
+            /// Settings endpoint path.
+            /// </summary>
+            public const string Settings = Base + "/settings";
+
+            /// <summary>
             /// Preview endpoint path.
             /// </summary>
             public const string Previews = Base + "/preview";
