@@ -234,13 +234,13 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
         response.EnsureSuccessStatusCode();
 
-        var envelope = await _client!.GetFromJsonAsync<ServerSettingsEnvelopeDto>("/api/v1/server/settings");
+        var envelope = await _client!.GetFromJsonAsync<CottonServerSettingsDto>("/api/v1/server/settings");
         Assert.That(envelope, Is.Not.Null);
-        Assert.That(envelope!.Settings, Is.Not.Null);
-        Assert.That(envelope.Settings!.PublicBaseUrl, Does.Contain("localhost"));
-        Assert.That(envelope.Settings.PublicBaseUrl.EndsWith('/'), Is.False);
-        Assert.That(envelope.Settings.StorageType, Is.EqualTo(StorageType.Local));
-        Assert.That(envelope.Settings.EmailMode, Is.EqualTo(EmailMode.None));
+        Assert.That(envelope, Is.Not.Null);
+        Assert.That(envelope!.PublicBaseUrl, Does.Contain("localhost"));
+        Assert.That(envelope.PublicBaseUrl!.EndsWith('/'), Is.False);
+        Assert.That(envelope.Storage, Is.EqualTo(StorageType.Local));
+        Assert.That(envelope.Email, Is.EqualTo(EmailMode.None));
     }
 
     private static CottonServerSettingsDto CreateValidInitialSettings(

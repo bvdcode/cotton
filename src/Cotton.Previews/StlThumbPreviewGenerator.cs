@@ -1,5 +1,3 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml;
@@ -91,7 +89,7 @@ namespace Cotton.Previews
 
                 if (!rendered)
                 {
-                    return await GenerateFallbackPreviewWebPAsync(size).ConfigureAwait(false);
+                    throw new InvalidOperationException($"Failed to render {_modelExtension} preview with f3d.");
                 }
 
                 await using FileStream renderedPngStream = new(
@@ -365,14 +363,6 @@ namespace Cotton.Previews
             {
                 return false;
             }
-        }
-
-        private static async Task<byte[]> GenerateFallbackPreviewWebPAsync(int size)
-        {
-            using Image<Rgba32> image = new(size, size, new Rgba32(34, 34, 38, 255));
-            using var outputStream = new MemoryStream();
-            await image.SaveAsWebpAsync(outputStream).ConfigureAwait(false);
-            return outputStream.ToArray();
         }
 
         private static async Task<string?> TryNormalizeThreeMfArchiveAsync(string sourcePath)
