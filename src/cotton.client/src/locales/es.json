@@ -819,9 +819,26 @@
         "actions": {
           "autoAlign": "Alinear al suelo",
           "autoOrient": "Orientación automática",
+          "cycleLighting": "Luz: {{preset}}",
           "cycleRotation": "Rotar / voltear",
+          "cycleSurface": "Superficie: {{preset}}",
           "resetColor": "Usar colores originales",
+          "toggleShadows": "Sombras: {{state}}",
           "togglePalette": "Paleta de colores"
+        },
+        "lighting": {
+          "balanced": "Equilibrada",
+          "studio": "Estudio",
+          "dramatic": "Dramática"
+        },
+        "surface": {
+          "original": "Original",
+          "matte": "Mate",
+          "glossy": "Brillante"
+        },
+        "states": {
+          "on": "Activado",
+          "off": "Desactivado"
         }
       },
       "language": {

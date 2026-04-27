@@ -819,9 +819,26 @@
         "actions": {
           "autoAlign": "Align to ground",
           "autoOrient": "Auto orient",
+          "cycleLighting": "Lighting: {{preset}}",
           "cycleRotation": "Rotate / flip",
+          "cycleSurface": "Surface: {{preset}}",
           "resetColor": "Use original colors",
+          "toggleShadows": "Shadows: {{state}}",
           "togglePalette": "Color palette"
+        },
+        "lighting": {
+          "balanced": "Balanced",
+          "studio": "Studio",
+          "dramatic": "Dramatic"
+        },
+        "surface": {
+          "original": "Original",
+          "matte": "Matte",
+          "glossy": "Glossy"
+        },
+        "states": {
+          "on": "On",
+          "off": "Off"
         }
       },
       "language": {

@@ -12,9 +12,12 @@ import {
 import {
   AutoFixHigh,
   ColorLens,
+  FilterDrama,
   FormatColorReset,
   Rotate90DegreesCw,
+  Texture,
   VerticalAlignBottom,
+  WbSunny,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { PreviewModal, PdfPreview, ModelPreview } from "../../files/components/preview";
@@ -33,6 +36,21 @@ interface SharedFilePreviewModalProps {
   contentType: string | null;
   onClose: () => void;
 }
+
+type LightingPreset = "balanced" | "studio" | "dramatic";
+type SurfacePreset = "original" | "matte" | "glossy";
+
+const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
+  "balanced",
+  "studio",
+  "dramatic",
+];
+
+const SURFACE_PRESET_ORDER: ReadonlyArray<SurfacePreset> = [
+  "original",
+  "matte",
+  "glossy",
+];
 
 export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   open,
@@ -56,6 +74,9 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
   const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
   const [cycleOrientationToken, setCycleOrientationToken] = React.useState<number>(0);
+  const [lightingPreset, setLightingPreset] = React.useState<LightingPreset>("balanced");
+  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("original");
+  const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
     () => [
@@ -80,15 +101,37 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     };
   }, [fileId, token]);
 
+  const cycleLightingPreset = React.useCallback(() => {
+    setLightingPreset((currentPreset) => {
+      const currentIndex = LIGHTING_PRESET_ORDER.indexOf(currentPreset);
+      const nextIndex = (currentIndex + 1) % LIGHTING_PRESET_ORDER.length;
+      return LIGHTING_PRESET_ORDER[nextIndex];
+    });
+  }, []);
+
+  const cycleSurfacePreset = React.useCallback(() => {
+    setSurfacePreset((currentPreset) => {
+      const currentIndex = SURFACE_PRESET_ORDER.indexOf(currentPreset);
+      const nextIndex = (currentIndex + 1) % SURFACE_PRESET_ORDER.length;
+      return SURFACE_PRESET_ORDER[nextIndex];
+    });
+  }, []);
+
   React.useEffect(() => {
     if (!open || !isModel) {
       setPaletteAnchorEl(null);
       setMaterialColor(null);
+      setLightingPreset("balanced");
+      setSurfacePreset("original");
+      setShadowsEnabled(true);
       return;
     }
 
     setPaletteAnchorEl(null);
     setMaterialColor(null);
+    setLightingPreset("balanced");
+    setSurfacePreset("original");
+    setShadowsEnabled(true);
   }, [fileId, isModel, open]);
 
   React.useEffect(() => {
@@ -171,6 +214,47 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   const modelHeaderActions = isModel
     ? (
       <Stack direction="row" spacing={0.5} alignItems="center">
+        <Tooltip
+          title={t("preview.model.actions.cycleLighting", {
+            ns: "files",
+            preset: t(`preview.model.lighting.${lightingPreset}`, { ns: "files" }),
+          })}
+        >
+          <IconButton onClick={cycleLightingPreset}>
+            <WbSunny />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip
+          title={t("preview.model.actions.toggleShadows", {
+            ns: "files",
+            state: t(
+              shadowsEnabled
+                ? "preview.model.states.on"
+                : "preview.model.states.off",
+              { ns: "files" },
+            ),
+          })}
+        >
+          <IconButton
+            color={shadowsEnabled ? "primary" : "default"}
+            onClick={() => setShadowsEnabled((currentState) => !currentState)}
+          >
+            <FilterDrama />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip
+          title={t("preview.model.actions.cycleSurface", {
+            ns: "files",
+            preset: t(`preview.model.surface.${surfacePreset}`, { ns: "files" }),
+          })}
+        >
+          <IconButton onClick={cycleSurfacePreset}>
+            <Texture />
+          </IconButton>
+        </Tooltip>
+
         <Tooltip title={t("preview.model.actions.cycleRotation", { ns: "files" })}>
           <IconButton onClick={() => setCycleOrientationToken((value) => value + 1)}>
             <Rotate90DegreesCw />
@@ -290,6 +374,9 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
               autoAlignToken={autoAlignToken}
               autoOrientToken={autoOrientToken}
               cycleOrientationToken={cycleOrientationToken}
+              lightingPreset={lightingPreset}
+              shadowsEnabled={shadowsEnabled}
+              surfacePreset={surfacePreset}
             />
           </Box>
         </Box>
