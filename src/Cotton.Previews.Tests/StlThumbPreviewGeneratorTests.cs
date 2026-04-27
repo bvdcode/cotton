@@ -4,12 +4,33 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.IO.Compression;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Cotton.Previews.Tests;
 
 public class StlThumbPreviewGeneratorTests
 {
+    [Test]
+    public void NativeRenderImport_ModelFilenameParameter_UsesUtf8Marshalling()
+    {
+        Type nativeType = typeof(StlThumbPreviewGenerator)
+            .GetNestedType("StlThumbNative", BindingFlags.NonPublic)
+            ?? throw new AssertionException("StlThumbNative nested type was not found.");
+
+        MethodInfo renderMethod = nativeType.GetMethod(
+                "RenderToBuffer",
+                BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new AssertionException("RenderToBuffer method was not found.");
+
+        ParameterInfo modelFilenameParameter = renderMethod.GetParameters()[3];
+        MarshalAsAttribute marshalAs = modelFilenameParameter.GetCustomAttribute<MarshalAsAttribute>()
+            ?? throw new AssertionException("MarshalAsAttribute is missing on modelFilename parameter.");
+
+        Assert.That(marshalAs.Value, Is.EqualTo(UnmanagedType.LPUTF8Str));
+    }
+
     [Test]
     public async Task GeneratePreviewWebPAsync_ThreeMfWithEmbeddedThumbnail_UsesEmbeddedImage()
     {

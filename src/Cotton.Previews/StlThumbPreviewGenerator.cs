@@ -408,7 +408,7 @@ namespace Cotton.Previews
                 byte[] buffer,
                 uint width,
                 uint height,
-                [MarshalAs(UnmanagedType.LPWStr)] string modelFilename);
+                [MarshalAs(UnmanagedType.LPUTF8Str)] string modelFilename);
 #pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
         }
     }
