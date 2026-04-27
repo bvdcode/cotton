@@ -1,5 +1,6 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
 
 namespace Cotton.Previews
@@ -8,6 +9,7 @@ namespace Cotton.Previews
     {
         private readonly string _modelExtension;
         private readonly string[] _supportedContentTypes;
+        private const string ThreeMfExtension = ".3mf";
 
         public StlThumbPreviewGenerator()
             : this(".stl", ["model/stl", "application/sla"])
@@ -35,7 +37,7 @@ namespace Cotton.Previews
                 ["model/3mf", "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"]);
         }
 
-        public int Version => 0;
+        public int Version => 1;
 
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
@@ -47,6 +49,7 @@ namespace Cotton.Previews
             int bufferSize = checked(size * size * 4);
             byte[] rgbaBuffer = new byte[bufferSize];
             string modelFilePath = Path.Combine(Path.GetTempPath(), $"cotton-model-{Guid.NewGuid():N}{_modelExtension}");
+            string? normalizedThreeMfPath = null;
 
             try
             {
@@ -66,22 +69,15 @@ namespace Cotton.Previews
                     await stream.CopyToAsync(fileStream).ConfigureAwait(false);
                 }
 
-                bool rendered;
-                try
+                bool rendered = RenderToBuffer(rgbaBuffer, size, modelFilePath);
+
+                if (!rendered && string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
                 {
-                    rendered = StlThumbNative.RenderToBuffer(rgbaBuffer, (uint)size, (uint)size, modelFilePath);
-                }
-                catch (DllNotFoundException ex)
-                {
-                    throw new InvalidOperationException("stl-thumb native library was not found.", ex);
-                }
-                catch (EntryPointNotFoundException ex)
-                {
-                    throw new InvalidOperationException("stl-thumb entry point render_to_buffer was not found.", ex);
-                }
-                catch (BadImageFormatException ex)
-                {
-                    throw new InvalidOperationException("stl-thumb native library architecture is incompatible.", ex);
+                    normalizedThreeMfPath = await TryNormalizeThreeMfArchiveAsync(modelFilePath).ConfigureAwait(false);
+                    if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
+                    {
+                        rendered = RenderToBuffer(rgbaBuffer, size, normalizedThreeMfPath);
+                    }
                 }
 
                 if (!rendered)
@@ -96,14 +92,99 @@ namespace Cotton.Previews
             }
             finally
             {
-                try
+                TryDeleteFile(modelFilePath);
+
+                if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
                 {
-                    File.Delete(modelFilePath);
+                    TryDeleteFile(normalizedThreeMfPath);
                 }
-                catch
+            }
+        }
+
+        private static bool RenderToBuffer(byte[] rgbaBuffer, int size, string modelFilePath)
+        {
+            try
+            {
+                return StlThumbNative.RenderToBuffer(rgbaBuffer, (uint)size, (uint)size, modelFilePath);
+            }
+            catch (DllNotFoundException ex)
+            {
+                throw new InvalidOperationException("stl-thumb native library was not found.", ex);
+            }
+            catch (EntryPointNotFoundException ex)
+            {
+                throw new InvalidOperationException("stl-thumb entry point render_to_buffer was not found.", ex);
+            }
+            catch (BadImageFormatException ex)
+            {
+                throw new InvalidOperationException("stl-thumb native library architecture is incompatible.", ex);
+            }
+        }
+
+        private static async Task<string?> TryNormalizeThreeMfArchiveAsync(string sourcePath)
+        {
+            string normalizedPath = Path.Combine(Path.GetTempPath(), $"cotton-model-normalized-{Guid.NewGuid():N}{ThreeMfExtension}");
+
+            try
+            {
+                await using FileStream inputFileStream = new(
+                    sourcePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 81920,
+                    options: FileOptions.Asynchronous);
+
+                using ZipArchive sourceArchive = new(inputFileStream, ZipArchiveMode.Read, leaveOpen: false);
+
+                await using FileStream outputFileStream = new(
+                    normalizedPath,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize: 81920,
+                    options: FileOptions.Asynchronous);
+
+                using ZipArchive normalizedArchive = new(outputFileStream, ZipArchiveMode.Create, leaveOpen: false);
+                foreach (ZipArchiveEntry sourceEntry in sourceArchive.Entries)
                 {
-                    // Temporary-file cleanup failures must not hide the original render error.
+                    ZipArchiveEntry normalizedEntry = normalizedArchive.CreateEntry(sourceEntry.FullName, CompressionLevel.Optimal);
+                    normalizedEntry.LastWriteTime = sourceEntry.LastWriteTime;
+
+                    await using Stream sourceEntryStream = sourceEntry.Open();
+                    await using Stream normalizedEntryStream = normalizedEntry.Open();
+                    await sourceEntryStream.CopyToAsync(normalizedEntryStream).ConfigureAwait(false);
                 }
+
+                return normalizedPath;
+            }
+            catch (InvalidDataException)
+            {
+                TryDeleteFile(normalizedPath);
+                return null;
+            }
+            catch (NotSupportedException)
+            {
+                TryDeleteFile(normalizedPath);
+                return null;
+            }
+            catch (IOException)
+            {
+                TryDeleteFile(normalizedPath);
+                return null;
+            }
+
+        }
+
+        private static void TryDeleteFile(string filePath)
+        {
+            try
+            {
+                File.Delete(filePath);
+            }
+            catch
+            {
+                // Temporary-file cleanup failures must not hide the original render error.
             }
         }
 
