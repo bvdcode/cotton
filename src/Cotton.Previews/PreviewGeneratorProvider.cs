@@ -16,6 +16,7 @@
             new TextPreviewGenerator(),
             new AudioPreviewGenerator(),
             new VideoPreviewGenerator(),
+            new SvgPreviewGenerator(),
             new ImagePreviewGenerator(),
         ];
 

@@ -29,6 +29,7 @@ const IMAGE_EXTENSIONS = [
   "webp",
   "bmp",
   "svg",
+  "svgz",
   "heic",
 ];
 const PDF_EXTENSIONS = ["pdf"];
