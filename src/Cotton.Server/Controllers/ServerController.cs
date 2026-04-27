@@ -15,9 +15,7 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Server)]
-    public class ServerController(
-        SettingsProvider _settings,
-        IMediator _mediator) : ControllerBase
+    public class ServerController(IMediator _mediator, SettingsProvider _settings) : ControllerBase
     {
         [HttpPost("emergency-shutdown")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -30,8 +28,14 @@ namespace Cotton.Server.Controllers
         [HttpGet("info")]
         public async Task<IActionResult> GetServerInfo()
         {
-            PublicServerInfo result = await _mediator.Send(new GetServerInfoQuery());
-            return Ok(result);
+            string instanceIdHash = _settings.GetServerSettings().GetInstanceIdHash();
+            bool serverHasUsers = await _settings.ServerHasUsersAsync();
+            return Ok(new PublicServerInfo()
+            {
+                InstanceIdHash = instanceIdHash,
+                CanCreateInitialAdmin = !serverHasUsers,
+                Product = Constants.ProductName,
+            });
         }
 
         [HttpPatch("database-backup/trigger")]

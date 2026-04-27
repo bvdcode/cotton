@@ -1,8 +1,10 @@
 ﻿using Cotton.Server.Handlers.Server;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
+using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Runtime;
@@ -26,7 +28,7 @@ namespace Cotton.Server.Controllers
 
         [HttpPost]
         [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> CreateSettings(InitialServerSettingsRequestDto request, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateSettings(CottonServerSettingsDto request, CancellationToken cancellationToken)
         {
             string fallbackPublicBaseUrl = $"{Request.Scheme}://{Request.Host.Value}";
             await _mediator.Send(new CreateInitialServerSettingsRequest(request, fallbackPublicBaseUrl), cancellationToken);
@@ -34,12 +36,25 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
-        [HttpGet]
-        public async Task<IActionResult> GetSettings()
+        [HttpGet("chunk-size")]
+        public async Task<IActionResult> GetChunkSize()
         {
-            bool isAdmin = User.IsInRole(nameof(UserRole.Admin));
-            ServerSettingsEnvelopeDto settings = await _mediator.Send(new GetServerSettingsQuery(isAdmin));
-            return Ok(settings);
+            int maxChunkSizeBytes = _settings.GetServerSettings().MaxChunkSizeBytes;
+            return Ok(new { maxChunkSizeBytes });
+        }
+
+        [Authorize]
+        [HttpGet("supported-hash-algorithms")]
+        public async Task<IActionResult> GetSupportedHashAlgorithms()
+        {
+            return Ok(new { supportedHashAlgorithms = Hasher.SupportedHashAlgorithm });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet]
+        public async Task<CottonServerSettingsDto> GetSettings()
+        {
+            return _settings.GetServerSettings().Adapt<CottonServerSettingsDto>();
         }
     }
 }
