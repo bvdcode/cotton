@@ -12,8 +12,9 @@ export interface NodeFileManifestDto extends BaseDto {
   name: string;
   contentType: string;
   sizeBytes: number;
+  isClientEncrypted: boolean;
+  metadata: Record<string, string>;
   previewHashEncryptedHex?: string | null;
-  largeFilePreviewPresignedToken?: string | null;
 }
 export interface NodeResponse {
   content: NodeContentDto;
