@@ -26,7 +26,7 @@ namespace Cotton.Server.Jobs
         IHubContext<EventHub> _hubContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
-        private const int MaxItemsPerRun = 1000;
+        private const int MaxItemsPerRun = 100;
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -134,7 +134,7 @@ namespace Cotton.Server.Jobs
                             .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex());
                     }
                     // TODO: Move to settings or autoconfig
-                    await Task.Delay(100);
+                    await Task.Delay(250);
                 }
                 catch (Exception ex)
                 {
