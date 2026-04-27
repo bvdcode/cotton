@@ -566,7 +566,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnName("is_client_encrypted");
 
                     b.Property<Dictionary<string, string>>("Metadata")
-                        .IsRequired()
                         .HasColumnType("hstore")
                         .HasColumnName("metadata");
 
