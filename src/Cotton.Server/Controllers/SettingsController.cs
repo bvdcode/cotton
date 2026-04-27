@@ -1,4 +1,5 @@
-﻿using Cotton.Server.Handlers.Server;
+﻿using Cotton.Database.Models.Enums;
+using Cotton.Server.Handlers.Server;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -7,7 +8,6 @@ using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Runtime;
 
 namespace Cotton.Server.Controllers
 {
@@ -17,7 +17,6 @@ namespace Cotton.Server.Controllers
         SettingsProvider _settings,
         IMediator _mediator) : ControllerBase
     {
-
         [HttpGet("is-setup-complete")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> IsServerInitialized()
@@ -55,6 +54,13 @@ namespace Cotton.Server.Controllers
         public async Task<CottonServerSettingsDto> GetSettings()
         {
             return _settings.GetServerSettings().Adapt<CottonServerSettingsDto>();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("geoip-lookup-mode/{mode}")]
+        public async Task<IActionResult> SetGeoIpLookupMode([FromRoute] GeoIpLookupMode mode)
+        {
+
         }
     }
 }
