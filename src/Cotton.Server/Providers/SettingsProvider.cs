@@ -9,6 +9,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.Linq.Expressions;
 
 namespace Cotton.Server.Providers
 {
@@ -335,6 +336,33 @@ namespace Cotton.Server.Providers
             {
                 _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
             }
+        }
+
+        public async Task SetProperty<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
+        {
+            var memberExpression = selector.Body as MemberExpression;
+            if (memberExpression is null && selector.Body is UnaryExpression unaryExpression)
+            {
+                memberExpression = unaryExpression.Operand as MemberExpression;
+            }
+
+            if (memberExpression?.Member.Name is not string propertyName)
+            {
+                throw new ArgumentException("Selector must point to a settings property.", nameof(selector));
+            }
+
+            CottonServerSettings? settings = await _dbContext.ServerSettings
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (settings is null)
+            {
+                throw new InvalidOperationException("Server settings are not initialized.");
+            }
+
+            _dbContext.Entry(settings).Property(propertyName).CurrentValue = value;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            _cache = null;
         }
 
         private static int? TryParseInt(string? value)
