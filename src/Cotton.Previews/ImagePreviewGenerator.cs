@@ -1,4 +1,5 @@
 ﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -6,7 +7,9 @@ namespace Cotton.Previews
 {
     public class ImagePreviewGenerator : IPreviewGenerator
     {
-        public int Version => 0;
+        public int Version => 2;
+        public const int SmallPreviewQuality = 75;
+        public const int LargePreviewQuality = 82;
 
         public IEnumerable<string> SupportedContentTypes =>
             Configuration.Default.ImageFormats.SelectMany(x => x.MimeTypes);
@@ -17,6 +20,9 @@ namespace Cotton.Previews
             {
                 stream.Position = 0;
             }
+
+            int mid = (PreviewGeneratorProvider.DefaultSmallPreviewSize + PreviewGeneratorProvider.DefaultLargePreviewSize) / 2;
+            int quality = size > mid ? LargePreviewQuality : SmallPreviewQuality;
 
             using Image<Rgba32> image = Image.Load<Rgba32>(stream);
             image.Mutate(x => x.AutoOrient());
@@ -29,7 +35,8 @@ namespace Cotton.Previews
                 }));
             }
             using var outputStream = new MemoryStream();
-            await image.SaveAsWebpAsync(outputStream);
+            
+            await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = quality });
             return outputStream.ToArray();
         }
     }
