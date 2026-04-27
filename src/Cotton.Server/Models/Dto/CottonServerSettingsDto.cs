@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Models.Dto
 {
+    [Obsolete("This class is deprecated and will be removed in future versions. Please use the new configuration system.")]
     public class CottonServerSettingsDto
     {
         /// <summary>
@@ -35,8 +36,6 @@ namespace Cotton.Server.Models.Dto
         public S3Config? S3Config { get; init; }
 
         public EmailConfig? EmailConfig { get; init; }
-
-        public string? CustomGeoIpLookupUrl { get; set; }
 
         public int MaxChunkSizeBytes { get; init; }
 
