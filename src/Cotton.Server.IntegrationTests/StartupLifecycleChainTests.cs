@@ -243,7 +243,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         Assert.That(envelope.Settings.EmailMode, Is.EqualTo(EmailMode.None));
     }
 
-    private static InitialServerSettingsRequestDto CreateValidInitialSettings(
+    private static CottonServerSettingsDto CreateValidInitialSettings(
         string timezone = "UTC",
         bool telemetry = false,
         EmailMode email = EmailMode.None,
@@ -254,7 +254,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         S3Config? s3Config = null,
         EmailConfig? emailConfig = null)
     {
-        return new InitialServerSettingsRequestDto
+        return new CottonServerSettingsDto
         {
             TrustedMode = false,
             Usage = [ServerUsage.Other],
