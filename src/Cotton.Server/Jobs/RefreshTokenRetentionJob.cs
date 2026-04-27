@@ -13,6 +13,8 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            await Task.Delay(600_000); // Wait for 10 minutes for the server to start up and stabilize
+
             var cutoffDate = DateTime.UtcNow - RetentionPeriod;
             var tokensToRefresh = _dbContext.RefreshTokens
                 .Where(rt => rt.CreatedAt < cutoffDate)

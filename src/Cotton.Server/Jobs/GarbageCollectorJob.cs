@@ -46,6 +46,8 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            await Task.Delay(900_000); // Wait for 15 minutes for the server to start up and stabilize
+
             if (DryRunEnabled)
             {
                 _logger.LogWarning("GarbageCollectorJob is running in DRY-RUN mode. No DB rows or storage objects will be deleted/updated.");

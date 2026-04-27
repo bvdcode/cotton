@@ -19,6 +19,8 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            await Task.Delay(360_000); // Wait for 6 minutes for the server to start up and stabilize
+
             var settings = _settingsProvider.GetServerSettings();
             if (!settings.TelemetryEnabled)
             {

@@ -10,16 +10,18 @@ namespace Cotton.Server.Jobs
     {
         private static readonly TimeSpan _ttl = TimeSpan.FromHours(1);
 
-        public Task Execute(IJobExecutionContext context)
+        public async Task Execute(IJobExecutionContext context)
         {
+            await Task.Delay(420_000); // Wait for 7 minutes for the server to start up and stabilize
+
             if (_perf.IsNightTime())
             {
-                return Task.CompletedTask;
+                return;
             }
 
             var backend = _backendProvider.GetBackend();
             backend.CleanupTempFiles(_ttl);
-            return Task.CompletedTask;
+            return;
         }
     }
 }
