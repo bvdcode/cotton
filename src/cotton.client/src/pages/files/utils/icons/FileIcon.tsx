@@ -9,6 +9,18 @@ import { getFileTypeInfo } from "../fileTypes";
  */
 const MAX_EXTENSION_LENGTH = 6;
 
+interface FileIconOptions {
+  extensionLabelMaxLength?: number;
+  hideLongExtensionLabel?: boolean;
+  hideInvalidExtensionLabel?: boolean;
+}
+
+interface ExtensionLabelOptions {
+  extensionLabelMaxLength: number;
+  hideLongExtensionLabel: boolean;
+  hideInvalidExtensionLabel: boolean;
+}
+
 /**
  * Get file icon based on preview availability and file extension
  * 
@@ -22,6 +34,7 @@ export function getFileIcon(
   previewHash: string | null,
   fileName: string,
   contentType?: string | null,
+  options?: FileIconOptions,
 ): IconResult {
   // Strategy 1: Use server-generated preview if available
   if (previewHash) {
@@ -44,7 +57,12 @@ export function getFileIcon(
   }
 
   // Fallback: Generic file icon with extension label
-  return getGenericFileIcon(extension);
+  return getGenericFileIcon(extension, {
+    extensionLabelMaxLength:
+      options?.extensionLabelMaxLength ?? MAX_EXTENSION_LENGTH,
+    hideLongExtensionLabel: options?.hideLongExtensionLabel ?? false,
+    hideInvalidExtensionLabel: options?.hideInvalidExtensionLabel ?? false,
+  });
 }
 
 /**
@@ -74,8 +92,11 @@ function getImageFileIcon(): IconResult {
  * 
  * Single Responsibility: Renders generic file icon with extension text
  */
-function getGenericFileIcon(extension: string): IconResult {
-  const displayExtension = truncateExtension(extension);
+function getGenericFileIcon(
+  extension: string,
+  options: ExtensionLabelOptions,
+): IconResult {
+  const displayExtension = formatExtensionLabel(extension, options);
 
   return (
     <Box
@@ -96,35 +117,62 @@ function getGenericFileIcon(extension: string): IconResult {
               : "inherit",
         }}
       />
-      <Typography
-        variant="caption"
-        sx={{
-          position: "absolute",
-          top: "54%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          fontWeight: 700,
-          fontSize: 14,
-          textTransform: "uppercase",
-          color: (theme) =>
-            theme.palette.mode === "light"
-              ? "rgba(0, 0, 0, 0.6)"
-              : "text.secondary",
-          pointerEvents: "none",
-        }}
-      >
-        {displayExtension}
-      </Typography>
+      {displayExtension && (
+        <Typography
+          variant="caption"
+          sx={{
+            position: "absolute",
+            top: "54%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            fontWeight: 700,
+            fontSize: 14,
+            textTransform: "uppercase",
+            color: (theme) =>
+              theme.palette.mode === "light"
+                ? "rgba(0, 0, 0, 0.6)"
+                : "text.secondary",
+            pointerEvents: "none",
+          }}
+        >
+          {displayExtension}
+        </Typography>
+      )}
     </Box>
   );
 }
 
 /**
- * Truncate extension if too long
+ * Format extension label depending on rendering rules
  * Single Responsibility: Extension formatting
  */
-function truncateExtension(extension: string): string {
-  return extension.length > MAX_EXTENSION_LENGTH
-    ? extension.slice(0, MAX_EXTENSION_LENGTH)
-    : extension;
+function formatExtensionLabel(
+  extension: string,
+  options: ExtensionLabelOptions,
+): string | null {
+  const normalizedExtension = extension.trim().toLowerCase();
+
+  if (normalizedExtension.length === 0) {
+    return null;
+  }
+
+  if (
+    options.hideInvalidExtensionLabel &&
+    !/^[a-z0-9]+$/.test(normalizedExtension)
+  ) {
+    return null;
+  }
+
+  if (
+    options.hideLongExtensionLabel &&
+    normalizedExtension.length > options.extensionLabelMaxLength
+  ) {
+    return null;
+  }
+
+  if (normalizedExtension.length > options.extensionLabelMaxLength) {
+    return normalizedExtension.slice(0, options.extensionLabelMaxLength);
+  }
+
+  return normalizedExtension;
 }
