@@ -42,11 +42,11 @@ public class StlThumbPreviewGeneratorTests
 
         AssertWebpSignature(preview);
         using var image = Image.Load<Rgba32>(preview);
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(image.Width, Is.EqualTo(200));
             Assert.That(image.Height, Is.EqualTo(100));
-        });
+        }
     }
 
     private static byte[] CreateThreeMfWithThumbnailBytes(int width, int height)
@@ -133,8 +133,11 @@ public class StlThumbPreviewGeneratorTests
 
     private static void AssertWebpSignature(byte[] imageBytes)
     {
-        Assert.That(imageBytes.Length, Is.GreaterThanOrEqualTo(12));
-        Assert.That(Encoding.ASCII.GetString(imageBytes, 0, 4), Is.EqualTo("RIFF"));
-        Assert.That(Encoding.ASCII.GetString(imageBytes, 8, 4), Is.EqualTo("WEBP"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(imageBytes, Has.Length.GreaterThanOrEqualTo(12));
+            Assert.That(Encoding.ASCII.GetString(imageBytes, 0, 4), Is.EqualTo("RIFF"));
+            Assert.That(Encoding.ASCII.GetString(imageBytes, 8, 4), Is.EqualTo("WEBP"));
+        }
     }
 }
