@@ -16,7 +16,7 @@ RUN set -eux \
     && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-18 libgl1 libegl1 libosmesa6 libfontconfig1 libxcursor1 libx11-6 libx11-xcb1 libxrandr2 libxi6 libxinerama1 \
+    && apt-get install -y --no-install-recommends postgresql-client-18 libgl1 libegl1 libosmesa6 libfontconfig1 \
     && case "$(dpkg --print-architecture)" in amd64|arm64|armhf) STL_THUMB_DEB_ARCH="$(dpkg --print-architecture)" ;; *) echo "Unsupported architecture for stl-thumb .deb"; exit 1 ;; esac \
     && STL_THUMB_DEB_URL="https://github.com/unlimitedbacon/stl-thumb/releases/download/v${STL_THUMB_VERSION}/stl-thumb_${STL_THUMB_VERSION}_${STL_THUMB_DEB_ARCH}.deb" \
     && curl -fsSL "$STL_THUMB_DEB_URL" -o /tmp/stl-thumb.deb \
