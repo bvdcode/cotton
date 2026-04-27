@@ -490,17 +490,17 @@ namespace Cotton.Server.Controllers
             string? sessionId = null)
         {
             IPAddress ipAddress = GetRequestIpAddress();
-            GeoIpInfo lookup = await GeoIpClient.LookupAsync(ipAddress.ToString());
+            GeoIpInfo? lookup = await GeoIpClient.TryLookupAsync(ipAddress.ToString());
             sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
             return new()
             {
                 RevokedAt = null,
                 UserId = user.Id,
-                City = lookup.City,
+                City = lookup?.City ?? "Unknown",
                 SessionId = sessionId,
-                Region = lookup.Region,
+                Region = lookup?.Region ?? "Unknown",
                 IsTrusted = trustDevice,
-                Country = lookup.Country,
+                Country = lookup?.Country ?? "Unknown",
                 AuthType = AuthType.Credentials,
                 IpAddress = ipAddress,
                 UserAgent = Request.Headers.UserAgent.ToString(),
