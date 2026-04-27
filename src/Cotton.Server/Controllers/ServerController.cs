@@ -3,12 +3,9 @@
 
 using Cotton.Models;
 using Cotton.Server.Handlers.Server;
-using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Models.Dto;
-using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Extensions;
-using EasyExtensions.Models.Enums;
 using EasyExtensions.Mediator;
+using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

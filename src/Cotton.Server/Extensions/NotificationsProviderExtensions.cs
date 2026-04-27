@@ -1,7 +1,8 @@
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
-using Cotton.Server.Helpers;
+using EasyExtensions.Clients;
+using EasyExtensions.Clients.Models;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Primitives;
 using System.Net;
@@ -10,6 +11,58 @@ namespace Cotton.Server.Extensions
 {
     public static class NotificationsProviderExtensions
     {
+        private record ClientNotificationContext(
+            string Ip,
+            string UserAgent,
+            string DeviceName,
+            bool HasDevice,
+            string Country,
+            string Region,
+            string City);
+
+        private static async Task<ClientNotificationContext> CreateClientContextAsync(
+            IPAddress ipAddress,
+            StringValues userAgent)
+        {
+            string ip = ipAddress.ToString();
+            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
+            string deviceName = device.FriendlyName ?? device.Type.ToString();
+            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ip);
+
+            return new ClientNotificationContext(
+                Ip: ip,
+                UserAgent: userAgent.ToString(),
+                DeviceName: deviceName,
+                HasDevice: HasKnownDevice(deviceName),
+                Country: NormalizeGeoField(ipInfo.Country),
+                Region: NormalizeGeoField(ipInfo.Region),
+                City: NormalizeGeoField(ipInfo.City));
+        }
+
+        private static bool HasKnownDevice(string deviceName)
+        {
+            return !string.IsNullOrWhiteSpace(deviceName)
+                && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeGeoField(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "Unknown" : value;
+        }
+
+        private static Dictionary<string, string> CreateBaseMetadata(ClientNotificationContext context)
+        {
+            return new Dictionary<string, string>
+            {
+                ["ip"] = context.Ip,
+                ["userAgent"] = context.UserAgent,
+                ["device"] = context.DeviceName,
+                ["country"] = context.Country,
+                ["region"] = context.Region,
+                ["city"] = context.City
+            };
+        }
+
         public static async Task SendFailedLoginAttemptAsync(
             this INotificationsProvider notifications,
             Guid userId,
@@ -19,41 +72,29 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
-            string deviceName = device.FriendlyName ?? device.Type.ToString();
-
-            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
-                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            metadata["username"] = username;
 
             await notifications.SendNotificationAsync(
                 userId: userId,
                 title: NotificationTemplates.FailedLoginAttemptTitle,
-                content: hasDevice
+                content: context.HasDevice
                     ? NotificationTemplates.FailedLoginAttemptContent(
                         username,
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
                     : NotificationTemplates.FailedLoginAttemptContentNoDevice(
                         username,
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
                 priority: NotificationPriority.High,
-                metadata: new Dictionary<string, string>
-                {
-                    ["username"] = username,
-                    ["ip"] = ipAddress.ToString(),
-                    ["userAgent"] = userAgent.ToString(),
-                    ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
-                });
+                metadata: metadata);
         }
 
         public static async Task SendOtpEnabledAsync(
@@ -64,38 +105,26 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
-            string deviceName = device.FriendlyName ?? device.Type.ToString();
-
-            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
-                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
 
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.OtpEnabledTitle,
-                content: hasDevice
+                content: context.HasDevice
                     ? NotificationTemplates.OtpEnabledContent(
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
                     : NotificationTemplates.OtpEnabledContentNoDevice(
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
                 priority: NotificationPriority.Medium,
-                metadata: new Dictionary<string, string>
-                {
-                    ["ip"] = ipAddress.ToString(),
-                    ["userAgent"] = userAgent.ToString(),
-                    ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
-                });
+                metadata: metadata);
         }
 
         public static async Task SendSuccessfulLoginAsync(
@@ -106,38 +135,26 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
-            string deviceName = device.FriendlyName ?? device.Type.ToString();
-
-            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
-                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
 
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.SuccessfulLoginTitle,
-                content: hasDevice
+                content: context.HasDevice
                     ? NotificationTemplates.SuccessfulLoginContent(
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
                     : NotificationTemplates.SuccessfulLoginContentNoDevice(
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
                 priority: NotificationPriority.None,
-                metadata: new Dictionary<string, string>
-                {
-                    ["ip"] = ipAddress.ToString(),
-                    ["userAgent"] = userAgent.ToString(),
-                    ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
-                });
+                metadata: metadata);
         }
 
         public static async Task SendTotpFailedAttemptAsync(
@@ -149,41 +166,29 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
-            string deviceName = device.FriendlyName ?? device.Type.ToString();
-
-            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
-                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            metadata["totpFailedAttempts"] = totpFailedAttempts.ToString();
 
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.TotpFailedAttemptTitle,
-                content: hasDevice
+                content: context.HasDevice
                     ? NotificationTemplates.TotpFailedAttemptContent(
                         totpFailedAttempts,
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
                     : NotificationTemplates.TotpFailedAttemptContentNoDevice(
                         totpFailedAttempts,
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
                 priority: NotificationPriority.Medium,
-                metadata: new Dictionary<string, string>
-                {
-                    ["totpFailedAttempts"] = totpFailedAttempts.ToString(),
-                    ["ip"] = ipAddress.ToString(),
-                    ["userAgent"] = userAgent.ToString(),
-                    ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
-                });
+                metadata: metadata);
         }
 
         public static async Task SendTotpLockoutAsync(
@@ -195,41 +200,29 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
-            string deviceName = device.FriendlyName ?? device.Type.ToString();
-
-            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
-                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            metadata["maxFailedAttempts"] = maxFailedAttempts.ToString();
 
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.TotpLockoutTitle,
-                content: hasDevice
+                content: context.HasDevice
                     ? NotificationTemplates.TotpLockoutContent(
                         maxFailedAttempts,
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
                     : NotificationTemplates.TotpLockoutContentNoDevice(
                         maxFailedAttempts,
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
                 priority: NotificationPriority.High,
-                metadata: new Dictionary<string, string>
-                {
-                    ["maxFailedAttempts"] = maxFailedAttempts.ToString(),
-                    ["ip"] = ipAddress.ToString(),
-                    ["userAgent"] = userAgent.ToString(),
-                    ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
-                });
+                metadata: metadata);
         }
 
         public static async Task SendWebDavTokenResetAsync(
@@ -240,38 +233,26 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
-            string deviceName = device.FriendlyName ?? device.Type.ToString();
-
-            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
-                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
 
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.WebDavTokenResetTitle,
-                content: hasDevice
+                content: context.HasDevice
                     ? NotificationTemplates.WebDavTokenResetContent(
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
                     : NotificationTemplates.WebDavTokenResetContentNoDevice(
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
                 priority: NotificationPriority.Medium,
-                metadata: new Dictionary<string, string>
-                {
-                    ["ip"] = ipAddress.ToString(),
-                    ["userAgent"] = userAgent.ToString(),
-                    ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
-                });
+                metadata: metadata);
         }
 
         public static async Task SendSharedFileDownloadedNotificationAsync(
@@ -283,41 +264,29 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
-            GeoIpInfo ipInfo = await GeoIpHelpers.LookupAsync(ipAddress.ToString());
-            string deviceName = device.FriendlyName ?? device.Type.ToString();
-
-            bool hasDevice = !string.IsNullOrWhiteSpace(deviceName)
-                             && !string.Equals(deviceName, "Unknown", StringComparison.OrdinalIgnoreCase);
+            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
+            metadata["fileName"] = fileName;
 
             await notifications.SendNotificationAsync(
                 userId,
                 title: NotificationTemplates.SharedFileDownloadedTitle,
-                content: hasDevice
+                content: context.HasDevice
                     ? NotificationTemplates.SharedFileDownloadedContent(
                         fileName,
-                        ipAddress.ToString(),
-                        deviceName,
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City)
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
                     : NotificationTemplates.SharedFileDownloadedContentNoDevice(
                         fileName,
-                        ipAddress.ToString(),
-                        ipInfo.Country,
-                        ipInfo.Region,
-                        ipInfo.City),
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
                 priority: NotificationPriority.None,
-                metadata: new Dictionary<string, string>
-                {
-                    ["fileName"] = fileName,
-                    ["ip"] = ipAddress.ToString(),
-                    ["userAgent"] = userAgent.ToString(),
-                    ["device"] = deviceName,
-                    ["country"] = ipInfo.Country,
-                    ["region"] = ipInfo.Region,
-                    ["city"] = ipInfo.City
-                });
+                metadata: metadata);
         }
 
         public static async Task SendUploadHashMismatchNotificationAsync(

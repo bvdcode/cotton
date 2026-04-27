@@ -6,6 +6,8 @@ namespace Cotton.Previews
 {
     public class ImagePreviewGenerator : IPreviewGenerator
     {
+        public int Version => 0;
+
         public IEnumerable<string> SupportedContentTypes =>
             Configuration.Default.ImageFormats.SelectMany(x => x.MimeTypes);
 

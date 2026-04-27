@@ -8,6 +8,7 @@ namespace Cotton.Previews
 {
     public sealed class PdfPreviewGenerator : IPreviewGenerator
     {
+        public int Version => 0;
         public IEnumerable<string> SupportedContentTypes => ["application/pdf"];
         private static readonly DocLib _docLib = DocLib.Instance;
 

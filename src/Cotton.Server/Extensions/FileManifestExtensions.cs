@@ -7,7 +7,26 @@ namespace Cotton.Server.Extensions
     {
         public static Dictionary<string, long> GetChunkLengths(this IEnumerable<FileManifestChunk> fileManifestChunks)
         {
-            return fileManifestChunks.ToDictionary(x => Hasher.ToHexStringHash(x.ChunkHash), x => x.Chunk.PlainSizeBytes);
+            ArgumentNullException.ThrowIfNull(fileManifestChunks);
+
+            Dictionary<string, long> result = new(StringComparer.OrdinalIgnoreCase);
+            foreach (var fileManifestChunk in fileManifestChunks)
+            {
+                ArgumentNullException.ThrowIfNull(fileManifestChunk.ChunkHash);
+                ArgumentNullException.ThrowIfNull(fileManifestChunk.Chunk);
+
+                string hash = Hasher.ToHexStringHash(fileManifestChunk.ChunkHash);
+                long length = fileManifestChunk.Chunk.PlainSizeBytes;
+
+                if (result.TryGetValue(hash, out long existingLength) && existingLength != length)
+                {
+                    throw new InvalidOperationException($"Chunk '{hash}' has conflicting lengths ({existingLength} and {length}).");
+                }
+
+                result[hash] = length;
+            }
+
+            return result;
         }
 
         public static string[] GetChunkHashes(this IEnumerable<FileManifestChunk> chunks)

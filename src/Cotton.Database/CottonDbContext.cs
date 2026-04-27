@@ -37,6 +37,10 @@ namespace Cotton.Database
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<FileManifest>()
+                .Property(x => x.PreviewGeneratorVersion)
+                .HasDefaultValue(0);
+
             ValueConverter<string?, string?> encryptedStringConverter = new(
                 value => EncryptString(value),
                 value => DecryptString(value));
