@@ -820,8 +820,8 @@
           "autoAlign": "Alinear al suelo",
           "autoOrient": "Orientación automática",
           "cycleLighting": "Luz: {{preset}}",
-          "cycleRotation": "Rotar / voltear",
           "cycleSurface": "Superficie: {{preset}}",
+          "flipModel": "Voltear modelo",
           "resetColor": "Usar colores originales",
           "toggleShadows": "Sombras: {{state}}",
           "togglePalette": "Paleta de colores"
@@ -834,7 +834,10 @@
         "surface": {
           "original": "Original",
           "matte": "Mate",
-          "glossy": "Brillante"
+          "glossy": "Brillante",
+          "metal": "Metal",
+          "satin": "Satinado",
+          "smooth": "Suavizado"
         },
         "states": {
           "on": "Activado",

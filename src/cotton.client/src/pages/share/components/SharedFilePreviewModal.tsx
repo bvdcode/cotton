@@ -14,7 +14,7 @@ import {
   ColorLens,
   FilterDrama,
   FormatColorReset,
-  Rotate90DegreesCw,
+  SwapVert,
   Texture,
   VerticalAlignBottom,
   WbSunny,
@@ -38,7 +38,13 @@ interface SharedFilePreviewModalProps {
 }
 
 type LightingPreset = "balanced" | "studio" | "dramatic";
-type SurfacePreset = "original" | "matte" | "glossy";
+type SurfacePreset =
+  | "original"
+  | "matte"
+  | "glossy"
+  | "metal"
+  | "satin"
+  | "smooth";
 
 const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
   "balanced",
@@ -50,6 +56,9 @@ const SURFACE_PRESET_ORDER: ReadonlyArray<SurfacePreset> = [
   "original",
   "matte",
   "glossy",
+  "smooth",
+  "metal",
+  "satin",
 ];
 
 export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
@@ -65,17 +74,24 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   const { t } = useTranslation(["files", "share", "common"]);
   const theme = useTheme();
   const isModel = fileType === "model";
+  const defaultModelColor = React.useMemo<string | null>(() => {
+    return theme.palette.mode === "dark"
+      ? theme.palette.grey[700]
+      : null;
+  }, [theme]);
 
   const [textContent, setTextContent] = React.useState<string | null>(null);
   const [loadingText, setLoadingText] = React.useState<boolean>(false);
   const [textError, setTextError] = React.useState<string | null>(null);
   const [paletteAnchorEl, setPaletteAnchorEl] = React.useState<HTMLElement | null>(null);
-  const [materialColor, setMaterialColor] = React.useState<string | null>(null);
+  const [materialColor, setMaterialColor] = React.useState<string | null>(
+    defaultModelColor,
+  );
   const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
   const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
-  const [cycleOrientationToken, setCycleOrientationToken] = React.useState<number>(0);
+  const [flipToken, setFlipToken] = React.useState<number>(0);
   const [lightingPreset, setLightingPreset] = React.useState<LightingPreset>("balanced");
-  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("original");
+  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("metal");
   const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
@@ -141,19 +157,19 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   React.useEffect(() => {
     if (!open || !isModel) {
       setPaletteAnchorEl(null);
-      setMaterialColor(null);
+      setMaterialColor(defaultModelColor);
       setLightingPreset("balanced");
-      setSurfacePreset("original");
+      setSurfacePreset("metal");
       setShadowsEnabled(true);
       return;
     }
 
     setPaletteAnchorEl(null);
-    setMaterialColor(null);
+    setMaterialColor(defaultModelColor);
     setLightingPreset("balanced");
-    setSurfacePreset("original");
+    setSurfacePreset("metal");
     setShadowsEnabled(true);
-  }, [fileId, isModel, open]);
+  }, [defaultModelColor, fileId, isModel, open]);
 
   React.useEffect(() => {
     if (!open || fileType !== "text" || !fileId || !fileName) {
@@ -276,9 +292,9 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
           </IconButton>
         </Tooltip>
 
-        <Tooltip title={t("preview.model.actions.cycleRotation", { ns: "files" })}>
-          <IconButton onClick={() => setCycleOrientationToken((value) => value + 1)}>
-            <Rotate90DegreesCw />
+        <Tooltip title={t("preview.model.actions.flipModel", { ns: "files" })}>
+          <IconButton onClick={() => setFlipToken((value) => value + 1)}>
+            <SwapVert />
           </IconButton>
         </Tooltip>
 
@@ -300,9 +316,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
               setPaletteAnchorEl((current) => (current ? null : event.currentTarget));
             }}
           >
-            <ColorLens
-              sx={{ color: materialColor ?? theme.palette.text.primary }}
-            />
+            <ColorLens />
           </IconButton>
         </Tooltip>
       </Stack>
@@ -394,7 +408,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
               materialColor={materialColor}
               autoAlignToken={autoAlignToken}
               autoOrientToken={autoOrientToken}
-              cycleOrientationToken={cycleOrientationToken}
+              flipToken={flipToken}
               lightingPreset={lightingPreset}
               shadowsEnabled={shadowsEnabled}
               surfacePreset={surfacePreset}
