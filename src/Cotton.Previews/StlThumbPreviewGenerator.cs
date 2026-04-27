@@ -9,6 +9,9 @@ namespace Cotton.Previews
 {
     public class StlThumbPreviewGenerator : IPreviewGenerator
     {
+        public int Version => 2;
+        public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
+
         private readonly string _modelExtension;
         private readonly string[] _supportedContentTypes;
         private const string ThreeMfExtension = ".3mf";
@@ -38,10 +41,6 @@ namespace Cotton.Previews
                 ".3mf",
                 ["model/3mf", "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"]);
         }
-
-        public int Version => 1;
-
-        public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
