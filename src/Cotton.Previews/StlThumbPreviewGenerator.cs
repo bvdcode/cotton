@@ -14,7 +14,7 @@ namespace Cotton.Previews
         private const string ThreeMfExtension = ".3mf";
 
         public StlThumbPreviewGenerator()
-            : this(".stl", ["model/stl", "application/sla"])
+            : this(".stl", ["model/stl", "application/sla", "application/vnd.ms-pki.stl"])
         {
         }
 

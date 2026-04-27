@@ -102,6 +102,7 @@ namespace Cotton.Server.Services
                 "image/x-heif" => "image/heif",
                 "audio/x-flac" => "audio/flac",
                 "audio/x-wav" => "audio/wav",
+                "application/vnd.ms-pki.stl" => "model/stl",
                 _ => normalized,
             };
         }
