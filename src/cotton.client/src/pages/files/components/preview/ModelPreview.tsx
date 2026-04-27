@@ -110,6 +110,9 @@ interface MaterialSurfaceState {
   metalness?: number;
   roughness?: number;
   shininess?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  flatShading?: boolean;
 }
 
 const toAbsoluteUrl = (url: string): string => {
@@ -255,6 +258,28 @@ const hasPhongShininess = (
   return typeof candidate.shininess === "number";
 };
 
+const hasPhysicalSurfaceProperties = (
+  material: THREE.Material,
+): material is THREE.Material & {
+  clearcoat: number;
+  clearcoatRoughness: number;
+} => {
+  const candidate = material as THREE.Material & {
+    clearcoat?: number;
+    clearcoatRoughness?: number;
+  };
+
+  return typeof candidate.clearcoat === "number" &&
+    typeof candidate.clearcoatRoughness === "number";
+};
+
+const hasFlatShadingProperty = (
+  material: THREE.Material,
+): material is THREE.Material & { flatShading: boolean } => {
+  const candidate = material as THREE.Material & { flatShading?: boolean };
+  return typeof candidate.flatShading === "boolean";
+};
+
 const resolveCssVariableColor = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed.startsWith("var(") || typeof window === "undefined") {
@@ -384,6 +409,15 @@ const applyMaterialSurfacePreset = (
           state.shininess = material.shininess;
         }
 
+        if (hasPhysicalSurfaceProperties(material)) {
+          state.clearcoat = material.clearcoat;
+          state.clearcoatRoughness = material.clearcoatRoughness;
+        }
+
+        if (hasFlatShadingProperty(material)) {
+          state.flatShading = material.flatShading;
+        }
+
         originalSurfaceMap.set(material, state);
       }
 
@@ -395,12 +429,12 @@ const applyMaterialSurfacePreset = (
       if (hasStandardSurfaceProperties(material)) {
         switch (surfacePreset) {
           case "matte":
-            material.metalness = 0.02;
-            material.roughness = 0.93;
+            material.metalness = 0;
+            material.roughness = 1;
             break;
           case "glossy":
-            material.metalness = 0.34;
-            material.roughness = 0.36;
+            material.metalness = 0.55;
+            material.roughness = 0.12;
             break;
           case "original":
           default:
@@ -417,15 +451,54 @@ const applyMaterialSurfacePreset = (
       if (hasPhongShininess(material)) {
         switch (surfacePreset) {
           case "matte":
-            material.shininess = 8;
+            material.shininess = 4;
             break;
           case "glossy":
-            material.shininess = 96;
+            material.shininess = 180;
             break;
           case "original":
           default:
             if (typeof originalState.shininess === "number") {
               material.shininess = originalState.shininess;
+            }
+            break;
+        }
+      }
+
+      if (hasPhysicalSurfaceProperties(material)) {
+        switch (surfacePreset) {
+          case "matte":
+            material.clearcoat = 0;
+            material.clearcoatRoughness = 1;
+            break;
+          case "glossy":
+            material.clearcoat = 0.9;
+            material.clearcoatRoughness = 0.08;
+            break;
+          case "original":
+          default:
+            if (typeof originalState.clearcoat === "number") {
+              material.clearcoat = originalState.clearcoat;
+            }
+            if (typeof originalState.clearcoatRoughness === "number") {
+              material.clearcoatRoughness = originalState.clearcoatRoughness;
+            }
+            break;
+        }
+      }
+
+      if (hasFlatShadingProperty(material)) {
+        switch (surfacePreset) {
+          case "matte":
+            material.flatShading = true;
+            break;
+          case "glossy":
+            material.flatShading = false;
+            break;
+          case "original":
+          default:
+            if (typeof originalState.flatShading === "boolean") {
+              material.flatShading = originalState.flatShading;
             }
             break;
         }
@@ -456,6 +529,23 @@ const applyShadowPreferences = (
 
     node.castShadow = shadowsEnabled;
     node.receiveShadow = shadowsEnabled;
+  });
+};
+
+const ensureMeshNormals = (object: THREE.Object3D): void => {
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    const geometry = node.geometry;
+    if (!(geometry instanceof THREE.BufferGeometry)) {
+      return;
+    }
+
+    if (!geometry.getAttribute("normal")) {
+      geometry.computeVertexNormals();
+    }
   });
 };
 
@@ -711,6 +801,7 @@ const prepareModelScene = async (
   qualityMode: PreviewQualityMode,
 ): Promise<PreparedModelScene> => {
   await simplifyObjectGeometry(object, qualityMode);
+  ensureMeshNormals(object);
   normalizeModelScale(object);
   alignModelToGround(object);
 
