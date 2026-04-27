@@ -2,6 +2,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace Cotton.Previews
 {
@@ -69,6 +71,15 @@ namespace Cotton.Previews
                     await stream.CopyToAsync(fileStream).ConfigureAwait(false);
                 }
 
+                if (string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    byte[]? embeddedPreview = await TryExtractEmbeddedThreeMfThumbnailWebPAsync(modelFilePath, size).ConfigureAwait(false);
+                    if (embeddedPreview is not null)
+                    {
+                        return embeddedPreview;
+                    }
+                }
+
                 bool rendered = RenderToBuffer(rgbaBuffer, size, modelFilePath);
 
                 if (!rendered && string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
@@ -99,6 +110,206 @@ namespace Cotton.Previews
                     TryDeleteFile(normalizedThreeMfPath);
                 }
             }
+        }
+
+        private static async Task<byte[]?> TryExtractEmbeddedThreeMfThumbnailWebPAsync(string modelFilePath, int size)
+        {
+            try
+            {
+                await using FileStream modelFileStream = new(
+                    modelFilePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 81920,
+                    options: FileOptions.Asynchronous);
+
+                using ZipArchive archive = new(modelFileStream, ZipArchiveMode.Read, leaveOpen: false);
+                string[] candidateEntries = GetThreeMfThumbnailCandidateEntryNames(archive);
+                if (candidateEntries.Length == 0)
+                {
+                    return null;
+                }
+
+                ImagePreviewGenerator imagePreviewGenerator = new();
+
+                foreach (string candidateEntry in candidateEntries)
+                {
+                    ZipArchiveEntry? entry = archive.GetEntry(candidateEntry);
+                    if (entry is null || entry.Length <= 0)
+                    {
+                        continue;
+                    }
+
+                    using Stream entryStream = entry.Open();
+                    using var imageBytes = new MemoryStream();
+                    await entryStream.CopyToAsync(imageBytes).ConfigureAwait(false);
+                    if (imageBytes.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    imageBytes.Position = 0;
+                    try
+                    {
+                        return await imagePreviewGenerator.GeneratePreviewWebPAsync(imageBytes, size).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Candidate image may be unsupported/corrupt. Continue with next candidate.
+                    }
+                }
+
+                return null;
+            }
+            catch (InvalidDataException)
+            {
+                return null;
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        private static string[] GetThreeMfThumbnailCandidateEntryNames(ZipArchive archive)
+        {
+            HashSet<string> results = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string target in TryReadThreeMfThumbnailTargetsFromRelationships(archive))
+            {
+                if (IsSupportedImageExtension(target))
+                {
+                    results.Add(target);
+                }
+            }
+
+            foreach (string fallback in archive.Entries
+                .Select(x => NormalizeZipEntryPath(x.FullName))
+                .Where(IsSupportedImageExtension)
+                .OrderByDescending(ScoreThreeMfImageCandidate))
+            {
+                results.Add(fallback);
+            }
+
+            return [.. results];
+        }
+
+        private static IEnumerable<string> TryReadThreeMfThumbnailTargetsFromRelationships(ZipArchive archive)
+        {
+            ZipArchiveEntry? relationshipsEntry = archive.GetEntry("_rels/.rels");
+            if (relationshipsEntry is null)
+            {
+                yield break;
+            }
+
+            XDocument relationshipsDocument;
+            try
+            {
+                using Stream entryStream = relationshipsEntry.Open();
+                relationshipsDocument = XDocument.Load(entryStream);
+            }
+            catch (XmlException)
+            {
+                yield break;
+            }
+
+            XNamespace relNs = "http://schemas.openxmlformats.org/package/2006/relationships";
+            IEnumerable<XElement> relationshipNodes = relationshipsDocument
+                .Descendants(relNs + "Relationship");
+
+            foreach (XElement relationshipNode in relationshipNodes)
+            {
+                string? relationshipType = relationshipNode.Attribute("Type")?.Value;
+                if (!IsThumbnailRelationshipType(relationshipType))
+                {
+                    continue;
+                }
+
+                string? relationshipTarget = relationshipNode.Attribute("Target")?.Value;
+                if (string.IsNullOrWhiteSpace(relationshipTarget))
+                {
+                    continue;
+                }
+
+                yield return NormalizeZipEntryPath(relationshipTarget);
+            }
+        }
+
+        private static string NormalizeZipEntryPath(string entryPath)
+        {
+            if (string.IsNullOrWhiteSpace(entryPath))
+            {
+                return string.Empty;
+            }
+
+            string normalized = Uri.UnescapeDataString(entryPath.Trim().Replace('\\', '/'));
+            return normalized.TrimStart('/');
+        }
+
+        private static bool IsSupportedImageExtension(string entryPath)
+        {
+            string normalized = NormalizeZipEntryPath(entryPath);
+            return normalized.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".tif", StringComparison.OrdinalIgnoreCase)
+                || normalized.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsThumbnailRelationshipType(string? relationshipType)
+        {
+            if (string.IsNullOrWhiteSpace(relationshipType))
+            {
+                return false;
+            }
+
+            return relationshipType.EndsWith(
+                    "/metadata/thumbnail",
+                    StringComparison.OrdinalIgnoreCase)
+                || relationshipType.Contains(
+                    "thumbnail",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int ScoreThreeMfImageCandidate(string entryPath)
+        {
+            string normalized = NormalizeZipEntryPath(entryPath);
+            int score = 0;
+
+            if (normalized.StartsWith("Metadata/", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 30;
+            }
+
+            if (normalized.Contains("thumbnail", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 100;
+            }
+
+            if (normalized.Contains("cover", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 80;
+            }
+
+            if (normalized.Contains("plate", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 60;
+            }
+
+            if (normalized.Contains("small", StringComparison.OrdinalIgnoreCase))
+            {
+                score -= 20;
+            }
+
+            return score;
         }
 
         private static bool RenderToBuffer(byte[] rgbaBuffer, int size, string modelFilePath)
