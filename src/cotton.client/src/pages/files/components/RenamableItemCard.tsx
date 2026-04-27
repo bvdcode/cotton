@@ -1,8 +1,9 @@
-import { Box, TextField, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import { FileSystemItemCard } from "./FileSystemItemCard";
 import type { FileSystemItemCardAction } from "./FileSystemItemCard";
+import { InlineRenameField } from "./InlineRenameField";
 
 interface RenamableItemCardProps {
   icon: ReactNode;
@@ -115,31 +116,12 @@ export const RenamableItemCard = ({
           gap: 0.5,
         }}
       >
-        <TextField
-          autoFocus
-          fullWidth
-          size="small"
-          variant="standard"
+        <InlineRenameField
           value={renamingValue}
-          onChange={(e) => onRenamingValueChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              onConfirmRename();
-            } else if (e.key === "Escape") {
-              onCancelRename();
-            }
-          }}
-          onBlur={onConfirmRename}
+          onChange={onRenamingValueChange}
+          onConfirm={onConfirmRename}
+          onCancel={onCancelRename}
           placeholder={placeholder}
-          slotProps={{
-            input: {
-              sx: {
-                fontSize: { xs: "0.8rem", md: "0.85rem" },
-                px: 0,
-                py: 0.25,
-              },
-            },
-          }}
         />
       </Box>
 
