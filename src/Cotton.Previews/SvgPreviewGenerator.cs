@@ -6,7 +6,7 @@ namespace Cotton.Previews
 {
     public sealed class SvgPreviewGenerator : IPreviewGenerator
     {
-        public int Version => 0;
+        public int Version => 1;
 
         public IEnumerable<string> SupportedContentTypes =>
         [
