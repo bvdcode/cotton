@@ -9,7 +9,7 @@
 [![Github last-commit](https://img.shields.io/github/last-commit/bvdcode/cotton)](https://github.com/bvdcode/cotton/commits/main/)
 
 > **[Using Cotton? Say hi here!](https://github.com/bvdcode/cotton/discussions/3)**  
-> Live demo: [cotton.splidex.com](https://cotton.splidex.com/) - whatever credentials you enter will create your user
+> Live demo: [cotton.splidex.com](https://cotton.splidex.com/) - user and password: `demo` / `demo`, or whatever credentials you enter will create your user
 
 <div align="center">
 
