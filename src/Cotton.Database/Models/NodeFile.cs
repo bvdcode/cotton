@@ -43,7 +43,7 @@ namespace Cotton.Database.Models
         public bool IsClientEncrypted { get; set; }
 
         [Column("metadata")]
-        public Dictionary<string, string> Metadata { get; set; } = [];
+        public Dictionary<string, string>? Metadata { get; set; } = [];
 
         public void SetName(string input)
         {
