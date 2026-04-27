@@ -1,8 +1,8 @@
 import React from "react";
 import {
   Box,
-  Collapse,
   IconButton,
+  Popover,
   Stack,
   Tooltip,
   useTheme,
@@ -44,19 +44,19 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const theme = useTheme();
   const isModel = fileType === "model";
 
-  const [isPaletteOpen, setIsPaletteOpen] = React.useState<boolean>(false);
+  const [paletteAnchorEl, setPaletteAnchorEl] = React.useState<HTMLElement | null>(null);
   const [materialColor, setMaterialColor] = React.useState<string | null>(null);
   const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
   const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
 
-  const paletteColors = React.useMemo<string[]>(
+  const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
     () => [
-      theme.palette.grey[400],
-      theme.palette.primary.main,
-      theme.palette.info.main,
-      theme.palette.success.main,
-      theme.palette.warning.main,
-      theme.palette.error.main,
+      { id: "neutral", color: theme.palette.grey[500] },
+      { id: "green", color: theme.palette.success.dark },
+      { id: "primary", color: theme.palette.primary.main },
+      { id: "info", color: theme.palette.info.main },
+      { id: "warning", color: theme.palette.warning.main },
+      { id: "error", color: theme.palette.error.main },
     ],
     [theme],
   );
@@ -68,12 +68,12 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
   React.useEffect(() => {
     if (!isOpen || !isModel) {
-      setIsPaletteOpen(false);
+      setPaletteAnchorEl(null);
       setMaterialColor(null);
       return;
     }
 
-    setIsPaletteOpen(false);
+    setPaletteAnchorEl(null);
     setMaterialColor(null);
   }, [fileId, isModel, isOpen]);
 
@@ -85,30 +85,24 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     ? (
       <Stack direction="row" spacing={0.5} alignItems="center">
         <Tooltip title={t("preview.model.actions.autoOrient")}>
-          <IconButton
-            size="small"
-            onClick={() => setAutoOrientToken((value) => value + 1)}
-          >
-            <AutoFixHigh fontSize="small" />
+          <IconButton onClick={() => setAutoOrientToken((value) => value + 1)}>
+            <AutoFixHigh />
           </IconButton>
         </Tooltip>
 
         <Tooltip title={t("preview.model.actions.autoAlign")}>
-          <IconButton
-            size="small"
-            onClick={() => setAutoAlignToken((value) => value + 1)}
-          >
-            <VerticalAlignBottom fontSize="small" />
+          <IconButton onClick={() => setAutoAlignToken((value) => value + 1)}>
+            <VerticalAlignBottom />
           </IconButton>
         </Tooltip>
 
         <Tooltip title={t("preview.model.actions.togglePalette")}>
           <IconButton
-            size="small"
-            onClick={() => setIsPaletteOpen((isOpenValue) => !isOpenValue)}
+            onClick={(event) => {
+              setPaletteAnchorEl((current) => (current ? null : event.currentTarget));
+            }}
           >
             <ColorLens
-              fontSize="small"
               sx={{ color: materialColor ?? theme.palette.text.primary }}
             />
           </IconButton>
@@ -154,51 +148,61 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               autoOrientToken={autoOrientToken}
             />
           </Box>
-
-          <Collapse in={isPaletteOpen} timeout="auto" unmountOnExit>
-            <Box
-              sx={{
-                alignItems: "center",
-                backgroundColor: "background.paper",
-                borderTop: 1,
-                borderColor: "divider",
-                display: "flex",
-                justifyContent: "center",
-                minHeight: 56,
-                px: 1.5,
-                py: 1,
-              }}
-            >
-              <Stack direction="row" spacing={1}>
-                <Tooltip title={t("preview.model.actions.resetColor")}>
-                  <IconButton size="small" onClick={() => setMaterialColor(null)}>
-                    <FormatColorReset fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-
-                {paletteColors.map((color) => (
-                  <IconButton
-                    key={color}
-                    size="small"
-                    onClick={() => setMaterialColor(color)}
-                  >
-                    <Box
-                      sx={{
-                        backgroundColor: color,
-                        border: 1,
-                        borderColor:
-                          materialColor === color ? "text.primary" : "divider",
-                        borderRadius: "50%",
-                        height: 18,
-                        width: 18,
-                      }}
-                    />
-                  </IconButton>
-                ))}
-              </Stack>
-            </Box>
-          </Collapse>
         </Box>
+      )}
+
+      {isModel && (
+        <Popover
+          open={Boolean(paletteAnchorEl)}
+          anchorEl={paletteAnchorEl}
+          onClose={() => setPaletteAnchorEl(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+          sx={{ mt: 0.5 }}
+        >
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+              px: 1,
+              py: 0.75,
+            }}
+          >
+            <Tooltip title={t("preview.model.actions.resetColor")}>
+              <IconButton
+                onClick={() => {
+                  setMaterialColor(null);
+                  setPaletteAnchorEl(null);
+                }}
+              >
+                <FormatColorReset />
+              </IconButton>
+            </Tooltip>
+
+            {paletteColors.map((paletteOption) => (
+              <IconButton
+                key={paletteOption.id}
+                onClick={() => {
+                  setMaterialColor(paletteOption.color);
+                  setPaletteAnchorEl(null);
+                }}
+              >
+                <Box
+                  sx={{
+                    backgroundColor: paletteOption.color,
+                    border: 1,
+                    borderColor:
+                      materialColor === paletteOption.color ? "text.primary" : "divider",
+                    borderRadius: "50%",
+                    height: 18,
+                    width: 18,
+                  }}
+                />
+              </IconButton>
+            ))}
+          </Stack>
+        </Popover>
       )}
     </PreviewModal>
   );
