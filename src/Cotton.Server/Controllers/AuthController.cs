@@ -20,7 +20,6 @@ using EasyExtensions.AspNetCore.Authorization.Abstractions;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.AspNetCore.Extensions;
-using EasyExtensions.Clients;
 using EasyExtensions.Clients.Models;
 using EasyExtensions.EntityFrameworkCore.Database;
 using EasyExtensions.Extensions;
@@ -50,7 +49,8 @@ namespace Cotton.Server.Controllers
         IPasswordHashService _hasher,
         ILogger<AuthController> _logger,
         WebDavAuthCache _webDavAuthCache,
-        INotificationsProvider _notifications) : ControllerBase
+        INotificationsProvider _notifications,
+        IGeoLookupService _geoLookup) : ControllerBase
     {
         public const int WebDavTokenLength = 32;
         public const int RefreshTokenLength = 32;
@@ -69,7 +69,9 @@ namespace Cotton.Server.Controllers
             user.WebDavTokenPhc = _hasher.Hash(token);
             await _dbContext.SaveChangesAsync();
             _webDavAuthCache.BumpUsernameCacheVersion(user.Username);
-            await _notifications.SendWebDavTokenResetAsync(userId,
+            await _notifications.SendWebDavTokenResetAsync(
+                _geoLookup,
+                userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
             return Ok(token);
@@ -130,7 +132,9 @@ namespace Cotton.Server.Controllers
             user.IsTotpEnabled = true;
             user.TotpEnabledAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync();
-            await _notifications.SendOtpEnabledAsync(userId,
+            await _notifications.SendOtpEnabledAsync(
+                _geoLookup,
+                userId,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
             return Ok();
@@ -201,7 +205,9 @@ namespace Cotton.Server.Controllers
             await _dbContext.SaveChangesAsync();
             AddRefreshTokenToCookies(dbToken.Token, request.TrustDevice);
             AddAccessTokenToCookies(accessToken);
-            await _notifications.SendSuccessfulLoginAsync(user.Id,
+            await _notifications.SendSuccessfulLoginAsync(
+                _geoLookup,
+                user.Id,
                 GetRequestIpAddress(),
                 Request.Headers.UserAgent);
             return Ok(new TokenPairResponseDto()
@@ -234,6 +240,7 @@ namespace Cotton.Server.Controllers
             if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
             {
                 await _notifications.SendFailedLoginAttemptAsync(
+                    _geoLookup,
                     user.Id,
                     request.Username,
                     GetRequestIpAddress(),
@@ -265,6 +272,7 @@ namespace Cotton.Server.Controllers
             if (user.TotpFailedAttempts >= maxFailedAttempts)
             {
                 await _notifications.SendTotpLockoutAsync(
+                    _geoLookup,
                     user.Id,
                     maxFailedAttempts,
                     GetRequestIpAddress(),
@@ -279,6 +287,7 @@ namespace Cotton.Server.Controllers
                 user.TotpFailedAttempts += 1;
                 await _dbContext.SaveChangesAsync();
                 await _notifications.SendTotpFailedAttemptAsync(
+                    _geoLookup,
                     user.Id,
                     user.TotpFailedAttempts,
                     GetRequestIpAddress(),
@@ -490,7 +499,7 @@ namespace Cotton.Server.Controllers
             string? sessionId = null)
         {
             IPAddress ipAddress = GetRequestIpAddress();
-            GeoIpInfo? lookup = await GeoIpClient.TryLookupAsync(ipAddress.ToString());
+            GeoIpInfo? lookup = await _geoLookup.TryLookupAsync(ipAddress);
             sessionId ??= StringHelpers.CreateRandomString(RefreshTokenLength);
             return new()
             {
