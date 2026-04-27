@@ -137,6 +137,8 @@ interface MaterialSurfaceState {
   flatShading?: boolean;
 }
 
+type MeshStoredMaterial = THREE.Material | THREE.Material[];
+
 const toAbsoluteUrl = (url: string): string => {
   if (typeof window === "undefined") {
     return url;
@@ -162,6 +164,15 @@ const createNeutralMaterial = (): THREE.MeshStandardMaterial => {
 
 const disposeMaterial = (material: THREE.Material): void => {
   material.dispose();
+};
+
+const disposeStoredMaterial = (material: MeshStoredMaterial): void => {
+  if (Array.isArray(material)) {
+    material.forEach(disposeMaterial);
+    return;
+  }
+
+  disposeMaterial(material);
 };
 
 const disposeObject3D = (object: THREE.Object3D): void => {
@@ -316,6 +327,64 @@ const hasFlatShadingProperty = (
   return typeof candidate.flatShading === "boolean";
 };
 
+const createPreviewOverrideMaterial = (
+  material: THREE.Material,
+): THREE.MeshPhysicalMaterial => {
+  const previewMaterial = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color("#b8b8b8"),
+    metalness: 0,
+    roughness: 0.72,
+    side: material.side,
+    transparent: material.transparent,
+    opacity: material.opacity,
+    alphaTest: material.alphaTest,
+    depthTest: material.depthTest,
+    depthWrite: material.depthWrite,
+    visible: material.visible,
+    flatShading: hasFlatShadingProperty(material)
+      ? material.flatShading
+      : false,
+  });
+
+  previewMaterial.name = material.name
+    ? `${material.name}-preview-override`
+    : "preview-override";
+
+  return previewMaterial;
+};
+
+const applyPreviewOverrideMaterials = (
+  object: THREE.Object3D,
+  shouldOverride: boolean,
+  originalMaterialMap: WeakMap<THREE.Mesh, MeshStoredMaterial>,
+): void => {
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh) || !node.material) {
+      return;
+    }
+
+    const savedOriginalMaterial = originalMaterialMap.get(node);
+
+    if (shouldOverride) {
+      if (!savedOriginalMaterial) {
+        originalMaterialMap.set(node, node.material);
+        node.material = Array.isArray(node.material)
+          ? node.material.map(createPreviewOverrideMaterial)
+          : createPreviewOverrideMaterial(node.material);
+      }
+
+      return;
+    }
+
+    if (!savedOriginalMaterial) {
+      return;
+    }
+
+    disposeStoredMaterial(node.material);
+    node.material = savedOriginalMaterial;
+  });
+};
+
 const resolveCssVariableColor = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed.startsWith("var(") || typeof window === "undefined") {
@@ -427,7 +496,6 @@ const applyMaterialSurfacePreset = (
   surfacePreset: ModelSurfacePreset,
   originalSurfaceMap: WeakMap<THREE.Material, MaterialSurfaceState>,
   hasColorOverride: boolean,
-  overrideLuminance: number | null,
 ): void => {
   object.traverse((node) => {
     if (!(node instanceof THREE.Mesh)) {
@@ -475,20 +543,33 @@ const applyMaterialSurfacePreset = (
       if (hasStandardSurfaceProperties(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.metalness = 1;
-            material.roughness = 0.08;
+            material.metalness = hasColorOverride
+              ? 1
+              : 0.82;
+            material.roughness = hasColorOverride
+              ? 0.18
+              : 0.38;
             break;
           case "smooth":
-            material.metalness = 0.04;
-            material.roughness = 0.6;
+            material.metalness = hasColorOverride
+              ? 0.02
+              : 0.02;
+            material.roughness = hasColorOverride
+              ? 0.4
+              : 0.52;
             break;
           case "original":
           default:
-            if (typeof originalState.metalness === "number") {
-              material.metalness = originalState.metalness;
-            }
-            if (typeof originalState.roughness === "number") {
-              material.roughness = originalState.roughness;
+            if (hasColorOverride) {
+              material.metalness = 0;
+              material.roughness = 0.72;
+            } else {
+              if (typeof originalState.metalness === "number") {
+                material.metalness = originalState.metalness;
+              }
+              if (typeof originalState.roughness === "number") {
+                material.roughness = originalState.roughness;
+              }
             }
             break;
         }
@@ -497,14 +578,20 @@ const applyMaterialSurfacePreset = (
       if (hasEnvMapIntensity(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.envMapIntensity = 1.8;
+            material.envMapIntensity = hasColorOverride
+              ? 1.1
+              : 0.78;
             break;
           case "smooth":
-            material.envMapIntensity = 0.16;
+            material.envMapIntensity = hasColorOverride
+              ? 0.08
+              : 0.22;
             break;
           case "original":
           default:
-            if (typeof originalState.envMapIntensity === "number") {
+            if (hasColorOverride) {
+              material.envMapIntensity = 0;
+            } else if (typeof originalState.envMapIntensity === "number") {
               material.envMapIntensity = originalState.envMapIntensity;
             }
             break;
@@ -514,14 +601,20 @@ const applyMaterialSurfacePreset = (
       if (hasPhongShininess(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.shininess = 300;
+            material.shininess = hasColorOverride
+              ? 150
+              : 120;
             break;
           case "smooth":
-            material.shininess = 28;
+            material.shininess = hasColorOverride
+              ? 42
+              : 36;
             break;
           case "original":
           default:
-            if (typeof originalState.shininess === "number") {
+            if (hasColorOverride) {
+              material.shininess = 14;
+            } else if (typeof originalState.shininess === "number") {
               material.shininess = originalState.shininess;
             }
             break;
@@ -531,14 +624,20 @@ const applyMaterialSurfacePreset = (
       if (hasPhongReflectivity(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.reflectivity = 1;
+            material.reflectivity = hasColorOverride
+              ? 0.95
+              : 0.58;
             break;
           case "smooth":
-            material.reflectivity = 0.12;
+            material.reflectivity = hasColorOverride
+              ? 0.12
+              : 0.2;
             break;
           case "original":
           default:
-            if (typeof originalState.reflectivity === "number") {
+            if (hasColorOverride) {
+              material.reflectivity = 0.03;
+            } else if (typeof originalState.reflectivity === "number") {
               material.reflectivity = originalState.reflectivity;
             }
             break;
@@ -548,20 +647,33 @@ const applyMaterialSurfacePreset = (
       if (hasPhysicalSurfaceProperties(material)) {
         switch (surfacePreset) {
           case "metal":
-            material.clearcoat = 0.65;
-            material.clearcoatRoughness = 0.08;
+            material.clearcoat = hasColorOverride
+              ? 0.22
+              : 0.14;
+            material.clearcoatRoughness = hasColorOverride
+              ? 0.18
+              : 0.42;
             break;
           case "smooth":
-            material.clearcoat = 0.06;
-            material.clearcoatRoughness = 0.72;
+            material.clearcoat = hasColorOverride
+              ? 0.05
+              : 0.08;
+            material.clearcoatRoughness = hasColorOverride
+              ? 0.62
+              : 0.58;
             break;
           case "original":
           default:
-            if (typeof originalState.clearcoat === "number") {
-              material.clearcoat = originalState.clearcoat;
-            }
-            if (typeof originalState.clearcoatRoughness === "number") {
-              material.clearcoatRoughness = originalState.clearcoatRoughness;
+            if (hasColorOverride) {
+              material.clearcoat = 0;
+              material.clearcoatRoughness = 1;
+            } else {
+              if (typeof originalState.clearcoat === "number") {
+                material.clearcoat = originalState.clearcoat;
+              }
+              if (typeof originalState.clearcoatRoughness === "number") {
+                material.clearcoatRoughness = originalState.clearcoatRoughness;
+              }
             }
             break;
         }
@@ -583,107 +695,6 @@ const applyMaterialSurfacePreset = (
               material.flatShading = originalState.flatShading;
             }
             break;
-        }
-      }
-
-      // Keep selected palette colors visually faithful by reducing strong reflections.
-      if (hasColorOverride) {
-        const normalizedLuminance = overrideLuminance ?? 0.5;
-
-        if (hasStandardSurfaceProperties(material)) {
-          if (surfacePreset === "metal") {
-            material.metalness = 0.58;
-            material.roughness = THREE.MathUtils.lerp(
-              0.44,
-              0.56,
-              1 - normalizedLuminance,
-            );
-          } else if (surfacePreset === "smooth") {
-            material.metalness = 0.08;
-            material.roughness = 0.76;
-          } else {
-            material.metalness = 0.02;
-            material.roughness = 0.88;
-          }
-        }
-
-        if (hasEnvMapIntensity(material)) {
-          if (surfacePreset === "metal") {
-            material.envMapIntensity = THREE.MathUtils.lerp(
-              0.18,
-              0.28,
-              normalizedLuminance,
-            );
-          } else if (surfacePreset === "smooth") {
-            material.envMapIntensity = THREE.MathUtils.lerp(
-              0.08,
-              0.14,
-              normalizedLuminance,
-            );
-          } else {
-            material.envMapIntensity = THREE.MathUtils.lerp(
-              0.04,
-              0.08,
-              normalizedLuminance,
-            );
-          }
-        }
-
-        if (hasPhongShininess(material)) {
-          if (surfacePreset === "metal") {
-            material.shininess = THREE.MathUtils.lerp(
-              72,
-              96,
-              normalizedLuminance,
-            );
-          } else if (surfacePreset === "smooth") {
-            material.shininess = THREE.MathUtils.lerp(
-              26,
-              40,
-              normalizedLuminance,
-            );
-          } else {
-            material.shininess = THREE.MathUtils.lerp(
-              10,
-              18,
-              normalizedLuminance,
-            );
-          }
-        }
-
-        if (hasPhongReflectivity(material)) {
-          if (surfacePreset === "metal") {
-            material.reflectivity = THREE.MathUtils.lerp(
-              0.24,
-              0.35,
-              normalizedLuminance,
-            );
-          } else if (surfacePreset === "smooth") {
-            material.reflectivity = THREE.MathUtils.lerp(
-              0.1,
-              0.14,
-              normalizedLuminance,
-            );
-          } else {
-            material.reflectivity = THREE.MathUtils.lerp(
-              0.04,
-              0.08,
-              normalizedLuminance,
-            );
-          }
-        }
-
-        if (hasPhysicalSurfaceProperties(material)) {
-          if (surfacePreset === "metal") {
-            material.clearcoat = 0.18;
-            material.clearcoatRoughness = 0.64;
-          } else if (surfacePreset === "smooth") {
-            material.clearcoat = 0.07;
-            material.clearcoatRoughness = 0.76;
-          } else {
-            material.clearcoat = 0;
-            material.clearcoatRoughness = 1;
-          }
         }
       }
 
@@ -805,20 +816,24 @@ const autoOrientModelUpright = (object: THREE.Object3D): void => {
   orientLongestAxisUp(object);
 
   const baseQuaternion = object.quaternion.clone();
-  const baseSupportScore = calculateSupportScore(object);
+  let bestSupportScore = Number.NEGATIVE_INFINITY;
+  const bestQuaternion = baseQuaternion.clone();
 
-  const flippedQuaternion = baseQuaternion.clone().multiply(
-    new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)),
-  );
+  for (const orientationVariant of FLIP_ORIENTATION_VARIANTS) {
+    object.quaternion
+      .copy(baseQuaternion)
+      .multiply(orientationVariant.quaternion);
 
-  object.quaternion.copy(flippedQuaternion);
-  object.updateMatrixWorld(true);
-  const flippedSupportScore = calculateSupportScore(object);
-
-  if (flippedSupportScore <= baseSupportScore) {
-    object.quaternion.copy(baseQuaternion);
     object.updateMatrixWorld(true);
+    const supportScore = calculateSupportScore(object);
+    if (supportScore > bestSupportScore) {
+      bestSupportScore = supportScore;
+      bestQuaternion.copy(object.quaternion);
+    }
   }
+
+  object.quaternion.copy(bestQuaternion);
+  object.updateMatrixWorld(true);
 };
 
 const applyFlipOrientation = (
@@ -1005,7 +1020,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   flipToken,
   lightingPreset = "balanced",
   shadowsEnabled = true,
-  surfacePreset = "metal",
+  surfacePreset = "original",
 }) => {
   const { t } = useTranslation(["files"]);
   const theme = useTheme();
@@ -1059,21 +1074,10 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   const hasColorOverride =
     effectiveMaterialColor !== null &&
     effectiveMaterialColor !== undefined;
-  const colorLuminance = React.useMemo<number | null>(() => {
-    if (!hasColorOverride || !effectiveMaterialColor) {
-      return null;
-    }
-
-    const parsedColor = new THREE.Color(effectiveMaterialColor);
-    return (
-      parsedColor.r * 0.2126 +
-      parsedColor.g * 0.7152 +
-      parsedColor.b * 0.0722
-    );
-  }, [effectiveMaterialColor, hasColorOverride]);
-  const lightIntensityMultiplier = colorLuminance === null
+  const lightIntensityMultiplier = hasColorOverride
       ? 1
-      : THREE.MathUtils.lerp(0.24, 0.42, colorLuminance);
+      : 1;
+  const shouldUseEnvironment = true;
 
   const sourceKey = source.kind === "fileId"
     ? `file:${source.fileId}`
@@ -1097,6 +1101,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   const originalSurfaceRef = React.useRef<WeakMap<THREE.Material, MaterialSurfaceState>>(
     new WeakMap(),
   );
+  const originalMeshMaterialsRef = React.useRef<WeakMap<THREE.Mesh, MeshStoredMaterial>>(
+    new WeakMap(),
+  );
   const flipBaseQuaternionRef = React.useRef<THREE.Quaternion | null>(null);
   const flipOrientationIndexRef = React.useRef<number>(0);
 
@@ -1107,6 +1114,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       setPreparedModel(null);
       originalColorsRef.current = new WeakMap();
       originalSurfaceRef.current = new WeakMap();
+      originalMeshMaterialsRef.current = new WeakMap();
       flipBaseQuaternionRef.current = null;
       flipOrientationIndexRef.current = 0;
       return;
@@ -1117,6 +1125,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     setHasLoadError(false);
     originalColorsRef.current = new WeakMap();
     originalSurfaceRef.current = new WeakMap();
+    originalMeshMaterialsRef.current = new WeakMap();
     flipBaseQuaternionRef.current = null;
     flipOrientationIndexRef.current = 0;
 
@@ -1160,12 +1169,17 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       return;
     }
 
+    applyPreviewOverrideMaterials(
+      preparedModel.object,
+      hasColorOverride,
+      originalMeshMaterialsRef.current,
+    );
+
     applyMaterialSurfacePreset(
       preparedModel.object,
       surfacePreset,
       originalSurfaceRef.current,
       hasColorOverride,
-      colorLuminance,
     );
     applyShadowPreferences(preparedModel.object, shadowsEnabled);
     applyMaterialColor(
@@ -1174,7 +1188,6 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       originalColorsRef.current,
     );
   }, [
-    colorLuminance,
     effectiveMaterialColor,
     hasColorOverride,
     preparedModel,
@@ -1274,6 +1287,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   React.useEffect(() => {
     return () => {
       if (preparedModel) {
+        applyPreviewOverrideMaterials(
+          preparedModel.object,
+          false,
+          originalMeshMaterialsRef.current,
+        );
         disposeObject3D(preparedModel.object);
       }
     };
@@ -1344,6 +1362,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
 
       {!hasLoadError && preparedModel && (
         <Canvas
+          flat
           shadows={shadowsEnabled ? { type: THREE.PCFShadowMap } : false}
           camera={{
             position: [2.5, 2.5, 2.5],
@@ -1358,7 +1377,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
           }
         >
           <color attach="background" args={[sceneBackgroundColor]} />
-          <Environment preset={environmentPreset} />
+          {shouldUseEnvironment && <Environment preset={environmentPreset} />}
           <hemisphereLight
             args={[
               theme.palette.common.white,

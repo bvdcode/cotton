@@ -85,7 +85,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
   const [flipToken, setFlipToken] = React.useState<number>(0);
   const [lightingPreset, setLightingPreset] = React.useState<LightingPreset>("balanced");
-  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("metal");
+  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("original");
   const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
@@ -153,7 +153,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
       setPaletteAnchorEl(null);
       setMaterialColor(defaultModelColor);
       setLightingPreset("balanced");
-      setSurfacePreset("metal");
+      setSurfacePreset("original");
       setShadowsEnabled(true);
       return;
     }
@@ -161,7 +161,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     setPaletteAnchorEl(null);
     setMaterialColor(defaultModelColor);
     setLightingPreset("balanced");
-    setSurfacePreset("metal");
+    setSurfacePreset("original");
     setShadowsEnabled(true);
   }, [defaultModelColor, fileId, isModel, open]);
 
