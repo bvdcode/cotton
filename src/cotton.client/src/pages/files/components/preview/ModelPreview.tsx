@@ -58,15 +58,15 @@ const FLIP_ORIENTATION_VARIANTS: ReadonlyArray<FlipOrientationVariant> =
 
 const LIGHTING_PRESET_CONFIG: Record<ModelLightingPreset, LightingPresetConfig> = {
   balanced: {
-    ambientIntensity: 0.52,
-    keyIntensity: 0.72,
-    fillIntensity: 0.24,
-    rimIntensity: 0.22,
+    ambientIntensity: 0.34,
+    keyIntensity: 0.78,
+    fillIntensity: 0.1,
+    rimIntensity: 0.26,
   },
   studio: {
-    ambientIntensity: 0.62,
-    keyIntensity: 0.88,
-    fillIntensity: 0.36,
+    ambientIntensity: 0.4,
+    keyIntensity: 0.86,
+    fillIntensity: 0.14,
     rimIntensity: 0.3,
   },
   dramatic: {
@@ -1018,9 +1018,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   autoAlignToken,
   autoOrientToken,
   flipToken,
-  lightingPreset = "balanced",
+  lightingPreset = "dramatic",
   shadowsEnabled = true,
-  surfacePreset = "original",
+  surfacePreset = "metal",
 }) => {
   const { t } = useTranslation(["files"]);
   const theme = useTheme();
@@ -1048,13 +1048,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
         return theme.palette.background.default;
     }
   }, [lightingPreset, theme]);
-  const environmentPreset = lightingPreset === "dramatic"
-    ? "city"
-    : "studio";
-  const defaultDarkModelColor = React.useMemo<string | null>(() => {
-    return theme.palette.mode === "dark"
-      ? theme.palette.grey[700]
-      : null;
+  const environmentPreset = "city";
+  const defaultPreviewColor = React.useMemo<string>(() => {
+    return theme.palette.error.main;
   }, [theme]);
   const gridLineColor = React.useMemo(() => {
     return theme.palette.mode === "dark"
@@ -1068,9 +1064,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   }, [theme]);
   const effectiveMaterialColor = React.useMemo<string | null | undefined>(() => {
     return materialColor === undefined
-      ? defaultDarkModelColor
+      ? defaultPreviewColor
       : materialColor;
-  }, [defaultDarkModelColor, materialColor]);
+  }, [defaultPreviewColor, materialColor]);
   const hasColorOverride =
     effectiveMaterialColor !== null &&
     effectiveMaterialColor !== undefined;
