@@ -58,9 +58,18 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("geoip-lookup-mode/{mode}")]
-        public async Task<IActionResult> SetGeoIpLookupMode([FromRoute] GeoIpLookupMode mode)
+        public async Task<IActionResult> SetGeoIpLookupMode([FromRoute] GeoIpLookupMode mode, CancellationToken cancellationToken)
         {
+            await _settings.SetProperty(x => x.GeoIpLookupMode, mode, cancellationToken);
+            return NoContent();
+        }
 
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("geoip-lookup-mode")]
+        public async Task<IActionResult> GetGeoIpLookupMode()
+        {
+            GeoIpLookupMode geoIpLookupMode = _settings.GetServerSettings().GeoIpLookupMode;
+            return Ok(new { geoIpLookupMode });
         }
     }
 }
