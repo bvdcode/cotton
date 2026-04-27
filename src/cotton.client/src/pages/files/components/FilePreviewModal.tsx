@@ -66,9 +66,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const theme = useTheme();
   const isModel = fileType === "model";
   const defaultModelColor = React.useMemo<string | null>(() => {
-    return theme.palette.mode === "dark"
-      ? theme.palette.grey[700]
-      : null;
+    return theme.palette.error.main;
   }, [theme]);
 
   const [paletteAnchorEl, setPaletteAnchorEl] =
@@ -80,9 +78,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
   const [flipToken, setFlipToken] = React.useState<number>(0);
   const [lightingPreset, setLightingPreset] =
-    React.useState<LightingPreset>("balanced");
+    React.useState<LightingPreset>("dramatic");
   const [surfacePreset, setSurfacePreset] =
-    React.useState<SurfacePreset>("original");
+    React.useState<SurfacePreset>("metal");
   const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
@@ -143,16 +141,16 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     if (!isOpen || !isModel) {
       setPaletteAnchorEl(null);
       setMaterialColor(defaultModelColor);
-      setLightingPreset("balanced");
-      setSurfacePreset("original");
+      setLightingPreset("dramatic");
+      setSurfacePreset("metal");
       setShadowsEnabled(true);
       return;
     }
 
     setPaletteAnchorEl(null);
     setMaterialColor(defaultModelColor);
-    setLightingPreset("balanced");
-    setSurfacePreset("original");
+    setLightingPreset("dramatic");
+    setSurfacePreset("metal");
     setShadowsEnabled(true);
   }, [defaultModelColor, fileId, isModel, isOpen]);
 
