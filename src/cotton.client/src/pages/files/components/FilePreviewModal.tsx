@@ -34,10 +34,7 @@ interface FilePreviewModalProps {
 type LightingPreset = "balanced" | "studio" | "dramatic";
 type SurfacePreset =
   | "original"
-  | "matte"
-  | "glossy"
   | "metal"
-  | "satin"
   | "smooth";
 
 const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
@@ -48,11 +45,8 @@ const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
 
 const SURFACE_PRESET_ORDER: ReadonlyArray<SurfacePreset> = [
   "original",
-  "matte",
-  "glossy",
-  "smooth",
   "metal",
-  "satin",
+  "smooth",
 ];
 
 /**
