@@ -28,6 +28,41 @@ const MANUAL_AXIS_UP_ROTATIONS: ReadonlyArray<{ x: number; z: number }> = [
   { x: 0, z: Math.PI / 2 },
   { x: 0, z: -Math.PI / 2 },
 ];
+const MANUAL_YAW_ROTATIONS: ReadonlyArray<number> = [
+  0,
+  Math.PI / 2,
+  Math.PI,
+  -Math.PI / 2,
+];
+const MANUAL_ORIENTATION_VARIANTS: ReadonlyArray<{ x: number; y: number; z: number }> =
+  MANUAL_AXIS_UP_ROTATIONS.flatMap((axisUpRotation) => {
+    return MANUAL_YAW_ROTATIONS.map((yaw) => ({
+      x: axisUpRotation.x,
+      y: yaw,
+      z: axisUpRotation.z,
+    }));
+  });
+
+const LIGHTING_PRESET_CONFIG: Record<ModelLightingPreset, LightingPresetConfig> = {
+  balanced: {
+    ambientIntensity: 0.72,
+    keyIntensity: 0.95,
+    fillIntensity: 0.5,
+    rimIntensity: 0.42,
+  },
+  studio: {
+    ambientIntensity: 0.86,
+    keyIntensity: 1.2,
+    fillIntensity: 0.62,
+    rimIntensity: 0.56,
+  },
+  dramatic: {
+    ambientIntensity: 0.45,
+    keyIntensity: 1.45,
+    fillIntensity: 0.22,
+    rimIntensity: 0.78,
+  },
+};
 
 type ModelPreviewSource =
   | {
@@ -40,6 +75,8 @@ type ModelPreviewSource =
     };
 
 type PreviewQualityMode = "normal" | "reduced";
+type ModelLightingPreset = "balanced" | "studio" | "dramatic";
+type ModelSurfacePreset = "original" | "matte" | "glossy";
 
 interface ModelPreviewProps {
   source: ModelPreviewSource;
@@ -50,6 +87,9 @@ interface ModelPreviewProps {
   autoAlignToken?: number;
   autoOrientToken?: number;
   cycleOrientationToken?: number;
+  lightingPreset?: ModelLightingPreset;
+  shadowsEnabled?: boolean;
+  surfacePreset?: ModelSurfacePreset;
 }
 
 interface PreparedModelScene {
@@ -57,6 +97,19 @@ interface PreparedModelScene {
   gridSize: number;
   gridDivisions: number;
   qualityMode: PreviewQualityMode;
+}
+
+interface LightingPresetConfig {
+  ambientIntensity: number;
+  keyIntensity: number;
+  fillIntensity: number;
+  rimIntensity: number;
+}
+
+interface MaterialSurfaceState {
+  metalness?: number;
+  roughness?: number;
+  shininess?: number;
 }
 
 const toAbsoluteUrl = (url: string): string => {
@@ -179,8 +232,27 @@ const simplifyObjectGeometry = async (
 const hasColorProperty = (
   material: THREE.Material,
 ): material is THREE.Material & { color: THREE.Color } => {
-  return "color" in material &&
-    (material as { color?: unknown }).color instanceof THREE.Color;
+  const materialWithColor = material as THREE.Material & { color?: THREE.Color };
+  return "color" in material && materialWithColor.color instanceof THREE.Color;
+};
+
+const hasStandardSurfaceProperties = (
+  material: THREE.Material,
+): material is THREE.Material & { metalness: number; roughness: number } => {
+  const candidate = material as THREE.Material & {
+    metalness?: number;
+    roughness?: number;
+  };
+
+  return typeof candidate.metalness === "number" &&
+    typeof candidate.roughness === "number";
+};
+
+const hasPhongShininess = (
+  material: THREE.Material,
+): material is THREE.Material & { shininess: number } => {
+  const candidate = material as THREE.Material & { shininess?: number };
+  return typeof candidate.shininess === "number";
 };
 
 const resolveCssVariableColor = (value: string): string => {
@@ -289,6 +361,104 @@ const applyMaterialColor = (
   });
 };
 
+const applyMaterialSurfacePreset = (
+  object: THREE.Object3D,
+  surfacePreset: ModelSurfacePreset,
+  originalSurfaceMap: WeakMap<THREE.Material, MaterialSurfaceState>,
+): void => {
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    const applyToMaterial = (material: THREE.Material): void => {
+      if (!originalSurfaceMap.has(material)) {
+        const state: MaterialSurfaceState = {};
+
+        if (hasStandardSurfaceProperties(material)) {
+          state.metalness = material.metalness;
+          state.roughness = material.roughness;
+        }
+
+        if (hasPhongShininess(material)) {
+          state.shininess = material.shininess;
+        }
+
+        originalSurfaceMap.set(material, state);
+      }
+
+      const originalState = originalSurfaceMap.get(material);
+      if (!originalState) {
+        return;
+      }
+
+      if (hasStandardSurfaceProperties(material)) {
+        switch (surfacePreset) {
+          case "matte":
+            material.metalness = 0.02;
+            material.roughness = 0.93;
+            break;
+          case "glossy":
+            material.metalness = 0.34;
+            material.roughness = 0.36;
+            break;
+          case "original":
+          default:
+            if (typeof originalState.metalness === "number") {
+              material.metalness = originalState.metalness;
+            }
+            if (typeof originalState.roughness === "number") {
+              material.roughness = originalState.roughness;
+            }
+            break;
+        }
+      }
+
+      if (hasPhongShininess(material)) {
+        switch (surfacePreset) {
+          case "matte":
+            material.shininess = 8;
+            break;
+          case "glossy":
+            material.shininess = 96;
+            break;
+          case "original":
+          default:
+            if (typeof originalState.shininess === "number") {
+              material.shininess = originalState.shininess;
+            }
+            break;
+        }
+      }
+
+      material.needsUpdate = true;
+    };
+
+    if (Array.isArray(node.material)) {
+      node.material.forEach(applyToMaterial);
+      return;
+    }
+
+    if (node.material) {
+      applyToMaterial(node.material);
+    }
+  });
+};
+
+const applyShadowPreferences = (
+  object: THREE.Object3D,
+  shadowsEnabled: boolean,
+): void => {
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    node.castShadow = shadowsEnabled;
+    node.receiveShadow = shadowsEnabled;
+  });
+};
+
 const orientLongestAxisUp = (object: THREE.Object3D): void => {
   object.updateMatrixWorld(true);
 
@@ -381,10 +551,10 @@ const autoOrientModelUpright = (object: THREE.Object3D): void => {
 const applyAxisUpRotation = (
   object: THREE.Object3D,
   baseQuaternion: THREE.Quaternion,
-  rotationVariant: { x: number; z: number },
+  rotationVariant: { x: number; y: number; z: number },
 ): void => {
   const variantQuaternion = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(rotationVariant.x, 0, rotationVariant.z),
+    new THREE.Euler(rotationVariant.x, rotationVariant.y, rotationVariant.z),
   );
 
   object.quaternion.copy(baseQuaternion).multiply(variantQuaternion);
@@ -562,6 +732,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   autoAlignToken,
   autoOrientToken,
   cycleOrientationToken,
+  lightingPreset = "balanced",
+  shadowsEnabled = true,
+  surfacePreset = "original",
 }) => {
   const { t } = useTranslation(["files"]);
   const theme = useTheme();
@@ -574,6 +747,22 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     () => resolveQualityMode(fileSizeBytes),
     [fileSizeBytes],
   );
+  const lightingConfig = React.useMemo(
+    () => LIGHTING_PRESET_CONFIG[lightingPreset],
+    [lightingPreset],
+  );
+  const sceneBackgroundColor = React.useMemo(() => {
+    switch (lightingPreset) {
+      case "studio":
+        return theme.palette.background.paper;
+      case "dramatic":
+        return theme.palette.grey[900];
+      case "balanced":
+      default:
+        return theme.palette.background.default;
+    }
+  }, [lightingPreset, theme]);
+
   const sourceKey = source.kind === "fileId"
     ? `file:${source.fileId}`
     : `url:${source.url}`;
@@ -593,6 +782,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
   const originalColorsRef = React.useRef<WeakMap<THREE.Material, THREE.Color>>(
     new WeakMap(),
   );
+  const originalSurfaceRef = React.useRef<WeakMap<THREE.Material, MaterialSurfaceState>>(
+    new WeakMap(),
+  );
   const manualOrientationBaseRef = React.useRef<THREE.Quaternion | null>(null);
   const manualOrientationStepRef = React.useRef<number>(0);
 
@@ -601,6 +793,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       setIsLoading(false);
       setHasLoadError(false);
       setPreparedModel(null);
+      originalColorsRef.current = new WeakMap();
+      originalSurfaceRef.current = new WeakMap();
       manualOrientationBaseRef.current = null;
       manualOrientationStepRef.current = 0;
       return;
@@ -609,6 +803,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     let cancelled = false;
     setIsLoading(true);
     setHasLoadError(false);
+    originalColorsRef.current = new WeakMap();
+    originalSurfaceRef.current = new WeakMap();
 
     void (async () => {
       try {
@@ -656,6 +852,19 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       originalColorsRef.current,
     );
   }, [materialColor, preparedModel]);
+
+  React.useEffect(() => {
+    if (!preparedModel) {
+      return;
+    }
+
+    applyMaterialSurfacePreset(
+      preparedModel.object,
+      surfacePreset,
+      originalSurfaceRef.current,
+    );
+    applyShadowPreferences(preparedModel.object, shadowsEnabled);
+  }, [preparedModel, shadowsEnabled, surfacePreset]);
 
   React.useEffect(() => {
     if (autoAlignToken === undefined) {
@@ -738,13 +947,13 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
       }
 
       const nextRotationIndex =
-        (manualOrientationStepRef.current + 1) % MANUAL_AXIS_UP_ROTATIONS.length;
+        (manualOrientationStepRef.current + 1) % MANUAL_ORIENTATION_VARIANTS.length;
       manualOrientationStepRef.current = nextRotationIndex;
 
       applyAxisUpRotation(
         previous.object,
         baseQuaternion,
-        MANUAL_AXIS_UP_ROTATIONS[nextRotationIndex],
+        MANUAL_ORIENTATION_VARIANTS[nextRotationIndex],
       );
       alignModelToGround(previous.object);
 
@@ -831,6 +1040,7 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
 
       {!hasLoadError && preparedModel && (
         <Canvas
+          shadows={shadowsEnabled}
           camera={{
             position: [2.5, 2.5, 2.5],
             fov: 45,
@@ -843,10 +1053,36 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
               : [1, 2]
           }
         >
-          <color attach="background" args={[theme.palette.background.default]} />
-          <ambientLight intensity={0.75} />
-          <directionalLight position={[8, 8, 8]} intensity={0.8} />
-          <directionalLight position={[-6, 4, -6]} intensity={0.45} />
+          <color attach="background" args={[sceneBackgroundColor]} />
+          <hemisphereLight
+            args={[
+              theme.palette.common.white,
+              theme.palette.grey[900],
+              lightingConfig.ambientIntensity,
+            ]}
+          />
+          <directionalLight
+            position={[9, 11, 8]}
+            intensity={lightingConfig.keyIntensity}
+            castShadow={shadowsEnabled}
+          />
+          <directionalLight
+            position={[-7, 5, -6]}
+            intensity={lightingConfig.fillIntensity}
+            castShadow={false}
+          />
+          <directionalLight
+            position={[0, 7, -10]}
+            intensity={lightingConfig.rimIntensity}
+            castShadow={false}
+          />
+
+          {shadowsEnabled && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} receiveShadow>
+              <planeGeometry args={[preparedModel.gridSize, preparedModel.gridSize]} />
+              <shadowMaterial transparent opacity={0.28} />
+            </mesh>
+          )}
 
           <gridHelper
             args={[
