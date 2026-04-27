@@ -236,7 +236,7 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
             nodeId: file.nodeId ?? undefined,
             folderPath: folderPath ?? undefined,
             previewUrl: tryBuildPreviewUrl(
-              file.largeFilePreviewPresignedToken ?? file.previewHashEncryptedHex ?? undefined,
+              file.previewHashEncryptedHex ?? undefined,
             ),
           });
         }
