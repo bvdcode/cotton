@@ -1,7 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Diagnostics;
 using System.IO.Compression;
-using System.Runtime.InteropServices;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -9,7 +9,7 @@ namespace Cotton.Previews
 {
     public class StlThumbPreviewGenerator : IPreviewGenerator
     {
-        public int Version => 3;
+        public int Version => 4;
         public IEnumerable<string> SupportedContentTypes => _supportedContentTypes;
 
         private readonly string _modelExtension;
@@ -48,8 +48,8 @@ namespace Cotton.Previews
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
             int bufferSize = checked(size * size * 4);
-            byte[] rgbaBuffer = new byte[bufferSize];
             string modelFilePath = Path.Combine(Path.GetTempPath(), $"cotton-model-{Guid.NewGuid():N}{_modelExtension}");
+            string renderedPngPath = Path.Combine(Path.GetTempPath(), $"cotton-preview-{Guid.NewGuid():N}.png");
             string? normalizedThreeMfPath = null;
 
             try
@@ -79,57 +79,37 @@ namespace Cotton.Previews
                     }
                 }
 
-                bool rendered = false;
-                Exception? renderException = null;
-
-                try
-                {
-                    rendered = RenderToBuffer(rgbaBuffer, size, modelFilePath);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    renderException = ex;
-                }
+                bool rendered = await TryRenderWithF3dAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
 
                 if (!rendered && string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
                 {
                     normalizedThreeMfPath = await TryNormalizeThreeMfArchiveAsync(modelFilePath).ConfigureAwait(false);
                     if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
                     {
-                        try
-                        {
-                            rendered = RenderToBuffer(rgbaBuffer, size, normalizedThreeMfPath);
-                        }
-                        catch (InvalidOperationException ex)
-                        {
-                            renderException = ex;
-                        }
+                        rendered = await TryRenderWithF3dAsync(normalizedThreeMfPath, renderedPngPath, size).ConfigureAwait(false);
                     }
                 }
 
                 if (!rendered)
                 {
-                    if (string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return await GenerateFallbackPreviewWebPAsync(size).ConfigureAwait(false);
-                    }
-
-                    if (renderException is not null)
-                    {
-                        throw renderException;
-                    }
-
-                    throw new InvalidOperationException("stl-thumb failed to render model preview.");
+                    return await GenerateFallbackPreviewWebPAsync(size).ConfigureAwait(false);
                 }
 
-                using Image<Rgba32> image = Image.LoadPixelData<Rgba32>(rgbaBuffer, size, size);
-                using var outputStream = new MemoryStream();
-                await image.SaveAsWebpAsync(outputStream).ConfigureAwait(false);
-                return outputStream.ToArray();
+                await using FileStream renderedPngStream = new(
+                    renderedPngPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 81920,
+                    options: FileOptions.Asynchronous);
+
+                ImagePreviewGenerator imagePreviewGenerator = new();
+                return await imagePreviewGenerator.GeneratePreviewWebPAsync(renderedPngStream, size).ConfigureAwait(false);
             }
             finally
             {
                 TryDeleteFile(modelFilePath);
+                TryDeleteFile(renderedPngPath);
 
                 if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
                 {
@@ -338,23 +318,52 @@ namespace Cotton.Previews
             return score;
         }
 
-        private static bool RenderToBuffer(byte[] rgbaBuffer, int size, string modelFilePath)
+        private static async Task<bool> TryRenderWithF3dAsync(string modelFilePath, string outputPngPath, int size)
         {
+            const int renderTimeoutSeconds = 20;
+
             try
             {
-                return StlThumbNative.RenderToBuffer(rgbaBuffer, (uint)size, (uint)size, modelFilePath);
+                TryDeleteFile(outputPngPath);
+
+                using Process process = new();
+                process.StartInfo = new ProcessStartInfo
+                {
+                    FileName = "f3d",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+
+                process.StartInfo.ArgumentList.Add(modelFilePath);
+                process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
+                process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
+                process.StartInfo.ArgumentList.Add("--no-background");
+
+                process.Start();
+
+                Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+                Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+
+                using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(renderTimeoutSeconds));
+                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+                await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+
+                if (process.ExitCode != 0)
+                {
+                    return false;
+                }
+
+                return File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
             }
-            catch (DllNotFoundException ex)
+            catch (OperationCanceledException)
             {
-                throw new InvalidOperationException("stl-thumb native library was not found.", ex);
+                return false;
             }
-            catch (EntryPointNotFoundException ex)
+            catch
             {
-                throw new InvalidOperationException("stl-thumb entry point render_to_buffer was not found.", ex);
-            }
-            catch (BadImageFormatException ex)
-            {
-                throw new InvalidOperationException("stl-thumb native library architecture is incompatible.", ex);
+                return false;
             }
         }
 
@@ -433,19 +442,5 @@ namespace Cotton.Previews
             }
         }
 
-        private static class StlThumbNative
-        {
-#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
-            [DllImport("stl_thumb", EntryPoint = "render_to_buffer", CallingConvention = CallingConvention.Cdecl)]
-            [return: MarshalAs(UnmanagedType.I1)]
-            internal static extern bool RenderToBuffer(
-                byte[] buffer,
-                uint width,
-                uint height,
-#pragma warning disable CA2101 // Specify marshaling for P/Invoke string arguments
-                [MarshalAs(UnmanagedType.LPUTF8Str)] string modelFilename);
-#pragma warning restore CA2101 // Specify marshaling for P/Invoke string arguments
-#pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
-        }
     }
 }
