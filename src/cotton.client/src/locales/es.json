@@ -814,6 +814,9 @@
           "render": "Renderizando PDF..."
         }
       },
+      "model": {
+        "loading": "Cargando modelo 3D..."
+      },
       "language": {
         "label": "Idioma"
       },
@@ -829,6 +832,8 @@
         "downloadFailed": "La descarga falló",
         "pdfLoadFailed": "No se pudo cargar el PDF",
         "pdfDisplayFailed": "No se pudo mostrar el PDF",
+        "modelLoadFailed": "No se pudo cargar el modelo 3D",
+        "modelUnsupportedType": "Este formato de archivo 3D no es compatible con la vista previa en el navegador",
         "pdfTooLarge": "El PDF es demasiado grande para la vista previa ({{size}}). El tamaño máximo es {{maxSize}}. Descarga el archivo para verlo.",
         "fileTooLarge": "El archivo es demasiado grande para la vista previa ({{size}}). El tamaño máximo para la vista previa de texto es {{maxSize}}. Descarga el archivo para verlo."
       }
