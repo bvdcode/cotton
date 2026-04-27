@@ -13,6 +13,7 @@ import {
   AutoFixHigh,
   ColorLens,
   FormatColorReset,
+  Rotate90DegreesCw,
   VerticalAlignBottom,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
@@ -54,6 +55,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   const [materialColor, setMaterialColor] = React.useState<string | null>(null);
   const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
   const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
+  const [cycleOrientationToken, setCycleOrientationToken] = React.useState<number>(0);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
     () => [
@@ -169,6 +171,12 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   const modelHeaderActions = isModel
     ? (
       <Stack direction="row" spacing={0.5} alignItems="center">
+        <Tooltip title={t("preview.model.actions.cycleRotation", { ns: "files" })}>
+          <IconButton onClick={() => setCycleOrientationToken((value) => value + 1)}>
+            <Rotate90DegreesCw />
+          </IconButton>
+        </Tooltip>
+
         <Tooltip title={t("preview.model.actions.autoOrient", { ns: "files" })}>
           <IconButton onClick={() => setAutoOrientToken((value) => value + 1)}>
             <AutoFixHigh />
@@ -281,6 +289,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
               materialColor={materialColor}
               autoAlignToken={autoAlignToken}
               autoOrientToken={autoOrientToken}
+              cycleOrientationToken={cycleOrientationToken}
             />
           </Box>
         </Box>
