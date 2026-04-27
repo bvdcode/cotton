@@ -172,7 +172,11 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
         return;
       }
 
-      if (typeInfo.type === "pdf" || typeInfo.type === "text") {
+      if (
+        typeInfo.type === "pdf" ||
+        typeInfo.type === "text" ||
+        typeInfo.type === "model"
+      ) {
         const opened = openPreview(
           fileId,
           fileName,

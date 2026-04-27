@@ -6,11 +6,17 @@ import {
   InsertDriveFile,
   Movie,
   PictureAsPdf,
+  ViewInAr,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { getFileTypeInfo, type FileType } from "../../files/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import { MediaLightbox, type MediaItem, PdfPreview } from "../../files/components";
+import {
+  MediaLightbox,
+  type MediaItem,
+  ModelPreview,
+  PdfPreview,
+} from "../../files/components";
 import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
@@ -38,6 +44,8 @@ function getFallbackIcon(fileType: FileType) {
       return <Movie />;
     case "text":
       return <Description />;
+    case "model":
+      return <ViewInAr />;
     default:
       return <InsertDriveFile />;
   }
@@ -285,6 +293,21 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
           }}
           fileName={fileName ?? title}
           fileSizeBytes={contentLength}
+        />
+      </Box>
+    );
+  }
+
+  if (fileTypeInfo.type === "model") {
+    return (
+      <Box width="100%" height="100%">
+        <ModelPreview
+          source={{
+            kind: "url",
+            url: inlineUrl,
+          }}
+          fileName={fileName ?? title}
+          contentType={contentType}
         />
       </Box>
     );

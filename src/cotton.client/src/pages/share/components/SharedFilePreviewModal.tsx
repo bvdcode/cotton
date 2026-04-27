@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { PreviewModal, PdfPreview } from "../../files/components/preview";
+import { PreviewModal, PdfPreview, ModelPreview } from "../../files/components/preview";
 import type { FileType } from "../../files/utils/fileTypes";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import { previewConfig } from "../../../shared/config/previewConfig";
@@ -107,7 +107,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     return null;
   }
 
-  if (fileType !== "pdf" && fileType !== "text") {
+  if (fileType !== "pdf" && fileType !== "text" && fileType !== "model") {
     return null;
   }
 
@@ -181,6 +181,17 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
             />
           )}
         </Box>
+      )}
+
+      {fileType === "model" && (
+        <ModelPreview
+          source={{
+            kind: "url",
+            url: sharedFoldersApi.buildFileContentUrl(token, fileId, "inline"),
+          }}
+          fileName={fileName}
+          contentType={contentType}
+        />
       )}
     </PreviewModal>
   );
