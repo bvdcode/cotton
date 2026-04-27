@@ -4,16 +4,19 @@
 using Cotton.Models;
 using Cotton.Server.Handlers.Server;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Runtime;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Server)]
     public class ServerController(
+        SettingsProvider _settings,
         IMediator _mediator) : ControllerBase
     {
         [HttpPost("emergency-shutdown")]
@@ -35,7 +38,7 @@ namespace Cotton.Server.Controllers
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<IActionResult> IsServerInitialized()
         {
-            bool isServerInitialized = await _mediator.Send(new IsServerInitializedQuery());
+            bool isServerInitialized = await _settings.IsServerInitializedAsync();
             return Ok(new { IsServerInitialized = isServerInitialized });
         }
 
