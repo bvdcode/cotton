@@ -104,5 +104,21 @@ namespace Cotton.Server.Controllers
             ServerUsage[] serverUsage = _settings.GetServerSettings().ServerUsage;
             return Ok(new { serverUsage });
         }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("telemetry")]
+        public async Task<IActionResult> SetTelemetry([FromBody] bool enabled, CancellationToken cancellationToken = default)
+        {
+            await _settings.SetPropertyAsync(x => x.TelemetryEnabled, enabled, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("telemetry")]
+        public IActionResult GetTelemetry()
+        {
+            bool telemetryEnabled = _settings.GetServerSettings().TelemetryEnabled;
+            return Ok(new { telemetryEnabled });
+        }
     }
 }
