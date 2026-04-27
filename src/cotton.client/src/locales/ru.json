@@ -814,8 +814,8 @@
           "autoAlign": "Выровнять по земле",
           "autoOrient": "Автоориентация",
           "cycleLighting": "Свет: {{preset}}",
-          "cycleRotation": "Повернуть / перевернуть",
           "cycleSurface": "Поверхность: {{preset}}",
+          "flipModel": "Перевернуть",
           "resetColor": "Исходные цвета",
           "toggleShadows": "Тени: {{state}}",
           "togglePalette": "Палитра цветов"
@@ -828,7 +828,10 @@
         "surface": {
           "original": "Исходная",
           "matte": "Матовая",
-          "glossy": "Глянцевая"
+          "glossy": "Глянцевая",
+          "metal": "Металл",
+          "satin": "Сатин",
+          "smooth": "Сглаженная"
         },
         "states": {
           "on": "Вкл",
