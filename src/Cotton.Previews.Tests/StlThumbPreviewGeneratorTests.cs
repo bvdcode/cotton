@@ -4,8 +4,6 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.IO.Compression;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Cotton.Previews.Tests;
@@ -13,22 +11,20 @@ namespace Cotton.Previews.Tests;
 public class StlThumbPreviewGeneratorTests
 {
     [Test]
-    public void NativeRenderImport_ModelFilenameParameter_UsesUtf8Marshalling()
+    public async Task GeneratePreviewWebPAsync_StlInvalidContent_ReturnsFallbackImage()
     {
-        Type nativeType = typeof(StlThumbPreviewGenerator)
-            .GetNestedType("StlThumbNative", BindingFlags.NonPublic)
-            ?? throw new AssertionException("StlThumbNative nested type was not found.");
+        StlThumbPreviewGenerator generator = new();
+        using var stream = new MemoryStream("not-an-stl"u8.ToArray());
 
-        MethodInfo renderMethod = nativeType.GetMethod(
-                "RenderToBuffer",
-                BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new AssertionException("RenderToBuffer method was not found.");
+        byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
 
-        ParameterInfo modelFilenameParameter = renderMethod.GetParameters()[3];
-        MarshalAsAttribute marshalAs = modelFilenameParameter.GetCustomAttribute<MarshalAsAttribute>()
-            ?? throw new AssertionException("MarshalAsAttribute is missing on modelFilename parameter.");
-
-        Assert.That(marshalAs.Value, Is.EqualTo(UnmanagedType.LPUTF8Str));
+        AssertWebpSignature(preview);
+        using var image = Image.Load<Rgba32>(preview);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(image.Width, Is.EqualTo(128));
+            Assert.That(image.Height, Is.EqualTo(128));
+        }
     }
 
     [Test]
@@ -46,6 +42,28 @@ public class StlThumbPreviewGeneratorTests
         {
             Assert.That(image.Width, Is.EqualTo(200));
             Assert.That(image.Height, Is.EqualTo(100));
+        }
+    }
+
+    [Test]
+    public async Task GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_ReturnsFallbackImage()
+    {
+        StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
+        byte[] threeMf = CreateThreeMfWithoutThumbnailWithInvalidModelBytes();
+        using var stream = new MemoryStream(threeMf);
+
+        byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
+
+        AssertWebpSignature(preview);
+        using var image = Image.Load<Rgba32>(preview);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(image.Width, Is.EqualTo(128));
+            Assert.That(image.Height, Is.EqualTo(128));
+            Assert.That(image[0, 0].A, Is.EqualTo(255));
+            Assert.That(image[0, 0].R, Is.InRange((byte)30, (byte)40));
+            Assert.That(image[0, 0].G, Is.InRange((byte)30, (byte)40));
+            Assert.That(image[0, 0].B, Is.InRange((byte)30, (byte)45));
         }
     }
 
@@ -91,6 +109,38 @@ public class StlThumbPreviewGeneratorTests
                 """);
 
             WriteBinaryEntry(archive, "Metadata/thumbnail.png", thumbnailPng);
+        }
+
+        return output.ToArray();
+    }
+
+    private static byte[] CreateThreeMfWithoutThumbnailWithInvalidModelBytes()
+    {
+        using var output = new MemoryStream();
+        using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteTextEntry(
+                archive,
+                "[Content_Types].xml",
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
+                </Types>
+                """);
+
+            WriteTextEntry(
+                archive,
+                "_rels/.rels",
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
+                </Relationships>
+                """);
+
+            WriteTextEntry(archive, "3D/3dmodel.model", "not-a-valid-3mf-model");
         }
 
         return output.ToArray();
