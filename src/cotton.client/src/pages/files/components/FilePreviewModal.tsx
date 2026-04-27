@@ -56,6 +56,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         <ModelPreview
           source={{ kind: "fileId", fileId }}
           fileName={fileName}
+          fileSizeBytes={fileSizeBytes}
         />
       )}
     </PreviewModal>

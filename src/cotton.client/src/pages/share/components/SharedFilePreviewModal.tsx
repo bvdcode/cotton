@@ -191,6 +191,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
           }}
           fileName={fileName}
           contentType={contentType}
+          fileSizeBytes={fileSizeBytes}
         />
       )}
     </PreviewModal>
