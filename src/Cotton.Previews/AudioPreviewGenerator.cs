@@ -81,14 +81,14 @@ namespace Cotton.Previews
         {
             short[] samples = await DecodePcm16MonoAsync(url).ConfigureAwait(false);
 
-            int bars = Math.Clamp(size / 6, 10, 32);
+            int bars = Math.Clamp(size / 10, 8, 20);
             float[] amplitudes = BuildAmplitudes(samples, bars);
 
             using var image = new Image<Rgba32>(size, size, new Rgba32(0, 0, 0, 0));
             image.Mutate(ctx =>
             {
-                float barGap = Math.Max(4f, size / 64f);
-                float sidePadding = Math.Max(8f, barGap * 1.5f);
+                float barGap = Math.Max(5f, size / 48f);
+                float sidePadding = Math.Max(10f, barGap * 1.5f);
                 float availableWidth = size - (sidePadding * 2f) - ((bars - 1) * barGap);
                 float barWidth = Math.Max(1f, availableWidth / bars);
                 float totalBarsWidth = (bars * barWidth) + ((bars - 1) * barGap);

@@ -47,20 +47,20 @@ public class AudioPreviewGeneratorTests
             ("case-c", 300, 900, 0.95),
         ];
 
-        foreach (var @case in cases)
+        foreach (var (Name, LowFreq, HighFreq, EnvelopeHz) in cases)
         {
             byte[] wavBytes = CreatePcm16MonoWavBytes(
                 sampleRate: 8000,
                 durationSeconds: 2,
-                lowFreq: @case.LowFreq,
-                highFreq: @case.HighFreq,
-                envelopeHz: @case.EnvelopeHz);
+                lowFreq: LowFreq,
+                highFreq: HighFreq,
+                envelopeHz: EnvelopeHz);
 
             using var stream = new MemoryStream(wavBytes);
             byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 200);
 
             AssertWebpSignature(preview);
-            string artifactPath = Path.Combine(artifactsDirectory, $"audio-waveform-preview-{@case.Name}.webp");
+            string artifactPath = Path.Combine(artifactsDirectory, $"audio-waveform-preview-{Name}.webp");
             await File.WriteAllBytesAsync(artifactPath, preview);
             TestContext.Progress.WriteLine($"Audio waveform preview debug artifact: {artifactPath}");
         }
@@ -70,8 +70,7 @@ public class AudioPreviewGeneratorTests
         int sampleRate,
         int durationSeconds,
         double lowFreq = 220,
-        double highFreq = 660,
-        double envelopeHz = 0.7)
+        double highFreq = 660)
     {
         int totalSamples = sampleRate * durationSeconds;
         short[] samples = new short[totalSamples];
@@ -79,7 +78,7 @@ public class AudioPreviewGeneratorTests
         for (int i = 0; i < totalSamples; i++)
         {
             double t = (double)i / sampleRate;
-            double envelope = 0.25 + 0.75 * Math.Abs(Math.Sin(2 * Math.PI * envelopeHz * t));
+            double envelope = 0.25 + 0.75 * Math.Abs(Math.Sin(2 * Math.PI * 0.7 * t));
             double tone = Math.Sin(2 * Math.PI * lowFreq * t) * 0.65 + Math.Sin(2 * Math.PI * highFreq * t) * 0.35;
             samples[i] = (short)(tone * envelope * short.MaxValue * 0.85);
         }
