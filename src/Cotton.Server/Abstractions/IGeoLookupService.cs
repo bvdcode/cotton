@@ -1,10 +1,10 @@
-using EasyExtensions.Clients.Models;
+using Cotton.Server.Models;
 using System.Net;
 
 namespace Cotton.Server.Abstractions
 {
     public interface IGeoLookupService
     {
-        Task<GeoIpInfo?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default);
+        Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default);
     }
 }
