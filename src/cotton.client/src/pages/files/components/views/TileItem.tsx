@@ -336,6 +336,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       tile.file.previewHashEncryptedHex ?? null,
       tile.file.name,
       tile.file.contentType,
+      {
+        extensionLabelMaxLength: 4,
+        hideLongExtensionLabel: true,
+        hideInvalidExtensionLabel: true,
+      },
     );
     const previewUrl = typeof preview === "string" ? preview : null;
 
