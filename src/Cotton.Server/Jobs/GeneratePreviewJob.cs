@@ -26,7 +26,9 @@ namespace Cotton.Server.Jobs
         IHubContext<EventHub> _hubContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
-        private const int MaxItemsPerRun = 100;
+        private const int MaxItemsPerRun = 1000;
+        private const int UnthrottledItemsCount = 100;
+        private const int ThrottleDelayMs = 250;
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -133,8 +135,15 @@ namespace Cotton.Server.Jobs
                             .User(nodeFile.OwnerId.ToString())
                             .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex());
                     }
-                    // TODO: Move to settings or autoconfig
-                    await Task.Delay(250);
+                    if (processed == UnthrottledItemsCount)
+                    {
+                        _logger.LogInformation("Processed {Count} items, throttling further processing to avoid overloading the system...", UnthrottledItemsCount);
+                    }
+                    if (processed > UnthrottledItemsCount)
+                    {
+                        // TODO: Move to settings or autoconfig
+                        await Task.Delay(ThrottleDelayMs);
+                    }
                 }
                 catch (Exception ex)
                 {
