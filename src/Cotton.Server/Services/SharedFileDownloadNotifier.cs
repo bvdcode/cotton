@@ -11,7 +11,8 @@ namespace Cotton.Server.Services
 {
     public sealed class SharedFileDownloadNotifier(
         IMemoryCache _cache,
-        INotificationsProvider _notifications) : ISharedFileDownloadNotifier
+        INotificationsProvider _notifications,
+        IGeoLookupService _geoLookup) : ISharedFileDownloadNotifier
     {
         private static IPAddress GetRequestIpAddress(HttpContext httpContext)
         {
@@ -42,6 +43,7 @@ namespace Cotton.Server.Services
             });
 
             await _notifications.SendSharedFileDownloadedNotificationAsync(
+                _geoLookup,
                 ownerId,
                 fileName,
                 requestIp,

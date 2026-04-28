@@ -9,6 +9,7 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.Linq.Expressions;
 
 namespace Cotton.Server.Providers
 {
@@ -114,7 +115,7 @@ namespace Cotton.Server.Providers
             return value;
         }
 
-        public async Task<string?> ValidateServerSettingsAsync(InitialServerSettingsRequestDto request)
+        public async Task<string?> ValidateServerSettingsAsync(CottonServerSettingsDto request)
         {
             if (!IsTimezoneValid(request.Timezone))
             {
@@ -147,7 +148,7 @@ namespace Cotton.Server.Providers
             return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
         }
 
-        private static string? ValidateTelemetryConstraints(InitialServerSettingsRequestDto request)
+        private static string? ValidateTelemetryConstraints(CottonServerSettingsDto request)
         {
             if (request.Telemetry)
             {
@@ -167,7 +168,7 @@ namespace Cotton.Server.Providers
             return null;
         }
 
-        private static async Task<string?> ValidateEmailConstraintsAsync(InitialServerSettingsRequestDto request)
+        private static async Task<string?> ValidateEmailConstraintsAsync(CottonServerSettingsDto request)
         {
             if (request.Email == EmailMode.Cloud)
             {
@@ -214,7 +215,7 @@ namespace Cotton.Server.Providers
             }
         }
 
-        private static async Task<string?> ValidateStorageConstraintsAsync(InitialServerSettingsRequestDto request)
+        private static async Task<string?> ValidateStorageConstraintsAsync(CottonServerSettingsDto request)
         {
             if (request.Storage != StorageType.S3)
             {
@@ -290,7 +291,7 @@ namespace Cotton.Server.Providers
             await s3.DeleteObjectAsync(s3Config.Bucket, testKey);
         }
 
-        public async Task SaveServerSettingsAsync(InitialServerSettingsRequestDto request)
+        public async Task SaveServerSettingsAsync(CottonServerSettingsDto request)
         {
             int? smtpPort = TryParseInt(request.EmailConfig?.Port);
             var lastSettings = await _dbContext.ServerSettings
@@ -335,6 +336,29 @@ namespace Cotton.Server.Providers
             {
                 _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
             }
+        }
+
+        public async Task SetPropertyAsync<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
+        {
+            var memberExpression = selector.Body as MemberExpression;
+            if (memberExpression is null && selector.Body is UnaryExpression unaryExpression)
+            {
+                memberExpression = unaryExpression.Operand as MemberExpression;
+            }
+
+            if (memberExpression?.Member.Name is not string propertyName)
+            {
+                throw new ArgumentException("Selector must point to a settings property.", nameof(selector));
+            }
+
+            CottonServerSettings? settings = await _dbContext.ServerSettings
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken)
+                    ?? throw new InvalidOperationException("Server settings are not initialized.");
+
+            _dbContext.Entry(settings).Property(propertyName).CurrentValue = value;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            _cache = null;
         }
 
         private static int? TryParseInt(string? value)

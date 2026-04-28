@@ -27,7 +27,8 @@ public sealed class WebDavBasicAuthenticationHandler(
     IPasswordHashService hasher,
     IMemoryCache cache,
     Cotton.Server.Services.WebDav.WebDavAuthCache authCache,
-    INotificationsProvider notifications)
+    INotificationsProvider notifications,
+    IGeoLookupService geoLookup)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string PolicyName = "WebDav";
@@ -230,6 +231,7 @@ public sealed class WebDavBasicAuthenticationHandler(
         try
         {
             await notifications.SendFailedLoginAttemptAsync(
+                geoLookup,
                 user.Id,
                 username,
                 GetRequestIpAddress(),

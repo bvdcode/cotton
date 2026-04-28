@@ -12,6 +12,8 @@ namespace Cotton.Server.Models.Dto
         public string Name { get; set; } = null!;
         public string ContentType { get; set; } = null!;
         public long SizeBytes { get; set; }
+        public bool IsClientEncrypted { get; set; }
+        public Dictionary<string, string> Metadata { get; set; } = [];
         public string? PreviewHashEncryptedHex { get; set; }
     }
 }

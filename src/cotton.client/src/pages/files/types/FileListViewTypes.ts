@@ -1,5 +1,8 @@
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
+import type { SharedNodeFileDto } from "../../../shared/api/sharedFoldersApi";
+
+export type FileListFileDto = NodeFileManifestDto | SharedNodeFileDto;
 
 /**
  * Represents a folder tile in the file list view
@@ -15,7 +18,7 @@ export interface FolderTile {
  */
 export interface FileTile {
   kind: "file";
-  file: NodeFileManifestDto;
+  file: FileListFileDto;
   path?: string;
   containerPath?: string;
 }

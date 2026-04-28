@@ -12,14 +12,15 @@ export interface ServerSettings {
 }
 
 interface SetupStatusRaw {
-  isServerInitialized?: boolean;
-  IsServerInitialized?: boolean;
+  isServerInitialized: boolean;
 }
 
-interface ServerSettingsRaw {
+interface ChunkSizeRaw {
   maxChunkSizeBytes: number;
-  SupportedHashAlgorithm?: string;
-  supportedHashAlgorithm?: string;
+}
+
+interface SupportedHashAlgorithmsRaw {
+  supportedHashAlgorithms: string[];
 }
 
 export const settingsApi = {
@@ -33,23 +34,29 @@ export const settingsApi = {
       "server/settings/is-setup-complete",
     );
 
-    return (
-      response.data.isServerInitialized ??
-      response.data.IsServerInitialized ??
-      true
-    );
+    return response.data.isServerInitialized;
   },
 
   get: async (): Promise<ServerSettings> => {
-    const response = await httpClient.get<ServerSettingsRaw>("server/settings");
+    const [chunkSizeResponse, supportedHashAlgorithmsResponse] =
+      await Promise.all([
+        httpClient.get<ChunkSizeRaw>("server/settings/chunk-size"),
+        httpClient.get<SupportedHashAlgorithmsRaw>(
+          "server/settings/supported-hash-algorithms",
+        ),
+      ]);
 
-    const supportedHashAlgorithm =
-      response.data.supportedHashAlgorithm ??
-      response.data.SupportedHashAlgorithm ??
-      "Unknown";
+    const [supportedHashAlgorithm] =
+      supportedHashAlgorithmsResponse.data.supportedHashAlgorithms;
+
+    if (!supportedHashAlgorithm) {
+      throw new Error(
+        "supportedHashAlgorithms must contain at least one value",
+      );
+    }
 
     return {
-      maxChunkSizeBytes: response.data.maxChunkSizeBytes,
+      maxChunkSizeBytes: chunkSizeResponse.data.maxChunkSizeBytes,
       supportedHashAlgorithm,
     };
   },
