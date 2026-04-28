@@ -324,6 +324,44 @@ namespace Cotton.Previews
 
         private static async Task<F3dRenderResult> TryRenderWithF3dAsync(string modelFilePath, string outputPngPath, int size)
         {
+            F3dRenderResult primaryResult = await RunF3dAsync(
+                modelFilePath,
+                outputPngPath,
+                size,
+                includeMaxSizeArgument: true,
+                includeNoBackgroundArgument: true).ConfigureAwait(false);
+
+            if (primaryResult.Success)
+            {
+                return primaryResult;
+            }
+
+            F3dRenderResult fallbackResult = await RunF3dAsync(
+                modelFilePath,
+                outputPngPath,
+                size,
+                includeMaxSizeArgument: false,
+                includeNoBackgroundArgument: false).ConfigureAwait(false);
+
+            if (fallbackResult.Success)
+            {
+                return new F3dRenderResult(
+                    true,
+                    $"f3d fallback rendering succeeded after primary failure. Primary diagnostics: {primaryResult.Diagnostics}");
+            }
+
+            return new F3dRenderResult(
+                false,
+                $"Primary f3d render failed. {primaryResult.Diagnostics} | Fallback f3d render failed. {fallbackResult.Diagnostics}");
+        }
+
+        private static async Task<F3dRenderResult> RunF3dAsync(
+            string modelFilePath,
+            string outputPngPath,
+            int size,
+            bool includeMaxSizeArgument,
+            bool includeNoBackgroundArgument)
+        {
             const int renderTimeoutSeconds = 20;
 
             try
@@ -343,8 +381,14 @@ namespace Cotton.Previews
                 process.StartInfo.ArgumentList.Add(modelFilePath);
                 process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
                 process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
-                process.StartInfo.ArgumentList.Add($"--max-size={PreviewGeneratorProvider.DefaultSmallPreviewSize}");
-                process.StartInfo.ArgumentList.Add("--no-background");
+                if (includeMaxSizeArgument)
+                {
+                    process.StartInfo.ArgumentList.Add($"--max-size={PreviewGeneratorProvider.DefaultSmallPreviewSize}");
+                }
+                if (includeNoBackgroundArgument)
+                {
+                    process.StartInfo.ArgumentList.Add("--no-background");
+                }
 
                 process.Start();
 
@@ -359,7 +403,7 @@ namespace Cotton.Previews
                 {
                     return new F3dRenderResult(
                         false,
-                        $"f3d exited with code {process.ExitCode}. stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"f3d exited with code {process.ExitCode} (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
                 }
 
                 bool hasOutput = File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
@@ -367,15 +411,15 @@ namespace Cotton.Previews
                     ? new F3dRenderResult(true, null)
                     : new F3dRenderResult(
                         false,
-                        $"f3d finished successfully but did not produce output file. stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"f3d finished successfully but did not produce output file (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
             }
             catch (OperationCanceledException)
             {
-                return new F3dRenderResult(false, $"f3d render timed out after {renderTimeoutSeconds} seconds.");
+                return new F3dRenderResult(false, $"f3d render timed out after {renderTimeoutSeconds} seconds (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}).");
             }
             catch (Exception ex)
             {
-                return new F3dRenderResult(false, $"f3d render failed: {ex.GetType().Name}: {ex.Message}");
+                return new F3dRenderResult(false, $"f3d render failed (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}): {ex.GetType().Name}: {ex.Message}");
             }
         }
 
