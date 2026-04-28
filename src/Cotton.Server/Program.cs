@@ -59,6 +59,7 @@ namespace Cotton.Server
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
+                .AddScoped<IGeoLookupService, GeoLookupService>()
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()

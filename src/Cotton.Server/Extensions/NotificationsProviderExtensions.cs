@@ -1,8 +1,6 @@
 using Cotton.Database.Models.Enums;
 using Cotton.Localization;
 using Cotton.Server.Abstractions;
-using EasyExtensions.Clients;
-using EasyExtensions.Clients.Models;
 using EasyExtensions.Helpers;
 using Microsoft.Extensions.Primitives;
 using System.Net;
@@ -21,22 +19,23 @@ namespace Cotton.Server.Extensions
             string City);
 
         private static async Task<ClientNotificationContext> CreateClientContextAsync(
+            IGeoLookupService geoLookup,
             IPAddress ipAddress,
             StringValues userAgent)
         {
             string ip = ipAddress.ToString();
             UserAgentDeviceInfo device = UserAgentHelpers.GetDeviceInfo(userAgent);
             string deviceName = device.FriendlyName ?? device.Type.ToString();
-            GeoIpInfo ipInfo = await GeoIpClient.LookupAsync(ip);
+            var ipInfo = await geoLookup.TryLookupAsync(ipAddress);
 
             return new ClientNotificationContext(
                 Ip: ip,
                 UserAgent: userAgent.ToString(),
                 DeviceName: deviceName,
                 HasDevice: HasKnownDevice(deviceName),
-                Country: NormalizeGeoField(ipInfo.Country),
-                Region: NormalizeGeoField(ipInfo.Region),
-                City: NormalizeGeoField(ipInfo.City));
+                Country: NormalizeGeoField(ipInfo?.Country),
+                Region: NormalizeGeoField(ipInfo?.Region),
+                City: NormalizeGeoField(ipInfo?.City));
         }
 
         private static bool HasKnownDevice(string deviceName)
@@ -65,6 +64,7 @@ namespace Cotton.Server.Extensions
 
         public static async Task SendFailedLoginAttemptAsync(
             this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
             Guid userId,
             string username,
             IPAddress ipAddress,
@@ -72,7 +72,7 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
             metadata["username"] = username;
 
@@ -99,13 +99,14 @@ namespace Cotton.Server.Extensions
 
         public static async Task SendOtpEnabledAsync(
             this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
             Guid userId,
             IPAddress ipAddress,
             StringValues userAgent)
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
 
             await notifications.SendNotificationAsync(
@@ -129,13 +130,14 @@ namespace Cotton.Server.Extensions
 
         public static async Task SendSuccessfulLoginAsync(
             this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
             Guid userId,
             IPAddress ipAddress,
             StringValues userAgent)
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
 
             await notifications.SendNotificationAsync(
@@ -159,6 +161,7 @@ namespace Cotton.Server.Extensions
 
         public static async Task SendTotpFailedAttemptAsync(
             this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
             Guid userId,
             int totpFailedAttempts,
             IPAddress ipAddress,
@@ -166,7 +169,7 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
             metadata["totpFailedAttempts"] = totpFailedAttempts.ToString();
 
@@ -193,6 +196,7 @@ namespace Cotton.Server.Extensions
 
         public static async Task SendTotpLockoutAsync(
             this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
             Guid userId,
             int maxFailedAttempts,
             IPAddress ipAddress,
@@ -200,7 +204,7 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
             metadata["maxFailedAttempts"] = maxFailedAttempts.ToString();
 
@@ -227,13 +231,14 @@ namespace Cotton.Server.Extensions
 
         public static async Task SendWebDavTokenResetAsync(
             this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
             Guid userId,
             IPAddress ipAddress,
             StringValues userAgent)
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
 
             await notifications.SendNotificationAsync(
@@ -257,6 +262,7 @@ namespace Cotton.Server.Extensions
 
         public static async Task SendSharedFileDownloadedNotificationAsync(
             this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
             Guid userId,
             string fileName,
             IPAddress ipAddress,
@@ -264,7 +270,7 @@ namespace Cotton.Server.Extensions
         {
             ArgumentNullException.ThrowIfNull(notifications);
 
-            ClientNotificationContext context = await CreateClientContextAsync(ipAddress, userAgent);
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
             Dictionary<string, string> metadata = CreateBaseMetadata(context);
             metadata["fileName"] = fileName;
 

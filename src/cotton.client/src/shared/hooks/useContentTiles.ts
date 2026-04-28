@@ -1,6 +1,14 @@
 import { useMemo } from "react";
-import type { NodeContentDto } from "../api/nodesApi";
-import type { FileSystemTile } from "../../pages/files/types/FileListViewTypes";
+import type { NodeDto } from "../api/layoutsApi";
+import type {
+  FileListFileDto,
+  FileSystemTile,
+} from "../../pages/files/types/FileListViewTypes";
+
+interface ContentTilesSource<TFile extends FileListFileDto> {
+  nodes: NodeDto[];
+  files: TFile[];
+}
 
 /**
  * Sort nodes/files alphabetically
@@ -16,7 +24,9 @@ const sortByName = <T extends { name: string }>(items: T[]): T[] => {
 /**
  * Hook to build sorted folders, files and tiles from content
  */
-export const useContentTiles = (content: NodeContentDto | undefined) => {
+export const useContentTiles = <TFile extends FileListFileDto>(
+  content: ContentTilesSource<TFile> | undefined,
+) => {
   const sortedFolders = useMemo(() => {
     return sortByName(content?.nodes ?? []);
   }, [content?.nodes]);

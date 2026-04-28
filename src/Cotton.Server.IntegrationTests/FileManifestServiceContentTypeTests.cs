@@ -42,6 +42,7 @@ public class FileManifestServiceContentTypeTests
     [TestCase("image/x-heif", "image/heif")]
     [TestCase("audio/x-flac", "audio/flac")]
     [TestCase("audio/x-wav", "audio/wav")]
+    [TestCase("application/vnd.ms-pki.stl", "model/stl")]
     [TestCase("text/plain; charset=utf-8", "text/plain")]
     [TestCase("APPLICATION/OCTET-STREAM", "application/octet-stream")]
     public void ResolveContentType_NormalizesAliases_AndParameters(string contentType, string expectedContentType)

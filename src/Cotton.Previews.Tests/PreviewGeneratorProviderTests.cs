@@ -10,6 +10,7 @@ public class PreviewGeneratorProviderTests
     [TestCase("image/heic", typeof(HeicPreviewGenerator))]
     [TestCase("model/stl", typeof(StlThumbPreviewGenerator))]
     [TestCase("application/sla", typeof(StlThumbPreviewGenerator))]
+    [TestCase("application/vnd.ms-pki.stl", typeof(StlThumbPreviewGenerator))]
     [TestCase("model/obj", typeof(StlThumbPreviewGenerator))]
     [TestCase("model/3mf", typeof(StlThumbPreviewGenerator))]
     [TestCase("application/vnd.ms-package.3dmanufacturing-3dmodel+xml", typeof(StlThumbPreviewGenerator))]
@@ -63,6 +64,7 @@ public class PreviewGeneratorProviderTests
             Assert.That(mimeTypes, Does.Contain("video/mp4"));
             Assert.That(mimeTypes, Does.Contain("model/stl"));
             Assert.That(mimeTypes, Does.Contain("application/sla"));
+            Assert.That(mimeTypes, Does.Contain("application/vnd.ms-pki.stl"));
             Assert.That(mimeTypes, Does.Contain("model/obj"));
             Assert.That(mimeTypes, Does.Contain("model/3mf"));
             Assert.That(mimeTypes, Does.Contain("application/vnd.ms-package.3dmanufacturing-3dmodel+xml"));
@@ -78,7 +80,7 @@ public class PreviewGeneratorProviderTests
         using (Assert.EnterMultipleScope())
         {
             Assert.That(PreviewGeneratorProvider.DefaultSmallPreviewSize, Is.EqualTo(200));
-            Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.EqualTo(1600));
+            Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.EqualTo(2000));
             Assert.That(PreviewGeneratorProvider.DefaultLargePreviewSize, Is.GreaterThan(PreviewGeneratorProvider.DefaultSmallPreviewSize));
         }
     }
