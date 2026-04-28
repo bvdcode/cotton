@@ -378,6 +378,10 @@ namespace Cotton.Previews
                     CreateNoWindow = true,
                 };
 
+                process.StartInfo.Environment["LIBGL_ALWAYS_SOFTWARE"] = "1";
+                process.StartInfo.Environment["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe";
+                process.StartInfo.Environment["GALLIUM_DRIVER"] = "llvmpipe";
+
                 process.StartInfo.ArgumentList.Add(modelFilePath);
                 process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
                 process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
