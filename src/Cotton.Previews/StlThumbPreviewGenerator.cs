@@ -328,8 +328,10 @@ namespace Cotton.Previews
                 modelFilePath,
                 outputPngPath,
                 size,
+                renderingBackend: "osmesa",
                 includeMaxSizeArgument: true,
-                includeNoBackgroundArgument: true).ConfigureAwait(false);
+                includeNoBackgroundArgument: true,
+                includeVerboseDebugArgument: true).ConfigureAwait(false);
 
             if (primaryResult.Success)
             {
@@ -340,8 +342,10 @@ namespace Cotton.Previews
                 modelFilePath,
                 outputPngPath,
                 size,
+                renderingBackend: "egl",
                 includeMaxSizeArgument: false,
-                includeNoBackgroundArgument: false).ConfigureAwait(false);
+                includeNoBackgroundArgument: false,
+                includeVerboseDebugArgument: false).ConfigureAwait(false);
 
             if (fallbackResult.Success)
             {
@@ -359,8 +363,10 @@ namespace Cotton.Previews
             string modelFilePath,
             string outputPngPath,
             int size,
+            string renderingBackend,
             bool includeMaxSizeArgument,
-            bool includeNoBackgroundArgument)
+            bool includeNoBackgroundArgument,
+            bool includeVerboseDebugArgument)
         {
             const int renderTimeoutSeconds = 20;
 
@@ -382,8 +388,15 @@ namespace Cotton.Previews
                 process.StartInfo.Environment["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe";
                 process.StartInfo.Environment["GALLIUM_DRIVER"] = "llvmpipe";
 
+                process.StartInfo.ArgumentList.Add("--no-config");
+                process.StartInfo.ArgumentList.Add("--no-config");
+                process.StartInfo.ArgumentList.Add($"--rendering-backend={renderingBackend}");
+                if (includeVerboseDebugArgument)
+                {
+                    process.StartInfo.ArgumentList.Add("--verbose=debug");
+                }
+                process.StartInfo.ArgumentList.Add($"--rendering-backend={renderingBackend}");
                 process.StartInfo.ArgumentList.Add(modelFilePath);
-                process.StartInfo.ArgumentList.Add($"--output={outputPngPath}");
                 process.StartInfo.ArgumentList.Add($"--resolution={size},{size}");
                 if (includeMaxSizeArgument)
                 {
@@ -407,7 +420,7 @@ namespace Cotton.Previews
                 {
                     return new F3dRenderResult(
                         false,
-                        $"f3d exited with code {process.ExitCode} (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"f3d exited with code {process.ExitCode} (backend={renderingBackend}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose-debug={includeVerboseDebugArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
                 }
 
                 bool hasOutput = File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
@@ -415,15 +428,15 @@ namespace Cotton.Previews
                     ? new F3dRenderResult(true, null)
                     : new F3dRenderResult(
                         false,
-                        $"f3d finished successfully but did not produce output file (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"f3d finished successfully but did not produce output file (backend={renderingBackend}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose-debug={includeVerboseDebugArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
             }
             catch (OperationCanceledException)
             {
-                return new F3dRenderResult(false, $"f3d render timed out after {renderTimeoutSeconds} seconds (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}).");
+                return new F3dRenderResult(false, $"f3d render timed out after {renderTimeoutSeconds} seconds (backend={renderingBackend}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose-debug={includeVerboseDebugArgument}).");
             }
             catch (Exception ex)
             {
-                return new F3dRenderResult(false, $"f3d render failed (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}): {ex.GetType().Name}: {ex.Message}");
+                return new F3dRenderResult(false, $"f3d render failed (backend={renderingBackend}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose-debug={includeVerboseDebugArgument}): {ex.GetType().Name}: {ex.Message}");
             }
         }
 

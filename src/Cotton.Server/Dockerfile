@@ -15,7 +15,7 @@ RUN set -eux \
     && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-18 f3d \
+    && apt-get install -y --no-install-recommends postgresql-client-18 f3d libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0 \
     && apt-get purge -y --auto-remove curl gnupg \
     && rm -rf /var/lib/apt/lists/*
 
