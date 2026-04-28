@@ -76,20 +76,27 @@ namespace Cotton.Previews
                     }
                 }
 
-                bool rendered = await TryRenderWithF3dAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
+                F3dRenderResult renderResult = await TryRenderWithF3dAsync(modelFilePath, renderedPngPath, size).ConfigureAwait(false);
+                bool rendered = renderResult.Success;
+                string? renderDiagnostics = renderResult.Diagnostics;
 
                 if (!rendered && string.Equals(_modelExtension, ThreeMfExtension, StringComparison.OrdinalIgnoreCase))
                 {
                     normalizedThreeMfPath = await TryNormalizeThreeMfArchiveAsync(modelFilePath).ConfigureAwait(false);
                     if (!string.IsNullOrWhiteSpace(normalizedThreeMfPath))
                     {
-                        rendered = await TryRenderWithF3dAsync(normalizedThreeMfPath, renderedPngPath, size).ConfigureAwait(false);
+                        F3dRenderResult normalizedRenderResult = await TryRenderWithF3dAsync(normalizedThreeMfPath, renderedPngPath, size).ConfigureAwait(false);
+                        rendered = normalizedRenderResult.Success;
+                        renderDiagnostics = string.Join(" | ",
+                            new[] { renderDiagnostics, normalizedRenderResult.Diagnostics }
+                                .Where(x => !string.IsNullOrWhiteSpace(x)));
                     }
                 }
 
                 if (!rendered)
                 {
-                    throw new InvalidOperationException($"Failed to render {_modelExtension} preview with f3d.");
+                    throw new InvalidOperationException(
+                        $"Failed to render {_modelExtension} preview with f3d. {renderDiagnostics}");
                 }
 
                 await using FileStream renderedPngStream = new(
@@ -315,7 +322,7 @@ namespace Cotton.Previews
             return score;
         }
 
-        private static async Task<bool> TryRenderWithF3dAsync(string modelFilePath, string outputPngPath, int size)
+        private static async Task<F3dRenderResult> TryRenderWithF3dAsync(string modelFilePath, string outputPngPath, int size)
         {
             const int renderTimeoutSeconds = 20;
 
@@ -350,20 +357,43 @@ namespace Cotton.Previews
 
                 if (process.ExitCode != 0)
                 {
-                    return false;
+                    return new F3dRenderResult(
+                        false,
+                        $"f3d exited with code {process.ExitCode}. stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
                 }
 
-                return File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
+                bool hasOutput = File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
+                return hasOutput
+                    ? new F3dRenderResult(true, null)
+                    : new F3dRenderResult(
+                        false,
+                        $"f3d finished successfully but did not produce output file. stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
             }
             catch (OperationCanceledException)
             {
-                return false;
+                return new F3dRenderResult(false, $"f3d render timed out after {renderTimeoutSeconds} seconds.");
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return new F3dRenderResult(false, $"f3d render failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
+
+        private static string LimitDiagnostic(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "<empty>";
+            }
+
+            const int maxLength = 1000;
+            string normalized = text.Trim();
+            return normalized.Length <= maxLength
+                ? normalized
+                : normalized[..maxLength] + "...";
+        }
+
+        private readonly record struct F3dRenderResult(bool Success, string? Diagnostics);
 
         private static async Task<string?> TryNormalizeThreeMfArchiveAsync(string sourcePath)
         {
