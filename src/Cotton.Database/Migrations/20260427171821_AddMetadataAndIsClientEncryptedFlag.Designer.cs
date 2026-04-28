@@ -5,6 +5,7 @@ using System.Net;
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    partial class CottonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260427171821_AddMetadataAndIsClientEncryptedFlag")]
+    partial class AddMetadataAndIsClientEncryptedFlag
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -186,10 +189,6 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("CustomGeoIpLookupUrl")
-                        .HasColumnType("text")
-                        .HasColumnName("custom_geo_ip_lookup_url");
-
                     b.Property<int>("EmailMode")
                         .HasColumnType("integer")
                         .HasColumnName("email_mode");
@@ -197,10 +196,6 @@ namespace Cotton.Database.Migrations
                     b.Property<int>("EncryptionThreads")
                         .HasColumnType("integer")
                         .HasColumnName("encryption_threads");
-
-                    b.Property<int>("GeoIpLookupMode")
-                        .HasColumnType("integer")
-                        .HasColumnName("geo_ip_lookup_mode");
 
                     b.Property<Guid>("InstanceId")
                         .HasColumnType("uuid")

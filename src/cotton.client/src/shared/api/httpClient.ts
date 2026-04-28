@@ -1,5 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { getRefreshEnabled } from "../store";
+import { getRefreshEnabled, useAuthStore } from "../store/authStore";
 import { isJsonObject, type JsonValue } from "../types/json";
 import { toast } from "react-toastify";
 
@@ -96,9 +96,44 @@ const resolveBrowserTimeZone = (): string | null => {
 const browserTimeZone = resolveBrowserTimeZone();
 
 let accessToken: string | null = null;
+let refreshBlocked = false;
+let logoutEventDispatched = false;
+
+const resetAuthTransportState = (): void => {
+  refreshBlocked = false;
+  logoutEventDispatched = false;
+};
+
+const dispatchLogoutEventOnce = (): void => {
+  if (logoutEventDispatched || typeof window === "undefined") {
+    return;
+  }
+
+  logoutEventDispatched = true;
+  window.dispatchEvent(new CustomEvent("auth:logout"));
+};
+
+const isTerminalRefreshFailure = (error: unknown): boolean => {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+
+  const status = error.response?.status;
+  return status === 400 || status === 401 || status === 403 || status === 404;
+};
+
+const disableRefreshAndLogout = (): void => {
+  clearAccessToken();
+  useAuthStore.getState().logoutLocal();
+  dispatchLogoutEventOnce();
+};
+
 export const getAccessToken = () => accessToken;
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
+  if (token) {
+    resetAuthTransportState();
+  }
 };
 export const clearAccessToken = () => {
   accessToken = null;
@@ -110,7 +145,7 @@ export const clearAccessToken = () => {
  */
 export const refreshAccessToken = async (): Promise<string | null> => {
   try {
-    if (!getRefreshEnabled()) {
+    if (!getRefreshEnabled() || refreshBlocked) {
       clearAccessToken();
       return null;
     }
@@ -126,7 +161,13 @@ export const refreshAccessToken = async (): Promise<string | null> => {
     }
     clearAccessToken();
     return null;
-  } catch {
+  } catch (error) {
+    if (isTerminalRefreshFailure(error)) {
+      refreshBlocked = true;
+      disableRefreshAndLogout();
+      return null;
+    }
+
     clearAccessToken();
     return null;
   }
@@ -191,11 +232,8 @@ httpClient.interceptors.response.use(
       }
 
       // If refresh is disabled (explicit logout), never attempt refresh.
-      if (!getRefreshEnabled()) {
-        clearAccessToken();
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("auth:logout"));
-        }
+      if (!getRefreshEnabled() || refreshBlocked) {
+        disableRefreshAndLogout();
         tryDispatchApiErrorToast(error);
         return Promise.reject(error);
       }
@@ -236,13 +274,9 @@ httpClient.interceptors.response.use(
         }
       } catch (refreshError) {
         // Refresh failed - clear token and queue
-        clearAccessToken();
         processQueue(null);
 
-        // Trigger logout from auth context if available
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("auth:logout"));
-        }
+        disableRefreshAndLogout();
 
         return Promise.reject(refreshError);
       } finally {

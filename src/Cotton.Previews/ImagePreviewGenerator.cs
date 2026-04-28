@@ -35,7 +35,7 @@ namespace Cotton.Previews
                 }));
             }
             using var outputStream = new MemoryStream();
-            
+
             await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = quality });
             return outputStream.ToArray();
         }

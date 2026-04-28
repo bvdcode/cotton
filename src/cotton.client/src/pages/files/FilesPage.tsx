@@ -180,7 +180,6 @@ export const FilesPage: React.FC = () => {
     setLightboxOpen,
   } = useFileInteractionHandlers({
     sortedFiles,
-    audioFallbackNodeId: nodeId ?? undefined,
   });
 
   // Consume selectedFileId from router state (e.g. dashboard → open file)

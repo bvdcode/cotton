@@ -109,6 +109,12 @@ namespace Cotton.Database.Models
         [Column("smtp_password_encrypted")]
         public string? SmtpPasswordEncrypted { get; set; }
 
+        [Column("geo_ip_lookup_mode")]
+        public GeoIpLookupMode GeoIpLookupMode { get; set; }
+
+        [Column("custom_geo_ip_lookup_url")]
+        public string? CustomGeoIpLookupUrl { get; set; }
+
         public string GetInstanceIdHash()
         {
             return InstanceId.ToString().Sha256();
