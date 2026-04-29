@@ -13,31 +13,31 @@ namespace Cotton.Database.Models
     public class CottonServerSettings : BaseEntity<Guid>
     {
         [Column("encryption_threads")]
-        public int EncryptionThreads { get; init; }
+        public int EncryptionThreads { get; set; }
 
         [Column("cipher_chunk_size_bytes")]
-        public int CipherChunkSizeBytes { get; init; }
+        public int CipherChunkSizeBytes { get; set; }
 
         [Column("max_chunk_size_bytes")]
-        public int MaxChunkSizeBytes { get; init; }
+        public int MaxChunkSizeBytes { get; set; }
 
         [Column("session_timeout_hours")]
-        public int SessionTimeoutHours { get; init; } = 30 * 24;
+        public int SessionTimeoutHours { get; set; } = 30 * 24;
 
         [Column("allow_cross_user_deduplication")]
-        public bool AllowCrossUserDeduplication { get; init; }
+        public bool AllowCrossUserDeduplication { get; set; }
 
         [Column("allow_global_indexing")]
-        public bool AllowGlobalIndexing { get; init; }
+        public bool AllowGlobalIndexing { get; set; }
 
         [Column("telemetry_enabled")]
-        public bool TelemetryEnabled { get; init; }
+        public bool TelemetryEnabled { get; set; }
 
         [Column("timezone")]
-        public string Timezone { get; init; } = null!;
+        public string Timezone { get; set; } = null!;
 
         [Column("instance_id")]
-        public Guid InstanceId { get; init; }
+        public Guid InstanceId { get; set; }
 
         [Column("public_base_url")]
         public string PublicBaseUrl { get; set; } = null!;
@@ -58,25 +58,25 @@ namespace Cotton.Database.Models
         public bool SmtpUseSsl { get; set; }
 
         [Column("s3_access_key_id")]
-        public string? S3AccessKeyId { get; init; }
+        public string? S3AccessKeyId { get; set; }
 
         [Column("s3_bucket_name")]
-        public string? S3BucketName { get; init; }
+        public string? S3BucketName { get; set; }
 
         [Column("s3_region")]
-        public string? S3Region { get; init; }
+        public string? S3Region { get; set; }
 
         [Column("s3_endpoint_url")]
-        public string? S3EndpointUrl { get; init; }
+        public string? S3EndpointUrl { get; set; }
 
         [Column("email_mode")]
-        public EmailMode EmailMode { get; init; }
+        public EmailMode EmailMode { get; set; }
 
         [Column("compution_mode")]
-        public ComputionMode ComputionMode { get; init; }
+        public ComputionMode ComputionMode { get; set; }
 
         [Column("storage_type")]
-        public StorageType StorageType { get; init; }
+        public StorageType StorageType { get; set; }
 
         [Column("server_usage")]
         public ServerUsage[] ServerUsage { get; set; } = [];

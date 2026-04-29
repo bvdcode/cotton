@@ -15,11 +15,13 @@ import {
   Diversity3,
   Folder,
   FolderCopy,
+  Http,
   Memory,
   PrivacyTip,
   PsychologyAlt,
   Save,
   SdStorage,
+  TravelExplore,
 } from "@mui/icons-material";
 
 export type SetupSingleOption<T> = {
@@ -165,6 +167,55 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         value: false,
         icon: <PrivacyTip />,
         disabledIfAny: ["email:cloud", "ai:cloud", "masterKeyStorage:cloud"],
+      },
+    ],
+  },
+  {
+    key: "geoIpLookupMode",
+    type: "single",
+    title: () => t("setup:questions.geoIpLookup.title"),
+    subtitle: () => t("setup:questions.geoIpLookup.subtitle"),
+    options: [
+      {
+        key: "disabled",
+        label: () => t("setup:questions.geoIpLookup.options.disabled"),
+        description: () =>
+          t("setup:questions.geoIpLookup.descriptions.disabled"),
+        value: "disabled",
+        icon: <Block />,
+      },
+      {
+        key: "cottonCloud",
+        label: () => t("setup:questions.geoIpLookup.options.cottonCloud"),
+        description: () =>
+          t("setup:questions.geoIpLookup.descriptions.cottonCloud"),
+        value: "cottonCloud",
+        icon: <TravelExplore />,
+        requires: "telemetry:allow",
+      },
+      {
+        key: "custom",
+        label: () => t("setup:questions.geoIpLookup.options.custom"),
+        description: () =>
+          t("setup:questions.geoIpLookup.descriptions.custom"),
+        value: "customHttp",
+        icon: <Http />,
+      },
+    ],
+  },
+  {
+    key: "customGeoIpLookupUrl",
+    type: "form",
+    requires: "geoIpLookupMode:custom",
+    title: () => t("setup:questions.customGeoIpLookupUrl.title"),
+    subtitle: () => t("setup:questions.customGeoIpLookupUrl.subtitle"),
+    fields: [
+      {
+        key: "url",
+        label: () => t("setup:questions.customGeoIpLookupUrl.fields.url"),
+        placeholder: () =>
+          t("setup:questions.customGeoIpLookupUrl.placeholders.url"),
+        type: "url",
       },
     ],
   },

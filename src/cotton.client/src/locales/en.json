@@ -546,6 +546,30 @@
         },
         "disabledTooltip": "To disable telemetry, you need to turn off the following services:"
       },
+      "geoIpLookup": {
+        "title": "Resolve IP addresses in security notifications?",
+        "subtitle": "Cotton can turn a sign-in IP address into a city and country, so account access emails can say where a session came from instead of showing only a raw address.",
+        "options": {
+          "disabled": "No, keep it off",
+          "cottonCloud": "Use Cotton Cloud resolver",
+          "custom": "Use my own resolver"
+        },
+        "descriptions": {
+          "disabled": "No location lookup will be made for sign-in and access notifications.",
+          "cottonCloud": "Use Cotton Cloud to resolve IP addresses. Requires telemetry to be enabled.",
+          "custom": "Use an HTTP endpoint you control. The endpoint can include {ip} or accept an ip query parameter."
+        }
+      },
+      "customGeoIpLookupUrl": {
+        "title": "Custom IP resolver",
+        "subtitle": "Enter an HTTP endpoint that returns country, region, and city as JSON.",
+        "fields": {
+          "url": "Lookup URL"
+        },
+        "placeholders": {
+          "url": "https://geo.example.com/lookup/{ip}"
+        }
+      },
       "ai": {
         "title": "AI and Computations",
         "subtitle": "Choose where AI computations will be performed for search, recognition, and other features.",
@@ -951,6 +975,9 @@
     "menu": {
       "navigate": "Section",
       "users": "Users",
+      "generalSettings": "General settings",
+      "storageSettings": "Storage",
+      "emailSettings": "Email",
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics"
     },
@@ -1002,6 +1029,128 @@
         "save": "Save",
         "saving": "Saving...",
         "success": "User updated."
+      }
+    },
+    "settings": {
+      "actions": {
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "state": {
+        "saved": "Settings saved."
+      },
+      "errors": {
+        "loadFailed": "Failed to load settings.",
+        "saveFailed": "Failed to save settings."
+      },
+      "general": {
+        "title": "General settings",
+        "description": "Core server behavior and notification location lookup.",
+        "fields": {
+          "publicBaseUrl": "Public base URL",
+          "timezone": "Time zone",
+          "telemetry": "Telemetry",
+          "allowDeduplication": "Cross-user deduplication",
+          "allowGlobalIndexing": "Global indexing",
+          "serverUsage": "Server usage",
+          "storageSpaceMode": "Storage space mode",
+          "computionMode": "Computation mode",
+          "geoIpLookupMode": "IP lookup mode",
+          "customGeoIpLookupUrl": "Custom IP lookup URL"
+        },
+        "serverUsage": {
+          "Photos": "Photos",
+          "Documents": "Documents",
+          "Media": "Media",
+          "Other": "Other"
+        },
+        "storageSpaceMode": {
+          "Optimal": "Optimal",
+          "Limited": "Limited",
+          "Unlimited": "Unlimited"
+        },
+        "computionMode": {
+          "Local": "Local",
+          "Remote": "Remote runner",
+          "Cloud": "Cotton Cloud"
+        },
+        "geoIpLookupMode": {
+          "Disabled": "Disabled",
+          "CottonCloud": "Cotton Cloud",
+          "CustomHttp": "Custom HTTP"
+        }
+      }
+    },
+    "storageSettings": {
+      "title": "Storage",
+      "description": "Configure storage credentials first, then switch the active storage backend.",
+      "fields": {
+        "storageType": "Active storage"
+      },
+      "storageType": {
+        "Local": "Local disk",
+        "S3": "S3-compatible storage"
+      },
+      "s3": {
+        "title": "S3 configuration",
+        "fields": {
+          "endpoint": "Endpoint URL",
+          "region": "Region",
+          "bucket": "Bucket",
+          "accessKey": "Access key",
+          "secretKey": "Secret key"
+        }
+      },
+      "actions": {
+        "saveS3": "Save S3 config",
+        "useLocal": "Use local storage",
+        "useS3": "Save config and use S3"
+      },
+      "state": {
+        "s3Saved": "S3 configuration saved.",
+        "storageSaved": "Storage mode updated."
+      },
+      "errors": {
+        "loadFailed": "Failed to load storage settings.",
+        "s3SaveFailed": "Failed to save S3 configuration.",
+        "storageSaveFailed": "Failed to switch storage mode."
+      }
+    },
+    "emailSettings": {
+      "title": "Email",
+      "description": "Configure how Cotton sends account and security notifications.",
+      "fields": {
+        "emailMode": "Email mode"
+      },
+      "emailMode": {
+        "None": "Disabled",
+        "Cloud": "Cotton Cloud Mail",
+        "Custom": "Custom SMTP"
+      },
+      "smtp": {
+        "title": "SMTP configuration",
+        "fields": {
+          "smtpServer": "SMTP server",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "fromAddress": "From address",
+          "useSSL": "Use SSL/TLS"
+        }
+      },
+      "actions": {
+        "saveSmtp": "Save SMTP config",
+        "saveMode": "Save email mode",
+        "saving": "Saving..."
+      },
+      "state": {
+        "smtpSaved": "SMTP configuration saved.",
+        "modeSaved": "Email mode updated."
+      },
+      "errors": {
+        "loadFailed": "Failed to load email settings.",
+        "smtpSaveFailed": "Failed to save SMTP configuration.",
+        "modeSaveFailed": "Failed to save email mode."
       }
     },
     "databaseBackup": {
