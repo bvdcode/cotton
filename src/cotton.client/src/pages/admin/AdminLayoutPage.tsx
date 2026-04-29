@@ -14,7 +14,13 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 type AdminMenuItem = {
-  id: "users" | "databaseBackup" | "storageStatistics";
+  id:
+    | "users"
+    | "generalSettings"
+    | "storageSettings"
+    | "emailSettings"
+    | "databaseBackup"
+    | "storageStatistics";
   to: string;
   title: string;
 };
@@ -29,6 +35,21 @@ export const AdminLayoutPage = () => {
       id: "users",
       to: "/admin/users",
       title: t("menu.users"),
+    },
+    {
+      id: "generalSettings",
+      to: "/admin/general-settings",
+      title: t("menu.generalSettings"),
+    },
+    {
+      id: "storageSettings",
+      to: "/admin/storage-settings",
+      title: t("menu.storageSettings"),
+    },
+    {
+      id: "emailSettings",
+      to: "/admin/email-settings",
+      title: t("menu.emailSettings"),
     },
     {
       id: "databaseBackup",
