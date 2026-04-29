@@ -332,6 +332,23 @@ This split is what gives Cotton several of its user-facing strengths:
 
 ---
 
+## Storage Lifetime Contract
+
+Cotton treats the database as the source of truth for whether a storage object is still alive. Any feature that writes or reuses a stored chunk must also register a live reference before it can rely on that object surviving garbage collection.
+
+Live references currently include:
+
+- file content through `FileManifestChunk`;
+- previews through `FileManifest.SmallFilePreviewHash` and `FileManifest.LargeFilePreviewHash`;
+- avatars through `User.AvatarHash`;
+- protected database backup artifacts: the latest backup pointer, the latest backup manifest, and the chunks listed by that manifest.
+
+`ChunkOwnership` is an ingest/concurrency guard, not a durable retention reference. A raw object that only exists in the storage backend is not considered live. The storage consistency job may register such objects as orphan `Chunk` rows so GC can schedule them, and the garbage collector clears schedules for objects that become live again before deletion.
+
+The rule for new storage-backed features is simple: write through the normal chunk/manifest flow or add an explicit reference/protection path that `ChunkUsageService` understands. If GC cannot see the reference, the object is eligible for reclaim after the retention window.
+
+---
+
 ## Chunk-First Upload Model
 
 Clients upload independent chunks (size <= server limit) identified by **SHA-256**.
@@ -429,7 +446,7 @@ Share tokens can be single-use (`DeleteAfterUse`) and expire after configurable 
 
 **GC-aware chunk ingest**  
 The garbage collector coordinates with ingestion: if a chunk is currently being deleted, the ingest path will refuse/hold concurrent uploads of that same chunk until the delete completes—this prevents rare races and windows where a delete and an upload could conflict. The behavior is deliberate: safety first, then fast reconciliation.  
-_See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Services/ChunkIngestService.cs`_
+_See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Services/ChunkUsageService.cs`, `src/Cotton.Server/Services/ChunkIngestService.cs`_
 
 **Industrial-strength NameValidator**  
 Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
