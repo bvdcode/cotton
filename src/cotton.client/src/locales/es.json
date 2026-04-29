@@ -562,7 +562,7 @@
       },
       "timezone": {
         "title": "Zona horaria",
-        "subtitle": "Selecciona tu zona horaria para evitar que las notificaciones y el ruido del disco te molesten por la noche."
+        "subtitle": "Selecciona tu zona horaria para evitar que las notificaciones y el ruido del disco te molesten por la noche. Esto es solo para las rutinas del servidor, la interfaz web siempre mostrará los horarios en tu zona horaria local."
       },
       "storageSpace": {
         "title": "¿Cuánto espacio le das a la aplicación?",

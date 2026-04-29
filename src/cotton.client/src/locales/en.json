@@ -586,7 +586,7 @@
       },
       "timezone": {
         "title": "Time Zone",
-        "subtitle": "Select your time zone to avoid being disturbed by notifications and disk noise at night."
+        "subtitle": "Select your time zone to avoid being disturbed by notifications and disk noise at night. This is only for server routines, Web UI will always show times in your local time zone."
       },
       "storageSpace": {
         "title": "How much space are you giving to the app?",
