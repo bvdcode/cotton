@@ -56,6 +56,7 @@ namespace Cotton.Server
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
                 .AddScoped<FileManifestService>()
+                .AddScoped<ChunkUsageService>()
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
