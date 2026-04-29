@@ -43,19 +43,19 @@ namespace Cotton.Database.Models
         public string PublicBaseUrl { get; set; } = null!;
 
         [Column("smtp_server_address")]
-        public string? SmtpServerAddress { get; init; }
+        public string? SmtpServerAddress { get; set; }
 
         [Column("smtp_server_port")]
-        public int? SmtpServerPort { get; init; }
+        public int? SmtpServerPort { get; set; }
 
         [Column("smtp_username")]
-        public string? SmtpUsername { get; init; }
+        public string? SmtpUsername { get; set; }
 
         [Column("smtp_sender_email")]
-        public string? SmtpSenderEmail { get; init; }
+        public string? SmtpSenderEmail { get; set; }
 
         [Column("smtp_use_ssl")]
-        public bool SmtpUseSsl { get; init; }
+        public bool SmtpUseSsl { get; set; }
 
         [Column("s3_access_key_id")]
         public string? S3AccessKeyId { get; init; }
