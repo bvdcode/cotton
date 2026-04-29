@@ -19,9 +19,52 @@ interface ChunkSizeRaw {
   maxChunkSizeBytes: number;
 }
 
-interface SupportedHashAlgorithmsRaw {
-  supportedHashAlgorithms: string[];
-}
+const getRecordField = (value: unknown, field: string): unknown => {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  return (value as Record<string, unknown>)[field];
+};
+
+const resolveMaxChunkSizeBytes = (payload: unknown): number => {
+  const maxChunkSizeBytes =
+    typeof payload === "number"
+      ? payload
+      : getRecordField(payload, "maxChunkSizeBytes");
+
+  if (typeof maxChunkSizeBytes !== "number" || !Number.isFinite(maxChunkSizeBytes)) {
+    throw new Error("chunk-size response must contain maxChunkSizeBytes");
+  }
+
+  return maxChunkSizeBytes;
+};
+
+const resolveSupportedHashAlgorithm = (payload: unknown): string => {
+  const rawAlgorithms = Array.isArray(payload)
+    ? payload
+    : (getRecordField(payload, "supportedHashAlgorithms") ??
+      getRecordField(payload, "supportedHashAlgorithm"));
+
+  if (typeof rawAlgorithms === "string" && rawAlgorithms.trim().length > 0) {
+    return rawAlgorithms;
+  }
+
+  if (Array.isArray(rawAlgorithms)) {
+    const supportedHashAlgorithm = rawAlgorithms.find(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    );
+
+    if (supportedHashAlgorithm) {
+      return supportedHashAlgorithm;
+    }
+  }
+
+  throw new Error(
+    "supported-hash-algorithms response must contain at least one string value",
+  );
+};
 
 export const settingsApi = {
   getPublicInfo: async (): Promise<PublicServerInfo> => {
@@ -40,24 +83,17 @@ export const settingsApi = {
   get: async (): Promise<ServerSettings> => {
     const [chunkSizeResponse, supportedHashAlgorithmsResponse] =
       await Promise.all([
-        httpClient.get<ChunkSizeRaw>("server/settings/chunk-size"),
-        httpClient.get<SupportedHashAlgorithmsRaw>(
+        httpClient.get<ChunkSizeRaw | number>("server/settings/chunk-size"),
+        httpClient.get<unknown>(
           "server/settings/supported-hash-algorithms",
         ),
       ]);
 
-    const [supportedHashAlgorithm] =
-      supportedHashAlgorithmsResponse.data.supportedHashAlgorithms;
-
-    if (!supportedHashAlgorithm) {
-      throw new Error(
-        "supportedHashAlgorithms must contain at least one value",
-      );
-    }
-
     return {
-      maxChunkSizeBytes: chunkSizeResponse.data.maxChunkSizeBytes,
-      supportedHashAlgorithm,
+      maxChunkSizeBytes: resolveMaxChunkSizeBytes(chunkSizeResponse.data),
+      supportedHashAlgorithm: resolveSupportedHashAlgorithm(
+        supportedHashAlgorithmsResponse.data,
+      ),
     };
   },
 
