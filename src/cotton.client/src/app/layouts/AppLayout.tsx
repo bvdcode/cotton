@@ -31,6 +31,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const theme = useTheme();
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const settingsLoading = useSettingsStore((s) => s.loading);
+  const settingsError = useSettingsStore((s) => s.error);
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
 
   const navTextColor = theme.palette.text.primary;
@@ -41,11 +42,17 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
     if (!isAuthenticated) {
       return;
     }
-    if (settingsLoaded || settingsLoading) {
+    if (settingsLoaded || settingsLoading || settingsError) {
       return;
     }
     fetchSettings();
-  }, [isAuthenticated, settingsLoaded, settingsLoading, fetchSettings]);
+  }, [
+    isAuthenticated,
+    settingsLoaded,
+    settingsLoading,
+    settingsError,
+    fetchSettings,
+  ]);
 
   return (
     <Box
