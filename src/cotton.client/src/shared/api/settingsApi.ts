@@ -33,7 +33,10 @@ const resolveMaxChunkSizeBytes = (payload: unknown): number => {
       ? payload
       : getRecordField(payload, "maxChunkSizeBytes");
 
-  if (typeof maxChunkSizeBytes !== "number" || !Number.isFinite(maxChunkSizeBytes)) {
+  if (
+    typeof maxChunkSizeBytes !== "number" ||
+    !Number.isFinite(maxChunkSizeBytes)
+  ) {
     throw new Error("chunk-size response must contain maxChunkSizeBytes");
   }
 
@@ -47,7 +50,7 @@ const resolveSupportedHashAlgorithm = (payload: unknown): string => {
       getRecordField(payload, "supportedHashAlgorithm"));
 
   if (typeof rawAlgorithms === "string" && rawAlgorithms.trim().length > 0) {
-    return rawAlgorithms;
+    return rawAlgorithms.trim();
   }
 
   if (Array.isArray(rawAlgorithms)) {
@@ -57,7 +60,7 @@ const resolveSupportedHashAlgorithm = (payload: unknown): string => {
     );
 
     if (supportedHashAlgorithm) {
-      return supportedHashAlgorithm;
+      return supportedHashAlgorithm.trim();
     }
   }
 
