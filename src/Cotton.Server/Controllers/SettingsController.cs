@@ -120,5 +120,154 @@ namespace Cotton.Server.Controllers
             bool telemetryEnabled = _settings.GetServerSettings().TelemetryEnabled;
             return Ok(new { telemetryEnabled });
         }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("storage-space-mode/{mode}")]
+        public async Task<IActionResult> SetStorageSpaceMode([FromRoute] StorageSpaceMode mode, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.StorageSpaceMode, mode, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("storage-space-mode")]
+        public IActionResult GetStorageSpaceMode()
+        {
+            StorageSpaceMode storageSpaceMode = _settings.GetServerSettings().StorageSpaceMode;
+            return Ok(new { storageSpaceMode });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("timezone")]
+        public async Task<IActionResult> SetTimezone([FromBody] string timezone, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.Timezone, timezone, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("timezone")]
+        public IActionResult GetTimezone()
+        {
+            string timezone = _settings.GetServerSettings().Timezone;
+            return Ok(new { timezone });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("public-base-url")]
+        public async Task<IActionResult> SetPublicBaseUrl([FromBody] string url, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.PublicBaseUrl, url, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("public-base-url")]
+        public IActionResult GetPublicBaseUrl()
+        {
+            string? publicBaseUrl = _settings.GetServerSettings().PublicBaseUrl;
+            return Ok(new { publicBaseUrl });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("compution-mode/{mode}")]
+        public async Task<IActionResult> SetComputionMode([FromRoute] ComputionMode mode, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.ComputionMode, mode, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("compution-mode")]
+        public IActionResult GetComputionMode()
+        {
+            ComputionMode computionMode = _settings.GetServerSettings().ComputionMode;
+            return Ok(new { computionMode });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("email-mode/{mode}")]
+        public async Task<IActionResult> SetEmailMode([FromRoute] EmailMode mode, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.EmailMode, mode, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("email-mode")]
+        public IActionResult GetEmailMode()
+        {
+            EmailMode emailMode = _settings.GetServerSettings().EmailMode;
+            return Ok(new { emailMode });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("allow-cross-user-deduplication")]
+        public async Task<IActionResult> SetAllowCrossUserDeduplication([FromBody] bool allow, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.AllowCrossUserDeduplication, allow, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("allow-cross-user-deduplication")]
+        public IActionResult GetAllowCrossUserDeduplication()
+        {
+            bool allowCrossUserDeduplication = _settings.GetServerSettings().AllowCrossUserDeduplication;
+            return Ok(new { allowCrossUserDeduplication });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("allow-global-indexing")]
+        public async Task<IActionResult> SetAllowGlobalIndexing([FromBody] bool allow, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.AllowGlobalIndexing, allow, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("allow-global-indexing")]
+        public IActionResult GetAllowGlobalIndexing()
+        {
+            bool allowGlobalIndexing = _settings.GetServerSettings().AllowGlobalIndexing;
+            return Ok(new { allowGlobalIndexing });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("set-s3-config")]
+        public async Task<IActionResult> SetS3Config([FromBody] S3Config s3Config, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.S3AccessKeyId, s3Config.AccessKey, cancellationToken);
+            await _settings.SetPropertyAsync(x => x.S3SecretAccessKeyEncrypted, s3Config.SecretKey, cancellationToken);
+            await _settings.SetPropertyAsync(x => x.S3EndpointUrl, s3Config.Endpoint, cancellationToken);
+            await _settings.SetPropertyAsync(x => x.S3Region, s3Config.Region, cancellationToken);
+            await _settings.SetPropertyAsync(x => x.S3BucketName, s3Config.Bucket, cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("get-s3-config")]
+        public IActionResult GetS3Config()
+        {
+            var settings = _settings.GetServerSettings();
+            var s3Config = new S3Config
+            {
+                AccessKey = settings.S3AccessKeyId ?? string.Empty,
+                SecretKey = string.Empty,
+                Endpoint = settings.S3EndpointUrl ?? string.Empty,
+                Region = settings.S3Region ?? string.Empty,
+                Bucket = settings.S3BucketName ?? string.Empty
+            };
+            return Ok(s3Config);
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("set-email-config")]
+        public async Task<IActionResult> SetEmailConfig([FromBody] EmailConfig emailConfig, CancellationToken cancellationToken)
+        {
+            await _settings.SetPropertyAsync(x => x.SmtpUseSsl = emailConfig.UseSSL, cancellationToken);
+            // todo: finish
+            return NoContent();
+        }
     }
 }
