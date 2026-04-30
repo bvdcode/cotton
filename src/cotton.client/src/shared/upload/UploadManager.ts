@@ -1,9 +1,12 @@
 import type { Guid } from "../api/layoutsApi";
 import { useNodesStore } from "../store/nodesStore";
 import { useSettingsStore } from "../store/settingsStore";
+import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
+import { uploadConfig } from "./config";
 import { uploadFileToNode } from "./uploadFileToNode";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
+import type { UploadServerParams } from "./types";
 
 export type UploadTaskStatus =
   | "queued"
@@ -29,6 +32,10 @@ export interface UploadTask {
 
 interface UploadTaskInternal extends UploadTask {
   _file: File;
+  _startedAt?: number;
+  _sawProgress?: boolean;
+  _laneProbeConsumed?: boolean;
+  _laneProbeTimeout?: ReturnType<typeof setTimeout>;
 }
 
 export interface UploadFilePickerContext {
@@ -56,7 +63,12 @@ const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
   private readonly tasks: UploadTaskInternal[] = [];
-  private running = false;
+  private pumping = false;
+  private activeUploads = 0;
+  private readonly fileConcurrency = new AdaptiveConcurrencyController({
+    maxConcurrency: uploadConfig.maxConcurrentFileUploads,
+    rampUpDurationMs: uploadConfig.concurrencyRampUpMs,
+  });
   private open = false;
   private snapshot: { open: boolean; tasks: UploadTask[]; overall: UploadOverallStats } = {
     open: false,
@@ -152,11 +164,11 @@ export class UploadManager {
   enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
     const list = Array.isArray(files) ? files : Array.from(files);
 
-    // If there are no active uploads, start a fresh overall session.
     if (!this.hasActiveTasks()) {
       this.overallBytesTotal = 0;
       this.overallBytesUploaded = 0;
       this.overallEstimator.reset();
+      this.fileConcurrency.reset();
     }
 
     for (const file of list) {
@@ -174,19 +186,16 @@ export class UploadManager {
       });
     }
 
-    // Pop open the widget.
     this.open = true;
     this.pruneFinishedTasks();
     this.emit();
-
-    void this.pump();
+    this.pump();
   }
 
   private pruneFinishedTasks(): void {
     const finishedStatuses: UploadTaskStatus[] = ["completed", "failed"];
     const now = Date.now();
 
-    // First pass: remove tasks older than TTL
     for (let i = this.tasks.length - 1; i >= 0; i--) {
       const t = this.tasks[i];
       if (finishedStatuses.includes(t.status) && t.completedAt && now - t.completedAt > FINISHED_TASK_TTL_MS) {
@@ -194,7 +203,6 @@ export class UploadManager {
       }
     }
 
-    // Second pass: enforce max count limit
     const finished = this.tasks.filter((t) => finishedStatuses.includes(t.status));
     if (finished.length > MAX_FINISHED_TASKS) {
       const toRemove = finished.length - MAX_FINISHED_TASKS;
@@ -212,8 +220,6 @@ export class UploadManager {
   }
 
   private emit() {
-    // useSyncExternalStore requires the snapshot result to be referentially stable
-    // between store updates.
     const progress01 = this.overallBytesTotal > 0 ? this.overallBytesUploaded / this.overallBytesTotal : 0;
     this.snapshot = {
       open: this.open,
@@ -247,12 +253,12 @@ export class UploadManager {
     return this.tasks.some((t) => t.status === "queued" || t.status === "uploading" || t.status === "finalizing");
   }
 
-  private async pump() {
-    if (this.running) return;
-    this.running = true;
+  private pump() {
+    if (this.pumping) return;
+    this.pumping = true;
 
     try {
-      while (true) {
+      while (this.activeUploads < this.fileConcurrency.current) {
         const next = this.tasks.find((t) => t.status === "queued");
         if (!next) {
           if (!this.hasActiveTasks()) {
@@ -270,84 +276,141 @@ export class UploadManager {
           continue;
         }
 
-        const file = next._file;
-        next.status = "uploading";
-        next.error = undefined;
-        next.uploadSpeedBytesPerSec = 0;
-
-        const taskEstimator = new RollingBytesPerSecondEstimator({ windowMs: 1500, minDurationMs: 250 });
-        let lastEmitTime = 0;
-
-        this.emit();
-
-        try {
-          await uploadFileToNode({
-            file,
-            nodeId: next.nodeId,
-            server: {
-              maxChunkSizeBytes: settings.maxChunkSizeBytes,
-              supportedHashAlgorithm: settings.supportedHashAlgorithm,
-            },
-            onProgress: (bytesUploaded) => {
-              const prevBytesUploaded = next.bytesUploaded;
-              next.bytesUploaded = Math.min(next.bytesTotal, bytesUploaded);
-              next.progress01 = next.bytesTotal > 0 ? next.bytesUploaded / next.bytesTotal : 1;
-
-              const now = Date.now();
-              const taskRate = taskEstimator.update(next.bytesUploaded, now);
-              next.uploadSpeedBytesPerSec =
-                taskRate.rollingBytesPerSec > 0 ? taskRate.rollingBytesPerSec : taskRate.averageBytesPerSec;
-
-              const delta = next.bytesUploaded - prevBytesUploaded;
-              if (delta > 0) {
-                this.overallBytesUploaded += delta;
-                this.overallEstimator.update(this.overallBytesUploaded, now);
-              }
-
-              // Throttle UI updates; speed estimation remains accurate.
-              if (now - lastEmitTime >= 100 || next.bytesUploaded >= next.bytesTotal) {
-                lastEmitTime = now;
-                this.emit();
-              }
-            },
-            onFinalizing: () => {
-              next.status = "finalizing";
-              this.emit();
-            },
-          });
-
-          next.status = "completed";
-          next.completedAt = Date.now();
-          const beforeFinalize = next.bytesUploaded;
-          next.bytesUploaded = next.bytesTotal;
-          next.progress01 = 1;
-
-          const finalizeDelta = next.bytesUploaded - beforeFinalize;
-          if (finalizeDelta > 0) {
-            this.overallBytesUploaded += finalizeDelta;
-            this.overallEstimator.update(this.overallBytesUploaded, Date.now());
-          }
-          this.emit();
-
-          // Ensure the Files UI picks up the new file manifests.
-          this.scheduleNodeRefresh(next.nodeId);
-        } catch (e) {
-          next.status = "failed";
-          next.completedAt = Date.now();
-          next.error = e instanceof Error ? e.message : undefined;
-          next.errorKey = "uploadFailed";
-          this.emit();
-        }
+        this.startTask(next, {
+          maxChunkSizeBytes: settings.maxChunkSizeBytes,
+          supportedHashAlgorithm: settings.supportedHashAlgorithm,
+        });
       }
     } finally {
-      this.running = false;
+      this.pumping = false;
     }
   }
 
-  /**
-   * Cleanup method to release hash worker pool resources.
-   * Call this when the application is being unmounted or reset.
-   */
+  private startTask(task: UploadTaskInternal, server: UploadServerParams) {
+    this.activeUploads += 1;
+    task.status = "uploading";
+    task.error = undefined;
+    task.uploadSpeedBytesPerSec = 0;
+    task._startedAt = Date.now();
+    task._sawProgress = false;
+    task._laneProbeConsumed = false;
+
+    const taskEstimator = new RollingBytesPerSecondEstimator({ windowMs: 1500, minDurationMs: 250 });
+    let lastEmitTime = 0;
+
+    task._laneProbeTimeout = setTimeout(() => {
+      this.maybeOpenLaneForHeadOfLine(task, Date.now());
+    }, uploadConfig.fileHeadOfLineProbeMs);
+
+    this.emit();
+
+    void (async () => {
+      try {
+        await uploadFileToNode({
+          file: task._file,
+          nodeId: task.nodeId,
+          server,
+          onProgress: (bytesUploaded) => {
+            const prevBytesUploaded = task.bytesUploaded;
+            task.bytesUploaded = Math.min(
+              task.bytesTotal,
+              Math.max(task.bytesUploaded, bytesUploaded),
+            );
+            task.progress01 = task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
+
+            const now = Date.now();
+            if (task.bytesUploaded > 0) {
+              task._sawProgress = true;
+              this.maybeOpenLaneForHeadOfLine(task, now);
+            }
+
+            const taskRate = taskEstimator.update(task.bytesUploaded, now);
+            task.uploadSpeedBytesPerSec =
+              taskRate.rollingBytesPerSec > 0 ? taskRate.rollingBytesPerSec : taskRate.averageBytesPerSec;
+
+            const delta = task.bytesUploaded - prevBytesUploaded;
+            if (delta > 0) {
+              this.overallBytesUploaded += delta;
+              this.overallEstimator.update(this.overallBytesUploaded, now);
+            }
+
+            if (
+              now - lastEmitTime >= uploadConfig.progressEmitIntervalMs ||
+              task.bytesUploaded >= task.bytesTotal
+            ) {
+              lastEmitTime = now;
+              this.emit();
+            }
+          },
+          onFinalizing: () => {
+            task.status = "finalizing";
+            this.emit();
+          },
+        });
+
+        task.status = "completed";
+        task.completedAt = Date.now();
+        const beforeFinalize = task.bytesUploaded;
+        task.bytesUploaded = task.bytesTotal;
+        task.progress01 = 1;
+
+        const finalizeDelta = task.bytesUploaded - beforeFinalize;
+        if (finalizeDelta > 0) {
+          this.overallBytesUploaded += finalizeDelta;
+          this.overallEstimator.update(this.overallBytesUploaded, Date.now());
+        }
+
+        this.fileConcurrency.observe({
+          bytes: task.bytesTotal,
+          durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
+          succeeded: true,
+        });
+        this.emit();
+
+        this.scheduleNodeRefresh(task.nodeId);
+      } catch (e) {
+        task.status = "failed";
+        task.completedAt = Date.now();
+        task.error = e instanceof Error ? e.message : undefined;
+        task.errorKey = "uploadFailed";
+        this.fileConcurrency.observe({
+          bytes: task.bytesTotal,
+          durationMs: task.completedAt - (task._startedAt ?? task.completedAt),
+          succeeded: false,
+        });
+        this.emit();
+      } finally {
+        if (task._laneProbeTimeout) {
+          clearTimeout(task._laneProbeTimeout);
+          task._laneProbeTimeout = undefined;
+        }
+        this.activeUploads = Math.max(0, this.activeUploads - 1);
+        this.pump();
+      }
+    })();
+  }
+
+  private maybeOpenLaneForHeadOfLine(task: UploadTaskInternal, now: number) {
+    if (
+      task._laneProbeConsumed ||
+      !task._sawProgress ||
+      this.fileConcurrency.current > 1 ||
+      !this.tasks.some((t) => t.status === "queued")
+    ) {
+      return;
+    }
+
+    const startedAt = task._startedAt ?? now;
+    if (now - startedAt < uploadConfig.fileHeadOfLineProbeMs) {
+      return;
+    }
+
+    task._laneProbeConsumed = true;
+    if (this.fileConcurrency.tryIncrease()) {
+      this.pump();
+    }
+  }
+
   destroy(): void {
     if (this.pruneIntervalId) {
       clearInterval(this.pruneIntervalId);
@@ -356,9 +419,6 @@ export class UploadManager {
     globalHashWorkerPool.destroy();
   }
 
-  /**
-   * Get hash worker pool statistics for debugging/monitoring
-   */
   getHashWorkerPoolStats() {
     return globalHashWorkerPool.getStats();
   }

@@ -105,9 +105,9 @@ export const getWidgetTitle = (
     return {
       key: "titleWithProgress",
       options: {
-      completed: Math.min(completed + 1, total),
-      total,
-      speed: formatBytes(totalSpeed),
+        completed: Math.min(completed + failed + stats.activeTasks.length, total),
+        total,
+        speed: formatBytes(totalSpeed),
       },
     };
   }
