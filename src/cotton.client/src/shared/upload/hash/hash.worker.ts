@@ -13,6 +13,7 @@ type HashChunkMessage = {
   type: "hashChunk";
   requestId: string;
   buffer: ArrayBuffer;
+  updateFileHash?: boolean;
 };
 
 type DigestFileMessage = { type: "digestFile"; requestId: string };
@@ -91,8 +92,9 @@ self.onmessage = async (ev: MessageEvent<InMessage>) => {
 
       const bytes = new Uint8Array(msg.buffer);
 
-      // Update whole-file hash incrementally.
-      fileHasher.update(bytes);
+      if (msg.updateFileHash !== false) {
+        fileHasher.update(bytes);
+      }
 
       // Compute hash for this chunk.
       chunkHasher.init();

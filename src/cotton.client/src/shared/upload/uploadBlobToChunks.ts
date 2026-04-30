@@ -1,10 +1,59 @@
 import { chunksApi } from "../api/chunksApi";
+import { isAxiosError } from "../api/httpClient";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
 import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "./hash/hashing";
 import { canUseHashWorker, HashWorkerClient } from "./hash/hashWorkerClient";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
 import type { UploadFileToNodeOptions, UploadServerParams } from "./types";
+
+interface ChunkSegment {
+  id: number;
+  start: number;
+  end: number;
+  updateFileHash: boolean;
+  networkFailures: number;
+  availableAt: number;
+}
+
+interface UploadedChunkSegment {
+  start: number;
+  end: number;
+  hash: string;
+}
+
+const getSegmentLength = (segment: ChunkSegment) => segment.end - segment.start;
+
+const getRetryDelayMs = (networkFailures: number) =>
+  Math.min(5000, 250 * 2 ** Math.min(Math.max(0, networkFailures - 1), 4));
+
+const isConnectionInterruption = (error: unknown): boolean => {
+  if (!isAxiosError(error)) {
+    return false;
+  }
+
+  if (error.response) {
+    return false;
+  }
+
+  const code = (error.code ?? "").toUpperCase();
+  if (code === "ERR_CANCELED") {
+    return false;
+  }
+
+  return (
+    code === "ERR_NETWORK" ||
+    code === "ECONNABORTED" ||
+    code === "ETIMEDOUT" ||
+    code === "ERR_NETWORK_CHANGED" ||
+    Boolean(error.request)
+  );
+};
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => {
+    globalThis.setTimeout(resolve, ms);
+  });
 
 export async function uploadBlobToChunks(options: {
   blob: Blob;
@@ -26,15 +75,25 @@ export async function uploadBlobToChunks(options: {
     rampUpDurationMs: uploadConfig.concurrencyRampUpMs,
   });
 
-  const chunkSize = Math.max(1, server.maxChunkSizeBytes);
+  const initialChunkSize = Math.max(1, server.maxChunkSizeBytes);
+  const minChunkSize = Math.max(
+    1,
+    Math.min(uploadConfig.minAdaptiveChunkSizeBytes, initialChunkSize),
+  );
   const algorithm = toWebCryptoAlgorithm(server.supportedHashAlgorithm);
 
-  const chunkCount = Math.ceil(blob.size / chunkSize);
-  const chunkHashesByIndex: string[] = new Array(chunkCount);
-
+  let activeChunkSize = initialChunkSize;
+  let nextSegmentId = 0;
+  let nextOffset = 0;
+  let nextFileHashOffset = 0;
   let completedBytes = 0;
   let lastReportedBytes = 0;
-  const inFlightBytesByIndex = new Map<number, number>();
+  let fatalError: unknown = null;
+
+  const pendingSegments: ChunkSegment[] = [];
+  const uploadedSegments: UploadedChunkSegment[] = [];
+  const inFlightBytesById = new Map<number, number>();
+  let fileHashWaiters: Array<() => void> = [];
 
   const report = () => {
     if (!options.onProgress) {
@@ -42,7 +101,7 @@ export async function uploadBlobToChunks(options: {
     }
 
     let inFlightBytes = 0;
-    for (const bytes of inFlightBytesByIndex.values()) {
+    for (const bytes of inFlightBytesById.values()) {
       inFlightBytes += bytes;
     }
 
@@ -55,10 +114,127 @@ export async function uploadBlobToChunks(options: {
     options.onProgress(nextBytes);
   };
 
+  const makeSegment = (
+    start: number,
+    end: number,
+    updateFileHash: boolean,
+    networkFailures = 0,
+    availableAt = 0,
+  ): ChunkSegment => ({
+    id: nextSegmentId++,
+    start,
+    end,
+    updateFileHash,
+    networkFailures,
+    availableAt,
+  });
+
+  const takeReadyPendingSegment = (now: number): ChunkSegment | null => {
+    const index = pendingSegments.findIndex((segment) => segment.availableAt <= now);
+    if (index < 0) {
+      return null;
+    }
+
+    return pendingSegments.splice(index, 1)[0];
+  };
+
+  const getNextPendingTime = (): number | null => {
+    let nextTime: number | null = null;
+    for (const segment of pendingSegments) {
+      if (nextTime === null || segment.availableAt < nextTime) {
+        nextTime = segment.availableAt;
+      }
+    }
+    return nextTime;
+  };
+
+  const createNextInitialSegment = (): ChunkSegment | null => {
+    if (nextOffset >= blob.size) {
+      return null;
+    }
+
+    const start = nextOffset;
+    const end = Math.min(blob.size, start + activeChunkSize);
+    nextOffset = end;
+    return makeSegment(start, end, true);
+  };
+
+  const reduceChunkSize = () => {
+    activeChunkSize = Math.max(minChunkSize, Math.floor(activeChunkSize / 2));
+  };
+
+  const queueRetrySegments = (segment: ChunkSegment) => {
+    reduceChunkSize();
+
+    const failures = segment.networkFailures + 1;
+    const availableAt = Date.now() + getRetryDelayMs(failures);
+    const retrySize = Math.min(activeChunkSize, getSegmentLength(segment));
+
+    for (let start = segment.start; start < segment.end; start += retrySize) {
+      pendingSegments.push(
+        makeSegment(
+          start,
+          Math.min(segment.end, start + retrySize),
+          false,
+          failures,
+          availableAt,
+        ),
+      );
+    }
+  };
+
+  const buildOrderedChunkHashes = () => {
+    uploadedSegments.sort((a, b) => a.start - b.start);
+
+    let expectedStart = 0;
+    for (const segment of uploadedSegments) {
+      if (segment.start !== expectedStart || segment.end <= segment.start) {
+        throw new Error("Uploaded chunks do not cover the file contiguously.");
+      }
+      expectedStart = segment.end;
+    }
+
+    if (expectedStart !== blob.size) {
+      throw new Error("Uploaded chunks do not cover the complete file.");
+    }
+
+    return uploadedSegments.map((segment) => segment.hash);
+  };
+
+  const wakeFileHashWaiters = () => {
+    const waiters = fileHashWaiters;
+    fileHashWaiters = [];
+    for (const resolve of waiters) {
+      resolve();
+    }
+  };
+
+  const waitForFileHashTurn = async (segment: ChunkSegment) => {
+    while (!fatalError && segment.start !== nextFileHashOffset) {
+      await new Promise<void>((resolve) => {
+        fileHashWaiters.push(resolve);
+      });
+    }
+
+    if (fatalError) {
+      throw fatalError;
+    }
+  };
+
+  const advanceFileHashOffset = (segment: ChunkSegment) => {
+    nextFileHashOffset = segment.end;
+    wakeFileHashWaiters();
+  };
+
   let worker: HashWorkerClient | null = null;
   let blobHasher: Awaited<ReturnType<typeof createIncrementalHasher>> | null = null;
   const abortController = new AbortController();
-  let firstUploadError: unknown = null;
+
+  const failUpload = (error: unknown) => {
+    fatalError ??= error;
+    abortController.abort();
+    wakeFileHashWaiters();
+  };
 
   if (canUseHashWorker()) {
     worker = await globalHashWorkerPool.acquire(algorithm);
@@ -69,124 +245,155 @@ export async function uploadBlobToChunks(options: {
   try {
     const inFlight = new Set<Promise<void>>();
 
-    const waitForSlot = async () => {
-      while (inFlight.size >= chunkUploadConcurrency.current) {
-        await Promise.race(inFlight);
-      }
-    };
-
-    const waitForAllUploads = async () => {
-      while (inFlight.size > 0) {
-        await Promise.race(inFlight);
-      }
-    };
-
-    const setInFlightProgress = (index: number, bytesUploaded: number) => {
-      const previous = inFlightBytesByIndex.get(index) ?? 0;
-      inFlightBytesByIndex.set(index, Math.max(previous, bytesUploaded));
+    const setInFlightProgress = (segmentId: number, bytesUploaded: number) => {
+      const previous = inFlightBytesById.get(segmentId) ?? 0;
+      inFlightBytesById.set(segmentId, Math.max(previous, bytesUploaded));
       report();
     };
 
-    const startUpload = (
-      index: number,
-      chunk: Blob,
-      chunkHash: string,
-      chunkBytes: number,
-    ) => {
+    const uploadSegment = async (segment: ChunkSegment) => {
+      const chunk = blob.slice(segment.start, segment.end);
+      const chunkBytes = getSegmentLength(segment);
       const startedAt = performance.now();
 
-      const uploadPromise = (async () => {
-        try {
-          if (sendChunkHashForValidation) {
-            const exists = await chunksApi.exists(chunkHash, abortController.signal);
-            if (!exists) {
-              await chunksApi.uploadChunk({
-                blob: chunk,
-                fileName,
-                hash: chunkHash,
-                signal: abortController.signal,
-                onProgress: (bytesUploaded) => {
-                  setInFlightProgress(index, bytesUploaded);
-                },
-              });
-            }
-          } else {
+      try {
+        const buffer = await chunk.arrayBuffer();
+        let chunkHash: string;
+
+        if (segment.updateFileHash) {
+          await waitForFileHashTurn(segment);
+        }
+
+        if (worker) {
+          chunkHash = await worker.hashChunk(buffer, {
+            updateFileHash: segment.updateFileHash,
+          });
+        } else {
+          const bytes = new Uint8Array(buffer);
+          if (segment.updateFileHash) {
+            blobHasher!.update(bytes);
+          }
+          chunkHash = await hashBytes(bytes, algorithm);
+        }
+
+        if (segment.updateFileHash) {
+          advanceFileHashOffset(segment);
+        }
+
+        if (sendChunkHashForValidation) {
+          const exists = await chunksApi.exists(chunkHash, abortController.signal);
+          if (!exists) {
             await chunksApi.uploadChunk({
               blob: chunk,
               fileName,
-              hash: null,
+              hash: chunkHash,
               signal: abortController.signal,
               onProgress: (bytesUploaded) => {
-                setInFlightProgress(index, bytesUploaded);
+                setInFlightProgress(segment.id, bytesUploaded);
               },
             });
           }
-
-          inFlightBytesByIndex.delete(index);
-          completedBytes += chunkBytes;
-          report();
-          chunkUploadConcurrency.observe({
-            bytes: chunkBytes,
-            durationMs: performance.now() - startedAt,
-            succeeded: true,
+        } else {
+          await chunksApi.uploadChunk({
+            blob: chunk,
+            fileName,
+            hash: null,
+            signal: abortController.signal,
+            onProgress: (bytesUploaded) => {
+              setInFlightProgress(segment.id, bytesUploaded);
+            },
           });
-        } catch (error) {
-          firstUploadError ??= error;
-          abortController.abort();
-          inFlightBytesByIndex.delete(index);
+        }
+
+        inFlightBytesById.delete(segment.id);
+        uploadedSegments.push({ start: segment.start, end: segment.end, hash: chunkHash });
+        completedBytes += chunkBytes;
+        report();
+        chunkUploadConcurrency.observe({
+          bytes: chunkBytes,
+          durationMs: performance.now() - startedAt,
+          succeeded: true,
+        });
+      } catch (error) {
+        inFlightBytesById.delete(segment.id);
+
+        if (!fatalError && isConnectionInterruption(error)) {
+          queueRetrySegments(segment);
           chunkUploadConcurrency.observe({
             bytes: chunkBytes,
             durationMs: performance.now() - startedAt,
             succeeded: false,
           });
+          return;
         }
-      })();
 
+        failUpload(error);
+      }
+    };
+
+    const startUpload = (segment: ChunkSegment) => {
+      const uploadPromise = uploadSegment(segment);
       inFlight.add(uploadPromise);
       uploadPromise.finally(() => {
         inFlight.delete(uploadPromise);
       });
     };
 
-    for (let index = 0; index < chunkCount && !firstUploadError; index += 1) {
-      const start = index * chunkSize;
-      const end = Math.min(blob.size, start + chunkSize);
-      const chunk = blob.slice(start, end);
-      const chunkBytes = end - start;
+    while (!fatalError) {
+      let startedAny = false;
+      const now = Date.now();
 
-      const buffer = await chunk.arrayBuffer();
+      while (inFlight.size < chunkUploadConcurrency.current && !fatalError) {
+        const segment = takeReadyPendingSegment(now) ?? createNextInitialSegment();
+        if (!segment) {
+          break;
+        }
 
-      let chunkHash: string;
-      if (worker) {
-        chunkHash = await worker.hashChunk(buffer);
-      } else {
-        const bytes = new Uint8Array(buffer);
-        blobHasher!.update(bytes);
-        chunkHash = await hashBytes(bytes, algorithm);
+        startUpload(segment);
+        startedAny = true;
       }
-      chunkHashesByIndex[index] = chunkHash;
 
-      if (firstUploadError) {
+      if (fatalError) {
         break;
       }
 
-      await waitForSlot();
-      if (firstUploadError) {
+      if (nextOffset >= blob.size && pendingSegments.length === 0 && inFlight.size === 0) {
         break;
       }
 
-      startUpload(index, chunk, chunkHash, chunkBytes);
+      if (inFlight.size > 0) {
+        await Promise.race(inFlight);
+        continue;
+      }
+
+      const nextPendingTime = getNextPendingTime();
+      if (nextPendingTime !== null) {
+        await delay(Math.max(0, nextPendingTime - Date.now()));
+        continue;
+      }
+
+      if (!startedAny) {
+        break;
+      }
     }
 
-    await waitForAllUploads();
+    while (inFlight.size > 0) {
+      await Promise.race(inFlight);
+    }
 
-    if (firstUploadError) {
-      throw firstUploadError;
+    if (fatalError) {
+      throw fatalError;
+    }
+
+    if (nextFileHashOffset !== blob.size) {
+      throw new Error("File hash did not cover the complete file.");
     }
 
     const fileHash = worker ? await worker.digestFile() : blobHasher!.digestHex();
+    const chunkHashes = buildOrderedChunkHashes();
 
-    return { chunkHashes: chunkHashesByIndex, fileHash };
+    report();
+    return { chunkHashes, fileHash };
   } finally {
     if (worker) {
       globalHashWorkerPool.release(worker);
