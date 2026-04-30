@@ -15,6 +15,10 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
 }) => {
   const { t } = useTranslation("upload");
   const isFailed = task.status === "failed";
+  const progressPercent =
+    task.status === "completed"
+      ? 100
+      : Math.min(99, Math.floor(task.progress01 * 100));
 
   return (
     <Box sx={{ pr: 0.5, pb: 1 }}>
@@ -46,7 +50,7 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
 
       <LinearProgress
         variant="determinate"
-        value={Math.round(task.progress01 * 100)}
+        value={progressPercent}
         color={isFailed ? "error" : "primary"}
         sx={{ mt: 0.5 }}
       />
@@ -63,7 +67,7 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
         >
           {isFailed
             ? (task.errorKey ? t(`errors.${task.errorKey}`) : task.error ?? t("status.failed"))
-            : `${Math.round(task.progress01 * 100)}%`}
+            : `${progressPercent}%`}
         </Typography>
       </Box>
     </Box>

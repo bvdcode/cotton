@@ -36,6 +36,7 @@ interface UploadTaskInternal extends UploadTask {
   _sawProgress?: boolean;
   _laneProbeConsumed?: boolean;
   _laneProbeTimeout?: ReturnType<typeof setTimeout>;
+  _bytesTransferredForSpeed?: number;
 }
 
 export interface UploadFilePickerContext {
@@ -80,6 +81,7 @@ export class UploadManager {
 
   private overallBytesTotal = 0;
   private overallBytesUploaded = 0;
+  private overallBytesTransferredForSpeed = 0;
   private overallEstimator = new RollingBytesPerSecondEstimator({ windowMs: 2000, minDurationMs: 300 });
 
   private filePickerOpen: ((options: { multiple: boolean; accept?: string }) => void) | null = null;
@@ -133,6 +135,10 @@ export class UploadManager {
 
     this.overallBytesTotal = this.tasks.reduce((sum, t) => sum + t.bytesTotal, 0);
     this.overallBytesUploaded = this.tasks.reduce((sum, t) => sum + t.bytesUploaded, 0);
+    this.overallBytesTransferredForSpeed = this.tasks.reduce(
+      (sum, t) => sum + (t._bytesTransferredForSpeed ?? t.bytesUploaded),
+      0,
+    );
     this.overallEstimator.reset();
 
     if (this.tasks.length === 0) {
@@ -167,6 +173,7 @@ export class UploadManager {
     if (!this.hasActiveTasks()) {
       this.overallBytesTotal = 0;
       this.overallBytesUploaded = 0;
+      this.overallBytesTransferredForSpeed = 0;
       this.overallEstimator.reset();
       this.fileConcurrency.reset();
     }
@@ -294,6 +301,7 @@ export class UploadManager {
     task._startedAt = Date.now();
     task._sawProgress = false;
     task._laneProbeConsumed = false;
+    task._bytesTransferredForSpeed = 0;
 
     const taskEstimator = new RollingBytesPerSecondEstimator({ windowMs: 1500, minDurationMs: 250 });
     let lastEmitTime = 0;
@@ -310,11 +318,11 @@ export class UploadManager {
           file: task._file,
           nodeId: task.nodeId,
           server,
-          onProgress: (bytesUploaded) => {
+          onProgress: (bytesUploaded, snapshot) => {
             const prevBytesUploaded = task.bytesUploaded;
             task.bytesUploaded = Math.min(
               task.bytesTotal,
-              Math.max(task.bytesUploaded, bytesUploaded),
+              Math.max(0, bytesUploaded),
             );
             task.progress01 = task.bytesTotal > 0 ? task.bytesUploaded / task.bytesTotal : 1;
 
@@ -324,14 +332,29 @@ export class UploadManager {
               this.maybeOpenLaneForHeadOfLine(task, now);
             }
 
-            const taskRate = taskEstimator.update(task.bytesUploaded, now);
-            task.uploadSpeedBytesPerSec =
-              taskRate.rollingBytesPerSec > 0 ? taskRate.rollingBytesPerSec : taskRate.averageBytesPerSec;
+            const prevSpeedBytes = task._bytesTransferredForSpeed ?? 0;
+            const nextSpeedBytes = Math.max(
+              prevSpeedBytes,
+              snapshot?.bytesTransmitted ?? task.bytesUploaded,
+            );
+            const speedDelta = nextSpeedBytes - prevSpeedBytes;
+            if (speedDelta > 0) {
+              task._bytesTransferredForSpeed = nextSpeedBytes;
+              const taskRate = taskEstimator.update(nextSpeedBytes, now);
+              task.uploadSpeedBytesPerSec =
+                taskRate.rollingBytesPerSec > 0 ? taskRate.rollingBytesPerSec : taskRate.averageBytesPerSec;
+
+              this.overallBytesTransferredForSpeed += speedDelta;
+              this.overallEstimator.update(this.overallBytesTransferredForSpeed, now);
+            }
 
             const delta = task.bytesUploaded - prevBytesUploaded;
-            if (delta > 0) {
+            if (delta !== 0) {
               this.overallBytesUploaded += delta;
-              this.overallEstimator.update(this.overallBytesUploaded, now);
+              this.overallBytesUploaded = Math.max(
+                0,
+                Math.min(this.overallBytesTotal, this.overallBytesUploaded),
+              );
             }
 
             if (

@@ -11,7 +11,22 @@ export interface UploadFileToNodeOptions {
   concurrency?: number;
 }
 
+export interface UploadProgressSnapshot {
+  // Current display progress. This includes confirmed chunks plus bytes sent by
+  // active requests, and may decrease if a request is interrupted and retried.
+  bytesUploaded: number;
+
+  // Bytes acknowledged by successful chunk requests.
+  bytesConfirmed: number;
+
+  // Bytes currently sent by active chunk requests but not yet acknowledged.
+  bytesInFlight: number;
+
+  // Monotonic network-send counter used for speed estimation.
+  bytesTransmitted: number;
+}
+
 export interface UploadFileToNodeCallbacks {
-  onProgress?: (bytesUploaded: number) => void;
+  onProgress?: (bytesUploaded: number, snapshot?: UploadProgressSnapshot) => void;
   onFinalizing?: () => void;
 }

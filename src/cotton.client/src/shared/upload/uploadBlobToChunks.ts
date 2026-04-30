@@ -5,7 +5,7 @@ import { uploadConfig } from "./config";
 import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "./hash/hashing";
 import { canUseHashWorker, HashWorkerClient } from "./hash/hashWorkerClient";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
-import type { UploadFileToNodeOptions, UploadServerParams } from "./types";
+import type { UploadFileToNodeOptions, UploadProgressSnapshot, UploadServerParams } from "./types";
 
 interface ChunkSegment {
   id: number;
@@ -55,12 +55,26 @@ const delay = (ms: number) =>
     globalThis.setTimeout(resolve, ms);
   });
 
+const waitForBrowserOnline = () =>
+  new Promise<void>((resolve) => {
+    if (
+      typeof navigator === "undefined" ||
+      typeof window === "undefined" ||
+      navigator.onLine
+    ) {
+      resolve();
+      return;
+    }
+
+    window.addEventListener("online", () => resolve(), { once: true });
+  });
+
 export async function uploadBlobToChunks(options: {
   blob: Blob;
   fileName: string;
   server: UploadServerParams;
   client?: UploadFileToNodeOptions;
-  onProgress?: (bytesUploaded: number) => void;
+  onProgress?: (bytesUploaded: number, snapshot?: UploadProgressSnapshot) => void;
 }): Promise<{ chunkHashes: string[]; fileHash: string }> {
   const { blob, fileName, server } = options;
 
@@ -87,7 +101,8 @@ export async function uploadBlobToChunks(options: {
   let nextOffset = 0;
   let nextFileHashOffset = 0;
   let completedBytes = 0;
-  let lastReportedBytes = 0;
+  let bytesTransmitted = 0;
+  let lastReportedBytes: number | null = null;
   let fatalError: unknown = null;
 
   const pendingSegments: ChunkSegment[] = [];
@@ -105,13 +120,23 @@ export async function uploadBlobToChunks(options: {
       inFlightBytes += bytes;
     }
 
-    const nextBytes = Math.min(blob.size, completedBytes + inFlightBytes);
-    if (nextBytes < lastReportedBytes) {
+    let nextBytes = Math.min(blob.size, completedBytes + inFlightBytes);
+    if (blob.size > 0 && completedBytes < blob.size) {
+      nextBytes = Math.min(nextBytes, blob.size - 1);
+    }
+
+    if (nextBytes === lastReportedBytes) {
       return;
     }
 
     lastReportedBytes = nextBytes;
-    options.onProgress(nextBytes);
+    const snapshot: UploadProgressSnapshot = {
+      bytesUploaded: nextBytes,
+      bytesConfirmed: completedBytes,
+      bytesInFlight: inFlightBytes,
+      bytesTransmitted,
+    };
+    options.onProgress(nextBytes, snapshot);
   };
 
   const makeSegment = (
@@ -247,7 +272,11 @@ export async function uploadBlobToChunks(options: {
 
     const setInFlightProgress = (segmentId: number, bytesUploaded: number) => {
       const previous = inFlightBytesById.get(segmentId) ?? 0;
-      inFlightBytesById.set(segmentId, Math.max(previous, bytesUploaded));
+      const next = Math.max(previous, bytesUploaded);
+      if (next > previous) {
+        bytesTransmitted += next - previous;
+      }
+      inFlightBytesById.set(segmentId, next);
       report();
     };
 
@@ -316,6 +345,7 @@ export async function uploadBlobToChunks(options: {
         });
       } catch (error) {
         inFlightBytesById.delete(segment.id);
+        report();
 
         if (!fatalError && isConnectionInterruption(error)) {
           queueRetrySegments(segment);
@@ -369,6 +399,7 @@ export async function uploadBlobToChunks(options: {
       const nextPendingTime = getNextPendingTime();
       if (nextPendingTime !== null) {
         await delay(Math.max(0, nextPendingTime - Date.now()));
+        await waitForBrowserOnline();
         continue;
       }
 
