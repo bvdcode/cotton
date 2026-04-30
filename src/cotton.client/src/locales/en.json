@@ -1000,6 +1000,7 @@
         "birthDate": "Date of birth",
         "totp": "2FA",
         "sessions": "Sessions",
+        "storageUsed": "Storage used",
         "lastActivity": "Last activity",
         "actions": "Actions"
       },

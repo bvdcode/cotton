@@ -14,6 +14,7 @@ export interface AdminUserDto extends BaseDto<string> {
   totpFailedAttempts: number;
   lastActivityAt: string | null;
   activeSessionCount: number;
+  storageUsedBytes: number;
 }
 
 export interface AdminCreateUserRequestDto {
