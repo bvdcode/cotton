@@ -33,8 +33,8 @@ namespace Cotton.Server.Jobs
             if (_isFirstRun)
             {
                 _isFirstRun = false;
+                _logger.LogInformation("Waiting for 15 minutes before the first garbage collection run to allow the server to start up and stabilize.");
                 await Task.Delay(900_000, context.CancellationToken); // Wait for 15 minutes for the server to start up and stabilize
-                _logger.LogInformation("Garbage Collector Job is running for the first time. It will perform a full cleanup immediately and then schedule the next run after {DelayMinutes} minutes.", InitialDelayMs / 60000);
             }
             await RunOnceAsync(DateTime.UtcNow, context.CancellationToken);
         }
