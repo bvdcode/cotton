@@ -32,8 +32,6 @@ export type GeneralSettingsValidationMessages = {
 type PublicBaseUrlValidation = {
   error: string | null;
   normalized: string | null;
-  configuredOrigin: string;
-  mismatchesCurrentOrigin: boolean;
 };
 
 type TextUrlValidation = {
@@ -124,7 +122,6 @@ export const normalizeStoredPublicBaseUrl = (value: string): string => {
 
 export const validatePublicBaseUrl = (
   value: string,
-  currentOrigin: string,
   messages: GeneralSettingsValidationMessages,
 ): PublicBaseUrlValidation => {
   const trimmed = value.trim();
@@ -132,8 +129,6 @@ export const validatePublicBaseUrl = (
     return {
       error: messages.required,
       normalized: null,
-      configuredOrigin: "",
-      mismatchesCurrentOrigin: false,
     };
   }
 
@@ -149,8 +144,6 @@ export const validatePublicBaseUrl = (
       return {
         error: messages.publicBaseUrlInvalid,
         normalized: null,
-        configuredOrigin: "",
-        mismatchesCurrentOrigin: false,
       };
     }
 
@@ -158,16 +151,11 @@ export const validatePublicBaseUrl = (
     return {
       error: null,
       normalized,
-      configuredOrigin: url.origin,
-      mismatchesCurrentOrigin:
-        currentOrigin.length > 0 && url.origin !== currentOrigin,
     };
   } catch {
     return {
       error: messages.publicBaseUrlInvalid,
       normalized: null,
-      configuredOrigin: "",
-      mismatchesCurrentOrigin: false,
     };
   }
 };

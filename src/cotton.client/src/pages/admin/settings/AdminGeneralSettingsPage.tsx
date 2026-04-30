@@ -79,10 +79,6 @@ export const AdminGeneralSettingsPage = () => {
     () => new Set(timeZoneOptions),
     [timeZoneOptions],
   );
-  const currentOrigin = useMemo(
-    () => (typeof window === "undefined" ? "" : window.location.origin),
-    [],
-  );
 
   const savingAny = savingKeys.size > 0;
   const pageDisabled = loading || loadError !== null;
@@ -225,8 +221,8 @@ export const AdminGeneralSettingsPage = () => {
   );
 
   const publicBaseUrlValidation = useMemo(
-    () => validatePublicBaseUrl(publicBaseUrl, currentOrigin, validationMessages),
-    [currentOrigin, publicBaseUrl, validationMessages],
+    () => validatePublicBaseUrl(publicBaseUrl, validationMessages),
+    [publicBaseUrl, validationMessages],
   );
 
   const timezoneValidationError = useMemo(
@@ -483,25 +479,19 @@ export const AdminGeneralSettingsPage = () => {
                     />
                   </AdminSettingSavingOverlay>
                 </Box>
-                <AdminSettingSavingOverlay saving={isSaving("publicBaseUrl")}>
-                  <Button
-                    variant="contained"
-                    onClick={savePublicBaseUrl}
-                    disabled={!canSavePublicBaseUrl}
-                    sx={{ minWidth: 120, minHeight: 56 }}
-                  >
-                    {t("settings.actions.save")}
-                  </Button>
-                </AdminSettingSavingOverlay>
+                <Box width={{ xs: "100%", md: "auto" }}>
+                  <AdminSettingSavingOverlay saving={isSaving("publicBaseUrl")}>
+                    <Button
+                      variant="contained"
+                      onClick={savePublicBaseUrl}
+                      disabled={!canSavePublicBaseUrl}
+                      fullWidth
+                    >
+                      {t("settings.actions.save")}
+                    </Button>
+                  </AdminSettingSavingOverlay>
+                </Box>
               </Stack>
-              {publicBaseUrlValidation.mismatchesCurrentOrigin && (
-                <Alert severity="warning">
-                  {t("settings.general.validation.publicBaseUrlMismatch", {
-                    current: currentOrigin,
-                    configured: publicBaseUrlValidation.configuredOrigin,
-                  })}
-                </Alert>
-              )}
             </Stack>
 
             <Stack
@@ -530,16 +520,18 @@ export const AdminGeneralSettingsPage = () => {
                   />
                 </AdminSettingSavingOverlay>
               </Box>
-              <AdminSettingSavingOverlay saving={isSaving("timezone")}>
-                <Button
-                  variant="contained"
-                  onClick={saveTimezone}
-                  disabled={!canSaveTimezone}
-                  sx={{ minWidth: 120, minHeight: 56 }}
-                >
-                  {t("settings.actions.save")}
-                </Button>
-              </AdminSettingSavingOverlay>
+              <Box width={{ xs: "100%", md: "auto" }}>
+                <AdminSettingSavingOverlay saving={isSaving("timezone")}>
+                  <Button
+                    variant="contained"
+                    onClick={saveTimezone}
+                    disabled={!canSaveTimezone}
+                    fullWidth
+                  >
+                    {t("settings.actions.save")}
+                  </Button>
+                </AdminSettingSavingOverlay>
+              </Box>
             </Stack>
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
@@ -731,16 +723,18 @@ export const AdminGeneralSettingsPage = () => {
                       />
                     </AdminSettingSavingOverlay>
                   </Box>
-                  <AdminSettingSavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
-                    <Button
-                      variant="contained"
-                      onClick={saveCustomGeoIpLookupUrl}
-                      disabled={!canSaveCustomGeoIpLookupUrl}
-                      sx={{ minWidth: 120, minHeight: 56 }}
-                    >
-                      {t("settings.actions.save")}
-                    </Button>
-                  </AdminSettingSavingOverlay>
+                  <Box width={{ xs: "100%", md: "auto" }}>
+                    <AdminSettingSavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
+                      <Button
+                        variant="contained"
+                        onClick={saveCustomGeoIpLookupUrl}
+                        disabled={!canSaveCustomGeoIpLookupUrl}
+                        fullWidth
+                      >
+                        {t("settings.actions.save")}
+                      </Button>
+                    </AdminSettingSavingOverlay>
+                  </Box>
                 </Stack>
               )}
             </Stack>
