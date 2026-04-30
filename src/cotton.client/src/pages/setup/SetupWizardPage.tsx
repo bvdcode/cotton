@@ -21,6 +21,7 @@ import { UserRole } from "../../features/auth/types";
 import { settingsApi } from "../../shared/api/settingsApi";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
 import { isJsonObject, type JsonValue } from "../../shared/types/json";
+import { useSetupStatusStore } from "../../shared/store/setupStatusStore";
 // Helper function to convert keys to values for server
 function convertAnswersToValues(
   answers: Record<string, JsonValue>,
@@ -121,6 +122,9 @@ export function SetupWizardPage() {
         // Convert keys to values before sending to server
         const convertedAnswers = convertAnswersToValues(answers);
         await settingsApi.saveSetupAnswers(convertedAnswers);
+        await useSetupStatusStore
+          .getState()
+          .fetchSetupStatus({ force: true });
         navigate("/onboarding");
       } catch (err) {
         console.error("Failed to save setup:", err);

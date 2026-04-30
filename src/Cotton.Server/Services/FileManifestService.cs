@@ -102,6 +102,7 @@ namespace Cotton.Server.Services
                 "image/x-heif" => "image/heif",
                 "audio/x-flac" => "audio/flac",
                 "audio/x-wav" => "audio/wav",
+                "application/vnd.ms-pki.stl" => "model/stl",
                 _ => normalized,
             };
         }
@@ -145,6 +146,11 @@ namespace Cotton.Server.Services
             await _dbContext.FileManifests.AddAsync(newFileManifest, cancellationToken);
             for (int i = 0; i < chunks.Count; i++)
             {
+                if (chunks[i].GCScheduledAfter.HasValue)
+                {
+                    chunks[i].GCScheduledAfter = null;
+                }
+
                 var fileChunk = new FileManifestChunk
                 {
                     ChunkOrder = i,
@@ -155,6 +161,18 @@ namespace Cotton.Server.Services
             }
             await _dbContext.SaveChangesAsync(cancellationToken);
             return newFileManifest;
+        }
+
+        public async Task<int> ClearGcSchedulesForManifestReferencesAsync(
+            Guid fileManifestId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Chunks
+                .Where(c => c.GCScheduledAfter != null
+                    && (_dbContext.FileManifestChunks.Any(fmc => fmc.FileManifestId == fileManifestId && fmc.ChunkHash == c.Hash)
+                        || _dbContext.FileManifests.Any(fm => fm.Id == fileManifestId
+                            && (fm.SmallFilePreviewHash == c.Hash || fm.LargeFilePreviewHash == c.Hash))))
+                .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), cancellationToken);
         }
     }
 }

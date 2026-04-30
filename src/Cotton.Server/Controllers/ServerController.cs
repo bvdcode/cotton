@@ -3,18 +3,22 @@
 
 using Cotton.Models;
 using Cotton.Server.Handlers.Server;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Providers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
+using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Quartz;
+using System.Runtime;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Server)]
-    public class ServerController(
-        IMediator _mediator) : ControllerBase
+    public class ServerController(IMediator _mediator, SettingsProvider _settings, ISchedulerFactory _scheduler) : ControllerBase
     {
         [HttpPost("emergency-shutdown")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -27,34 +31,14 @@ namespace Cotton.Server.Controllers
         [HttpGet("info")]
         public async Task<IActionResult> GetServerInfo()
         {
-            PublicServerInfo result = await _mediator.Send(new GetServerInfoQuery());
-            return Ok(result);
-        }
-
-        [HttpGet("settings/is-setup-complete")]
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> IsServerInitialized()
-        {
-            bool isServerInitialized = await _mediator.Send(new IsServerInitializedQuery());
-            return Ok(new { IsServerInitialized = isServerInitialized });
-        }
-
-        [HttpPost("settings")]
-        [Authorize(Roles = nameof(UserRole.Admin))]
-        public async Task<IActionResult> CreateSettings(InitialServerSettingsRequestDto request, CancellationToken cancellationToken)
-        {
-            string fallbackPublicBaseUrl = $"{Request.Scheme}://{Request.Host.Value}";
-            await _mediator.Send(new CreateInitialServerSettingsRequest(request, fallbackPublicBaseUrl), cancellationToken);
-            return Ok();
-        }
-
-        [Authorize]
-        [HttpGet("settings")]
-        public async Task<IActionResult> GetSettings()
-        {
-            bool isAdmin = User.IsInRole(nameof(UserRole.Admin));
-            ServerSettingsEnvelopeDto settings = await _mediator.Send(new GetServerSettingsQuery(isAdmin));
-            return Ok(settings);
+            string instanceIdHash = _settings.GetServerSettings().GetInstanceIdHash();
+            bool serverHasUsers = await _settings.ServerHasUsersAsync();
+            return Ok(new PublicServerInfo()
+            {
+                InstanceIdHash = instanceIdHash,
+                CanCreateInitialAdmin = !serverHasUsers,
+                Product = Constants.ProductName,
+            });
         }
 
         [HttpPatch("database-backup/trigger")]
@@ -62,6 +46,14 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> TriggerDatabaseBackup(CancellationToken cancellationToken)
         {
             await _mediator.Send(new TriggerDatabaseBackupRequest(), cancellationToken);
+            return Ok();
+        }
+
+        [HttpPatch("gc/trigger")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> TriggerGarbageCollector()
+        {
+            await _scheduler.TriggerJobAsync<GarbageCollectorJob>();
             return Ok();
         }
 

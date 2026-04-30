@@ -1,6 +1,7 @@
 using Cotton.Database;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
+using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -22,7 +23,8 @@ namespace Cotton.Server.Handlers.Server
 
     public class GetGcChunksTimelineQueryHandler(
         CottonDbContext _dbContext,
-        SettingsProvider _settings) : IRequestHandler<GetGcChunksTimelineQuery, GcChunkTimelineDto>
+        SettingsProvider _settings,
+        ChunkUsageService _chunkUsage) : IRequestHandler<GetGcChunksTimelineQuery, GcChunkTimelineDto>
     {
         private const int DefaultGcTimelineHorizonDays = 30;
         private const int MaxGcTimelineHorizonDays = 365;
@@ -51,13 +53,13 @@ namespace Cotton.Server.Handlers.Server
                 throw new BadRequestException($"Requested range is too large. Maximum is {MaxGcTimelineHorizonDays} days.");
             }
 
-            var gcBaseQuery = _dbContext.Chunks
-                .AsNoTracking()
+            HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(cancellationToken);
+            var gcBaseQuery = _chunkUsage
+                .WhereNotProtectedByStorageKeys(
+                    _chunkUsage.WhereUnreferencedByDatabase(_dbContext.Chunks.AsNoTracking()),
+                    protectedStorageKeys)
                 .Where(c => c.GCScheduledAfter != null
-                    && c.GCScheduledAfter < rangeEndUtc
-                    && !c.FileManifestChunks.Any()
-                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
-                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash));
+                    && c.GCScheduledAfter < rangeEndUtc);
 
             var overdueAggregate = await gcBaseQuery
                 .Where(c => c.GCScheduledAfter < rangeStartUtc)
@@ -135,7 +137,7 @@ namespace Cotton.Server.Handlers.Server
 
             long totalChunks = buckets.Sum(x => x.ChunkCount);
             long totalSizeBytes = buckets.Sum(x => x.SizeBytes);
-            var storageStats = await GetStorageUsageStatsAsync(now, cancellationToken);
+            var storageStats = await GetStorageUsageStatsAsync(now, protectedStorageKeys, cancellationToken);
 
             return new GcChunkTimelineDto
             {
@@ -152,6 +154,7 @@ namespace Cotton.Server.Handlers.Server
 
         private async Task<StorageUsageStatsDto> GetStorageUsageStatsAsync(
             DateTime nowUtc,
+            IReadOnlyCollection<string> protectedStorageKeys,
             CancellationToken cancellationToken)
         {
             var chunks = _dbContext.Chunks.AsNoTracking();
@@ -191,11 +194,11 @@ namespace Cotton.Server.Handlers.Server
                 select (long?)(c.PlainSizeBytes * r.RefCount))
                 .SumAsync(cancellationToken) ?? 0L;
 
-            var pendingGc = chunks
-                .Where(c => c.GCScheduledAfter != null
-                    && !c.FileManifestChunks.Any()
-                    && !_dbContext.FileManifests.Any(fm => fm.SmallFilePreviewHash == c.Hash)
-                    && !_dbContext.FileManifests.Any(fm => fm.LargeFilePreviewHash == c.Hash));
+            var pendingGc = _chunkUsage
+                .WhereNotProtectedByStorageKeys(
+                    _chunkUsage.WhereUnreferencedByDatabase(chunks),
+                    protectedStorageKeys)
+                .Where(c => c.GCScheduledAfter != null);
 
             long pendingGcChunkCount = await pendingGc.LongCountAsync(cancellationToken);
             long pendingGcStoredSizeBytes = await pendingGc.SumAsync(x => (long?)x.StoredSizeBytes, cancellationToken) ?? 0L;
