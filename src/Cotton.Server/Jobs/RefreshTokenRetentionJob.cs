@@ -17,6 +17,7 @@ namespace Cotton.Server.Jobs
 
             var cutoffDate = DateTime.UtcNow - RetentionPeriod;
             var tokensToRefresh = _dbContext.RefreshTokens
+                .Where(rt => rt.RevokedAt == null)
                 .Where(rt => rt.CreatedAt < cutoffDate)
                 .ToList();
             foreach (var token in tokensToRefresh)

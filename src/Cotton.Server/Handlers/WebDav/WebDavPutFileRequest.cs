@@ -276,12 +276,19 @@ public class WebDavPutFileRequestHandler(
         var fileManifest = await _dbContext.FileManifests
             .FirstOrDefaultAsync(f => f.ProposedContentHash == fileHash || f.ComputedContentHash == fileHash, ct);
 
-        fileManifest ??= await _fileManifestService.CreateNewFileManifestAsync(
-            chunks,
-            resourceName,
-            contentType,
-            fileHash,
-            ct);
+        if (fileManifest is not null)
+        {
+            await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
+        }
+        else
+        {
+            fileManifest = await _fileManifestService.CreateNewFileManifestAsync(
+                chunks,
+                resourceName,
+                contentType,
+                fileHash,
+                ct);
+        }
 
         return fileManifest;
     }

@@ -9,17 +9,23 @@ using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.Linq.Expressions;
+using System.Net.Mail;
 
 namespace Cotton.Server.Providers
 {
     public class SettingsProvider(
-        CottonDbContext _dbContext)
+        CottonDbContext _dbContext,
+        IStorageBackendTypeCache? _storageTypeCache = null)
     {
         private static readonly Lock _cacheLock = new();
+        private static readonly SemaphoreSlim _settingsCreationLock = new(1, 1);
         private static CottonServerSettings? _cache;
         private static readonly TimeSpan _boolCacheTtl = TimeSpan.FromMinutes(1);
         private static (bool Value, DateTimeOffset CachedAt)? _isServerInitializedCache;
         private static (bool Value, DateTimeOffset CachedAt)? _serverHasUsersCache;
+        private const string defaultPublicBaseUrl = "http://localhost";
+        private const string defaultTimezone = "UTC";
         private const int defaultSessionTimeoutHours = 24 * 30;
         private const int defaultTotpMaxFailedAttempts = 64;
         private const int defaultEncryptionThreads = 2;
@@ -69,10 +75,49 @@ namespace Cotton.Server.Providers
                     MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
                     SessionTimeoutHours = defaultSessionTimeoutHours,
                     TelemetryEnabled = false,
-                    Timezone = "America/Los_Angeles",
+                    Timezone = defaultTimezone,
                     TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
+                    EmailMode = EmailMode.None,
+                    ComputionMode = ComputionMode.Local,
+                    StorageType = StorageType.Local,
+                    InstanceId = Guid.Empty,
+                    PublicBaseUrl = defaultPublicBaseUrl,
+                    ServerUsage = [ServerUsage.Other],
+                    StorageSpaceMode = StorageSpaceMode.Optimal,
+                    GeoIpLookupMode = GeoIpLookupMode.Disabled,
                 };
                 return _cache;
+            }
+        }
+
+        public async Task<CottonServerSettings> EnsureServerSettingsAsync(
+            string? fallbackPublicBaseUrl,
+            CancellationToken cancellationToken = default)
+        {
+            CottonServerSettings? settings = await LoadLatestSettingsAsync(asNoTracking: false, cancellationToken);
+            if (settings is not null)
+            {
+                return settings;
+            }
+
+            await _settingsCreationLock.WaitAsync(cancellationToken);
+            try
+            {
+                settings = await LoadLatestSettingsAsync(asNoTracking: false, cancellationToken);
+                if (settings is not null)
+                {
+                    return settings;
+                }
+
+                settings = CreateDefaultSettings(fallbackPublicBaseUrl);
+                await _dbContext.ServerSettings.AddAsync(settings, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                InvalidateSettingsCache(serverIsInitialized: true);
+                return settings;
+            }
+            finally
+            {
+                _settingsCreationLock.Release();
             }
         }
 
@@ -87,7 +132,16 @@ namespace Cotton.Server.Providers
                 }
             }
 
-            bool value = await _dbContext.ServerSettings.AsNoTracking().AnyAsync();
+            bool value;
+            try
+            {
+                value = await _dbContext.ServerSettings.AsNoTracking().AnyAsync();
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+            {
+                value = false;
+            }
+
             lock (_cacheLock)
             {
                 _isServerInitializedCache = (value, DateTimeOffset.UtcNow);
@@ -106,7 +160,16 @@ namespace Cotton.Server.Providers
                 }
             }
 
-            bool value = await _dbContext.Users.AsNoTracking().AnyAsync();
+            bool value;
+            try
+            {
+                value = await _dbContext.Users.AsNoTracking().AnyAsync();
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+            {
+                value = false;
+            }
+
             lock (_cacheLock)
             {
                 _serverHasUsersCache = (value, DateTimeOffset.UtcNow);
@@ -114,64 +177,55 @@ namespace Cotton.Server.Providers
             return value;
         }
 
-        public async Task<string?> ValidateServerSettingsAsync(InitialServerSettingsRequestDto request)
+        public string? ValidateTimezone(string? timezone)
         {
-            if (!IsTimezoneValid(request.Timezone))
+            if (string.IsNullOrWhiteSpace(timezone))
             {
-                return "Timezone not found: " + request.Timezone;
+                return "Timezone must be provided.";
             }
 
-            var telemetryError = ValidateTelemetryConstraints(request);
-            if (telemetryError is not null)
+            if (!IsTimezoneValid(timezone))
             {
-                return telemetryError;
-            }
-
-            var emailError = await ValidateEmailConstraintsAsync(request);
-            if (emailError is not null)
-            {
-                return emailError;
-            }
-
-            var storageError = await ValidateStorageConstraintsAsync(request);
-            if (storageError is not null)
-            {
-                return storageError;
+                return "Timezone not found: " + timezone;
             }
 
             return null;
         }
 
-        private static bool IsTimezoneValid(string timezone)
+        public string? ValidateTelemetryChange(bool enabled)
         {
-            return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
-        }
-
-        private static string? ValidateTelemetryConstraints(InitialServerSettingsRequestDto request)
-        {
-            if (request.Telemetry)
+            if (enabled)
             {
                 return null;
             }
 
-            if (request.Email == EmailMode.Cloud)
+            var settings = GetServerSettings();
+
+            if (settings.EmailMode == EmailMode.Cloud)
             {
                 return "Telemetry must be enabled to use cloud email service.";
             }
 
-            if (request.ComputionMode == ComputionMode.Cloud)
+            if (settings.ComputionMode == ComputionMode.Cloud)
             {
                 return "Telemetry must be enabled to use cloud AI service.";
+            }
+
+            if (settings.GeoIpLookupMode == GeoIpLookupMode.CottonCloud)
+            {
+                return "Telemetry must be enabled to use Cotton Cloud IP lookup.";
             }
 
             return null;
         }
 
-        private static async Task<string?> ValidateEmailConstraintsAsync(InitialServerSettingsRequestDto request)
+        public async Task<string?> ValidateEmailModeAsync(EmailMode mode)
         {
-            if (request.Email == EmailMode.Cloud)
+            var settings = GetServerSettings();
+
+            if (mode == EmailMode.Cloud)
             {
-                if (!request.Telemetry)
+                if (!settings.TelemetryEnabled)
                 {
                     return "Telemetry must be enabled to use cloud email service.";
                 }
@@ -185,19 +239,55 @@ namespace Cotton.Server.Providers
                 return null;
             }
 
-            if (request.Email == EmailMode.Custom)
+            if (mode == EmailMode.Custom)
             {
-                return request.EmailConfig is null
-                    ? "EmailConfig must be provided when using Custom email service."
-                    : null;
+                return IsEmailConfigComplete(settings)
+                    ? null
+                    : "SMTP settings must be configured before enabling Custom email service.";
             }
 
-            if (request.Email == EmailMode.None)
+            if (mode == EmailMode.None)
             {
                 return null;
             }
 
-            return "Invalid email mode: " + request.Email;
+            return "Invalid email mode: " + mode;
+        }
+
+        public string? ValidateComputionMode(ComputionMode mode)
+        {
+            if (mode == ComputionMode.Cloud && !GetServerSettings().TelemetryEnabled)
+            {
+                return "Telemetry must be enabled to use cloud AI service.";
+            }
+
+            return Enum.IsDefined(mode)
+                ? null
+                : "Invalid computation mode: " + mode;
+        }
+
+        public string? ValidateGeoIpLookupMode(GeoIpLookupMode mode)
+        {
+            var settings = GetServerSettings();
+
+            if (mode == GeoIpLookupMode.CottonCloud && !settings.TelemetryEnabled)
+            {
+                return "Telemetry must be enabled to use Cotton Cloud IP lookup.";
+            }
+
+            if (mode == GeoIpLookupMode.CustomHttp && string.IsNullOrWhiteSpace(settings.CustomGeoIpLookupUrl))
+            {
+                return "Custom GeoIP lookup URL must be configured before enabling Custom HTTP lookup.";
+            }
+
+            if (mode == GeoIpLookupMode.MaxMindLocal)
+            {
+                return "MaxMind local lookup is not configurable yet.";
+            }
+
+            return Enum.IsDefined(mode)
+                ? null
+                : "Invalid GeoIP lookup mode: " + mode;
         }
 
         private static async Task<bool> CheckGatewayHealthAsync()
@@ -214,21 +304,94 @@ namespace Cotton.Server.Providers
             }
         }
 
-        private static async Task<string?> ValidateStorageConstraintsAsync(InitialServerSettingsRequestDto request)
+        public async Task<string?> ValidateStorageTypeAsync(StorageType type)
         {
-            if (request.Storage != StorageType.S3)
+            if (type == StorageType.Local)
             {
                 return null;
             }
 
-            if (request.S3Config is null)
+            if (type != StorageType.S3)
             {
-                return "S3Config must be provided when using S3 storage.";
+                return "Invalid storage type: " + type;
             }
 
+            var settings = GetServerSettings();
+            var s3Config = new S3Config
+            {
+                AccessKey = settings.S3AccessKeyId ?? string.Empty,
+                SecretKey = settings.S3SecretAccessKeyEncrypted ?? string.Empty,
+                Endpoint = settings.S3EndpointUrl ?? string.Empty,
+                Region = settings.S3Region ?? string.Empty,
+                Bucket = settings.S3BucketName ?? string.Empty
+            };
+
+            var configError = ValidateS3ConfigShape(s3Config);
+            if (configError is not null)
+            {
+                return "S3 settings must be configured before enabling S3 storage.";
+            }
+
+            return await ValidateS3ConnectivityAsync(s3Config);
+        }
+
+        public async Task<string?> ValidateS3ConfigAsync(S3Config? s3Config)
+        {
+            var shapeError = ValidateS3ConfigShape(s3Config);
+            if (shapeError is not null)
+            {
+                return shapeError;
+            }
+
+            return await ValidateS3ConnectivityAsync(s3Config!);
+        }
+
+        private static string? ValidateS3ConfigShape(S3Config? s3Config)
+        {
+            if (s3Config is null)
+            {
+                return "S3 settings must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(s3Config.Endpoint))
+            {
+                return "S3 endpoint URL must be provided.";
+            }
+
+            if (!Uri.TryCreate(s3Config.Endpoint, UriKind.Absolute, out var endpoint) ||
+                (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
+            {
+                return "S3 endpoint URL must be an absolute HTTP or HTTPS URL.";
+            }
+
+            if (string.IsNullOrWhiteSpace(s3Config.Region))
+            {
+                return "S3 region must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(s3Config.Bucket))
+            {
+                return "S3 bucket must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(s3Config.AccessKey))
+            {
+                return "S3 access key must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(s3Config.SecretKey))
+            {
+                return "S3 secret key must be provided.";
+            }
+
+            return null;
+        }
+
+        private static async Task<string?> ValidateS3ConnectivityAsync(S3Config s3Config)
+        {
             try
             {
-                await ValidateS3Async(request.S3Config);
+                await ValidateS3Async(s3Config);
                 return null;
             }
             catch (Exception ex)
@@ -290,56 +453,211 @@ namespace Cotton.Server.Providers
             await s3.DeleteObjectAsync(s3Config.Bucket, testKey);
         }
 
-        public async Task SaveServerSettingsAsync(InitialServerSettingsRequestDto request)
+        public string? ValidateEmailConfig(EmailConfig? emailConfig)
         {
-            int? smtpPort = TryParseInt(request.EmailConfig?.Port);
-            var lastSettings = await _dbContext.ServerSettings
-                .OrderByDescending(s => s.CreatedAt)
-                .FirstOrDefaultAsync();
-            Guid instanceId = lastSettings?.InstanceId ?? Guid.NewGuid();
-            CottonServerSettings newSettings = new()
+            if (emailConfig is null)
             {
-                EmailMode = request.Email,
-                ComputionMode = request.ComputionMode,
-                StorageType = request.Storage,
-                EncryptionThreads = defaultEncryptionThreads,
-                MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
-                CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
-                SessionTimeoutHours = defaultSessionTimeoutHours,
-                AllowCrossUserDeduplication = request.TrustedMode,
-                AllowGlobalIndexing = request.TrustedMode,
-                TelemetryEnabled = request.Telemetry,
-                Timezone = request.Timezone,
-                SmtpServerAddress = request.EmailConfig?.SmtpServer,
-                SmtpServerPort = smtpPort,
-                SmtpUsername = request.EmailConfig?.Username,
-                SmtpPasswordEncrypted = request.EmailConfig?.Password,
-                SmtpSenderEmail = request.EmailConfig?.FromAddress,
-                SmtpUseSsl = request.EmailConfig?.UseSSL ?? false,
-                S3AccessKeyId = request.S3Config?.AccessKey,
-                S3SecretAccessKeyEncrypted = request.S3Config?.SecretKey,
-                S3BucketName = request.S3Config?.Bucket,
-                S3Region = request.S3Config?.Region,
-                S3EndpointUrl = request.S3Config?.Endpoint,
-                InstanceId = instanceId,
-                // TODO: Double check if public base url is not null
-                PublicBaseUrl = request.PublicBaseUrl!.TrimEnd('/'),
-                ServerUsage = request.Usage,
-                StorageSpaceMode = request.StorageSpace,
-                TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
-            };
-            await _dbContext.ServerSettings.AddAsync(newSettings);
-            await _dbContext.SaveChangesAsync();
-            _cache = null;
-            lock (_cacheLock)
+                return "SMTP settings must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(emailConfig.SmtpServer))
             {
-                _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
+                return "SMTP server must be provided.";
+            }
+
+            if (!TryParsePort(emailConfig.Port, out _))
+            {
+                return "SMTP port must be a number between 1 and 65535.";
+            }
+
+            if (string.IsNullOrWhiteSpace(emailConfig.Username))
+            {
+                return "SMTP username must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(emailConfig.Password))
+            {
+                return "SMTP password must be provided.";
+            }
+
+            if (string.IsNullOrWhiteSpace(emailConfig.FromAddress))
+            {
+                return "SMTP sender address must be provided.";
+            }
+
+            try
+            {
+                _ = new MailAddress(emailConfig.FromAddress);
+            }
+            catch (FormatException)
+            {
+                return "SMTP sender address must be a valid email address.";
+            }
+
+            return null;
+        }
+
+        public string? ValidatePublicBaseUrl(string? url)
+        {
+            return TryNormalizePublicBaseUrl(url, out _)
+                ? null
+                : "Public base URL must be an absolute HTTP or HTTPS URL.";
+        }
+
+        public string? ValidateCustomGeoIpLookupUrl(string? url)
+        {
+            return TryNormalizePublicBaseUrl(url, out _)
+                ? null
+                : "Custom GeoIP lookup URL must be an absolute HTTP or HTTPS URL.";
+        }
+
+        public async Task UpdateSettingsAsync(
+            Action<CottonServerSettings> update,
+            string? fallbackPublicBaseUrl,
+            CancellationToken cancellationToken = default)
+        {
+            CottonServerSettings settings = await EnsureServerSettingsAsync(fallbackPublicBaseUrl, cancellationToken);
+            update(settings);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            InvalidateSettingsCache(serverIsInitialized: true);
+        }
+
+        public async Task SetPropertyAsync<TProperty>(Expression<Func<CottonServerSettings, TProperty>> selector, TProperty value, CancellationToken cancellationToken = default)
+        {
+            await SetPropertyAsync(selector, value, fallbackPublicBaseUrl: null, cancellationToken);
+        }
+
+        public async Task SetPropertyAsync<TProperty>(
+            Expression<Func<CottonServerSettings, TProperty>> selector,
+            TProperty value,
+            string? fallbackPublicBaseUrl,
+            CancellationToken cancellationToken = default)
+        {
+            var memberExpression = selector.Body as MemberExpression;
+            if (memberExpression is null && selector.Body is UnaryExpression unaryExpression)
+            {
+                memberExpression = unaryExpression.Operand as MemberExpression;
+            }
+
+            if (memberExpression?.Member.Name is not string propertyName)
+            {
+                throw new ArgumentException("Selector must point to a settings property.", nameof(selector));
+            }
+
+            CottonServerSettings settings = await EnsureServerSettingsAsync(fallbackPublicBaseUrl, cancellationToken);
+
+            _dbContext.Entry(settings).Property(propertyName).CurrentValue = value;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            InvalidateSettingsCache(serverIsInitialized: true);
+        }
+
+        public static string NormalizePublicBaseUrl(string? url)
+        {
+            return TryNormalizePublicBaseUrl(url, out string? normalized)
+                ? normalized
+                : defaultPublicBaseUrl;
+        }
+
+        public static bool TryParsePort(string? value, out int port)
+        {
+            return int.TryParse(value, out port) && port is >= 1 and <= 65535;
+        }
+
+        private static bool IsTimezoneValid(string timezone)
+        {
+            return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
+        }
+
+        private static bool TryNormalizePublicBaseUrl(string? url, out string normalized)
+        {
+            normalized = string.Empty;
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return false;
+            }
+
+            string trimmed = url.Trim().TrimEnd('/');
+            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            {
+                return false;
+            }
+
+            normalized = trimmed;
+            return true;
+        }
+
+        private async Task<CottonServerSettings?> LoadLatestSettingsAsync(
+            bool asNoTracking,
+            CancellationToken cancellationToken)
+        {
+            IQueryable<CottonServerSettings> query = _dbContext.ServerSettings
+                .OrderByDescending(s => s.CreatedAt);
+
+            if (asNoTracking)
+            {
+                query = query.AsNoTracking();
+            }
+
+            try
+            {
+                return await query.FirstOrDefaultAsync(cancellationToken);
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+            {
+                return null;
             }
         }
 
-        private static int? TryParseInt(string? value)
+        private static CottonServerSettings CreateDefaultSettings(string? fallbackPublicBaseUrl)
         {
-            return int.TryParse(value, out int i) ? i : null;
+            return new()
+            {
+                AllowCrossUserDeduplication = false,
+                AllowGlobalIndexing = false,
+                CipherChunkSizeBytes = defaultCipherChunkSizeBytes,
+                EncryptionThreads = defaultEncryptionThreads,
+                MaxChunkSizeBytes = defaultMaxChunkSizeBytes,
+                SessionTimeoutHours = defaultSessionTimeoutHours,
+                TelemetryEnabled = false,
+                Timezone = defaultTimezone,
+                TotpMaxFailedAttempts = defaultTotpMaxFailedAttempts,
+                EmailMode = EmailMode.None,
+                ComputionMode = ComputionMode.Local,
+                StorageType = StorageType.Local,
+                InstanceId = Guid.NewGuid(),
+                PublicBaseUrl = NormalizePublicBaseUrl(fallbackPublicBaseUrl),
+                ServerUsage = [ServerUsage.Other],
+                StorageSpaceMode = StorageSpaceMode.Optimal,
+                GeoIpLookupMode = GeoIpLookupMode.Disabled,
+            };
+        }
+
+        private static bool IsEmailConfigComplete(CottonServerSettings settings)
+        {
+            return !string.IsNullOrWhiteSpace(settings.SmtpServerAddress)
+                && settings.SmtpServerPort is >= 1 and <= 65535
+                && !string.IsNullOrWhiteSpace(settings.SmtpUsername)
+                && !string.IsNullOrWhiteSpace(settings.SmtpPasswordEncrypted)
+                && !string.IsNullOrWhiteSpace(settings.SmtpSenderEmail);
+        }
+
+        private void InvalidateSettingsCache(bool serverIsInitialized)
+        {
+            _storageTypeCache?.Reset();
+
+            lock (_cacheLock)
+            {
+                _cache = null;
+                if (serverIsInitialized)
+                {
+                    _isServerInitializedCache = (true, DateTimeOffset.UtcNow);
+                }
+            }
         }
     }
 }

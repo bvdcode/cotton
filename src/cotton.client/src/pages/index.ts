@@ -12,6 +12,9 @@ export {
 	AdminUsersPage,
 	AdminDatabaseBackupPage,
 	AdminStorageStatisticsPage,
+	AdminGeneralSettingsPage,
+	AdminStorageSettingsPage,
+	AdminEmailSettingsPage,
 } from "./admin";
 export { ResetPasswordPage } from "./reset-password/ResetPasswordPage";
 export { VerifyEmailPage } from "./verify-email/VerifyEmailPage";

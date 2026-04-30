@@ -11,6 +11,23 @@ namespace Cotton.Previews.Tests;
 public class StlThumbPreviewGeneratorTests
 {
     [Test]
+    public async Task GeneratePreviewWebPAsync_StlInvalidContent_ReturnsFallbackImage()
+    {
+        StlThumbPreviewGenerator generator = new();
+        using var stream = new MemoryStream("not-an-stl"u8.ToArray());
+
+        byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
+
+        AssertWebpSignature(preview);
+        using var image = Image.Load<Rgba32>(preview);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(image.Width, Is.EqualTo(128));
+            Assert.That(image.Height, Is.EqualTo(128));
+        }
+    }
+
+    [Test]
     public async Task GeneratePreviewWebPAsync_ThreeMfWithEmbeddedThumbnail_UsesEmbeddedImage()
     {
         StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
@@ -21,11 +38,33 @@ public class StlThumbPreviewGeneratorTests
 
         AssertWebpSignature(preview);
         using var image = Image.Load<Rgba32>(preview);
-        Assert.Multiple(() =>
+        using (Assert.EnterMultipleScope())
         {
             Assert.That(image.Width, Is.EqualTo(200));
             Assert.That(image.Height, Is.EqualTo(100));
-        });
+        }
+    }
+
+    [Test]
+    public async Task GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_ReturnsFallbackImage()
+    {
+        StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
+        byte[] threeMf = CreateThreeMfWithoutThumbnailWithInvalidModelBytes();
+        using var stream = new MemoryStream(threeMf);
+
+        byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
+
+        AssertWebpSignature(preview);
+        using var image = Image.Load<Rgba32>(preview);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(image.Width, Is.EqualTo(128));
+            Assert.That(image.Height, Is.EqualTo(128));
+            Assert.That(image[0, 0].A, Is.EqualTo(255));
+            Assert.That(image[0, 0].R, Is.InRange((byte)30, (byte)40));
+            Assert.That(image[0, 0].G, Is.InRange((byte)30, (byte)40));
+            Assert.That(image[0, 0].B, Is.InRange((byte)30, (byte)45));
+        }
     }
 
     private static byte[] CreateThreeMfWithThumbnailBytes(int width, int height)
@@ -75,6 +114,38 @@ public class StlThumbPreviewGeneratorTests
         return output.ToArray();
     }
 
+    private static byte[] CreateThreeMfWithoutThumbnailWithInvalidModelBytes()
+    {
+        using var output = new MemoryStream();
+        using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteTextEntry(
+                archive,
+                "[Content_Types].xml",
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
+                </Types>
+                """);
+
+            WriteTextEntry(
+                archive,
+                "_rels/.rels",
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
+                </Relationships>
+                """);
+
+            WriteTextEntry(archive, "3D/3dmodel.model", "not-a-valid-3mf-model");
+        }
+
+        return output.ToArray();
+    }
+
     private static byte[] CreateGradientPngBytes(int width, int height)
     {
         using var image = new Image<Rgba32>(width, height);
@@ -112,8 +183,11 @@ public class StlThumbPreviewGeneratorTests
 
     private static void AssertWebpSignature(byte[] imageBytes)
     {
-        Assert.That(imageBytes.Length, Is.GreaterThanOrEqualTo(12));
-        Assert.That(Encoding.ASCII.GetString(imageBytes, 0, 4), Is.EqualTo("RIFF"));
-        Assert.That(Encoding.ASCII.GetString(imageBytes, 8, 4), Is.EqualTo("WEBP"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(imageBytes, Has.Length.GreaterThanOrEqualTo(12));
+            Assert.That(Encoding.ASCII.GetString(imageBytes, 0, 4), Is.EqualTo("RIFF"));
+            Assert.That(Encoding.ASCII.GetString(imageBytes, 8, 4), Is.EqualTo("WEBP"));
+        }
     }
 }

@@ -39,6 +39,12 @@ namespace Cotton.Database.Models
         [Column("name_key", TypeName = "citext")]
         public string NameKey { get; private set; } = null!;
 
+        [Column("is_client_encrypted")]
+        public bool IsClientEncrypted { get; set; }
+
+        [Column("metadata")]
+        public Dictionary<string, string>? Metadata { get; set; } = [];
+
         public void SetName(string input)
         {
             bool isValid = NameValidator.TryNormalizeAndValidate(input, out string normalized, out string error);

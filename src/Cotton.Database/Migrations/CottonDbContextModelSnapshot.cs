@@ -186,6 +186,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("CustomGeoIpLookupUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("custom_geo_ip_lookup_url");
+
                     b.Property<int>("EmailMode")
                         .HasColumnType("integer")
                         .HasColumnName("email_mode");
@@ -193,6 +197,10 @@ namespace Cotton.Database.Migrations
                     b.Property<int>("EncryptionThreads")
                         .HasColumnType("integer")
                         .HasColumnName("encryption_threads");
+
+                    b.Property<int>("GeoIpLookupMode")
+                        .HasColumnType("integer")
+                        .HasColumnName("geo_ip_lookup_mode");
 
                     b.Property<Guid>("InstanceId")
                         .HasColumnType("uuid")
@@ -560,6 +568,14 @@ namespace Cotton.Database.Migrations
                     b.Property<Guid>("FileManifestId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_manifest_id");
+
+                    b.Property<bool>("IsClientEncrypted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_client_encrypted");
+
+                    b.Property<Dictionary<string, string>>("Metadata")
+                        .HasColumnType("hstore")
+                        .HasColumnName("metadata");
 
                     b.Property<string>("Name")
                         .IsRequired()
