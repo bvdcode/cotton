@@ -1,4 +1,5 @@
 import { chunksApi } from "../api/chunksApi";
+import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
 import { createIncrementalHasher, hashBytes, toWebCryptoAlgorithm } from "./hash/hashing";
 import { canUseHashWorker, HashWorkerClient } from "./hash/hashWorkerClient";
@@ -17,10 +18,13 @@ export async function uploadBlobToChunks(options: {
   const sendChunkHashForValidation =
     options.client?.sendChunkHashForValidation ?? uploadConfig.sendChunkHashForValidation;
 
-  // Dynamic concurrency: start at 1 chunk to probe throughput, then ramp up to max
-  // if the first chunk finishes quickly.
-  const maxConcurrency = Math.max(1, options.client?.concurrency ?? uploadConfig.maxChunkUploadConcurrency);
-  let concurrency = 1;
+  const chunkUploadConcurrency = new AdaptiveConcurrencyController({
+    maxConcurrency: Math.max(
+      1,
+      options.client?.concurrency ?? uploadConfig.maxChunkUploadConcurrency,
+    ),
+    rampUpDurationMs: uploadConfig.concurrencyRampUpMs,
+  });
 
   const chunkSize = Math.max(1, server.maxChunkSizeBytes);
   const algorithm = toWebCryptoAlgorithm(server.supportedHashAlgorithm);
@@ -29,16 +33,32 @@ export async function uploadBlobToChunks(options: {
   const chunkHashesByIndex: string[] = new Array(chunkCount);
 
   let completedBytes = 0;
+  let lastReportedBytes = 0;
+  const inFlightBytesByIndex = new Map<number, number>();
+
   const report = () => {
-    options.onProgress?.(completedBytes);
+    if (!options.onProgress) {
+      return;
+    }
+
+    let inFlightBytes = 0;
+    for (const bytes of inFlightBytesByIndex.values()) {
+      inFlightBytes += bytes;
+    }
+
+    const nextBytes = Math.min(blob.size, completedBytes + inFlightBytes);
+    if (nextBytes < lastReportedBytes) {
+      return;
+    }
+
+    lastReportedBytes = nextBytes;
+    options.onProgress(nextBytes);
   };
 
-  // Compute whole-blob hash in a single sequential pass while we iterate chunks.
-  // Uploads (exists/uploadChunk) still run concurrently via a small in-flight pool.
-  
-  // Use worker pool to avoid WASM memory exhaustion
   let worker: HashWorkerClient | null = null;
   let blobHasher: Awaited<ReturnType<typeof createIncrementalHasher>> | null = null;
+  const abortController = new AbortController();
+  let firstUploadError: unknown = null;
 
   if (canUseHashWorker()) {
     worker = await globalHashWorkerPool.acquire(algorithm);
@@ -48,86 +68,128 @@ export async function uploadBlobToChunks(options: {
 
   try {
     const inFlight = new Set<Promise<void>>();
+
     const waitForSlot = async () => {
-      while (inFlight.size >= concurrency) {
+      while (inFlight.size >= chunkUploadConcurrency.current) {
         await Promise.race(inFlight);
       }
     };
 
-    const startUpload = (p: Promise<void>) => {
-      inFlight.add(p);
-      p.finally(() => inFlight.delete(p));
+    const waitForAllUploads = async () => {
+      while (inFlight.size > 0) {
+        await Promise.race(inFlight);
+      }
     };
 
-    for (let index = 0; index < chunkCount; index += 1) {
+    const setInFlightProgress = (index: number, bytesUploaded: number) => {
+      const previous = inFlightBytesByIndex.get(index) ?? 0;
+      inFlightBytesByIndex.set(index, Math.max(previous, bytesUploaded));
+      report();
+    };
+
+    const startUpload = (
+      index: number,
+      chunk: Blob,
+      chunkHash: string,
+      chunkBytes: number,
+    ) => {
+      const startedAt = performance.now();
+
+      const uploadPromise = (async () => {
+        try {
+          if (sendChunkHashForValidation) {
+            const exists = await chunksApi.exists(chunkHash, abortController.signal);
+            if (!exists) {
+              await chunksApi.uploadChunk({
+                blob: chunk,
+                fileName,
+                hash: chunkHash,
+                signal: abortController.signal,
+                onProgress: (bytesUploaded) => {
+                  setInFlightProgress(index, bytesUploaded);
+                },
+              });
+            }
+          } else {
+            await chunksApi.uploadChunk({
+              blob: chunk,
+              fileName,
+              hash: null,
+              signal: abortController.signal,
+              onProgress: (bytesUploaded) => {
+                setInFlightProgress(index, bytesUploaded);
+              },
+            });
+          }
+
+          inFlightBytesByIndex.delete(index);
+          completedBytes += chunkBytes;
+          report();
+          chunkUploadConcurrency.observe({
+            bytes: chunkBytes,
+            durationMs: performance.now() - startedAt,
+            succeeded: true,
+          });
+        } catch (error) {
+          firstUploadError ??= error;
+          abortController.abort();
+          inFlightBytesByIndex.delete(index);
+          chunkUploadConcurrency.observe({
+            bytes: chunkBytes,
+            durationMs: performance.now() - startedAt,
+            succeeded: false,
+          });
+        }
+      })();
+
+      inFlight.add(uploadPromise);
+      uploadPromise.finally(() => {
+        inFlight.delete(uploadPromise);
+      });
+    };
+
+    for (let index = 0; index < chunkCount && !firstUploadError; index += 1) {
       const start = index * chunkSize;
       const end = Math.min(blob.size, start + chunkSize);
       const chunk = blob.slice(start, end);
       const chunkBytes = end - start;
 
-      // Read this server-sized chunk ONCE and feed both hash computations.
       const buffer = await chunk.arrayBuffer();
 
-      // Offload hashing to worker when available to keep UI responsive.
       let chunkHash: string;
       if (worker) {
-        // Worker handles both blob hash and chunk hash.
-        // Buffer is transferred to worker, so create it before transferring.
-        chunkHash = await worker.hashChunk(buffer); // transfers buffer
+        chunkHash = await worker.hashChunk(buffer);
       } else {
-        // Non-worker path: update blob hasher and compute chunk hash.
         const bytes = new Uint8Array(buffer);
         blobHasher!.update(bytes);
         chunkHash = await hashBytes(bytes, algorithm);
       }
       chunkHashesByIndex[index] = chunkHash;
 
-      const doUpload = async () => {
-        if (sendChunkHashForValidation) {
-          const exists = await chunksApi.exists(chunkHash);
-          if (!exists) {
-            await chunksApi.uploadChunk({ blob: chunk, fileName, hash: chunkHash });
-          }
-        } else {
-          // Server should compute its own hash and skip validation.
-          await chunksApi.uploadChunk({ blob: chunk, fileName, hash: null });
-        }
-
-        completedBytes += chunkBytes;
-        report();
-      };
-
-      // Dynamic concurrency probe: upload the first chunk sequentially.
-      // If it completes quickly, ramp up to maxConcurrency for the rest.
-      if (index === 0) {
-        const startedAt = performance.now();
-        await doUpload();
-        const elapsedMs = performance.now() - startedAt;
-        if (elapsedMs < 1000 && maxConcurrency > 1) {
-          concurrency = maxConcurrency;
-        }
-        continue;
+      if (firstUploadError) {
+        break;
       }
 
       await waitForSlot();
-      startUpload(doUpload());
+      if (firstUploadError) {
+        break;
+      }
+
+      startUpload(index, chunk, chunkHash, chunkBytes);
     }
 
-    await Promise.all(inFlight);
+    await waitForAllUploads();
+
+    if (firstUploadError) {
+      throw firstUploadError;
+    }
 
     const fileHash = worker ? await worker.digestFile() : blobHasher!.digestHex();
 
-    // Return worker to pool instead of terminating it
-    if (worker) {
-      globalHashWorkerPool.release(worker);
-    }
-
     return { chunkHashes: chunkHashesByIndex, fileHash };
-  } catch (error) {
-    // In case of error, still return worker to pool
+  } finally {
     if (worker) {
       globalHashWorkerPool.release(worker);
     }
-    throw error;
   }
 }
