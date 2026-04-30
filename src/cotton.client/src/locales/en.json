@@ -1036,7 +1036,8 @@
     "settings": {
       "actions": {
         "save": "Save",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "close": "Close"
       },
       "state": {
         "saved": "Settings saved."
@@ -1060,6 +1061,14 @@
           "geoIpLookupMode": "IP lookup mode",
           "customGeoIpLookupUrl": "Custom IP lookup URL"
         },
+        "validation": {
+          "required": "This field is required.",
+          "publicBaseUrlInvalid": "Enter a valid HTTP or HTTPS base URL without credentials, query, or hash.",
+          "publicBaseUrlMismatch": "Current address is {{current}}, but generated public links will use {{configured}}. Be careful before saving this value.",
+          "timezoneInvalid": "Choose a valid IANA time zone from the list.",
+          "customGeoIpLookupUrlInvalid": "Enter a valid HTTP or HTTPS lookup URL.",
+          "customGeoIpLookupUrlRequiresIp": "The lookup URL must include the {ip} placeholder."
+        },
         "serverUsage": {
           "Photos": "Photos",
           "Documents": "Documents",
@@ -1071,10 +1080,16 @@
           "Limited": "Limited",
           "Unlimited": "Unlimited"
         },
+        "storageSpaceHelp": {
+          "open": "What does storage space mode affect?",
+          "title": "Storage space mode",
+          "description": "This mode tells Cotton how aggressively to optimize storage. Unlimited favors speed and simple retention. Optimal balances speed, compression, deduplication, and cleanup. Limited favors saving disk space more aggressively and may spend more CPU on storage optimization."
+        },
         "computionMode": {
           "Local": "Local",
           "Remote": "Remote runner",
-          "Cloud": "Cotton Cloud"
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "This feature is still in development."
         },
         "geoIpLookupMode": {
           "Disabled": "Disabled",

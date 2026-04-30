@@ -1,10 +1,13 @@
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Checkbox,
+  CircularProgress,
   FormControl,
   FormControlLabel,
+  IconButton,
   InputLabel,
   LinearProgress,
   MenuItem,
@@ -13,9 +16,21 @@ import {
   Stack,
   Switch,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { HelpOutline } from "@mui/icons-material";
+import { alpha } from "@mui/material/styles";
+import { useConfirm } from "material-ui-confirm";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   settingsApi,
@@ -25,27 +40,132 @@ import {
   type StorageSpaceMode,
 } from "../../../shared/api/settingsApi";
 
-type LoadState =
-  | { kind: "loading" }
-  | { kind: "idle" }
-  | { kind: "saving" }
-  | { kind: "error"; message: string }
-  | { kind: "success"; message: string };
+type SettingKey =
+  | "publicBaseUrl"
+  | "timezone"
+  | "telemetry"
+  | "allowDeduplication"
+  | "allowGlobalIndexing"
+  | "serverUsage"
+  | "storageSpaceMode"
+  | "geoIpLookupMode"
+  | "customGeoIpLookupUrl";
+
+type StatusMessage = {
+  severity: "success" | "error";
+  message: string;
+};
+
+type SavingOverlayProps = {
+  saving: boolean;
+  children: ReactNode;
+};
 
 const usageOptions: ServerUsage[] = ["Photos", "Documents", "Media", "Other"];
 const computionOptions: ComputionMode[] = ["Local", "Remote", "Cloud"];
 const storageSpaceOptions: StorageSpaceMode[] = [
+  "Unlimited",
   "Optimal",
   "Limited",
-  "Unlimited",
 ];
 const geoIpOptions: GeoIpLookupMode[] = ["Disabled", "CottonCloud", "CustomHttp"];
 
+const fallbackTimeZones = [
+  "UTC",
+  "America/Los_Angeles",
+  "America/New_York",
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Madrid",
+  "Europe/Moscow",
+  "Asia/Dubai",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
+
+const getSupportedTimeZones = (): string[] => {
+  const intlWithSupportedValues = Intl as typeof Intl & {
+    supportedValuesOf?: (key: "timeZone") => string[];
+  };
+
+  if (typeof intlWithSupportedValues.supportedValuesOf !== "function") {
+    return fallbackTimeZones;
+  }
+
+  const supported = intlWithSupportedValues.supportedValuesOf("timeZone");
+  const withUtc = supported.includes("UTC") ? supported : ["UTC", ...supported];
+  return Array.from(new Set(withUtc)).sort((a, b) => a.localeCompare(b));
+};
+
+const normalizeUrlForSave = (url: URL): string => {
+  url.hash = "";
+  url.search = "";
+
+  const normalized = url.toString();
+  return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
+};
+
+const isHttpUrl = (url: URL): boolean =>
+  url.protocol === "http:" || url.protocol === "https:";
+
+const normalizeStoredPublicBaseUrl = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    const url = new URL(trimmed);
+    if (!isHttpUrl(url) || url.username || url.password || url.search || url.hash) {
+      return trimmed;
+    }
+
+    return normalizeUrlForSave(url);
+  } catch {
+    return trimmed;
+  }
+};
+
+const isSameArray = <T,>(left: readonly T[], right: readonly T[]): boolean =>
+  left.length === right.length &&
+  left.every((item, index) => item === right[index]);
+
+const SavingOverlay = ({ saving, children }: SavingOverlayProps) => (
+  <Box sx={{ position: "relative" }}>
+    {children}
+    {saving && (
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 1,
+          pointerEvents: "none",
+          bgcolor: (theme) => alpha(theme.palette.background.paper, 0.72),
+        }}
+      >
+        <CircularProgress size={22} />
+      </Box>
+    )}
+  </Box>
+);
+
 export const AdminGeneralSettingsPage = () => {
   const { t } = useTranslation("admin");
-  const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
+  const confirm = useConfirm();
+
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [status, setStatus] = useState<StatusMessage | null>(null);
+  const [savingKeys, setSavingKeys] = useState<ReadonlySet<SettingKey>>(
+    () => new Set(),
+  );
+
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
+  const [savedPublicBaseUrl, setSavedPublicBaseUrl] = useState("");
   const [timezone, setTimezone] = useState("UTC");
+  const [savedTimezone, setSavedTimezone] = useState("UTC");
   const [telemetry, setTelemetry] = useState(false);
   const [allowDeduplication, setAllowDeduplication] = useState(false);
   const [allowGlobalIndexing, setAllowGlobalIndexing] = useState(false);
@@ -56,13 +176,79 @@ export const AdminGeneralSettingsPage = () => {
   const [geoIpLookupMode, setGeoIpLookupMode] =
     useState<GeoIpLookupMode>("Disabled");
   const [customGeoIpLookupUrl, setCustomGeoIpLookupUrl] = useState("");
+  const [savedCustomGeoIpLookupUrl, setSavedCustomGeoIpLookupUrl] = useState("");
 
-  const isBusy = loadState.kind === "loading" || loadState.kind === "saving";
+  const timeZoneOptions = useMemo(() => getSupportedTimeZones(), []);
+  const validTimeZones = useMemo(
+    () => new Set(timeZoneOptions),
+    [timeZoneOptions],
+  );
+  const currentOrigin = useMemo(
+    () => (typeof window === "undefined" ? "" : window.location.origin),
+    [],
+  );
+
+  const savingAny = savingKeys.size > 0;
+  const pageDisabled = loading || loadError !== null;
+  const isSaving = useCallback(
+    (key: SettingKey): boolean => savingKeys.has(key),
+    [savingKeys],
+  );
+
+  const setKeySaving = useCallback((key: SettingKey, saving: boolean) => {
+    setSavingKeys((current) => {
+      const next = new Set(current);
+      if (saving) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const runSave = useCallback(
+    async (
+      key: SettingKey,
+      task: () => Promise<void>,
+      options?: {
+        onSuccess?: () => void;
+        onError?: () => void;
+        showSuccess?: boolean;
+      },
+    ) => {
+      setStatus(null);
+      setKeySaving(key, true);
+      try {
+        await task();
+        options?.onSuccess?.();
+        if (options?.showSuccess) {
+          setStatus({
+            severity: "success",
+            message: t("settings.state.saved"),
+          });
+        }
+      } catch {
+        options?.onError?.();
+        setStatus({
+          severity: "error",
+          message: t("settings.errors.saveFailed"),
+        });
+      } finally {
+        setKeySaving(key, false);
+      }
+    },
+    [setKeySaving, t],
+  );
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      setStatus(null);
+
       try {
         const [
           nextPublicBaseUrl,
@@ -90,23 +276,31 @@ export const AdminGeneralSettingsPage = () => {
 
         if (!active) return;
 
-        setPublicBaseUrl(nextPublicBaseUrl);
-        setTimezone(nextTimezone);
+        const normalizedPublicBaseUrl =
+          normalizeStoredPublicBaseUrl(nextPublicBaseUrl);
+        const normalizedTimezone = nextTimezone.trim() || "UTC";
+        const normalizedCustomGeoIpLookupUrl = nextCustomGeoIpLookupUrl.trim();
+
+        setPublicBaseUrl(normalizedPublicBaseUrl);
+        setSavedPublicBaseUrl(normalizedPublicBaseUrl);
+        setTimezone(normalizedTimezone);
+        setSavedTimezone(normalizedTimezone);
         setTelemetry(nextTelemetry);
         setAllowDeduplication(nextAllowDeduplication);
         setAllowGlobalIndexing(nextAllowGlobalIndexing);
-        setServerUsage(nextServerUsage);
+        setServerUsage(nextServerUsage.length > 0 ? nextServerUsage : ["Other"]);
         setStorageSpaceMode(nextStorageSpaceMode);
         setComputionMode(nextComputionMode);
         setGeoIpLookupMode(nextGeoIpLookupMode);
-        setCustomGeoIpLookupUrl(nextCustomGeoIpLookupUrl);
-        setLoadState({ kind: "idle" });
+        setCustomGeoIpLookupUrl(normalizedCustomGeoIpLookupUrl);
+        setSavedCustomGeoIpLookupUrl(normalizedCustomGeoIpLookupUrl);
       } catch {
         if (!active) return;
-        setLoadState({
-          kind: "error",
-          message: t("settings.errors.loadFailed"),
-        });
+        setLoadError(t("settings.errors.loadFailed"));
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
@@ -117,42 +311,281 @@ export const AdminGeneralSettingsPage = () => {
     };
   }, [t]);
 
-  const toggleUsage = (usage: ServerUsage) => {
-    setServerUsage((current) => {
-      const next = current.includes(usage)
-        ? current.filter((item) => item !== usage)
-        : [...current, usage];
-      return next.length > 0 ? next : ["Other"];
-    });
-  };
-
-  const handleSave = async () => {
-    setLoadState({ kind: "saving" });
-    try {
-      await settingsApi.setTelemetry(telemetry);
-      await settingsApi.setPublicBaseUrl(publicBaseUrl);
-      await settingsApi.setTimezone(timezone);
-      await settingsApi.setAllowCrossUserDeduplication(allowDeduplication);
-      await settingsApi.setAllowGlobalIndexing(allowGlobalIndexing);
-      await settingsApi.setServerUsage(serverUsage);
-      await settingsApi.setStorageSpaceMode(storageSpaceMode);
-      await settingsApi.setComputionMode(computionMode);
-      if (geoIpLookupMode === "CustomHttp") {
-        await settingsApi.setCustomGeoIpLookupUrl(customGeoIpLookupUrl);
-      }
-      await settingsApi.setGeoIpLookupMode(geoIpLookupMode);
-
-      setLoadState({
-        kind: "success",
-        message: t("settings.state.saved"),
-      });
-    } catch {
-      setLoadState({
-        kind: "error",
-        message: t("settings.errors.saveFailed"),
-      });
+  const publicBaseUrlValidation = useMemo(() => {
+    const trimmed = publicBaseUrl.trim();
+    if (!trimmed) {
+      return {
+        error: t("settings.general.validation.required"),
+        normalized: null,
+        configuredOrigin: "",
+        mismatchesCurrentOrigin: false,
+      };
     }
-  };
+
+    try {
+      const url = new URL(trimmed);
+      if (!isHttpUrl(url) || url.username || url.password) {
+        return {
+          error: t("settings.general.validation.publicBaseUrlInvalid"),
+          normalized: null,
+          configuredOrigin: "",
+          mismatchesCurrentOrigin: false,
+        };
+      }
+
+      if (url.search || url.hash) {
+        return {
+          error: t("settings.general.validation.publicBaseUrlInvalid"),
+          normalized: null,
+          configuredOrigin: "",
+          mismatchesCurrentOrigin: false,
+        };
+      }
+
+      const normalized = normalizeUrlForSave(url);
+      return {
+        error: null,
+        normalized,
+        configuredOrigin: url.origin,
+        mismatchesCurrentOrigin:
+          currentOrigin.length > 0 && url.origin !== currentOrigin,
+      };
+    } catch {
+      return {
+        error: t("settings.general.validation.publicBaseUrlInvalid"),
+        normalized: null,
+        configuredOrigin: "",
+        mismatchesCurrentOrigin: false,
+      };
+    }
+  }, [currentOrigin, publicBaseUrl, t]);
+
+  const timezoneValidationError = useMemo(() => {
+    const trimmed = timezone.trim();
+    if (!trimmed) {
+      return t("settings.general.validation.required");
+    }
+
+    return validTimeZones.has(trimmed)
+      ? null
+      : t("settings.general.validation.timezoneInvalid");
+  }, [t, timezone, validTimeZones]);
+
+  const customGeoIpLookupUrlValidation = useMemo(() => {
+    if (geoIpLookupMode !== "CustomHttp") {
+      return { error: null, normalized: customGeoIpLookupUrl.trim() };
+    }
+
+    const trimmed = customGeoIpLookupUrl.trim();
+    if (!trimmed) {
+      return {
+        error: t("settings.general.validation.required"),
+        normalized: null,
+      };
+    }
+
+    if (!trimmed.includes("{ip}")) {
+      return {
+        error: t("settings.general.validation.customGeoIpLookupUrlRequiresIp"),
+        normalized: null,
+      };
+    }
+
+    try {
+      const probe = trimmed.split("{ip}").join("127.0.0.1");
+      const url = new URL(probe);
+      if (!isHttpUrl(url)) {
+        return {
+          error: t("settings.general.validation.customGeoIpLookupUrlInvalid"),
+          normalized: null,
+        };
+      }
+    } catch {
+      return {
+        error: t("settings.general.validation.customGeoIpLookupUrlInvalid"),
+        normalized: null,
+      };
+    }
+
+    return { error: null, normalized: trimmed };
+  }, [customGeoIpLookupUrl, geoIpLookupMode, t]);
+
+  const canSavePublicBaseUrl =
+    !pageDisabled &&
+    !isSaving("publicBaseUrl") &&
+    !publicBaseUrlValidation.error &&
+    publicBaseUrlValidation.normalized !== null &&
+    publicBaseUrlValidation.normalized !== savedPublicBaseUrl;
+
+  const canSaveTimezone =
+    !pageDisabled &&
+    !isSaving("timezone") &&
+    !timezoneValidationError &&
+    timezone.trim() !== savedTimezone;
+
+  const canSaveCustomGeoIpLookupUrl =
+    geoIpLookupMode === "CustomHttp" &&
+    !pageDisabled &&
+    !isSaving("customGeoIpLookupUrl") &&
+    !customGeoIpLookupUrlValidation.error &&
+    customGeoIpLookupUrlValidation.normalized !== null &&
+    customGeoIpLookupUrlValidation.normalized !== savedCustomGeoIpLookupUrl;
+
+  const savePublicBaseUrl = useCallback(() => {
+    const next = publicBaseUrlValidation.normalized;
+    if (!next || !canSavePublicBaseUrl) return;
+
+    setPublicBaseUrl(next);
+    void runSave(
+      "publicBaseUrl",
+      () => settingsApi.setPublicBaseUrl(next),
+      {
+        onSuccess: () => setSavedPublicBaseUrl(next),
+        showSuccess: true,
+      },
+    );
+  }, [canSavePublicBaseUrl, publicBaseUrlValidation.normalized, runSave]);
+
+  const saveTimezone = useCallback(() => {
+    const next = timezone.trim();
+    if (!canSaveTimezone) return;
+
+    setTimezone(next);
+    void runSave("timezone", () => settingsApi.setTimezone(next), {
+      onSuccess: () => setSavedTimezone(next),
+      showSuccess: true,
+    });
+  }, [canSaveTimezone, runSave, timezone]);
+
+  const saveCustomGeoIpLookupUrl = useCallback(() => {
+    const next = customGeoIpLookupUrlValidation.normalized;
+    if (!next || !canSaveCustomGeoIpLookupUrl) return;
+
+    setCustomGeoIpLookupUrl(next);
+    void runSave(
+      "customGeoIpLookupUrl",
+      () => settingsApi.setCustomGeoIpLookupUrl(next),
+      {
+        onSuccess: () => setSavedCustomGeoIpLookupUrl(next),
+        showSuccess: true,
+      },
+    );
+  }, [
+    canSaveCustomGeoIpLookupUrl,
+    customGeoIpLookupUrlValidation.normalized,
+    runSave,
+  ]);
+
+  const handleTelemetryChange = useCallback(
+    (next: boolean) => {
+      if (next === telemetry || pageDisabled) return;
+
+      const previous = telemetry;
+      setTelemetry(next);
+      void runSave("telemetry", () => settingsApi.setTelemetry(next), {
+        onError: () => setTelemetry(previous),
+      });
+    },
+    [pageDisabled, runSave, telemetry],
+  );
+
+  const handleAllowDeduplicationChange = useCallback(
+    (next: boolean) => {
+      if (next === allowDeduplication || pageDisabled) return;
+
+      const previous = allowDeduplication;
+      setAllowDeduplication(next);
+      void runSave(
+        "allowDeduplication",
+        () => settingsApi.setAllowCrossUserDeduplication(next),
+        {
+          onError: () => setAllowDeduplication(previous),
+        },
+      );
+    },
+    [allowDeduplication, pageDisabled, runSave],
+  );
+
+  const handleAllowGlobalIndexingChange = useCallback(
+    (next: boolean) => {
+      if (next === allowGlobalIndexing || pageDisabled) return;
+
+      const previous = allowGlobalIndexing;
+      setAllowGlobalIndexing(next);
+      void runSave(
+        "allowGlobalIndexing",
+        () => settingsApi.setAllowGlobalIndexing(next),
+        {
+          onError: () => setAllowGlobalIndexing(previous),
+        },
+      );
+    },
+    [allowGlobalIndexing, pageDisabled, runSave],
+  );
+
+  const handleStorageSpaceModeChange = useCallback(
+    (_: unknown, next: StorageSpaceMode | null) => {
+      if (!next || next === storageSpaceMode || pageDisabled) return;
+
+      const previous = storageSpaceMode;
+      setStorageSpaceMode(next);
+      void runSave(
+        "storageSpaceMode",
+        () => settingsApi.setStorageSpaceMode(next),
+        {
+          onError: () => setStorageSpaceMode(previous),
+        },
+      );
+    },
+    [pageDisabled, runSave, storageSpaceMode],
+  );
+
+  const handleGeoIpLookupModeChange = useCallback(
+    (next: GeoIpLookupMode) => {
+      if (next === geoIpLookupMode || pageDisabled) return;
+
+      const previous = geoIpLookupMode;
+      setGeoIpLookupMode(next);
+      void runSave(
+        "geoIpLookupMode",
+        () => settingsApi.setGeoIpLookupMode(next),
+        {
+          onError: () => setGeoIpLookupMode(previous),
+        },
+      );
+    },
+    [geoIpLookupMode, pageDisabled, runSave],
+  );
+
+  const toggleUsage = useCallback(
+    (usage: ServerUsage) => {
+      if (pageDisabled) return;
+
+      const previous = serverUsage;
+      const toggled = serverUsage.includes(usage)
+        ? serverUsage.filter((item) => item !== usage)
+        : [...serverUsage, usage];
+      const next =
+        toggled.length > 0 ? toggled : (["Other"] satisfies ServerUsage[]);
+
+      if (isSameArray(previous, next)) return;
+
+      setServerUsage(next);
+      void runSave("serverUsage", () => settingsApi.setServerUsage(next), {
+        onError: () => setServerUsage(previous),
+      });
+    },
+    [pageDisabled, runSave, serverUsage],
+  );
+
+  const showStorageSpaceHelp = useCallback(() => {
+    void confirm({
+      title: t("settings.general.storageSpaceHelp.title"),
+      description: t("settings.general.storageSpaceHelp.description"),
+      confirmationText: t("settings.actions.close"),
+      hideCancelButton: true,
+    });
+  }, [confirm, t]);
 
   return (
     <Stack spacing={2}>
@@ -170,189 +603,291 @@ export const AdminGeneralSettingsPage = () => {
           <Box minHeight={4}>
             <LinearProgress
               sx={{
-                opacity: isBusy ? 1 : 0,
+                opacity: loading || savingAny ? 1 : 0,
                 transition: "opacity 120ms ease",
               }}
             />
           </Box>
 
-          {loadState.kind === "error" && (
-            <Alert severity="error">{loadState.message}</Alert>
-          )}
-          {loadState.kind === "success" && (
-            <Alert severity="success">{loadState.message}</Alert>
-          )}
+          {loadError && <Alert severity="error">{loadError}</Alert>}
+          {status && <Alert severity={status.severity}>{status.message}</Alert>}
 
           <Stack spacing={2}>
-            <TextField
-              label={t("settings.general.fields.publicBaseUrl")}
-              value={publicBaseUrl}
-              onChange={(event) => setPublicBaseUrl(event.target.value)}
-              disabled={isBusy}
-              fullWidth
-            />
-            <TextField
-              label={t("settings.general.fields.timezone")}
-              value={timezone}
-              onChange={(event) => setTimezone(event.target.value)}
-              disabled={isBusy}
-              fullWidth
-            />
+            <Stack spacing={1}>
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={1}
+                alignItems={{ xs: "stretch", md: "flex-start" }}
+              >
+                <Box flex={1}>
+                  <SavingOverlay saving={isSaving("publicBaseUrl")}>
+                    <TextField
+                      label={t("settings.general.fields.publicBaseUrl")}
+                      value={publicBaseUrl}
+                      onChange={(event) => setPublicBaseUrl(event.target.value)}
+                      disabled={pageDisabled || isSaving("publicBaseUrl")}
+                      error={Boolean(publicBaseUrlValidation.error)}
+                      helperText={publicBaseUrlValidation.error ?? " "}
+                      fullWidth
+                    />
+                  </SavingOverlay>
+                </Box>
+                <SavingOverlay saving={isSaving("publicBaseUrl")}>
+                  <Button
+                    variant="contained"
+                    onClick={savePublicBaseUrl}
+                    disabled={!canSavePublicBaseUrl}
+                    sx={{ minWidth: 120, minHeight: 56 }}
+                  >
+                    {t("settings.actions.save")}
+                  </Button>
+                </SavingOverlay>
+              </Stack>
+              {publicBaseUrlValidation.mismatchesCurrentOrigin && (
+                <Alert severity="warning">
+                  {t("settings.general.validation.publicBaseUrlMismatch", {
+                    current: currentOrigin,
+                    configured: publicBaseUrlValidation.configuredOrigin,
+                  })}
+                </Alert>
+              )}
+            </Stack>
 
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <FormControl fullWidth>
-                <InputLabel id="admin-compution-mode-label">
-                  {t("settings.general.fields.computionMode")}
-                </InputLabel>
-                <Select
-                  labelId="admin-compution-mode-label"
-                  label={t("settings.general.fields.computionMode")}
-                  value={computionMode}
-                  onChange={(event) =>
-                    setComputionMode(event.target.value as ComputionMode)
-                  }
-                  disabled={isBusy}
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={1}
+              alignItems={{ xs: "stretch", md: "flex-start" }}
+            >
+              <Box flex={1}>
+                <SavingOverlay saving={isSaving("timezone")}>
+                  <Autocomplete
+                    freeSolo
+                    options={timeZoneOptions}
+                    value={timezone}
+                    inputValue={timezone}
+                    onChange={(_, value) => setTimezone(value ?? "")}
+                    onInputChange={(_, value) => setTimezone(value)}
+                    disabled={pageDisabled || isSaving("timezone")}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={t("settings.general.fields.timezone")}
+                        error={Boolean(timezoneValidationError)}
+                        helperText={timezoneValidationError ?? " "}
+                      />
+                    )}
+                  />
+                </SavingOverlay>
+              </Box>
+              <SavingOverlay saving={isSaving("timezone")}>
+                <Button
+                  variant="contained"
+                  onClick={saveTimezone}
+                  disabled={!canSaveTimezone}
+                  sx={{ minWidth: 120, minHeight: 56 }}
                 >
-                  {computionOptions.map((option) => (
-                    <MenuItem
-                      key={option}
-                      value={option}
-                      disabled={!telemetry && option === "Cloud"}
-                    >
-                      {t(`settings.general.computionMode.${option}`)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl fullWidth>
-                <InputLabel id="admin-storage-space-mode-label">
-                  {t("settings.general.fields.storageSpaceMode")}
-                </InputLabel>
-                <Select
-                  labelId="admin-storage-space-mode-label"
-                  label={t("settings.general.fields.storageSpaceMode")}
-                  value={storageSpaceMode}
-                  onChange={(event) =>
-                    setStorageSpaceMode(event.target.value as StorageSpaceMode)
-                  }
-                  disabled={isBusy}
-                >
-                  {storageSpaceOptions.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {t(`settings.general.storageSpaceMode.${option}`)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  {t("settings.actions.save")}
+                </Button>
+              </SavingOverlay>
             </Stack>
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={telemetry}
-                    onChange={(event) => setTelemetry(event.target.checked)}
-                    disabled={isBusy}
-                  />
-                }
-                label={t("settings.general.fields.telemetry")}
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={allowDeduplication}
-                    onChange={(event) =>
-                      setAllowDeduplication(event.target.checked)
-                    }
-                    disabled={isBusy}
-                  />
-                }
-                label={t("settings.general.fields.allowDeduplication")}
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={allowGlobalIndexing}
-                    onChange={(event) =>
-                      setAllowGlobalIndexing(event.target.checked)
-                    }
-                    disabled={isBusy}
-                  />
-                }
-                label={t("settings.general.fields.allowGlobalIndexing")}
-              />
+              <Tooltip title={t("settings.general.computionMode.inDevelopment")}>
+                <Box flex={1}>
+                  <FormControl fullWidth disabled>
+                    <InputLabel id="admin-compution-mode-label">
+                      {t("settings.general.fields.computionMode")}
+                    </InputLabel>
+                    <Select
+                      labelId="admin-compution-mode-label"
+                      label={t("settings.general.fields.computionMode")}
+                      value={computionMode}
+                      onChange={(event) =>
+                        setComputionMode(event.target.value as ComputionMode)
+                      }
+                    >
+                      {computionOptions.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {t(`settings.general.computionMode.${option}`)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Tooltip>
+
+              <Stack flex={1} spacing={1}>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    {t("settings.general.fields.storageSpaceMode")}
+                  </Typography>
+                  <Tooltip title={t("settings.general.storageSpaceHelp.open")}>
+                    <IconButton
+                      size="small"
+                      onClick={showStorageSpaceHelp}
+                      disabled={pageDisabled}
+                    >
+                      <HelpOutline fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+                <SavingOverlay saving={isSaving("storageSpaceMode")}>
+                  <ToggleButtonGroup
+                    fullWidth
+                    exclusive
+                    value={storageSpaceMode}
+                    onChange={handleStorageSpaceModeChange}
+                    disabled={pageDisabled || isSaving("storageSpaceMode")}
+                    aria-label={t("settings.general.fields.storageSpaceMode")}
+                  >
+                    {storageSpaceOptions.map((option) => (
+                      <ToggleButton
+                        key={option}
+                        value={option}
+                        aria-label={t(`settings.general.storageSpaceMode.${option}`)}
+                      >
+                        {t(`settings.general.storageSpaceMode.${option}`)}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </SavingOverlay>
+              </Stack>
+            </Stack>
+
+            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+              <SavingOverlay saving={isSaving("telemetry")}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={telemetry}
+                      onChange={(event) =>
+                        handleTelemetryChange(event.target.checked)
+                      }
+                      disabled={pageDisabled || isSaving("telemetry")}
+                    />
+                  }
+                  label={t("settings.general.fields.telemetry")}
+                />
+              </SavingOverlay>
+              <SavingOverlay saving={isSaving("allowDeduplication")}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={allowDeduplication}
+                      onChange={(event) =>
+                        handleAllowDeduplicationChange(event.target.checked)
+                      }
+                      disabled={pageDisabled || isSaving("allowDeduplication")}
+                    />
+                  }
+                  label={t("settings.general.fields.allowDeduplication")}
+                />
+              </SavingOverlay>
+              <SavingOverlay saving={isSaving("allowGlobalIndexing")}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={allowGlobalIndexing}
+                      onChange={(event) =>
+                        handleAllowGlobalIndexingChange(event.target.checked)
+                      }
+                      disabled={pageDisabled || isSaving("allowGlobalIndexing")}
+                    />
+                  }
+                  label={t("settings.general.fields.allowGlobalIndexing")}
+                />
+              </SavingOverlay>
             </Stack>
 
             <Stack spacing={1}>
               <Typography variant="subtitle2" fontWeight={700}>
                 {t("settings.general.fields.serverUsage")}
               </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                {usageOptions.map((option) => (
-                  <FormControlLabel
-                    key={option}
-                    control={
-                      <Checkbox
-                        checked={serverUsage.includes(option)}
-                        onChange={() => toggleUsage(option)}
-                        disabled={isBusy}
-                      />
-                    }
-                    label={t(`settings.general.serverUsage.${option}`)}
-                  />
-                ))}
-              </Stack>
-            </Stack>
-
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <FormControl fullWidth>
-                <InputLabel id="admin-geoip-mode-label">
-                  {t("settings.general.fields.geoIpLookupMode")}
-                </InputLabel>
-                <Select
-                  labelId="admin-geoip-mode-label"
-                  label={t("settings.general.fields.geoIpLookupMode")}
-                  value={geoIpLookupMode}
-                  onChange={(event) =>
-                    setGeoIpLookupMode(event.target.value as GeoIpLookupMode)
-                  }
-                  disabled={isBusy}
-                >
-                  {geoIpOptions.map((option) => (
-                    <MenuItem
+              <SavingOverlay saving={isSaving("serverUsage")}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                  {usageOptions.map((option) => (
+                    <FormControlLabel
                       key={option}
-                      value={option}
-                      disabled={!telemetry && option === "CottonCloud"}
-                    >
-                      {t(`settings.general.geoIpLookupMode.${option}`)}
-                    </MenuItem>
+                      control={
+                        <Checkbox
+                          checked={serverUsage.includes(option)}
+                          onChange={() => toggleUsage(option)}
+                          disabled={pageDisabled || isSaving("serverUsage")}
+                        />
+                      }
+                      label={t(`settings.general.serverUsage.${option}`)}
+                    />
                   ))}
-                </Select>
-              </FormControl>
-
-              <TextField
-                label={t("settings.general.fields.customGeoIpLookupUrl")}
-                value={customGeoIpLookupUrl}
-                onChange={(event) =>
-                  setCustomGeoIpLookupUrl(event.target.value)
-                }
-                disabled={isBusy || geoIpLookupMode !== "CustomHttp"}
-                fullWidth
-              />
+                </Stack>
+              </SavingOverlay>
             </Stack>
-          </Stack>
 
-          <Stack direction="row" justifyContent="flex-end">
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              disabled={isBusy}
-            >
-              {loadState.kind === "saving"
-                ? t("settings.actions.saving")
-                : t("settings.actions.save")}
-            </Button>
+            <Stack spacing={2}>
+              <SavingOverlay saving={isSaving("geoIpLookupMode")}>
+                <FormControl fullWidth>
+                  <InputLabel id="admin-geoip-mode-label">
+                    {t("settings.general.fields.geoIpLookupMode")}
+                  </InputLabel>
+                  <Select
+                    labelId="admin-geoip-mode-label"
+                    label={t("settings.general.fields.geoIpLookupMode")}
+                    value={geoIpLookupMode}
+                    onChange={(event) =>
+                      handleGeoIpLookupModeChange(
+                        event.target.value as GeoIpLookupMode,
+                      )
+                    }
+                    disabled={pageDisabled || isSaving("geoIpLookupMode")}
+                  >
+                    {geoIpOptions.map((option) => (
+                      <MenuItem
+                        key={option}
+                        value={option}
+                        disabled={!telemetry && option === "CottonCloud"}
+                      >
+                        {t(`settings.general.geoIpLookupMode.${option}`)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </SavingOverlay>
+
+              {geoIpLookupMode === "CustomHttp" && (
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={1}
+                  alignItems={{ xs: "stretch", md: "flex-start" }}
+                >
+                  <Box flex={1}>
+                    <SavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
+                      <TextField
+                        label={t("settings.general.fields.customGeoIpLookupUrl")}
+                        value={customGeoIpLookupUrl}
+                        onChange={(event) =>
+                          setCustomGeoIpLookupUrl(event.target.value)
+                        }
+                        disabled={
+                          pageDisabled || isSaving("customGeoIpLookupUrl")
+                        }
+                        error={Boolean(customGeoIpLookupUrlValidation.error)}
+                        helperText={customGeoIpLookupUrlValidation.error ?? " "}
+                        fullWidth
+                      />
+                    </SavingOverlay>
+                  </Box>
+                  <SavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
+                    <Button
+                      variant="contained"
+                      onClick={saveCustomGeoIpLookupUrl}
+                      disabled={!canSaveCustomGeoIpLookupUrl}
+                      sx={{ minWidth: 120, minHeight: 56 }}
+                    >
+                      {t("settings.actions.save")}
+                    </Button>
+                  </SavingOverlay>
+                </Stack>
+              )}
+            </Stack>
           </Stack>
         </Stack>
       </Paper>
