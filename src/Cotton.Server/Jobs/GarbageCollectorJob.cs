@@ -22,20 +22,20 @@ namespace Cotton.Server.Jobs
         private const int ManifestBatchSize = 1000;
         private const int ChunkBatchSize = 1000;
         private const int ChunkGcDelayDays = 7;
-        private const int InitialDelayMs = 60_000;
         private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
         public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
 
+        private static bool _isFirstRun = true;
+
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(900_000, context.CancellationToken); // Wait for 15 minutes for the server to start up and stabilize
-
-            _logger.LogInformation(
-                "Waiting {InitialDelayMs} seconds before starting garbage collection to allow any ongoing operations to complete...",
-                InitialDelayMs / 1000);
-            await Task.Delay(InitialDelayMs, context.CancellationToken);
-
+            if (_isFirstRun)
+            {
+                _isFirstRun = false;
+                await Task.Delay(900_000, context.CancellationToken); // Wait for 15 minutes for the server to start up and stabilize
+                _logger.LogInformation("Garbage Collector Job is running for the first time. It will perform a full cleanup immediately and then schedule the next run after {DelayMinutes} minutes.", InitialDelayMs / 60000);
+            }
             await RunOnceAsync(DateTime.UtcNow, context.CancellationToken);
         }
 
