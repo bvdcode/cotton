@@ -973,6 +973,7 @@
         "birthDate": "Fecha de nacimiento",
         "totp": "2FA",
         "sessions": "Sesiones",
+        "storageUsed": "Almacenamiento",
         "lastActivity": "Última actividad",
         "actions": "Acciones"
       },

@@ -969,6 +969,7 @@
         "birthDate": "Дата рождения",
         "totp": "2FA",
         "sessions": "Сессии",
+        "storageUsed": "Занято",
         "lastActivity": "Последняя активность",
         "actions": "Действия"
       },
