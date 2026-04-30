@@ -3,19 +3,22 @@
 
 using Cotton.Models;
 using Cotton.Server.Handlers.Server;
+using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
+using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Quartz;
 using System.Runtime;
 
 namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Server)]
-    public class ServerController(IMediator _mediator, SettingsProvider _settings) : ControllerBase
+    public class ServerController(IMediator _mediator, SettingsProvider _settings, ISchedulerFactory _scheduler) : ControllerBase
     {
         [HttpPost("emergency-shutdown")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -43,6 +46,14 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> TriggerDatabaseBackup(CancellationToken cancellationToken)
         {
             await _mediator.Send(new TriggerDatabaseBackupRequest(), cancellationToken);
+            return Ok();
+        }
+
+        [HttpPatch("gc/trigger")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> TriggerGarbageCollector()
+        {
+            await _scheduler.TriggerJobAsync<GarbageCollectorJob>();
             return Ok();
         }
 
