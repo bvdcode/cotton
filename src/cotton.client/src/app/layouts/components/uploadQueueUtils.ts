@@ -52,6 +52,7 @@ export const calculateUploadStats = (tasks: UploadTask[]) => {
   const total = tasks.length;
   let completed = 0;
   let failed = 0;
+  let inProgress = 0;
   const activeTasks: UploadTask[] = [];
 
   for (const task of tasks) {
@@ -65,11 +66,13 @@ export const calculateUploadStats = (tasks: UploadTask[]) => {
       continue;
     }
 
-    if (
-      task.status === "queued" ||
-      task.status === "uploading" ||
-      task.status === "finalizing"
-    ) {
+    if (task.status === "uploading" || task.status === "finalizing") {
+      inProgress += 1;
+      activeTasks.push(task);
+      continue;
+    }
+
+    if (task.status === "queued") {
       activeTasks.push(task);
     }
   }
@@ -82,6 +85,7 @@ export const calculateUploadStats = (tasks: UploadTask[]) => {
     total,
     completed,
     failed,
+    inProgress,
     activeTasks,
     hasActive,
     allCompleted,
@@ -99,13 +103,13 @@ export const getWidgetTitle = (
   | { key: "titleWithErrors"; options: { total: number; failed: number } }
   | { key: "title" }
   | { key: "titleWithTotal"; options: { total: number } } => {
-  const { hasActive, allCompleted, hasErrors, completed, failed, total } = stats;
+  const { hasActive, allCompleted, hasErrors, completed, failed, inProgress, total } = stats;
 
   if (hasActive) {
     return {
       key: "titleWithProgress",
       options: {
-        completed: Math.min(completed + failed + stats.activeTasks.length, total),
+        completed: Math.min(completed + failed + inProgress, total),
         total,
         speed: formatBytes(totalSpeed),
       },

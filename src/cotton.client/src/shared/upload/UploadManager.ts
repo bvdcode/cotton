@@ -227,13 +227,19 @@ export class UploadManager {
   }
 
   private emit() {
-    const progress01 = this.overallBytesTotal > 0 ? this.overallBytesUploaded / this.overallBytesTotal : 0;
+    const bytesTotal = this.tasks.reduce((sum, task) => sum + task.bytesTotal, 0);
+    const bytesUploaded = this.tasks.reduce((sum, task) => sum + task.bytesUploaded, 0);
+    const progress01 = bytesTotal > 0 ? bytesUploaded / bytesTotal : 0;
+
+    this.overallBytesTotal = bytesTotal;
+    this.overallBytesUploaded = bytesUploaded;
+
     this.snapshot = {
       open: this.open,
       tasks: this.tasks.slice(),
       overall: {
-        bytesTotal: this.overallBytesTotal,
-        bytesUploaded: this.overallBytesUploaded,
+        bytesTotal,
+        bytesUploaded,
         progress01,
         uploadSpeedBytesPerSec: this.overallEstimator.getSnapshot().rollingBytesPerSec,
       },
