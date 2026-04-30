@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Checkbox,
-  CircularProgress,
   FormControl,
   FormControlLabel,
   IconButton,
@@ -22,15 +21,8 @@ import {
   Typography,
 } from "@mui/material";
 import { HelpOutline } from "@mui/icons-material";
-import { alpha } from "@mui/material/styles";
 import { useConfirm } from "material-ui-confirm";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   settingsApi,
@@ -39,117 +31,21 @@ import {
   type ServerUsage,
   type StorageSpaceMode,
 } from "../../../shared/api/settingsApi";
-
-type SettingKey =
-  | "publicBaseUrl"
-  | "timezone"
-  | "telemetry"
-  | "allowDeduplication"
-  | "allowGlobalIndexing"
-  | "serverUsage"
-  | "storageSpaceMode"
-  | "geoIpLookupMode"
-  | "customGeoIpLookupUrl";
-
-type StatusMessage = {
-  severity: "success" | "error";
-  message: string;
-};
-
-type SavingOverlayProps = {
-  saving: boolean;
-  children: ReactNode;
-};
-
-const usageOptions: ServerUsage[] = ["Photos", "Documents", "Media", "Other"];
-const computionOptions: ComputionMode[] = ["Local", "Remote", "Cloud"];
-const storageSpaceOptions: StorageSpaceMode[] = [
-  "Unlimited",
-  "Optimal",
-  "Limited",
-];
-const geoIpOptions: GeoIpLookupMode[] = ["Disabled", "CottonCloud", "CustomHttp"];
-
-const fallbackTimeZones = [
-  "UTC",
-  "America/Los_Angeles",
-  "America/New_York",
-  "Europe/London",
-  "Europe/Berlin",
-  "Europe/Madrid",
-  "Europe/Moscow",
-  "Asia/Dubai",
-  "Asia/Tokyo",
-  "Australia/Sydney",
-];
-
-const getSupportedTimeZones = (): string[] => {
-  const intlWithSupportedValues = Intl as typeof Intl & {
-    supportedValuesOf?: (key: "timeZone") => string[];
-  };
-
-  if (typeof intlWithSupportedValues.supportedValuesOf !== "function") {
-    return fallbackTimeZones;
-  }
-
-  const supported = intlWithSupportedValues.supportedValuesOf("timeZone");
-  const withUtc = supported.includes("UTC") ? supported : ["UTC", ...supported];
-  return Array.from(new Set(withUtc)).sort((a, b) => a.localeCompare(b));
-};
-
-const normalizeUrlForSave = (url: URL): string => {
-  url.hash = "";
-  url.search = "";
-
-  const normalized = url.toString();
-  return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
-};
-
-const isHttpUrl = (url: URL): boolean =>
-  url.protocol === "http:" || url.protocol === "https:";
-
-const normalizeStoredPublicBaseUrl = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-
-  try {
-    const url = new URL(trimmed);
-    if (!isHttpUrl(url) || url.username || url.password || url.search || url.hash) {
-      return trimmed;
-    }
-
-    return normalizeUrlForSave(url);
-  } catch {
-    return trimmed;
-  }
-};
-
-const isSameArray = <T,>(left: readonly T[], right: readonly T[]): boolean =>
-  left.length === right.length &&
-  left.every((item, index) => item === right[index]);
-
-const SavingOverlay = ({ saving, children }: SavingOverlayProps) => (
-  <Box sx={{ position: "relative" }}>
-    {children}
-    {saving && (
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 1,
-          pointerEvents: "none",
-          bgcolor: (theme) => alpha(theme.palette.background.paper, 0.72),
-        }}
-      >
-        <CircularProgress size={22} />
-      </Box>
-    )}
-  </Box>
-);
+import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
+import {
+  computionOptions,
+  geoIpOptions,
+  getSupportedTimeZones,
+  isSameArray,
+  normalizeStoredPublicBaseUrl,
+  storageSpaceOptions,
+  usageOptions,
+  validateCustomGeoIpLookupUrl,
+  validatePublicBaseUrl,
+  validateTimezone,
+  type GeneralSettingKey,
+  type SettingsStatusMessage,
+} from "./adminGeneralSettingsModel";
 
 export const AdminGeneralSettingsPage = () => {
   const { t } = useTranslation("admin");
@@ -157,8 +53,8 @@ export const AdminGeneralSettingsPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [status, setStatus] = useState<StatusMessage | null>(null);
-  const [savingKeys, setSavingKeys] = useState<ReadonlySet<SettingKey>>(
+  const [status, setStatus] = useState<SettingsStatusMessage | null>(null);
+  const [savingKeys, setSavingKeys] = useState<ReadonlySet<GeneralSettingKey>>(
     () => new Set(),
   );
 
@@ -191,11 +87,11 @@ export const AdminGeneralSettingsPage = () => {
   const savingAny = savingKeys.size > 0;
   const pageDisabled = loading || loadError !== null;
   const isSaving = useCallback(
-    (key: SettingKey): boolean => savingKeys.has(key),
+    (key: GeneralSettingKey): boolean => savingKeys.has(key),
     [savingKeys],
   );
 
-  const setKeySaving = useCallback((key: SettingKey, saving: boolean) => {
+  const setKeySaving = useCallback((key: GeneralSettingKey, saving: boolean) => {
     setSavingKeys((current) => {
       const next = new Set(current);
       if (saving) {
@@ -209,7 +105,7 @@ export const AdminGeneralSettingsPage = () => {
 
   const runSave = useCallback(
     async (
-      key: SettingKey,
+      key: GeneralSettingKey,
       task: () => Promise<void>,
       options?: {
         onSuccess?: () => void;
@@ -311,104 +207,42 @@ export const AdminGeneralSettingsPage = () => {
     };
   }, [t]);
 
-  const publicBaseUrlValidation = useMemo(() => {
-    const trimmed = publicBaseUrl.trim();
-    if (!trimmed) {
-      return {
-        error: t("settings.general.validation.required"),
-        normalized: null,
-        configuredOrigin: "",
-        mismatchesCurrentOrigin: false,
-      };
-    }
+  const validationMessages = useMemo(
+    () => ({
+      required: t("settings.general.validation.required"),
+      publicBaseUrlInvalid: t(
+        "settings.general.validation.publicBaseUrlInvalid",
+      ),
+      timezoneInvalid: t("settings.general.validation.timezoneInvalid"),
+      customGeoIpLookupUrlInvalid: t(
+        "settings.general.validation.customGeoIpLookupUrlInvalid",
+      ),
+      customGeoIpLookupUrlRequiresIp: t(
+        "settings.general.validation.customGeoIpLookupUrlRequiresIp",
+      ),
+    }),
+    [t],
+  );
 
-    try {
-      const url = new URL(trimmed);
-      if (!isHttpUrl(url) || url.username || url.password) {
-        return {
-          error: t("settings.general.validation.publicBaseUrlInvalid"),
-          normalized: null,
-          configuredOrigin: "",
-          mismatchesCurrentOrigin: false,
-        };
-      }
+  const publicBaseUrlValidation = useMemo(
+    () => validatePublicBaseUrl(publicBaseUrl, currentOrigin, validationMessages),
+    [currentOrigin, publicBaseUrl, validationMessages],
+  );
 
-      if (url.search || url.hash) {
-        return {
-          error: t("settings.general.validation.publicBaseUrlInvalid"),
-          normalized: null,
-          configuredOrigin: "",
-          mismatchesCurrentOrigin: false,
-        };
-      }
+  const timezoneValidationError = useMemo(
+    () => validateTimezone(timezone, validTimeZones, validationMessages),
+    [timezone, validTimeZones, validationMessages],
+  );
 
-      const normalized = normalizeUrlForSave(url);
-      return {
-        error: null,
-        normalized,
-        configuredOrigin: url.origin,
-        mismatchesCurrentOrigin:
-          currentOrigin.length > 0 && url.origin !== currentOrigin,
-      };
-    } catch {
-      return {
-        error: t("settings.general.validation.publicBaseUrlInvalid"),
-        normalized: null,
-        configuredOrigin: "",
-        mismatchesCurrentOrigin: false,
-      };
-    }
-  }, [currentOrigin, publicBaseUrl, t]);
-
-  const timezoneValidationError = useMemo(() => {
-    const trimmed = timezone.trim();
-    if (!trimmed) {
-      return t("settings.general.validation.required");
-    }
-
-    return validTimeZones.has(trimmed)
-      ? null
-      : t("settings.general.validation.timezoneInvalid");
-  }, [t, timezone, validTimeZones]);
-
-  const customGeoIpLookupUrlValidation = useMemo(() => {
-    if (geoIpLookupMode !== "CustomHttp") {
-      return { error: null, normalized: customGeoIpLookupUrl.trim() };
-    }
-
-    const trimmed = customGeoIpLookupUrl.trim();
-    if (!trimmed) {
-      return {
-        error: t("settings.general.validation.required"),
-        normalized: null,
-      };
-    }
-
-    if (!trimmed.includes("{ip}")) {
-      return {
-        error: t("settings.general.validation.customGeoIpLookupUrlRequiresIp"),
-        normalized: null,
-      };
-    }
-
-    try {
-      const probe = trimmed.split("{ip}").join("127.0.0.1");
-      const url = new URL(probe);
-      if (!isHttpUrl(url)) {
-        return {
-          error: t("settings.general.validation.customGeoIpLookupUrlInvalid"),
-          normalized: null,
-        };
-      }
-    } catch {
-      return {
-        error: t("settings.general.validation.customGeoIpLookupUrlInvalid"),
-        normalized: null,
-      };
-    }
-
-    return { error: null, normalized: trimmed };
-  }, [customGeoIpLookupUrl, geoIpLookupMode, t]);
+  const customGeoIpLookupUrlValidation = useMemo(
+    () =>
+      validateCustomGeoIpLookupUrl(
+        customGeoIpLookupUrl,
+        geoIpLookupMode === "CustomHttp",
+        validationMessages,
+      ),
+    [customGeoIpLookupUrl, geoIpLookupMode, validationMessages],
+  );
 
   const canSavePublicBaseUrl =
     !pageDisabled &&
@@ -620,7 +454,7 @@ export const AdminGeneralSettingsPage = () => {
                 alignItems={{ xs: "stretch", md: "flex-start" }}
               >
                 <Box flex={1}>
-                  <SavingOverlay saving={isSaving("publicBaseUrl")}>
+                  <AdminSettingSavingOverlay saving={isSaving("publicBaseUrl")}>
                     <TextField
                       label={t("settings.general.fields.publicBaseUrl")}
                       value={publicBaseUrl}
@@ -630,9 +464,9 @@ export const AdminGeneralSettingsPage = () => {
                       helperText={publicBaseUrlValidation.error ?? " "}
                       fullWidth
                     />
-                  </SavingOverlay>
+                  </AdminSettingSavingOverlay>
                 </Box>
-                <SavingOverlay saving={isSaving("publicBaseUrl")}>
+                <AdminSettingSavingOverlay saving={isSaving("publicBaseUrl")}>
                   <Button
                     variant="contained"
                     onClick={savePublicBaseUrl}
@@ -641,7 +475,7 @@ export const AdminGeneralSettingsPage = () => {
                   >
                     {t("settings.actions.save")}
                   </Button>
-                </SavingOverlay>
+                </AdminSettingSavingOverlay>
               </Stack>
               {publicBaseUrlValidation.mismatchesCurrentOrigin && (
                 <Alert severity="warning">
@@ -659,7 +493,7 @@ export const AdminGeneralSettingsPage = () => {
               alignItems={{ xs: "stretch", md: "flex-start" }}
             >
               <Box flex={1}>
-                <SavingOverlay saving={isSaving("timezone")}>
+                <AdminSettingSavingOverlay saving={isSaving("timezone")}>
                   <Autocomplete
                     freeSolo
                     options={timeZoneOptions}
@@ -677,9 +511,9 @@ export const AdminGeneralSettingsPage = () => {
                       />
                     )}
                   />
-                </SavingOverlay>
+                </AdminSettingSavingOverlay>
               </Box>
-              <SavingOverlay saving={isSaving("timezone")}>
+              <AdminSettingSavingOverlay saving={isSaving("timezone")}>
                 <Button
                   variant="contained"
                   onClick={saveTimezone}
@@ -688,7 +522,7 @@ export const AdminGeneralSettingsPage = () => {
                 >
                   {t("settings.actions.save")}
                 </Button>
-              </SavingOverlay>
+              </AdminSettingSavingOverlay>
             </Stack>
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
@@ -731,7 +565,7 @@ export const AdminGeneralSettingsPage = () => {
                     </IconButton>
                   </Tooltip>
                 </Stack>
-                <SavingOverlay saving={isSaving("storageSpaceMode")}>
+                <AdminSettingSavingOverlay saving={isSaving("storageSpaceMode")}>
                   <ToggleButtonGroup
                     fullWidth
                     exclusive
@@ -750,12 +584,12 @@ export const AdminGeneralSettingsPage = () => {
                       </ToggleButton>
                     ))}
                   </ToggleButtonGroup>
-                </SavingOverlay>
+                </AdminSettingSavingOverlay>
               </Stack>
             </Stack>
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <SavingOverlay saving={isSaving("telemetry")}>
+              <AdminSettingSavingOverlay saving={isSaving("telemetry")}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -768,8 +602,8 @@ export const AdminGeneralSettingsPage = () => {
                   }
                   label={t("settings.general.fields.telemetry")}
                 />
-              </SavingOverlay>
-              <SavingOverlay saving={isSaving("allowDeduplication")}>
+              </AdminSettingSavingOverlay>
+              <AdminSettingSavingOverlay saving={isSaving("allowDeduplication")}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -782,8 +616,8 @@ export const AdminGeneralSettingsPage = () => {
                   }
                   label={t("settings.general.fields.allowDeduplication")}
                 />
-              </SavingOverlay>
-              <SavingOverlay saving={isSaving("allowGlobalIndexing")}>
+              </AdminSettingSavingOverlay>
+              <AdminSettingSavingOverlay saving={isSaving("allowGlobalIndexing")}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -796,14 +630,14 @@ export const AdminGeneralSettingsPage = () => {
                   }
                   label={t("settings.general.fields.allowGlobalIndexing")}
                 />
-              </SavingOverlay>
+              </AdminSettingSavingOverlay>
             </Stack>
 
             <Stack spacing={1}>
               <Typography variant="subtitle2" fontWeight={700}>
                 {t("settings.general.fields.serverUsage")}
               </Typography>
-              <SavingOverlay saving={isSaving("serverUsage")}>
+              <AdminSettingSavingOverlay saving={isSaving("serverUsage")}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
                   {usageOptions.map((option) => (
                     <FormControlLabel
@@ -819,11 +653,11 @@ export const AdminGeneralSettingsPage = () => {
                     />
                   ))}
                 </Stack>
-              </SavingOverlay>
+              </AdminSettingSavingOverlay>
             </Stack>
 
             <Stack spacing={2}>
-              <SavingOverlay saving={isSaving("geoIpLookupMode")}>
+              <AdminSettingSavingOverlay saving={isSaving("geoIpLookupMode")}>
                 <FormControl fullWidth>
                   <InputLabel id="admin-geoip-mode-label">
                     {t("settings.general.fields.geoIpLookupMode")}
@@ -850,7 +684,7 @@ export const AdminGeneralSettingsPage = () => {
                     ))}
                   </Select>
                 </FormControl>
-              </SavingOverlay>
+              </AdminSettingSavingOverlay>
 
               {geoIpLookupMode === "CustomHttp" && (
                 <Stack
@@ -859,7 +693,7 @@ export const AdminGeneralSettingsPage = () => {
                   alignItems={{ xs: "stretch", md: "flex-start" }}
                 >
                   <Box flex={1}>
-                    <SavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
+                    <AdminSettingSavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
                       <TextField
                         label={t("settings.general.fields.customGeoIpLookupUrl")}
                         value={customGeoIpLookupUrl}
@@ -873,9 +707,9 @@ export const AdminGeneralSettingsPage = () => {
                         helperText={customGeoIpLookupUrlValidation.error ?? " "}
                         fullWidth
                       />
-                    </SavingOverlay>
+                    </AdminSettingSavingOverlay>
                   </Box>
-                  <SavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
+                  <AdminSettingSavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
                     <Button
                       variant="contained"
                       onClick={saveCustomGeoIpLookupUrl}
@@ -884,7 +718,7 @@ export const AdminGeneralSettingsPage = () => {
                     >
                       {t("settings.actions.save")}
                     </Button>
-                  </SavingOverlay>
+                  </AdminSettingSavingOverlay>
                 </Stack>
               )}
             </Stack>
