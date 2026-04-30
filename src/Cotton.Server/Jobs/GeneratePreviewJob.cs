@@ -186,6 +186,12 @@ namespace Cotton.Server.Jobs
             }
 
             bool updated = false;
+            if (existing.GCScheduledAfter.HasValue)
+            {
+                existing.GCScheduledAfter = null;
+                updated = true;
+            }
+
             if (existing.PlainSizeBytes <= 0)
             {
                 existing.PlainSizeBytes = sizeBytes;
