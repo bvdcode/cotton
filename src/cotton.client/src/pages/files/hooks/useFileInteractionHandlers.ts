@@ -7,7 +7,6 @@ import { buildAudioPlaylistFromFiles } from "../../../shared/utils/audioPlaylist
 import { useAudioPlayerStore } from "../../../shared/store/audioPlayerStore";
 import { useMediaLightbox } from "./useMediaLightbox";
 import { useFilePreview } from "./useFilePreview";
-import type { AppToastState } from "../../../shared/ui/AppToast";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 
 interface UseFileInteractionHandlersArgs {
@@ -20,8 +19,6 @@ interface UseFileInteractionHandlersResult {
   handleFileClick: (fileId: string, fileName: string, fileSizeBytes?: number) => void;
   handleDownloadFile: (fileId: string, fileName: string) => Promise<void>;
   handleShareFile: (fileId: string, fileName: string) => Promise<void>;
-  shareToast: AppToastState;
-  setShareToast: React.Dispatch<React.SetStateAction<AppToastState>>;
   lightboxOpen: boolean;
   lightboxIndex: number;
   mediaItems: ReturnType<typeof useMediaLightbox>["mediaItems"];
@@ -35,10 +32,6 @@ export const useFileInteractionHandlers = ({
   sortedFiles,
 }: UseFileInteractionHandlersArgs): UseFileInteractionHandlersResult => {
   const { t } = useTranslation(["files", "search", "common"]);
-  const [shareToast, setShareToast] = React.useState<AppToastState>({
-    open: false,
-    message: "",
-  });
 
   const { previewState, openPreview, closePreview } = useFilePreview();
   const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
@@ -57,16 +50,7 @@ export const useFileInteractionHandlers = ({
 
   const handleShareFile = React.useCallback(
     async (fileId: string, fileName: string) => {
-      const showShareToast = (toast: AppToastState) => {
-        setShareToast(toast);
-      };
-
-      await shareFile(
-        fileId,
-        fileName,
-        t,
-        showShareToast,
-      );
+      await shareFile(fileId, fileName, t);
     },
     [t],
   );
@@ -102,8 +86,6 @@ export const useFileInteractionHandlers = ({
     handleFileClick,
     handleDownloadFile,
     handleShareFile,
-    shareToast,
-    setShareToast,
     lightboxOpen,
     lightboxIndex,
     mediaItems,

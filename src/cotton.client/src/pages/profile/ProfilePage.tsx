@@ -10,21 +10,14 @@ import {
   EditProfileCard,
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
 export const SettingsPage = () => {
   const { user, setAuthenticated } = useAuth();
-  const { t: tCommon } = useTranslation("common");
   const { t: tRoutes } = useTranslation("routes");
 
-  useEffect(() => {
-    document.title = `${tCommon("title")} - ${tRoutes("settings")}`;
-
-    return () => {
-      document.title = tCommon("title");
-    };
-  }, [tCommon, tRoutes]);
+  usePageTitle(tRoutes("settings"));
 
   if (!user) {
     return null;

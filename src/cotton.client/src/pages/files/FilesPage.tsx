@@ -1,6 +1,7 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
 import { Alert, Box } from "@mui/material";
 import { Delete } from "@mui/icons-material";
+import { toast } from "react-toastify";
 import {
   FileListViewFactory,
   PageHeader,
@@ -37,12 +38,12 @@ import {
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
-import { AppToast } from "../../shared/ui/AppToast";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
+import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
 const HUGE_FOLDER_THRESHOLD = 10_000;
 
@@ -125,22 +126,18 @@ export const FilesPage: React.FC = () => {
     setLayoutType(InterfaceLayoutType.List);
   }, [isHugeFolder, layoutType, setLayoutType]);
 
-  useEffect(() => {
+  const pageTitle = useMemo(() => {
     const folderName = currentNode?.name;
     const isRoot = !routeNodeId || ancestors.length === 0;
 
     if (isRoot) {
-      document.title = `Cotton - ${t("title", { ns: "files" })}`;
-    } else if (folderName) {
-      document.title = `Cotton - ${folderName}`;
-    } else {
-      document.title = "Cotton";
+      return t("title", { ns: "files" });
     }
 
-    return () => {
-      document.title = "Cotton";
-    };
+    return folderName ?? null;
   }, [currentNode?.name, routeNodeId, ancestors.length, t]);
+
+  usePageTitle(pageTitle);
 
   const breadcrumbs = useMemo(
     () => buildBreadcrumbs(ancestors, currentNode),
@@ -169,8 +166,6 @@ export const FilesPage: React.FC = () => {
     handleFileClick,
     handleDownloadFile,
     handleShareFile,
-    shareToast,
-    setShareToast,
     lightboxOpen,
     lightboxIndex,
     mediaItems,
@@ -202,8 +197,16 @@ export const FilesPage: React.FC = () => {
   }, [sortedFiles, handleFileClick, handleMediaClick]);
 
   const showToast = React.useCallback(
-    (message: string) => setShareToast({ open: true, message }),
-    [setShareToast],
+    (message: string, variant: "info" | "error" = "info") => {
+      const toastId = `files-upload-${variant}-${message}`;
+      if (variant === "error") {
+        toast.error(message, { toastId });
+        return;
+      }
+
+      toast.info(message, { toastId });
+    },
+    [],
   );
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
@@ -240,9 +243,9 @@ export const FilesPage: React.FC = () => {
 
   const handleShareFolder = React.useCallback(
     async (folderId: string, folderName: string) => {
-      await shareFolder(folderId, folderName, t, setShareToast);
+      await shareFolder(folderId, folderName, t);
     },
-    [setShareToast, t],
+    [t],
   );
 
   // Build folder operations adapter
@@ -408,11 +411,6 @@ export const FilesPage: React.FC = () => {
           caption={getDropPreparationCaption(t, fileUpload.dropPreparation)}
         />
       )}
-
-      <AppToast
-        toast={shareToast}
-        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-      />
 
       <DraggingOverlay
         open={fileUpload.isDragging}

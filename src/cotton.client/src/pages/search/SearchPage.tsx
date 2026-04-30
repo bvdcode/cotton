@@ -21,7 +21,7 @@ import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
-import { AppToast } from "../../shared/ui/AppToast";
+import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
@@ -29,13 +29,7 @@ export const SearchPage: React.FC = () => {
   const { rootNode, ensureHomeData } = useLayoutsStore();
 
   const gridHostRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    document.title = "Cotton - Search";
-
-    return () => {
-      document.title = "Cotton";
-    };
-  }, []);
+  usePageTitle(t("title", { ns: "search" }));
 
   useEffect(() => {
     void ensureHomeData();
@@ -91,8 +85,6 @@ export const SearchPage: React.FC = () => {
     handleFileClick,
     handleDownloadFile,
     handleShareFile,
-    shareToast,
-    setShareToast,
     lightboxOpen,
     lightboxIndex,
     mediaItems,
@@ -145,10 +137,6 @@ export const SearchPage: React.FC = () => {
       width="100%"
       sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
     >
-      <AppToast
-        toast={shareToast}
-        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-      />
       <SearchBar
         value={query}
         onChange={setQuery}

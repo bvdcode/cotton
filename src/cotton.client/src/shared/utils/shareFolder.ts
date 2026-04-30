@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { toast } from "react-toastify";
 import { layoutsApi } from "../api/layoutsApi";
 import {
   selectShareLinkExpireAfterMinutes,
@@ -7,13 +8,6 @@ import {
 import { shareLinks } from "./shareLinks";
 import { shareLinkAction } from "./shareLinkAction";
 
-interface ShareToast {
-  open: boolean;
-  message: string;
-}
-
-type SetShareToast = (toast: ShareToast) => void;
-
 const buildShareMessage = (folderName: string, t: TFunction): string =>
   t("share.folderMessage", { ns: "files", name: folderName });
 
@@ -21,7 +15,6 @@ export const shareFolder = async (
   nodeId: string,
   folderName: string,
   t: TFunction,
-  setShareToast: SetShareToast,
 ): Promise<void> => {
   try {
     const expireAfterMinutes =
@@ -31,9 +24,8 @@ export const shareFolder = async (
 
     const token = shareLinks.tryExtractTokenFromDownloadUrl(shareLink);
     if (!token) {
-      setShareToast({
-        open: true,
-        message: t("share.errors.token", { ns: "files" }),
+      toast.error(t("share.errors.token", { ns: "files" }), {
+        toastId: `share-folder-token-${nodeId}`,
       });
       return;
     }
@@ -49,30 +41,26 @@ export const shareFolder = async (
 
     switch (outcome.kind) {
       case "shared":
-        setShareToast({
-          open: true,
-          message: t("share.folderShared", { ns: "files", name: folderName }),
+        toast.success(t("share.folderShared", { ns: "files", name: folderName }), {
+          toastId: `share-folder-shared-${nodeId}`,
         });
         return;
       case "copied":
-        setShareToast({
-          open: true,
-          message: t("share.folderCopied", { ns: "files", name: folderName }),
+        toast.success(t("share.folderCopied", { ns: "files", name: folderName }), {
+          toastId: `share-folder-copied-${nodeId}`,
         });
         return;
       case "aborted":
         return;
       case "error":
       default:
-        setShareToast({
-          open: true,
-          message: t("share.errors.copy", { ns: "files" }),
+        toast.error(t("share.errors.copy", { ns: "files" }), {
+          toastId: `share-folder-copy-${nodeId}`,
         });
     }
   } catch {
-    setShareToast({
-      open: true,
-      message: t("share.errors.link", { ns: "files" }),
+    toast.error(t("share.errors.link", { ns: "files" }), {
+      toastId: `share-folder-link-${nodeId}`,
     });
   }
 };

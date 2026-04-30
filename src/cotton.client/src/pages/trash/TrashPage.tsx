@@ -42,6 +42,7 @@ import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,
 } from "../files/utils/viewMode";
+import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
 type EmptyTrashProgressDialogProps = {
   open: boolean;
@@ -133,22 +134,18 @@ export const TrashPage: React.FC = () => {
     void refreshNodeContent(nodeId);
   }, [layoutType, nodeId, refreshNodeContent, reloadListPage]);
 
-  useEffect(() => {
+  const pageTitle = useMemo(() => {
     const folderName = currentNode?.name;
     const isRoot = !routeNodeId || ancestors.length === 0;
 
     if (isRoot) {
-      document.title = `Cotton - ${t("title")}`;
-    } else if (folderName) {
-      document.title = `Cotton - ${folderName}`;
-    } else {
-      document.title = "Cotton";
+      return t("title");
     }
 
-    return () => {
-      document.title = "Cotton";
-    };
+    return folderName ?? null;
   }, [currentNode?.name, routeNodeId, ancestors.length, t]);
+
+  usePageTitle(pageTitle);
 
   const breadcrumbs = useMemo(
     () => buildBreadcrumbs(ancestors, currentNode),

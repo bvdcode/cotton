@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { toast } from "react-toastify";
 import { filesApi } from "../api/filesApi";
 import {
   selectShareLinkExpireAfterMinutes,
@@ -6,13 +7,6 @@ import {
 } from "../store/userPreferencesStore";
 import { shareLinks } from "./shareLinks";
 import { shareLinkAction } from "./shareLinkAction";
-
-interface ShareToast {
-  open: boolean;
-  message: string;
-}
-
-type SetShareToast = (toast: ShareToast) => void;
 
 /**
  * Builds a formatted share text for a file.
@@ -35,7 +29,6 @@ export const shareFile = async (
   nodeFileId: string,
   fileName: string,
   t: TFunction,
-  setShareToast: SetShareToast,
 ): Promise<void> => {
   try {
     const expireAfterMinutes =
@@ -48,9 +41,8 @@ export const shareFile = async (
 
     const token = shareLinks.tryExtractTokenFromDownloadUrl(downloadLink);
     if (!token) {
-      setShareToast({
-        open: true,
-        message: t("share.errors.token", { ns: "files" }),
+      toast.error(t("share.errors.token", { ns: "files" }), {
+        toastId: `share-file-token-${nodeFileId}`,
       });
       return;
     }
@@ -66,30 +58,26 @@ export const shareFile = async (
 
     switch (outcome.kind) {
       case "shared":
-        setShareToast({
-          open: true,
-          message: t("share.shared", { ns: "files", name: fileName }),
+        toast.success(t("share.shared", { ns: "files", name: fileName }), {
+          toastId: `share-file-shared-${nodeFileId}`,
         });
         return;
       case "copied":
-        setShareToast({
-          open: true,
-          message: t("share.copied", { ns: "files", name: fileName }),
+        toast.success(t("share.copied", { ns: "files", name: fileName }), {
+          toastId: `share-file-copied-${nodeFileId}`,
         });
         return;
       case "aborted":
         return;
       case "error":
       default:
-        setShareToast({
-          open: true,
-          message: t("share.errors.copy", { ns: "files" }),
+        toast.error(t("share.errors.copy", { ns: "files" }), {
+          toastId: `share-file-copy-${nodeFileId}`,
         });
     }
   } catch {
-    setShareToast({
-      open: true,
-      message: t("share.errors.link", { ns: "files" }),
+    toast.error(t("share.errors.link", { ns: "files" }), {
+      toastId: `share-file-link-${nodeFileId}`,
     });
   }
 };
