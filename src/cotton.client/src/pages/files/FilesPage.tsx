@@ -45,7 +45,7 @@ import {
 } from "../../shared/store/localPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
-const HUGE_FOLDER_THRESHOLD = 10_000;
+const HUGE_FOLDER_THRESHOLD = 100_000;
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
