@@ -265,6 +265,21 @@ export const AdminGeneralSettingsPage = () => {
     customGeoIpLookupUrlValidation.normalized !== null &&
     customGeoIpLookupUrlValidation.normalized !== savedCustomGeoIpLookupUrl;
 
+  const updatePublicBaseUrl = useCallback((value: string) => {
+    setStatus(null);
+    setPublicBaseUrl(value);
+  }, []);
+
+  const updateTimezone = useCallback((value: string) => {
+    setStatus(null);
+    setTimezone(value);
+  }, []);
+
+  const updateCustomGeoIpLookupUrl = useCallback((value: string) => {
+    setStatus(null);
+    setCustomGeoIpLookupUrl(value);
+  }, []);
+
   const savePublicBaseUrl = useCallback(() => {
     const next = publicBaseUrlValidation.normalized;
     if (!next || !canSavePublicBaseUrl) return;
@@ -458,7 +473,9 @@ export const AdminGeneralSettingsPage = () => {
                     <TextField
                       label={t("settings.general.fields.publicBaseUrl")}
                       value={publicBaseUrl}
-                      onChange={(event) => setPublicBaseUrl(event.target.value)}
+                      onChange={(event) =>
+                        updatePublicBaseUrl(event.target.value)
+                      }
                       disabled={pageDisabled || isSaving("publicBaseUrl")}
                       error={Boolean(publicBaseUrlValidation.error)}
                       helperText={publicBaseUrlValidation.error ?? " "}
@@ -499,8 +516,8 @@ export const AdminGeneralSettingsPage = () => {
                     options={timeZoneOptions}
                     value={timezone}
                     inputValue={timezone}
-                    onChange={(_, value) => setTimezone(value ?? "")}
-                    onInputChange={(_, value) => setTimezone(value)}
+                    onChange={(_, value) => updateTimezone(value ?? "")}
+                    onInputChange={(_, value) => updateTimezone(value)}
                     disabled={pageDisabled || isSaving("timezone")}
                     renderInput={(params) => (
                       <TextField
@@ -698,7 +715,7 @@ export const AdminGeneralSettingsPage = () => {
                         label={t("settings.general.fields.customGeoIpLookupUrl")}
                         value={customGeoIpLookupUrl}
                         onChange={(event) =>
-                          setCustomGeoIpLookupUrl(event.target.value)
+                          updateCustomGeoIpLookupUrl(event.target.value)
                         }
                         disabled={
                           pageDisabled || isSaving("customGeoIpLookupUrl")
