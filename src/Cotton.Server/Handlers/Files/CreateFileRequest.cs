@@ -114,6 +114,8 @@ namespace Cotton.Server.Handlers.Files
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash, ct);
             if (fileManifest is not null)
             {
+                await _fileManifestService.ClearGcSchedulesForManifestReferencesAsync(fileManifest.Id, ct);
+
                 var settings = _settingsProvider.GetServerSettings();
                 if (!settings.AllowCrossUserDeduplication
                     && (fileManifest.SmallFilePreviewHashEncrypted is not null || fileManifest.PreviewGenerationError is not null))
