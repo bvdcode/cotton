@@ -2,6 +2,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   LinearProgress,
   Paper,
   Stack,
@@ -16,6 +17,8 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import {
   adminApi,
   type GcChunkTimelineDto,
@@ -25,6 +28,11 @@ import { isAxiosError } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 
 type LoadState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string };
+
+type TriggerState =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "error"; message: string };
@@ -119,6 +127,9 @@ export const AdminStorageStatisticsPage = () => {
   const [timeline, setTimeline] = useState<GcChunkTimelineDto | null>(null);
   const [bucket, setBucket] = useState<GcTimelineBucketKind>("day");
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
+  const [triggerState, setTriggerState] = useState<TriggerState>({
+    kind: "idle",
+  });
 
   const [refreshVersion, setRefreshVersion] = useState(0);
 
@@ -178,8 +189,38 @@ export const AdminStorageStatisticsPage = () => {
     setBucket(nextBucket);
   };
 
+  const handleTriggerGarbageCollector = async () => {
+    setTriggerState({ kind: "loading" });
+
+    try {
+      await adminApi.triggerGarbageCollector();
+      setTriggerState({ kind: "idle" });
+      toast.success(t("storageStatistics.state.triggerGcSuccess"), {
+        toastId: "admin:storage-statistics:trigger-gc:success",
+      });
+      setLoadState({ kind: "loading" });
+      setRefreshVersion((value) => value + 1);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        const message = (
+          error.response?.data as { message?: string } | undefined
+        )?.message;
+        if (typeof message === "string" && message.length > 0) {
+          setTriggerState({ kind: "error", message });
+          return;
+        }
+      }
+
+      setTriggerState({
+        kind: "error",
+        message: t("storageStatistics.errors.triggerGcFailed"),
+      });
+    }
+  };
+
   const placeholder = t("placeholder", { ns: "common" });
   const isLoading = loadState.kind === "loading";
+  const isTriggering = triggerState.kind === "loading";
 
   const summaryCards = useMemo(() => {
     if (!timeline) {
@@ -319,13 +360,13 @@ export const AdminStorageStatisticsPage = () => {
               </Typography>
             </Stack>
 
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
               <ToggleButtonGroup
                 size="small"
                 exclusive
                 value={bucket}
                 onChange={handleBucketChange}
-                disabled={isLoading}
+                disabled={isLoading || isTriggering}
               >
                 <ToggleButton value="hour">
                   {t("storageStatistics.bucket.hour")}
@@ -336,12 +377,27 @@ export const AdminStorageStatisticsPage = () => {
               </ToggleButtonGroup>
 
               <Button
+                variant="contained"
+                onClick={() => void handleTriggerGarbageCollector()}
+                disabled={isLoading || isTriggering}
+                startIcon={
+                  isTriggering
+                    ? <CircularProgress size={16} color="inherit" />
+                    : <DeleteSweepIcon />
+                }
+              >
+                {isTriggering
+                  ? t("storageStatistics.actions.triggeringGc")
+                  : t("storageStatistics.actions.triggerGc")}
+              </Button>
+
+              <Button
                 variant="outlined"
                 onClick={() => {
                   setLoadState({ kind: "loading" });
                   setRefreshVersion((value) => value + 1);
                 }}
-                disabled={isLoading}
+                disabled={isLoading || isTriggering}
               >
                 {t("storageStatistics.actions.refresh")}
               </Button>
@@ -350,6 +406,10 @@ export const AdminStorageStatisticsPage = () => {
 
           {loadState.kind === "error" && (
             <Alert severity="error">{loadState.message}</Alert>
+          )}
+
+          {triggerState.kind === "error" && (
+            <Alert severity="error">{triggerState.message}</Alert>
           )}
 
           <Box minHeight={4}>
