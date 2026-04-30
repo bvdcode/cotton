@@ -1187,7 +1187,9 @@
       "title": "Storage statistics",
       "description": "Current storage usage and scheduled GC release timeline.",
       "actions": {
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "triggerGc": "Run GC",
+        "triggeringGc": "Starting..."
       },
       "bucket": {
         "hour": "Hour",
@@ -1195,7 +1197,8 @@
       },
       "state": {
         "loading": "Loading storage statistics...",
-        "empty": "No scheduled GC buckets in the selected period."
+        "empty": "No scheduled GC buckets in the selected period.",
+        "triggerGcSuccess": "Garbage collector job was triggered."
       },
       "summary": {
         "fromUtc": "From",
@@ -1231,7 +1234,8 @@
         }
       },
       "errors": {
-        "loadFailed": "Failed to load storage statistics."
+        "loadFailed": "Failed to load storage statistics.",
+        "triggerGcFailed": "Failed to trigger garbage collector."
       }
     }
   },

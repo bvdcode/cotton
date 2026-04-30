@@ -131,6 +131,10 @@ export const adminApi = {
     await httpClient.patch("server/database-backup/trigger");
   },
 
+  triggerGarbageCollector: async (): Promise<void> => {
+    await httpClient.patch("server/gc/trigger");
+  },
+
   getGcChunksTimeline: async (
     request?: GetGcChunksTimelineRequest,
   ): Promise<GcChunkTimelineDto> => {
