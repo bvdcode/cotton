@@ -114,7 +114,7 @@ export const AdminStorageSettingsPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Paper>
+      <Paper sx={{ overflow: "hidden" }}>
         <Stack p={2} spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
@@ -215,7 +215,12 @@ export const AdminStorageSettingsPage = () => {
             />
           </Stack>
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1}
+            useFlexGap
+            sx={{ flexWrap: "wrap" }}
+          >
             <Button
               variant="outlined"
               onClick={saveS3Config}
