@@ -358,6 +358,7 @@ export class UploadManager {
             }
 
             if (
+              delta < 0 ||
               now - lastEmitTime >= uploadConfig.progressEmitIntervalMs ||
               task.bytesUploaded >= task.bytesTotal
             ) {
