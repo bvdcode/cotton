@@ -438,7 +438,7 @@ export const AdminGeneralSettingsPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Paper>
+      <Paper sx={{ overflow: "hidden" }}>
         <Stack p={2} spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
@@ -468,7 +468,7 @@ export const AdminGeneralSettingsPage = () => {
                 spacing={1}
                 alignItems={{ xs: "stretch", md: "flex-start" }}
               >
-                <Box flex={1}>
+                <Box flex={1} minWidth={0}>
                   <AdminSettingSavingOverlay saving={isSaving("publicBaseUrl")}>
                     <TextField
                       label={t("settings.general.fields.publicBaseUrl")}
@@ -509,7 +509,7 @@ export const AdminGeneralSettingsPage = () => {
               spacing={1}
               alignItems={{ xs: "stretch", md: "flex-start" }}
             >
-              <Box flex={1}>
+              <Box flex={1} minWidth={0}>
                 <AdminSettingSavingOverlay saving={isSaving("timezone")}>
                   <Autocomplete
                     freeSolo
@@ -544,7 +544,7 @@ export const AdminGeneralSettingsPage = () => {
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <Tooltip title={t("settings.general.computionMode.inDevelopment")}>
-                <Box flex={1}>
+                <Box flex={1} minWidth={0}>
                   <FormControl fullWidth disabled>
                     <InputLabel id="admin-compution-mode-label">
                       {t("settings.general.fields.computionMode")}
@@ -655,7 +655,12 @@ export const AdminGeneralSettingsPage = () => {
                 {t("settings.general.fields.serverUsage")}
               </Typography>
               <AdminSettingSavingOverlay saving={isSaving("serverUsage")}>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  useFlexGap
+                  sx={{ flexWrap: "wrap" }}
+                >
                   {usageOptions.map((option) => (
                     <FormControlLabel
                       key={option}
@@ -709,7 +714,7 @@ export const AdminGeneralSettingsPage = () => {
                   spacing={1}
                   alignItems={{ xs: "stretch", md: "flex-start" }}
                 >
-                  <Box flex={1}>
+                  <Box flex={1} minWidth={0}>
                     <AdminSettingSavingOverlay saving={isSaving("customGeoIpLookupUrl")}>
                       <TextField
                         label={t("settings.general.fields.customGeoIpLookupUrl")}

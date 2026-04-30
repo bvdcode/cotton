@@ -1,4 +1,4 @@
-import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -50,6 +50,8 @@ const formatStorageBytes = (bytes: number): string => {
     maximumFractionDigits: fractionDigits,
   }).format(value)} ${units[unitIndex]}`;
 };
+
+const USERS_TABLE_MIN_HEIGHT = 420;
 
 export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
@@ -159,13 +161,21 @@ export const AdminUsersPage = () => {
         align: "right",
         headerAlign: "right",
         renderCell: (params) => (
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            sx={{ fontVariantNumeric: "tabular-nums" }}
+          <Box
+            height="100%"
+            width="100%"
+            display="flex"
+            alignItems="center"
+            justifyContent="flex-end"
           >
-            {formatStorageBytes(params.row.storageUsedBytes)}
-          </Typography>
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              sx={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              {formatStorageBytes(params.row.storageUsedBytes)}
+            </Typography>
+          </Box>
         ),
       },
       {
@@ -227,12 +237,20 @@ export const AdminUsersPage = () => {
     <Stack spacing={2} height="100%" minHeight={0}>
       <CreateUserForm onUserCreated={fetchUsers} />
 
-      <Paper sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+      <Paper
+        sx={{
+          flex: 1,
+          minHeight: USERS_TABLE_MIN_HEIGHT,
+          display: "flex",
+          overflow: "hidden",
+        }}
+      >
         <Stack spacing={2} p={2} width="100%" height="100%" minHeight={0}>
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "stretch", sm: "center" }}
           >
             <Typography variant="h6" fontWeight={700}>
               {t("users.title")}
@@ -250,7 +268,7 @@ export const AdminUsersPage = () => {
             <Alert severity="error">{loadState.message}</Alert>
           )}
 
-          <Stack flex={1} minHeight={0}>
+          <Stack flex={1} minHeight={Math.max(USERS_TABLE_MIN_HEIGHT - 112, 280)}>
             <DataGrid
               rows={users}
               columns={columns}
@@ -268,7 +286,7 @@ export const AdminUsersPage = () => {
                 },
               }}
               pagination
-              sx={{ height: "100%" }}
+              sx={{ height: "100%", minHeight: Math.max(USERS_TABLE_MIN_HEIGHT - 112, 280) }}
             />
           </Stack>
         </Stack>

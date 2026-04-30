@@ -208,19 +208,25 @@ export const AdminDatabaseBackupPage = () => {
   }, [backup, placeholder, t]);
 
   return (
-    <Stack spacing={1}>
-      <Paper>
-        <Stack p={2}>
+    <Stack spacing={2}>
+      <Paper sx={{ overflow: "hidden" }}>
+        <Stack p={2} spacing={2}>
           <Stack
-            direction="row"
+            direction={{ xs: "column", md: "row" }}
+            spacing={1}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "stretch", md: "center" }}
           >
             <Typography variant="h6" fontWeight={700}>
               {t("databaseBackup.title")}
             </Typography>
 
-            <Stack direction="row" spacing={1}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
               <Button
                 variant="outlined"
                 onClick={() => void refreshLatestBackup()}
