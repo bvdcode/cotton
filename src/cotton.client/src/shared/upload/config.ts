@@ -7,6 +7,10 @@ export const uploadConfig = {
   // Upload at most 4 chunks in parallel inside one large file.
   maxChunkUploadConcurrency: 4,
 
+  // If a chunk upload is interrupted by transport/network failure, retry that
+  // byte range with smaller chunks down to this floor.
+  minAdaptiveChunkSizeBytes: 128 * 1024,
+
   // Upload at most 4 files in parallel. The manager still starts from one file
   // and opens more lanes only after uploads prove they benefit from it.
   maxConcurrentFileUploads: 4,
