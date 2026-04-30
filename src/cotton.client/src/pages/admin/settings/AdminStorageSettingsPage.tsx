@@ -10,6 +10,8 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,6 +30,8 @@ type LoadState =
 
 export const AdminStorageSettingsPage = () => {
   const { t } = useTranslation("admin");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [storageType, setStorageType] = useState<StorageType>("Local");
   const [s3Config, setS3Config] = useState<S3Config>({
@@ -39,6 +43,7 @@ export const AdminStorageSettingsPage = () => {
   });
 
   const isBusy = loadState.kind === "loading" || loadState.kind === "saving";
+  const isS3Storage = storageType === "S3";
 
   useEffect(() => {
     let active = true;
@@ -114,7 +119,7 @@ export const AdminStorageSettingsPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Paper sx={{ overflow: "hidden" }}>
+      <Paper>
         <Stack p={2} spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
@@ -159,79 +164,80 @@ export const AdminStorageSettingsPage = () => {
             </Select>
           </FormControl>
 
-          <Stack spacing={2}>
-            <Typography variant="subtitle1" fontWeight={700}>
-              {t("storageSettings.s3.title")}
-            </Typography>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+          {isS3Storage && (
+            <Stack spacing={2}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                {t("storageSettings.s3.title")}
+              </Typography>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label={t("storageSettings.s3.fields.endpoint")}
+                  value={s3Config.endpoint}
+                  onChange={(event) =>
+                    updateS3Config("endpoint", event.target.value)
+                  }
+                  disabled={isBusy}
+                  fullWidth
+                />
+                <TextField
+                  label={t("storageSettings.s3.fields.region")}
+                  value={s3Config.region}
+                  onChange={(event) =>
+                    updateS3Config("region", event.target.value)
+                  }
+                  disabled={isBusy}
+                  fullWidth
+                />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label={t("storageSettings.s3.fields.bucket")}
+                  value={s3Config.bucket}
+                  onChange={(event) =>
+                    updateS3Config("bucket", event.target.value)
+                  }
+                  disabled={isBusy}
+                  fullWidth
+                />
+                <TextField
+                  label={t("storageSettings.s3.fields.accessKey")}
+                  value={s3Config.accessKey}
+                  onChange={(event) =>
+                    updateS3Config("accessKey", event.target.value)
+                  }
+                  disabled={isBusy}
+                  fullWidth
+                />
+              </Stack>
               <TextField
-                label={t("storageSettings.s3.fields.endpoint")}
-                value={s3Config.endpoint}
+                label={t("storageSettings.s3.fields.secretKey")}
+                value={s3Config.secretKey}
                 onChange={(event) =>
-                  updateS3Config("endpoint", event.target.value)
+                  updateS3Config("secretKey", event.target.value)
                 }
                 disabled={isBusy}
-                fullWidth
-              />
-              <TextField
-                label={t("storageSettings.s3.fields.region")}
-                value={s3Config.region}
-                onChange={(event) =>
-                  updateS3Config("region", event.target.value)
-                }
-                disabled={isBusy}
+                type="password"
                 fullWidth
               />
             </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <TextField
-                label={t("storageSettings.s3.fields.bucket")}
-                value={s3Config.bucket}
-                onChange={(event) =>
-                  updateS3Config("bucket", event.target.value)
-                }
-                disabled={isBusy}
-                fullWidth
-              />
-              <TextField
-                label={t("storageSettings.s3.fields.accessKey")}
-                value={s3Config.accessKey}
-                onChange={(event) =>
-                  updateS3Config("accessKey", event.target.value)
-                }
-                disabled={isBusy}
-                fullWidth
-              />
-            </Stack>
-            <TextField
-              label={t("storageSettings.s3.fields.secretKey")}
-              value={s3Config.secretKey}
-              onChange={(event) =>
-                updateS3Config("secretKey", event.target.value)
-              }
-              disabled={isBusy}
-              type="password"
-              fullWidth
-            />
-          </Stack>
+          )}
 
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            useFlexGap
-            sx={{ flexWrap: "wrap" }}
-          >
-            <Button
-              variant="outlined"
-              onClick={saveS3Config}
-              disabled={isBusy}
-            >
-              {t("storageSettings.actions.saveS3")}
-            </Button>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+            {isS3Storage && (
+              <Button
+                variant="outlined"
+                onClick={saveS3Config}
+                disabled={isBusy}
+                fullWidth={isMobile}
+              >
+                {t("storageSettings.actions.saveS3")}
+              </Button>
+            )}
             <Button
               variant={storageType === "Local" ? "contained" : "outlined"}
               onClick={() => void activateStorage("Local")}
               disabled={isBusy}
+              fullWidth={isMobile}
             >
               {t("storageSettings.actions.useLocal")}
             </Button>
@@ -239,6 +245,7 @@ export const AdminStorageSettingsPage = () => {
               variant={storageType === "S3" ? "contained" : "outlined"}
               onClick={() => void activateStorage("S3")}
               disabled={isBusy}
+              fullWidth={isMobile}
             >
               {t("storageSettings.actions.useS3")}
             </Button>

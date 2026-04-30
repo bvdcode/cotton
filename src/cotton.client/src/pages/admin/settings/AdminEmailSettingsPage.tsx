@@ -12,6 +12,8 @@ import {
   Switch,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,6 +34,8 @@ const emailModes: EmailMode[] = ["None", "Cloud", "Custom"];
 
 export const AdminEmailSettingsPage = () => {
   const { t } = useTranslation("admin");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [emailMode, setEmailMode] = useState<EmailMode>("None");
   const [emailConfig, setEmailConfig] = useState<EmailConfig>({
@@ -44,6 +48,7 @@ export const AdminEmailSettingsPage = () => {
   });
 
   const isBusy = loadState.kind === "loading" || loadState.kind === "saving";
+  const isCustomEmailMode = emailMode === "Custom";
 
   useEffect(() => {
     let active = true;
@@ -121,7 +126,7 @@ export const AdminEmailSettingsPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Paper sx={{ overflow: "hidden" }}>
+      <Paper>
         <Stack p={2} spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
@@ -165,91 +170,92 @@ export const AdminEmailSettingsPage = () => {
             </Select>
           </FormControl>
 
-          <Stack spacing={2}>
-            <Typography variant="subtitle1" fontWeight={700}>
-              {t("emailSettings.smtp.title")}
-            </Typography>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <TextField
-                label={t("emailSettings.smtp.fields.smtpServer")}
-                value={emailConfig.smtpServer}
-                onChange={(event) =>
-                  updateEmailConfig("smtpServer", event.target.value)
-                }
-                disabled={isBusy}
-                fullWidth
-              />
-              <TextField
-                label={t("emailSettings.smtp.fields.port")}
-                value={emailConfig.port}
-                onChange={(event) =>
-                  updateEmailConfig("port", event.target.value)
-                }
-                disabled={isBusy}
-                fullWidth
-              />
-            </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <TextField
-                label={t("emailSettings.smtp.fields.username")}
-                value={emailConfig.username}
-                onChange={(event) =>
-                  updateEmailConfig("username", event.target.value)
-                }
-                disabled={isBusy}
-                fullWidth
-              />
-              <TextField
-                label={t("emailSettings.smtp.fields.password")}
-                value={emailConfig.password}
-                onChange={(event) =>
-                  updateEmailConfig("password", event.target.value)
-                }
-                disabled={isBusy}
-                type="password"
-                fullWidth
-              />
-            </Stack>
-            <TextField
-              label={t("emailSettings.smtp.fields.fromAddress")}
-              value={emailConfig.fromAddress}
-              onChange={(event) =>
-                updateEmailConfig("fromAddress", event.target.value)
-              }
-              disabled={isBusy}
-              fullWidth
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={emailConfig.useSSL}
+          {isCustomEmailMode && (
+            <Stack spacing={2}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                {t("emailSettings.smtp.title")}
+              </Typography>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label={t("emailSettings.smtp.fields.smtpServer")}
+                  value={emailConfig.smtpServer}
                   onChange={(event) =>
-                    updateEmailConfig("useSSL", event.target.checked)
+                    updateEmailConfig("smtpServer", event.target.value)
                   }
                   disabled={isBusy}
+                  fullWidth
                 />
-              }
-              label={t("emailSettings.smtp.fields.useSSL")}
-            />
-          </Stack>
+                <TextField
+                  label={t("emailSettings.smtp.fields.port")}
+                  value={emailConfig.port}
+                  onChange={(event) =>
+                    updateEmailConfig("port", event.target.value)
+                  }
+                  disabled={isBusy}
+                  fullWidth
+                />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label={t("emailSettings.smtp.fields.username")}
+                  value={emailConfig.username}
+                  onChange={(event) =>
+                    updateEmailConfig("username", event.target.value)
+                  }
+                  disabled={isBusy}
+                  fullWidth
+                />
+                <TextField
+                  label={t("emailSettings.smtp.fields.password")}
+                  value={emailConfig.password}
+                  onChange={(event) =>
+                    updateEmailConfig("password", event.target.value)
+                  }
+                  disabled={isBusy}
+                  type="password"
+                  fullWidth
+                />
+              </Stack>
+              <TextField
+                label={t("emailSettings.smtp.fields.fromAddress")}
+                value={emailConfig.fromAddress}
+                onChange={(event) =>
+                  updateEmailConfig("fromAddress", event.target.value)
+                }
+                disabled={isBusy}
+                fullWidth
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={emailConfig.useSSL}
+                    onChange={(event) =>
+                      updateEmailConfig("useSSL", event.target.checked)
+                    }
+                    disabled={isBusy}
+                  />
+                }
+                label={t("emailSettings.smtp.fields.useSSL")}
+              />
+            </Stack>
+          )}
 
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            useFlexGap
-            sx={{ flexWrap: "wrap" }}
-          >
-            <Button
-              variant="outlined"
-              onClick={saveSmtpConfig}
-              disabled={isBusy}
-            >
-              {t("emailSettings.actions.saveSmtp")}
-            </Button>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+            {isCustomEmailMode && (
+              <Button
+                variant="outlined"
+                onClick={saveSmtpConfig}
+                disabled={isBusy}
+                fullWidth={isMobile}
+              >
+                {t("emailSettings.actions.saveSmtp")}
+              </Button>
+            )}
             <Button
               variant="contained"
               onClick={saveEmailMode}
               disabled={isBusy}
+              fullWidth={isMobile}
             >
               {loadState.kind === "saving"
                 ? t("emailSettings.actions.saving")
