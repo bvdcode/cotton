@@ -27,6 +27,8 @@ namespace Cotton.Server.Jobs
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
         private const int MaxItemsPerRun = 1000;
+        private const int UnthrottledItemsCount = 100;
+        private const int ThrottleDelayMs = 250;
 
         public async Task Execute(IJobExecutionContext context)
         {
@@ -133,8 +135,15 @@ namespace Cotton.Server.Jobs
                             .User(nodeFile.OwnerId.ToString())
                             .SendAsync("PreviewGenerated", nodeFile.NodeId, nodeFile.Id, item.GetPreviewHashEncryptedHex());
                     }
-                    // TODO: Move to settings or autoconfig
-                    await Task.Delay(100);
+                    if (processed == UnthrottledItemsCount)
+                    {
+                        _logger.LogInformation("Processed {Count} items, throttling further processing to avoid overloading the system...", UnthrottledItemsCount);
+                    }
+                    if (processed > UnthrottledItemsCount)
+                    {
+                        // TODO: Move to settings or autoconfig
+                        await Task.Delay(ThrottleDelayMs);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -177,6 +186,12 @@ namespace Cotton.Server.Jobs
             }
 
             bool updated = false;
+            if (existing.GCScheduledAfter.HasValue)
+            {
+                existing.GCScheduledAfter = null;
+                updated = true;
+            }
+
             if (existing.PlainSizeBytes <= 0)
             {
                 existing.PlainSizeBytes = sizeBytes;

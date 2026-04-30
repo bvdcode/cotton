@@ -19,6 +19,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -113,7 +114,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task InitialSettings_SetupFlag_Transitions_FromFalse_ToTrue()
+    public async Task FirstSettingsPatch_CreatesSafeDefaults_AndSetsSetupCompleteFlag()
     {
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
@@ -121,90 +122,68 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         bool before = await GetIsServerInitializedAsync();
         Assert.That(before, Is.False);
 
-        var createResponse = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings());
-        createResponse.EnsureSuccessStatusCode();
+        HttpResponseMessage response = await _client!.PatchAsJsonAsync(
+            "/api/v1/server/settings/telemetry",
+            false);
+        response.EnsureSuccessStatusCode();
 
         bool after = await GetIsServerInitializedAsync();
         Assert.That(after, Is.True);
+
+        JsonElement publicBaseUrl = await GetJsonAsync("/api/v1/server/settings/public-base-url");
+        Assert.That(publicBaseUrl.GetProperty("publicBaseUrl").GetString(), Does.Contain("localhost"));
     }
 
     [Test]
-    public async Task CreateInitialSettings_Rejects_InvalidTimezone()
+    public async Task SettingsPatchFlow_PersistsIndependentConfigurationSteps()
     {
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
 
-        var response = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings(timezone: "Mars/OlympusMons"));
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/allow-cross-user-deduplication", true)).EnsureSuccessStatusCode();
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/allow-global-indexing", true)).EnsureSuccessStatusCode();
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/server-usage", new[] { "Photos", "Documents" })).EnsureSuccessStatusCode();
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/telemetry", true)).EnsureSuccessStatusCode();
+        (await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Local", null)).EnsureSuccessStatusCode();
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/timezone", "UTC")).EnsureSuccessStatusCode();
+        (await _client!.PatchAsync("/api/v1/server/settings/storage-space-mode/Limited", null)).EnsureSuccessStatusCode();
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/public-base-url", "https://cotton.example/")).EnsureSuccessStatusCode();
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/custom-geoip-lookup-url", "https://geo.example/lookup/{ip}")).EnsureSuccessStatusCode();
+        (await _client!.PatchAsync("/api/v1/server/settings/geoip-lookup-mode/CustomHttp", null)).EnsureSuccessStatusCode();
 
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings");
+        var emailConfig = new EmailConfig
+        {
+            SmtpServer = "smtp.example.com",
+            Port = "587",
+            Username = "mailer",
+            Password = "secret",
+            FromAddress = "noreply@example.com",
+            UseSSL = true
+        };
+        (await _client!.PatchAsJsonAsync("/api/v1/server/settings/email-config", emailConfig)).EnsureSuccessStatusCode();
+        (await _client!.PatchAsync("/api/v1/server/settings/email-mode/Custom", null)).EnsureSuccessStatusCode();
+
+        Assert.That(await GetIsServerInitializedAsync(), Is.True);
+
+        JsonElement publicBaseUrl = await GetJsonAsync("/api/v1/server/settings/public-base-url");
+        JsonElement serverUsage = await GetJsonAsync("/api/v1/server/settings/server-usage");
+        JsonElement geoIpMode = await GetJsonAsync("/api/v1/server/settings/geoip-lookup-mode");
+        JsonElement emailMode = await GetJsonAsync("/api/v1/server/settings/email-mode");
+        JsonElement storedEmailConfig = await GetJsonAsync("/api/v1/server/settings/email-config");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(publicBaseUrl.GetProperty("publicBaseUrl").GetString(), Is.EqualTo("https://cotton.example"));
+            Assert.That(serverUsage.GetProperty("serverUsage").EnumerateArray().Select(x => x.GetString()), Does.Contain("Photos"));
+            Assert.That(geoIpMode.GetProperty("geoIpLookupMode").GetString(), Is.EqualTo("CustomHttp"));
+            Assert.That(emailMode.GetProperty("emailMode").GetString(), Is.EqualTo("Custom"));
+            Assert.That(storedEmailConfig.GetProperty("smtpServer").GetString(), Is.EqualTo("smtp.example.com"));
+            Assert.That(storedEmailConfig.GetProperty("password").GetString(), Is.EqualTo(string.Empty));
+        });
     }
 
     [Test]
-    public async Task CreateInitialSettings_Rejects_CloudEmail_WithoutTelemetry()
-    {
-        TokenPairResponseDto login = await LoginAsync();
-        SetBearer(login.AccessToken);
-
-        var response = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings(
-                telemetry: false,
-                email: EmailMode.Cloud));
-
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings");
-    }
-
-    [Test]
-    public async Task CreateInitialSettings_Rejects_CloudComputation_WithoutTelemetry()
-    {
-        TokenPairResponseDto login = await LoginAsync();
-        SetBearer(login.AccessToken);
-
-        var response = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings(
-                telemetry: false,
-                computionMode: ComputionMode.Cloud));
-
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings");
-    }
-
-    [Test]
-    public async Task CreateInitialSettings_Rejects_CustomEmail_WithoutEmailConfig()
-    {
-        TokenPairResponseDto login = await LoginAsync();
-        SetBearer(login.AccessToken);
-
-        var response = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings(
-                email: EmailMode.Custom,
-                emailConfig: null));
-
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings");
-    }
-
-    [Test]
-    public async Task CreateInitialSettings_Rejects_S3Storage_WithoutS3Config()
-    {
-        TokenPairResponseDto login = await LoginAsync();
-        SetBearer(login.AccessToken);
-
-        var response = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings(
-                storage: StorageType.S3,
-                s3Config: null));
-
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings");
-    }
-
-    [Test]
-    public async Task CreateInitialSettings_InvalidRequest_DoesNotSetSetupCompleteFlag()
+    public async Task SettingsPatch_Rejects_InvalidTimezone_ButKeepsSafeDefaults()
     {
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
@@ -212,62 +191,56 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         bool before = await GetIsServerInitializedAsync();
         Assert.That(before, Is.False);
 
-        var response = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings(timezone: "Mars/OlympusMons"));
+        var response = await _client!.PatchAsJsonAsync(
+            "/api/v1/server/settings/timezone",
+            "Mars/OlympusMons");
 
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings");
-
-        bool after = await GetIsServerInitializedAsync();
-        Assert.That(after, Is.False, "Invalid setup requests must not mark server as initialized.");
+        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/timezone");
+        Assert.That(await GetIsServerInitializedAsync(), Is.True);
     }
 
     [Test]
-    public async Task CreateInitialSettings_WithFallbackPublicBaseUrl_PersistsTrimmedUrl()
+    public async Task SettingsPatch_Rejects_CloudEmail_WithoutTelemetry()
     {
         TokenPairResponseDto login = await LoginAsync();
         SetBearer(login.AccessToken);
 
-        var response = await _client!.PostAsJsonAsync(
-            "/api/v1/server/settings",
-            CreateValidInitialSettings(publicBaseUrl: " "));
+        var response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Cloud", null);
 
-        response.EnsureSuccessStatusCode();
-
-        var envelope = await _client!.GetFromJsonAsync<ServerSettingsEnvelopeDto>("/api/v1/server/settings");
-        Assert.That(envelope, Is.Not.Null);
-        Assert.That(envelope!.Settings, Is.Not.Null);
-        Assert.That(envelope.Settings!.PublicBaseUrl, Does.Contain("localhost"));
-        Assert.That(envelope.Settings.PublicBaseUrl.EndsWith('/'), Is.False);
-        Assert.That(envelope.Settings.StorageType, Is.EqualTo(StorageType.Local));
-        Assert.That(envelope.Settings.EmailMode, Is.EqualTo(EmailMode.None));
+        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/email-mode/Cloud");
     }
 
-    private static InitialServerSettingsRequestDto CreateValidInitialSettings(
-        string timezone = "UTC",
-        bool telemetry = false,
-        EmailMode email = EmailMode.None,
-        StorageType storage = StorageType.Local,
-        ComputionMode computionMode = ComputionMode.Local,
-        StorageSpaceMode storageSpace = StorageSpaceMode.Optimal,
-        string? publicBaseUrl = "http://localhost",
-        S3Config? s3Config = null,
-        EmailConfig? emailConfig = null)
+    [Test]
+    public async Task SettingsPatch_Rejects_CloudComputation_WithoutTelemetry()
     {
-        return new InitialServerSettingsRequestDto
-        {
-            TrustedMode = false,
-            Usage = [ServerUsage.Other],
-            Telemetry = telemetry,
-            Storage = storage,
-            Email = email,
-            ComputionMode = computionMode,
-            Timezone = timezone,
-            StorageSpace = storageSpace,
-            PublicBaseUrl = publicBaseUrl,
-            S3Config = s3Config,
-            EmailConfig = emailConfig
-        };
+        TokenPairResponseDto login = await LoginAsync();
+        SetBearer(login.AccessToken);
+
+        var response = await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Cloud", null);
+
+        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/compution-mode/Cloud");
+    }
+
+    [Test]
+    public async Task SettingsPatch_Rejects_CustomEmail_WithoutEmailConfig()
+    {
+        TokenPairResponseDto login = await LoginAsync();
+        SetBearer(login.AccessToken);
+
+        var response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Custom", null);
+
+        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/email-mode/Custom");
+    }
+
+    [Test]
+    public async Task SettingsPatch_Rejects_S3Storage_WithoutS3Config()
+    {
+        TokenPairResponseDto login = await LoginAsync();
+        SetBearer(login.AccessToken);
+
+        var response = await _client!.PatchAsync("/api/v1/server/settings/storage-type/S3", null);
+
+        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/storage-type/S3");
     }
 
     private async Task<TokenPairResponseDto> LoginAsync(string username = "testuser", string password = "testpassword")
@@ -306,6 +279,14 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         var response = await _client!.GetFromJsonAsync<IsServerInitializedResponse>("/api/v1/server/settings/is-setup-complete");
         Assert.That(response, Is.Not.Null);
         return response!.IsServerInitialized;
+    }
+
+    private async Task<JsonElement> GetJsonAsync(string url)
+    {
+        EnsureClientCreated();
+
+        JsonElement response = await _client!.GetFromJsonAsync<JsonElement>(url);
+        return response;
     }
 
     private void SetBearer(string accessToken)

@@ -34,7 +34,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     // Listen for logout event from httpClient interceptor
     const handleLogout = () => {
-      setUnauthenticated();
+      logoutLocal();
       resetUserScopedStores(null);
     };
     window.addEventListener("auth:logout", handleLogout);
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       window.removeEventListener("auth:logout", handleLogout);
     };
-  }, []);
+  }, [logoutLocal]);
 
   useEffect(() => {
     // Security: prevent cross-user cached data reuse.

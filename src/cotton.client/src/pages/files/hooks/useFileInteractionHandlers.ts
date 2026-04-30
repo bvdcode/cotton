@@ -12,7 +12,6 @@ import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 
 interface UseFileInteractionHandlersArgs {
   sortedFiles: NodeFileManifestDto[];
-  audioFallbackNodeId?: string;
 }
 
 interface UseFileInteractionHandlersResult {
@@ -34,7 +33,6 @@ interface UseFileInteractionHandlersResult {
 
 export const useFileInteractionHandlers = ({
   sortedFiles,
-  audioFallbackNodeId,
 }: UseFileInteractionHandlersArgs): UseFileInteractionHandlersResult => {
   const { t } = useTranslation(["files", "search", "common"]);
   const [shareToast, setShareToast] = React.useState<AppToastState>({
@@ -46,11 +44,8 @@ export const useFileInteractionHandlers = ({
   const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
 
   const audioPlaylist = React.useMemo(
-    () =>
-      buildAudioPlaylistFromFiles(sortedFiles, {
-        fallbackNodeId: audioFallbackNodeId,
-      }),
-    [sortedFiles, audioFallbackNodeId],
+    () => buildAudioPlaylistFromFiles(sortedFiles),
+    [sortedFiles],
   );
 
   const handleDownloadFile = React.useCallback(

@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Cotton.Server.Infrastructure
 {
+    [Obsolete("This converter is deprecated and will be removed in future versions. Please use the new configuration system.")]
     public class JsonEnumArrayConverter<TEnum> : JsonConverter<TEnum[]> where TEnum : struct, Enum
     {
         public override TEnum[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

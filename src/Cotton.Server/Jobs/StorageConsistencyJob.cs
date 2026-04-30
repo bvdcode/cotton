@@ -16,20 +16,26 @@ namespace Cotton.Server.Jobs
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         INotificationsProvider _notifications,
+        ChunkUsageService _chunkUsage,
         ILogger<StorageConsistencyJob> _logger) : IJob
     {
         private const int BatchSize = 10000;
 
         public async Task Execute(IJobExecutionContext context)
         {
-            await Task.Delay(300_000); // Wait for 5 minutes for the server to start up and stabilize
+            await Task.Delay(300_000, context.CancellationToken); // Wait for 5 minutes for the server to start up and stabilize
 
+            await RunOnceAsync(context.CancellationToken);
+        }
+
+        public async Task RunOnceAsync(CancellationToken ct = default)
+        {
             _logger.LogInformation("Storage consistency check started.");
-            HashSet<string> storageKeys = await CollectStorageKeysAsync(context.CancellationToken);
+            HashSet<string> storageKeys = await CollectStorageKeysAsync(ct);
             _logger.LogInformation("Found {Count} keys in storage.", storageKeys.Count);
 
-            await CheckDbChunksAgainstStorageAsync(storageKeys, context.CancellationToken);
-            await RegisterOrphanedStorageKeysAsync(storageKeys, context.CancellationToken);
+            await CheckDbChunksAgainstStorageAsync(storageKeys, ct);
+            await RegisterOrphanedStorageKeysAsync(storageKeys, ct);
 
             _logger.LogInformation("Storage consistency check completed.");
         }
@@ -107,17 +113,30 @@ namespace Cotton.Server.Jobs
             {
                 await _dbContext.FileManifests
                     .Where(fm => fm.SmallFilePreviewHash == chunkHash)
-                    .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.SmallFilePreviewHash, (byte[]?)null), ct);
+                    .ExecuteUpdateAsync(fm => fm
+                        .SetProperty(x => x.SmallFilePreviewHash, (byte[]?)null)
+                        .SetProperty(x => x.SmallFilePreviewHashEncrypted, (byte[]?)null), ct);
 
                 await _dbContext.FileManifests
                     .Where(fm => fm.LargeFilePreviewHash == chunkHash)
                     .ExecuteUpdateAsync(fm => fm.SetProperty(x => x.LargeFilePreviewHash, (byte[]?)null), ct);
+            }
 
-                // If this chunk was preview-only, we don't care: no notifications, no DB cleanups.
-                if (!referencedByFileData)
-                {
-                    return;
-                }
+            bool referencedByAvatar = await _dbContext.Users
+                .AnyAsync(u => u.AvatarHash == chunkHash, ct);
+
+            if (referencedByAvatar)
+            {
+                await _dbContext.Users
+                    .Where(u => u.AvatarHash == chunkHash)
+                    .ExecuteUpdateAsync(u => u
+                        .SetProperty(x => x.AvatarHash, (byte[]?)null)
+                        .SetProperty(x => x.AvatarHashEncrypted, (byte[]?)null), ct);
+            }
+
+            if (!referencedByFileData)
+            {
+                return;
             }
 
             // 2) For actual file data chunks: notify affected users, but do not delete anything.
@@ -153,6 +172,13 @@ namespace Cotton.Server.Jobs
 
         private async Task RegisterOrphanedStorageKeysAsync(HashSet<string> remainingStorageKeys, CancellationToken ct)
         {
+            if (remainingStorageKeys.Count == 0)
+            {
+                return;
+            }
+
+            HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(ct);
+            remainingStorageKeys.ExceptWith(protectedStorageKeys);
             if (remainingStorageKeys.Count == 0)
             {
                 return;
