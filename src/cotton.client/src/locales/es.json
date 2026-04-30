@@ -1,5 +1,6 @@
 {
   "search": {
+    "title": "Búsqueda",
     "searchPlaceholder": "Buscar archivos y carpetas...",
     "error": "La búsqueda falló. Inténtalo de nuevo.",
     "enterQueryHint": "Empieza a escribir para buscar...",
