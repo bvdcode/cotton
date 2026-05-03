@@ -36,13 +36,14 @@ export const SettingsSection = ({
     <Stack
       direction="row"
       spacing={1}
-      alignItems="center"
+      alignItems="flex-start"
       justifyContent="space-between"
     >
       <Stack
         direction="row"
         spacing={1}
-        alignItems="center"
+        alignItems="flex-start"
+        flexWrap="wrap"
         minWidth={0}
         flex={1}
       >
@@ -53,7 +54,14 @@ export const SettingsSection = ({
           minWidth={0}
           flex={1}
         >
-          <Typography variant="subtitle1" fontWeight={700}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={700}
+            sx={{
+              flexShrink: 0,
+              whiteSpace: { xs: "normal", md: "nowrap" },
+            }}
+          >
             {title}
           </Typography>
           {description && (
