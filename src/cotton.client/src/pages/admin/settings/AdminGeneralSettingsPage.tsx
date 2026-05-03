@@ -3,6 +3,7 @@ import {
   Autocomplete,
   Box,
   Checkbox,
+  CircularProgress,
   FormControl,
   FormControlLabel,
   InputAdornment,
@@ -463,12 +464,8 @@ export const AdminGeneralSettingsPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Paper sx={{ overflow: "hidden" }}>
-        <Stack
-          p={2}
-          spacing={2}
-          sx={{ maxWidth: contentMaxWidth, width: "100%", mx: "auto" }}
-        >
+      <Paper sx={{ overflow: "hidden", maxWidth: contentMaxWidth, mx: "auto" }}>
+        <Stack p={2} spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
               {t("settings.general.title")}
@@ -502,6 +499,7 @@ export const AdminGeneralSettingsPage = () => {
               onSave={savePublicBaseUrl}
               disabled={!canSavePublicBaseUrl}
               saving={isSaving("publicBaseUrl")}
+              help={t("settings.general.help.publicBaseUrl")}
             >
               <AdminSettingSavingOverlay saving={loading}>
                 <TextField
@@ -512,15 +510,6 @@ export const AdminGeneralSettingsPage = () => {
                   error={Boolean(publicBaseUrlValidation.error)}
                   helperText={publicBaseUrlValidation.error ?? " "}
                   fullWidth
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <SettingHelpIcon
-                          title={t("settings.general.help.publicBaseUrl")}
-                        />
-                      </InputAdornment>
-                    ),
-                  }}
                 />
               </AdminSettingSavingOverlay>
             </AdminSettingSaveField>
@@ -530,10 +519,12 @@ export const AdminGeneralSettingsPage = () => {
               onSave={saveTimezone}
               disabled={!canSaveTimezone}
               saving={isSaving("timezone")}
+              help={t("settings.general.help.timezone")}
             >
               <AdminSettingSavingOverlay saving={loading}>
                 <Autocomplete
                   freeSolo
+                  disableClearable
                   options={timeZoneOptions}
                   value={timezone}
                   inputValue={timezone}
@@ -546,19 +537,6 @@ export const AdminGeneralSettingsPage = () => {
                       label={t("settings.general.fields.timezone")}
                       error={Boolean(timezoneValidationError)}
                       helperText={timezoneValidationError ?? " "}
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            <InputAdornment position="end">
-                              <SettingHelpIcon
-                                title={t("settings.general.help.timezone")}
-                              />
-                            </InputAdornment>
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
                     />
                   )}
                 />
@@ -579,22 +557,20 @@ export const AdminGeneralSettingsPage = () => {
                   title={t("settings.general.computionMode.inDevelopment")}
                 />
               </Stack>
-              <AdminSettingSavingOverlay saving={loading}>
-                <FormControl fullWidth disabled>
-                  <Select
-                    value={computionMode}
-                    onChange={(event) =>
-                      setComputionMode(event.target.value as ComputionMode)
-                    }
-                  >
-                    {computionOptions.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {t(`settings.general.computionMode.${option}`)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </AdminSettingSavingOverlay>
+              <FormControl fullWidth disabled>
+                <Select
+                  value={computionMode}
+                  onChange={(event) =>
+                    setComputionMode(event.target.value as ComputionMode)
+                  }
+                >
+                  {computionOptions.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {t(`settings.general.computionMode.${option}`)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Stack>
 
             <Stack
@@ -602,63 +578,93 @@ export const AdminGeneralSettingsPage = () => {
               spacing={2}
               sx={{ gridColumn: { lg: "1 / -1" } }}
             >
-              <AdminSettingSavingOverlay
-                saving={loading || isSaving("telemetry")}
-              >
-                <FormControlLabel
-                  control={
+              <FormControlLabel
+                control={
+                  isSaving("telemetry") ? (
+                    <Box
+                      sx={{
+                        display: "inline-flex",
+                        width: 58,
+                        height: 38,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <CircularProgress size={18} />
+                    </Box>
+                  ) : (
                     <Switch
                       checked={telemetry}
                       onChange={(event) =>
                         handleTelemetryChange(event.target.checked)
                       }
-                      disabled={pageDisabled || isSaving("telemetry")}
+                      disabled={pageDisabled}
                     />
-                  }
-                  label={renderHelpLabel(
-                    t("settings.general.fields.telemetry"),
-                    t("settings.general.help.telemetry"),
-                  )}
-                />
-              </AdminSettingSavingOverlay>
-              <AdminSettingSavingOverlay
-                saving={loading || isSaving("allowDeduplication")}
-              >
-                <FormControlLabel
-                  control={
+                  )
+                }
+                label={renderHelpLabel(
+                  t("settings.general.fields.telemetry"),
+                  t("settings.general.help.telemetry"),
+                )}
+              />
+              <FormControlLabel
+                control={
+                  isSaving("allowDeduplication") ? (
+                    <Box
+                      sx={{
+                        display: "inline-flex",
+                        width: 58,
+                        height: 38,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <CircularProgress size={18} />
+                    </Box>
+                  ) : (
                     <Switch
                       checked={allowDeduplication}
                       onChange={(event) =>
                         handleAllowDeduplicationChange(event.target.checked)
                       }
-                      disabled={pageDisabled || isSaving("allowDeduplication")}
+                      disabled={pageDisabled}
                     />
-                  }
-                  label={renderHelpLabel(
-                    t("settings.general.fields.allowDeduplication"),
-                    t("settings.general.help.allowDeduplication"),
-                  )}
-                />
-              </AdminSettingSavingOverlay>
-              <AdminSettingSavingOverlay
-                saving={loading || isSaving("allowGlobalIndexing")}
-              >
-                <FormControlLabel
-                  control={
+                  )
+                }
+                label={renderHelpLabel(
+                  t("settings.general.fields.allowDeduplication"),
+                  t("settings.general.help.allowDeduplication"),
+                )}
+              />
+              <FormControlLabel
+                control={
+                  isSaving("allowGlobalIndexing") ? (
+                    <Box
+                      sx={{
+                        display: "inline-flex",
+                        width: 58,
+                        height: 38,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <CircularProgress size={18} />
+                    </Box>
+                  ) : (
                     <Switch
                       checked={allowGlobalIndexing}
                       onChange={(event) =>
                         handleAllowGlobalIndexingChange(event.target.checked)
                       }
-                      disabled={pageDisabled || isSaving("allowGlobalIndexing")}
+                      disabled={pageDisabled}
                     />
-                  }
-                  label={renderHelpLabel(
-                    t("settings.general.fields.allowGlobalIndexing"),
-                    t("settings.general.help.allowGlobalIndexing"),
-                  )}
-                />
-              </AdminSettingSavingOverlay>
+                  )
+                }
+                label={renderHelpLabel(
+                  t("settings.general.fields.allowGlobalIndexing"),
+                  t("settings.general.help.allowGlobalIndexing"),
+                )}
+              />
             </Stack>
 
             <Stack spacing={1} sx={{ gridColumn: { lg: "1 / -1" } }}>
@@ -669,31 +675,28 @@ export const AdminGeneralSettingsPage = () => {
                 <SettingHelpIcon
                   title={t("settings.general.help.serverUsage")}
                 />
+                {isSaving("serverUsage") && <CircularProgress size={14} />}
               </Stack>
-              <AdminSettingSavingOverlay
-                saving={loading || isSaving("serverUsage")}
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                useFlexGap
+                sx={{ flexWrap: "wrap" }}
               >
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1}
-                  useFlexGap
-                  sx={{ flexWrap: "wrap" }}
-                >
-                  {usageOptions.map((option) => (
-                    <FormControlLabel
-                      key={option}
-                      control={
-                        <Checkbox
-                          checked={serverUsage.includes(option)}
-                          onChange={() => toggleUsage(option)}
-                          disabled={pageDisabled || isSaving("serverUsage")}
-                        />
-                      }
-                      label={t(`settings.general.serverUsage.${option}`)}
-                    />
-                  ))}
-                </Stack>
-              </AdminSettingSavingOverlay>
+                {usageOptions.map((option) => (
+                  <FormControlLabel
+                    key={option}
+                    control={
+                      <Checkbox
+                        checked={serverUsage.includes(option)}
+                        onChange={() => toggleUsage(option)}
+                        disabled={pageDisabled || isSaving("serverUsage")}
+                      />
+                    }
+                    label={t(`settings.general.serverUsage.${option}`)}
+                  />
+                ))}
+              </Stack>
             </Stack>
 
             <Stack
@@ -716,26 +719,27 @@ export const AdminGeneralSettingsPage = () => {
 
               {geoIpLookupMode === "CustomHttp" && (
                 <Box sx={{ maxWidth: 760 }}>
-                  <AdminSettingSaveField
-                    label={t("settings.actions.save")}
-                    onSave={saveCustomGeoIpLookupUrl}
-                    disabled={!canSaveCustomGeoIpLookupUrl}
-                    saving={isSaving("customGeoIpLookupUrl")}
-                  >
-                    <AdminSettingSavingOverlay saving={loading}>
-                      <TextField
-                        label={t("settings.general.fields.customGeoIpLookupUrl")}
-                        value={customGeoIpLookupUrl}
-                        onChange={(event) =>
-                          updateCustomGeoIpLookupUrl(event.target.value)
-                        }
-                        disabled={pageDisabled}
-                        error={Boolean(customGeoIpLookupUrlError)}
-                        helperText={customGeoIpLookupUrlError ?? " "}
-                        fullWidth
-                      />
-                    </AdminSettingSavingOverlay>
-                  </AdminSettingSaveField>
+                  <AdminSettingSavingOverlay saving={loading}>
+                    <TextField
+                      label={t("settings.general.fields.customGeoIpLookupUrl")}
+                      value={customGeoIpLookupUrl}
+                      onChange={(event) =>
+                        updateCustomGeoIpLookupUrl(event.target.value)
+                      }
+                      onBlur={saveCustomGeoIpLookupUrl}
+                      disabled={pageDisabled}
+                      error={Boolean(customGeoIpLookupUrlError)}
+                      helperText={customGeoIpLookupUrlError ?? " "}
+                      fullWidth
+                      InputProps={{
+                        endAdornment: isSaving("customGeoIpLookupUrl") ? (
+                          <InputAdornment position="end">
+                            <CircularProgress size={16} />
+                          </InputAdornment>
+                        ) : undefined,
+                      }}
+                    />
+                  </AdminSettingSavingOverlay>
                 </Box>
               )}
             </Stack>

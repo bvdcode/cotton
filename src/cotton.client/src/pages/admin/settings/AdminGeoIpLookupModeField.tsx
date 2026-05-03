@@ -8,7 +8,6 @@ import {
 } from "@mui/material";
 import { useCallback, useState, type SyntheticEvent } from "react";
 import type { GeoIpLookupMode } from "../../../shared/api/settingsApi";
-import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
 import { geoIpOptions } from "./adminGeneralSettingsModel";
 
 type AdminGeoIpLookupModeFieldProps = {
@@ -71,45 +70,43 @@ export const AdminGeoIpLookupModeField = ({
         </Tooltip>
       </Stack>
 
-      <AdminSettingSavingOverlay saving={loading}>
-        <FormControl fullWidth>
-          <Select
-            value={value}
-            onOpen={handleOpen}
-            onChange={(event) => onChange(event.target.value as GeoIpLookupMode)}
-            disabled={disabled}
-            renderValue={(selected) => getLabel(selected as GeoIpLookupMode)}
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  width: menuWidth ? `${menuWidth}px` : undefined,
-                  maxWidth: "100%",
-                },
+      <FormControl fullWidth>
+        <Select
+          value={value}
+          onOpen={handleOpen}
+          onChange={(event) => onChange(event.target.value as GeoIpLookupMode)}
+          disabled={disabled}
+          renderValue={(selected) => getLabel(selected as GeoIpLookupMode)}
+          MenuProps={{
+            PaperProps: {
+              sx: {
+                width: menuWidth ? `${menuWidth}px` : undefined,
+                maxWidth: "100%",
               },
-            }}
-          >
-            {geoIpOptions.map((option) => (
-              <MenuItem
-                key={option}
-                value={option}
-                disabled={!telemetryEnabled && option === "CottonCloud"}
-                sx={{ alignItems: "flex-start" }}
-              >
-                <Stack spacing={0.25} py={0.25}>
-                  <Typography variant="body2">{getLabel(option)}</Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ lineHeight: 1.35, whiteSpace: "normal" }}
-                  >
-                    {getDescription(option)}
-                  </Typography>
-                </Stack>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </AdminSettingSavingOverlay>
+            },
+          }}
+        >
+          {geoIpOptions.map((option) => (
+            <MenuItem
+              key={option}
+              value={option}
+              disabled={!telemetryEnabled && option === "CottonCloud"}
+              sx={{ alignItems: "flex-start" }}
+            >
+              <Stack spacing={0.25} py={0.25}>
+                <Typography variant="body2">{getLabel(option)}</Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.35, whiteSpace: "normal" }}
+                >
+                  {getDescription(option)}
+                </Typography>
+              </Stack>
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
     </Stack>
   );
 };
