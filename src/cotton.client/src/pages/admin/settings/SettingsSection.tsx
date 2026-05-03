@@ -17,16 +17,10 @@ const StatusIndicator = ({ status }: { status: SaveStatus }) => {
     return <CircularProgress size={14} thickness={5} />;
   }
   if (status === "saved") {
-    return (
-      <CheckCircleOutlineIcon
-        sx={{ fontSize: 16, color: "success.main" }}
-      />
-    );
+    return <CheckCircleOutlineIcon sx={{ fontSize: 16, color: "success.main" }} />;
   }
   if (status === "error") {
-    return (
-      <ErrorOutlineIcon sx={{ fontSize: 16, color: "error.main" }} />
-    );
+    return <ErrorOutlineIcon sx={{ fontSize: 16, color: "error.main" }} />;
   }
   return null;
 };
@@ -52,9 +46,22 @@ export const SettingsSection = ({
         minWidth={0}
         flex={1}
       >
-        <Typography variant="subtitle1" fontWeight={700}>
-          {title}
-        </Typography>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={{ xs: 0.25, md: 0.75 }}
+          alignItems={{ xs: "flex-start", md: "baseline" }}
+          minWidth={0}
+          flex={1}
+        >
+          <Typography variant="subtitle1" fontWeight={700}>
+            {title}
+          </Typography>
+          {description && (
+            <Typography variant="caption" color="text.secondary">
+              {description}
+            </Typography>
+          )}
+        </Stack>
         <Box
           sx={{
             width: 16,
@@ -69,11 +76,6 @@ export const SettingsSection = ({
       </Stack>
       {action}
     </Stack>
-    {description && (
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-    )}
     {children}
   </Stack>
 );

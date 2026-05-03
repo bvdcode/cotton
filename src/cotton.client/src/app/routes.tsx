@@ -23,6 +23,7 @@ import {
   AdminUsersPage,
   AdminDatabaseBackupPage,
   AdminStorageStatisticsPage,
+  AdminStorageSettingsPage,
   AdminGeneralSettingsPage,
   AdminNotificationsSettingsPage,
   ResetPasswordPage,
@@ -171,12 +172,12 @@ export function AppRoutes() {
             element={<AdminStorageStatisticsPage />}
           />
           <Route
-            path="general-settings"
-            element={<AdminGeneralSettingsPage />}
+            path="storage-settings"
+            element={<AdminStorageSettingsPage />}
           />
           <Route
-            path="storage-settings"
-            element={<Navigate to="/admin/storage-statistics" replace />}
+            path="general-settings"
+            element={<AdminGeneralSettingsPage />}
           />
           <Route
             path="notifications-settings"
