@@ -280,6 +280,15 @@
         "button": "Confirm",
         "loading": "Confirming..."
       },
+      "disable": {
+        "button": "Disable 2FA",
+        "dialogTitle": "Disable two-factor authentication",
+        "dialogDescription": "Enter your password to confirm disabling two-factor authentication.",
+        "passwordLabel": "Password",
+        "confirm": "Disable",
+        "confirming": "Disabling...",
+        "success": "Two-factor authentication has been disabled."
+      },
       "errors": {
         "setupFailed": "Failed to start 2FA setup.",
         "confirmFailed": "Failed to confirm 2FA.",
@@ -287,7 +296,9 @@
         "codeRequired": "Please enter the 6-digit code.",
         "invalidCode": "Invalid two-factor authentication code.",
         "alreadyEnabled": "2FA is already enabled.",
-        "setupNotInitiated": "2FA setup has not been initiated. Generate a QR code first."
+        "setupNotInitiated": "2FA setup has not been initiated. Generate a QR code first.",
+        "disableFailed": "Failed to disable 2FA.",
+        "invalidPassword": "Invalid password."
       }
     },
     "fields": {
