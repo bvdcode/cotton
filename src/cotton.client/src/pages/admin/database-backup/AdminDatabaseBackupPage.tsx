@@ -209,8 +209,14 @@ export const AdminDatabaseBackupPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Paper sx={{ overflow: "hidden" }}>
-        <Stack p={2} spacing={2}>
+      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
+      <Paper
+        sx={{
+          width: "min(100%, 880px)",
+          overflow: "hidden",
+        }}
+      >
+        <Stack p={3} spacing={3}>
           <Stack
             direction={{ xs: "column", md: "row" }}
             spacing={1}
@@ -341,6 +347,7 @@ export const AdminDatabaseBackupPage = () => {
           </Alert>
         </Stack>
       </Paper>
+      </Box>
     </Stack>
   );
 };
