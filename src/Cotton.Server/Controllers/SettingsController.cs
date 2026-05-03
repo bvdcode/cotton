@@ -1,3 +1,4 @@
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
@@ -23,7 +24,7 @@ namespace Cotton.Server.Controllers
             return Ok(new
             {
                 settings.MaxChunkSizeBytes,
-                SupportedHashAlgorithm = Hasher.SupportedHashAlgorithm,
+                Hasher.SupportedHashAlgorithm,
             });
         }
 
@@ -357,7 +358,7 @@ namespace Cotton.Server.Controllers
         {
             if (error is not null)
             {
-                throw new BadRequestException(error);
+                throw new BadRequestException<CottonServerSettings>(error);
             }
         }
 
@@ -365,7 +366,7 @@ namespace Cotton.Server.Controllers
         {
             if (value.ValueKind != JsonValueKind.Array)
             {
-                throw new BadRequestException("Server usage must be an array.");
+                throw new BadRequestException<CottonServerSettings>("Server usage must be an array.");
             }
 
             var result = new List<ServerUsage>();
@@ -377,7 +378,7 @@ namespace Cotton.Server.Controllers
                     string? raw = item.GetString();
                     if (!Enum.TryParse(raw, ignoreCase: true, out usage))
                     {
-                        throw new BadRequestException("Invalid server usage: " + raw);
+                        throw new BadRequestException<CottonServerSettings>("Invalid server usage: " + raw);
                     }
                 }
                 else if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out int rawValue))
@@ -385,12 +386,12 @@ namespace Cotton.Server.Controllers
                     usage = (ServerUsage)rawValue;
                     if (!Enum.IsDefined(usage))
                     {
-                        throw new BadRequestException("Invalid server usage: " + rawValue);
+                        throw new BadRequestException<CottonServerSettings>("Invalid server usage: " + rawValue);
                     }
                 }
                 else
                 {
-                    throw new BadRequestException("Server usage entries must be strings or numbers.");
+                    throw new BadRequestException<CottonServerSettings>("Server usage entries must be strings or numbers.");
                 }
 
                 if (!result.Contains(usage))

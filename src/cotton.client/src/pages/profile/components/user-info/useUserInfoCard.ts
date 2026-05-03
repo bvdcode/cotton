@@ -36,6 +36,7 @@ interface UseUserInfoCardResult {
   title: string;
   avatarInitials: string;
   birthDateValue: string;
+  birthDateCompactValue: string;
   handleAvatarFileSelected: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleSendEmailVerification: () => Promise<void>;
 }
@@ -81,24 +82,36 @@ export const useUserInfoCard = ({
     [user.email, user.firstName, user.lastName, user.username],
   );
 
-  const birthDateValue = useMemo(() => {
+  const birthDateValues = useMemo(() => {
     const placeholder = t("common:placeholder");
     if (!user.birthDate || user.birthDate.trim().length === 0) {
-      return placeholder;
+      return {
+        compact: placeholder,
+        full: placeholder,
+      };
     }
 
     const formatted = formatDateOnly(user.birthDate);
     const parsed = tryParseDateOnly(user.birthDate);
     if (!parsed) {
-      return formatted;
+      return {
+        compact: formatted,
+        full: formatted,
+      };
     }
 
     const ageYears = getAgeYears(parsed);
     if (ageYears < 0 || ageYears > 150) {
-      return formatted;
+      return {
+        compact: formatted,
+        full: formatted,
+      };
     }
 
-    return `${formatted} (${t("ageYears", { count: ageYears })})`;
+    return {
+      compact: formatted,
+      full: `${formatted} (${t("ageYears", { count: ageYears })})`,
+    };
   }, [t, user.birthDate]);
 
   const handleAvatarFileSelected = useCallback(
@@ -243,7 +256,8 @@ export const useUserInfoCard = ({
     emailVerificationSending,
     title,
     avatarInitials,
-    birthDateValue,
+    birthDateValue: birthDateValues.full,
+    birthDateCompactValue: birthDateValues.compact,
     handleAvatarFileSelected,
     handleSendEmailVerification,
   };

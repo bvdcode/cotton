@@ -978,8 +978,10 @@
     "menu": {
       "navigate": "Section",
       "users": "Users",
+      "usersAndGroups": "Users and groups",
       "generalSettings": "General settings",
       "storageSettings": "Storage",
+      "storageAndStatistics": "Storage and statistics",
       "emailSettings": "Email",
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics"

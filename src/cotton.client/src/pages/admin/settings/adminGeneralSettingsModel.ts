@@ -43,9 +43,9 @@ export const usageOptions: ServerUsage[] = [
 export const computionOptions: ComputionMode[] = ["Local", "Remote", "Cloud"];
 
 export const storageSpaceOptions: StorageSpaceMode[] = [
-  "Limited",
-  "Optimal",
   "Unlimited",
+  "Optimal",
+  "Limited",
 ];
 
 export const geoIpOptions: GeoIpLookupMode[] = [

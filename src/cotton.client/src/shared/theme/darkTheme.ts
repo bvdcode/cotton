@@ -57,14 +57,6 @@ export const darkTheme = createTheme({
           transition: background-color 50000s ease-in-out 0s !important;
           border-radius: inherit;
         }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          filter: invert(85%) sepia(10%) saturate(300%) hue-rotate(180deg) brightness(105%);
-          opacity: 0.75;
-          transition: opacity .2s;
-        }
-        input[type="date"]:hover::-webkit-calendar-picker-indicator {
-          opacity: 1;
-        }
         .theme-light input[type="date"]::-webkit-calendar-picker-indicator {
           filter: invert(25%) sepia(16%) saturate(500%) hue-rotate(220deg) brightness(95%);
         }

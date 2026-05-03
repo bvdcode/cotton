@@ -5,7 +5,6 @@ import {
   Checkbox,
   FormControl,
   FormControlLabel,
-  IconButton,
   InputAdornment,
   InputLabel,
   LinearProgress,
@@ -15,20 +14,11 @@ import {
   Stack,
   Switch,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
+import { HelpOutline } from "@mui/icons-material";
 import {
-  AllInclusive,
-  CheckCircleOutline,
-  HelpOutline,
-  WarningAmber,
-} from "@mui/icons-material";
-import { useConfirm } from "material-ui-confirm";
-import {
-  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -41,7 +31,6 @@ import {
   type ComputionMode,
   type GeoIpLookupMode,
   type ServerUsage,
-  type StorageSpaceMode,
 } from "../../../shared/api/settingsApi";
 import {
   hasApiErrorToastBeenDispatched,
@@ -55,7 +44,6 @@ import {
   getSupportedTimeZones,
   isSameArray,
   normalizeStoredPublicBaseUrl,
-  storageSpaceOptions,
   usageOptions,
   validateCustomGeoIpLookupUrl,
   validatePublicBaseUrl,
@@ -64,12 +52,6 @@ import {
 } from "./adminGeneralSettingsModel";
 
 const contentMaxWidth = 1180;
-
-const storageSpaceModeIcons: Record<StorageSpaceMode, ReactNode> = {
-  Limited: <WarningAmber fontSize="small" sx={{ color: "warning.main" }} />,
-  Optimal: <CheckCircleOutline fontSize="small" sx={{ color: "success.main" }} />,
-  Unlimited: <AllInclusive fontSize="small" sx={{ color: "info.main" }} />,
-};
 
 const SettingHelpIcon = ({ title }: { title: string }) => (
   <Tooltip title={title}>
@@ -97,7 +79,6 @@ const renderHelpLabel = (label: string, help: string) => (
 
 export const AdminGeneralSettingsPage = () => {
   const { t } = useTranslation("admin");
-  const confirm = useConfirm();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -113,8 +94,6 @@ export const AdminGeneralSettingsPage = () => {
   const [allowDeduplication, setAllowDeduplication] = useState(false);
   const [allowGlobalIndexing, setAllowGlobalIndexing] = useState(false);
   const [serverUsage, setServerUsage] = useState<ServerUsage[]>(["Other"]);
-  const [storageSpaceMode, setStorageSpaceMode] =
-    useState<StorageSpaceMode>("Optimal");
   const [computionMode, setComputionMode] = useState<ComputionMode>("Local");
   const [geoIpLookupMode, setGeoIpLookupMode] =
     useState<GeoIpLookupMode>("Disabled");
@@ -195,7 +174,6 @@ export const AdminGeneralSettingsPage = () => {
           nextAllowDeduplication,
           nextAllowGlobalIndexing,
           nextServerUsage,
-          nextStorageSpaceMode,
           nextComputionMode,
           nextGeoIpLookupMode,
           nextCustomGeoIpLookupUrl,
@@ -206,7 +184,6 @@ export const AdminGeneralSettingsPage = () => {
           settingsApi.getAllowCrossUserDeduplication(),
           settingsApi.getAllowGlobalIndexing(),
           settingsApi.getServerUsage(),
-          settingsApi.getStorageSpaceMode(),
           settingsApi.getComputionMode(),
           settingsApi.getGeoIpLookupMode(),
           settingsApi.getCustomGeoIpLookupUrl(),
@@ -227,7 +204,6 @@ export const AdminGeneralSettingsPage = () => {
         setAllowDeduplication(nextAllowDeduplication);
         setAllowGlobalIndexing(nextAllowGlobalIndexing);
         setServerUsage(nextServerUsage.length > 0 ? nextServerUsage : ["Other"]);
-        setStorageSpaceMode(nextStorageSpaceMode);
         setComputionMode(nextComputionMode);
         setGeoIpLookupMode(nextGeoIpLookupMode);
         setSavedGeoIpLookupMode(nextGeoIpLookupMode);
@@ -416,30 +392,6 @@ export const AdminGeneralSettingsPage = () => {
     [allowGlobalIndexing, pageDisabled, runSave],
   );
 
-  const handleStorageSpaceModeChange = useCallback(
-    (_: unknown, next: StorageSpaceMode | null) => {
-      if (
-        !next ||
-        next === storageSpaceMode ||
-        pageDisabled ||
-        isSaving("storageSpaceMode")
-      ) {
-        return;
-      }
-
-      const previous = storageSpaceMode;
-      setStorageSpaceMode(next);
-      void runSave(
-        "storageSpaceMode",
-        () => settingsApi.setStorageSpaceMode(next),
-        {
-          onError: () => setStorageSpaceMode(previous),
-        },
-      );
-    },
-    [isSaving, pageDisabled, runSave, storageSpaceMode],
-  );
-
   const handleGeoIpLookupModeChange = useCallback(
     (next: GeoIpLookupMode) => {
       if (
@@ -490,15 +442,6 @@ export const AdminGeneralSettingsPage = () => {
     },
     [pageDisabled, runSave, serverUsage],
   );
-
-  const showStorageSpaceHelp = useCallback(() => {
-    void confirm({
-      title: t("settings.general.storageSpaceHelp.title"),
-      description: t("settings.general.storageSpaceHelp.description"),
-      confirmationText: t("settings.actions.close"),
-      hideCancelButton: true,
-    });
-  }, [confirm, t]);
 
   return (
     <Stack spacing={2}>
@@ -636,52 +579,6 @@ export const AdminGeneralSettingsPage = () => {
                     ))}
                   </Select>
                 </FormControl>
-              </AdminSettingSavingOverlay>
-            </Stack>
-
-            <Stack spacing={1}>
-              <Stack
-                direction="row"
-                alignItems="center"
-                spacing={0.5}
-                minHeight={32}
-              >
-                <Typography variant="subtitle2" fontWeight={700}>
-                  {t("settings.general.fields.storageSpaceMode")}
-                </Typography>
-                <Tooltip title={t("settings.general.storageSpaceHelp.open")}>
-                  <IconButton
-                    size="small"
-                    onClick={showStorageSpaceHelp}
-                    disabled={pageDisabled}
-                  >
-                    <HelpOutline fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-              <AdminSettingSavingOverlay saving={loading}>
-                <ToggleButtonGroup
-                  fullWidth
-                  exclusive
-                  value={storageSpaceMode}
-                  onChange={handleStorageSpaceModeChange}
-                  disabled={pageDisabled}
-                  aria-label={t("settings.general.fields.storageSpaceMode")}
-                >
-                  {storageSpaceOptions.map((option) => (
-                    <ToggleButton
-                      key={option}
-                      value={option}
-                      aria-label={t(`settings.general.storageSpaceMode.${option}`)}
-                      sx={{ minHeight: 40, gap: 0.75 }}
-                    >
-                      {storageSpaceModeIcons[option]}
-                      <Box component="span">
-                        {t(`settings.general.storageSpaceMode.${option}`)}
-                      </Box>
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
               </AdminSettingSavingOverlay>
             </Stack>
 

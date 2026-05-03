@@ -24,8 +24,14 @@ import {
   type GcChunkTimelineDto,
   type GcTimelineBucketKind,
 } from "../../../shared/api/adminApi";
+import {
+  settingsApi,
+  type StorageSpaceMode,
+} from "../../../shared/api/settingsApi";
 import { isAxiosError } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { AdminStorageBackendSettings } from "../settings/AdminStorageBackendSettings";
+import { storageSpaceOptions } from "../settings/adminGeneralSettingsModel";
 
 type LoadState =
   | { kind: "idle" }
@@ -126,6 +132,10 @@ export const AdminStorageStatisticsPage = () => {
 
   const [timeline, setTimeline] = useState<GcChunkTimelineDto | null>(null);
   const [bucket, setBucket] = useState<GcTimelineBucketKind>("day");
+  const [storageSpaceMode, setStorageSpaceMode] =
+    useState<StorageSpaceMode>("Optimal");
+  const [storageSpaceModeLoading, setStorageSpaceModeLoading] = useState(true);
+  const [storageSpaceModeSaving, setStorageSpaceModeSaving] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [triggerState, setTriggerState] = useState<TriggerState>({
     kind: "idle",
@@ -177,6 +187,42 @@ export const AdminStorageStatisticsPage = () => {
     };
   }, [bucket, refreshVersion, t]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadStorageSpaceMode = async () => {
+      setStorageSpaceModeLoading(true);
+
+      try {
+        const nextStorageSpaceMode = await settingsApi.getStorageSpaceMode();
+
+        if (!isActive) {
+          return;
+        }
+
+        setStorageSpaceMode(nextStorageSpaceMode);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        toast.error(t("settings.errors.loadFailed"), {
+          toastId: "admin:storage-statistics:storage-space-mode:load-failed",
+        });
+      } finally {
+        if (isActive) {
+          setStorageSpaceModeLoading(false);
+        }
+      }
+    };
+
+    void loadStorageSpaceMode();
+
+    return () => {
+      isActive = false;
+    };
+  }, [t]);
+
   const handleBucketChange = (
     _: MouseEvent<HTMLElement>,
     nextBucket: GcTimelineBucketKind | null,
@@ -187,6 +233,46 @@ export const AdminStorageStatisticsPage = () => {
 
     setLoadState({ kind: "loading" });
     setBucket(nextBucket);
+  };
+
+  const handleStorageSpaceModeChange = (
+    _: MouseEvent<HTMLElement>,
+    nextMode: StorageSpaceMode | null,
+  ) => {
+    if (
+      !nextMode ||
+      nextMode === storageSpaceMode ||
+      storageSpaceModeLoading ||
+      storageSpaceModeSaving
+    ) {
+      return;
+    }
+
+    const previousMode = storageSpaceMode;
+    setStorageSpaceMode(nextMode);
+    setStorageSpaceModeSaving(true);
+
+    settingsApi
+      .setStorageSpaceMode(nextMode)
+      .then(() => {
+        toast.success(t("settings.state.saved"), {
+          toastId: "admin:storage-statistics:storage-space-mode:saved",
+        });
+      })
+      .catch(() => {
+        setStorageSpaceMode(previousMode);
+        toast.error(t("settings.errors.saveFailed"), {
+          toastId: "admin:storage-statistics:storage-space-mode:save-failed",
+        });
+      })
+      .finally(() => {
+        setStorageSpaceModeSaving(false);
+      });
+  };
+
+  const refreshTimeline = () => {
+    setLoadState({ kind: "loading" });
+    setRefreshVersion((value) => value + 1);
   };
 
   const handleTriggerGarbageCollector = async () => {
@@ -364,6 +450,21 @@ export const AdminStorageStatisticsPage = () => {
               <ToggleButtonGroup
                 size="small"
                 exclusive
+                value={storageSpaceMode}
+                onChange={handleStorageSpaceModeChange}
+                disabled={storageSpaceModeLoading}
+                aria-label={t("settings.general.fields.storageSpaceMode")}
+              >
+                {storageSpaceOptions.map((option) => (
+                  <ToggleButton key={option} value={option}>
+                    {t(`settings.general.storageSpaceMode.${option}`)}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+
+              <ToggleButtonGroup
+                size="small"
+                exclusive
                 value={bucket}
                 onChange={handleBucketChange}
                 disabled={isLoading || isTriggering}
@@ -393,16 +494,19 @@ export const AdminStorageStatisticsPage = () => {
 
               <Button
                 variant="outlined"
-                onClick={() => {
-                  setLoadState({ kind: "loading" });
-                  setRefreshVersion((value) => value + 1);
-                }}
+                onClick={refreshTimeline}
                 disabled={isLoading || isTriggering}
               >
                 {t("storageStatistics.actions.refresh")}
               </Button>
             </Stack>
           </Stack>
+
+          <AdminStorageBackendSettings
+            showHeader={false}
+            onSaved={refreshTimeline}
+            sx={{ maxWidth: 760 }}
+          />
 
           {loadState.kind === "error" && (
             <Alert severity="error">{loadState.message}</Alert>
