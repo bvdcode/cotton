@@ -60,19 +60,21 @@ export const AdminLayoutPage = () => {
       icon: <NotificationsActiveIcon />,
     },
     {
+      id: "storage",
+      to: "/admin/storage-statistics",
+      title: t("menu.storageAndStatistics", {
+        defaultValue: t("menu.storageStatistics", {
+          defaultValue: "Storage",
+        }),
+      }),
+      icon: <StorageIcon />,
+      activePaths: ["/admin/storage-statistics", "/admin/storage-settings"],
+    },
+    {
       id: "databaseBackup",
       to: "/admin/database-backup",
       title: t("menu.databaseBackup"),
       icon: <BackupIcon />,
-    },
-    {
-      id: "storage",
-      to: "/admin/storage-statistics",
-      title: t("menu.storageAndStatistics", {
-        defaultValue: t("menu.storageStatistics"),
-      }),
-      icon: <StorageIcon />,
-      activePaths: ["/admin/storage-statistics", "/admin/storage-settings"],
     },
   ];
 
