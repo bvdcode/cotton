@@ -75,7 +75,7 @@ export const AdminGeoIpLookupModeField = ({
           value={value}
           onOpen={handleOpen}
           onChange={(event) => onChange(event.target.value as GeoIpLookupMode)}
-          disabled={disabled}
+          disabled={disabled || loading}
           renderValue={(selected) => getLabel(selected as GeoIpLookupMode)}
           MenuProps={{
             PaperProps: {
