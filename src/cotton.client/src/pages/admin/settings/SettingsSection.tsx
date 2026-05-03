@@ -36,13 +36,14 @@ export const SettingsSection = ({
     <Stack
       direction="row"
       spacing={1}
-      alignItems="center"
+      alignItems="flex-start"
       justifyContent="space-between"
     >
       <Stack
         direction="row"
         spacing={1}
-        alignItems="center"
+        alignItems="flex-start"
+        flexWrap="wrap"
         minWidth={0}
         flex={1}
       >
