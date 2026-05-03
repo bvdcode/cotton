@@ -1131,7 +1131,7 @@
       "title": "Storage",
       "description": "Configure storage credentials first, then switch the active storage backend.",
       "fields": {
-        "storageType": "Active storage"
+        "storageType": "Storage backend"
       },
       "storageType": {
         "Local": "Local disk",

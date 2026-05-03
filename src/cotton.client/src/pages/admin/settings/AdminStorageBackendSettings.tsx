@@ -218,7 +218,7 @@ export const AdminStorageBackendSettings = ({
             sx={{
               minWidth: 0,
               display: "flex",
-              justifyContent: { xs: "flex-start", md: "flex-end" },
+              height: "100%",
             }}
           >
             {storageTypeRightSlot}

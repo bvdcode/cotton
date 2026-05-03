@@ -431,18 +431,17 @@ export const AdminStorageStatisticsPage = () => {
 
   const storageSpaceModeControl = (
     <Stack
-      direction="row"
-      spacing={1}
-      alignItems="center"
-      useFlexGap
-      sx={{ flexWrap: "wrap", justifyContent: { md: "flex-end" } }}
+      spacing={0.75}
+      sx={{ width: "100%" }}
     >
-      <Typography variant="body2" color="text.secondary">
-        {t("settings.general.fields.storageSpaceMode")}
-      </Typography>
-      <Tooltip title={storageSpaceModeHelp}>
-        <HelpOutlineIcon fontSize="small" color="action" />
-      </Tooltip>
+      <Stack direction="row" spacing={0.75} alignItems="center">
+        <Typography variant="body2" color="text.secondary">
+          {t("settings.general.fields.storageSpaceMode")}
+        </Typography>
+        <Tooltip title={storageSpaceModeHelp}>
+          <HelpOutlineIcon fontSize="small" color="action" />
+        </Tooltip>
+      </Stack>
       <ToggleButtonGroup
         size="small"
         exclusive
@@ -450,6 +449,11 @@ export const AdminStorageStatisticsPage = () => {
         onChange={handleStorageSpaceModeChange}
         disabled={storageSpaceModeLoading || storageSpaceModeSaving}
         aria-label={t("settings.general.fields.storageSpaceMode")}
+        fullWidth
+        sx={{
+          width: "100%",
+          "& .MuiToggleButton-root": { flex: 1, minWidth: 0 },
+        }}
       >
         {storageSpaceOptions.map((option) => (
           <ToggleButton key={option} value={option}>
