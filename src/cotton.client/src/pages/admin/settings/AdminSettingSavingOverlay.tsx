@@ -13,22 +13,23 @@ export const AdminSettingSavingOverlay = ({
 }: AdminSettingSavingOverlayProps) => (
   <Box sx={{ position: "relative" }}>
     {children}
-    {saving && (
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 1,
-          pointerEvents: "none",
-          bgcolor: (theme) => alpha(theme.palette.background.paper, 0.72),
-        }}
-      >
-        <CircularProgress size={22} />
-      </Box>
-    )}
+    <Box
+      sx={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 2,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 1,
+        pointerEvents: saving ? "auto" : "none",
+        bgcolor: (theme) => alpha(theme.palette.background.paper, 0.72),
+        opacity: saving ? 1 : 0,
+        transition: "opacity 150ms ease",
+        transitionDelay: saving ? "120ms" : "0ms",
+      }}
+    >
+      <CircularProgress size={22} />
+    </Box>
   </Box>
 );

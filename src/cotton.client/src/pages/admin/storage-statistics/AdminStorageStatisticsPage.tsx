@@ -450,21 +450,6 @@ export const AdminStorageStatisticsPage = () => {
               <ToggleButtonGroup
                 size="small"
                 exclusive
-                value={storageSpaceMode}
-                onChange={handleStorageSpaceModeChange}
-                disabled={storageSpaceModeLoading}
-                aria-label={t("settings.general.fields.storageSpaceMode")}
-              >
-                {storageSpaceOptions.map((option) => (
-                  <ToggleButton key={option} value={option}>
-                    {t(`settings.general.storageSpaceMode.${option}`)}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-
-              <ToggleButtonGroup
-                size="small"
-                exclusive
                 value={bucket}
                 onChange={handleBucketChange}
                 disabled={isLoading || isTriggering}
@@ -507,6 +492,26 @@ export const AdminStorageStatisticsPage = () => {
             onSaved={refreshTimeline}
             sx={{ maxWidth: 760 }}
           />
+
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              {t("settings.general.fields.storageSpaceMode")}
+            </Typography>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={storageSpaceMode}
+              onChange={handleStorageSpaceModeChange}
+              disabled={storageSpaceModeLoading || storageSpaceModeSaving}
+              aria-label={t("settings.general.fields.storageSpaceMode")}
+            >
+              {storageSpaceOptions.map((option) => (
+                <ToggleButton key={option} value={option}>
+                  {t(`settings.general.storageSpaceMode.${option}`)}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
 
           {loadState.kind === "error" && (
             <Alert severity="error">{loadState.message}</Alert>
