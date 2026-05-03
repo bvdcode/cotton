@@ -50,6 +50,31 @@
                    $"If this wasn't you, please secure your account immediately.";
         }
 
+        public static string OtpDisabledTitle => "Two-factor authentication disabled";
+
+        public static string OtpDisabledContentNoDevice(
+            string ipAddress,
+            string country,
+            string region,
+            string city)
+        {
+            return $"Two-factor authentication has been disabled for your account " +
+                   $"from {city}, {region}, {country} ({ipAddress}). " +
+                   $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
+        }
+
+        public static string OtpDisabledContent(
+            string ipAddress,
+            string device,
+            string country,
+            string region,
+            string city)
+        {
+            return $"Two-factor authentication has been disabled for your account from {device} " +
+                   $"in {city}, {region}, {country} ({ipAddress}). " +
+                   $"Your account is less secure now. If this wasn't you, please secure your account immediately.";
+        }
+
         public static string OtpEnabledTitle => "Two-factor authentication activated";
 
         public static string OtpEnabledContentNoDevice(
