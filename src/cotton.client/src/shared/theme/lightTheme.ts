@@ -21,6 +21,13 @@ export const lightTheme = createTheme({
   },
   shape: { borderRadius: 12 },
   components: {
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          padding: "16px 24px",
+        },
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: `
         input:-webkit-autofill,
