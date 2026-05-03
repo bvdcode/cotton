@@ -21,6 +21,13 @@ export const darkTheme = createTheme({
   },
   shape: { borderRadius: 12 },
   components: {
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          padding: "16px 24px",
+        },
+      },
+    },
     MuiAlert: {
       styleOverrides: {
         standardInfo: {
