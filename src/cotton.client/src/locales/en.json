@@ -552,13 +552,13 @@
         "subtitle": "Cotton can turn a sign-in IP address into a city and country, so account access emails can say where a session came from instead of showing only a raw address.",
         "options": {
           "disabled": "No, keep it off",
-          "cottonCloud": "Use Cotton Cloud resolver",
+          "cottonCloud": "Use cloud service",
           "custom": "Use my own resolver"
         },
         "descriptions": {
           "disabled": "No location lookup will be made for sign-in and access notifications.",
-          "cottonCloud": "Use Cotton Cloud to resolve IP addresses. Requires telemetry to be enabled.",
-          "custom": "Use an HTTP endpoint you control. The endpoint can include {ip} or accept an ip query parameter."
+          "cottonCloud": "Resolve IP addresses through the Cotton provider. Requires telemetry to be enabled.",
+          "custom": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         }
       },
       "customGeoIpLookupUrl": {
@@ -1069,6 +1069,14 @@
           "customGeoIpLookupUrlInvalid": "Enter a valid HTTP or HTTPS lookup URL.",
           "customGeoIpLookupUrlRequiresIp": "The lookup URL must include the {ip} placeholder."
         },
+        "help": {
+          "publicBaseUrl": "Despite this setting, Cotton determines the public URL automatically almost everywhere. Set it only when automatic detection is wrong.",
+          "timezone": "This helps us avoid running background jobs while you sleep, so your disks do not grind at night.",
+          "telemetry": "Cotton collects anonymous data so the developer can see errors and fix them, because not everyone reports issues. Enabling telemetry also unlocks cloud services out of the box.",
+          "allowDeduplication": "Controls whether one user can learn that another user already stores the same file. When disabled, identical data is still deduplicated on the server after upload, but it is needlessly transferred first. When enabled, another user may learn that someone in this cloud uploaded that file before. This is safe for family and trusted friends.",
+          "allowGlobalIndexing": "Allows the server to decrypt user files and build a deep search index. Without it, search only uses file and folder names.",
+          "serverUsage": "Optimizes feature recommendations and a few settings. It is not a critical parameter, so choose whatever feels right."
+        },
         "serverUsage": {
           "Photos": "Photos",
           "Documents": "Documents",
@@ -1083,7 +1091,7 @@
         "storageSpaceHelp": {
           "open": "What does storage space mode affect?",
           "title": "Storage space mode",
-          "description": "This mode tells Cotton how aggressively to optimize storage. Unlimited favors speed and simple retention. Optimal balances speed, compression, deduplication, and cleanup. Limited favors saving disk space more aggressively and may spend more CPU on storage optimization."
+          "description": "Limited makes the cloud clean orphaned data as quickly as possible. Unlimited lowers maintenance load and gives data reuse a much better chance. Optimal stays between those two."
         },
         "computionMode": {
           "Local": "Local",
@@ -1093,8 +1101,13 @@
         },
         "geoIpLookupMode": {
           "Disabled": "Disabled",
-          "CottonCloud": "Cotton Cloud",
+          "CottonCloud": "Cloud service",
           "CustomHttp": "Custom HTTP"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "Do not resolve IP locations for notifications.",
+          "CottonCloud": "Resolve IP addresses through the Cotton provider.",
+          "CustomHttp": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         }
       }
     },

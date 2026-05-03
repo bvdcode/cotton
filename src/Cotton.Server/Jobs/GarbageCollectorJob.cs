@@ -10,18 +10,20 @@ using System.Collections.Concurrent;
 
 namespace Cotton.Server.Jobs
 {
-    [JobTrigger(days: 1)]
+    [JobTrigger(hours: 6)]
     [DisallowConcurrentExecution]
     public class GarbageCollectorJob(
+        PerfTracker _perf,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
         ChunkUsageService _chunkUsage,
         SettingsProvider _settingsProvider,
         ILogger<GarbageCollectorJob> _logger) : IJob
     {
-        private const int ManifestBatchSize = 1000;
-        private const int ChunkBatchSize = 1000;
         private const int ChunkGcDelayDays = 7;
+        private const int ManifestBatchSize = 1000;
+        private const int MinChunkBatchSize = 1000;
+        private const int MaxChunkBatchSize = 100000;
         private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
         public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
@@ -30,23 +32,41 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            bool isNightTime = _perf.IsNightTime();
+            StorageSpaceMode spaceMode = _settingsProvider.GetServerSettings().StorageSpaceMode;
+            bool isAggressiveMode = spaceMode == StorageSpaceMode.Limited;
+            if (!isAggressiveMode && isNightTime)
+            {
+                _logger.LogInformation("Skipping garbage collection run because it's currently night time and aggressive GC mode is not enabled.");
+                return;
+            }
+
             if (_isFirstRun)
             {
                 _isFirstRun = false;
-                _logger.LogInformation("Waiting for 15 minutes before the first garbage collection run to allow the server to start up and stabilize.");
+                _logger.LogInformation("Waiting for 15 minutes before the first garbage collection run to allow the server to start up.");
                 await Task.Delay(900_000, context.CancellationToken); // Wait for 15 minutes for the server to start up and stabilize
             }
-            await RunOnceAsync(DateTime.UtcNow, context.CancellationToken);
+
+            int batchSize = spaceMode switch
+            {
+                StorageSpaceMode.Limited => MaxChunkBatchSize,
+                StorageSpaceMode.Unlimited => MinChunkBatchSize,
+                StorageSpaceMode.Optimal => (MinChunkBatchSize + MaxChunkBatchSize) / 2,
+                _ => MinChunkBatchSize * 2,
+            };
+
+            await RunOnceAsync(DateTime.UtcNow, batchSize, context.CancellationToken);
         }
 
-        public async Task RunOnceAsync(DateTime now, CancellationToken ct = default)
+        public async Task RunOnceAsync(DateTime now, int batchSize, CancellationToken ct = default)
         {
             HashSet<string> protectedStorageKeys = await _chunkUsage.GetProtectedStorageKeysAsync(ct);
 
             await DeleteOrphanedManifestsAsync(ct);
             await ClearSchedulesForReferencedChunksAsync(protectedStorageKeys, ct);
-            await ScheduleOrphanedChunksAsync(now, protectedStorageKeys, ct);
-            await DeleteScheduledChunksAsync(now, protectedStorageKeys, ct);
+            await ScheduleOrphanedChunksAsync(now, protectedStorageKeys, batchSize, ct);
+            await DeleteScheduledChunksAsync(now, batchSize, protectedStorageKeys, ct);
         }
 
         private async Task DeleteOrphanedManifestsAsync(CancellationToken ct)
@@ -114,7 +134,7 @@ namespace Cotton.Server.Jobs
             }
         }
 
-        private async Task ScheduleOrphanedChunksAsync(DateTime now, HashSet<string> protectedStorageKeys, CancellationToken ct)
+        private async Task ScheduleOrphanedChunksAsync(DateTime now, HashSet<string> protectedStorageKeys, int batchSize, CancellationToken ct)
         {
             StorageSpaceMode spaceMode = _settingsProvider.GetServerSettings().StorageSpaceMode;
             DateTime deleteAfter = spaceMode switch
@@ -132,11 +152,11 @@ namespace Cotton.Server.Jobs
                 .Where(c => c.GCScheduledAfter == null)
                 .OrderBy(c => c.Hash);
 
-            while (scheduledCount < ChunkBatchSize)
+            while (scheduledCount < batchSize)
             {
                 var orphanedChunks = await orphanedChunksQuery
                     .Skip(scannedCount)
-                    .Take(ChunkBatchSize)
+                    .Take(batchSize)
                     .ToListAsync(ct);
 
                 if (orphanedChunks.Count == 0)
@@ -156,13 +176,13 @@ namespace Cotton.Server.Jobs
                     chunk.GCScheduledAfter = deleteAfter;
                     scheduledCount++;
 
-                    if (scheduledCount == ChunkBatchSize)
+                    if (scheduledCount == batchSize)
                     {
                         break;
                     }
                 }
 
-                if (orphanedChunks.Count < ChunkBatchSize)
+                if (orphanedChunks.Count < batchSize)
                 {
                     break;
                 }
@@ -179,14 +199,14 @@ namespace Cotton.Server.Jobs
             }
         }
 
-        private async Task DeleteScheduledChunksAsync(DateTime now, HashSet<string> protectedStorageKeys, CancellationToken ct)
+        private async Task DeleteScheduledChunksAsync(DateTime now, int batchSize, HashSet<string> protectedStorageKeys, CancellationToken ct)
         {
             var chunksToDelete = await _chunkUsage
                 .WhereUnreferencedByDatabase(_dbContext.Chunks)
                 .Where(c => c.GCScheduledAfter != null
                     && c.GCScheduledAfter <= now)
                 .OrderBy(c => c.Hash)
-                .Take(ChunkBatchSize)
+                .Take(batchSize)
                 .ToListAsync(ct);
 
             if (chunksToDelete.Count == 0)

@@ -2,9 +2,9 @@
 {
     public enum GeoIpLookupMode
     {
-        Disabled,
-        CottonCloud,
-        MaxMindLocal,
-        CustomHttp
+        Disabled = 0,
+        CottonCloud = 1,
+        MaxMindLocal = 2,
+        CustomHttp = 3
     }
 }

@@ -16,11 +16,6 @@ export type GeneralSettingKey =
   | "geoIpLookupMode"
   | "customGeoIpLookupUrl";
 
-export type SettingsStatusMessage = {
-  severity: "success" | "error";
-  message: string;
-};
-
 export type GeneralSettingsValidationMessages = {
   required: string;
   publicBaseUrlInvalid: string;
@@ -49,9 +44,9 @@ export const usageOptions: ServerUsage[] = [
 export const computionOptions: ComputionMode[] = ["Local", "Remote", "Cloud"];
 
 export const storageSpaceOptions: StorageSpaceMode[] = [
-  "Unlimited",
-  "Optimal",
   "Limited",
+  "Optimal",
+  "Unlimited",
 ];
 
 export const geoIpOptions: GeoIpLookupMode[] = [
