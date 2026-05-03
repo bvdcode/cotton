@@ -21,19 +21,20 @@ import {
   type EmailConfig,
   type EmailMode,
 } from "../../../shared/api/settingsApi";
-import { AdminSettingSaveIconButton } from "./AdminSettingSaveIconButton";
+import {
+  hasApiErrorToastBeenDispatched,
+  isAxiosError,
+} from "../../../shared/api/httpClient";
+import { AdminSettingSaveField } from "./AdminSettingSaveField";
 import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
 
-type SavingKey = "emailMode" | "smtpConfig";
-
 const emailModes: EmailMode[] = ["None", "Cloud", "Custom"];
-const saveIconSx = { mt: 1, flexShrink: 0 };
 
 export const AdminEmailSettingsPage = () => {
   const { t } = useTranslation("admin");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<SavingKey | null>(null);
+  const [saving, setSaving] = useState(false);
   const [emailMode, setEmailMode] = useState<EmailMode>("None");
   const [emailConfig, setEmailConfig] = useState<EmailConfig>({
     smtpServer: "",
@@ -44,9 +45,8 @@ export const AdminEmailSettingsPage = () => {
     useSSL: false,
   });
 
-  const isBusy = loading || savingKey !== null;
+  const isBusy = loading || saving;
   const isCustomEmailMode = emailMode === "Custom";
-  const isSaving = (key: SavingKey): boolean => savingKey === key;
 
   useEffect(() => {
     let active = true;
@@ -89,28 +89,10 @@ export const AdminEmailSettingsPage = () => {
     setEmailConfig((current) => ({ ...current, [key]: value }));
   };
 
-  const saveSmtpConfig = async () => {
+  const saveEmailSettings = async () => {
     if (isBusy) return;
 
-    setSavingKey("smtpConfig");
-    try {
-      await settingsApi.setEmailConfig(emailConfig);
-      toast.success(t("emailSettings.state.smtpSaved"), {
-        toastId: "admin-email-settings:smtp-config:saved",
-      });
-    } catch {
-      toast.error(t("emailSettings.errors.smtpSaveFailed"), {
-        toastId: "admin-email-settings:smtp-config:save-failed",
-      });
-    } finally {
-      setSavingKey(null);
-    }
-  };
-
-  const saveEmailMode = async () => {
-    if (isBusy) return;
-
-    setSavingKey("emailMode");
+    setSaving(true);
     try {
       if (emailMode === "Custom") {
         await settingsApi.setEmailConfig(emailConfig);
@@ -120,19 +102,21 @@ export const AdminEmailSettingsPage = () => {
       toast.success(t("emailSettings.state.modeSaved"), {
         toastId: "admin-email-settings:email-mode:saved",
       });
-    } catch {
-      toast.error(t("emailSettings.errors.modeSaveFailed"), {
-        toastId: "admin-email-settings:email-mode:save-failed",
-      });
+    } catch (error) {
+      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
+        toast.error(t("emailSettings.errors.modeSaveFailed"), {
+          toastId: "admin-email-settings:email-mode:save-failed",
+        });
+      }
     } finally {
-      setSavingKey(null);
+      setSaving(false);
     }
   };
 
   return (
     <Stack spacing={2}>
       <Paper>
-        <Stack p={2} spacing={2}>
+        <Stack p={2} spacing={2} sx={{ maxWidth: 920, width: "100%" }}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
               {t("emailSettings.title")}
@@ -144,15 +128,20 @@ export const AdminEmailSettingsPage = () => {
 
           <LinearProgress
             sx={{
-              opacity: isBusy ? 1 : 0,
+              opacity: loading ? 1 : 0,
               transition: "opacity 120ms ease",
             }}
           />
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
 
-          <Stack direction="row" spacing={1} alignItems="flex-start">
-            <Box flex={1} minWidth={0}>
+          <Box sx={{ maxWidth: 760 }}>
+            <AdminSettingSaveField
+              label={t("settings.actions.save")}
+              onSave={() => void saveEmailSettings()}
+              disabled={isBusy}
+              saving={saving}
+            >
               <AdminSettingSavingOverlay saving={loading}>
                 <FormControl fullWidth>
                   <InputLabel id="admin-email-mode-label">
@@ -165,7 +154,7 @@ export const AdminEmailSettingsPage = () => {
                     onChange={(event) =>
                       setEmailMode(event.target.value as EmailMode)
                     }
-                    disabled={isBusy}
+                  disabled={isBusy}
                   >
                     {emailModes.map((mode) => (
                       <MenuItem key={mode} value={mode}>
@@ -175,16 +164,8 @@ export const AdminEmailSettingsPage = () => {
                   </Select>
                 </FormControl>
               </AdminSettingSavingOverlay>
-            </Box>
-            <AdminSettingSavingOverlay saving={isSaving("emailMode")}>
-              <AdminSettingSaveIconButton
-                label={t("emailSettings.actions.saveMode")}
-                onClick={() => void saveEmailMode()}
-                disabled={isBusy}
-                sx={saveIconSx}
-              />
-            </AdminSettingSavingOverlay>
-          </Stack>
+            </AdminSettingSaveField>
+          </Box>
 
           {isCustomEmailMode && (
             <Stack spacing={2}>
@@ -248,29 +229,17 @@ export const AdminEmailSettingsPage = () => {
                   </AdminSettingSavingOverlay>
                 </Box>
               </Stack>
-              <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Box flex={1} minWidth={0}>
-                  <AdminSettingSavingOverlay saving={loading}>
-                    <TextField
-                      label={t("emailSettings.smtp.fields.fromAddress")}
-                      value={emailConfig.fromAddress}
-                      onChange={(event) =>
-                        updateEmailConfig("fromAddress", event.target.value)
-                      }
-                      disabled={isBusy}
-                      fullWidth
-                    />
-                  </AdminSettingSavingOverlay>
-                </Box>
-                <AdminSettingSavingOverlay saving={isSaving("smtpConfig")}>
-                  <AdminSettingSaveIconButton
-                    label={t("emailSettings.actions.saveSmtp")}
-                    onClick={() => void saveSmtpConfig()}
+              <AdminSettingSavingOverlay saving={loading}>
+                <TextField
+                  label={t("emailSettings.smtp.fields.fromAddress")}
+                  value={emailConfig.fromAddress}
+                  onChange={(event) =>
+                    updateEmailConfig("fromAddress", event.target.value)
+                  }
                     disabled={isBusy}
-                    sx={saveIconSx}
-                  />
-                </AdminSettingSavingOverlay>
-              </Stack>
+                  fullWidth
+                />
+              </AdminSettingSavingOverlay>
               <AdminSettingSavingOverlay saving={loading}>
                 <FormControlLabel
                   control={

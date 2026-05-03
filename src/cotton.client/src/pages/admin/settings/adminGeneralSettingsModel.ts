@@ -21,7 +21,6 @@ export type GeneralSettingsValidationMessages = {
   publicBaseUrlInvalid: string;
   timezoneInvalid: string;
   customGeoIpLookupUrlInvalid: string;
-  customGeoIpLookupUrlRequiresIp: string;
 };
 
 type PublicBaseUrlValidation = {
@@ -52,6 +51,7 @@ export const storageSpaceOptions: StorageSpaceMode[] = [
 export const geoIpOptions: GeoIpLookupMode[] = [
   "Disabled",
   "CottonCloud",
+  "MaxMindLocal",
   "CustomHttp",
 ];
 
@@ -179,16 +179,8 @@ export const validateCustomGeoIpLookupUrl = (
     return { error: messages.required, normalized: null };
   }
 
-  if (!trimmed.includes("{ip}")) {
-    return {
-      error: messages.customGeoIpLookupUrlRequiresIp,
-      normalized: null,
-    };
-  }
-
   try {
-    const probe = trimmed.split("{ip}").join("127.0.0.1");
-    const url = new URL(probe);
+    const url = new URL(trimmed);
     if (!isHttpUrl(url)) {
       return {
         error: messages.customGeoIpLookupUrlInvalid,
