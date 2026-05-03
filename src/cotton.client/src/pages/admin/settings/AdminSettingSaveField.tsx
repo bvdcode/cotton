@@ -3,10 +3,10 @@ import {
   Box,
   CircularProgress,
   IconButton,
-  Tooltip,
   type SxProps,
   type Theme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import type { ReactNode } from "react";
 
 type AdminSettingSaveFieldProps = {
@@ -30,9 +30,16 @@ export const AdminSettingSaveField = ({
     sx={[
       {
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) 48px",
+        gridTemplateColumns: "minmax(0, 1fr) auto",
         alignItems: "start",
         width: "100%",
+        "& .AdminSettingSaveField-control .MuiOutlinedInput-root": {
+          borderTopRightRadius: 0,
+          borderBottomRightRadius: 0,
+          bgcolor: (theme) => alpha(theme.palette.common.white, 0.02),
+          transition:
+            "border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease",
+        },
         "& .MuiOutlinedInput-root": {
           borderTopRightRadius: 0,
           borderBottomRightRadius: 0,
@@ -42,57 +49,66 @@ export const AdminSettingSaveField = ({
           borderTopRightRadius: 0,
           borderBottomRightRadius: 0,
         },
+        "& .MuiAutocomplete-endAdornment": {
+          right: 4,
+        },
         "&:hover .MuiOutlinedInput-notchedOutline": {
           borderColor: "text.primary",
         },
-        "&:hover .AdminSettingSaveField-button": {
+        "&:hover .AdminSettingSaveField-buttonRoot": {
           borderColor: "text.primary",
         },
-        "&:focus-within .AdminSettingSaveField-button": {
+        "&:focus-within .AdminSettingSaveField-control .MuiOutlinedInput-root": {
+          bgcolor: (theme) => alpha(theme.palette.common.white, 0.03),
+        },
+        "&:focus-within .AdminSettingSaveField-buttonRoot": {
           borderColor: "primary.main",
-          borderTopWidth: 2,
-          borderRightWidth: 2,
-          borderBottomWidth: 2,
-          borderLeftWidth: 0,
         },
       },
       ...(Array.isArray(sx) ? sx : [sx]),
     ]}
   >
-    <Box minWidth={0}>{children}</Box>
-    <Tooltip title={label}>
-      <span>
-        <IconButton
-          className="AdminSettingSaveField-button"
-          aria-label={label}
-          color="primary"
-          disabled={disabled}
-          onClick={onSave}
-          sx={{
-            width: 48,
-            height: 56,
-            borderTop: 1,
-            borderRight: 1,
-            borderBottom: 1,
-            borderLeft: 0,
-            borderColor: "divider",
-            borderRadius: (theme) =>
-              `0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0`,
+    <Box className="AdminSettingSaveField-control" minWidth={0}>
+      {children}
+    </Box>
+    <Box
+      className="AdminSettingSaveField-buttonRoot"
+      sx={{
+        width: 52,
+        height: 56,
+        borderTop: 1,
+        borderRight: 1,
+        borderBottom: 1,
+        borderLeft: 0,
+        borderColor: "divider",
+        bgcolor: (theme) => alpha(theme.palette.common.white, 0.02),
+        borderTopRightRadius: (theme) => theme.shape.borderRadius,
+        borderBottomRightRadius: (theme) => theme.shape.borderRadius,
+        transition:
+          "border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease",
+      }}
+    >
+      <IconButton
+        className="AdminSettingSaveField-button"
+        aria-label={label}
+        color="primary"
+        disabled={disabled}
+        onClick={onSave}
+        sx={{
+          width: "100%",
+          height: "100%",
+          borderRadius: 0,
+          bgcolor: "transparent",
+          "&:hover": {
             bgcolor: "transparent",
-            transition:
-              "border-color 120ms ease, background-color 120ms ease",
-            "&:hover": {
-              bgcolor: "transparent",
-            },
-            "&.Mui-disabled": {
-              bgcolor: "transparent",
-              borderColor: "divider",
-            },
-          }}
-        >
-          {saving ? <CircularProgress size={20} /> : <SaveIcon />}
-        </IconButton>
-      </span>
-    </Tooltip>
+          },
+          "&.Mui-disabled": {
+            bgcolor: "transparent",
+          },
+        }}
+      >
+        {saving ? <CircularProgress size={20} /> : <SaveIcon />}
+      </IconButton>
+    </Box>
   </Box>
 );

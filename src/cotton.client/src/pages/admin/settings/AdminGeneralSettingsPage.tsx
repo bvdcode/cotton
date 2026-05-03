@@ -6,7 +6,6 @@ import {
   FormControl,
   FormControlLabel,
   InputAdornment,
-  InputLabel,
   LinearProgress,
   MenuItem,
   Paper,
@@ -18,12 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { HelpOutline } from "@mui/icons-material";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
@@ -38,9 +32,9 @@ import {
 } from "../../../shared/api/httpClient";
 import { AdminSettingSaveField } from "./AdminSettingSaveField";
 import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
+import { AdminGeoIpLookupModeField } from "./AdminGeoIpLookupModeField";
 import {
   computionOptions,
-  geoIpOptions,
   getSupportedTimeZones,
   isSameArray,
   normalizeStoredPublicBaseUrl,
@@ -51,7 +45,7 @@ import {
   type GeneralSettingKey,
 } from "./adminGeneralSettingsModel";
 
-const contentMaxWidth = 1180;
+const contentMaxWidth = 1080;
 
 const SettingHelpIcon = ({ title }: { title: string }) => (
   <Tooltip title={title}>
@@ -100,7 +94,10 @@ export const AdminGeneralSettingsPage = () => {
   const [savedGeoIpLookupMode, setSavedGeoIpLookupMode] =
     useState<GeoIpLookupMode>("Disabled");
   const [customGeoIpLookupUrl, setCustomGeoIpLookupUrl] = useState("");
-  const [savedCustomGeoIpLookupUrl, setSavedCustomGeoIpLookupUrl] = useState("");
+  const [savedCustomGeoIpLookupUrl, setSavedCustomGeoIpLookupUrl] =
+    useState("");
+  const [customGeoIpLookupUrlTouched, setCustomGeoIpLookupUrlTouched] =
+    useState(false);
 
   const timeZoneOptions = useMemo(() => getSupportedTimeZones(), []);
   const validTimeZones = useMemo(
@@ -114,17 +111,20 @@ export const AdminGeneralSettingsPage = () => {
     [savingKeys],
   );
 
-  const setKeySaving = useCallback((key: GeneralSettingKey, saving: boolean) => {
-    setSavingKeys((current) => {
-      const next = new Set(current);
-      if (saving) {
-        next.add(key);
-      } else {
-        next.delete(key);
-      }
-      return next;
-    });
-  }, []);
+  const setKeySaving = useCallback(
+    (key: GeneralSettingKey, saving: boolean) => {
+      setSavingKeys((current) => {
+        const next = new Set(current);
+        if (saving) {
+          next.add(key);
+        } else {
+          next.delete(key);
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
   const runSave = useCallback(
     async (
@@ -203,12 +203,15 @@ export const AdminGeneralSettingsPage = () => {
         setTelemetry(nextTelemetry);
         setAllowDeduplication(nextAllowDeduplication);
         setAllowGlobalIndexing(nextAllowGlobalIndexing);
-        setServerUsage(nextServerUsage.length > 0 ? nextServerUsage : ["Other"]);
+        setServerUsage(
+          nextServerUsage.length > 0 ? nextServerUsage : ["Other"],
+        );
         setComputionMode(nextComputionMode);
         setGeoIpLookupMode(nextGeoIpLookupMode);
         setSavedGeoIpLookupMode(nextGeoIpLookupMode);
         setCustomGeoIpLookupUrl(normalizedCustomGeoIpLookupUrl);
         setSavedCustomGeoIpLookupUrl(normalizedCustomGeoIpLookupUrl);
+        setCustomGeoIpLookupUrlTouched(false);
       } catch {
         if (!active) return;
         setLoadError(t("settings.errors.loadFailed"));
@@ -292,21 +295,29 @@ export const AdminGeneralSettingsPage = () => {
 
   const updateCustomGeoIpLookupUrl = useCallback((value: string) => {
     setCustomGeoIpLookupUrl(value);
+    setCustomGeoIpLookupUrlTouched(true);
   }, []);
+
+  const getGeoIpModeLabel = useCallback(
+    (mode: GeoIpLookupMode) => t(`settings.general.geoIpLookupMode.${mode}`),
+    [t],
+  );
+
+  const getGeoIpModeDescription = useCallback(
+    (mode: GeoIpLookupMode) =>
+      t(`settings.general.geoIpLookupModeDescription.${mode}`),
+    [t],
+  );
 
   const savePublicBaseUrl = useCallback(() => {
     const next = publicBaseUrlValidation.normalized;
     if (!next || !canSavePublicBaseUrl) return;
 
     setPublicBaseUrl(next);
-    void runSave(
-      "publicBaseUrl",
-      () => settingsApi.setPublicBaseUrl(next),
-      {
-        onSuccess: () => setSavedPublicBaseUrl(next),
-        showSuccess: true,
-      },
-    );
+    void runSave("publicBaseUrl", () => settingsApi.setPublicBaseUrl(next), {
+      onSuccess: () => setSavedPublicBaseUrl(next),
+      showSuccess: true,
+    });
   }, [canSavePublicBaseUrl, publicBaseUrlValidation.normalized, runSave]);
 
   const saveTimezone = useCallback(() => {
@@ -321,6 +332,7 @@ export const AdminGeneralSettingsPage = () => {
   }, [canSaveTimezone, runSave, timezone]);
 
   const saveCustomGeoIpLookupUrl = useCallback(() => {
+    setCustomGeoIpLookupUrlTouched(true);
     const next = customGeoIpLookupUrlValidation.normalized;
     if (!next || !canSaveCustomGeoIpLookupUrl) return;
 
@@ -405,6 +417,7 @@ export const AdminGeneralSettingsPage = () => {
 
       if (next === "CustomHttp") {
         setGeoIpLookupMode(next);
+        setCustomGeoIpLookupUrlTouched(false);
         return;
       }
 
@@ -421,6 +434,11 @@ export const AdminGeneralSettingsPage = () => {
     },
     [geoIpLookupMode, isSaving, pageDisabled, runSave],
   );
+
+  const customGeoIpLookupUrlError =
+    customGeoIpLookupUrlTouched && geoIpLookupMode === "CustomHttp"
+      ? customGeoIpLookupUrlValidation.error
+      : null;
 
   const toggleUsage = useCallback(
     (usage: ServerUsage) => {
@@ -454,9 +472,6 @@ export const AdminGeneralSettingsPage = () => {
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
               {t("settings.general.title")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t("settings.general.description")}
             </Typography>
           </Stack>
 
@@ -651,7 +666,9 @@ export const AdminGeneralSettingsPage = () => {
                 <Typography variant="subtitle2" fontWeight={700}>
                   {t("settings.general.fields.serverUsage")}
                 </Typography>
-                <SettingHelpIcon title={t("settings.general.help.serverUsage")} />
+                <SettingHelpIcon
+                  title={t("settings.general.help.serverUsage")}
+                />
               </Stack>
               <AdminSettingSavingOverlay
                 saving={loading || isSaving("serverUsage")}
@@ -679,68 +696,49 @@ export const AdminGeneralSettingsPage = () => {
               </AdminSettingSavingOverlay>
             </Stack>
 
-            <AdminSettingSavingOverlay
-              saving={loading || isSaving("geoIpLookupMode")}
+            <Stack
+              spacing={1.5}
+              sx={{
+                gridColumn: { lg: "1 / -1" },
+                maxWidth: { lg: 980 },
+              }}
             >
-              <FormControl fullWidth>
-                <InputLabel id="admin-geoip-mode-label">
-                  {t("settings.general.fields.geoIpLookupMode")}
-                </InputLabel>
-                <Select
-                  labelId="admin-geoip-mode-label"
-                  label={t("settings.general.fields.geoIpLookupMode")}
-                  value={geoIpLookupMode}
-                  onChange={(event) =>
-                    handleGeoIpLookupModeChange(
-                      event.target.value as GeoIpLookupMode,
-                    )
-                  }
-                  disabled={pageDisabled || isSaving("geoIpLookupMode")}
-                >
-                  {geoIpOptions.map((option) => (
-                    <MenuItem
-                      key={option}
-                      value={option}
-                      disabled={!telemetry && option === "CottonCloud"}
-                    >
-                      <Stack spacing={0.25} py={0.5}>
-                        <Typography variant="body2">
-                          {t(`settings.general.geoIpLookupMode.${option}`)}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {t(
-                            `settings.general.geoIpLookupModeDescription.${option}`,
-                          )}
-                        </Typography>
-                      </Stack>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </AdminSettingSavingOverlay>
+              <AdminGeoIpLookupModeField
+                value={geoIpLookupMode}
+                loading={loading || isSaving("geoIpLookupMode")}
+                disabled={pageDisabled || isSaving("geoIpLookupMode")}
+                telemetryEnabled={telemetry}
+                label={t("settings.general.fields.geoIpLookupMode")}
+                getLabel={getGeoIpModeLabel}
+                getDescription={getGeoIpModeDescription}
+                onChange={handleGeoIpLookupModeChange}
+              />
 
-            {geoIpLookupMode === "CustomHttp" && (
-              <AdminSettingSaveField
-                label={t("settings.actions.save")}
-                onSave={saveCustomGeoIpLookupUrl}
-                disabled={!canSaveCustomGeoIpLookupUrl}
-                saving={isSaving("customGeoIpLookupUrl")}
-              >
-                <AdminSettingSavingOverlay saving={loading}>
-                  <TextField
-                    label={t("settings.general.fields.customGeoIpLookupUrl")}
-                    value={customGeoIpLookupUrl}
-                    onChange={(event) =>
-                      updateCustomGeoIpLookupUrl(event.target.value)
-                    }
-                    disabled={pageDisabled}
-                    error={Boolean(customGeoIpLookupUrlValidation.error)}
-                    helperText={customGeoIpLookupUrlValidation.error ?? " "}
-                    fullWidth
-                  />
-                </AdminSettingSavingOverlay>
-              </AdminSettingSaveField>
-            )}
+              {geoIpLookupMode === "CustomHttp" && (
+                <Box sx={{ maxWidth: 760 }}>
+                  <AdminSettingSaveField
+                    label={t("settings.actions.save")}
+                    onSave={saveCustomGeoIpLookupUrl}
+                    disabled={!canSaveCustomGeoIpLookupUrl}
+                    saving={isSaving("customGeoIpLookupUrl")}
+                  >
+                    <AdminSettingSavingOverlay saving={loading}>
+                      <TextField
+                        label={t("settings.general.fields.customGeoIpLookupUrl")}
+                        value={customGeoIpLookupUrl}
+                        onChange={(event) =>
+                          updateCustomGeoIpLookupUrl(event.target.value)
+                        }
+                        disabled={pageDisabled}
+                        error={Boolean(customGeoIpLookupUrlError)}
+                        helperText={customGeoIpLookupUrlError ?? " "}
+                        fullWidth
+                      />
+                    </AdminSettingSavingOverlay>
+                  </AdminSettingSaveField>
+                </Box>
+              )}
+            </Stack>
           </Box>
         </Stack>
       </Paper>
