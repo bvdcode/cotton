@@ -467,7 +467,7 @@ export const AdminGeneralSettingsPage = () => {
         <Stack
           p={2}
           spacing={2}
-          sx={{ maxWidth: contentMaxWidth, width: "100%" }}
+          sx={{ maxWidth: contentMaxWidth, width: "100%", mx: "auto" }}
         >
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>

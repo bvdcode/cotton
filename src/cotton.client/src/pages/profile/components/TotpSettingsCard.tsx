@@ -215,7 +215,11 @@ export const TotpSettingsCard = ({
                   <Typography variant="body2" color="text.secondary">
                     {t("fields.totpEnabledAt")}
                   </Typography>
-                  <Typography variant="body2" fontWeight={600} textAlign="right">
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    textAlign="right"
+                  >
                     {formatDateTime(totpEnabledAt)}
                   </Typography>
                 </Box>
@@ -226,10 +230,6 @@ export const TotpSettingsCard = ({
                   {t("fields.totpFailedAttempts")}: {totpFailedAttempts}
                 </Alert>
               )}
-
-              <Typography variant="body2" color="text.secondary">
-                {t("totp.enabledDescription")}
-              </Typography>
 
               <Box>
                 <Button
@@ -309,9 +309,7 @@ export const TotpSettingsCard = ({
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      onClick={() =>
-                        setDisablePasswordVisible((v) => !v)
-                      }
+                      onClick={() => setDisablePasswordVisible((v) => !v)}
                       edge="end"
                     >
                       {disablePasswordVisible ? (

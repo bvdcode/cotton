@@ -116,7 +116,7 @@ export const AdminEmailSettingsPage = () => {
   return (
     <Stack spacing={2}>
       <Paper>
-        <Stack p={2} spacing={2} sx={{ maxWidth: 920, width: "100%" }}>
+        <Stack p={2} spacing={2} sx={{ maxWidth: 920, width: "100%", mx: "auto" }}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
               {t("emailSettings.title")}
