@@ -143,7 +143,7 @@ export const UserMenu = () => {
           <ListItemIcon>
             <Person fontSize="small" />
           </ListItemIcon>
-          <ListItemText>{t("userMenu.settings")}</ListItemText>
+          <ListItemText>{t("userMenu.profile")}</ListItemText>
         </MenuItem>
 
         {isAdmin && (

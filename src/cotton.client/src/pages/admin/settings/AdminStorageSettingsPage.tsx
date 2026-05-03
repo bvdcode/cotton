@@ -19,18 +19,18 @@ import {
   type S3Config,
   type StorageType,
 } from "../../../shared/api/settingsApi";
-import { AdminSettingSaveIconButton } from "./AdminSettingSaveIconButton";
+import {
+  hasApiErrorToastBeenDispatched,
+  isAxiosError,
+} from "../../../shared/api/httpClient";
+import { AdminSettingSaveField } from "./AdminSettingSaveField";
 import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
-
-type SavingKey = "storageType" | "s3Config";
-
-const saveIconSx = { mt: 1, flexShrink: 0 };
 
 export const AdminStorageSettingsPage = () => {
   const { t } = useTranslation("admin");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<SavingKey | null>(null);
+  const [saving, setSaving] = useState(false);
   const [storageType, setStorageType] = useState<StorageType>("Local");
   const [s3Config, setS3Config] = useState<S3Config>({
     endpoint: "",
@@ -40,9 +40,8 @@ export const AdminStorageSettingsPage = () => {
     secretKey: "",
   });
 
-  const isBusy = loading || savingKey !== null;
+  const isBusy = loading || saving;
   const isS3Storage = storageType === "S3";
-  const isSaving = (key: SavingKey): boolean => savingKey === key;
 
   useEffect(() => {
     let active = true;
@@ -82,51 +81,34 @@ export const AdminStorageSettingsPage = () => {
     setS3Config((current) => ({ ...current, [key]: value }));
   };
 
-  const saveS3Config = async () => {
+  const saveStorageSettings = async () => {
     if (isBusy) return;
 
-    setSavingKey("s3Config");
+    setSaving(true);
     try {
-      await settingsApi.setS3Config(s3Config);
-      toast.success(t("storageSettings.state.s3Saved"), {
-        toastId: "admin-storage-settings:s3-config:saved",
-      });
-    } catch {
-      toast.error(t("storageSettings.errors.s3SaveFailed"), {
-        toastId: "admin-storage-settings:s3-config:save-failed",
-      });
-    } finally {
-      setSavingKey(null);
-    }
-  };
-
-  const activateStorage = async (nextType: StorageType) => {
-    if (isBusy) return;
-
-    setSavingKey("storageType");
-    try {
-      if (nextType === "S3") {
+      if (storageType === "S3") {
         await settingsApi.setS3Config(s3Config);
       }
 
-      await settingsApi.setStorageType(nextType);
-      setStorageType(nextType);
+      await settingsApi.setStorageType(storageType);
       toast.success(t("storageSettings.state.storageSaved"), {
         toastId: "admin-storage-settings:storage-type:saved",
       });
-    } catch {
-      toast.error(t("storageSettings.errors.storageSaveFailed"), {
-        toastId: "admin-storage-settings:storage-type:save-failed",
-      });
+    } catch (error) {
+      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
+        toast.error(t("storageSettings.errors.storageSaveFailed"), {
+          toastId: "admin-storage-settings:storage-type:save-failed",
+        });
+      }
     } finally {
-      setSavingKey(null);
+      setSaving(false);
     }
   };
 
   return (
     <Stack spacing={2}>
       <Paper>
-        <Stack p={2} spacing={2}>
+        <Stack p={2} spacing={2} sx={{ maxWidth: 920, width: "100%" }}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
               {t("storageSettings.title")}
@@ -138,15 +120,20 @@ export const AdminStorageSettingsPage = () => {
 
           <LinearProgress
             sx={{
-              opacity: isBusy ? 1 : 0,
+              opacity: loading ? 1 : 0,
               transition: "opacity 120ms ease",
             }}
           />
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
 
-          <Stack direction="row" spacing={1} alignItems="flex-start">
-            <Box flex={1} minWidth={0}>
+          <Box sx={{ maxWidth: 760 }}>
+            <AdminSettingSaveField
+              label={t("settings.actions.save")}
+              onSave={() => void saveStorageSettings()}
+              disabled={isBusy}
+              saving={saving}
+            >
               <AdminSettingSavingOverlay saving={loading}>
                 <FormControl fullWidth>
                   <InputLabel id="admin-storage-type-label">
@@ -170,20 +157,8 @@ export const AdminStorageSettingsPage = () => {
                   </Select>
                 </FormControl>
               </AdminSettingSavingOverlay>
-            </Box>
-            <AdminSettingSavingOverlay saving={isSaving("storageType")}>
-              <AdminSettingSaveIconButton
-                label={
-                  storageType === "S3"
-                    ? t("storageSettings.actions.useS3")
-                    : t("storageSettings.actions.useLocal")
-                }
-                onClick={() => void activateStorage(storageType)}
-                disabled={isBusy}
-                sx={saveIconSx}
-              />
-            </AdminSettingSavingOverlay>
-          </Stack>
+            </AdminSettingSaveField>
+          </Box>
 
           {isS3Storage && (
             <Stack spacing={2}>
@@ -246,30 +221,18 @@ export const AdminStorageSettingsPage = () => {
                   </AdminSettingSavingOverlay>
                 </Box>
               </Stack>
-              <Stack direction="row" spacing={1} alignItems="flex-start">
-                <Box flex={1} minWidth={0}>
-                  <AdminSettingSavingOverlay saving={loading}>
-                    <TextField
-                      label={t("storageSettings.s3.fields.secretKey")}
-                      value={s3Config.secretKey}
-                      onChange={(event) =>
-                        updateS3Config("secretKey", event.target.value)
-                      }
-                      disabled={isBusy}
-                      type="password"
-                      fullWidth
-                    />
-                  </AdminSettingSavingOverlay>
-                </Box>
-                <AdminSettingSavingOverlay saving={isSaving("s3Config")}>
-                  <AdminSettingSaveIconButton
-                    label={t("storageSettings.actions.saveS3")}
-                    onClick={() => void saveS3Config()}
-                    disabled={isBusy}
-                    sx={saveIconSx}
-                  />
-                </AdminSettingSavingOverlay>
-              </Stack>
+              <AdminSettingSavingOverlay saving={loading}>
+                <TextField
+                  label={t("storageSettings.s3.fields.secretKey")}
+                  value={s3Config.secretKey}
+                  onChange={(event) =>
+                    updateS3Config("secretKey", event.target.value)
+                  }
+                  disabled={isBusy}
+                  type="password"
+                  fullWidth
+                />
+              </AdminSettingSavingOverlay>
             </Stack>
           )}
         </Stack>

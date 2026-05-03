@@ -20,9 +20,20 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { HelpOutline } from "@mui/icons-material";
+import {
+  AllInclusive,
+  CheckCircleOutline,
+  HelpOutline,
+  WarningAmber,
+} from "@mui/icons-material";
 import { useConfirm } from "material-ui-confirm";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
@@ -32,7 +43,11 @@ import {
   type ServerUsage,
   type StorageSpaceMode,
 } from "../../../shared/api/settingsApi";
-import { AdminSettingSaveIconButton } from "./AdminSettingSaveIconButton";
+import {
+  hasApiErrorToastBeenDispatched,
+  isAxiosError,
+} from "../../../shared/api/httpClient";
+import { AdminSettingSaveField } from "./AdminSettingSaveField";
 import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
 import {
   computionOptions,
@@ -48,7 +63,13 @@ import {
   type GeneralSettingKey,
 } from "./adminGeneralSettingsModel";
 
-const saveIconSx = { mt: 1, flexShrink: 0 };
+const contentMaxWidth = 1180;
+
+const storageSpaceModeIcons: Record<StorageSpaceMode, ReactNode> = {
+  Limited: <WarningAmber fontSize="small" sx={{ color: "warning.main" }} />,
+  Optimal: <CheckCircleOutline fontSize="small" sx={{ color: "success.main" }} />,
+  Unlimited: <AllInclusive fontSize="small" sx={{ color: "info.main" }} />,
+};
 
 const SettingHelpIcon = ({ title }: { title: string }) => (
   <Tooltip title={title}>
@@ -97,6 +118,8 @@ export const AdminGeneralSettingsPage = () => {
   const [computionMode, setComputionMode] = useState<ComputionMode>("Local");
   const [geoIpLookupMode, setGeoIpLookupMode] =
     useState<GeoIpLookupMode>("Disabled");
+  const [savedGeoIpLookupMode, setSavedGeoIpLookupMode] =
+    useState<GeoIpLookupMode>("Disabled");
   const [customGeoIpLookupUrl, setCustomGeoIpLookupUrl] = useState("");
   const [savedCustomGeoIpLookupUrl, setSavedCustomGeoIpLookupUrl] = useState("");
 
@@ -106,7 +129,6 @@ export const AdminGeneralSettingsPage = () => {
     [timeZoneOptions],
   );
 
-  const savingAny = savingKeys.size > 0;
   const pageDisabled = loading || loadError !== null;
   const isSaving = useCallback(
     (key: GeneralSettingKey): boolean => savingKeys.has(key),
@@ -144,11 +166,13 @@ export const AdminGeneralSettingsPage = () => {
             toastId: `admin-general-settings:${key}:saved`,
           });
         }
-      } catch {
+      } catch (error) {
         options?.onError?.();
-        toast.error(t("settings.errors.saveFailed"), {
-          toastId: `admin-general-settings:${key}:save-failed`,
-        });
+        if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
+          toast.error(t("settings.errors.saveFailed"), {
+            toastId: `admin-general-settings:${key}:save-failed`,
+          });
+        }
       } finally {
         setKeySaving(key, false);
       }
@@ -206,6 +230,7 @@ export const AdminGeneralSettingsPage = () => {
         setStorageSpaceMode(nextStorageSpaceMode);
         setComputionMode(nextComputionMode);
         setGeoIpLookupMode(nextGeoIpLookupMode);
+        setSavedGeoIpLookupMode(nextGeoIpLookupMode);
         setCustomGeoIpLookupUrl(normalizedCustomGeoIpLookupUrl);
         setSavedCustomGeoIpLookupUrl(normalizedCustomGeoIpLookupUrl);
       } catch {
@@ -234,9 +259,6 @@ export const AdminGeneralSettingsPage = () => {
       timezoneInvalid: t("settings.general.validation.timezoneInvalid"),
       customGeoIpLookupUrlInvalid: t(
         "settings.general.validation.customGeoIpLookupUrlInvalid",
-      ),
-      customGeoIpLookupUrlRequiresIp: t(
-        "settings.general.validation.customGeoIpLookupUrlRequiresIp",
       ),
     }),
     [t],
@@ -281,7 +303,8 @@ export const AdminGeneralSettingsPage = () => {
     !isSaving("customGeoIpLookupUrl") &&
     !customGeoIpLookupUrlValidation.error &&
     customGeoIpLookupUrlValidation.normalized !== null &&
-    customGeoIpLookupUrlValidation.normalized !== savedCustomGeoIpLookupUrl;
+    (customGeoIpLookupUrlValidation.normalized !== savedCustomGeoIpLookupUrl ||
+      savedGeoIpLookupMode !== "CustomHttp");
 
   const updatePublicBaseUrl = useCallback((value: string) => {
     setPublicBaseUrl(value);
@@ -328,9 +351,15 @@ export const AdminGeneralSettingsPage = () => {
     setCustomGeoIpLookupUrl(next);
     void runSave(
       "customGeoIpLookupUrl",
-      () => settingsApi.setCustomGeoIpLookupUrl(next),
+      async () => {
+        await settingsApi.setCustomGeoIpLookupUrl(next);
+        await settingsApi.setGeoIpLookupMode("CustomHttp");
+      },
       {
-        onSuccess: () => setSavedCustomGeoIpLookupUrl(next),
+        onSuccess: () => {
+          setSavedCustomGeoIpLookupUrl(next);
+          setSavedGeoIpLookupMode("CustomHttp");
+        },
         showSuccess: true,
       },
     );
@@ -389,7 +418,14 @@ export const AdminGeneralSettingsPage = () => {
 
   const handleStorageSpaceModeChange = useCallback(
     (_: unknown, next: StorageSpaceMode | null) => {
-      if (!next || next === storageSpaceMode || pageDisabled) return;
+      if (
+        !next ||
+        next === storageSpaceMode ||
+        pageDisabled ||
+        isSaving("storageSpaceMode")
+      ) {
+        return;
+      }
 
       const previous = storageSpaceMode;
       setStorageSpaceMode(next);
@@ -401,12 +437,24 @@ export const AdminGeneralSettingsPage = () => {
         },
       );
     },
-    [pageDisabled, runSave, storageSpaceMode],
+    [isSaving, pageDisabled, runSave, storageSpaceMode],
   );
 
   const handleGeoIpLookupModeChange = useCallback(
     (next: GeoIpLookupMode) => {
-      if (next === geoIpLookupMode || pageDisabled) return;
+      if (
+        next === geoIpLookupMode ||
+        pageDisabled ||
+        isSaving("geoIpLookupMode") ||
+        isSaving("customGeoIpLookupUrl")
+      ) {
+        return;
+      }
+
+      if (next === "CustomHttp") {
+        setGeoIpLookupMode(next);
+        return;
+      }
 
       const previous = geoIpLookupMode;
       setGeoIpLookupMode(next);
@@ -414,11 +462,12 @@ export const AdminGeneralSettingsPage = () => {
         "geoIpLookupMode",
         () => settingsApi.setGeoIpLookupMode(next),
         {
+          onSuccess: () => setSavedGeoIpLookupMode(next),
           onError: () => setGeoIpLookupMode(previous),
         },
       );
     },
-    [geoIpLookupMode, pageDisabled, runSave],
+    [geoIpLookupMode, isSaving, pageDisabled, runSave],
   );
 
   const toggleUsage = useCallback(
@@ -454,7 +503,11 @@ export const AdminGeneralSettingsPage = () => {
   return (
     <Stack spacing={2}>
       <Paper sx={{ overflow: "hidden" }}>
-        <Stack p={2} spacing={2}>
+        <Stack
+          p={2}
+          spacing={2}
+          sx={{ maxWidth: contentMaxWidth, width: "100%" }}
+        >
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
               {t("settings.general.title")}
@@ -467,7 +520,7 @@ export const AdminGeneralSettingsPage = () => {
           <Box minHeight={4}>
             <LinearProgress
               sx={{
-                opacity: loading || savingAny ? 1 : 0,
+                opacity: loading ? 1 : 0,
                 transition: "opacity 120ms ease",
               }}
             />
@@ -475,163 +528,168 @@ export const AdminGeneralSettingsPage = () => {
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
 
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={1} alignItems="flex-start">
-              <Box flex={1} minWidth={0}>
-                <AdminSettingSavingOverlay
-                  saving={loading || isSaving("publicBaseUrl")}
-                >
-                  <TextField
-                    label={t("settings.general.fields.publicBaseUrl")}
-                    value={publicBaseUrl}
-                    onChange={(event) =>
-                      updatePublicBaseUrl(event.target.value)
-                    }
-                    disabled={pageDisabled || isSaving("publicBaseUrl")}
-                    error={Boolean(publicBaseUrlValidation.error)}
-                    helperText={publicBaseUrlValidation.error ?? " "}
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <SettingHelpIcon
-                            title={t("settings.general.help.publicBaseUrl")}
-                          />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </AdminSettingSavingOverlay>
-              </Box>
-              <AdminSettingSavingOverlay saving={isSaving("publicBaseUrl")}>
-                <AdminSettingSaveIconButton
-                  label={t("settings.actions.save")}
-                  onClick={savePublicBaseUrl}
-                  disabled={!canSavePublicBaseUrl}
-                  sx={saveIconSx}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "minmax(0, 1fr)",
+                lg: "repeat(2, minmax(320px, 1fr))",
+              },
+              gap: 2,
+              alignItems: "start",
+            }}
+          >
+            <AdminSettingSaveField
+              label={t("settings.actions.save")}
+              onSave={savePublicBaseUrl}
+              disabled={!canSavePublicBaseUrl}
+              saving={isSaving("publicBaseUrl")}
+            >
+              <AdminSettingSavingOverlay saving={loading}>
+                <TextField
+                  label={t("settings.general.fields.publicBaseUrl")}
+                  value={publicBaseUrl}
+                  onChange={(event) => updatePublicBaseUrl(event.target.value)}
+                  disabled={pageDisabled}
+                  error={Boolean(publicBaseUrlValidation.error)}
+                  helperText={publicBaseUrlValidation.error ?? " "}
+                  fullWidth
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <SettingHelpIcon
+                          title={t("settings.general.help.publicBaseUrl")}
+                        />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
+              </AdminSettingSavingOverlay>
+            </AdminSettingSaveField>
+
+            <AdminSettingSaveField
+              label={t("settings.actions.save")}
+              onSave={saveTimezone}
+              disabled={!canSaveTimezone}
+              saving={isSaving("timezone")}
+            >
+              <AdminSettingSavingOverlay saving={loading}>
+                <Autocomplete
+                  freeSolo
+                  options={timeZoneOptions}
+                  value={timezone}
+                  inputValue={timezone}
+                  onChange={(_, value) => updateTimezone(value ?? "")}
+                  onInputChange={(_, value) => updateTimezone(value)}
+                  disabled={pageDisabled}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={t("settings.general.fields.timezone")}
+                      error={Boolean(timezoneValidationError)}
+                      helperText={timezoneValidationError ?? " "}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            <InputAdornment position="end">
+                              <SettingHelpIcon
+                                title={t("settings.general.help.timezone")}
+                              />
+                            </InputAdornment>
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              </AdminSettingSavingOverlay>
+            </AdminSettingSaveField>
+
+            <Stack spacing={1}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={0.5}
+                minHeight={32}
+              >
+                <Typography variant="subtitle2" fontWeight={700}>
+                  {t("settings.general.fields.computionMode")}
+                </Typography>
+                <SettingHelpIcon
+                  title={t("settings.general.computionMode.inDevelopment")}
+                />
+              </Stack>
+              <AdminSettingSavingOverlay saving={loading}>
+                <FormControl fullWidth disabled>
+                  <Select
+                    value={computionMode}
+                    onChange={(event) =>
+                      setComputionMode(event.target.value as ComputionMode)
+                    }
+                  >
+                    {computionOptions.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {t(`settings.general.computionMode.${option}`)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </AdminSettingSavingOverlay>
+            </Stack>
+
+            <Stack spacing={1}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={0.5}
+                minHeight={32}
+              >
+                <Typography variant="subtitle2" fontWeight={700}>
+                  {t("settings.general.fields.storageSpaceMode")}
+                </Typography>
+                <Tooltip title={t("settings.general.storageSpaceHelp.open")}>
+                  <IconButton
+                    size="small"
+                    onClick={showStorageSpaceHelp}
+                    disabled={pageDisabled}
+                  >
+                    <HelpOutline fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+              <AdminSettingSavingOverlay saving={loading}>
+                <ToggleButtonGroup
+                  fullWidth
+                  exclusive
+                  value={storageSpaceMode}
+                  onChange={handleStorageSpaceModeChange}
+                  disabled={pageDisabled}
+                  aria-label={t("settings.general.fields.storageSpaceMode")}
+                >
+                  {storageSpaceOptions.map((option) => (
+                    <ToggleButton
+                      key={option}
+                      value={option}
+                      aria-label={t(`settings.general.storageSpaceMode.${option}`)}
+                      sx={{ minHeight: 40, gap: 0.75 }}
+                    >
+                      {storageSpaceModeIcons[option]}
+                      <Box component="span">
+                        {t(`settings.general.storageSpaceMode.${option}`)}
+                      </Box>
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
               </AdminSettingSavingOverlay>
             </Stack>
 
             <Stack
-              direction="row"
-              spacing={1}
-              alignItems="flex-start"
+              direction={{ xs: "column", md: "row" }}
+              spacing={2}
+              sx={{ gridColumn: { lg: "1 / -1" } }}
             >
-              <Box flex={1} minWidth={0}>
-                <AdminSettingSavingOverlay
-                  saving={loading || isSaving("timezone")}
-                >
-                  <Autocomplete
-                    freeSolo
-                    options={timeZoneOptions}
-                    value={timezone}
-                    inputValue={timezone}
-                    onChange={(_, value) => updateTimezone(value ?? "")}
-                    onInputChange={(_, value) => updateTimezone(value)}
-                    disabled={pageDisabled || isSaving("timezone")}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={t("settings.general.fields.timezone")}
-                        error={Boolean(timezoneValidationError)}
-                        helperText={timezoneValidationError ?? " "}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              <InputAdornment position="end">
-                                <SettingHelpIcon
-                                  title={t("settings.general.help.timezone")}
-                                />
-                              </InputAdornment>
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                  />
-                </AdminSettingSavingOverlay>
-              </Box>
-              <AdminSettingSavingOverlay saving={isSaving("timezone")}>
-                <AdminSettingSaveIconButton
-                  label={t("settings.actions.save")}
-                  onClick={saveTimezone}
-                  disabled={!canSaveTimezone}
-                  sx={saveIconSx}
-                />
-              </AdminSettingSavingOverlay>
-            </Stack>
-
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <Tooltip title={t("settings.general.computionMode.inDevelopment")}>
-                <Box flex={1} minWidth={0}>
-                  <AdminSettingSavingOverlay saving={loading}>
-                    <FormControl fullWidth disabled>
-                      <InputLabel id="admin-compution-mode-label">
-                        {t("settings.general.fields.computionMode")}
-                      </InputLabel>
-                      <Select
-                        labelId="admin-compution-mode-label"
-                        label={t("settings.general.fields.computionMode")}
-                        value={computionMode}
-                        onChange={(event) =>
-                          setComputionMode(event.target.value as ComputionMode)
-                        }
-                      >
-                        {computionOptions.map((option) => (
-                          <MenuItem key={option} value={option}>
-                            {t(`settings.general.computionMode.${option}`)}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </AdminSettingSavingOverlay>
-                </Box>
-              </Tooltip>
-
-              <Stack flex={1} spacing={1}>
-                <Stack direction="row" alignItems="center" spacing={0.5}>
-                  <Typography variant="subtitle2" fontWeight={700}>
-                    {t("settings.general.fields.storageSpaceMode")}
-                  </Typography>
-                  <Tooltip title={t("settings.general.storageSpaceHelp.open")}>
-                    <IconButton
-                      size="small"
-                      onClick={showStorageSpaceHelp}
-                      disabled={pageDisabled}
-                    >
-                      <HelpOutline fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-                <AdminSettingSavingOverlay
-                  saving={loading || isSaving("storageSpaceMode")}
-                >
-                  <ToggleButtonGroup
-                    fullWidth
-                    exclusive
-                    value={storageSpaceMode}
-                    onChange={handleStorageSpaceModeChange}
-                    disabled={pageDisabled || isSaving("storageSpaceMode")}
-                    aria-label={t("settings.general.fields.storageSpaceMode")}
-                  >
-                    {storageSpaceOptions.map((option) => (
-                      <ToggleButton
-                        key={option}
-                        value={option}
-                        aria-label={t(`settings.general.storageSpaceMode.${option}`)}
-                      >
-                        {t(`settings.general.storageSpaceMode.${option}`)}
-                      </ToggleButton>
-                    ))}
-                  </ToggleButtonGroup>
-                </AdminSettingSavingOverlay>
-              </Stack>
-            </Stack>
-
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <AdminSettingSavingOverlay
                 saving={loading || isSaving("telemetry")}
               >
@@ -691,7 +749,7 @@ export const AdminGeneralSettingsPage = () => {
               </AdminSettingSavingOverlay>
             </Stack>
 
-            <Stack spacing={1}>
+            <Stack spacing={1} sx={{ gridColumn: { lg: "1 / -1" } }}>
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <Typography variant="subtitle2" fontWeight={700}>
                   {t("settings.general.fields.serverUsage")}
@@ -724,86 +782,69 @@ export const AdminGeneralSettingsPage = () => {
               </AdminSettingSavingOverlay>
             </Stack>
 
-            <Stack spacing={2}>
-              <AdminSettingSavingOverlay
-                saving={loading || isSaving("geoIpLookupMode")}
-              >
-                <FormControl fullWidth>
-                  <InputLabel id="admin-geoip-mode-label">
-                    {t("settings.general.fields.geoIpLookupMode")}
-                  </InputLabel>
-                  <Select
-                    labelId="admin-geoip-mode-label"
-                    label={t("settings.general.fields.geoIpLookupMode")}
-                    value={geoIpLookupMode}
-                    onChange={(event) =>
-                      handleGeoIpLookupModeChange(
-                        event.target.value as GeoIpLookupMode,
-                      )
-                    }
-                    disabled={pageDisabled || isSaving("geoIpLookupMode")}
-                  >
-                    {geoIpOptions.map((option) => (
-                      <MenuItem
-                        key={option}
-                        value={option}
-                        disabled={!telemetry && option === "CottonCloud"}
-                      >
-                        <Stack spacing={0.25} py={0.5}>
-                          <Typography variant="body2">
-                            {t(`settings.general.geoIpLookupMode.${option}`)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {t(
-                              `settings.general.geoIpLookupModeDescription.${option}`,
-                            )}
-                          </Typography>
-                        </Stack>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </AdminSettingSavingOverlay>
-
-              {geoIpLookupMode === "CustomHttp" && (
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  alignItems="flex-start"
+            <AdminSettingSavingOverlay
+              saving={loading || isSaving("geoIpLookupMode")}
+            >
+              <FormControl fullWidth>
+                <InputLabel id="admin-geoip-mode-label">
+                  {t("settings.general.fields.geoIpLookupMode")}
+                </InputLabel>
+                <Select
+                  labelId="admin-geoip-mode-label"
+                  label={t("settings.general.fields.geoIpLookupMode")}
+                  value={geoIpLookupMode}
+                  onChange={(event) =>
+                    handleGeoIpLookupModeChange(
+                      event.target.value as GeoIpLookupMode,
+                    )
+                  }
+                  disabled={pageDisabled || isSaving("geoIpLookupMode")}
                 >
-                  <Box flex={1} minWidth={0}>
-                    <AdminSettingSavingOverlay
-                      saving={loading || isSaving("customGeoIpLookupUrl")}
+                  {geoIpOptions.map((option) => (
+                    <MenuItem
+                      key={option}
+                      value={option}
+                      disabled={!telemetry && option === "CottonCloud"}
                     >
-                      <TextField
-                        label={t("settings.general.fields.customGeoIpLookupUrl")}
-                        value={customGeoIpLookupUrl}
-                        onChange={(event) =>
-                          updateCustomGeoIpLookupUrl(event.target.value)
-                        }
-                        disabled={
-                          pageDisabled || isSaving("customGeoIpLookupUrl")
-                        }
-                        error={Boolean(customGeoIpLookupUrlValidation.error)}
-                        helperText={customGeoIpLookupUrlValidation.error ?? " "}
-                        fullWidth
-                      />
-                    </AdminSettingSavingOverlay>
-                  </Box>
-                  <AdminSettingSavingOverlay
-                    saving={isSaving("customGeoIpLookupUrl")}
-                  >
-                    <AdminSettingSaveIconButton
-                      label={t("settings.actions.save")}
-                      onClick={saveCustomGeoIpLookupUrl}
-                      disabled={!canSaveCustomGeoIpLookupUrl}
-                      sx={saveIconSx}
-                    />
-                  </AdminSettingSavingOverlay>
-                </Stack>
-              )}
-            </Stack>
-          </Stack>
+                      <Stack spacing={0.25} py={0.5}>
+                        <Typography variant="body2">
+                          {t(`settings.general.geoIpLookupMode.${option}`)}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t(
+                            `settings.general.geoIpLookupModeDescription.${option}`,
+                          )}
+                        </Typography>
+                      </Stack>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </AdminSettingSavingOverlay>
+
+            {geoIpLookupMode === "CustomHttp" && (
+              <AdminSettingSaveField
+                label={t("settings.actions.save")}
+                onSave={saveCustomGeoIpLookupUrl}
+                disabled={!canSaveCustomGeoIpLookupUrl}
+                saving={isSaving("customGeoIpLookupUrl")}
+              >
+                <AdminSettingSavingOverlay saving={loading}>
+                  <TextField
+                    label={t("settings.general.fields.customGeoIpLookupUrl")}
+                    value={customGeoIpLookupUrl}
+                    onChange={(event) =>
+                      updateCustomGeoIpLookupUrl(event.target.value)
+                    }
+                    disabled={pageDisabled}
+                    error={Boolean(customGeoIpLookupUrlValidation.error)}
+                    helperText={customGeoIpLookupUrlValidation.error ?? " "}
+                    fullWidth
+                  />
+                </AdminSettingSavingOverlay>
+              </AdminSettingSaveField>
+            )}
+          </Box>
         </Stack>
       </Paper>
     </Stack>

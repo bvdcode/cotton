@@ -553,11 +553,13 @@
         "options": {
           "disabled": "No, keep it off",
           "cottonCloud": "Use cloud service",
+          "local": "Use GeoIP Light locally",
           "custom": "Use my own resolver"
         },
         "descriptions": {
           "disabled": "No location lookup will be made for sign-in and access notifications.",
           "cottonCloud": "Resolve IP addresses through the Cotton provider. Requires telemetry to be enabled.",
+          "local": "Resolve IP addresses on your server with a local GeoIP Light database/package.",
           "custom": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         }
       },
@@ -1066,8 +1068,7 @@
           "publicBaseUrlInvalid": "Enter a valid HTTP or HTTPS base URL without credentials, query, or hash.",
           "publicBaseUrlMismatch": "Current address is {{current}}, but generated public links will use {{configured}}. Be careful before saving this value.",
           "timezoneInvalid": "Choose a valid IANA time zone from the list.",
-          "customGeoIpLookupUrlInvalid": "Enter a valid HTTP or HTTPS lookup URL.",
-          "customGeoIpLookupUrlRequiresIp": "The lookup URL must include the {ip} placeholder."
+          "customGeoIpLookupUrlInvalid": "Enter a valid HTTP or HTTPS lookup URL."
         },
         "help": {
           "publicBaseUrl": "Despite this setting, Cotton determines the public URL automatically almost everywhere. Set it only when automatic detection is wrong.",
@@ -1102,11 +1103,13 @@
         "geoIpLookupMode": {
           "Disabled": "Disabled",
           "CottonCloud": "Cloud service",
+          "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "Custom HTTP"
         },
         "geoIpLookupModeDescription": {
           "Disabled": "Do not resolve IP locations for notifications.",
           "CottonCloud": "Resolve IP addresses through the Cotton provider.",
+          "MaxMindLocal": "Resolve IP addresses locally with a GeoIP Light database/package.",
           "CustomHttp": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         }
       }

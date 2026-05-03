@@ -15,7 +15,11 @@ export type StorageType = "Local" | "S3";
 export type EmailMode = "None" | "Cloud" | "Custom";
 export type ComputionMode = "Local" | "Cloud" | "Remote";
 export type StorageSpaceMode = "Optimal" | "Limited" | "Unlimited";
-export type GeoIpLookupMode = "Disabled" | "CottonCloud" | "CustomHttp";
+export type GeoIpLookupMode =
+  | "Disabled"
+  | "CottonCloud"
+  | "MaxMindLocal"
+  | "CustomHttp";
 export type ServerUsage = "Other" | "Photos" | "Documents" | "Media";
 
 export interface S3Config {
@@ -54,6 +58,7 @@ const storageSpaceModeValues: StorageSpaceMode[] = [
 const geoIpLookupModeValues: GeoIpLookupMode[] = [
   "Disabled",
   "CottonCloud",
+  "MaxMindLocal",
   "CustomHttp",
 ];
 const serverUsageValues: ServerUsage[] = [
@@ -181,6 +186,7 @@ const toStorageSpaceMode = (value: unknown): StorageSpaceMode => {
 const toGeoIpLookupMode = (value: unknown): GeoIpLookupMode => {
   if (typeof value !== "string") return "Disabled";
   if (value.toLowerCase() === "cottoncloud") return "CottonCloud";
+  if (value.toLowerCase() === "maxmindlocal") return "MaxMindLocal";
   if (value.toLowerCase() === "customhttp") return "CustomHttp";
   return "Disabled";
 };
