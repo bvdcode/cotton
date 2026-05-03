@@ -487,30 +487,36 @@ export const AdminStorageStatisticsPage = () => {
             </Stack>
           </Stack>
 
-          <AdminStorageBackendSettings
-            showHeader={false}
-            onSaved={refreshTimeline}
-            sx={{ maxWidth: 760 }}
-          />
-
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Typography variant="body2" color="text.secondary">
-              {t("settings.general.fields.storageSpaceMode")}
-            </Typography>
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={storageSpaceMode}
-              onChange={handleStorageSpaceModeChange}
-              disabled={storageSpaceModeLoading || storageSpaceModeSaving}
-              aria-label={t("settings.general.fields.storageSpaceMode")}
-            >
-              {storageSpaceOptions.map((option) => (
-                <ToggleButton key={option} value={option}>
-                  {t(`settings.general.storageSpaceMode.${option}`)}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems={{ md: "flex-start" }}
+          >
+            <Box flex={1} minWidth={0}>
+              <AdminStorageBackendSettings
+                showHeader={false}
+                onSaved={refreshTimeline}
+              />
+            </Box>
+            <Stack spacing={0.5} sx={{ flexShrink: 0 }}>
+              <Typography variant="body2" color="text.secondary">
+                {t("settings.general.fields.storageSpaceMode")}
+              </Typography>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={storageSpaceMode}
+                onChange={handleStorageSpaceModeChange}
+                disabled={storageSpaceModeLoading || storageSpaceModeSaving}
+                aria-label={t("settings.general.fields.storageSpaceMode")}
+              >
+                {storageSpaceOptions.map((option) => (
+                  <ToggleButton key={option} value={option}>
+                    {t(`settings.general.storageSpaceMode.${option}`)}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            </Stack>
           </Stack>
 
           {loadState.kind === "error" && (

@@ -1,4 +1,5 @@
 import SaveIcon from "@mui/icons-material/Save";
+import { HelpOutline } from "@mui/icons-material";
 import {
   Box,
   CircularProgress,
@@ -15,6 +16,7 @@ type AdminSettingSaveFieldProps = {
   saving?: boolean;
   onSave: () => void;
   children: ReactNode;
+  help?: string;
   sx?: SxProps<Theme>;
 };
 
@@ -24,6 +26,7 @@ export const AdminSettingSaveField = ({
   saving = false,
   onSave,
   children,
+  help,
   sx,
 }: AdminSettingSaveFieldProps) => (
   <Box
@@ -35,6 +38,21 @@ export const AdminSettingSaveField = ({
     <Box flex={1} minWidth={0}>
       {children}
     </Box>
+    {help && (
+      <Tooltip title={help}>
+        <Box
+          component="span"
+          sx={{
+            mt: 1.5,
+            color: "text.secondary",
+            display: "flex",
+            cursor: "help",
+          }}
+        >
+          <HelpOutline fontSize="small" />
+        </Box>
+      </Tooltip>
+    )}
     <Tooltip title={label}>
       <span>
         <IconButton

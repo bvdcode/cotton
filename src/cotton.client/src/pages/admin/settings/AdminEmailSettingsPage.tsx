@@ -1,6 +1,8 @@
 import {
   Alert,
   Box,
+  Button,
+  CircularProgress,
   FormControl,
   FormControlLabel,
   InputLabel,
@@ -25,7 +27,6 @@ import {
   hasApiErrorToastBeenDispatched,
   isAxiosError,
 } from "../../../shared/api/httpClient";
-import { AdminSettingSaveField } from "./AdminSettingSaveField";
 import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
 
 const emailModes: EmailMode[] = ["None", "Cloud", "Custom"];
@@ -34,8 +35,10 @@ export const AdminEmailSettingsPage = () => {
   const { t } = useTranslation("admin");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [modeSaving, setModeSaving] = useState(false);
+  const [smtpSaving, setSmtpSaving] = useState(false);
   const [emailMode, setEmailMode] = useState<EmailMode>("None");
+  const [savedEmailMode, setSavedEmailMode] = useState<EmailMode>("None");
   const [emailConfig, setEmailConfig] = useState<EmailConfig>({
     smtpServer: "",
     port: "",
@@ -45,7 +48,7 @@ export const AdminEmailSettingsPage = () => {
     useSSL: false,
   });
 
-  const isBusy = loading || saving;
+  const isBusy = loading || modeSaving || smtpSaving;
   const isCustomEmailMode = emailMode === "Custom";
 
   useEffect(() => {
@@ -64,6 +67,7 @@ export const AdminEmailSettingsPage = () => {
         if (!active) return;
 
         setEmailMode(nextEmailMode);
+        setSavedEmailMode(nextEmailMode);
         setEmailConfig(nextEmailConfig);
       } catch {
         if (!active) return;
@@ -89,16 +93,41 @@ export const AdminEmailSettingsPage = () => {
     setEmailConfig((current) => ({ ...current, [key]: value }));
   };
 
-  const saveEmailSettings = async () => {
+  const handleEmailModeChange = async (next: EmailMode) => {
+    if (next === emailMode || isBusy) return;
+
+    setEmailMode(next);
+
+    if (next === "Custom") return;
+
+    const previous = savedEmailMode;
+    setModeSaving(true);
+    try {
+      await settingsApi.setEmailMode(next);
+      setSavedEmailMode(next);
+      toast.success(t("emailSettings.state.modeSaved"), {
+        toastId: "admin-email-settings:email-mode:saved",
+      });
+    } catch (error) {
+      setEmailMode(previous);
+      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
+        toast.error(t("emailSettings.errors.modeSaveFailed"), {
+          toastId: "admin-email-settings:email-mode:save-failed",
+        });
+      }
+    } finally {
+      setModeSaving(false);
+    }
+  };
+
+  const saveSmtpSettings = async () => {
     if (isBusy) return;
 
-    setSaving(true);
+    setSmtpSaving(true);
     try {
-      if (emailMode === "Custom") {
-        await settingsApi.setEmailConfig(emailConfig);
-      }
-
-      await settingsApi.setEmailMode(emailMode);
+      await settingsApi.setEmailConfig(emailConfig);
+      await settingsApi.setEmailMode("Custom");
+      setSavedEmailMode("Custom");
       toast.success(t("emailSettings.state.modeSaved"), {
         toastId: "admin-email-settings:email-mode:saved",
       });
@@ -109,14 +138,14 @@ export const AdminEmailSettingsPage = () => {
         });
       }
     } finally {
-      setSaving(false);
+      setSmtpSaving(false);
     }
   };
 
   return (
     <Stack spacing={2}>
-      <Paper>
-        <Stack p={2} spacing={2} sx={{ maxWidth: 920, width: "100%", mx: "auto" }}>
+      <Paper sx={{ overflow: "hidden", maxWidth: 920, width: "100%", mx: "auto" }}>
+        <Stack p={2} spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
               {t("emailSettings.title")}
@@ -126,45 +155,40 @@ export const AdminEmailSettingsPage = () => {
             </Typography>
           </Stack>
 
-          <LinearProgress
-            sx={{
-              opacity: loading ? 1 : 0,
-              transition: "opacity 120ms ease",
-            }}
-          />
+          <Box minHeight={4}>
+            <LinearProgress
+              sx={{
+                opacity: loading ? 1 : 0,
+                transition: "opacity 120ms ease",
+              }}
+            />
+          </Box>
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
 
           <Box sx={{ maxWidth: 760 }}>
-            <AdminSettingSaveField
-              label={t("settings.actions.save")}
-              onSave={() => void saveEmailSettings()}
-              disabled={isBusy}
-              saving={saving}
-            >
-              <AdminSettingSavingOverlay saving={loading}>
-                <FormControl fullWidth>
-                  <InputLabel id="admin-email-mode-label">
-                    {t("emailSettings.fields.emailMode")}
-                  </InputLabel>
-                  <Select
-                    labelId="admin-email-mode-label"
-                    label={t("emailSettings.fields.emailMode")}
-                    value={emailMode}
-                    onChange={(event) =>
-                      setEmailMode(event.target.value as EmailMode)
-                    }
+            <AdminSettingSavingOverlay saving={loading || modeSaving}>
+              <FormControl fullWidth>
+                <InputLabel id="admin-email-mode-label">
+                  {t("emailSettings.fields.emailMode")}
+                </InputLabel>
+                <Select
+                  labelId="admin-email-mode-label"
+                  label={t("emailSettings.fields.emailMode")}
+                  value={emailMode}
+                  onChange={(event) =>
+                    void handleEmailModeChange(event.target.value as EmailMode)
+                  }
                   disabled={isBusy}
-                  >
-                    {emailModes.map((mode) => (
-                      <MenuItem key={mode} value={mode}>
-                        {t(`emailSettings.emailMode.${mode}`)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </AdminSettingSavingOverlay>
-            </AdminSettingSaveField>
+                >
+                  {emailModes.map((mode) => (
+                    <MenuItem key={mode} value={mode}>
+                      {t(`emailSettings.emailMode.${mode}`)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </AdminSettingSavingOverlay>
           </Box>
 
           {isCustomEmailMode && (
@@ -173,61 +197,53 @@ export const AdminEmailSettingsPage = () => {
                 {t("emailSettings.smtp.title")}
               </Typography>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <Box flex={1} minWidth={0}>
-                  <AdminSettingSavingOverlay saving={loading}>
-                    <TextField
-                      label={t("emailSettings.smtp.fields.smtpServer")}
-                      value={emailConfig.smtpServer}
-                      onChange={(event) =>
-                        updateEmailConfig("smtpServer", event.target.value)
-                      }
-                      disabled={isBusy}
-                      fullWidth
-                    />
-                  </AdminSettingSavingOverlay>
-                </Box>
-                <Box flex={1} minWidth={0}>
-                  <AdminSettingSavingOverlay saving={loading}>
-                    <TextField
-                      label={t("emailSettings.smtp.fields.port")}
-                      value={emailConfig.port}
-                      onChange={(event) =>
-                        updateEmailConfig("port", event.target.value)
-                      }
-                      disabled={isBusy}
-                      fullWidth
-                    />
-                  </AdminSettingSavingOverlay>
-                </Box>
+                <AdminSettingSavingOverlay saving={loading}>
+                  <TextField
+                    label={t("emailSettings.smtp.fields.smtpServer")}
+                    value={emailConfig.smtpServer}
+                    onChange={(event) =>
+                      updateEmailConfig("smtpServer", event.target.value)
+                    }
+                    disabled={isBusy}
+                    fullWidth
+                  />
+                </AdminSettingSavingOverlay>
+                <AdminSettingSavingOverlay saving={loading}>
+                  <TextField
+                    label={t("emailSettings.smtp.fields.port")}
+                    value={emailConfig.port}
+                    onChange={(event) =>
+                      updateEmailConfig("port", event.target.value)
+                    }
+                    disabled={isBusy}
+                    fullWidth
+                  />
+                </AdminSettingSavingOverlay>
               </Stack>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <Box flex={1} minWidth={0}>
-                  <AdminSettingSavingOverlay saving={loading}>
-                    <TextField
-                      label={t("emailSettings.smtp.fields.username")}
-                      value={emailConfig.username}
-                      onChange={(event) =>
-                        updateEmailConfig("username", event.target.value)
-                      }
-                      disabled={isBusy}
-                      fullWidth
-                    />
-                  </AdminSettingSavingOverlay>
-                </Box>
-                <Box flex={1} minWidth={0}>
-                  <AdminSettingSavingOverlay saving={loading}>
-                    <TextField
-                      label={t("emailSettings.smtp.fields.password")}
-                      value={emailConfig.password}
-                      onChange={(event) =>
-                        updateEmailConfig("password", event.target.value)
-                      }
-                      disabled={isBusy}
-                      type="password"
-                      fullWidth
-                    />
-                  </AdminSettingSavingOverlay>
-                </Box>
+                <AdminSettingSavingOverlay saving={loading}>
+                  <TextField
+                    label={t("emailSettings.smtp.fields.username")}
+                    value={emailConfig.username}
+                    onChange={(event) =>
+                      updateEmailConfig("username", event.target.value)
+                    }
+                    disabled={isBusy}
+                    fullWidth
+                  />
+                </AdminSettingSavingOverlay>
+                <AdminSettingSavingOverlay saving={loading}>
+                  <TextField
+                    label={t("emailSettings.smtp.fields.password")}
+                    value={emailConfig.password}
+                    onChange={(event) =>
+                      updateEmailConfig("password", event.target.value)
+                    }
+                    disabled={isBusy}
+                    type="password"
+                    fullWidth
+                  />
+                </AdminSettingSavingOverlay>
               </Stack>
               <AdminSettingSavingOverlay saving={loading}>
                 <TextField
@@ -236,7 +252,7 @@ export const AdminEmailSettingsPage = () => {
                   onChange={(event) =>
                     updateEmailConfig("fromAddress", event.target.value)
                   }
-                    disabled={isBusy}
+                  disabled={isBusy}
                   fullWidth
                 />
               </AdminSettingSavingOverlay>
@@ -254,6 +270,20 @@ export const AdminEmailSettingsPage = () => {
                   label={t("emailSettings.smtp.fields.useSSL")}
                 />
               </AdminSettingSavingOverlay>
+              <Box>
+                <Button
+                  variant="contained"
+                  onClick={() => void saveSmtpSettings()}
+                  disabled={isBusy}
+                  startIcon={
+                    smtpSaving ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : undefined
+                  }
+                >
+                  {t("settings.actions.save")}
+                </Button>
+              </Box>
             </Stack>
           )}
         </Stack>
