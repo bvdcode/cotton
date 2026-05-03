@@ -17,6 +17,7 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
     title,
     avatarInitials,
     birthDateValue,
+    birthDateCompactValue,
     handleAvatarFileSelected,
     handleSendEmailVerification,
   } = useUserInfoCard({ user, onUserUpdate });
@@ -47,6 +48,7 @@ export const UserInfoCard = ({ user, onUserUpdate }: UserInfoCardProps) => {
         email={user.email}
         isEmailVerified={user.isEmailVerified}
         birthDateValue={birthDateValue}
+        birthDateCompactValue={birthDateCompactValue}
         onAvatarFileSelected={handleAvatarFileSelected}
         onSendEmailVerification={handleSendEmailVerification}
         emailVerificationSending={emailVerificationSending}

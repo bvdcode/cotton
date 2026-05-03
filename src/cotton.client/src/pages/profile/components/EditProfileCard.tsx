@@ -151,19 +151,14 @@ export const EditProfileCard = ({
         </Box>
 
         <Box
-          display="flex"
-          flexDirection={{ xs: "column", sm: "row" }}
+          display="grid"
+          gridTemplateColumns={{
+            xs: "minmax(132px, 0.85fr) minmax(0, 1.15fr)",
+            sm: "repeat(2, minmax(0, 1fr))",
+          }}
           gap={2}
           alignItems="center"
         >
-          <TextField
-            label={t("editProfile.email")}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            fullWidth
-          />
-
           <TextField
             label={t("editProfile.birthDate")}
             type="date"
@@ -173,6 +168,14 @@ export const EditProfileCard = ({
             slotProps={{
               inputLabel: { shrink: true },
             }}
+          />
+
+          <TextField
+            label={t("editProfile.email")}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            fullWidth
           />
         </Box>
 

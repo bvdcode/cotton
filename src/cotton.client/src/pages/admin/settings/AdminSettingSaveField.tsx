@@ -42,9 +42,18 @@ export const AdminSettingSaveField = ({
           borderTopRightRadius: 0,
           borderBottomRightRadius: 0,
         },
+        "&:hover .MuiOutlinedInput-notchedOutline": {
+          borderColor: "text.primary",
+        },
+        "&:hover .AdminSettingSaveField-button": {
+          borderColor: "text.primary",
+        },
         "&:focus-within .AdminSettingSaveField-button": {
           borderColor: "primary.main",
-          borderWidth: 2,
+          borderTopWidth: 2,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderLeftWidth: 0,
         },
       },
       ...(Array.isArray(sx) ? sx : [sx]),
@@ -62,19 +71,21 @@ export const AdminSettingSaveField = ({
           sx={{
             width: 48,
             height: 56,
-            border: 1,
-            borderLeftWidth: 1,
+            borderTop: 1,
+            borderRight: 1,
+            borderBottom: 1,
+            borderLeft: 0,
             borderColor: "divider",
-            borderRadius: "0 4px 4px 0",
-            bgcolor: "background.paper",
+            borderRadius: (theme) =>
+              `0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0`,
+            bgcolor: "transparent",
             transition:
               "border-color 120ms ease, background-color 120ms ease",
             "&:hover": {
-              bgcolor: "action.hover",
-              borderColor: "text.primary",
+              bgcolor: "transparent",
             },
             "&.Mui-disabled": {
-              bgcolor: "action.disabledBackground",
+              bgcolor: "transparent",
               borderColor: "divider",
             },
           }}

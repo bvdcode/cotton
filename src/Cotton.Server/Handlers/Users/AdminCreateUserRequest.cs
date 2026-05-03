@@ -7,12 +7,12 @@ using Cotton.Server.Models.Dto;
 using Cotton.Validators;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
+using EasyExtensions.Helpers;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
 
 namespace Cotton.Server.Handlers.Users
 {
@@ -20,11 +20,10 @@ namespace Cotton.Server.Handlers.Users
     {
         public string Username { get; } = username;
         public string? Email { get; } = email;
-        [Required]
-        public string Password { get; } = password;
-        public UserRole Role { get; } = role;
+        public string? Password { get; } = password;
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
+        public UserRole Role { get; } = role;
         public DateOnly? BirthDate { get; set; }
     }
 
@@ -42,24 +41,23 @@ namespace Cotton.Server.Handlers.Users
                 throw new BadRequestException<User>(usernameError);
             }
 
-            if (string.IsNullOrWhiteSpace(request.Password))
-            {
-                throw new BadRequestException<User>("Password is required");
-            }
-
             bool exists = await _dbContext.Users.AnyAsync(x => x.Username == username, cancellationToken);
             if (exists)
             {
                 throw new BadRequestException<User>("User already exists");
             }
 
+            string phc = _hasher.Hash(string.IsNullOrWhiteSpace(request.Password)
+                ? StringHelpers.CreateRandomString(32)
+                : request.Password);
+
             var user = new User
             {
                 Username = username,
                 Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
                 Role = request.Role,
-                PasswordPhc = _hasher.Hash(request.Password),
-                WebDavTokenPhc = _hasher.Hash(request.Password),
+                PasswordPhc = phc,
+                WebDavTokenPhc = _hasher.Hash(StringHelpers.CreateRandomString(32)),
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 BirthDate = request.BirthDate,

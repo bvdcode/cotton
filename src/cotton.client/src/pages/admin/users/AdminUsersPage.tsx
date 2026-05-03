@@ -1,16 +1,24 @@
-import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Badge, Box, Stack, Tooltip, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ColumnsPanelTrigger,
   DataGrid,
-  type GridColDef,
+  FilterPanelTrigger,
+  ToolbarButton,
   GridActionsCellItem,
+  type GridColDef,
+  useGridApiContext,
+  useGridRootProps,
 } from "@mui/x-data-grid";
+import { GridToolbar } from "@mui/x-data-grid/internals";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { isAxiosError } from "../../../shared/api/httpClient";
 import { adminApi, type AdminUserDto } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
-import { CreateUserForm } from "./CreateUserForm";
+import { CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
 import { formatDateOnly } from "../../../shared/utils/dateOnly";
 
@@ -51,7 +59,81 @@ const formatStorageBytes = (bytes: number): string => {
   }).format(value)} ${units[unitIndex]}`;
 };
 
-const USERS_TABLE_MIN_HEIGHT = 420;
+interface UsersGridToolbarProps {
+  createLabel: string;
+  loading: boolean;
+  refreshLabel: string;
+  onCreate: () => void;
+  onRefresh: () => void;
+}
+
+const UsersGridToolbar = ({
+  createLabel,
+  loading,
+  refreshLabel,
+  onCreate,
+  onRefresh,
+}: UsersGridToolbarProps) => {
+  const apiRef = useGridApiContext();
+  const rootProps = useGridRootProps();
+  const ColumnSelectorIcon = rootProps.slots.columnSelectorIcon;
+  const FilterIcon = rootProps.slots.openFilterButtonIcon;
+
+  return (
+    <GridToolbar
+      mainControls={
+        <>
+          <Tooltip title={refreshLabel}>
+            <span>
+              <ToolbarButton
+                aria-label={refreshLabel}
+                onClick={onRefresh}
+                disabled={loading}
+              >
+                <RefreshIcon fontSize="small" />
+              </ToolbarButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title={createLabel}>
+            <ToolbarButton aria-label={createLabel} onClick={onCreate}>
+              <PersonAddAltIcon fontSize="small" />
+            </ToolbarButton>
+          </Tooltip>
+
+          {!rootProps.disableColumnSelector && (
+            <Tooltip title={apiRef.current.getLocaleText("toolbarColumns")}>
+              <ColumnsPanelTrigger render={<ToolbarButton />}>
+                <ColumnSelectorIcon fontSize="small" />
+              </ColumnsPanelTrigger>
+            </Tooltip>
+          )}
+
+          {!rootProps.disableColumnFilter && (
+            <Tooltip title={apiRef.current.getLocaleText("toolbarFilters")}>
+              <FilterPanelTrigger
+                render={(triggerProps, state) => (
+                  <ToolbarButton
+                    {...triggerProps}
+                    color={state.filterCount > 0 ? "primary" : "default"}
+                  >
+                    <Badge
+                      badgeContent={state.filterCount}
+                      color="primary"
+                      variant="dot"
+                    >
+                      <FilterIcon fontSize="small" />
+                    </Badge>
+                  </ToolbarButton>
+                )}
+              />
+            </Tooltip>
+          )}
+        </>
+      }
+    />
+  );
+};
 
 export const AdminUsersPage = () => {
   const { t } = useTranslation(["admin", "common"]);
@@ -59,6 +141,7 @@ export const AdminUsersPage = () => {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [editingUser, setEditingUser] = useState<AdminUserDto | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const roleLabel = useMemo(() => {
     return (r: UserRole) => {
@@ -88,6 +171,8 @@ export const AdminUsersPage = () => {
   }, [t]);
 
   const isLoading = loadState.kind === "loading";
+  const createLabel = t("users.create.button");
+  const refreshLabel = t("users.refresh");
 
   const columns: GridColDef<AdminUserDto>[] = useMemo(
     () => [
@@ -233,65 +318,60 @@ export const AdminUsersPage = () => {
     };
   }, [t]);
 
-  return (
-    <Stack spacing={2} height="100%" minHeight={0}>
-      <CreateUserForm onUserCreated={fetchUsers} />
+  const GridToolbarSlot = useMemo(() => {
+    const ToolbarSlot = () => (
+      <UsersGridToolbar
+        createLabel={createLabel}
+        loading={isLoading}
+        refreshLabel={refreshLabel}
+        onCreate={() => setCreateOpen(true)}
+        onRefresh={() => void fetchUsers()}
+      />
+    );
 
-      <Paper
+    return ToolbarSlot;
+  }, [createLabel, fetchUsers, isLoading, refreshLabel]);
+
+  return (
+    <Stack spacing={1} height="100%" minHeight={0}>
+      {loadState.kind === "error" && (
+        <Alert severity="error">{loadState.message}</Alert>
+      )}
+
+      <DataGrid
+        rows={users}
+        columns={columns}
+        getRowId={(row) => row.id}
+        loading={isLoading}
+        disableRowSelectionOnClick
+        showToolbar
+        label={t("users.title")}
+        pageSizeOptions={[10, 25, 50, 100]}
+        initialState={{
+          pagination: {
+            paginationModel: {
+              pageSize: 25,
+              page: 0,
+            },
+          },
+        }}
+        pagination
+        slots={{ toolbar: GridToolbarSlot }}
         sx={{
           flex: 1,
-          minHeight: USERS_TABLE_MIN_HEIGHT,
-          display: "flex",
-          overflow: "hidden",
+          minHeight: 0,
+          "& .MuiDataGrid-toolbar": {
+            px: 1,
+            py: 0.75,
+          },
         }}
-      >
-        <Stack spacing={2} p={2} width="100%" height="100%" minHeight={0}>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            justifyContent="space-between"
-            alignItems={{ xs: "stretch", sm: "center" }}
-          >
-            <Typography variant="h6" fontWeight={700}>
-              {t("users.title")}
-            </Typography>
-            <Button
-              variant="outlined"
-              onClick={() => fetchUsers()}
-              disabled={isLoading}
-            >
-              {t("users.refresh")}
-            </Button>
-          </Stack>
+      />
 
-          {loadState.kind === "error" && (
-            <Alert severity="error">{loadState.message}</Alert>
-          )}
-
-          <Stack flex={1} minHeight={Math.max(USERS_TABLE_MIN_HEIGHT - 112, 280)}>
-            <DataGrid
-              rows={users}
-              columns={columns}
-              getRowId={(row) => row.id}
-              loading={isLoading}
-              disableRowSelectionOnClick
-              showToolbar
-              pageSizeOptions={[10, 25, 50, 100]}
-              initialState={{
-                pagination: {
-                  paginationModel: {
-                    pageSize: 25,
-                    page: 0,
-                  },
-                },
-              }}
-              pagination
-              sx={{ height: "100%", minHeight: Math.max(USERS_TABLE_MIN_HEIGHT - 112, 280) }}
-            />
-          </Stack>
-        </Stack>
-      </Paper>
-
+      <CreateUserDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onUserCreated={fetchUsers}
+      />
       <EditUserDialog
         open={editingUser !== null}
         user={editingUser}

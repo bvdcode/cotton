@@ -4,12 +4,19 @@ import {
   InputLabel,
   List,
   ListItemButton,
-  ListItemText,
+  ListItemIcon,
   MenuItem,
   Paper,
   Select,
+  Tooltip,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
+import BackupIcon from "@mui/icons-material/Backup";
+import EmailIcon from "@mui/icons-material/Email";
+import GroupsIcon from "@mui/icons-material/Groups";
+import SettingsIcon from "@mui/icons-material/Settings";
+import StorageIcon from "@mui/icons-material/Storage";
+import type { ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -17,12 +24,13 @@ type AdminMenuItem = {
   id:
     | "users"
     | "generalSettings"
-    | "storageSettings"
+    | "storage"
     | "emailSettings"
-    | "databaseBackup"
-    | "storageStatistics";
+    | "databaseBackup";
   to: string;
   title: string;
+  icon: ReactNode;
+  activePaths?: string[];
 };
 
 export const AdminLayoutPage = () => {
@@ -34,39 +42,47 @@ export const AdminLayoutPage = () => {
     {
       id: "users",
       to: "/admin/users",
-      title: t("menu.users"),
+      title: t("menu.usersAndGroups", {
+        defaultValue: "Users and groups",
+      }),
+      icon: <GroupsIcon />,
     },
     {
       id: "generalSettings",
       to: "/admin/general-settings",
       title: t("menu.generalSettings"),
-    },
-    {
-      id: "storageSettings",
-      to: "/admin/storage-settings",
-      title: t("menu.storageSettings"),
+      icon: <SettingsIcon />,
     },
     {
       id: "emailSettings",
       to: "/admin/email-settings",
       title: t("menu.emailSettings"),
+      icon: <EmailIcon />,
     },
     {
       id: "databaseBackup",
       to: "/admin/database-backup",
       title: t("menu.databaseBackup"),
+      icon: <BackupIcon />,
     },
     {
-      id: "storageStatistics",
+      id: "storage",
       to: "/admin/storage-statistics",
-      title: t("menu.storageStatistics"),
+      title: t("menu.storageAndStatistics", {
+        defaultValue: t("menu.storageStatistics"),
+      }),
+      icon: <StorageIcon />,
+      activePaths: ["/admin/storage-statistics", "/admin/storage-settings"],
     },
   ];
 
-  const isActive = (to: string) => location.pathname === to;
+  const isActive = (item: AdminMenuItem) =>
+    (item.activePaths ?? [item.to]).some((path) =>
+      location.pathname.startsWith(path),
+    );
 
   const selectedTo: string =
-    items.find((x) => location.pathname.startsWith(x.to))?.to ?? items[0].to;
+    items.find((item) => isActive(item))?.to ?? items[0].to;
 
   const handleMobileNavigate = (event: SelectChangeEvent<string>) => {
     navigate(event.target.value);
@@ -113,7 +129,7 @@ export const AdminLayoutPage = () => {
         flex={1}
         minHeight={0}
         sx={{
-          gridTemplateColumns: { xs: "1fr", md: "260px 1fr" },
+          gridTemplateColumns: { xs: "1fr", md: "64px minmax(0, 1fr)" },
           gap: 2,
         }}
       >
@@ -130,20 +146,36 @@ export const AdminLayoutPage = () => {
               pt: 1,
               overflowY: "auto",
               minHeight: 0,
-              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0.5,
             }}
           >
             {items.map((item) => (
-              <ListItemButton
-                key={item.id}
-                selected={isActive(item.to)}
-                onClick={() => navigate(item.to)}
-              >
-                <ListItemText
-                  primary={item.title}
-                  slotProps={{ primary: { noWrap: true } }}
-                />
-              </ListItemButton>
+              <Tooltip key={item.id} title={item.title} placement="right">
+                <ListItemButton
+                  aria-label={item.title}
+                  selected={isActive(item)}
+                  onClick={() => navigate(item.to)}
+                  sx={{
+                    justifyContent: "center",
+                    minHeight: 44,
+                    mx: 0.75,
+                    px: 0.75,
+                    borderRadius: 1,
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      color: "inherit",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                </ListItemButton>
+              </Tooltip>
             ))}
           </List>
         </Paper>
