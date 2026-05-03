@@ -1,6 +1,9 @@
+import SaveIcon from "@mui/icons-material/Save";
 import {
   Alert,
   Box,
+  Button,
+  CircularProgress,
   FormControl,
   InputLabel,
   LinearProgress,
@@ -12,7 +15,7 @@ import {
   type SxProps,
   type Theme,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
@@ -24,13 +27,13 @@ import {
   hasApiErrorToastBeenDispatched,
   isAxiosError,
 } from "../../../shared/api/httpClient";
-import { AdminSettingSaveField } from "./AdminSettingSaveField";
 import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
 
 type AdminStorageBackendSettingsProps = {
   showHeader?: boolean;
   onSaved?: () => void;
   sx?: SxProps<Theme>;
+  storageTypeRightSlot?: ReactNode;
 };
 
 const emptyS3Config: S3Config = {
@@ -45,15 +48,17 @@ export const AdminStorageBackendSettings = ({
   showHeader = true,
   onSaved,
   sx,
+  storageTypeRightSlot,
 }: AdminStorageBackendSettingsProps) => {
   const { t } = useTranslation("admin");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [storageTypeSaving, setStorageTypeSaving] = useState(false);
+  const [s3Saving, setS3Saving] = useState(false);
   const [storageType, setStorageType] = useState<StorageType>("Local");
   const [s3Config, setS3Config] = useState<S3Config>(emptyS3Config);
 
-  const isBusy = loading || saving;
+  const isBusy = loading || storageTypeSaving || s3Saving;
   const isS3Storage = storageType === "S3";
 
   useEffect(() => {
@@ -94,28 +99,54 @@ export const AdminStorageBackendSettings = ({
     setS3Config((current) => ({ ...current, [key]: value }));
   };
 
-  const saveStorageSettings = async () => {
-    if (isBusy) return;
+  const handleStorageTypeChange = async (next: StorageType) => {
+    if (next === storageType || isBusy) return;
 
-    setSaving(true);
+    if (next === "S3") {
+      setStorageType(next);
+      return;
+    }
+
+    const previous = storageType;
+    setStorageType(next);
+    setStorageTypeSaving(true);
     try {
-      if (storageType === "S3") {
-        await settingsApi.setS3Config(s3Config);
-      }
-
-      await settingsApi.setStorageType(storageType);
+      await settingsApi.setStorageType(next);
       toast.success(t("storageSettings.state.storageSaved"), {
         toastId: "admin-storage-settings:storage-type:saved",
       });
       onSaved?.();
     } catch (error) {
+      setStorageType(previous);
       if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
         toast.error(t("storageSettings.errors.storageSaveFailed"), {
           toastId: "admin-storage-settings:storage-type:save-failed",
         });
       }
     } finally {
-      setSaving(false);
+      setStorageTypeSaving(false);
+    }
+  };
+
+  const saveS3Config = async () => {
+    if (isBusy) return;
+
+    setS3Saving(true);
+    try {
+      await settingsApi.setS3Config(s3Config);
+      await settingsApi.setStorageType("S3");
+      toast.success(t("storageSettings.state.s3Saved"), {
+        toastId: "admin-storage-settings:s3-config:saved",
+      });
+      onSaved?.();
+    } catch (error) {
+      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
+        toast.error(t("storageSettings.errors.s3SaveFailed"), {
+          toastId: "admin-storage-settings:s3-config:save-failed",
+        });
+      }
+    } finally {
+      setS3Saving(false);
     }
   };
 
@@ -143,37 +174,56 @@ export const AdminStorageBackendSettings = ({
 
       {loadError && <Alert severity="error">{loadError}</Alert>}
 
-      <Box sx={{ maxWidth: showHeader ? 760 : 520, width: "100%" }}>
-        <AdminSettingSaveField
-          label={t("settings.actions.save")}
-          onSave={() => void saveStorageSettings()}
-          disabled={isBusy}
-          saving={saving}
-        >
-          <AdminSettingSavingOverlay saving={loading}>
-            <FormControl fullWidth>
-              <InputLabel id="admin-storage-type-label">
-                {t("storageSettings.fields.storageType")}
-              </InputLabel>
-              <Select
-                labelId="admin-storage-type-label"
-                label={t("storageSettings.fields.storageType")}
-                value={storageType}
-                onChange={(event) =>
-                  setStorageType(event.target.value as StorageType)
-                }
-                disabled={isBusy}
-              >
-                <MenuItem value="Local">
-                  {t("storageSettings.storageType.Local")}
-                </MenuItem>
-                <MenuItem value="S3">
-                  {t("storageSettings.storageType.S3")}
-                </MenuItem>
-              </Select>
-            </FormControl>
-          </AdminSettingSavingOverlay>
-        </AdminSettingSaveField>
+      <Box
+        sx={{
+          width: "100%",
+          display: "grid",
+          gap: 2,
+          alignItems: "center",
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: storageTypeRightSlot
+              ? "repeat(2, minmax(0, 1fr))"
+              : showHeader
+                ? "minmax(0, 760px)"
+                : "minmax(0, calc((100% - 16px) / 2))",
+          },
+        }}
+      >
+        <AdminSettingSavingOverlay saving={loading || storageTypeSaving}>
+          <FormControl fullWidth>
+            <InputLabel id="admin-storage-type-label">
+              {t("storageSettings.fields.storageType")}
+            </InputLabel>
+            <Select
+              labelId="admin-storage-type-label"
+              label={t("storageSettings.fields.storageType")}
+              value={storageType}
+              onChange={(event) =>
+                void handleStorageTypeChange(event.target.value as StorageType)
+              }
+              disabled={isBusy}
+            >
+              <MenuItem value="Local">
+                {t("storageSettings.storageType.Local")}
+              </MenuItem>
+              <MenuItem value="S3">
+                {t("storageSettings.storageType.S3")}
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </AdminSettingSavingOverlay>
+        {storageTypeRightSlot ? (
+          <Box
+            sx={{
+              minWidth: 0,
+              display: "flex",
+              justifyContent: { xs: "flex-start", md: "flex-end" },
+            }}
+          >
+            {storageTypeRightSlot}
+          </Box>
+        ) : null}
       </Box>
 
       {isS3Storage && (
@@ -249,6 +299,30 @@ export const AdminStorageBackendSettings = ({
                 fullWidth
               />
             </AdminSettingSavingOverlay>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "stretch",
+                width: "100%",
+              }}
+            >
+              <Button
+                variant="contained"
+                onClick={() => void saveS3Config()}
+                disabled={isBusy}
+                fullWidth
+                startIcon={
+                  s3Saving ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <SaveIcon />
+                  )
+                }
+                sx={{ height: 56 }}
+              >
+                {t("settings.actions.save")}
+              </Button>
+            </Box>
           </Box>
         </Stack>
       )}

@@ -1,9 +1,6 @@
 import { Checkbox, FormControlLabel, FormGroup } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import {
-  settingsApi,
-  type ServerUsage,
-} from "../../../shared/api/settingsApi";
+import { settingsApi, type ServerUsage } from "../../../shared/api/settingsApi";
 import { SettingsSection } from "./SettingsSection";
 import { useAutoSavedSetting } from "./useAutoSavedSetting";
 import { isSameArray, usageOptions } from "./adminGeneralSettingsModel";
@@ -31,7 +28,8 @@ export const ServerUsageSetting = () => {
     const toggled = value.includes(option)
       ? value.filter((item) => item !== option)
       : [...value, option];
-    const next = toggled.length > 0 ? toggled : (["Other"] satisfies ServerUsage[]);
+    const next =
+      toggled.length > 0 ? toggled : (["Other"] satisfies ServerUsage[]);
     commitValue(next);
   };
 
