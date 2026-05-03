@@ -38,6 +38,7 @@ export const AdminNotificationsSettingsPage = () => {
   const { t } = useTranslation("admin");
   const [modeStatus, setModeStatus] = useState<SaveStatus>("loading");
   const [smtpStatus, setSmtpStatus] = useState<SaveStatus>("loading");
+  const [smtpTesting, setSmtpTesting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [emailMode, setEmailMode] = useState<EmailMode>("None");
   const [savedEmailMode, setSavedEmailMode] = useState<EmailMode>("None");
@@ -59,7 +60,8 @@ export const AdminNotificationsSettingsPage = () => {
   );
 
   const isBusy = modeStatus === "loading" || modeStatus === "saving";
-  const isSmtpBusy = smtpStatus === "loading" || smtpStatus === "saving";
+  const isSmtpBusy =
+    smtpStatus === "loading" || smtpStatus === "saving" || smtpTesting;
   const isCustomEmailMode = emailMode === "Custom";
 
   const flashStatus = (
@@ -173,6 +175,36 @@ export const AdminNotificationsSettingsPage = () => {
     }
   };
 
+  const testSmtpSettings = async () => {
+    if (isBusy || isSmtpBusy) return;
+
+    setSmtpTesting(true);
+    try {
+      await settingsApi.testEmailConfig(emailConfig);
+      toast.success(
+        t("notificationsSettings.state.testSent", {
+          defaultValue: "Test email sent.",
+        }),
+        {
+          toastId: "admin-notifications-settings:smtp-test:sent",
+        },
+      );
+    } catch (error) {
+      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
+        toast.error(
+          t("notificationsSettings.errors.testFailed", {
+            defaultValue: "Failed to send test email.",
+          }),
+          {
+            toastId: "admin-notifications-settings:smtp-test:failed",
+          },
+        );
+      }
+    } finally {
+      setSmtpTesting(false);
+    }
+  };
+
   return (
     <Stack>
       <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
@@ -200,7 +232,9 @@ export const AdminNotificationsSettingsPage = () => {
             <SmtpConfigForm
               config={emailConfig}
               onChange={setEmailConfig}
+              onTest={() => void testSmtpSettings()}
               onSave={() => void saveSmtpSettings()}
+              testing={smtpTesting}
               saving={smtpStatus === "saving"}
               disabled={isBusy || isSmtpBusy}
               status={smtpStatus}

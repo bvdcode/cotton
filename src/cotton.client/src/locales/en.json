@@ -1186,16 +1186,19 @@
       },
       "actions": {
         "saveSmtp": "Save SMTP config",
+        "testSmtp": "Test SMTP",
         "saveMode": "Save email mode",
         "saving": "Saving..."
       },
       "state": {
         "smtpSaved": "SMTP configuration saved.",
+        "testSent": "Test email sent.",
         "modeSaved": "Notification mode updated."
       },
       "errors": {
         "loadFailed": "Failed to load notification settings.",
         "smtpSaveFailed": "Failed to save SMTP configuration.",
+        "testFailed": "Failed to send test email.",
         "modeSaveFailed": "Failed to save notification mode."
       }
     },
