@@ -1,4 +1,5 @@
 import SaveIcon from "@mui/icons-material/Save";
+import MarkEmailReadIcon from "@mui/icons-material/MarkEmailRead";
 import {
   Box,
   Button,
@@ -17,7 +18,9 @@ type SmtpConfigFormProps = {
   config: EmailConfig;
   onChange: (next: EmailConfig) => void;
   onSave: () => void;
+  onTest: () => void;
   saving: boolean;
+  testing: boolean;
   disabled: boolean;
   status?: SaveStatus;
 };
@@ -26,7 +29,9 @@ export const SmtpConfigForm = ({
   config,
   onChange,
   onSave,
+  onTest,
   saving,
+  testing,
   disabled,
   status = "idle",
 }: SmtpConfigFormProps) => {
@@ -107,20 +112,39 @@ export const SmtpConfigForm = ({
             label={t("notificationsSettings.smtp.fields.useSSL")}
           />
 
-          <Button
-            variant="contained"
-            onClick={onSave}
-            disabled={disabled || saving}
-            startIcon={
-              saving ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <SaveIcon />
-              )
-            }
-          >
-            {t("settings.actions.save")}
-          </Button>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              variant="outlined"
+              onClick={onTest}
+              disabled={disabled || testing || saving}
+              startIcon={
+                testing ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  <MarkEmailReadIcon />
+                )
+              }
+            >
+              {t("notificationsSettings.actions.testSmtp", {
+                defaultValue: "Test",
+              })}
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={onSave}
+              disabled={disabled || saving || testing}
+              startIcon={
+                saving ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  <SaveIcon />
+                )
+              }
+            >
+              {t("settings.actions.save")}
+            </Button>
+          </Stack>
         </Box>
       </Stack>
     </SettingsSection>

@@ -1,8 +1,10 @@
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +16,9 @@ namespace Cotton.Server.Controllers
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
-    public class SettingsController(SettingsProvider _settings) : ControllerBase
+    public class SettingsController(
+        SettingsProvider _settings,
+        INotificationsProvider _notifications) : ControllerBase
     {
         [HttpGet]
         [Authorize]
@@ -323,6 +327,23 @@ namespace Cotton.Server.Controllers
                 settings.SmtpSenderEmail = emailConfig.FromAddress.Trim();
                 settings.SmtpUseSsl = emailConfig.UseSSL;
             }, GetFallbackPublicBaseUrl(), cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPost("email-config/test")]
+        public async Task<IActionResult> SendEmailConfigTest([FromBody] EmailConfig emailConfig, CancellationToken cancellationToken)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+            ThrowIfInvalid(_settings.ValidateEmailConfig(emailConfig));
+
+            Guid userId = User.GetUserId();
+            bool sent = await _notifications.SendSmtpTestEmailAsync(userId, emailConfig, GetFallbackPublicBaseUrl());
+            if (!sent)
+            {
+                throw new BadRequestException<CottonServerSettings>("Failed to send test email.");
+            }
+
             return NoContent();
         }
 

@@ -1,5 +1,6 @@
 ﻿using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
+using Cotton.Server.Models.Dto;
 
 namespace Cotton.Server.Abstractions
 {
@@ -13,6 +14,11 @@ namespace Cotton.Server.Abstractions
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
+            string serverBaseUrl);
+
+        Task<bool> SendSmtpTestEmailAsync(
+            Guid userId,
+            EmailConfig emailConfig,
             string serverBaseUrl);
 
         Task SendNotificationAsync(

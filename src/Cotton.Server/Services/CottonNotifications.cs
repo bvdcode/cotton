@@ -48,6 +48,55 @@ namespace Cotton.Server.Services
             }
         }
 
+        public async Task<bool> SendSmtpTestEmailAsync(
+            Guid userId,
+            EmailConfig emailConfig,
+            string serverBaseUrl)
+        {
+            string? validationError = _settingsProvider.ValidateEmailConfig(emailConfig);
+            if (validationError is not null)
+            {
+                _logger.LogWarning("SMTP test email validation failed: {ValidationError}", validationError);
+                return false;
+            }
+
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user is null || string.IsNullOrWhiteSpace(user.Email))
+            {
+                return false;
+            }
+
+            if (!SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort))
+            {
+                return false;
+            }
+
+            string recipientName = GetRecipientDisplayName(user);
+            var smtpSettings = new CottonServerSettings
+            {
+                SmtpServerAddress = emailConfig.SmtpServer.Trim(),
+                SmtpServerPort = smtpPort,
+                SmtpUsername = emailConfig.Username.Trim(),
+                SmtpPasswordEncrypted = emailConfig.Password,
+                SmtpSenderEmail = emailConfig.FromAddress.Trim(),
+                SmtpUseSsl = emailConfig.UseSSL,
+            };
+
+            string subject = "Cotton SMTP test email";
+            string body = BuildSmtpTestBody(recipientName, serverBaseUrl);
+
+            try
+            {
+                SendSmtpEmail(user.Email, recipientName, subject, body, smtpSettings);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send SMTP test email to {Email}.", user.Email);
+                return false;
+            }
+        }
+
         private async Task<bool> SendViaCloudAsync(
             Guid userId,
             EmailTemplate template,
@@ -153,6 +202,21 @@ namespace Cotton.Server.Services
             }
 
             return firstName + " " + lastName;
+        }
+
+        private static string BuildSmtpTestBody(string recipientName, string serverBaseUrl)
+        {
+            string displayName = string.IsNullOrWhiteSpace(recipientName)
+                ? "there"
+                : recipientName;
+            string baseUrl = serverBaseUrl.Trim().TrimEnd('/');
+
+            return
+                "Hi " + displayName + "," + Environment.NewLine + Environment.NewLine +
+                "This is a test email from Cotton to confirm your SMTP configuration works." + Environment.NewLine +
+                "Server: " + baseUrl + Environment.NewLine +
+                "Sent at (UTC): " + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + Environment.NewLine +
+                "If you received this message, your SMTP setup is ready.";
         }
 
         private static void SendSmtpEmail(
