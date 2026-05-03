@@ -23,8 +23,8 @@ export const EmailModeSelector = ({
 
   return (
     <SettingsSection
-      title={t("emailSettings.fields.emailMode")}
-      description={t("emailSettings.description")}
+      title={t("notificationsSettings.fields.emailMode")}
+      description={t("notificationsSettings.description")}
       status={status}
     >
       <TextField
@@ -36,7 +36,7 @@ export const EmailModeSelector = ({
       >
         {emailModes.map((mode) => (
           <MenuItem key={mode} value={mode}>
-            {t(`emailSettings.emailMode.${mode}`)}
+            {t(`notificationsSettings.emailMode.${mode}`)}
           </MenuItem>
         ))}
       </TextField>

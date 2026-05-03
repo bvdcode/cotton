@@ -31,7 +31,7 @@ import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
 
 const emailModes: EmailMode[] = ["None", "Cloud", "Custom"];
 
-export const AdminEmailSettingsPage = () => {
+export const AdminNotificationsSettingsPage = () => {
   const { t } = useTranslation("admin");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -71,7 +71,7 @@ export const AdminEmailSettingsPage = () => {
         setEmailConfig(nextEmailConfig);
       } catch {
         if (!active) return;
-        setLoadError(t("emailSettings.errors.loadFailed"));
+        setLoadError(t("notificationsSettings.errors.loadFailed"));
       } finally {
         if (active) {
           setLoading(false);
@@ -105,14 +105,14 @@ export const AdminEmailSettingsPage = () => {
     try {
       await settingsApi.setEmailMode(next);
       setSavedEmailMode(next);
-      toast.success(t("emailSettings.state.modeSaved"), {
-        toastId: "admin-email-settings:email-mode:saved",
+      toast.success(t("notificationsSettings.state.modeSaved"), {
+        toastId: "admin-notifications-settings:email-mode:saved",
       });
     } catch (error) {
       setEmailMode(previous);
       if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("emailSettings.errors.modeSaveFailed"), {
-          toastId: "admin-email-settings:email-mode:save-failed",
+        toast.error(t("notificationsSettings.errors.modeSaveFailed"), {
+          toastId: "admin-notifications-settings:email-mode:save-failed",
         });
       }
     } finally {
@@ -128,13 +128,13 @@ export const AdminEmailSettingsPage = () => {
       await settingsApi.setEmailConfig(emailConfig);
       await settingsApi.setEmailMode("Custom");
       setSavedEmailMode("Custom");
-      toast.success(t("emailSettings.state.modeSaved"), {
-        toastId: "admin-email-settings:email-mode:saved",
+      toast.success(t("notificationsSettings.state.modeSaved"), {
+        toastId: "admin-notifications-settings:email-mode:saved",
       });
     } catch (error) {
       if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("emailSettings.errors.modeSaveFailed"), {
-          toastId: "admin-email-settings:email-mode:save-failed",
+        toast.error(t("notificationsSettings.errors.modeSaveFailed"), {
+          toastId: "admin-notifications-settings:email-mode:save-failed",
         });
       }
     } finally {
@@ -148,10 +148,10 @@ export const AdminEmailSettingsPage = () => {
         <Stack p={2} spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h6" fontWeight={700}>
-              {t("emailSettings.title")}
+              {t("notificationsSettings.title")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {t("emailSettings.description")}
+              {t("notificationsSettings.description")}
             </Typography>
           </Stack>
 
@@ -170,11 +170,11 @@ export const AdminEmailSettingsPage = () => {
             <AdminSettingSavingOverlay saving={loading || modeSaving}>
               <FormControl fullWidth>
                 <InputLabel id="admin-email-mode-label">
-                  {t("emailSettings.fields.emailMode")}
+                  {t("notificationsSettings.fields.emailMode")}
                 </InputLabel>
                 <Select
                   labelId="admin-email-mode-label"
-                  label={t("emailSettings.fields.emailMode")}
+                  label={t("notificationsSettings.fields.emailMode")}
                   value={emailMode}
                   onChange={(event) =>
                     void handleEmailModeChange(event.target.value as EmailMode)
@@ -183,7 +183,7 @@ export const AdminEmailSettingsPage = () => {
                 >
                   {emailModes.map((mode) => (
                     <MenuItem key={mode} value={mode}>
-                      {t(`emailSettings.emailMode.${mode}`)}
+                      {t(`notificationsSettings.emailMode.${mode}`)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -194,12 +194,12 @@ export const AdminEmailSettingsPage = () => {
           {isCustomEmailMode && (
             <Stack spacing={2}>
               <Typography variant="subtitle1" fontWeight={700}>
-                {t("emailSettings.smtp.title")}
+                {t("notificationsSettings.smtp.title")}
               </Typography>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <AdminSettingSavingOverlay saving={loading}>
                   <TextField
-                    label={t("emailSettings.smtp.fields.smtpServer")}
+                    label={t("notificationsSettings.smtp.fields.smtpServer")}
                     value={emailConfig.smtpServer}
                     onChange={(event) =>
                       updateEmailConfig("smtpServer", event.target.value)
@@ -210,7 +210,7 @@ export const AdminEmailSettingsPage = () => {
                 </AdminSettingSavingOverlay>
                 <AdminSettingSavingOverlay saving={loading}>
                   <TextField
-                    label={t("emailSettings.smtp.fields.port")}
+                    label={t("notificationsSettings.smtp.fields.port")}
                     value={emailConfig.port}
                     onChange={(event) =>
                       updateEmailConfig("port", event.target.value)
@@ -223,7 +223,7 @@ export const AdminEmailSettingsPage = () => {
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <AdminSettingSavingOverlay saving={loading}>
                   <TextField
-                    label={t("emailSettings.smtp.fields.username")}
+                    label={t("notificationsSettings.smtp.fields.username")}
                     value={emailConfig.username}
                     onChange={(event) =>
                       updateEmailConfig("username", event.target.value)
@@ -234,7 +234,7 @@ export const AdminEmailSettingsPage = () => {
                 </AdminSettingSavingOverlay>
                 <AdminSettingSavingOverlay saving={loading}>
                   <TextField
-                    label={t("emailSettings.smtp.fields.password")}
+                    label={t("notificationsSettings.smtp.fields.password")}
                     value={emailConfig.password}
                     onChange={(event) =>
                       updateEmailConfig("password", event.target.value)
@@ -247,7 +247,7 @@ export const AdminEmailSettingsPage = () => {
               </Stack>
               <AdminSettingSavingOverlay saving={loading}>
                 <TextField
-                  label={t("emailSettings.smtp.fields.fromAddress")}
+                  label={t("notificationsSettings.smtp.fields.fromAddress")}
                   value={emailConfig.fromAddress}
                   onChange={(event) =>
                     updateEmailConfig("fromAddress", event.target.value)
@@ -267,7 +267,7 @@ export const AdminEmailSettingsPage = () => {
                       disabled={isBusy}
                     />
                   }
-                  label={t("emailSettings.smtp.fields.useSSL")}
+                  label={t("notificationsSettings.smtp.fields.useSSL")}
                 />
               </AdminSettingSavingOverlay>
               <Box>

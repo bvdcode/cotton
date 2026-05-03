@@ -12,8 +12,8 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import BackupIcon from "@mui/icons-material/Backup";
-import EmailIcon from "@mui/icons-material/Email";
 import GroupsIcon from "@mui/icons-material/Groups";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import SettingsIcon from "@mui/icons-material/Settings";
 import StorageIcon from "@mui/icons-material/Storage";
 import type { ReactNode } from "react";
@@ -25,7 +25,7 @@ type AdminMenuItem = {
     | "users"
     | "generalSettings"
     | "storage"
-    | "emailSettings"
+    | "notificationsSettings"
     | "databaseBackup";
   to: string;
   title: string;
@@ -54,10 +54,10 @@ export const AdminLayoutPage = () => {
       icon: <SettingsIcon />,
     },
     {
-      id: "emailSettings",
-      to: "/admin/email-settings",
-      title: t("menu.emailSettings"),
-      icon: <EmailIcon />,
+      id: "notificationsSettings",
+      to: "/admin/notifications-settings",
+      title: t("menu.notificationsSettings", { defaultValue: "Notifications" }),
+      icon: <NotificationsActiveIcon />,
     },
     {
       id: "databaseBackup",

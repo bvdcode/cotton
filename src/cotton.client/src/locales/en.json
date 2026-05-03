@@ -993,7 +993,7 @@
       "generalSettings": "General settings",
       "storageSettings": "Storage",
       "storageAndStatistics": "Storage and statistics",
-      "emailSettings": "Email",
+      "notificationsSettings": "Notifications",
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics"
     },
@@ -1162,11 +1162,11 @@
         "storageSaveFailed": "Failed to switch storage mode."
       }
     },
-    "emailSettings": {
-      "title": "Email",
+    "notificationsSettings": {
+      "title": "Notifications",
       "description": "Configure how Cotton sends account and security notifications.",
       "fields": {
-        "emailMode": "Email mode"
+        "emailMode": "Notification mode"
       },
       "emailMode": {
         "None": "Disabled",
@@ -1191,12 +1191,12 @@
       },
       "state": {
         "smtpSaved": "SMTP configuration saved.",
-        "modeSaved": "Email mode updated."
+        "modeSaved": "Notification mode updated."
       },
       "errors": {
-        "loadFailed": "Failed to load email settings.",
+        "loadFailed": "Failed to load notification settings.",
         "smtpSaveFailed": "Failed to save SMTP configuration.",
-        "modeSaveFailed": "Failed to save email mode."
+        "modeSaveFailed": "Failed to save notification mode."
       }
     },
     "databaseBackup": {

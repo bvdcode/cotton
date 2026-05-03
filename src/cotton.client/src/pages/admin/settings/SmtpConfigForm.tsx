@@ -35,7 +35,7 @@ export const SmtpConfigForm = ({
   return (
     <Stack spacing={2}>
       <Typography variant="subtitle1" fontWeight={700}>
-        {t("emailSettings.smtp.title")}
+        {t("notificationsSettings.smtp.title")}
       </Typography>
 
       <Box
@@ -46,28 +46,28 @@ export const SmtpConfigForm = ({
         }}
       >
         <TextField
-          label={t("emailSettings.smtp.fields.smtpServer")}
+          label={t("notificationsSettings.smtp.fields.smtpServer")}
           value={config.smtpServer}
           onChange={(event) => update("smtpServer", event.target.value)}
           disabled={disabled}
           fullWidth
         />
         <TextField
-          label={t("emailSettings.smtp.fields.port")}
+          label={t("notificationsSettings.smtp.fields.port")}
           value={config.port}
           onChange={(event) => update("port", event.target.value)}
           disabled={disabled}
           fullWidth
         />
         <TextField
-          label={t("emailSettings.smtp.fields.username")}
+          label={t("notificationsSettings.smtp.fields.username")}
           value={config.username}
           onChange={(event) => update("username", event.target.value)}
           disabled={disabled}
           fullWidth
         />
         <TextField
-          label={t("emailSettings.smtp.fields.password")}
+          label={t("notificationsSettings.smtp.fields.password")}
           type="password"
           value={config.password}
           onChange={(event) => update("password", event.target.value)}
@@ -77,7 +77,7 @@ export const SmtpConfigForm = ({
       </Box>
 
       <TextField
-        label={t("emailSettings.smtp.fields.fromAddress")}
+        label={t("notificationsSettings.smtp.fields.fromAddress")}
         value={config.fromAddress}
         onChange={(event) => update("fromAddress", event.target.value)}
         disabled={disabled}
@@ -92,7 +92,7 @@ export const SmtpConfigForm = ({
             disabled={disabled}
           />
         }
-        label={t("emailSettings.smtp.fields.useSSL")}
+        label={t("notificationsSettings.smtp.fields.useSSL")}
       />
 
       <Box>

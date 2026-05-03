@@ -4,4 +4,4 @@ export { AdminDatabaseBackupPage } from "./database-backup/AdminDatabaseBackupPa
 export { AdminStorageStatisticsPage } from "./storage-statistics/AdminStorageStatisticsPage";
 export { AdminGeneralSettingsPage } from "./settings/AdminGeneralSettingsPage";
 export { AdminStorageSettingsPage } from "./settings/AdminStorageSettingsPage";
-export { AdminEmailSettingsPage } from "./settings/AdminEmailSettingsPage";
+export { AdminNotificationsSettingsPage } from "./settings/AdminNotificationsSettingsPage";
