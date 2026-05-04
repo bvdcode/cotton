@@ -1,6 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
-import { isJsonObject, type JsonValue } from "../types/json";
 import { toast } from "react-toastify";
 
 export { isAxiosError } from "axios";
@@ -9,7 +8,19 @@ type ToastAwareAxiosError = AxiosError & {
   _apiErrorToastDispatched?: boolean;
 };
 
-const collectStringMessages = (value: JsonValue, output: string[]): void => {
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const normalizeMessage = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const collectStringMessages = (value: unknown, output: string[]): void => {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (trimmed.length > 0) {
@@ -23,17 +34,15 @@ const collectStringMessages = (value: JsonValue, output: string[]): void => {
     return;
   }
 
-  if (!isJsonObject(value)) {
+  if (!isRecord(value)) {
     return;
   }
 
   Object.values(value).forEach((entry) => collectStringMessages(entry, output));
 };
 
-const extractApiErrorMessage = (
-  responseData: JsonValue | null | undefined,
-): string | null => {
-  if (!responseData || !isJsonObject(responseData)) {
+const extractApiValidationErrorMessage = (responseData: unknown): string | null => {
+  if (!isRecord(responseData)) {
     return null;
   }
 
@@ -47,7 +56,36 @@ const extractApiErrorMessage = (
   return messages[0] ?? null;
 };
 
-const tryDispatchApiErrorToast = (error: AxiosError): void => {
+export const extractApiErrorMessage = (responseData: unknown): string | null => {
+  const plainTextMessage = normalizeMessage(responseData);
+  if (plainTextMessage) {
+    return plainTextMessage;
+  }
+
+  if (!isRecord(responseData)) {
+    return null;
+  }
+
+  return (
+    normalizeMessage(responseData.detail) ??
+    normalizeMessage(responseData.message) ??
+    extractApiValidationErrorMessage(responseData) ??
+    normalizeMessage(responseData.title)
+  );
+};
+
+export const getApiErrorMessage = (error: unknown): string | null => {
+  if (!axios.isAxiosError(error)) {
+    return null;
+  }
+
+  return extractApiErrorMessage(error.response?.data);
+};
+
+const dispatchApiErrorToast = (
+  error: AxiosError,
+  message: string,
+): void => {
   if (typeof window === "undefined") {
     return;
   }
@@ -58,25 +96,49 @@ const tryDispatchApiErrorToast = (error: AxiosError): void => {
   }
 
   const requestUrl = error.config?.url ?? "";
-  if (requestUrl.includes("auth/refresh")) {
-    return;
-  }
-
-  const responseData = error.response?.data as JsonValue | null | undefined;
-  const message = extractApiErrorMessage(responseData);
-  if (!message) {
-    return;
-  }
-
   const responseStatus = error.response?.status ?? "unknown";
   const toastId = `api-error:${responseStatus}:${requestUrl}:${message}`;
   toast.error(message, { toastId });
   toastAwareError._apiErrorToastDispatched = true;
 };
 
+const tryDispatchApiErrorToast = (error: AxiosError): void => {
+  const requestUrl = error.config?.url ?? "";
+  if (requestUrl.includes("auth/refresh")) {
+    return;
+  }
+
+  const message = extractApiValidationErrorMessage(error.response?.data);
+  if (!message) {
+    return;
+  }
+
+  dispatchApiErrorToast(error, message);
+};
+
 export const hasApiErrorToastBeenDispatched = (error: AxiosError): boolean => {
   const toastAwareError = error as ToastAwareAxiosError;
   return toastAwareError._apiErrorToastDispatched === true;
+};
+
+export const showApiErrorToast = (
+  error: unknown,
+  fallbackMessage: string,
+  toastId: string,
+): void => {
+  if (axios.isAxiosError(error)) {
+    if (hasApiErrorToastBeenDispatched(error)) {
+      return;
+    }
+
+    const message = getApiErrorMessage(error);
+    if (message) {
+      dispatchApiErrorToast(error, message);
+      return;
+    }
+  }
+
+  toast.error(fallbackMessage, { toastId });
 };
 
 const resolveBrowserTimeZone = (): string | null => {

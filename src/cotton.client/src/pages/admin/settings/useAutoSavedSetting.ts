@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
-} from "../../../shared/api/httpClient";
+import { showApiErrorToast } from "../../../shared/api/httpClient";
 
 export type SaveStatus = "loading" | "idle" | "saving" | "saved" | "error";
 
@@ -111,11 +108,11 @@ export const useAutoSavedSetting = <T,>({
     } catch (error) {
       setValueState(savedValueRef.current);
       setStatus("error");
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(errorMessageRef.current, {
-          toastId: `${toastIdPrefixRef.current}:save-error`,
-        });
-      }
+      showApiErrorToast(
+        error,
+        errorMessageRef.current,
+        `${toastIdPrefixRef.current}:save-error`,
+      );
     }
   }, []);
 

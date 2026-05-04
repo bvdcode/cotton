@@ -31,19 +31,17 @@ import {
   type FormEvent,
 } from "react";
 import { authApi } from "../../shared/api/authApi";
-import { hasApiErrorToastBeenDispatched } from "../../shared/api/httpClient";
+import {
+  getApiErrorMessage,
+  hasApiErrorToastBeenDispatched,
+  isAxiosError,
+} from "../../shared/api/httpClient";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import Loader from "../../shared/ui/Loader";
-import axios from "axios";
 import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
 import { toast } from "react-toastify";
 import { getUsernameError } from "../../shared/validation/username";
-
-type LoginErrorData = {
-  message?: string;
-  detail?: string;
-};
 
 type ToastSeverity = "error" | "success";
 
@@ -335,10 +333,9 @@ export const LoginPage = () => {
       setAuthenticated(true, user);
       navigate("/");
     } catch (e) {
-      if (axios.isAxiosError(e)) {
+      if (isAxiosError(e)) {
         const status = e.response?.status;
-        const data = e.response?.data as LoginErrorData | undefined;
-        const serverMessage = data?.detail ?? data?.message;
+        const serverMessage = getApiErrorMessage(e) ?? undefined;
         const hint = tryGetTwoFactorHint({ status, serverMessage });
 
         if (hint === "required") {

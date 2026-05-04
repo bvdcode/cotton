@@ -20,10 +20,7 @@ import {
   type EmailConfig,
   type EmailMode,
 } from "../../../shared/api/settingsApi";
-import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
-} from "../../../shared/api/httpClient";
+import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { EmailModeSelector } from "./EmailModeSelector";
 import { SmtpConfigForm } from "./SmtpConfigForm";
 import type { SaveStatus } from "./useAutoSavedSetting";
@@ -144,11 +141,11 @@ export const AdminNotificationsSettingsPage = () => {
     } catch (error) {
       setEmailMode(previous);
       setModeStatus("error");
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("notificationsSettings.errors.modeSaveFailed"), {
-          toastId: "admin-notifications-settings:email-mode:save-failed",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("notificationsSettings.errors.modeSaveFailed"),
+        "admin-notifications-settings:email-mode:save-failed",
+      );
     }
   };
 
@@ -167,11 +164,11 @@ export const AdminNotificationsSettingsPage = () => {
     } catch (error) {
       setModeStatus("error");
       setSmtpStatus("error");
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("notificationsSettings.errors.modeSaveFailed"), {
-          toastId: "admin-notifications-settings:email-mode:save-failed",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("notificationsSettings.errors.modeSaveFailed"),
+        "admin-notifications-settings:email-mode:save-failed",
+      );
     }
   };
 
@@ -190,16 +187,13 @@ export const AdminNotificationsSettingsPage = () => {
         },
       );
     } catch (error) {
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(
-          t("notificationsSettings.errors.testFailed", {
-            defaultValue: "Failed to send test email.",
-          }),
-          {
-            toastId: "admin-notifications-settings:smtp-test:failed",
-          },
-        );
-      }
+      showApiErrorToast(
+        error,
+        t("notificationsSettings.errors.testFailed", {
+          defaultValue: "Failed to send test email.",
+        }),
+        "admin-notifications-settings:smtp-test:failed",
+      );
     } finally {
       setSmtpTesting(false);
     }

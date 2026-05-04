@@ -16,7 +16,7 @@ import {
   adminApi,
   type LatestDatabaseBackupDto,
 } from "../../../shared/api/adminApi";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 
 type LoadState =
@@ -61,14 +61,10 @@ export const AdminDatabaseBackupPage = () => {
       setBackup(latest);
       setLoadState({ kind: "idle" });
     } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setLoadState({ kind: "error", message });
-          return;
-        }
+      const message = getApiErrorMessage(error);
+      if (message) {
+        setLoadState({ kind: "error", message });
+        return;
       }
 
       setLoadState({
@@ -96,14 +92,10 @@ export const AdminDatabaseBackupPage = () => {
       .catch((error: unknown) => {
         if (cancelled) return;
 
-        if (isAxiosError(error)) {
-          const message = (
-            error.response?.data as { message?: string } | undefined
-          )?.message;
-          if (typeof message === "string" && message.length > 0) {
-            setLoadState({ kind: "error", message });
-            return;
-          }
+        const message = getApiErrorMessage(error);
+        if (message) {
+          setLoadState({ kind: "error", message });
+          return;
         }
 
         setLoadState({
@@ -128,14 +120,10 @@ export const AdminDatabaseBackupPage = () => {
       });
       await refreshLatestBackup();
     } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setTriggerFeedback({ kind: "error", message });
-          return;
-        }
+      const message = getApiErrorMessage(error);
+      if (message) {
+        setTriggerFeedback({ kind: "error", message });
+        return;
       }
 
       setTriggerFeedback({

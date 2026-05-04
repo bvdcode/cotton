@@ -15,7 +15,10 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import {
+  getApiErrorMessage,
+  isAxiosError,
+} from "../../../shared/api/httpClient";
 import { totpApi, type TotpSetup } from "../../../shared/api/totpApi";
 import { authApi } from "../../../shared/api/authApi";
 import type { User } from "../../../features/auth/types";
@@ -81,16 +84,18 @@ export const TotpSettingsCard = ({
     } catch (e) {
       if (isAxiosError(e)) {
         const status = e.response?.status;
-        const message = (e.response?.data as { message?: string })?.message;
         if (status === 409) {
           setTotpError(t("totp.errors.alreadyEnabled"));
           return;
         }
-        if (typeof message === "string" && message.length > 0) {
-          setTotpError(message);
-          return;
-        }
       }
+
+      const message = getApiErrorMessage(e);
+      if (message) {
+        setTotpError(message);
+        return;
+      }
+
       setTotpError(t("totp.errors.setupFailed"));
     } finally {
       setTotpLoading(false);
@@ -116,7 +121,6 @@ export const TotpSettingsCard = ({
     } catch (e) {
       if (isAxiosError(e)) {
         const status = e.response?.status;
-        const message = (e.response?.data as { message?: string })?.message;
         if (status === 403) {
           setTotpError(t("totp.errors.invalidCode"));
           return;
@@ -129,11 +133,14 @@ export const TotpSettingsCard = ({
           setTotpError(t("totp.errors.alreadyEnabled"));
           return;
         }
-        if (typeof message === "string" && message.length > 0) {
-          setTotpError(message);
-          return;
-        }
       }
+
+      const message = getApiErrorMessage(e);
+      if (message) {
+        setTotpError(message);
+        return;
+      }
+
       setTotpError(t("totp.errors.confirmFailed"));
     } finally {
       setTotpConfirmLoading(false);
@@ -182,6 +189,13 @@ export const TotpSettingsCard = ({
           return;
         }
       }
+
+      const message = getApiErrorMessage(e);
+      if (message) {
+        setDisableError(message);
+        return;
+      }
+
       setDisableError(t("totp.errors.disableFailed"));
     } finally {
       setDisableLoading(false);

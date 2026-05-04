@@ -13,7 +13,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { authApi } from "../../shared/api/authApi";
 import { useAuth } from "../../features/auth";
-import axios from "axios";
+import {
+  getApiErrorMessage,
+  isAxiosError,
+} from "../../shared/api/httpClient";
 
 export const VerifyEmailPage = () => {
   const { t } = useTranslation("verifyEmail");
@@ -42,10 +45,10 @@ export const VerifyEmailPage = () => {
         await authApi.confirmEmailVerification(token);
         setSuccess(true);
       } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 400) {
+        if (isAxiosError(err) && err.response?.status === 400) {
           setError(t("errors.invalidToken"));
         } else {
-          setError(t("errors.failed"));
+          setError(getApiErrorMessage(err) ?? t("errors.failed"));
         }
       } finally {
         setLoading(false);

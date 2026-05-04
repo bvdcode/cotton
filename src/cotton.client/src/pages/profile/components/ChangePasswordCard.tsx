@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { authApi } from "../../../shared/api/authApi";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import PasswordIcon from "@mui/icons-material/Password";
@@ -21,41 +21,6 @@ type ChangePasswordStatus =
   | { kind: "idle" }
   | { kind: "success" }
   | { kind: "error"; message: string };
-
-type ApiErrorResponse = {
-  message?: string;
-  title?: string;
-  errors?: Record<string, string | string[]>;
-};
-
-function extractApiErrorMessage(data?: ApiErrorResponse): string | null {
-  if (!data) return null;
-  if (typeof data.message === "string" && data.message.length > 0) {
-    return data.message;
-  }
-
-  const errors = data.errors;
-  if (errors && typeof errors === "object") {
-    const values = Object.values(errors);
-    for (const value of values) {
-      if (typeof value === "string" && value.length > 0) {
-        return value;
-      }
-      if (Array.isArray(value)) {
-        const first = value.find((v) => typeof v === "string" && v.length > 0);
-        if (first) {
-          return first;
-        }
-      }
-    }
-  }
-
-  if (typeof data.title === "string" && data.title.length > 0) {
-    return data.title;
-  }
-
-  return null;
-}
 
 type PasswordInputFieldProps = {
   label: string;
@@ -151,14 +116,12 @@ export const ChangePasswordCard = () => {
       setStatus({ kind: "success" });
       resetForm();
     } catch (e) {
-      if (isAxiosError(e)) {
-        const data = e.response?.data as ApiErrorResponse | undefined;
-        const message = extractApiErrorMessage(data);
-        if (message) {
-          setStatus({ kind: "error", message: message });
-          return;
-        }
+      const message = getApiErrorMessage(e);
+      if (message) {
+        setStatus({ kind: "error", message });
+        return;
       }
+
       setStatus({ kind: "error", message: t("password.errors.failed") });
     } finally {
       setLoading(false);

@@ -109,7 +109,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("server-usage")]
         public IActionResult GetServerUsage()
         {
-            string[] serverUsage = _settings.GetServerSettings().ServerUsage.Select(x => x.ToString()).ToArray();
+            string[] serverUsage = [.. _settings.GetServerSettings().ServerUsage.Select(x => x.ToString())];
             return Ok(new { serverUsage });
         }
 
@@ -277,7 +277,6 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("s3-config")]
-        [HttpPatch("set-s3-config")]
         public async Task<IActionResult> SetS3Config([FromBody] S3Config s3Config, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
@@ -295,7 +294,6 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("s3-config")]
-        [HttpGet("get-s3-config")]
         public IActionResult GetS3Config()
         {
             var settings = _settings.GetServerSettings();
@@ -312,7 +310,6 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("email-config")]
-        [HttpPatch("set-email-config")]
         public async Task<IActionResult> SetEmailConfig([FromBody] EmailConfig emailConfig, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
@@ -349,7 +346,6 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("email-config")]
-        [HttpGet("get-email-config")]
         public IActionResult GetEmailConfig()
         {
             var settings = _settings.GetServerSettings();

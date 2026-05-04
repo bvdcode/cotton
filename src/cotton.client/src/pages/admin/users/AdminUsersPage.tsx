@@ -15,7 +15,7 @@ import { GridToolbar } from "@mui/x-data-grid/internals";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { adminApi, type AdminUserDto } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
 import { CreateUserDialog } from "./CreateUserDialog";
@@ -158,14 +158,12 @@ export const AdminUsersPage = () => {
       setUsers(result);
       setLoadState({ kind: "idle" });
     } catch (e) {
-      if (isAxiosError(e)) {
-        const message = (e.response?.data as { message?: string } | undefined)
-          ?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setLoadState({ kind: "error", message });
-          return;
-        }
+      const message = getApiErrorMessage(e);
+      if (message) {
+        setLoadState({ kind: "error", message });
+        return;
       }
+
       setLoadState({ kind: "error", message: t("users.errors.loadFailed") });
     }
   }, [t]);
@@ -302,14 +300,12 @@ export const AdminUsersPage = () => {
       })
       .catch((e: unknown) => {
         if (cancelled) return;
-        if (isAxiosError(e)) {
-          const message = (e.response?.data as { message?: string } | undefined)
-            ?.message;
-          if (typeof message === "string" && message.length > 0) {
-            setLoadState({ kind: "error", message });
-            return;
-          }
+        const message = getApiErrorMessage(e);
+        if (message) {
+          setLoadState({ kind: "error", message });
+          return;
         }
+
         setLoadState({ kind: "error", message: t("users.errors.loadFailed") });
       });
 

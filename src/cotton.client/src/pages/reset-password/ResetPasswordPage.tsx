@@ -12,7 +12,10 @@ import { useTranslation } from "react-i18next";
 import { useState, useCallback, type FormEvent } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { authApi } from "../../shared/api/authApi";
-import axios from "axios";
+import {
+  getApiErrorMessage,
+  isAxiosError,
+} from "../../shared/api/httpClient";
 
 export const ResetPasswordPage = () => {
   const { t } = useTranslation("resetPassword");
@@ -46,14 +49,15 @@ export const ResetPasswordPage = () => {
         await authApi.resetPassword(token, newPassword);
         setSuccess(true);
       } catch (err) {
-        if (axios.isAxiosError(err)) {
+        if (isAxiosError(err)) {
           const status = err.response?.status;
           if (status === 400) {
             setError(t("errors.invalidToken"));
             return;
           }
         }
-        setError(t("errors.failed"));
+
+        setError(getApiErrorMessage(err) ?? t("errors.failed"));
       } finally {
         setLoading(false);
       }

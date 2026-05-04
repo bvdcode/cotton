@@ -25,7 +25,10 @@ import {
   settingsApi,
   type StorageSpaceMode,
 } from "../../../shared/api/settingsApi";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import {
+  getApiErrorMessage,
+  showApiErrorToast,
+} from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { AdminStorageBackendSettings } from "../settings/AdminStorageBackendSettings";
 import { storageSpaceOptions } from "../settings/adminGeneralSettingsModel";
@@ -159,14 +162,10 @@ export const AdminStorageStatisticsPage = () => {
           return;
         }
 
-        if (isAxiosError(error)) {
-          const message = (
-            error.response?.data as { message?: string } | undefined
-          )?.message;
-          if (typeof message === "string" && message.length > 0) {
-            setLoadState({ kind: "error", message });
-            return;
-          }
+        const message = getApiErrorMessage(error);
+        if (message) {
+          setLoadState({ kind: "error", message });
+          return;
         }
 
         setLoadState({
@@ -255,11 +254,13 @@ export const AdminStorageStatisticsPage = () => {
           toastId: "admin:storage-statistics:storage-space-mode:saved",
         });
       })
-      .catch(() => {
+      .catch((error) => {
         setStorageSpaceMode(previousMode);
-        toast.error(t("settings.errors.saveFailed"), {
-          toastId: "admin:storage-statistics:storage-space-mode:save-failed",
-        });
+        showApiErrorToast(
+          error,
+          t("settings.errors.saveFailed"),
+          "admin:storage-statistics:storage-space-mode:save-failed",
+        );
       })
       .finally(() => {
         setStorageSpaceModeSaving(false);
@@ -283,14 +284,10 @@ export const AdminStorageStatisticsPage = () => {
       setLoadState({ kind: "loading" });
       setRefreshVersion((value) => value + 1);
     } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setTriggerState({ kind: "error", message });
-          return;
-        }
+      const message = getApiErrorMessage(error);
+      if (message) {
+        setTriggerState({ kind: "error", message });
+        return;
       }
 
       setTriggerState({
@@ -452,7 +449,12 @@ export const AdminStorageStatisticsPage = () => {
         fullWidth
         sx={{
           width: "100%",
-          "& .MuiToggleButton-root": { flex: 1, minWidth: 0 },
+          "& .MuiToggleButton-root": {
+            flex: 1,
+            minWidth: 0,
+            whiteSpace: "normal",
+            lineHeight: 1.2,
+          },
         }}
       >
         {storageSpaceOptions.map((option) => (

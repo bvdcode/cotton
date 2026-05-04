@@ -11,7 +11,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import {
   adminApi,
   type AdminUserDto,
@@ -89,14 +89,12 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
       await onSaved();
       onClose();
     } catch (e) {
-      if (isAxiosError(e)) {
-        const message = (e.response?.data as { message?: string } | undefined)
-          ?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setError(message);
-          return;
-        }
+      const message = getApiErrorMessage(e);
+      if (message) {
+        setError(message);
+        return;
       }
+
       setError(t("users.errors.updateFailed"));
     } finally {
       setSaving(false);

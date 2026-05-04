@@ -23,10 +23,7 @@ import {
   type S3Config,
   type StorageType,
 } from "../../../shared/api/settingsApi";
-import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
-} from "../../../shared/api/httpClient";
+import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { AdminSettingSavingOverlay } from "./AdminSettingSavingOverlay";
 
 type AdminStorageBackendSettingsProps = {
@@ -118,11 +115,11 @@ export const AdminStorageBackendSettings = ({
       onSaved?.();
     } catch (error) {
       setStorageType(previous);
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("storageSettings.errors.storageSaveFailed"), {
-          toastId: "admin-storage-settings:storage-type:save-failed",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("storageSettings.errors.storageSaveFailed"),
+        "admin-storage-settings:storage-type:save-failed",
+      );
     } finally {
       setStorageTypeSaving(false);
     }
@@ -140,11 +137,11 @@ export const AdminStorageBackendSettings = ({
       });
       onSaved?.();
     } catch (error) {
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("storageSettings.errors.s3SaveFailed"), {
-          toastId: "admin-storage-settings:s3-config:save-failed",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("storageSettings.errors.s3SaveFailed"),
+        "admin-storage-settings:s3-config:save-failed",
+      );
     } finally {
       setS3Saving(false);
     }

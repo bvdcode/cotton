@@ -1,7 +1,4 @@
-import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
-} from "../../../shared/api/httpClient";
+import { showApiErrorToast } from "../../../shared/api/httpClient";
 import {
   Alert,
   Box,
@@ -92,13 +89,11 @@ export const EditProfileCard = ({
         toastId: "profile:edit:success",
       });
     } catch (error) {
-      if (isAxiosError(error) && hasApiErrorToastBeenDispatched(error)) {
-        return;
-      }
-
-      toast.error(t("editProfile.errors.failed"), {
-        toastId: "profile:edit:error:generic",
-      });
+      showApiErrorToast(
+        error,
+        t("editProfile.errors.failed"),
+        "profile:edit:error:generic",
+      );
     } finally {
       setLoading(false);
     }

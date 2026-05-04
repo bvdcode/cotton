@@ -11,10 +11,7 @@ import {
   settingsApi,
   type GeoIpLookupMode,
 } from "../../../shared/api/settingsApi";
-import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
-} from "../../../shared/api/httpClient";
+import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { SettingsSection } from "./SettingsSection";
 import {
   geoIpOptions,
@@ -115,11 +112,11 @@ export const GeoIpLookupSetting = () => {
   const reportError = useCallback(
     (error: unknown) => {
       setStatus("error");
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("settings.errors.saveFailed"), {
-          toastId: "admin-general:geoip:save-error",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("settings.errors.saveFailed"),
+        "admin-general:geoip:save-error",
+      );
     },
     [t],
   );
