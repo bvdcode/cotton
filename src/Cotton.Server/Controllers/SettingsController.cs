@@ -6,6 +6,7 @@ using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
+using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -314,7 +315,10 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_settings.ValidateEmailConfig(emailConfig));
-            SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort);
+            if (!SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort))
+            {
+                return this.ApiBadRequest("Invalid SMTP port number.");
+            }
             await _settings.UpdateSettingsAsync(settings =>
             {
                 settings.SmtpServerAddress = emailConfig.SmtpServer.Trim();
