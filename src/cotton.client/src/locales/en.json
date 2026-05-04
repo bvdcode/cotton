@@ -94,7 +94,8 @@
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
-      "logout": "Logout"
+      "logout": "Logout",
+      "help": "Help"
     },
     "app": {
       "logoAlt": "Cotton logo"
