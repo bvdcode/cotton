@@ -94,7 +94,8 @@
       "lightMode": "Tema claro",
       "darkMode": "Tema oscuro",
       "changeLanguage": "Cambiar idioma",
-      "logout": "Cerrar sesión"
+      "logout": "Cerrar sesión",
+      "help": "Ayuda"
     },
     "app": {
       "logoAlt": "Logo de Cotton"

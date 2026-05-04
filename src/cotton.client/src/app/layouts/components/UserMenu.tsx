@@ -9,7 +9,12 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { Logout, Person, AdminPanelSettings } from "@mui/icons-material";
+import {
+  Logout,
+  Person,
+  AdminPanelSettings,
+  BugReport,
+} from "@mui/icons-material";
 import { UserRole, useAuth } from "../../../features/auth";
 import { useTranslation } from "react-i18next";
 import { useState, type MouseEvent } from "react";
@@ -35,7 +40,12 @@ export const UserMenu = () => {
       return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
     }
 
-    const fallback = (args.displayName ?? args.username ?? args.email ?? "").trim();
+    const fallback = (
+      args.displayName ??
+      args.username ??
+      args.email ??
+      ""
+    ).trim();
     if (!fallback) return "";
 
     const parts = fallback.split(/\s+/).filter(Boolean);
@@ -159,6 +169,18 @@ export const UserMenu = () => {
             <ListItemText>{t("userMenu.admin")}</ListItemText>
           </MenuItem>
         )}
+
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            navigate("https://github.com/bvdcode/cotton/issues/new");
+          }}
+        >
+          <ListItemIcon>
+            <BugReport fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("userMenu.help")}</ListItemText>
+        </MenuItem>
 
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
