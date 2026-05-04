@@ -21,17 +21,13 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
 import {
   settingsApi,
   type S3Config,
   type StorageSpaceMode,
   type StorageType,
 } from "../../../shared/api/settingsApi";
-import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
-} from "../../../shared/api/httpClient";
+import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { SettingsSection } from "./SettingsSection";
 import { storageSpaceOptions } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
@@ -184,11 +180,11 @@ export const AdminStorageSettingsPage = () => {
     } catch (error) {
       setStorageType(previous);
       setStorageTypeStatus("error");
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("storageSettings.errors.storageSaveFailed"), {
-          toastId: "admin-storage-settings:storage-type:save-failed",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("storageSettings.errors.storageSaveFailed"),
+        "admin-storage-settings:storage-type:save-failed",
+      );
     }
   };
 
@@ -215,11 +211,11 @@ export const AdminStorageSettingsPage = () => {
     } catch (error) {
       setStorageTypeStatus("error");
       setS3Status("error");
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("storageSettings.errors.storageSaveFailed"), {
-          toastId: "admin-storage-settings:s3:save-failed",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("storageSettings.errors.storageSaveFailed"),
+        "admin-storage-settings:s3:save-failed",
+      );
     }
   };
 
@@ -246,11 +242,11 @@ export const AdminStorageSettingsPage = () => {
     } catch (error) {
       setStorageSpaceMode(previous);
       setStorageSpaceModeStatus("error");
-      if (!isAxiosError(error) || !hasApiErrorToastBeenDispatched(error)) {
-        toast.error(t("settings.errors.saveFailed"), {
-          toastId: "admin-storage-settings:storage-space-mode:save-failed",
-        });
-      }
+      showApiErrorToast(
+        error,
+        t("settings.errors.saveFailed"),
+        "admin-storage-settings:storage-space-mode:save-failed",
+      );
     }
   };
 
@@ -400,6 +396,15 @@ export const AdminStorageSettingsPage = () => {
               }
               disabled={storageSpaceDisabled}
               aria-label={t("settings.general.fields.storageSpaceMode")}
+              fullWidth
+              sx={{
+                "& .MuiToggleButton-root": {
+                  flex: 1,
+                  minWidth: 0,
+                  whiteSpace: "normal",
+                  lineHeight: 1.2,
+                },
+              }}
             >
               {storageSpaceOptions.map((option) => (
                 <ToggleButton key={option} value={option}>

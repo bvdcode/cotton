@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { UserRoleSelect } from "./UserRoleSelect";
 import { UserRole } from "../../../features/auth/types";
 import React, { useCallback, useEffect, useState } from "react";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import {
   adminApi,
   type AdminCreateUserRequestDto,
@@ -94,14 +94,10 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       resetForm();
       onClose();
     } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setCreateError(message);
-          return;
-        }
+      const message = getApiErrorMessage(error);
+      if (message) {
+        setCreateError(message);
+        return;
       }
 
       setCreateError(t("users.errors.createFailed"));

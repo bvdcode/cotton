@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { User } from "../../../../features/auth/types";
 import { authApi } from "../../../../shared/api/authApi";
 import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
+  getApiErrorMessage,
+  showApiErrorToast,
 } from "../../../../shared/api/httpClient";
 import { useSettingsStore } from "../../../../shared/store/settingsStore";
 import { uploadBlobToChunks } from "../../../../shared/upload";
@@ -195,15 +195,10 @@ export const useUserInfoCard = ({
           return;
         }
 
-        if (isAxiosError(error)) {
-          const data = error.response?.data as
-            | { message?: string; title?: string }
-            | undefined;
-          const message = data?.message ?? data?.title;
-          if (message) {
-            setAvatarStatus({ kind: "error", message });
-            return;
-          }
+        const message = getApiErrorMessage(error);
+        if (message) {
+          setAvatarStatus({ kind: "error", message });
+          return;
         }
 
         setAvatarStatus({ kind: "error", message: t("avatar.errors.failed") });
@@ -237,13 +232,11 @@ export const useUserInfoCard = ({
         toastId: "profile:email-verification:sent",
       });
     } catch (error) {
-      if (isAxiosError(error) && hasApiErrorToastBeenDispatched(error)) {
-        return;
-      }
-
-      toast.error(t("emailVerification.errors.failed"), {
-        toastId: "profile:email-verification:error:generic",
-      });
+      showApiErrorToast(
+        error,
+        t("emailVerification.errors.failed"),
+        "profile:email-verification:error:generic",
+      );
     } finally {
       setEmailVerificationSending(false);
     }

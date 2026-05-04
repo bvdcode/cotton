@@ -1098,14 +1098,14 @@
           "Other": "Other"
         },
         "storageSpaceMode": {
-          "Optimal": "Optimal",
-          "Limited": "Limited",
+          "Optimal": "Balanced",
+          "Limited": "Space Saver",
           "Unlimited": "Unlimited"
         },
         "storageSpaceHelp": {
           "open": "What does storage space mode affect?",
           "title": "Storage space mode",
-          "description": "Limited makes the cloud clean orphaned data as quickly as possible. Unlimited lowers maintenance load and gives data reuse a much better chance. Optimal stays between those two."
+          "description": "This controls how aggressively Cotton uses and frees storage: garbage collection timing, cleanup of unreferenced data, cache/data reuse, and how many old file versions can remain available. Every time a file is updated, Cotton keeps a shadow copy by retaining a reference to the previous file data until cleanup removes it. Unlimited keeps data longer and cleans mostly when space is needed; Space Saver frees storage sooner. Balanced stays between those two."
         },
         "computionMode": {
           "Local": "Local",
