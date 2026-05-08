@@ -12,7 +12,6 @@ using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quartz;
-using System.Runtime;
 
 namespace Cotton.Server.Controllers
 {
