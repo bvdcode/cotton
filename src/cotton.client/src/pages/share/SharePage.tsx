@@ -7,16 +7,17 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 import { isAxiosError } from "../../shared/api/httpClient";
 import { sharedFoldersApi } from "../../shared/api/sharedFoldersApi";
 import { useCopyFeedback } from "../../shared/hooks/useCopyFeedback";
+import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { shareLinks } from "../../shared/utils/shareLinks";
 import { shareLinkAction } from "../../shared/utils/shareLinkAction";
 import { ShareFileViewer } from "./components/ShareFileViewer";
 import { ShareHeaderBar } from "./components/ShareHeaderBar";
 import { SharedFolderViewer } from "./components/SharedFolderViewer";
 import { useShareFileInfo } from "./hooks/useShareFileInfo";
-import { AppToast, type AppToastState } from "../../shared/ui/AppToast";
 import {
   resolveSharePageViewState,
   type ShareTargetKind,
@@ -86,6 +87,7 @@ export const SharePage: React.FC = () => {
   const title = targetKind === "folder"
     ? t("folder.title", { ns: "share" })
     : t("title", { ns: "share" });
+  usePageTitle(title);
 
   const {
     loading,
@@ -99,11 +101,6 @@ export const SharePage: React.FC = () => {
     token: targetKind === "file" ? token : null,
     inlineUrl,
     downloadUrl,
-  });
-
-  const [shareToast, setShareToast] = React.useState<AppToastState>({
-    open: false,
-    message: "",
   });
 
   const [isCopied, markCopied] = useCopyFeedback();
@@ -150,34 +147,38 @@ export const SharePage: React.FC = () => {
 
       switch (outcome.kind) {
         case "shared":
-          setShareToast({
-            open: true,
-            message: t("toasts.shared", { ns: "share" }),
+          toast.success(t("toasts.shared", { ns: "share" }), {
+            toastId: "share-page-shared",
           });
           return;
         case "copied":
           markCopied();
-          setShareToast({
-            open: true,
-            message: t("toasts.copied", { ns: "share" }),
+          toast.success(t("toasts.copied", { ns: "share" }), {
+            toastId: "share-page-copied",
           });
           return;
         case "aborted":
           return;
         case "error":
         default:
-          setShareToast({
-            open: true,
-            message: t("errors.copyLink", { ns: "share" }),
+          toast.error(t("errors.copyLink", { ns: "share" }), {
+            toastId: "share-page-copy",
           });
       }
     } catch {
-      setShareToast({
-        open: true,
-        message: t("errors.copyLink", { ns: "share" }),
+      toast.error(t("errors.copyLink", { ns: "share" }), {
+        toastId: "share-page-copy",
       });
     }
-  }, [fileName, markCopied, shareUrl, sharedFolderInfo?.name, t, targetKind, title]);
+  }, [
+    fileName,
+    markCopied,
+    shareUrl,
+    sharedFolderInfo?.name,
+    t,
+    targetKind,
+    title,
+  ]);
 
   const viewState = React.useMemo(
     () =>
@@ -210,11 +211,6 @@ export const SharePage: React.FC = () => {
       minHeight={0}
       minWidth={0}
     >
-      <AppToast
-        toast={shareToast}
-        onClose={() => setShareToast((prev) => ({ ...prev, open: false }))}
-      />
-
       {viewState.kind === "loading" && (
         <Box
           flex={1}

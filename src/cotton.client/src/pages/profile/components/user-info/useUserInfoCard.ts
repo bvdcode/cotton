@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { User } from "../../../../features/auth/types";
 import { authApi } from "../../../../shared/api/authApi";
 import {
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
+  getApiErrorMessage,
+  showApiErrorToast,
 } from "../../../../shared/api/httpClient";
 import { useSettingsStore } from "../../../../shared/store/settingsStore";
 import { uploadBlobToChunks } from "../../../../shared/upload";
@@ -36,6 +36,7 @@ interface UseUserInfoCardResult {
   title: string;
   avatarInitials: string;
   birthDateValue: string;
+  birthDateCompactValue: string;
   handleAvatarFileSelected: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleSendEmailVerification: () => Promise<void>;
 }
@@ -81,24 +82,36 @@ export const useUserInfoCard = ({
     [user.email, user.firstName, user.lastName, user.username],
   );
 
-  const birthDateValue = useMemo(() => {
+  const birthDateValues = useMemo(() => {
     const placeholder = t("common:placeholder");
     if (!user.birthDate || user.birthDate.trim().length === 0) {
-      return placeholder;
+      return {
+        compact: placeholder,
+        full: placeholder,
+      };
     }
 
     const formatted = formatDateOnly(user.birthDate);
     const parsed = tryParseDateOnly(user.birthDate);
     if (!parsed) {
-      return formatted;
+      return {
+        compact: formatted,
+        full: formatted,
+      };
     }
 
     const ageYears = getAgeYears(parsed);
     if (ageYears < 0 || ageYears > 150) {
-      return formatted;
+      return {
+        compact: formatted,
+        full: formatted,
+      };
     }
 
-    return `${formatted} (${t("ageYears", { count: ageYears })})`;
+    return {
+      compact: formatted,
+      full: `${formatted} (${t("ageYears", { count: ageYears })})`,
+    };
   }, [t, user.birthDate]);
 
   const handleAvatarFileSelected = useCallback(
@@ -182,15 +195,10 @@ export const useUserInfoCard = ({
           return;
         }
 
-        if (isAxiosError(error)) {
-          const data = error.response?.data as
-            | { message?: string; title?: string }
-            | undefined;
-          const message = data?.message ?? data?.title;
-          if (message) {
-            setAvatarStatus({ kind: "error", message });
-            return;
-          }
+        const message = getApiErrorMessage(error);
+        if (message) {
+          setAvatarStatus({ kind: "error", message });
+          return;
         }
 
         setAvatarStatus({ kind: "error", message: t("avatar.errors.failed") });
@@ -224,13 +232,11 @@ export const useUserInfoCard = ({
         toastId: "profile:email-verification:sent",
       });
     } catch (error) {
-      if (isAxiosError(error) && hasApiErrorToastBeenDispatched(error)) {
-        return;
-      }
-
-      toast.error(t("emailVerification.errors.failed"), {
-        toastId: "profile:email-verification:error:generic",
-      });
+      showApiErrorToast(
+        error,
+        t("emailVerification.errors.failed"),
+        "profile:email-verification:error:generic",
+      );
     } finally {
       setEmailVerificationSending(false);
     }
@@ -243,7 +249,8 @@ export const useUserInfoCard = ({
     emailVerificationSending,
     title,
     avatarInitials,
-    birthDateValue,
+    birthDateValue: birthDateValues.full,
+    birthDateCompactValue: birthDateValues.compact,
     handleAvatarFileSelected,
     handleSendEmailVerification,
   };

@@ -101,6 +101,40 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpDelete("totp/disable")]
+        public async Task<IActionResult> DisableTotp([FromBody] DisableTotpRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                return this.ApiBadRequest("Password is required");
+            }
+            var userId = User.GetUserId();
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return this.ApiUnauthorized("User not found");
+            }
+            if (string.IsNullOrEmpty(user.PasswordPhc) || !_hasher.Verify(request.Password, user.PasswordPhc))
+            {
+                return this.ApiForbidden("Invalid password");
+            }
+            if (!user.IsTotpEnabled)
+            {
+                return this.ApiConflict("TOTP is not enabled for this user");
+            }
+            user.IsTotpEnabled = false;
+            user.TotpSecretEncrypted = null;
+            user.TotpEnabledAt = null;
+            await _dbContext.SaveChangesAsync();
+            await _notifications.SendOtpDisabledAsync(
+                _geoLookup,
+                userId,
+                GetRequestIpAddress(),
+                Request.Headers.UserAgent);
+            return Ok();
+        }
+
+        [Authorize]
         [HttpPost("totp/confirm")]
         public async Task<IActionResult> ConfirmTotp([FromBody] ConfirmTotpRequestDto request)
         {

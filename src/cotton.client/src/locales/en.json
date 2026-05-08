@@ -1,5 +1,6 @@
 {
   "search": {
+    "title": "Search",
     "searchPlaceholder": "Search files and folders...",
     "error": "Search failed. Please try again.",
     "enterQueryHint": "Start typing to search...",
@@ -93,7 +94,8 @@
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
-      "logout": "Logout"
+      "logout": "Logout",
+      "help": "Help"
     },
     "app": {
       "logoAlt": "Cotton logo"
@@ -279,6 +281,15 @@
         "button": "Confirm",
         "loading": "Confirming..."
       },
+      "disable": {
+        "button": "Disable 2FA",
+        "dialogTitle": "Disable two-factor authentication",
+        "dialogDescription": "Enter your password to confirm disabling two-factor authentication.",
+        "passwordLabel": "Password",
+        "confirm": "Disable",
+        "confirming": "Disabling...",
+        "success": "Two-factor authentication has been disabled."
+      },
       "errors": {
         "setupFailed": "Failed to start 2FA setup.",
         "confirmFailed": "Failed to confirm 2FA.",
@@ -286,7 +297,9 @@
         "codeRequired": "Please enter the 6-digit code.",
         "invalidCode": "Invalid two-factor authentication code.",
         "alreadyEnabled": "2FA is already enabled.",
-        "setupNotInitiated": "2FA setup has not been initiated. Generate a QR code first."
+        "setupNotInitiated": "2FA setup has not been initiated. Generate a QR code first.",
+        "disableFailed": "Failed to disable 2FA.",
+        "invalidPassword": "Invalid password."
       }
     },
     "fields": {
@@ -551,13 +564,15 @@
         "subtitle": "Cotton can turn a sign-in IP address into a city and country, so account access emails can say where a session came from instead of showing only a raw address.",
         "options": {
           "disabled": "No, keep it off",
-          "cottonCloud": "Use Cotton Cloud resolver",
+          "cottonCloud": "Use cloud service",
+          "local": "Use GeoIP Light locally",
           "custom": "Use my own resolver"
         },
         "descriptions": {
           "disabled": "No location lookup will be made for sign-in and access notifications.",
-          "cottonCloud": "Use Cotton Cloud to resolve IP addresses. Requires telemetry to be enabled.",
-          "custom": "Use an HTTP endpoint you control. The endpoint can include {ip} or accept an ip query parameter."
+          "cottonCloud": "Resolve IP addresses through the Cotton provider. Requires telemetry to be enabled.",
+          "local": "Resolve IP addresses on your server with a local GeoIP Light database/package.",
+          "custom": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         }
       },
       "customGeoIpLookupUrl": {
@@ -975,9 +990,11 @@
     "menu": {
       "navigate": "Section",
       "users": "Users",
+      "usersAndGroups": "Users and groups",
       "generalSettings": "General settings",
       "storageSettings": "Storage",
-      "emailSettings": "Email",
+      "storageAndStatistics": "Storage and statistics",
+      "notificationsSettings": "Notifications",
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics"
     },
@@ -1000,6 +1017,7 @@
         "birthDate": "Date of birth",
         "totp": "2FA",
         "sessions": "Sessions",
+        "storageUsed": "Storage used",
         "lastActivity": "Last activity",
         "actions": "Actions"
       },
@@ -1034,7 +1052,8 @@
     "settings": {
       "actions": {
         "save": "Save",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "close": "Close"
       },
       "state": {
         "saved": "Settings saved."
@@ -1058,6 +1077,21 @@
           "geoIpLookupMode": "IP lookup mode",
           "customGeoIpLookupUrl": "Custom IP lookup URL"
         },
+        "validation": {
+          "required": "This field is required.",
+          "publicBaseUrlInvalid": "Enter a valid HTTP or HTTPS base URL without credentials, query, or hash.",
+          "publicBaseUrlMismatch": "Current address is {{current}}, but generated public links will use {{configured}}. Be careful before saving this value.",
+          "timezoneInvalid": "Choose a valid IANA time zone from the list.",
+          "customGeoIpLookupUrlInvalid": "Enter a valid HTTP or HTTPS lookup URL."
+        },
+        "help": {
+          "publicBaseUrl": "Despite this setting, Cotton determines the public URL automatically almost everywhere. Set it only when automatic detection is wrong.",
+          "timezone": "This helps us avoid running background jobs while you sleep, so your disks do not grind at night.",
+          "telemetry": "Cotton collects anonymous data so the developer can see errors and fix them, because not everyone reports issues. Enabling telemetry also unlocks cloud services out of the box.",
+          "allowDeduplication": "Controls whether one user can learn that another user already stores the same file. When disabled, identical data is still deduplicated on the server after upload, but it is needlessly transferred first. When enabled, another user may learn that someone in this cloud uploaded that file before. This is safe for family and trusted friends.",
+          "allowGlobalIndexing": "Allows the server to decrypt user files and build a deep search index. Without it, search only uses file and folder names.",
+          "serverUsage": "Optimizes feature recommendations and a few settings. It is not a critical parameter, so choose whatever feels right."
+        },
         "serverUsage": {
           "Photos": "Photos",
           "Documents": "Documents",
@@ -1065,19 +1099,32 @@
           "Other": "Other"
         },
         "storageSpaceMode": {
-          "Optimal": "Optimal",
-          "Limited": "Limited",
+          "Optimal": "Balanced",
+          "Limited": "Space Saver",
           "Unlimited": "Unlimited"
+        },
+        "storageSpaceHelp": {
+          "open": "What does storage space mode affect?",
+          "title": "Storage space mode",
+          "description": "This controls how aggressively Cotton uses and frees storage: garbage collection timing, cleanup of unreferenced data, cache/data reuse, and how many old file versions can remain available. Every time a file is updated, Cotton keeps a shadow copy by retaining a reference to the previous file data until cleanup removes it. Unlimited keeps data longer and cleans mostly when space is needed; Space Saver frees storage sooner. Balanced stays between those two."
         },
         "computionMode": {
           "Local": "Local",
           "Remote": "Remote runner",
-          "Cloud": "Cotton Cloud"
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "This feature is still in development."
         },
         "geoIpLookupMode": {
           "Disabled": "Disabled",
-          "CottonCloud": "Cotton Cloud",
+          "CottonCloud": "Cloud service",
+          "MaxMindLocal": "GeoIP Light",
           "CustomHttp": "Custom HTTP"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "Do not resolve IP locations for notifications.",
+          "CottonCloud": "Resolve IP addresses through the Cotton provider.",
+          "MaxMindLocal": "Resolve IP addresses locally with a GeoIP Light database/package.",
+          "CustomHttp": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         }
       }
     },
@@ -1085,7 +1132,7 @@
       "title": "Storage",
       "description": "Configure storage credentials first, then switch the active storage backend.",
       "fields": {
-        "storageType": "Active storage"
+        "storageType": "Storage backend"
       },
       "storageType": {
         "Local": "Local disk",
@@ -1116,11 +1163,11 @@
         "storageSaveFailed": "Failed to switch storage mode."
       }
     },
-    "emailSettings": {
-      "title": "Email",
+    "notificationsSettings": {
+      "title": "Notifications",
       "description": "Configure how Cotton sends account and security notifications.",
       "fields": {
-        "emailMode": "Email mode"
+        "emailMode": "Notification mode"
       },
       "emailMode": {
         "None": "Disabled",
@@ -1140,17 +1187,20 @@
       },
       "actions": {
         "saveSmtp": "Save SMTP config",
+        "testSmtp": "Test SMTP",
         "saveMode": "Save email mode",
         "saving": "Saving..."
       },
       "state": {
         "smtpSaved": "SMTP configuration saved.",
-        "modeSaved": "Email mode updated."
+        "testSent": "Test email sent.",
+        "modeSaved": "Notification mode updated."
       },
       "errors": {
-        "loadFailed": "Failed to load email settings.",
+        "loadFailed": "Failed to load notification settings.",
         "smtpSaveFailed": "Failed to save SMTP configuration.",
-        "modeSaveFailed": "Failed to save email mode."
+        "testFailed": "Failed to send test email.",
+        "modeSaveFailed": "Failed to save notification mode."
       }
     },
     "databaseBackup": {

@@ -34,9 +34,21 @@ namespace Cotton.Server.Handlers.Users
                 })
                 .ToDictionaryAsync(x => x.UserId, x => x, cancellationToken);
 
+            var storageUsage = await _dbContext.ChunkOwnerships
+                .AsNoTracking()
+                .Where(x => userIds.Contains(x.OwnerId))
+                .GroupBy(x => x.OwnerId)
+                .Select(g => new
+                {
+                    UserId = g.Key,
+                    StorageUsedBytes = g.Sum(x => x.Chunk.StoredSizeBytes)
+                })
+                .ToDictionaryAsync(x => x.UserId, x => x.StorageUsedBytes, cancellationToken);
+
             return users.Select(u =>
             {
                 activity.TryGetValue(u.Id, out var a);
+                storageUsage.TryGetValue(u.Id, out long storageUsedBytes);
                 return new AdminUserDto
                 {
                     Id = u.Id,
@@ -52,6 +64,7 @@ namespace Cotton.Server.Handlers.Users
                     TotpFailedAttempts = u.TotpFailedAttempts,
                     LastActivityAt = a?.LastActivityAt,
                     ActiveSessionCount = a?.ActiveSessionCount ?? 0,
+                    StorageUsedBytes = storageUsedBytes,
                 };
             });
         }

@@ -21,6 +21,13 @@ export const darkTheme = createTheme({
   },
   shape: { borderRadius: 12 },
   components: {
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          padding: "16px 24px",
+        },
+      },
+    },
     MuiAlert: {
       styleOverrides: {
         standardInfo: {
@@ -56,14 +63,6 @@ export const darkTheme = createTheme({
           caret-color: #fff;
           transition: background-color 50000s ease-in-out 0s !important;
           border-radius: inherit;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          filter: invert(85%) sepia(10%) saturate(300%) hue-rotate(180deg) brightness(105%);
-          opacity: 0.75;
-          transition: opacity .2s;
-        }
-        input[type="date"]:hover::-webkit-calendar-picker-indicator {
-          opacity: 1;
         }
         .theme-light input[type="date"]::-webkit-calendar-picker-indicator {
           filter: invert(25%) sepia(16%) saturate(500%) hue-rotate(220deg) brightness(95%);

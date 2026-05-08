@@ -20,5 +20,6 @@ namespace Cotton.Server.Models.Dto
         public int TotpFailedAttempts { get; set; }
         public DateTime? LastActivityAt { get; set; }
         public int ActiveSessionCount { get; set; }
+        public long StorageUsedBytes { get; set; }
     }
 }

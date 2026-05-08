@@ -1,8 +1,12 @@
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Abstractions;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
+using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
+using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +17,9 @@ namespace Cotton.Server.Controllers
     [ApiController]
     [Route(Routes.V1.Settings)]
     [Route(Routes.V1.Server + "/settings")]
-    public class SettingsController(SettingsProvider _settings) : ControllerBase
+    public class SettingsController(
+        SettingsProvider _settings,
+        INotificationsProvider _notifications) : ControllerBase
     {
         [HttpGet]
         [Authorize]
@@ -23,7 +29,7 @@ namespace Cotton.Server.Controllers
             return Ok(new
             {
                 settings.MaxChunkSizeBytes,
-                SupportedHashAlgorithm = Hasher.SupportedHashAlgorithm,
+                Hasher.SupportedHashAlgorithm,
             });
         }
 
@@ -104,7 +110,7 @@ namespace Cotton.Server.Controllers
         [HttpGet("server-usage")]
         public IActionResult GetServerUsage()
         {
-            string[] serverUsage = _settings.GetServerSettings().ServerUsage.Select(x => x.ToString()).ToArray();
+            string[] serverUsage = [.. _settings.GetServerSettings().ServerUsage.Select(x => x.ToString())];
             return Ok(new { serverUsage });
         }
 
@@ -272,7 +278,6 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("s3-config")]
-        [HttpPatch("set-s3-config")]
         public async Task<IActionResult> SetS3Config([FromBody] S3Config s3Config, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
@@ -290,7 +295,6 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("s3-config")]
-        [HttpGet("get-s3-config")]
         public IActionResult GetS3Config()
         {
             var settings = _settings.GetServerSettings();
@@ -307,12 +311,14 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("email-config")]
-        [HttpPatch("set-email-config")]
         public async Task<IActionResult> SetEmailConfig([FromBody] EmailConfig emailConfig, CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_settings.ValidateEmailConfig(emailConfig));
-            SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort);
+            if (!SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort))
+            {
+                return this.ApiBadRequest("Invalid SMTP port number.");
+            }
             await _settings.UpdateSettingsAsync(settings =>
             {
                 settings.SmtpServerAddress = emailConfig.SmtpServer.Trim();
@@ -326,8 +332,24 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPost("email-config/test")]
+        public async Task<IActionResult> SendEmailConfigTest([FromBody] EmailConfig emailConfig, CancellationToken cancellationToken)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+            ThrowIfInvalid(_settings.ValidateEmailConfig(emailConfig));
+
+            Guid userId = User.GetUserId();
+            bool sent = await _notifications.SendSmtpTestEmailAsync(userId, emailConfig, GetFallbackPublicBaseUrl());
+            if (!sent)
+            {
+                throw new BadRequestException<CottonServerSettings>("Failed to send test email.");
+            }
+
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet("email-config")]
-        [HttpGet("get-email-config")]
         public IActionResult GetEmailConfig()
         {
             var settings = _settings.GetServerSettings();
@@ -357,7 +379,7 @@ namespace Cotton.Server.Controllers
         {
             if (error is not null)
             {
-                throw new BadRequestException(error);
+                throw new BadRequestException<CottonServerSettings>(error);
             }
         }
 
@@ -365,7 +387,7 @@ namespace Cotton.Server.Controllers
         {
             if (value.ValueKind != JsonValueKind.Array)
             {
-                throw new BadRequestException("Server usage must be an array.");
+                throw new BadRequestException<CottonServerSettings>("Server usage must be an array.");
             }
 
             var result = new List<ServerUsage>();
@@ -377,7 +399,7 @@ namespace Cotton.Server.Controllers
                     string? raw = item.GetString();
                     if (!Enum.TryParse(raw, ignoreCase: true, out usage))
                     {
-                        throw new BadRequestException("Invalid server usage: " + raw);
+                        throw new BadRequestException<CottonServerSettings>("Invalid server usage: " + raw);
                     }
                 }
                 else if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out int rawValue))
@@ -385,12 +407,12 @@ namespace Cotton.Server.Controllers
                     usage = (ServerUsage)rawValue;
                     if (!Enum.IsDefined(usage))
                     {
-                        throw new BadRequestException("Invalid server usage: " + rawValue);
+                        throw new BadRequestException<CottonServerSettings>("Invalid server usage: " + rawValue);
                     }
                 }
                 else
                 {
-                    throw new BadRequestException("Server usage entries must be strings or numbers.");
+                    throw new BadRequestException<CottonServerSettings>("Server usage entries must be strings or numbers.");
                 }
 
                 if (!result.Contains(usage))

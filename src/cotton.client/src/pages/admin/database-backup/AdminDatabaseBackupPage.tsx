@@ -16,7 +16,7 @@ import {
   adminApi,
   type LatestDatabaseBackupDto,
 } from "../../../shared/api/adminApi";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 
 type LoadState =
@@ -61,14 +61,10 @@ export const AdminDatabaseBackupPage = () => {
       setBackup(latest);
       setLoadState({ kind: "idle" });
     } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setLoadState({ kind: "error", message });
-          return;
-        }
+      const message = getApiErrorMessage(error);
+      if (message) {
+        setLoadState({ kind: "error", message });
+        return;
       }
 
       setLoadState({
@@ -96,14 +92,10 @@ export const AdminDatabaseBackupPage = () => {
       .catch((error: unknown) => {
         if (cancelled) return;
 
-        if (isAxiosError(error)) {
-          const message = (
-            error.response?.data as { message?: string } | undefined
-          )?.message;
-          if (typeof message === "string" && message.length > 0) {
-            setLoadState({ kind: "error", message });
-            return;
-          }
+        const message = getApiErrorMessage(error);
+        if (message) {
+          setLoadState({ kind: "error", message });
+          return;
         }
 
         setLoadState({
@@ -128,14 +120,10 @@ export const AdminDatabaseBackupPage = () => {
       });
       await refreshLatestBackup();
     } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setTriggerFeedback({ kind: "error", message });
-          return;
-        }
+      const message = getApiErrorMessage(error);
+      if (message) {
+        setTriggerFeedback({ kind: "error", message });
+        return;
       }
 
       setTriggerFeedback({
@@ -208,19 +196,31 @@ export const AdminDatabaseBackupPage = () => {
   }, [backup, placeholder, t]);
 
   return (
-    <Stack spacing={1}>
-      <Paper>
-        <Stack p={2}>
+    <Stack spacing={2}>
+      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
+      <Paper
+        sx={{
+          width: "min(100%, 880px)",
+          overflow: "hidden",
+        }}
+      >
+        <Stack p={3} spacing={3}>
           <Stack
-            direction="row"
+            direction={{ xs: "column", md: "row" }}
+            spacing={1}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "stretch", md: "center" }}
           >
             <Typography variant="h6" fontWeight={700}>
               {t("databaseBackup.title")}
             </Typography>
 
-            <Stack direction="row" spacing={1}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
               <Button
                 variant="outlined"
                 onClick={() => void refreshLatestBackup()}
@@ -335,6 +335,7 @@ export const AdminDatabaseBackupPage = () => {
           </Alert>
         </Stack>
       </Paper>
+      </Box>
     </Stack>
   );
 };

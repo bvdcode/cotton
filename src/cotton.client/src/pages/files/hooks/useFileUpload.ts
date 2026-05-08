@@ -37,8 +37,10 @@ type DropPreparationState = {
   processed: number;
 };
 
+type UploadToastVariant = "info" | "error";
+
 type FileUploadOptions = {
-  onToast?: (message: string) => void;
+  onToast?: (message: string, variant?: UploadToastVariant) => void;
 };
 
 const hasFileDragPayload = (dataTransfer: DataTransfer | null): boolean => {
@@ -592,7 +594,7 @@ export const useFileUpload = (
           await handleUploadDroppedFiles(scan.files);
         }
       } catch {
-        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }));
+        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }), "error");
       } finally {
         setDropPreparation({
           active: false,
@@ -618,7 +620,7 @@ export const useFileUpload = (
       try {
         await handleUploadFiles(Array.from(e.dataTransfer.files));
       } catch {
-        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }));
+        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }), "error");
       } finally {
         setDropPreparation({
           active: false,
