@@ -97,6 +97,37 @@ namespace Cotton.Server.Extensions
                 metadata: metadata);
         }
 
+        public static async Task SendOtpDisabledAsync(
+            this INotificationsProvider notifications,
+            IGeoLookupService geoLookup,
+            Guid userId,
+            IPAddress ipAddress,
+            StringValues userAgent)
+        {
+            ArgumentNullException.ThrowIfNull(notifications);
+
+            ClientNotificationContext context = await CreateClientContextAsync(geoLookup, ipAddress, userAgent);
+            Dictionary<string, string> metadata = CreateBaseMetadata(context);
+
+            await notifications.SendNotificationAsync(
+                userId,
+                title: NotificationTemplates.OtpDisabledTitle,
+                content: context.HasDevice
+                    ? NotificationTemplates.OtpDisabledContent(
+                        context.Ip,
+                        context.DeviceName,
+                        context.Country,
+                        context.Region,
+                        context.City)
+                    : NotificationTemplates.OtpDisabledContentNoDevice(
+                        context.Ip,
+                        context.Country,
+                        context.Region,
+                        context.City),
+                priority: NotificationPriority.High,
+                metadata: metadata);
+        }
+
         public static async Task SendOtpEnabledAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,

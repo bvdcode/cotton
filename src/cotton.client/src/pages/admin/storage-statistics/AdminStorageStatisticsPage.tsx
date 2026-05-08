@@ -6,26 +6,32 @@ import {
   LinearProgress,
   Paper,
   Stack,
+  Tooltip,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import {
-  type MouseEvent,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type MouseEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {
   adminApi,
   type GcChunkTimelineDto,
   type GcTimelineBucketKind,
 } from "../../../shared/api/adminApi";
-import { isAxiosError } from "../../../shared/api/httpClient";
+import {
+  settingsApi,
+  type StorageSpaceMode,
+} from "../../../shared/api/settingsApi";
+import {
+  getApiErrorMessage,
+  showApiErrorToast,
+} from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { AdminStorageBackendSettings } from "../settings/AdminStorageBackendSettings";
+import { storageSpaceOptions } from "../settings/adminGeneralSettingsModel";
 
 type LoadState =
   | { kind: "idle" }
@@ -67,9 +73,7 @@ const formatCount = (value: number): string =>
   new Intl.NumberFormat().format(value);
 
 const parseDateToUtc = (value: string): Date => {
-  const withZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
-    ? value
-    : `${value}Z`;
+  const withZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`;
   const parsed = new Date(withZone);
 
   if (!Number.isNaN(parsed.getTime())) {
@@ -112,6 +116,7 @@ const formatSlotLabel = (
     return new Intl.DateTimeFormat(undefined, {
       month: "short",
       day: "2-digit",
+      timeZone: "UTC",
     }).format(parsed);
   }
 
@@ -126,6 +131,10 @@ export const AdminStorageStatisticsPage = () => {
 
   const [timeline, setTimeline] = useState<GcChunkTimelineDto | null>(null);
   const [bucket, setBucket] = useState<GcTimelineBucketKind>("day");
+  const [storageSpaceMode, setStorageSpaceMode] =
+    useState<StorageSpaceMode>("Optimal");
+  const [storageSpaceModeLoading, setStorageSpaceModeLoading] = useState(true);
+  const [storageSpaceModeSaving, setStorageSpaceModeSaving] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [triggerState, setTriggerState] = useState<TriggerState>({
     kind: "idle",
@@ -153,14 +162,10 @@ export const AdminStorageStatisticsPage = () => {
           return;
         }
 
-        if (isAxiosError(error)) {
-          const message = (
-            error.response?.data as { message?: string } | undefined
-          )?.message;
-          if (typeof message === "string" && message.length > 0) {
-            setLoadState({ kind: "error", message });
-            return;
-          }
+        const message = getApiErrorMessage(error);
+        if (message) {
+          setLoadState({ kind: "error", message });
+          return;
         }
 
         setLoadState({
@@ -177,6 +182,42 @@ export const AdminStorageStatisticsPage = () => {
     };
   }, [bucket, refreshVersion, t]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadStorageSpaceMode = async () => {
+      setStorageSpaceModeLoading(true);
+
+      try {
+        const nextStorageSpaceMode = await settingsApi.getStorageSpaceMode();
+
+        if (!isActive) {
+          return;
+        }
+
+        setStorageSpaceMode(nextStorageSpaceMode);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        toast.error(t("settings.errors.loadFailed"), {
+          toastId: "admin:storage-statistics:storage-space-mode:load-failed",
+        });
+      } finally {
+        if (isActive) {
+          setStorageSpaceModeLoading(false);
+        }
+      }
+    };
+
+    void loadStorageSpaceMode();
+
+    return () => {
+      isActive = false;
+    };
+  }, [t]);
+
   const handleBucketChange = (
     _: MouseEvent<HTMLElement>,
     nextBucket: GcTimelineBucketKind | null,
@@ -187,6 +228,48 @@ export const AdminStorageStatisticsPage = () => {
 
     setLoadState({ kind: "loading" });
     setBucket(nextBucket);
+  };
+
+  const handleStorageSpaceModeChange = (
+    _: MouseEvent<HTMLElement>,
+    nextMode: StorageSpaceMode | null,
+  ) => {
+    if (
+      !nextMode ||
+      nextMode === storageSpaceMode ||
+      storageSpaceModeLoading ||
+      storageSpaceModeSaving
+    ) {
+      return;
+    }
+
+    const previousMode = storageSpaceMode;
+    setStorageSpaceMode(nextMode);
+    setStorageSpaceModeSaving(true);
+
+    settingsApi
+      .setStorageSpaceMode(nextMode)
+      .then(() => {
+        toast.success(t("settings.state.saved"), {
+          toastId: "admin:storage-statistics:storage-space-mode:saved",
+        });
+      })
+      .catch((error) => {
+        setStorageSpaceMode(previousMode);
+        showApiErrorToast(
+          error,
+          t("settings.errors.saveFailed"),
+          "admin:storage-statistics:storage-space-mode:save-failed",
+        );
+      })
+      .finally(() => {
+        setStorageSpaceModeSaving(false);
+      });
+  };
+
+  const refreshTimeline = () => {
+    setLoadState({ kind: "loading" });
+    setRefreshVersion((value) => value + 1);
   };
 
   const handleTriggerGarbageCollector = async () => {
@@ -201,14 +284,10 @@ export const AdminStorageStatisticsPage = () => {
       setLoadState({ kind: "loading" });
       setRefreshVersion((value) => value + 1);
     } catch (error) {
-      if (isAxiosError(error)) {
-        const message = (
-          error.response?.data as { message?: string } | undefined
-        )?.message;
-        if (typeof message === "string" && message.length > 0) {
-          setTriggerState({ kind: "error", message });
-          return;
-        }
+      const message = getApiErrorMessage(error);
+      if (message) {
+        setTriggerState({ kind: "error", message });
+        return;
       }
 
       setTriggerState({
@@ -221,6 +300,7 @@ export const AdminStorageStatisticsPage = () => {
   const placeholder = t("placeholder", { ns: "common" });
   const isLoading = loadState.kind === "loading";
   const isTriggering = triggerState.kind === "loading";
+  const storageSpaceModeHelp = t("settings.general.storageSpaceHelp.description");
 
   const summaryCards = useMemo(() => {
     if (!timeline) {
@@ -262,7 +342,9 @@ export const AdminStorageStatisticsPage = () => {
       },
       {
         id: "totalUniqueChunkStoredSizeBytes",
-        label: t("storageStatistics.storage.fields.totalUniqueChunkStoredSizeBytes"),
+        label: t(
+          "storageStatistics.storage.fields.totalUniqueChunkStoredSizeBytes",
+        ),
         value: formatBytes(storage.totalUniqueChunkStoredSizeBytes),
         extra: `${t("storageStatistics.storage.fields.totalUniqueChunkCount")}: ${formatCount(storage.totalUniqueChunkCount)}`,
       },
@@ -274,13 +356,16 @@ export const AdminStorageStatisticsPage = () => {
       return [];
     }
 
+    const currentBucketIndex =
+      toBucketIndex(new Date().toISOString(), bucket) ?? 0;
     const pointsByIndex = new Map<number, TimelinePoint>();
 
     timeline.buckets.forEach((item) => {
-      const bucketIndex = toBucketIndex(item.bucketStartUtc, bucket);
-      if (bucketIndex === null) {
+      const rawBucketIndex = toBucketIndex(item.bucketStartUtc, bucket);
+      if (rawBucketIndex === null) {
         return;
       }
+      const bucketIndex = Math.max(rawBucketIndex, currentBucketIndex);
 
       const existing = pointsByIndex.get(bucketIndex);
       if (existing) {
@@ -299,21 +384,21 @@ export const AdminStorageStatisticsPage = () => {
       });
     });
 
-    const sortedEntries = [...pointsByIndex.entries()].sort((a, b) => a[0] - b[0]);
-    const sortedBackendPoints = sortedEntries.map((entry) => entry[1]);
-
+    const sortedEntries = [...pointsByIndex.entries()].sort(
+      (a, b) => a[0] - b[0],
+    );
     const minSlotCount = MIN_SLOT_COUNT_BY_BUCKET[bucket];
 
-    // If backend returned enough buckets, show them all (minimum acts only as a floor).
-    if (sortedBackendPoints.length >= minSlotCount) {
-      return sortedBackendPoints;
-    }
-
-    const startIndex = sortedEntries[0]?.[0]
-      ?? toBucketIndex(timeline.from, bucket)
-      ?? toBucketIndex(new Date().toISOString(), bucket)
-      ?? 0;
-    const endIndex = sortedEntries[sortedEntries.length - 1]?.[0] ?? startIndex;
+    const rawStartIndex =
+      sortedEntries[0]?.[0] ??
+      toBucketIndex(timeline.from, bucket) ??
+      toBucketIndex(new Date().toISOString(), bucket) ??
+      0;
+    const startIndex = Math.max(rawStartIndex, currentBucketIndex);
+    const endIndex = Math.max(
+      sortedEntries[sortedEntries.length - 1]?.[0] ?? startIndex,
+      startIndex,
+    );
     const slotCount = Math.max(minSlotCount, endIndex - startIndex + 1);
 
     return Array.from({ length: slotCount }, (_, indexOffset) => {
@@ -341,10 +426,56 @@ export const AdminStorageStatisticsPage = () => {
     return maxValue > 0 ? maxValue : 1;
   }, [timelinePoints]);
 
+  const storageSpaceModeControl = (
+    <Stack
+      spacing={0.75}
+      sx={{ width: "100%" }}
+    >
+      <Stack direction="row" spacing={0.75} alignItems="center">
+        <Typography variant="body2" color="text.secondary">
+          {t("settings.general.fields.storageSpaceMode")}
+        </Typography>
+        <Tooltip title={storageSpaceModeHelp}>
+          <HelpOutlineIcon fontSize="small" color="action" />
+        </Tooltip>
+      </Stack>
+      <ToggleButtonGroup
+        size="small"
+        exclusive
+        value={storageSpaceMode}
+        onChange={handleStorageSpaceModeChange}
+        disabled={storageSpaceModeLoading || storageSpaceModeSaving}
+        aria-label={t("settings.general.fields.storageSpaceMode")}
+        fullWidth
+        sx={{
+          width: "100%",
+          "& .MuiToggleButton-root": {
+            flex: 1,
+            minWidth: 0,
+            whiteSpace: "normal",
+            lineHeight: 1.2,
+          },
+        }}
+      >
+        {storageSpaceOptions.map((option) => (
+          <ToggleButton key={option} value={option}>
+            {t(`settings.general.storageSpaceMode.${option}`)}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+    </Stack>
+  );
+
   return (
     <Stack spacing={2}>
-      <Paper>
-        <Stack p={2} spacing={2}>
+      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
+      <Paper
+        sx={{
+          width: "min(100%, 880px)",
+          overflow: "hidden",
+        }}
+      >
+        <Stack p={3} spacing={3}>
           <Stack
             direction={{ xs: "column", md: "row" }}
             spacing={1}
@@ -360,49 +491,63 @@ export const AdminStorageStatisticsPage = () => {
               </Typography>
             </Stack>
 
-            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-              <ToggleButtonGroup
-                size="small"
-                exclusive
-                value={bucket}
-                onChange={handleBucketChange}
-                disabled={isLoading || isTriggering}
+            <Stack spacing={1} alignItems={{ xs: "stretch", md: "flex-end" }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                useFlexGap
+                sx={{ flexWrap: "wrap", justifyContent: { md: "flex-end" } }}
               >
-                <ToggleButton value="hour">
-                  {t("storageStatistics.bucket.hour")}
-                </ToggleButton>
-                <ToggleButton value="day">
-                  {t("storageStatistics.bucket.day")}
-                </ToggleButton>
-              </ToggleButtonGroup>
+                <ToggleButtonGroup
+                  size="small"
+                  exclusive
+                  value={bucket}
+                  onChange={handleBucketChange}
+                  disabled={isLoading || isTriggering}
+                >
+                  <ToggleButton value="hour">
+                    {t("storageStatistics.bucket.hour")}
+                  </ToggleButton>
+                  <ToggleButton value="day">
+                    {t("storageStatistics.bucket.day")}
+                  </ToggleButton>
+                </ToggleButtonGroup>
 
-              <Button
-                variant="contained"
-                onClick={() => void handleTriggerGarbageCollector()}
-                disabled={isLoading || isTriggering}
-                startIcon={
-                  isTriggering
-                    ? <CircularProgress size={16} color="inherit" />
-                    : <DeleteSweepIcon />
-                }
-              >
-                {isTriggering
-                  ? t("storageStatistics.actions.triggeringGc")
-                  : t("storageStatistics.actions.triggerGc")}
-              </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => void handleTriggerGarbageCollector()}
+                  disabled={isLoading || isTriggering}
+                  startIcon={
+                    isTriggering ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <DeleteSweepIcon />
+                    )
+                  }
+                >
+                  {isTriggering
+                    ? t("storageStatistics.actions.triggeringGc")
+                    : t("storageStatistics.actions.triggerGc")}
+                </Button>
 
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  setLoadState({ kind: "loading" });
-                  setRefreshVersion((value) => value + 1);
-                }}
-                disabled={isLoading || isTriggering}
-              >
-                {t("storageStatistics.actions.refresh")}
-              </Button>
+                <Button
+                  variant="outlined"
+                  onClick={refreshTimeline}
+                  disabled={isLoading || isTriggering}
+                >
+                  {t("storageStatistics.actions.refresh")}
+                </Button>
+              </Stack>
             </Stack>
           </Stack>
+
+          <Box flex={1} minWidth={0}>
+            <AdminStorageBackendSettings
+              showHeader={false}
+              onSaved={refreshTimeline}
+              storageTypeRightSlot={storageSpaceModeControl}
+            />
+          </Box>
 
           {loadState.kind === "error" && (
             <Alert severity="error">{loadState.message}</Alert>
@@ -430,7 +575,7 @@ export const AdminStorageStatisticsPage = () => {
                   gridTemplateColumns: {
                     xs: "repeat(1, minmax(0, 1fr))",
                     sm: "repeat(2, minmax(0, 1fr))",
-                    md: `repeat(${Math.max(summaryCards.length, 1)}, minmax(0, 1fr))`,
+                    md: "repeat(3, minmax(0, 1fr))",
                   },
                 }}
               >
@@ -443,13 +588,21 @@ export const AdminStorageStatisticsPage = () => {
                     }}
                   >
                     <Stack spacing={0.5}>
-                      <Typography variant="caption" color="text.secondary" noWrap>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                      >
                         {card.label}
                       </Typography>
                       <Typography variant="h6" fontWeight={700}>
                         {card.value}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                      >
                         {card.extra}
                       </Typography>
                     </Stack>
@@ -469,7 +622,8 @@ export const AdminStorageStatisticsPage = () => {
                       {t("storageStatistics.timeline.title")}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {formatDateTime(timeline.from)} - {formatDateTime(timeline.to)}
+                      {formatDateTime(timeline.from)} -{" "}
+                      {formatDateTime(timeline.to)}
                     </Typography>
                   </Stack>
 
@@ -502,10 +656,12 @@ export const AdminStorageStatisticsPage = () => {
                         }}
                       >
                         {timelinePoints.map((point) => {
-                          const relativeSize = point.sizeBytes / maxTimelinePointSize;
-                          const dotSize = point.sizeBytes > 0
-                            ? 10 + Math.round(relativeSize * 16)
-                            : 8;
+                          const relativeSize =
+                            point.sizeBytes / maxTimelinePointSize;
+                          const dotSize =
+                            point.sizeBytes > 0
+                              ? 10 + Math.round(relativeSize * 16)
+                              : 8;
 
                           return (
                             <Stack
@@ -518,7 +674,11 @@ export const AdminStorageStatisticsPage = () => {
                                 {formatBytes(point.sizeBytes)}
                               </Typography>
 
-                              <Box height={28} display="flex" alignItems="center">
+                              <Box
+                                height={28}
+                                display="flex"
+                                alignItems="center"
+                              >
                                 <Box
                                   sx={{
                                     width: dotSize,
@@ -532,10 +692,18 @@ export const AdminStorageStatisticsPage = () => {
                                 />
                               </Box>
 
-                              <Typography variant="caption" color="text.secondary" noWrap>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                noWrap
+                              >
                                 {formatSlotLabel(point.bucketStartUtc, bucket)}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary" noWrap>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                noWrap
+                              >
                                 {formatCount(point.chunkCount)}
                               </Typography>
                             </Stack>
@@ -546,18 +714,17 @@ export const AdminStorageStatisticsPage = () => {
                   </Box>
 
                   {timeline.buckets.length === 0 && (
-                    <Alert severity="info">{t("storageStatistics.state.empty")}</Alert>
+                    <Alert severity="info">
+                      {t("storageStatistics.state.empty")}
+                    </Alert>
                   )}
-
-                  <Typography variant="caption" color="text.secondary">
-                    {t("storageStatistics.summary.generatedAtUtc")}: {formatDateTime(timeline.generatedAt)}
-                  </Typography>
                 </Stack>
               </Box>
             </Stack>
           )}
         </Stack>
       </Paper>
+      </Box>
     </Stack>
   );
 };

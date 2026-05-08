@@ -14,12 +14,13 @@ export interface AdminUserDto extends BaseDto<string> {
   totpFailedAttempts: number;
   lastActivityAt: string | null;
   activeSessionCount: number;
+  storageUsedBytes: number;
 }
 
 export interface AdminCreateUserRequestDto {
   username: string;
   email: string | null;
-  password: string;
+  password: string | null;
   role: UserRole;
   firstName: string | null;
   lastName: string | null;

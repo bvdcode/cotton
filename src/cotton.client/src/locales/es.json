@@ -1,5 +1,6 @@
 {
   "search": {
+    "title": "Búsqueda",
     "searchPlaceholder": "Buscar archivos y carpetas...",
     "error": "La búsqueda falló. Inténtalo de nuevo.",
     "enterQueryHint": "Empieza a escribir para buscar...",
@@ -93,7 +94,8 @@
       "lightMode": "Tema claro",
       "darkMode": "Tema oscuro",
       "changeLanguage": "Cambiar idioma",
-      "logout": "Cerrar sesión"
+      "logout": "Cerrar sesión",
+      "help": "Ayuda"
     },
     "app": {
       "logoAlt": "Logo de Cotton"
@@ -973,6 +975,7 @@
         "birthDate": "Fecha de nacimiento",
         "totp": "2FA",
         "sessions": "Sesiones",
+        "storageUsed": "Almacenamiento",
         "lastActivity": "Última actividad",
         "actions": "Acciones"
       },

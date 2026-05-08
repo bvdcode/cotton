@@ -194,6 +194,13 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         requires: "telemetry:allow",
       },
       {
+        key: "local",
+        label: () => t("setup:questions.geoIpLookup.options.local"),
+        description: () => t("setup:questions.geoIpLookup.descriptions.local"),
+        value: "maxMindLocal",
+        icon: <Computer />,
+      },
+      {
         key: "custom",
         label: () => t("setup:questions.geoIpLookup.options.custom"),
         description: () =>

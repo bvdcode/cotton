@@ -23,9 +23,9 @@ import {
   AdminUsersPage,
   AdminDatabaseBackupPage,
   AdminStorageStatisticsPage,
-  AdminGeneralSettingsPage,
   AdminStorageSettingsPage,
-  AdminEmailSettingsPage,
+  AdminGeneralSettingsPage,
+  AdminNotificationsSettingsPage,
   ResetPasswordPage,
   VerifyEmailPage,
 } from "../pages";
@@ -172,14 +172,21 @@ export function AppRoutes() {
             element={<AdminStorageStatisticsPage />}
           />
           <Route
+            path="storage-settings"
+            element={<AdminStorageSettingsPage />}
+          />
+          <Route
             path="general-settings"
             element={<AdminGeneralSettingsPage />}
           />
           <Route
-            path="storage-settings"
-            element={<AdminStorageSettingsPage />}
+            path="notifications-settings"
+            element={<AdminNotificationsSettingsPage />}
           />
-          <Route path="email-settings" element={<AdminEmailSettingsPage />} />
+          <Route
+            path="email-settings"
+            element={<Navigate to="/admin/notifications-settings" replace />}
+          />
         </Route>
 
         {/* Settings page (accessible from avatar menu) */}

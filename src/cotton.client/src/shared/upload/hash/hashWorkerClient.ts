@@ -81,7 +81,10 @@ export class HashWorkerClient {
     await this.initBarrier;
   }
 
-  async hashChunk(buffer: ArrayBuffer): Promise<string> {
+  async hashChunk(
+    buffer: ArrayBuffer,
+    options?: { updateFileHash?: boolean },
+  ): Promise<string> {
     await this.ensureInitialized();
     const requestId = makeRequestId();
     const promise = new Promise<string>((resolve, reject) => {
@@ -89,7 +92,15 @@ export class HashWorkerClient {
     });
 
     // Transfer ownership of the buffer to avoid copying.
-    this.worker.postMessage({ type: "hashChunk", requestId, buffer }, [buffer]);
+    this.worker.postMessage(
+      {
+        type: "hashChunk",
+        requestId,
+        buffer,
+        updateFileHash: options?.updateFileHash,
+      },
+      [buffer],
+    );
     return promise;
   }
 

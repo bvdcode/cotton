@@ -7,6 +7,7 @@ using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Helpers;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.DatabaseBackup;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Processors;
@@ -126,13 +127,14 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         var backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash));
         var usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
         var job = new GarbageCollectorJob(
+            new PerfTracker(),
             storage,
             DbContext,
             usage,
             new SettingsProvider(DbContext),
             NullLogger<GarbageCollectorJob>.Instance);
 
-        await job.RunOnceAsync(now);
+        await job.RunOnceAsync(now, 1000);
         DbContext.ChangeTracker.Clear();
 
         bool dueOrphanChunkExists = await DbContext.Chunks.AnyAsync(c => c.Hash == dueOrphanHash);
@@ -359,6 +361,14 @@ public class GarbageCollectorJobTests : IntegrationTestBase
             Guid userId,
             EmailTemplate template,
             Dictionary<string, string> parameters,
+            string serverBaseUrl)
+        {
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> SendSmtpTestEmailAsync(
+            Guid userId,
+            EmailConfig emailConfig,
             string serverBaseUrl)
         {
             return Task.FromResult(true);

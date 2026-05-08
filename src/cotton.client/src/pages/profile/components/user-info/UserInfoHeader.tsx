@@ -25,6 +25,7 @@ interface UserInfoHeaderProps {
   email?: string | null;
   isEmailVerified?: boolean;
   birthDateValue: string;
+  birthDateCompactValue: string;
   onAvatarFileSelected: ChangeEventHandler<HTMLInputElement>;
   onSendEmailVerification: () => void;
   emailVerificationSending: boolean;
@@ -96,6 +97,7 @@ export const UserInfoHeader = ({
   email,
   isEmailVerified,
   birthDateValue,
+  birthDateCompactValue,
   onAvatarFileSelected,
   onSendEmailVerification,
   emailVerificationSending,
@@ -156,23 +158,58 @@ export const UserInfoHeader = ({
         </Stack>
 
         <Stack
-          spacing={0.5}
+          direction={{ xs: "row", sm: "column" }}
+          spacing={{ xs: 1.5, sm: 0.5 }}
           alignItems={{ xs: "center", sm: "flex-start" }}
+          justifyContent={{ xs: "center", sm: "flex-start" }}
           mt={0.5}
+          sx={{
+            minWidth: 0,
+            "& > *": {
+              minWidth: 0,
+            },
+          }}
         >
+          {birthDateValue && (
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={0.5}
+              sx={{ order: { xs: 1, sm: 2 }, minWidth: 0 }}
+            >
+              <Tooltip title={t("fields.birthDate")} placement="left">
+                <Cake fontSize="small" />
+              </Tooltip>
+              <Typography variant="body2" color="text.secondary">
+                <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+                  {birthDateCompactValue}
+                </Box>
+                <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                  {birthDateValue}
+                </Box>
+              </Typography>
+            </Box>
+          )}
+
           {email && (
             <Stack
               direction="row"
               spacing={1}
               alignItems="center"
               justifyContent={{ xs: "center", sm: "flex-start" }}
-              flexWrap="wrap"
+              flexWrap={{ xs: "nowrap", sm: "wrap" }}
               useFlexGap
+              sx={{ order: { xs: 2, sm: 1 }, minWidth: 0 }}
             >
               <Tooltip title={t("fields.email")} placement="left">
                 <Email fontSize="small" />
               </Tooltip>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                noWrap
+                sx={{ minWidth: 0 }}
+              >
                 {email}
               </Typography>
               <EmailVerificationAction
@@ -187,17 +224,6 @@ export const UserInfoHeader = ({
                 </Tooltip>
               )}
             </Stack>
-          )}
-
-          {birthDateValue && (
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Tooltip title={t("fields.birthDate")} placement="left">
-                <Cake fontSize="small" />
-              </Tooltip>
-              <Typography variant="body2" color="text.secondary">
-                {birthDateValue}
-              </Typography>
-            </Box>
           )}
         </Stack>
       </Box>
