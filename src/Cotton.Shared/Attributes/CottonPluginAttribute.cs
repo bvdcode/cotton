@@ -50,6 +50,31 @@ namespace Cotton.Attributes
             string author,
             string website)
         {
+            if (string.IsNullOrWhiteSpace(pluginId))
+            {
+                throw new ArgumentException("Plugin ID cannot be null or empty.", nameof(pluginId));
+            }
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Name cannot be null or empty.", nameof(name));
+            }
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                throw new ArgumentException("Description cannot be null or empty.", nameof(description));
+            }
+            if (string.IsNullOrWhiteSpace(author))
+            {
+                throw new ArgumentException("Author cannot be null or empty.", nameof(author));
+            }
+            if (string.IsNullOrWhiteSpace(website))
+            {
+                throw new ArgumentException("Website cannot be null or empty.", nameof(website));
+            }
+            if (pluginId.Contains(" "))
+            {
+                throw new ArgumentException("Plugin ID cannot contain spaces.", nameof(pluginId));
+            }
+
             PluginId = pluginId;
             Name = name;
             Description = description;
