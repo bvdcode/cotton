@@ -1,6 +1,7 @@
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Helpers;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -26,8 +27,10 @@ namespace Cotton.Server.Controllers
         public IActionResult GetClientSettings()
         {
             var settings = _settings.GetServerSettings();
+            string? currentVersion = AppVersionHelpers.GetAppVersion();
             return Ok(new
             {
+                Version = currentVersion,
                 settings.MaxChunkSizeBytes,
                 Hasher.SupportedHashAlgorithm,
             });

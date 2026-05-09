@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Server.Helpers;
 using Cotton.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,7 +32,7 @@ public class AppVersionTrackerService(
 
     private async Task TrackVersionAsync(CancellationToken cancellationToken)
     {
-        string? currentVersion = Environment.GetEnvironmentVariable("APP_VERSION");
+        string? currentVersion = AppVersionHelpers.GetAppVersion();
         if (string.IsNullOrEmpty(currentVersion))
         {
             return;
