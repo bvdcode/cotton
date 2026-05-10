@@ -3,6 +3,7 @@ using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -22,12 +23,13 @@ namespace Cotton.Server.Jobs
         PerfTracker _perf,
         IStreamCipher _crypto,
         IStoragePipeline _storage,
+        SettingsProvider _settings,
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
-        private const int MaxItemsPerRun = 1000;
-        private const int UnthrottledItemsCount = 100;
+        private const int MaxItemsPerRun = 10000;
+        private const int UnthrottledItemsCount = 1000;
         private const int ThrottleDelayMs = 250;
 
         public async Task Execute(IJobExecutionContext context)

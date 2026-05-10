@@ -95,7 +95,8 @@
       "darkMode": "Dark Mode",
       "changeLanguage": "Change language",
       "logout": "Logout",
-      "help": "Help"
+      "help": "Help",
+      "serverVersion": "Server version: {{version}}"
     },
     "app": {
       "logoAlt": "Cotton logo"
