@@ -197,6 +197,7 @@ export function useSetupSteps(
                 subtitle={def.subtitle()}
                 linkUrl={def.linkUrl}
                 linkAriaLabel={def.linkAria?.()}
+                extraHeader={def.extraHeader?.()}
                 options={options}
                 selectedKey={selectedKey}
                 onSelect={(key) => updateAnswer(def.key, key)}
