@@ -20,7 +20,8 @@ namespace Cotton.Server.Controllers
     [Route(Routes.V1.Server + "/settings")]
     public class SettingsController(
         SettingsProvider _settings,
-        INotificationsProvider _notifications) : ControllerBase
+        INotificationsProvider _notifications,
+        IGeoLookupService _geoLookup) : ControllerBase
     {
         [HttpGet]
         [Authorize]
@@ -97,6 +98,17 @@ namespace Cotton.Server.Controllers
         {
             string? customGeoIpLookupUrl = _settings.GetServerSettings().CustomGeoIpLookupUrl;
             return Ok(new { customGeoIpLookupUrl });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPost("custom-geoip-lookup-url/test")]
+        public async Task<IActionResult> TestCustomGeoIpLookupUrl(CancellationToken cancellationToken)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+            ThrowIfInvalid(_settings.ValidateCustomGeoIpLookupUrl(_settings.GetServerSettings().CustomGeoIpLookupUrl));
+            string? testError = await _geoLookup.TestCustomLookupAsync(GetFallbackPublicBaseUrl(), cancellationToken);
+            ThrowIfInvalid(testError);
+            return NoContent();
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]

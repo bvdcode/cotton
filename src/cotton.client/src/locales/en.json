@@ -1143,6 +1143,12 @@
           "MaxMindLocal": "Resolve IP addresses locally with a GeoIP Light database/package.",
           "CustomHttp": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         },
+        "actions": {
+          "testGeoIpProvider": "Test provider"
+        },
+        "state": {
+          "geoIpTestPassed": "Custom resolver test passed."
+        },
         "openSetupWizard": {
           "title": "Open setup wizard",
           "description": "Walk through the first-run setup wizard again.",

@@ -499,6 +499,10 @@ export const settingsApi = {
     await httpClient.patch("server/settings/custom-geoip-lookup-url", url);
   },
 
+  testCustomGeoIpLookupUrl: async (): Promise<void> => {
+    await httpClient.post("server/settings/custom-geoip-lookup-url/test");
+  },
+
   saveSetupStep: async (
     stepKey: string,
     answers: Record<string, JsonValue>,
@@ -550,6 +554,7 @@ export const settingsApi = {
           getFormString(customGeoIpLookupUrl, "url"),
         );
         await settingsApi.setGeoIpLookupMode("CustomHttp");
+        await settingsApi.testCustomGeoIpLookupUrl();
         return;
       }
 
