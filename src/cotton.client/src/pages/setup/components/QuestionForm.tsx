@@ -1,4 +1,11 @@
-import { Box, FormControlLabel, Stack, Switch, TextField } from "@mui/material";
+import {
+  alpha,
+  Box,
+  FormControlLabel,
+  Stack,
+  Switch,
+  TextField,
+} from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionFormProps = {
@@ -68,8 +75,14 @@ export function QuestionForm({
                   justifyContent: "space-between",
                   px: 1.75,
                   border: 1,
-                  borderColor: "divider",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? alpha(theme.palette.common.white, 0.23)
+                      : alpha(theme.palette.common.black, 0.23),
                   borderRadius: 1,
+                  "&:hover": {
+                    borderColor: "text.primary",
+                  },
                   "& .MuiFormControlLabel-label": {
                     fontWeight: 700,
                   },
