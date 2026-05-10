@@ -6,5 +6,6 @@ namespace Cotton.Server.Abstractions
     public interface IGeoLookupService
     {
         Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default);
+        Task<string?> TestCustomLookupAsync(string serverBaseUrl, CancellationToken cancellationToken = default);
     }
 }

@@ -50,9 +50,19 @@ namespace Cotton.Server.Services
 
         public async Task<bool> SendSmtpTestEmailAsync(
             Guid userId,
-            EmailConfig emailConfig,
             string serverBaseUrl)
         {
+            CottonServerSettings settings = _settingsProvider.GetServerSettings();
+            var emailConfig = new EmailConfig
+            {
+                SmtpServer = settings.SmtpServerAddress ?? string.Empty,
+                Port = settings.SmtpServerPort?.ToString() ?? string.Empty,
+                Username = settings.SmtpUsername ?? string.Empty,
+                Password = settings.SmtpPasswordEncrypted ?? string.Empty,
+                FromAddress = settings.SmtpSenderEmail ?? string.Empty,
+                UseSSL = settings.SmtpUseSsl,
+            };
+
             string? validationError = _settingsProvider.ValidateEmailConfig(emailConfig);
             if (validationError is not null)
             {

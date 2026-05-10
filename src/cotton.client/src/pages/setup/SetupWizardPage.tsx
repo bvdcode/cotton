@@ -11,14 +11,14 @@ import {
   Link,
   CircularProgress,
 } from "@mui/material";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import { WizardHeader, WizardProgressBar, FloatingBlobs } from "./components";
 import { useSetupSteps } from "./useSetupSteps.tsx";
 import { useAuth } from "../../features/auth/useAuth";
 import { UserRole } from "../../features/auth/types";
+import { showApiErrorToast } from "../../shared/api/httpClient";
 import { settingsApi } from "../../shared/api/settingsApi";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
 import { isJsonObject, type JsonValue } from "../../shared/types/json";
@@ -28,7 +28,7 @@ function convertAnswersToValues(
   answers: Record<string, JsonValue>,
 ): Record<string, JsonValue> {
   const converted: Record<string, JsonValue> = {};
-  
+
   for (const [questionKey, answer] of Object.entries(answers)) {
     const stepDef = setupStepDefinitions.find((s) => s.key === questionKey);
 
@@ -38,7 +38,9 @@ function convertAnswersToValues(
       continue;
     }
 
-    if (stepDef.type === "single" && typeof answer === "string") {
+    if (questionKey === "trustedMode") {
+      converted[questionKey] = answer;
+    } else if (stepDef.type === "single" && typeof answer === "string") {
       // Find the option and get its value
       const options =
         "getOptions" in stepDef && stepDef.getOptions
@@ -61,9 +63,106 @@ function convertAnswersToValues(
       converted[questionKey] = answer;
     }
   }
-  
+
   return converted;
 }
+
+const hasWizardAnswer = (answer: JsonValue | undefined): boolean => {
+  if (answer === undefined || answer === null) {
+    return false;
+  }
+
+  if (typeof answer === "string") {
+    return answer.trim().length > 0;
+  }
+
+  if (typeof answer === "number") {
+    return true;
+  }
+
+  if (typeof answer === "boolean") {
+    return answer;
+  }
+
+  if (Array.isArray(answer)) {
+    return answer.length > 0;
+  }
+
+  return Object.values(answer).some((value) => hasWizardAnswer(value));
+};
+
+const toUsageAnswerKeys = (usage: Awaited<ReturnType<typeof settingsApi.getServerUsage>>): string[] =>
+  usage.map((value) => value.toLowerCase());
+
+const toGeoIpLookupAnswerKey = (
+  mode: Awaited<ReturnType<typeof settingsApi.getGeoIpLookupMode>>,
+): string => {
+  if (mode === "CottonCloud") return "cottonCloud";
+  if (mode === "MaxMindLocal") return "local";
+  if (mode === "CustomHttp") return "custom";
+  return "disabled";
+};
+
+const toEmailAnswerKey = (
+  mode: Awaited<ReturnType<typeof settingsApi.getEmailMode>>,
+): string => {
+  if (mode === "Cloud") return "cloud";
+  if (mode === "Custom") return "custom";
+  return "none";
+};
+
+const loadSetupStepPrefill = async (
+  stepKey: string,
+): Promise<JsonValue | undefined> => {
+  if (stepKey === "usage") {
+    const usage = toUsageAnswerKeys(await settingsApi.getServerUsage());
+    return usage.length > 0 ? usage : undefined;
+  }
+
+  if (stepKey === "telemetry") {
+    return (await settingsApi.getTelemetry()) ? "allow" : "deny";
+  }
+
+  if (stepKey === "geoIpLookupMode") {
+    return toGeoIpLookupAnswerKey(await settingsApi.getGeoIpLookupMode());
+  }
+
+  if (stepKey === "customGeoIpLookupUrl") {
+    const url = (await settingsApi.getCustomGeoIpLookupUrl()).trim();
+    return url ? { url } : undefined;
+  }
+
+  if (stepKey === "s3Config") {
+    const config = await settingsApi.getS3Config();
+    const answer: Record<string, JsonValue> = {
+      endpoint: config.endpoint,
+      region: config.region,
+      bucket: config.bucket,
+      accessKey: config.accessKey,
+      secretKey: config.secretKey,
+    };
+    return hasWizardAnswer(answer) ? answer : undefined;
+  }
+
+  if (stepKey === "emailConfig") {
+    const config = await settingsApi.getEmailConfig();
+    const answer: Record<string, JsonValue> = {
+      smtpServer: config.smtpServer,
+      port: config.port,
+      username: config.username,
+      password: config.password,
+      fromAddress: config.fromAddress,
+      useSSL: config.useSSL,
+    };
+    return hasWizardAnswer(answer) ? answer : undefined;
+  }
+
+  if (stepKey === "email") {
+    return toEmailAnswerKey(await settingsApi.getEmailMode());
+  }
+
+  return undefined;
+};
 
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
@@ -72,19 +171,17 @@ export function SetupWizardPage() {
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const prefetchedStepKeysRef = useRef<Set<string>>(new Set());
 
   // Generic answers storage
   const [answers, setAnswers] = useState<Record<string, JsonValue>>({});
 
-  const updateAnswer = useCallback(
-    (key: string, value: JsonValue) => {
-      setAnswers((prev) => {
-        const next: Record<string, JsonValue> = { ...prev, [key]: value };
-        return next;
-      });
-    },
-    [],
-  );
+  const updateAnswer = useCallback((key: string, value: JsonValue) => {
+    setAnswers((prev) => {
+      const next: Record<string, JsonValue> = { ...prev, [key]: value };
+      return next;
+    });
+  }, []);
 
   const updateFormField = useCallback(
     (stepKey: string, fieldKey: string, value: string | boolean) => {
@@ -102,8 +199,45 @@ export function SetupWizardPage() {
   const steps = useSetupSteps(answers, updateAnswer, updateFormField);
 
   const currentStep = steps[stepIndex];
+  const currentStepKey = currentStep?.key;
   const isLastStep = stepIndex === steps.length - 1;
   const canProceed = currentStep?.isValid?.() ?? false;
+
+  useEffect(() => {
+    if (!started || !currentStepKey) {
+      return;
+    }
+
+    if (prefetchedStepKeysRef.current.has(currentStepKey)) {
+      return;
+    }
+
+    prefetchedStepKeysRef.current.add(currentStepKey);
+    let active = true;
+
+    loadSetupStepPrefill(currentStepKey)
+      .then((prefill) => {
+        if (!active || prefill === undefined) {
+          return;
+        }
+
+        setAnswers((prev) =>
+          hasWizardAnswer(prev[currentStepKey])
+            ? prev
+            : { ...prev, [currentStepKey]: prefill },
+        );
+      })
+      .catch((error) => {
+        console.warn(
+          `Failed to prefill setup step "${currentStepKey}"`,
+          error,
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentStepKey, started]);
 
   const handleStart = () => {
     setStarted(true);
@@ -126,9 +260,7 @@ export function SetupWizardPage() {
       await settingsApi.saveSetupStep(currentStep.key, convertedAnswers);
 
       if (isLastStep) {
-        await useSetupStatusStore
-          .getState()
-          .fetchSetupStatus({ force: true });
+        await useSetupStatusStore.getState().fetchSetupStatus({ force: true });
         navigate("/onboarding");
         return;
       }
@@ -136,9 +268,11 @@ export function SetupWizardPage() {
       setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     } catch (err) {
       console.error(`Failed to save setup step "${currentStep.key}":`, err);
-      toast.error(t("errors.saveChoiceFailed"), {
-        toastId: `setup-wizard:${currentStep.key}:save-error`,
-      });
+      showApiErrorToast(
+        err,
+        t("errors.saveChoiceFailed"),
+        `setup-wizard:${currentStep.key}:save-error`,
+      );
     } finally {
       setLoading(false);
     }
@@ -174,7 +308,7 @@ export function SetupWizardPage() {
           elevation={6}
           sx={{
             width: "100%",
-            maxWidth: 560,
+            maxWidth: 600,
             borderRadius: 3,
           }}
         >
@@ -235,7 +369,7 @@ export function SetupWizardPage() {
         sx={{
           position: "relative",
           width: "100%",
-          maxWidth: 920,
+          maxWidth: 1000,
           minHeight: { xs: "calc(100vh - 60px)", sm: 600 },
           height: { xs: "calc(100vh - 60px)", sm: "auto" },
           mt: "auto",

@@ -1,4 +1,11 @@
-import { Stack, TextField, FormControlLabel, Checkbox } from "@mui/material";
+import {
+  alpha,
+  Box,
+  FormControlLabel,
+  Stack,
+  Switch,
+  TextField,
+} from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionFormProps = {
@@ -33,37 +40,72 @@ export function QuestionForm({
         linkUrl={linkUrl}
         linkAriaLabel={linkAriaLabel}
       />
-      <Stack spacing={2.5}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            md:
+              fields.length > 1
+                ? "repeat(2, minmax(0, 1fr))"
+                : "1fr",
+          },
+          gap: 2.5,
+        }}
+      >
         {fields.map((field) => {
           if (field.type === "boolean") {
+            const selected = Boolean(values[field.key]);
+
             return (
               <FormControlLabel
                 key={field.key}
+                label={field.label}
+                labelPlacement="start"
                 control={
-                  <Checkbox
-                    checked={Boolean(values[field.key])}
-                    onChange={(e) => onChange(field.key, e.target.checked)}
+                  <Switch
+                    checked={selected}
+                    onChange={(_, checked) => onChange(field.key, checked)}
                   />
                 }
-                label={field.label}
+                sx={{
+                  m: 0,
+                  minHeight: 56,
+                  width: "100%",
+                  justifyContent: "space-between",
+                  px: 1.75,
+                  border: 1,
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? alpha(theme.palette.common.white, 0.23)
+                      : alpha(theme.palette.common.black, 0.23),
+                  borderRadius: 1,
+                  "&:hover": {
+                    borderColor: "text.primary",
+                  },
+                  "& .MuiFormControlLabel-label": {
+                    fontWeight: 700,
+                  },
+                }}
               />
             );
           }
-          
+
+          const value = values[field.key];
           return (
             <TextField
               key={field.key}
               label={field.label}
               placeholder={field.placeholder}
               type={field.type || "text"}
-              value={values[field.key] || ""}
+              value={typeof value === "string" ? value : ""}
               onChange={(e) => onChange(field.key, e.target.value)}
               fullWidth
               variant="outlined"
             />
           );
         })}
-      </Stack>
+      </Box>
     </Stack>
   );
 }

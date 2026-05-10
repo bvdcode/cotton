@@ -199,7 +199,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const lightboxEvents = React.useMemo(
     () => ({
       view: ({ index: currentIndex }: { index: number }) => {
-        setIndex(currentIndex);
+        setIndex((prev) => (prev === currentIndex ? prev : currentIndex));
         showTouchControls();
         for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
           void ensureSlideHasOriginal(currentIndex + offset);
