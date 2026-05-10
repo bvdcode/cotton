@@ -17,6 +17,12 @@ type ConsoleErrorEntry = {
   message: string;
 };
 
+type ConsoleCaptureState = {
+  installed: boolean;
+  errors: ConsoleErrorEntry[];
+  originalConsoleError?: typeof console.error;
+};
+
 export type BuildBugReportUrlArgs = {
   serverVersion?: string | null;
   userRole?: number | null;
@@ -27,8 +33,26 @@ const ISSUE_URL = "https://github.com/bvdcode/cotton/issues/new";
 const MAX_CAPTURED_CONSOLE_ERRORS = 30;
 const MAX_CONSOLE_BLOCK_LENGTH = 8000;
 const MAX_SINGLE_ERROR_LENGTH = 1200;
-const RECENT_CONSOLE_ERRORS: ConsoleErrorEntry[] = [];
-const CONSOLE_CAPTURE_FLAG = "__cottonConsoleCaptureInstalled";
+const CAPTURE_STATE_KEY = "__cottonBugReportConsoleCaptureState";
+
+const getConsoleCaptureState = (): ConsoleCaptureState => {
+  const bag = window as unknown as Record<string, unknown>;
+  const existing = bag[CAPTURE_STATE_KEY] as ConsoleCaptureState | undefined;
+  if (
+    existing &&
+    typeof existing === "object" &&
+    Array.isArray(existing.errors)
+  ) {
+    return existing;
+  }
+
+  const created: ConsoleCaptureState = {
+    installed: false,
+    errors: [],
+  };
+  bag[CAPTURE_STATE_KEY] = created;
+  return created;
+};
 
 const truncateText = (value: string, maxLength: number): string =>
   value.length <= maxLength
@@ -59,16 +83,17 @@ const formatConsoleArgs = (args: unknown[]): string =>
   args.map((arg) => toConsoleMessage(arg)).join(" ");
 
 const pushConsoleError = (source: ConsoleErrorSource, message: string): void => {
-  RECENT_CONSOLE_ERRORS.push({
+  const state = getConsoleCaptureState();
+  state.errors.push({
     timestamp: new Date().toISOString(),
     source,
     message,
   });
 
-  if (RECENT_CONSOLE_ERRORS.length > MAX_CAPTURED_CONSOLE_ERRORS) {
-    RECENT_CONSOLE_ERRORS.splice(
+  if (state.errors.length > MAX_CAPTURED_CONSOLE_ERRORS) {
+    state.errors.splice(
       0,
-      RECENT_CONSOLE_ERRORS.length - MAX_CAPTURED_CONSOLE_ERRORS,
+      state.errors.length - MAX_CAPTURED_CONSOLE_ERRORS,
     );
   }
 };
@@ -149,13 +174,10 @@ const getRoleLabel = (role: number | null | undefined): string => {
   return "Unknown";
 };
 
-const buildConsoleErrorsMarkdown = (): string => {
-  const entries = RECENT_CONSOLE_ERRORS.slice(-15);
+const buildConsoleErrorsMarkdown = (): string | null => {
+  const entries = getConsoleCaptureState().errors.slice(-15);
   if (entries.length === 0) {
-    return [
-      "_Captured in this tab since page load._",
-      "_No recent console errors were captured._",
-    ].join("\n");
+    return null;
   }
 
   const lines = entries
@@ -183,14 +205,17 @@ const buildConsoleErrorsMarkdown = (): string => {
 };
 
 export const initializeBugReportConsoleCapture = (): void => {
-  const bag = window as unknown as Record<string, unknown>;
-  if (bag[CONSOLE_CAPTURE_FLAG] === true) {
+  const state = getConsoleCaptureState();
+  if (state.installed) {
     return;
   }
 
-  bag[CONSOLE_CAPTURE_FLAG] = true;
+  state.installed = true;
 
-  const originalConsoleError = console.error.bind(console);
+  if (!state.originalConsoleError) {
+    state.originalConsoleError = console.error.bind(console);
+  }
+  const originalConsoleError = state.originalConsoleError;
   console.error = (...args: unknown[]) => {
     pushConsoleError("console.error", formatConsoleArgs(args));
     originalConsoleError(...args);
@@ -227,6 +252,12 @@ export const buildBugReportUrl = ({
   const role = getRoleLabel(userRole);
   const openedAtUtc = new Date().toISOString();
   const consoleErrorsMarkdown = buildConsoleErrorsMarkdown();
+  const consoleErrorsSection = consoleErrorsMarkdown
+    ? `
+## Console errors (recent)
+${consoleErrorsMarkdown}
+`
+    : "";
 
   const url = new URL(ISSUE_URL);
   url.searchParams.set("labels", "bug");
@@ -260,9 +291,7 @@ ${version}
 - User role: ${role}
 - Current URL: ${maskCurrentUrlHost(currentUrl)}
 - Opened at (UTC): ${openedAtUtc}
-
-## Console errors (recent)
-${consoleErrorsMarkdown}
+${consoleErrorsSection}
 `,
   );
 
