@@ -40,7 +40,7 @@ export const AdminGeneralSettingsPage = () => {
               {t("settings.general.title")}
             </Typography>
 
-            <Tooltip title={t("settings.general.openSetupWizard.title")}>
+            <Tooltip title={t("settings.general.openSetupWizard.description")}>
               <IconButton
                 aria-label={t("settings.general.openSetupWizard.title")}
                 onClick={() => navigate("/setup?preview=1")}
