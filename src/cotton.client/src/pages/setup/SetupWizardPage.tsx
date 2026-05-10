@@ -14,11 +14,11 @@ import {
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import { WizardHeader, WizardProgressBar, FloatingBlobs } from "./components";
 import { useSetupSteps } from "./useSetupSteps.tsx";
 import { useAuth } from "../../features/auth/useAuth";
 import { UserRole } from "../../features/auth/types";
+import { showApiErrorToast } from "../../shared/api/httpClient";
 import { settingsApi } from "../../shared/api/settingsApi";
 import { setupStepDefinitions } from "./setupQuestions.tsx";
 import { isJsonObject, type JsonValue } from "../../shared/types/json";
@@ -28,7 +28,7 @@ function convertAnswersToValues(
   answers: Record<string, JsonValue>,
 ): Record<string, JsonValue> {
   const converted: Record<string, JsonValue> = {};
-  
+
   for (const [questionKey, answer] of Object.entries(answers)) {
     const stepDef = setupStepDefinitions.find((s) => s.key === questionKey);
 
@@ -38,7 +38,9 @@ function convertAnswersToValues(
       continue;
     }
 
-    if (stepDef.type === "single" && typeof answer === "string") {
+    if (questionKey === "trustedMode") {
+      converted[questionKey] = answer;
+    } else if (stepDef.type === "single" && typeof answer === "string") {
       // Find the option and get its value
       const options =
         "getOptions" in stepDef && stepDef.getOptions
@@ -61,7 +63,7 @@ function convertAnswersToValues(
       converted[questionKey] = answer;
     }
   }
-  
+
   return converted;
 }
 
@@ -76,15 +78,12 @@ export function SetupWizardPage() {
   // Generic answers storage
   const [answers, setAnswers] = useState<Record<string, JsonValue>>({});
 
-  const updateAnswer = useCallback(
-    (key: string, value: JsonValue) => {
-      setAnswers((prev) => {
-        const next: Record<string, JsonValue> = { ...prev, [key]: value };
-        return next;
-      });
-    },
-    [],
-  );
+  const updateAnswer = useCallback((key: string, value: JsonValue) => {
+    setAnswers((prev) => {
+      const next: Record<string, JsonValue> = { ...prev, [key]: value };
+      return next;
+    });
+  }, []);
 
   const updateFormField = useCallback(
     (stepKey: string, fieldKey: string, value: string | boolean) => {
@@ -126,9 +125,7 @@ export function SetupWizardPage() {
       await settingsApi.saveSetupStep(currentStep.key, convertedAnswers);
 
       if (isLastStep) {
-        await useSetupStatusStore
-          .getState()
-          .fetchSetupStatus({ force: true });
+        await useSetupStatusStore.getState().fetchSetupStatus({ force: true });
         navigate("/onboarding");
         return;
       }
@@ -136,9 +133,11 @@ export function SetupWizardPage() {
       setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     } catch (err) {
       console.error(`Failed to save setup step "${currentStep.key}":`, err);
-      toast.error(t("errors.saveChoiceFailed"), {
-        toastId: `setup-wizard:${currentStep.key}:save-error`,
-      });
+      showApiErrorToast(
+        err,
+        t("errors.saveChoiceFailed"),
+        `setup-wizard:${currentStep.key}:save-error`,
+      );
     } finally {
       setLoading(false);
     }
@@ -174,7 +173,7 @@ export function SetupWizardPage() {
           elevation={6}
           sx={{
             width: "100%",
-            maxWidth: 560,
+            maxWidth: 600,
             borderRadius: 3,
           }}
         >
@@ -235,7 +234,7 @@ export function SetupWizardPage() {
         sx={{
           position: "relative",
           width: "100%",
-          maxWidth: 920,
+          maxWidth: 1000,
           minHeight: { xs: "calc(100vh - 60px)", sm: 600 },
           height: { xs: "calc(100vh - 60px)", sm: "auto" },
           mt: "auto",
