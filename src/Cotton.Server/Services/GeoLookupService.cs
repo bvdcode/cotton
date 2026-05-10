@@ -149,17 +149,22 @@ namespace Cotton.Server.Services
                 return;
             }
 
-            if (match.Country is null && ContainsAny(name, "country", "countryname", "nation", "nationality", "countrycode"))
+            var countryPriority = GetCountryPriority(name);
+            if (countryPriority > 0 && match.TrySetCountry(text, countryPriority))
             {
-                match.Country = text;
+                return;
             }
-            else if (match.Region is null && ContainsAny(name, "region", "state", "province", "county", "district", "territory", "prefecture"))
+
+            var regionPriority = GetRegionPriority(name);
+            if (regionPriority > 0 && match.TrySetRegion(text, regionPriority))
             {
-                match.Region = text;
+                return;
             }
-            else if (match.City is null && ContainsAny(name, "city", "town", "locality", "village", "municipality"))
+
+            var cityPriority = GetCityPriority(name);
+            if (cityPriority > 0)
             {
-                match.City = text;
+                match.TrySetCity(text, cityPriority);
             }
         }
 
@@ -176,13 +181,92 @@ namespace Cotton.Server.Services
             return false;
         }
 
+        private static int GetCountryPriority(string name)
+        {
+            if (ContainsAny(name, "countryname", "country", "nation", "nationality"))
+            {
+                return 2;
+            }
+
+            if (ContainsAny(name, "countrycode", "countryiso", "countryalpha", "iso2", "iso3"))
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        private static int GetRegionPriority(string name)
+        {
+            if (ContainsAny(name, "region", "state", "province", "territory", "prefecture"))
+            {
+                return 2;
+            }
+
+            if (ContainsAny(name, "district"))
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        private static int GetCityPriority(string name)
+        {
+            if (ContainsAny(name, "city", "town", "locality", "village", "municipality"))
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
         private sealed class GeoFieldMatch
         {
             public string? Country { get; set; }
             public string? Region { get; set; }
             public string? City { get; set; }
+            private int _countryPriority;
+            private int _regionPriority;
+            private int _cityPriority;
 
             public bool IsComplete => Country is not null && Region is not null && City is not null;
+
+            public bool TrySetCountry(string value, int priority)
+            {
+                if (priority <= _countryPriority)
+                {
+                    return false;
+                }
+
+                Country = value;
+                _countryPriority = priority;
+                return true;
+            }
+
+            public bool TrySetRegion(string value, int priority)
+            {
+                if (priority <= _regionPriority)
+                {
+                    return false;
+                }
+
+                Region = value;
+                _regionPriority = priority;
+                return true;
+            }
+
+            public bool TrySetCity(string value, int priority)
+            {
+                if (priority <= _cityPriority)
+                {
+                    return false;
+                }
+
+                City = value;
+                _cityPriority = priority;
+                return true;
+            }
         }
     }
 }
