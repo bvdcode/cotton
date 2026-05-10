@@ -11,7 +11,7 @@ import {
   Link,
   CircularProgress,
 } from "@mui/material";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { WizardHeader, WizardProgressBar, FloatingBlobs } from "./components";
@@ -67,6 +67,62 @@ function convertAnswersToValues(
   return converted;
 }
 
+const hasWizardAnswer = (answer: JsonValue | undefined): boolean => {
+  if (answer === undefined || answer === null) {
+    return false;
+  }
+
+  if (typeof answer === "string") {
+    return answer.trim().length > 0;
+  }
+
+  if (typeof answer === "number" || typeof answer === "boolean") {
+    return true;
+  }
+
+  if (Array.isArray(answer)) {
+    return answer.length > 0;
+  }
+
+  return Object.values(answer).some((value) => hasWizardAnswer(value));
+};
+
+const loadSetupStepPrefill = async (
+  stepKey: string,
+): Promise<JsonValue | undefined> => {
+  if (stepKey === "customGeoIpLookupUrl") {
+    const url = (await settingsApi.getCustomGeoIpLookupUrl()).trim();
+    return url ? { url } : undefined;
+  }
+
+  if (stepKey === "s3Config") {
+    const config = await settingsApi.getS3Config();
+    const answer: Record<string, JsonValue> = {
+      endpoint: config.endpoint,
+      region: config.region,
+      bucket: config.bucket,
+      accessKey: config.accessKey,
+      secretKey: config.secretKey,
+    };
+    return hasWizardAnswer(answer) ? answer : undefined;
+  }
+
+  if (stepKey === "emailConfig") {
+    const config = await settingsApi.getEmailConfig();
+    const answer: Record<string, JsonValue> = {
+      smtpServer: config.smtpServer,
+      port: config.port,
+      username: config.username,
+      password: config.password,
+      fromAddress: config.fromAddress,
+      useSSL: config.useSSL,
+    };
+    return hasWizardAnswer(answer) ? answer : undefined;
+  }
+
+  return undefined;
+};
+
 export function SetupWizardPage() {
   const { t } = useTranslation("setup");
   const navigate = useNavigate();
@@ -74,6 +130,7 @@ export function SetupWizardPage() {
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const prefetchedStepKeysRef = useRef<Set<string>>(new Set());
 
   // Generic answers storage
   const [answers, setAnswers] = useState<Record<string, JsonValue>>({});
@@ -101,8 +158,45 @@ export function SetupWizardPage() {
   const steps = useSetupSteps(answers, updateAnswer, updateFormField);
 
   const currentStep = steps[stepIndex];
+  const currentStepKey = currentStep?.key;
   const isLastStep = stepIndex === steps.length - 1;
   const canProceed = currentStep?.isValid?.() ?? false;
+
+  useEffect(() => {
+    if (!started || !currentStepKey) {
+      return;
+    }
+
+    if (prefetchedStepKeysRef.current.has(currentStepKey)) {
+      return;
+    }
+
+    prefetchedStepKeysRef.current.add(currentStepKey);
+    let active = true;
+
+    loadSetupStepPrefill(currentStepKey)
+      .then((prefill) => {
+        if (!active || prefill === undefined) {
+          return;
+        }
+
+        setAnswers((prev) =>
+          hasWizardAnswer(prev[currentStepKey])
+            ? prev
+            : { ...prev, [currentStepKey]: prefill },
+        );
+      })
+      .catch((error) => {
+        console.warn(
+          `Failed to prefill setup step "${currentStepKey}"`,
+          error,
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentStepKey, started]);
 
   const handleStart = () => {
     setStarted(true);
