@@ -7,6 +7,7 @@ export interface PublicServerInfo {
 }
 
 export interface ServerSettings {
+  version: string | null;
   maxChunkSizeBytes: number;
   supportedHashAlgorithm: string;
 }
@@ -90,6 +91,14 @@ const resolveMaxChunkSizeBytes = (payload: unknown): number => {
   }
 
   return maxChunkSizeBytes;
+};
+
+const resolveVersion = (payload: unknown): string | null => {
+  const raw = getRecordField(payload, "version");
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    return raw.trim();
+  }
+  return null;
 };
 
 const resolveSupportedHashAlgorithm = (payload: unknown): string => {
@@ -227,6 +236,7 @@ export const settingsApi = {
     const response = await httpClient.get<unknown>("server/settings");
 
     return {
+      version: resolveVersion(response.data),
       maxChunkSizeBytes: resolveMaxChunkSizeBytes(response.data),
       supportedHashAlgorithm: resolveSupportedHashAlgorithm(response.data),
     };

@@ -3,7 +3,6 @@ using Cotton.Server.Models;
 using Cotton.Server.Providers;
 using EasyExtensions.Clients;
 using System.Net;
-using System.Net.Http.Json;
 
 namespace Cotton.Server.Services
 {

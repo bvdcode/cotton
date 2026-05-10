@@ -3,6 +3,7 @@ using Cotton.Database.Models;
 using Cotton.Previews;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -26,8 +27,8 @@ namespace Cotton.Server.Jobs
         IHubContext<EventHub> _hubContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
     {
-        private const int MaxItemsPerRun = 1000;
-        private const int UnthrottledItemsCount = 100;
+        private const int MaxItemsPerRun = 10000;
+        private const int UnthrottledItemsCount = 1000;
         private const int ThrottleDelayMs = 250;
 
         public async Task Execute(IJobExecutionContext context)
@@ -77,6 +78,7 @@ namespace Cotton.Server.Jobs
             int processed = 0;
             foreach (var item in itemsToProcess)
             {
+                _perf.OnPreviewGenerating();
                 processed++;
                 _logger.LogInformation("Processing {Current}/{Total}: FileManifest {FileManifestId}, ContentType={ContentType}, Size={Size}",
                     processed, itemsToProcess.Count, item.Id, item.ContentType, item.SizeBytes);
