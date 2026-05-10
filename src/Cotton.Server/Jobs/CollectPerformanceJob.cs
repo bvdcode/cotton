@@ -1,5 +1,6 @@
 ﻿using Cotton.Database;
 using Cotton.Models;
+using Cotton.Server.Helpers;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.Quartz.Attributes;
@@ -42,6 +43,7 @@ namespace Cotton.Server.Jobs
                 Nodes = await _dbContext.Nodes.CountAsync(),
                 Users = await _dbContext.Users.CountAsync(),
                 Files = await _dbContext.FileManifests.CountAsync(),
+                Version = AppVersionHelpers.GetAppVersion() ?? "Unknown",
             };
             using var httpClient = new HttpClient();
             await httpClient.PostAsJsonAsync(CloudTelemetryUrl, request);

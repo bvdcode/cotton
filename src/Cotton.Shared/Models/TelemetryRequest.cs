@@ -23,6 +23,11 @@ namespace Cotton.Models
         public int Users { get; set; }
 
         /// <summary>
+        /// Gets or sets the version identifier for the current instance.
+        /// </summary>
+        public string Version { get; set; } = string.Empty;
+
+        /// <summary>
         /// Gets or sets the number of nodes.
         /// </summary>
         public int Nodes { get; set; }
