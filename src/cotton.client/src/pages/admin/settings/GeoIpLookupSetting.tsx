@@ -1,4 +1,6 @@
 import {
+  Button,
+  CircularProgress,
   MenuItem,
   Stack,
   TextField,
@@ -47,6 +49,7 @@ export const GeoIpLookupSetting = () => {
   const [telemetry, setTelemetry] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("loading");
   const [urlTouched, setUrlTouched] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const flashTimerRef = useRef<number | null>(null);
 
@@ -152,48 +155,99 @@ export const GeoIpLookupSetting = () => {
 
   const urlError = urlTouched ? urlValidation.error : null;
 
-  const commitUrl = () => {
+  const commitUrl = useCallback(async (): Promise<boolean> => {
     setUrlTouched(true);
     const next = urlValidation.normalized;
-    if (urlValidation.error || next === null) return;
-    if (next === savedUrl && savedMode === "CustomHttp") return;
+    if (urlValidation.error || next === null) return false;
+    if (next === savedUrl && savedMode === "CustomHttp") return true;
 
     setUrl(next);
     setStatus("saving");
 
-    Promise.resolve()
-      .then(() => settingsApi.setCustomGeoIpLookupUrl(next))
-      .then(() =>
-        savedMode === "CustomHttp"
-          ? Promise.resolve()
-          : settingsApi.setGeoIpLookupMode("CustomHttp"),
-      )
-      .then(() => {
-        setSavedUrl(next);
-        setSavedMode("CustomHttp");
-        flashSaved();
-      })
-      .catch((error) => {
-        setUrl(savedUrl);
-        setMode(savedMode);
-        reportError(error);
-      });
-  };
+    try {
+      await settingsApi.setCustomGeoIpLookupUrl(next);
+      if (savedMode !== "CustomHttp") {
+        await settingsApi.setGeoIpLookupMode("CustomHttp");
+      }
+
+      setSavedUrl(next);
+      setSavedMode("CustomHttp");
+      flashSaved();
+      return true;
+    } catch (error) {
+      setUrl(savedUrl);
+      setMode(savedMode);
+      reportError(error);
+      return false;
+    }
+  }, [
+    flashSaved,
+    reportError,
+    savedMode,
+    savedUrl,
+    urlValidation.error,
+    urlValidation.normalized,
+  ]);
+
+  const handleTestProvider = useCallback(async () => {
+    if (testing) {
+      return;
+    }
+
+    const isCommitted = await commitUrl();
+    if (!isCommitted) {
+      return;
+    }
+
+    setTesting(true);
+    try {
+      await settingsApi.testCustomGeoIpLookupUrl();
+      toast.success(
+        t("settings.general.state.geoIpTestPassed", {
+          defaultValue: "Custom resolver test passed.",
+        }),
+        {
+          toastId: "admin-general:geoip:test-success",
+        },
+      );
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setTesting(false);
+    }
+  }, [commitUrl, reportError, t, testing]);
 
   const handleUrlKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      commitUrl();
+      void commitUrl();
     }
   };
 
-  const disabled = status === "loading" || status === "saving";
+  const disabled = status === "loading" || status === "saving" || testing;
 
   return (
     <SettingsSection
       title={t("settings.general.fields.geoIpLookupMode")}
       description={t(`settings.general.geoIpLookupModeDescription.${mode}`)}
       status={status}
+      action={
+        mode === "CustomHttp" ? (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => void handleTestProvider()}
+            disabled={disabled}
+            startIcon={
+              testing ? <CircularProgress size={16} color="inherit" /> : null
+            }
+          >
+            {t("settings.general.actions.testGeoIpProvider", {
+              defaultValue: "Test provider",
+            })}
+          </Button>
+        ) : undefined
+      }
     >
       <Stack spacing={2}>
         <TextField
@@ -239,7 +293,7 @@ export const GeoIpLookupSetting = () => {
               setUrl(event.target.value);
               setUrlTouched(true);
             }}
-            onBlur={commitUrl}
+            onBlur={() => void commitUrl()}
             onKeyDown={handleUrlKeyDown}
             disabled={disabled}
             error={Boolean(urlError)}

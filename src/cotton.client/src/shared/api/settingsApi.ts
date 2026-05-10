@@ -218,6 +218,32 @@ const getFormBoolean = (
   key: string,
 ): boolean => form[key] === true;
 
+const resolveTrustedModeSettings = (
+  value: JsonValue | undefined,
+): {
+  allowCrossUserDeduplication: boolean;
+  allowGlobalIndexing: boolean;
+} => {
+  if (value === true || value === "family") {
+    return {
+      allowCrossUserDeduplication: true,
+      allowGlobalIndexing: true,
+    };
+  }
+
+  if (value === "unknown") {
+    return {
+      allowCrossUserDeduplication: false,
+      allowGlobalIndexing: true,
+    };
+  }
+
+  return {
+    allowCrossUserDeduplication: false,
+    allowGlobalIndexing: false,
+  };
+};
+
 const saveBestEffort = async (
   operations: Array<() => Promise<void>>,
 ): Promise<void> => {
@@ -443,8 +469,8 @@ export const settingsApi = {
     await httpClient.patch("server/settings/email-config", config);
   },
 
-  testEmailConfig: async (config: EmailConfig): Promise<void> => {
-    await httpClient.post("server/settings/email-config/test", config);
+  testEmailConfig: async (): Promise<void> => {
+    await httpClient.post("server/settings/email-config/test");
   },
 
   getGeoIpLookupMode: async (): Promise<GeoIpLookupMode> => {
@@ -473,16 +499,26 @@ export const settingsApi = {
     await httpClient.patch("server/settings/custom-geoip-lookup-url", url);
   },
 
+  testCustomGeoIpLookupUrl: async (): Promise<void> => {
+    await httpClient.post("server/settings/custom-geoip-lookup-url/test");
+  },
+
   saveSetupStep: async (
     stepKey: string,
     answers: Record<string, JsonValue>,
   ): Promise<void> => {
     switch (stepKey) {
       case "trustedMode": {
-        const trustedMode = answers.trustedMode === true;
+        const {
+          allowCrossUserDeduplication,
+          allowGlobalIndexing,
+        } = resolveTrustedModeSettings(answers.trustedMode);
         await saveBestEffort([
-          () => settingsApi.setAllowCrossUserDeduplication(trustedMode),
-          () => settingsApi.setAllowGlobalIndexing(trustedMode),
+          () =>
+            settingsApi.setAllowCrossUserDeduplication(
+              allowCrossUserDeduplication,
+            ),
+          () => settingsApi.setAllowGlobalIndexing(allowGlobalIndexing),
         ]);
         return;
       }
@@ -518,6 +554,7 @@ export const settingsApi = {
           getFormString(customGeoIpLookupUrl, "url"),
         );
         await settingsApi.setGeoIpLookupMode("CustomHttp");
+        await settingsApi.testCustomGeoIpLookupUrl();
         return;
       }
 
@@ -561,6 +598,7 @@ export const settingsApi = {
           useSSL: getFormBoolean(emailConfig, "useSSL"),
         });
         await settingsApi.setEmailMode("Custom");
+        await settingsApi.testEmailConfig();
         return;
       }
 
