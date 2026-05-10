@@ -177,7 +177,7 @@ export const AdminNotificationsSettingsPage = () => {
 
     setSmtpTesting(true);
     try {
-      await settingsApi.testEmailConfig(emailConfig);
+      await settingsApi.testEmailConfig();
       toast.success(
         t("notificationsSettings.state.testSent", {
           defaultValue: "Test email sent.",
