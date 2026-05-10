@@ -169,7 +169,11 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
         description: () => t("setup:questions.telemetry.descriptions.deny"),
         value: false,
         icon: <PrivacyTip />,
-        disabledIfAny: ["email:cloud", "ai:cloud", "masterKeyStorage:cloud"],
+        disabledIfAny: [
+          "geoIpLookupMode:cottonCloud",
+          "email:cloud",
+          "computionMode:cloud",
+        ],
       },
     ],
   },
