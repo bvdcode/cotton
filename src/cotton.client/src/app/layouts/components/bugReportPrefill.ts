@@ -3,7 +3,8 @@ import { UserRole } from "../../../features/auth";
 type ConsoleErrorSource =
   | "console.error"
   | "window.error"
-  | "unhandledrejection";
+  | "unhandledrejection"
+  | "resource.error";
 
 type BrowserDetails = {
   name: string;
@@ -232,6 +233,42 @@ export const initializeBugReportConsoleCapture = (): void => {
 
     pushConsoleError("window.error", `${errorDetails}${location}`);
   });
+
+  // Capture resource load errors (scripts/styles/images) that do not bubble
+  // and often appear in DevTools as "Failed to load resource".
+  window.addEventListener(
+    "error",
+    (event: Event) => {
+      if (event instanceof ErrorEvent) {
+        return;
+      }
+
+      const target = event.target as
+        | (EventTarget & { src?: string; href?: string; tagName?: string })
+        | null;
+      if (!target) {
+        return;
+      }
+
+      const src = typeof target.src === "string" ? target.src : "";
+      const href = typeof target.href === "string" ? target.href : "";
+      const resourceUrl = src || href;
+      if (!resourceUrl) {
+        return;
+      }
+
+      const tagName =
+        typeof target.tagName === "string" && target.tagName.length > 0
+          ? target.tagName
+          : "resource";
+
+      pushConsoleError(
+        "resource.error",
+        `${tagName} failed to load: ${resourceUrl}`,
+      );
+    },
+    true,
+  );
 
   window.addEventListener(
     "unhandledrejection",
