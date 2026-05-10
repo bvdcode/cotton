@@ -14,6 +14,7 @@ import {
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { WizardHeader, WizardProgressBar, FloatingBlobs } from "./components";
 import { useSetupSteps } from "./useSetupSteps.tsx";
 import { useAuth } from "../../features/auth/useAuth";
@@ -71,7 +72,6 @@ export function SetupWizardPage() {
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Generic answers storage
   const [answers, setAnswers] = useState<Record<string, JsonValue>>({});
@@ -115,26 +115,33 @@ export function SetupWizardPage() {
       handleStart();
       return;
     }
-    if (isLastStep) {
-      setLoading(true);
-      setError(null);
-      try {
-        // Convert keys to values before sending to server
-        const convertedAnswers = convertAnswersToValues(answers);
-        await settingsApi.saveSetupAnswers(convertedAnswers);
+
+    if (!currentStep) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const convertedAnswers = convertAnswersToValues(answers);
+      await settingsApi.saveSetupStep(currentStep.key, convertedAnswers);
+
+      if (isLastStep) {
         await useSetupStatusStore
           .getState()
           .fetchSetupStatus({ force: true });
         navigate("/onboarding");
-      } catch (err) {
-        console.error("Failed to save setup:", err);
-        setError(t("errors.saveFailed"));
-      } finally {
-        setLoading(false);
+        return;
       }
-      return;
+
+      setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+    } catch (err) {
+      console.error(`Failed to save setup step "${currentStep.key}":`, err);
+      toast.error(t("errors.saveChoiceFailed"), {
+        toastId: `setup-wizard:${currentStep.key}:save-error`,
+      });
+    } finally {
+      setLoading(false);
     }
-    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   };
 
   const handleBack = () => {
@@ -283,11 +290,6 @@ export function SetupWizardPage() {
                       total={steps.length}
                     />
                     {currentStep?.render()}
-                    {error && (
-                      <Alert severity="error" onClose={() => setError(null)}>
-                        {error}
-                      </Alert>
-                    )}
                   </Stack>
                 ) : (
                   <Alert severity="info">{t("intro")}</Alert>

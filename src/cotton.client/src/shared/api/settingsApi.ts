@@ -218,6 +218,37 @@ const getFormBoolean = (
   key: string,
 ): boolean => form[key] === true;
 
+const saveBestEffort = async (
+  operations: Array<() => Promise<void>>,
+): Promise<void> => {
+  const results = await Promise.allSettled(
+    operations.map((operation) => operation()),
+  );
+
+  const failed = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+
+  if (failed.length === results.length) {
+    throw failed[0].reason;
+  }
+};
+
+const setupStepOrder = [
+  "trustedMode",
+  "usage",
+  "telemetry",
+  "geoIpLookupMode",
+  "customGeoIpLookupUrl",
+  "storage",
+  "s3Config",
+  "email",
+  "emailConfig",
+  "computionMode",
+  "timezone",
+  "storageSpace",
+] as const;
+
 export const settingsApi = {
   getPublicInfo: async (): Promise<PublicServerInfo> => {
     const response = await httpClient.get<PublicServerInfo>("server/info");
@@ -442,67 +473,129 @@ export const settingsApi = {
     await httpClient.patch("server/settings/custom-geoip-lookup-url", url);
   },
 
+  saveSetupStep: async (
+    stepKey: string,
+    answers: Record<string, JsonValue>,
+  ): Promise<void> => {
+    switch (stepKey) {
+      case "trustedMode": {
+        const trustedMode = answers.trustedMode === true;
+        await saveBestEffort([
+          () => settingsApi.setAllowCrossUserDeduplication(trustedMode),
+          () => settingsApi.setAllowGlobalIndexing(trustedMode),
+        ]);
+        return;
+      }
+
+      case "usage": {
+        const usage = Array.isArray(answers.usage)
+          ? answers.usage
+              .filter((value): value is string => typeof value === "string")
+              .map(mapUsageAnswer)
+          : (["Other"] satisfies ServerUsage[]);
+
+        await settingsApi.setServerUsage(usage.length > 0 ? usage : ["Other"]);
+        return;
+      }
+
+      case "telemetry":
+        await settingsApi.setTelemetry(answers.telemetry === true);
+        return;
+
+      case "geoIpLookupMode": {
+        const geoIpLookupMode = toGeoIpLookupMode(answers.geoIpLookupMode);
+        if (geoIpLookupMode !== "CustomHttp") {
+          await settingsApi.setGeoIpLookupMode(geoIpLookupMode);
+        }
+        return;
+      }
+
+      case "customGeoIpLookupUrl": {
+        const customGeoIpLookupUrl = readFormObject(
+          answers.customGeoIpLookupUrl,
+        );
+        await settingsApi.setCustomGeoIpLookupUrl(
+          getFormString(customGeoIpLookupUrl, "url"),
+        );
+        await settingsApi.setGeoIpLookupMode("CustomHttp");
+        return;
+      }
+
+      case "storage": {
+        const storageType = toStorageType(answers.storage);
+        if (storageType !== "S3") {
+          await settingsApi.setStorageType(storageType);
+        }
+        return;
+      }
+
+      case "s3Config": {
+        const s3Config = readFormObject(answers.s3Config);
+        await settingsApi.setS3Config({
+          endpoint: getFormString(s3Config, "endpoint"),
+          region: getFormString(s3Config, "region"),
+          bucket: getFormString(s3Config, "bucket"),
+          accessKey: getFormString(s3Config, "accessKey"),
+          secretKey: getFormString(s3Config, "secretKey"),
+        });
+        await settingsApi.setStorageType("S3");
+        return;
+      }
+
+      case "email": {
+        const emailMode = toEmailMode(answers.email);
+        if (emailMode !== "Custom") {
+          await settingsApi.setEmailMode(emailMode);
+        }
+        return;
+      }
+
+      case "emailConfig": {
+        const emailConfig = readFormObject(answers.emailConfig);
+        await settingsApi.setEmailConfig({
+          smtpServer: getFormString(emailConfig, "smtpServer"),
+          port: getFormString(emailConfig, "port"),
+          username: getFormString(emailConfig, "username"),
+          password: getFormString(emailConfig, "password"),
+          fromAddress: getFormString(emailConfig, "fromAddress"),
+          useSSL: getFormBoolean(emailConfig, "useSSL"),
+        });
+        await settingsApi.setEmailMode("Custom");
+        return;
+      }
+
+      case "computionMode":
+        await settingsApi.setComputionMode(
+          toComputionMode(answers.computionMode),
+        );
+        return;
+
+      case "timezone":
+        if (typeof answers.timezone === "string" && answers.timezone) {
+          await settingsApi.setTimezone(answers.timezone);
+        }
+        return;
+
+      case "storageSpace":
+        await settingsApi.setStorageSpaceMode(
+          toStorageSpaceMode(answers.storageSpace),
+        );
+        return;
+
+      default:
+        return;
+    }
+  },
+
   saveSetupAnswers: async (
     answers: Record<string, JsonValue>,
   ): Promise<void> => {
-    const trustedMode = answers.trustedMode === true;
-    const telemetry = answers.telemetry === true;
-    const storageType = toStorageType(answers.storage);
-    const emailMode = toEmailMode(answers.email);
-    const computionMode = toComputionMode(answers.computionMode);
-    const storageSpaceMode = toStorageSpaceMode(answers.storageSpace);
-    const geoIpLookupMode = toGeoIpLookupMode(answers.geoIpLookupMode);
-
-    const usage = Array.isArray(answers.usage)
-      ? answers.usage
-          .filter((value): value is string => typeof value === "string")
-          .map(mapUsageAnswer)
-      : (["Other"] satisfies ServerUsage[]);
-
-    await settingsApi.setAllowCrossUserDeduplication(trustedMode);
-    await settingsApi.setAllowGlobalIndexing(trustedMode);
-    await settingsApi.setServerUsage(usage.length > 0 ? usage : ["Other"]);
-    await settingsApi.setTelemetry(telemetry);
-
-    if (storageType === "S3") {
-      const s3Config = readFormObject(answers.s3Config);
-      await settingsApi.setS3Config({
-        endpoint: getFormString(s3Config, "endpoint"),
-        region: getFormString(s3Config, "region"),
-        bucket: getFormString(s3Config, "bucket"),
-        accessKey: getFormString(s3Config, "accessKey"),
-        secretKey: getFormString(s3Config, "secretKey"),
-      });
+    for (const stepKey of setupStepOrder) {
+      try {
+        await settingsApi.saveSetupStep(stepKey, answers);
+      } catch (error) {
+        console.warn(`Failed to save setup step "${stepKey}"`, error);
+      }
     }
-    await settingsApi.setStorageType(storageType);
-
-    if (emailMode === "Custom") {
-      const emailConfig = readFormObject(answers.emailConfig);
-      await settingsApi.setEmailConfig({
-        smtpServer: getFormString(emailConfig, "smtpServer"),
-        port: getFormString(emailConfig, "port"),
-        username: getFormString(emailConfig, "username"),
-        password: getFormString(emailConfig, "password"),
-        fromAddress: getFormString(emailConfig, "fromAddress"),
-        useSSL: getFormBoolean(emailConfig, "useSSL"),
-      });
-    }
-    await settingsApi.setEmailMode(emailMode);
-
-    await settingsApi.setComputionMode(computionMode);
-
-    if (typeof answers.timezone === "string" && answers.timezone) {
-      await settingsApi.setTimezone(answers.timezone);
-    }
-
-    await settingsApi.setStorageSpaceMode(storageSpaceMode);
-
-    if (geoIpLookupMode === "CustomHttp") {
-      const customGeoIpLookupUrl = readFormObject(answers.customGeoIpLookupUrl);
-      await settingsApi.setCustomGeoIpLookupUrl(
-        getFormString(customGeoIpLookupUrl, "url"),
-      );
-    }
-    await settingsApi.setGeoIpLookupMode(geoIpLookupMode);
   },
 };

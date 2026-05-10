@@ -442,7 +442,8 @@
     "subtitle": "Complete the initial server configuration to get started. This won't take long and will personalize the app for you.",
     "repoLink": "Project on GitHub",
     "errors": {
-      "saveFailed": "Failed to save settings. Please try again."
+      "saveFailed": "Failed to save settings.",
+      "saveChoiceFailed": "Something went wrong. Try choosing another option."
     },
     "status": {
       "hasUsers": "Has users",
@@ -575,8 +576,8 @@
         "disabledTooltip": "To disable telemetry, you need to turn off the following services:"
       },
       "geoIpLookup": {
-        "title": "Resolve IP addresses in security notifications?",
-        "subtitle": "Cotton can turn a sign-in IP address into a city and country, so account access emails can say where a session came from instead of showing only a raw address.",
+        "title": "Resolve IP addresses?",
+        "subtitle": "Cotton can turn IP addresses into city and country names. This can be used, for example, in security notifications to show where a sign-in came from and help detect unusual access.",
         "options": {
           "disabled": "No, keep it off",
           "cottonCloud": "Use cloud service",
@@ -584,7 +585,7 @@
           "custom": "Use my own resolver"
         },
         "descriptions": {
-          "disabled": "No location lookup will be made for sign-in and access notifications.",
+          "disabled": "No location lookup will be made. Features that can show sign-in location will keep raw IP addresses only.",
           "cottonCloud": "Resolve IP addresses through the Cotton provider. Requires telemetry to be enabled.",
           "local": "Resolve IP addresses on your server with a local GeoIP Light database/package.",
           "custom": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
@@ -1137,8 +1138,8 @@
           "CustomHttp": "Custom HTTP"
         },
         "geoIpLookupModeDescription": {
-          "Disabled": "Do not resolve IP locations for notifications.",
-          "CottonCloud": "Resolve IP addresses through the Cotton provider.",
+          "Disabled": "Do not resolve IP addresses.",
+          "CottonCloud": "Resolve IP addresses through the Cotton provider. This can be used by features such as security notifications.",
           "MaxMindLocal": "Resolve IP addresses locally with a GeoIP Light database/package.",
           "CustomHttp": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
         },

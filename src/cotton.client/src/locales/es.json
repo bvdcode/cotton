@@ -417,7 +417,8 @@
     "subtitle": "Completa la configuración inicial del servidor para empezar. No tardarás y personalizará la aplicación para ti.",
     "repoLink": "Proyecto en GitHub",
     "errors": {
-      "saveFailed": "No se pudieron guardar los ajustes. Inténtalo de nuevo."
+      "saveFailed": "No se pudieron guardar los ajustes.",
+      "saveChoiceFailed": "Ha ocurrido un error. Prueba a elegir otra opción."
     },
     "status": {
       "hasUsers": "Tiene usuarios",

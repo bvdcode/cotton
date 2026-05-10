@@ -18,6 +18,14 @@ type BuiltStep = {
 
 const skippedStepKeys = new Set<string>();
 
+const answerMatchesCondition = (
+  answer: JsonValue | undefined,
+  expected: string,
+): boolean =>
+  Array.isArray(answer)
+    ? answer.includes(expected)
+    : answer === expected;
+
 export function useSetupSteps(
   answers: Record<string, JsonValue>,
   updateAnswer: (key: string, value: JsonValue) => void,
@@ -34,11 +42,7 @@ export function useSetupSteps(
     
     let met = false;
     // Check if it's an array (multi-select)
-    if (Array.isArray(currentValue)) {
-      met = currentValue.includes(reqValue);
-    } else {
-      met = currentValue === reqValue;
-    }
+    met = answerMatchesCondition(currentValue, reqValue);
     
     // If not met, get the label of the required option and question title
     if (!met) {
@@ -72,7 +76,7 @@ export function useSetupSteps(
       const [key, value] = condition.split(":");
       const currentValue = answers[key];
       
-      if (currentValue === value) {
+      if (answerMatchesCondition(currentValue, value)) {
         // Find the label for this option
         const step = setupStepDefinitions.find((s) => s.key === key);
         if (step && step.type === "single") {
@@ -204,8 +208,16 @@ export function useSetupSteps(
               />
             );
           },
-          isValid: (): boolean =>
-            typeof answers[def.key] === "string" && answers[def.key] !== "",
+          isValid: (): boolean => {
+            const selectedKey = answers[def.key];
+            if (typeof selectedKey !== "string" || selectedKey === "") {
+              return false;
+            }
+
+            return options.some(
+              (option) => option.key === selectedKey && !option.disabled,
+            );
+          },
         });
       } else if (def.type === "multi") {
         const options = def.options.map((opt) => {
