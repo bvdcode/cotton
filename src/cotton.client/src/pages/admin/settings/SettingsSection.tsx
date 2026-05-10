@@ -39,48 +39,33 @@ export const SettingsSection = ({
       alignItems="flex-start"
       justifyContent="space-between"
     >
-      <Stack
-        direction="row"
-        spacing={1}
-        alignItems="flex-start"
-        flexWrap="wrap"
-        minWidth={0}
-        flex={1}
-      >
+      <Stack direction="column" spacing={0.25} minWidth={0} flex={1}>
         <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={{ xs: 0.25, md: 0.75 }}
-          alignItems={{ xs: "flex-start", md: "baseline" }}
+          direction="row"
+          spacing={1}
+          alignItems="center"
           minWidth={0}
-          flex={1}
         >
-          <Typography
-            variant="subtitle1"
-            fontWeight={700}
-            sx={{
-              flexShrink: 0,
-              whiteSpace: { xs: "normal", md: "nowrap" },
-            }}
-          >
+          <Typography variant="subtitle1" fontWeight={700}>
             {title}
           </Typography>
-          {description && (
-            <Typography variant="caption" color="text.secondary">
-              {description}
-            </Typography>
-          )}
+          <Box
+            sx={{
+              width: 16,
+              height: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <StatusIndicator status={status} />
+          </Box>
         </Stack>
-        <Box
-          sx={{
-            width: 16,
-            height: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <StatusIndicator status={status} />
-        </Box>
+        {description && (
+          <Typography variant="caption" color="text.secondary">
+            {description}
+          </Typography>
+        )}
       </Stack>
       {action}
     </Stack>

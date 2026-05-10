@@ -19,6 +19,8 @@ namespace Cotton.Server.Jobs
         ILogger<ComputeManifestHashesJob> _logger,
         CottonDbContext _dbContext) : IJob
     {
+        private const int MaxItemsPerRun = 1000;
+
         public async Task Execute(IJobExecutionContext context)
         {
             if (_perf.IsUploading())
@@ -31,13 +33,23 @@ namespace Cotton.Server.Jobs
                 _logger.LogInformation("ComputeManifestHashesJob skipped: night time.");
                 return;
             }
+
             var unprocessedManifests = _dbContext.FileManifests
+                .Take(MaxItemsPerRun)
                 .Include(fm => fm.FileManifestChunks)
                 .Where(fm => fm.ComputedContentHash == null)
                 .ToList();
+
             foreach (var manifest in unprocessedManifests)
             {
-                await Task.Delay(250);
+                if (_perf.IsPreviewGenerating() || _perf.IsUploading())
+                {
+                    await Task.Delay(60_000);
+                }
+                else
+                {
+                    await Task.Delay(250);
+                }
 
                 _logger.LogInformation("Computing hash for manifest {ManifestId}", manifest.Id);
                 string[] hashes = manifest.FileManifestChunks.GetChunkHashes();

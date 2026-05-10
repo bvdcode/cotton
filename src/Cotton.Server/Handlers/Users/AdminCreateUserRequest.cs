@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    public class AdminCreateUserRequest(string username, string? email, string password, UserRole role) : IRequest<UserDto>
+    public class AdminCreateUserRequest(string username, string? email, string? password, UserRole role) : IRequest<UserDto>
     {
         public string Username { get; } = username;
         public string? Email { get; } = email;

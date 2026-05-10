@@ -265,6 +265,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         children?: React.ReactNode;
         slide: Slide;
       }) => {
+        const previewUrl =
+          slide.type === "image"
+            ? (slide as { thumbnail?: string }).thumbnail
+            : undefined;
+
         return (
           <div
             className="media-lightbox__tap-area"
@@ -272,6 +277,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               void handleSlideImageError(slide);
             }}
           >
+            {previewUrl && (
+              <img
+                src={previewUrl}
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="media-lightbox__preview-bg"
+              />
+            )}
             {children}
           </div>
         );

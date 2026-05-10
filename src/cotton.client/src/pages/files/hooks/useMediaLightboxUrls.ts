@@ -48,6 +48,7 @@ export const useMediaLightboxUrls = ({
   const [downloadUrls, setDownloadUrls] = React.useState<Record<string, string>>({});
 
   const downloadUrlsRef = React.useRef<Record<string, string>>({});
+  const displayUrlsRef = React.useRef<Record<string, string>>({});
   const inFlightDownloadLoadsRef = React.useRef<Map<string, Promise<string | null>>>(
     new Map(),
   );
@@ -64,6 +65,10 @@ export const useMediaLightboxUrls = ({
   React.useEffect(() => {
     downloadUrlsRef.current = downloadUrls;
   }, [downloadUrls]);
+
+  React.useEffect(() => {
+    displayUrlsRef.current = displayUrls;
+  }, [displayUrls]);
 
   React.useEffect(() => {
     requestVersionRef.current += 1;
@@ -95,7 +100,7 @@ export const useMediaLightboxUrls = ({
 
   const ensureOriginalUrl = React.useCallback(
     async (item: MediaItem): Promise<string | null> => {
-      const existingDisplayUrl = displayUrls[item.id];
+      const existingDisplayUrl = displayUrlsRef.current[item.id];
       if (existingDisplayUrl) {
         return existingDisplayUrl;
       }
@@ -138,7 +143,7 @@ export const useMediaLightboxUrls = ({
       inFlightOriginalLoadsRef.current.set(item.id, loadTask);
       return await loadTask;
     },
-    [displayUrls, getSignedMediaUrl, preferPreview],
+    [getSignedMediaUrl, preferPreview],
   );
 
   const ensureSlideHasOriginal = React.useCallback(
@@ -170,7 +175,7 @@ export const useMediaLightboxUrls = ({
         return;
       }
 
-      const currentDisplayUrl = displayUrls[item.id];
+      const currentDisplayUrl = displayUrlsRef.current[item.id];
       if (currentDisplayUrl?.startsWith("blob:")) {
         return;
       }
@@ -208,7 +213,7 @@ export const useMediaLightboxUrls = ({
       inFlightHeicFallbacksRef.current.set(item.id, fallbackTask);
       await fallbackTask;
     },
-    [displayUrls, ensureOriginalUrl, items],
+    [ensureOriginalUrl, items],
   );
 
   const ensureDownloadUrl = React.useCallback(

@@ -143,7 +143,13 @@ function buildPersistedContentSnapshot(state: {
   const lastUpdatedByNodeId: Record<string, number | undefined> = {};
 
   for (const nodeId of keepNodeIds) {
-    contentByNodeId[nodeId] = state.contentByNodeId[nodeId];
+    const content = state.contentByNodeId[nodeId];
+    if (content) {
+      const itemCount = content.nodes.length + content.files.length;
+      if (itemCount <= MAX_PERSISTED_NODE_CONTENT_ITEMS) {
+        contentByNodeId[nodeId] = content;
+      }
+    }
     ancestorsByNodeId[nodeId] = state.ancestorsByNodeId[nodeId];
     lastUpdatedByNodeId[nodeId] = state.lastUpdatedByNodeId[nodeId];
   }
@@ -154,6 +160,34 @@ function buildPersistedContentSnapshot(state: {
     lastUpdatedByNodeId,
   };
 }
+
+// Folders larger than this are not persisted to sessionStorage to avoid
+// blowing the ~5 MB quota — they get refetched on reload instead.
+const MAX_PERSISTED_NODE_CONTENT_ITEMS = 10000;
+
+const safeSessionStorage = {
+  getItem: (key: string) => sessionStorage.getItem(key),
+  removeItem: (key: string) => sessionStorage.removeItem(key),
+  setItem: (key: string, value: string) => {
+    try {
+      sessionStorage.setItem(key, value);
+    } catch (error) {
+      const isQuota =
+        error instanceof DOMException &&
+        (error.name === "QuotaExceededError" ||
+          error.name === "NS_ERROR_DOM_QUOTA_REACHED");
+      if (!isQuota) throw error;
+      try {
+        sessionStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+      console.warn(
+        `[nodesStore] sessionStorage quota exceeded for "${key}" (${value.length} chars). Skipping persistence.`,
+      );
+    }
+  },
+};
 
 const CHILDREN_FETCH_PAGE_SIZE = 100_000;
 
@@ -680,7 +714,7 @@ export const useNodesStore = create<NodesState>()(
     },
     {
       name: NODES_STORAGE_KEY,
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => safeSessionStorage),
       partialize: (state) => {
         const persistedSnapshot = buildPersistedContentSnapshot(state);
         return {

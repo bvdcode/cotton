@@ -58,6 +58,25 @@
   overflow: hidden;
 }
 
+/*
+ * Blurred low-res preview rendered behind the main slide image.
+ * While the high-res image is still loading, YARL hides the main <img>
+ * via .yarl__slide_image_loading { opacity: 0 }, so this preview shows
+ * through together with the loading spinner. Once the main image
+ * finishes loading, it covers this layer.
+ */
+.lightbox-autohide .media-lightbox__preview-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  filter: blur(4px);
+}
+
 /* Idle state: controls hidden */
 .lightbox-autohide--idle .yarl__toolbar,
 .lightbox-autohide--idle .yarl__navigation_prev,
