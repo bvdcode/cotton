@@ -4,6 +4,7 @@
     {
         private const int ChunkTimeoutSeconds = 10;
         private DateTime? _lastChunkCreated;
+        private DateTime? _lastPreviewGenerating;
 
         public void OnChunkCreated()
         {
@@ -23,6 +24,20 @@
         {
             int hour = DateTime.UtcNow.Hour;
             return hour < 6 || hour >= 22;
+        }
+
+        public void OnPreviewGenerating()
+        {
+            _lastPreviewGenerating = DateTime.UtcNow;
+        }
+
+        public bool IsPreviewGenerating()
+        {
+            if (_lastPreviewGenerating == null)
+            {
+                return false;
+            }
+            return (DateTime.UtcNow - _lastPreviewGenerating.Value).TotalSeconds < ChunkTimeoutSeconds;
         }
     }
 }
