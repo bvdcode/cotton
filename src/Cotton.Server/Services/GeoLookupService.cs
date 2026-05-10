@@ -225,8 +225,6 @@ namespace Cotton.Server.Services
             private int _regionPriority;
             private int _cityPriority;
 
-            public bool IsComplete => Country is not null && Region is not null && City is not null;
-
             public bool TrySetCountry(string value, int priority)
             {
                 if (priority <= _countryPriority)

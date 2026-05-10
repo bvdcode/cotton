@@ -1,4 +1,4 @@
-import { Box, Chip, Stack, TextField, ToggleButton } from "@mui/material";
+import { Box, FormControlLabel, Stack, Switch, TextField } from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionFormProps = {
@@ -51,28 +51,30 @@ export function QuestionForm({
             const selected = Boolean(values[field.key]);
 
             return (
-              <ToggleButton
+              <FormControlLabel
                 key={field.key}
-                value={field.key}
-                selected={selected}
-                onChange={() => onChange(field.key, !selected)}
-                fullWidth
+                label={field.label}
+                labelPlacement="start"
+                control={
+                  <Switch
+                    checked={selected}
+                    onChange={(_, checked) => onChange(field.key, checked)}
+                  />
+                }
                 sx={{
+                  m: 0,
                   minHeight: 56,
+                  width: "100%",
                   justifyContent: "space-between",
                   px: 1.75,
-                  textTransform: "none",
-                  fontWeight: 700,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  "& .MuiFormControlLabel-label": {
+                    fontWeight: 700,
+                  },
                 }}
-              >
-                {field.label}
-                <Chip
-                  label={selected ? "On" : "Off"}
-                  color={selected ? "primary" : "default"}
-                  size="small"
-                  variant={selected ? "filled" : "outlined"}
-                />
-              </ToggleButton>
+              />
             );
           }
 
