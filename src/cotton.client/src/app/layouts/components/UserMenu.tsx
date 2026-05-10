@@ -19,11 +19,13 @@ import { UserRole, useAuth } from "../../../features/auth";
 import { useTranslation } from "react-i18next";
 import { useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useServerSettings } from "../../../shared/store/useServerSettings";
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation("common");
+  const { data: serverSettings } = useServerSettings();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isOpen = Boolean(anchorEl);
 
@@ -188,6 +190,21 @@ export const UserMenu = () => {
           </ListItemIcon>
           <ListItemText>{t("userMenu.logout")}</ListItemText>
         </MenuItem>
+
+        {serverSettings?.version && (
+          <>
+            <Divider />
+            <Box px={2}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", textAlign: "center" }}
+              >
+                {serverSettings.version}
+              </Typography>
+            </Box>
+          </>
+        )}
       </Menu>
     </>
   );

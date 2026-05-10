@@ -31,13 +31,15 @@ namespace Cotton.Server.Jobs
                 _logger.LogInformation("ComputeManifestHashesJob skipped: night time.");
                 return;
             }
+
             var unprocessedManifests = _dbContext.FileManifests
                 .Include(fm => fm.FileManifestChunks)
                 .Where(fm => fm.ComputedContentHash == null)
                 .ToList();
+
             foreach (var manifest in unprocessedManifests)
             {
-                await Task.Delay(250);
+                await Task.Delay(5000);
 
                 _logger.LogInformation("Computing hash for manifest {ManifestId}", manifest.Id);
                 string[] hashes = manifest.FileManifestChunks.GetChunkHashes();

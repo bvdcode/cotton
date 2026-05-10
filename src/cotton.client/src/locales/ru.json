@@ -81,7 +81,8 @@
       "darkMode": "Тёмная тема",
       "changeLanguage": "Сменить язык",
       "logout": "Выйти",
-      "help": "Помощь"
+      "help": "Помощь",
+      "serverVersion": "Версия сервера: {{version}}"
     },
     "app": {
       "logoAlt": "Логотип Cotton"
