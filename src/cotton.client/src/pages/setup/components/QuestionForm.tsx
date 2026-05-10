@@ -1,6 +1,4 @@
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
-import { Box, Stack, TextField, ToggleButton, Typography } from "@mui/material";
+import { Box, Chip, Stack, TextField, ToggleButton } from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionFormProps = {
@@ -68,24 +66,12 @@ export function QuestionForm({
                 }}
               >
                 {field.label}
-                <Box
-                  component="span"
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.75,
-                    color: selected ? "primary.main" : "text.secondary",
-                  }}
-                >
-                  <Typography component="span" variant="caption" fontWeight={800}>
-                    {selected ? "On" : "Off"}
-                  </Typography>
-                  {selected ? (
-                    <CheckCircleOutlineIcon fontSize="small" />
-                  ) : (
-                    <RadioButtonUncheckedIcon fontSize="small" />
-                  )}
-                </Box>
+                <Chip
+                  label={selected ? "On" : "Off"}
+                  color={selected ? "primary" : "default"}
+                  size="small"
+                  variant={selected ? "filled" : "outlined"}
+                />
               </ToggleButton>
             );
           }
