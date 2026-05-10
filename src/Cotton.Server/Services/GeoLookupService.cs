@@ -1,3 +1,4 @@
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Models;
 using Cotton.Server.Providers;
@@ -13,17 +14,17 @@ namespace Cotton.Server.Services
             var settings = _settings.GetServerSettings();
             ArgumentNullException.ThrowIfNull(ipAddress);
 
-            if (settings.GeoIpLookupMode == Cotton.Database.Models.Enums.GeoIpLookupMode.Disabled)
+            if (settings.GeoIpLookupMode == GeoIpLookupMode.Disabled)
             {
                 return null;
             }
 
-            if (settings.GeoIpLookupMode == Cotton.Database.Models.Enums.GeoIpLookupMode.CustomHttp)
+            if (settings.GeoIpLookupMode == GeoIpLookupMode.CustomHttp)
             {
                 return await TryLookupWithCustomHttpAsync(settings.CustomGeoIpLookupUrl, ipAddress, cancellationToken);
             }
 
-            if (settings.GeoIpLookupMode != Cotton.Database.Models.Enums.GeoIpLookupMode.CottonCloud ||
+            if (settings.GeoIpLookupMode != GeoIpLookupMode.CottonCloud ||
                 !settings.TelemetryEnabled)
             {
                 return null;

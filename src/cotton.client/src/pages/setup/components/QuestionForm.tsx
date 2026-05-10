@@ -1,4 +1,6 @@
-import { Stack, TextField, FormControlLabel, Checkbox } from "@mui/material";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
+import { Box, Stack, TextField, ToggleButton, Typography } from "@mui/material";
 import { QuestionHeader } from "./QuestionHeader";
 
 type QuestionFormProps = {
@@ -33,37 +35,73 @@ export function QuestionForm({
         linkUrl={linkUrl}
         linkAriaLabel={linkAriaLabel}
       />
-      <Stack spacing={2.5}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: "repeat(2, minmax(0, 1fr))",
+          },
+          gap: 2.5,
+        }}
+      >
         {fields.map((field) => {
           if (field.type === "boolean") {
+            const selected = Boolean(values[field.key]);
+
             return (
-              <FormControlLabel
+              <ToggleButton
                 key={field.key}
-                control={
-                  <Checkbox
-                    checked={Boolean(values[field.key])}
-                    onChange={(e) => onChange(field.key, e.target.checked)}
-                  />
-                }
-                label={field.label}
-              />
+                value={field.key}
+                selected={selected}
+                onChange={() => onChange(field.key, !selected)}
+                fullWidth
+                sx={{
+                  minHeight: 56,
+                  justifyContent: "space-between",
+                  px: 1.75,
+                  textTransform: "none",
+                  fontWeight: 700,
+                }}
+              >
+                {field.label}
+                <Box
+                  component="span"
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    color: selected ? "primary.main" : "text.secondary",
+                  }}
+                >
+                  <Typography component="span" variant="caption" fontWeight={800}>
+                    {selected ? "On" : "Off"}
+                  </Typography>
+                  {selected ? (
+                    <CheckCircleOutlineIcon fontSize="small" />
+                  ) : (
+                    <RadioButtonUncheckedIcon fontSize="small" />
+                  )}
+                </Box>
+              </ToggleButton>
             );
           }
-          
+
+          const value = values[field.key];
           return (
             <TextField
               key={field.key}
               label={field.label}
               placeholder={field.placeholder}
               type={field.type || "text"}
-              value={values[field.key] || ""}
+              value={typeof value === "string" ? value : ""}
               onChange={(e) => onChange(field.key, e.target.value)}
               fullWidth
               variant="outlined"
             />
           );
         })}
-      </Stack>
+      </Box>
     </Stack>
   );
 }
