@@ -112,11 +112,6 @@ namespace Cotton.Server.Services
                     }
 
                     FillGeoFields(property.Value, match);
-
-                    if (match.IsComplete)
-                    {
-                        return;
-                    }
                 }
             }
             else if (element.ValueKind == JsonValueKind.Array)
@@ -124,11 +119,6 @@ namespace Cotton.Server.Services
                 foreach (var item in element.EnumerateArray())
                 {
                     FillGeoFields(item, match);
-
-                    if (match.IsComplete)
-                    {
-                        return;
-                    }
                 }
             }
         }
@@ -183,14 +173,19 @@ namespace Cotton.Server.Services
 
         private static int GetCountryPriority(string name)
         {
-            if (ContainsAny(name, "countryname", "country", "nation", "nationality"))
+            if (ContainsAny(name, "countrycode", "countryiso", "countryalpha", "iso2", "iso3"))
+            {
+                return 1;
+            }
+
+            if (ContainsAny(name, "countryname", "countryfullname", "nation", "nationality"))
             {
                 return 2;
             }
 
-            if (ContainsAny(name, "countrycode", "countryiso", "countryalpha", "iso2", "iso3"))
+            if (name.Equals("country", StringComparison.OrdinalIgnoreCase))
             {
-                return 1;
+                return 2;
             }
 
             return 0;
