@@ -119,5 +119,21 @@ namespace Cotton.Database.Models
         {
             return InstanceId.ToString().Sha256();
         }
+
+        public TimeZoneInfo GetTimezoneInfo()
+        {
+            if (string.IsNullOrEmpty(Timezone))
+            {
+                return TimeZoneInfo.Utc;
+            }
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(Timezone);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return TimeZoneInfo.Utc;
+            }
+        }
     }
 }
