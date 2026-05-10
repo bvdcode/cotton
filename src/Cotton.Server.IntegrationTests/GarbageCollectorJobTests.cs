@@ -126,12 +126,13 @@ public class GarbageCollectorJobTests : IntegrationTestBase
 
         var backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash));
         var usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
+        var settingsProvider = new SettingsProvider(DbContext);
         var job = new GarbageCollectorJob(
-            new PerfTracker(),
+            new PerfTracker(settingsProvider),
             storage,
             DbContext,
             usage,
-            new SettingsProvider(DbContext),
+            settingsProvider,
             NullLogger<GarbageCollectorJob>.Instance);
 
         await job.RunOnceAsync(now, 1000);
@@ -368,7 +369,6 @@ public class GarbageCollectorJobTests : IntegrationTestBase
 
         public Task<bool> SendSmtpTestEmailAsync(
             Guid userId,
-            EmailConfig emailConfig,
             string serverBaseUrl)
         {
             return Task.FromResult(true);
