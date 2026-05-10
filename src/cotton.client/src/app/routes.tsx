@@ -25,6 +25,7 @@ import {
   AdminStorageStatisticsPage,
   AdminStorageSettingsPage,
   AdminGeneralSettingsPage,
+  AdminPrivacySettingsPage,
   AdminNotificationsSettingsPage,
   ResetPasswordPage,
   VerifyEmailPage,
@@ -178,6 +179,10 @@ export function AppRoutes() {
           <Route
             path="general-settings"
             element={<AdminGeneralSettingsPage />}
+          />
+          <Route
+            path="privacy-settings"
+            element={<AdminPrivacySettingsPage />}
           />
           <Route
             path="notifications-settings"
