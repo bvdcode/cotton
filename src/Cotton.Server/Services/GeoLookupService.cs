@@ -10,6 +10,8 @@ namespace Cotton.Server.Services
 {
     public sealed class GeoLookupService(SettingsProvider _settings) : IGeoLookupService
     {
+        private const string GoogleDnsIpAddress = "8.8.8.8";
+
         public async Task<GeoLookupResult?> TryLookupAsync(IPAddress ipAddress, CancellationToken cancellationToken = default)
         {
             var settings = _settings.GetServerSettings();
@@ -22,7 +24,8 @@ namespace Cotton.Server.Services
 
             if (settings.GeoIpLookupMode == GeoIpLookupMode.CustomHttp)
             {
-                return await TryLookupWithCustomHttpAsync(settings.CustomGeoIpLookupUrl, ipAddress, cancellationToken);
+                var attempt = await TryLookupWithCustomHttpAsync(settings.CustomGeoIpLookupUrl, ipAddress.ToString(), cancellationToken);
+                return attempt.Result;
             }
 
             if (settings.GeoIpLookupMode != GeoIpLookupMode.CottonCloud ||
@@ -43,24 +46,64 @@ namespace Cotton.Server.Services
                 City: geo.City);
         }
 
-        private static async Task<GeoLookupResult?> TryLookupWithCustomHttpAsync(
+        public async Task<string?> TestCustomLookupAsync(string serverBaseUrl, CancellationToken cancellationToken = default)
+        {
+            var settings = _settings.GetServerSettings();
+            string? lookupUrl = settings.CustomGeoIpLookupUrl;
+            if (string.IsNullOrWhiteSpace(lookupUrl))
+            {
+                return "Custom GeoIP lookup URL must be configured before testing.";
+            }
+
+            var attempts = new[]
+            {
+                new CustomLookupTestInput(serverBaseUrl, "instance URL"),
+                new CustomLookupTestInput(GoogleDnsIpAddress, "Google DNS IP"),
+                new CustomLookupTestInput(string.Empty, "empty IP"),
+            };
+
+            var failureDetails = new List<string>(attempts.Length);
+            foreach (var attemptInput in attempts)
+            {
+                var attempt = await TryLookupWithCustomHttpAsync(
+                    lookupUrl,
+                    attemptInput.Value,
+                    cancellationToken);
+                if (attempt.Result is not null)
+                {
+                    return null;
+                }
+
+                failureDetails.Add(
+                    $"{attemptInput.Label}: {attempt.Error ?? "no geo fields in response"}");
+            }
+
+            return "Custom IP resolver test failed. Tried instance URL, Google DNS IP, and empty IP. "
+                + string.Join("; ", failureDetails);
+        }
+
+        private static async Task<CustomLookupAttemptResult> TryLookupWithCustomHttpAsync(
             string? lookupUrl,
-            IPAddress ipAddress,
+            string ipValue,
             CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(lookupUrl))
             {
-                return null;
+                return new CustomLookupAttemptResult(
+                    Result: null,
+                    Error: "lookup URL is empty");
             }
 
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                string url = BuildCustomLookupUrl(lookupUrl, ipAddress);
+                string url = BuildCustomLookupUrl(lookupUrl, ipValue);
                 var json = await client.GetFromJsonAsync<JsonElement>(url, cancellationToken);
                 if (json.ValueKind == JsonValueKind.Undefined || json.ValueKind == JsonValueKind.Null)
                 {
-                    return null;
+                    return new CustomLookupAttemptResult(
+                        Result: null,
+                        Error: "response body is empty");
                 }
 
                 var match = FindGeoFields(json);
@@ -70,20 +113,35 @@ namespace Cotton.Server.Services
 
                 if (country is null && region is null && city is null)
                 {
-                    return null;
+                    return new CustomLookupAttemptResult(
+                        Result: null,
+                        Error: "response does not contain country, region, or city");
                 }
 
-                return new GeoLookupResult(country, region, city);
+                return new CustomLookupAttemptResult(
+                    Result: new GeoLookupResult(country, region, city),
+                    Error: null);
             }
-            catch
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                return null;
+                return new CustomLookupAttemptResult(
+                    Result: null,
+                    Error: "request timed out");
+            }
+            catch (Exception ex)
+            {
+                string error = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "request failed"
+                    : ex.Message;
+                return new CustomLookupAttemptResult(
+                    Result: null,
+                    Error: error);
             }
         }
 
-        private static string BuildCustomLookupUrl(string lookupUrl, IPAddress ipAddress)
+        private static string BuildCustomLookupUrl(string lookupUrl, string ipValue)
         {
-            string escapedIp = Uri.EscapeDataString(ipAddress.ToString());
+            string escapedIp = Uri.EscapeDataString(ipValue);
             if (lookupUrl.Contains("{ip}", StringComparison.OrdinalIgnoreCase))
             {
                 return lookupUrl.Replace("{ip}", escapedIp, StringComparison.OrdinalIgnoreCase);
@@ -261,5 +319,11 @@ namespace Cotton.Server.Services
                 return true;
             }
         }
+
+        private sealed record CustomLookupAttemptResult(
+            GeoLookupResult? Result,
+            string? Error);
+
+        private sealed record CustomLookupTestInput(string Value, string Label);
     }
 }
