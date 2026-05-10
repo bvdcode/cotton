@@ -76,8 +76,12 @@ const hasWizardAnswer = (answer: JsonValue | undefined): boolean => {
     return answer.trim().length > 0;
   }
 
-  if (typeof answer === "number" || typeof answer === "boolean") {
+  if (typeof answer === "number") {
     return true;
+  }
+
+  if (typeof answer === "boolean") {
+    return answer;
   }
 
   if (Array.isArray(answer)) {
@@ -87,9 +91,42 @@ const hasWizardAnswer = (answer: JsonValue | undefined): boolean => {
   return Object.values(answer).some((value) => hasWizardAnswer(value));
 };
 
+const toUsageAnswerKeys = (usage: Awaited<ReturnType<typeof settingsApi.getServerUsage>>): string[] =>
+  usage.map((value) => value.toLowerCase());
+
+const toGeoIpLookupAnswerKey = (
+  mode: Awaited<ReturnType<typeof settingsApi.getGeoIpLookupMode>>,
+): string => {
+  if (mode === "CottonCloud") return "cottonCloud";
+  if (mode === "MaxMindLocal") return "local";
+  if (mode === "CustomHttp") return "custom";
+  return "disabled";
+};
+
+const toEmailAnswerKey = (
+  mode: Awaited<ReturnType<typeof settingsApi.getEmailMode>>,
+): string => {
+  if (mode === "Cloud") return "cloud";
+  if (mode === "Custom") return "custom";
+  return "none";
+};
+
 const loadSetupStepPrefill = async (
   stepKey: string,
 ): Promise<JsonValue | undefined> => {
+  if (stepKey === "usage") {
+    const usage = toUsageAnswerKeys(await settingsApi.getServerUsage());
+    return usage.length > 0 ? usage : undefined;
+  }
+
+  if (stepKey === "telemetry") {
+    return (await settingsApi.getTelemetry()) ? "allow" : "deny";
+  }
+
+  if (stepKey === "geoIpLookupMode") {
+    return toGeoIpLookupAnswerKey(await settingsApi.getGeoIpLookupMode());
+  }
+
   if (stepKey === "customGeoIpLookupUrl") {
     const url = (await settingsApi.getCustomGeoIpLookupUrl()).trim();
     return url ? { url } : undefined;
@@ -118,6 +155,10 @@ const loadSetupStepPrefill = async (
       useSSL: config.useSSL,
     };
     return hasWizardAnswer(answer) ? answer : undefined;
+  }
+
+  if (stepKey === "email") {
+    return toEmailAnswerKey(await settingsApi.getEmailMode());
   }
 
   return undefined;
