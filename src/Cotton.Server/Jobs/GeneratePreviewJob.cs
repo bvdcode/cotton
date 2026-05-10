@@ -23,7 +23,6 @@ namespace Cotton.Server.Jobs
         PerfTracker _perf,
         IStreamCipher _crypto,
         IStoragePipeline _storage,
-        SettingsProvider _settings,
         CottonDbContext _dbContext,
         IHubContext<EventHub> _hubContext,
         ILogger<GeneratePreviewJob> _logger) : IJob
