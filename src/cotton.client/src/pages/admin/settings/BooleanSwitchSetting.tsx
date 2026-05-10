@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 type BooleanSwitchSettingProps = {
   title: ReactNode;
+  titleAction?: ReactNode;
   description?: ReactNode;
   toastIdPrefix: string;
   load: () => Promise<boolean>;
@@ -14,6 +15,7 @@ type BooleanSwitchSettingProps = {
 
 export const BooleanSwitchSetting = ({
   title,
+  titleAction,
   description,
   toastIdPrefix,
   load,
@@ -34,6 +36,7 @@ export const BooleanSwitchSetting = ({
   return (
     <SettingsSection
       title={title}
+      titleAction={titleAction}
       description={description}
       status={status}
       action={

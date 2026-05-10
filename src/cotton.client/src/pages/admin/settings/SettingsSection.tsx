@@ -6,6 +6,7 @@ import type { SaveStatus } from "./useAutoSavedSetting";
 
 type SettingsSectionProps = {
   title: ReactNode;
+  titleAction?: ReactNode;
   description?: ReactNode;
   status?: SaveStatus;
   action?: ReactNode;
@@ -27,6 +28,7 @@ const StatusIndicator = ({ status }: { status: SaveStatus }) => {
 
 export const SettingsSection = ({
   title,
+  titleAction,
   description,
   status = "idle",
   action,
@@ -49,6 +51,7 @@ export const SettingsSection = ({
           <Typography variant="subtitle1" fontWeight={700}>
             {title}
           </Typography>
+          {titleAction}
           <Box
             sx={{
               width: 16,
