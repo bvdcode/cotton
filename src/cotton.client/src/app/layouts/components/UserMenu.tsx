@@ -71,6 +71,94 @@ export const UserMenu = () => {
     await logout();
   };
 
+  const detectBrowser = (): string => {
+    const ua = navigator.userAgent;
+
+    if (ua.includes("Edg/")) {
+      return "Microsoft Edge";
+    }
+    if (ua.includes("OPR/") || ua.includes("Opera")) {
+      return "Opera";
+    }
+    if (ua.includes("Firefox/")) {
+      return "Firefox";
+    }
+    if (ua.includes("Chrome/")) {
+      return "Chrome";
+    }
+    if (ua.includes("Safari/")) {
+      return "Safari";
+    }
+
+    return "Unknown";
+  };
+
+  const detectOs = (): string => {
+    const ua = navigator.userAgent;
+
+    if (ua.includes("Windows NT")) {
+      return "Windows";
+    }
+    if (ua.includes("Mac OS X")) {
+      return "macOS";
+    }
+    if (ua.includes("Android")) {
+      return "Android";
+    }
+    if (ua.includes("iPhone") || ua.includes("iPad")) {
+      return "iOS";
+    }
+    if (ua.includes("Linux")) {
+      return "Linux";
+    }
+
+    return "Unknown";
+  };
+
+  const openBugReport = () => {
+    handleClose();
+
+    const version = serverSettings?.version ?? "unknown";
+    const browser = detectBrowser();
+    const os = detectOs();
+    const currentUrl = window.location.href;
+    const openedAtUtc = new Date().toISOString();
+
+    const url = new URL("https://github.com/bvdcode/cotton/issues/new");
+    url.searchParams.set("labels", "bug");
+    url.searchParams.set("assignees", "bvdcode");
+    url.searchParams.set("title", "[Bug]: ");
+    url.searchParams.set(
+      "body",
+      `## Version
+${version}
+
+## Description
+
+
+## Steps to reproduce
+1. 
+2. 
+3. 
+
+## Expected behavior
+
+
+## Actual behavior
+
+
+## Environment
+- Cotton version: ${version}
+- Browser: ${browser}
+- OS: ${os}
+- Current URL: ${currentUrl}
+- Opened at (UTC): ${openedAtUtc}
+`,
+    );
+
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+  };
+
   const fullName = [user?.firstName, user?.lastName]
     .filter(Boolean)
     .join(" ")
@@ -174,8 +262,7 @@ export const UserMenu = () => {
 
         <MenuItem
           onClick={() => {
-            handleClose();
-            navigate("https://github.com/bvdcode/cotton/issues/new");
+            openBugReport();
           }}
         >
           <ListItemIcon>
