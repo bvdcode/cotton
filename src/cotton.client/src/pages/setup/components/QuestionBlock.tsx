@@ -12,6 +12,7 @@ export function QuestionBlock<T>({
   onSelect,
   linkUrl,
   linkAriaLabel,
+  extraHeader,
 }: {
   title: string;
   subtitle: string;
@@ -29,6 +30,7 @@ export function QuestionBlock<T>({
   onSelect: (key: string, value: T) => void;
   linkUrl?: string;
   linkAriaLabel?: string;
+  extraHeader?: ReactNode;
 }) {
   return (
     <Stack spacing={1.5}>
@@ -37,6 +39,7 @@ export function QuestionBlock<T>({
         subtitle={subtitle}
         linkUrl={linkUrl}
         linkAriaLabel={linkAriaLabel}
+        extraHeader={extraHeader}
       />
       <Box
         sx={{

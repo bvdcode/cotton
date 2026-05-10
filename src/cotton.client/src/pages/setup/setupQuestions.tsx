@@ -23,6 +23,7 @@ import {
   SdStorage,
   TravelExplore,
 } from "@mui/icons-material";
+import { TelemetryHelpButton } from "../../shared/ui/TelemetryHelpButton";
 
 export type SetupSingleOption<T> = {
   key: string;
@@ -58,6 +59,7 @@ export type SetupStepDefinition =
       subtitle: () => string;
       linkUrl?: string;
       linkAria?: () => string;
+      extraHeader?: () => ReactNode;
       options: SetupSingleOption<unknown>[];
       getOptions?: () => SetupSingleOption<unknown>[];
       getDefaultValue?: () => unknown;
@@ -152,6 +154,7 @@ export const setupStepDefinitions: SetupStepDefinition[] = [
     type: "single",
     title: () => t("setup:questions.telemetry.title"),
     subtitle: () => t("setup:questions.telemetry.subtitle"),
+    extraHeader: () => <TelemetryHelpButton />,
     options: [
       {
         key: "allow",

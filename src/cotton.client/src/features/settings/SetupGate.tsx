@@ -42,12 +42,14 @@ export function SetupGate({ children }: Props) {
 
   const setupCompleted = isAdmin ? (isInitialized ?? true) : true;
   const onSetupPage = location.pathname === "/setup";
+  const previewSetup =
+    onSetupPage && new URLSearchParams(location.search).get("preview") === "1";
 
   if (!setupCompleted && !onSetupPage) {
     return <Navigate to="/setup" replace />;
   }
 
-  if (setupCompleted && onSetupPage) {
+  if (setupCompleted && onSetupPage && !previewSetup) {
     return <Navigate to="/" replace />;
   }
 

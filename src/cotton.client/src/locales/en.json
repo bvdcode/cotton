@@ -103,7 +103,21 @@
     },
     "title": "Cotton Cloud",
     "subtitle": "Setup Wizard",
-    "ok": "OK"
+    "ok": "OK",
+    "telemetryDetails": {
+      "tooltip": "What data is collected?",
+      "title": "What telemetry collects",
+      "intro": "Telemetry is anonymous and does not include any personal data, file names, or file contents. Only the following non-identifying details are sent:",
+      "items": {
+        "instanceId": "A random instance identifier (a one-time generated GUID, not tied to you)",
+        "serverUrl": "Public server URL, so we know whether the cloud is reachable",
+        "version": "Cotton server version",
+        "users": "Total number of user accounts",
+        "nodes": "Total number of folders",
+        "files": "Total number of files"
+      },
+      "outro": "That's everything. No file contents, no file names, no usernames, no emails, no IP addresses."
+    }
   },
   "audioPlayer": {
     "actions": {
@@ -1092,20 +1106,6 @@
           "allowDeduplication": "Controls whether one user can learn that another user already stores the same file. When disabled, identical data is still deduplicated on the server after upload, but it is needlessly transferred first. When enabled, another user may learn that someone in this cloud uploaded that file before. This is safe for family and trusted friends.",
           "allowGlobalIndexing": "Allows the server to decrypt user files and build a deep search index. Without it, search only uses file and folder names.",
           "serverUsage": "Optimizes feature recommendations and a few settings. It is not a critical parameter, so choose whatever feels right."
-        },
-        "telemetryDetails": {
-          "tooltip": "What data is collected?",
-          "title": "What telemetry collects",
-          "intro": "Telemetry is anonymous and does not include any personal data, file names, or file contents. Only the following non-identifying details are sent:",
-          "items": {
-            "instanceId": "A random instance identifier (a one-time generated GUID, not tied to you)",
-            "serverUrl": "Public server URL, so we know whether the cloud is reachable",
-            "version": "Cotton server version",
-            "users": "Total number of user accounts",
-            "nodes": "Total number of folders",
-            "files": "Total number of files"
-          },
-          "outro": "That's everything. No file contents, no file names, no usernames, no emails, no IP addresses."
         },
         "serverUsage": {
           "Photos": "Photos",
