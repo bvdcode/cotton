@@ -15,6 +15,7 @@ import BackupIcon from "@mui/icons-material/Backup";
 import GroupsIcon from "@mui/icons-material/Groups";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import SettingsIcon from "@mui/icons-material/Settings";
+import ShieldIcon from "@mui/icons-material/Shield";
 import StorageIcon from "@mui/icons-material/Storage";
 import type { ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -24,6 +25,7 @@ type AdminMenuItem = {
   id:
     | "users"
     | "generalSettings"
+    | "privacySettings"
     | "storage"
     | "notificationsSettings"
     | "databaseBackup";
@@ -52,6 +54,14 @@ export const AdminLayoutPage = () => {
       to: "/admin/general-settings",
       title: t("menu.generalSettings"),
       icon: <SettingsIcon />,
+    },
+    {
+      id: "privacySettings",
+      to: "/admin/privacy-settings",
+      title: t("menu.privacySettings", {
+        defaultValue: "Privacy and security",
+      }),
+      icon: <ShieldIcon />,
     },
     {
       id: "notificationsSettings",

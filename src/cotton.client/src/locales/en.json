@@ -1007,6 +1007,7 @@
       "users": "Users",
       "usersAndGroups": "Users and groups",
       "generalSettings": "General settings",
+      "privacySettings": "Privacy and security",
       "storageSettings": "Storage",
       "storageAndStatistics": "Storage and statistics",
       "notificationsSettings": "Notifications",
@@ -1140,7 +1141,16 @@
           "CottonCloud": "Resolve IP addresses through the Cotton provider.",
           "MaxMindLocal": "Resolve IP addresses locally with a GeoIP Light database/package.",
           "CustomHttp": "Paste a URL to your own service. Cotton will try to extract location-related fields from JSON automatically."
+        },
+        "openSetupWizard": {
+          "title": "Open setup wizard",
+          "description": "Walk through the first-run setup wizard again.",
+          "button": "Open"
         }
+      },
+      "privacy": {
+        "title": "Privacy and security",
+        "description": "Controls how data leaves the server and how user files can be accessed for shared features."
       }
     },
     "storageSettings": {

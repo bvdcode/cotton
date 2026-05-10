@@ -13,6 +13,7 @@ export {
 	AdminDatabaseBackupPage,
 	AdminStorageStatisticsPage,
 	AdminGeneralSettingsPage,
+	AdminPrivacySettingsPage,
 	AdminStorageSettingsPage,
 	AdminNotificationsSettingsPage,
 } from "./admin";
