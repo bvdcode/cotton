@@ -469,8 +469,8 @@ export const settingsApi = {
     await httpClient.patch("server/settings/email-config", config);
   },
 
-  testEmailConfig: async (config: EmailConfig): Promise<void> => {
-    await httpClient.post("server/settings/email-config/test", config);
+  testEmailConfig: async (): Promise<void> => {
+    await httpClient.post("server/settings/email-config/test");
   },
 
   getGeoIpLookupMode: async (): Promise<GeoIpLookupMode> => {
@@ -593,6 +593,7 @@ export const settingsApi = {
           useSSL: getFormBoolean(emailConfig, "useSSL"),
         });
         await settingsApi.setEmailMode("Custom");
+        await settingsApi.testEmailConfig();
         return;
       }
 

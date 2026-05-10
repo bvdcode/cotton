@@ -337,13 +337,13 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPost("email-config/test")]
-        public async Task<IActionResult> SendEmailConfigTest([FromBody] EmailConfig emailConfig, CancellationToken cancellationToken)
+        public async Task<IActionResult> SendEmailConfigTest(CancellationToken cancellationToken)
         {
             await EnsureSettingsAsync(cancellationToken);
-            ThrowIfInvalid(_settings.ValidateEmailConfig(emailConfig));
+            ThrowIfInvalid(await _settings.ValidateEmailModeAsync(EmailMode.Custom));
 
             Guid userId = User.GetUserId();
-            bool sent = await _notifications.SendSmtpTestEmailAsync(userId, emailConfig, GetFallbackPublicBaseUrl());
+            bool sent = await _notifications.SendSmtpTestEmailAsync(userId, GetFallbackPublicBaseUrl());
             if (!sent)
             {
                 throw new BadRequestException<CottonServerSettings>("Failed to send test email.");
