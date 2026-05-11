@@ -89,6 +89,8 @@ interface SearchModalProps {
   onClose: () => void;
 }
 
+const MIN_SETTING_QUERY_LENGTH = 3;
+
 const normalizeSearchText = (value: string): string =>
   value
     .toLocaleLowerCase()
@@ -180,7 +182,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
   const matchedDictionaryRows = useMemo(() => {
     const normalizedQuery = normalizeSearchText(query.trim());
-    if (!normalizedQuery) return [];
+    if (normalizedQuery.length < MIN_SETTING_QUERY_LENGTH) return [];
 
     return dictionaryEntries
       .map<DictionaryMatch | null>((entry) => {
@@ -346,8 +348,8 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             setFailedPreviews((prev) => new Set(prev).add(row.file.id));
           }}
           sx={{
-            width: 36,
-            height: 36,
+            width: "100%",
+            height: "100%",
             objectFit: "cover",
             borderRadius: 1,
           }}
@@ -408,10 +410,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
           paper: {
             sx: {
               width: { xs: "100%", sm: 880, lg: 1040 },
-              height: {
-                xs: "100%",
-                sm: hasQuery ? 680 : "auto",
-              },
+              height: { xs: "100%", sm: 680 },
               maxHeight: { xs: "100%", sm: "calc(100vh - 32px)" },
               borderRadius: { xs: 0, sm: 1.5 },
             },
@@ -424,6 +423,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             flexDirection: "column",
             gap: 1,
             minHeight: 0,
+            justifyContent: "flex-start",
             overflow: "hidden",
             p: { xs: 1.5, sm: 2 },
           }}
@@ -436,7 +436,13 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             onChange={(event) => setQuery(event.target.value)}
             disabled={!layoutId}
             placeholder={t("modal.placeholder")}
+            autoComplete="off"
             slotProps={{
+              htmlInput: {
+                autoComplete: "off",
+                autoCorrect: "off",
+                spellCheck: false,
+              },
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
@@ -484,17 +490,15 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 flex: 1,
                 minHeight: 0,
                 overflow: "hidden",
-                border: 1,
-                borderColor: "divider",
                 borderRadius: 1,
-                bgcolor: "background.paper",
+                bgcolor: "background.default",
               }}
             >
               <Box
                 sx={{
                   height: "100%",
                   overflowY: "auto",
-                  bgcolor: "background.paper",
+                  bgcolor: "background.default",
                 }}
               >
                 {rows.length === 0 && !loading ? (

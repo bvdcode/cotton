@@ -12,6 +12,7 @@ import {
   Container,
   IconButton,
 } from "@mui/material";
+import { Search as SearchIcon } from "@mui/icons-material";
 import React, { useEffect } from "react";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
@@ -28,6 +29,7 @@ interface AppLayoutProps {
 export const AppLayout = ({ routes }: AppLayoutProps) => {
   const location = useLocation();
   const { t } = useTranslation("routes");
+  const { t: tSearch } = useTranslation("search");
   const { isAuthenticated } = useAuth();
   const theme = useTheme();
   const settingsLoaded = useSettingsStore((s) => s.loaded);
@@ -163,6 +165,14 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
             })}
           </Box>
 
+          <IconButton
+            color="inherit"
+            aria-label={tSearch("open")}
+            title={tSearch("open")}
+            onClick={openSearch}
+          >
+            <SearchIcon fontSize="small" />
+          </IconButton>
           <NotificationsMenu />
           <UserMenu />
         </Toolbar>

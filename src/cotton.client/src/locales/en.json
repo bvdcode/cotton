@@ -33,12 +33,7 @@
           "duplicates",
           "privacy",
           "security",
-          "cross-user",
-          "\u0434\u0435\u0434\u0443\u043f\u043b\u0438\u043a\u0430\u0446\u0438\u044f",
-          "\u0434\u0435\u0434\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044f",
-          "\u0434\u0443\u0431\u043b\u0438\u043a\u0430\u0442\u044b",
-          "\u043f\u0440\u0438\u0432\u0430\u0442\u043d\u043e\u0441\u0442\u044c",
-          "\u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c"
+          "cross-user"
         ],
         "highlightSettingId": "allowCrossUserDeduplication",
         "adminOnly": true
@@ -52,10 +47,7 @@
           "global indexing",
           "indexing",
           "deep search",
-          "search index",
-          "\u0433\u043b\u043e\u0431\u0430\u043b\u044c\u043d\u044b\u0439 \u0438\u043d\u0434\u0435\u043a\u0441",
-          "\u0438\u043d\u0434\u0435\u043a\u0441\u0430\u0446\u0438\u044f",
-          "\u043f\u043e\u0438\u0441\u043a"
+          "search index"
         ],
         "highlightSettingId": "allowGlobalIndexing",
         "adminOnly": true
@@ -74,12 +66,7 @@
           "usage analytics",
           "crash reports",
           "bug reports",
-          "privacy",
-          "\u0442\u0435\u043b\u0435\u043c\u0435\u0442\u0440\u0438\u044f",
-          "\u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430",
-          "\u0430\u043d\u0430\u043b\u0438\u0442\u0438\u043a\u0430",
-          "\u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430",
-          "\u043c\u0435\u0442\u0440\u0438\u043a\u0438"
+          "privacy"
         ],
         "highlightSettingId": "telemetry",
         "adminOnly": true
@@ -98,10 +85,7 @@
           "smtp server",
           "from address",
           "ssl",
-          "tls",
-          "\u0441\u043c\u0442\u043f",
-          "\u043f\u043e\u0447\u0442\u0430",
-          "\u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f"
+          "tls"
         ],
         "adminOnly": true
       },
@@ -115,9 +99,7 @@
           "email mode",
           "mail mode",
           "cotton cloud mail",
-          "custom smtp",
-          "\u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f",
-          "\u0440\u0435\u0436\u0438\u043c \u043f\u043e\u0447\u0442\u044b"
+          "custom smtp"
         ],
         "adminOnly": true
       },
@@ -134,10 +116,7 @@
           "endpoint",
           "region",
           "access key",
-          "secret key",
-          "\u0445\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0435",
-          "\u0431\u0430\u043a\u0435\u0442",
-          "\u0441\u0435\u043a\u0440\u0435\u0442\u043d\u044b\u0439 \u043a\u043b\u044e\u0447"
+          "secret key"
         ],
         "adminOnly": true
       },
@@ -153,11 +132,7 @@
           "garbage collector",
           "chunks",
           "dedup saved",
-          "compression saved",
-          "\u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430",
-          "\u0445\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0435",
-          "\u0447\u0430\u043d\u043a\u0438",
-          "\u0441\u0431\u043e\u0440\u043a\u0430 \u043c\u0443\u0441\u043e\u0440\u0430"
+          "compression saved"
         ],
         "adminOnly": true
       },
@@ -171,11 +146,7 @@
           "database",
           "restore",
           "dump",
-          "manifest",
-          "\u0431\u044d\u043a\u0430\u043f",
-          "\u0440\u0435\u0437\u0435\u0440\u0432\u043d\u0430\u044f \u043a\u043e\u043f\u0438\u044f",
-          "\u0431\u0430\u0437\u0430 \u0434\u0430\u043d\u043d\u044b\u0445",
-          "\u0434\u0430\u043c\u043f"
+          "manifest"
         ],
         "adminOnly": true
       },
@@ -189,11 +160,7 @@
           "accounts",
           "admin users",
           "role",
-          "sessions",
-          "\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438",
-          "\u0430\u043a\u043a\u0430\u0443\u043d\u0442\u044b",
-          "\u0440\u043e\u043b\u0438",
-          "\u0441\u0435\u0441\u0441\u0438\u0438"
+          "sessions"
         ],
         "adminOnly": true
       },
@@ -204,9 +171,7 @@
         "path": "/admin/groups",
         "keywords": [
           "groups",
-          "user groups",
-          "\u0433\u0440\u0443\u043f\u043f\u044b",
-          "\u0433\u0440\u0443\u043f\u043f\u044b \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439"
+          "user groups"
         ],
         "adminOnly": true
       },
@@ -222,11 +187,7 @@
           "timezone",
           "server usage",
           "setup wizard",
-          "computation mode",
-          "\u043e\u0431\u0449\u0438\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438",
-          "\u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 url",
-          "\u0447\u0430\u0441\u043e\u0432\u043e\u0439 \u043f\u043e\u044f\u0441",
-          "\u043c\u0430\u0441\u0442\u0435\u0440 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438"
+          "computation mode"
         ],
         "adminOnly": true
       },
@@ -252,15 +213,7 @@
           "e-mail",
           "mail",
           "avatar",
-          "picture",
-          "\u043f\u0440\u043e\u0444\u0438\u043b\u044c",
-          "\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438",
-          "\u0430\u043a\u043a\u0430\u0443\u043d\u0442",
-          "\u0438\u043c\u044f",
-          "\u0444\u0430\u043c\u0438\u043b\u0438\u044f",
-          "\u0434\u0430\u0442\u0430 \u0440\u043e\u0436\u0434\u0435\u043d\u0438\u044f",
-          "\u043f\u043e\u0447\u0442\u0430",
-          "\u0430\u0432\u0430\u0442\u0430\u0440"
+          "picture"
         ]
       },
       {
@@ -284,16 +237,7 @@
           "image preview",
           "originals",
           "colors",
-          "colour",
-          "\u0432\u043d\u0435\u0448\u043d\u0438\u0439 \u0432\u0438\u0434",
-          "\u0442\u0435\u043c\u0430",
-          "\u0442\u0435\u043c\u043d\u0430\u044f \u0442\u0435\u043c\u0430",
-          "\u0441\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430",
-          "\u044f\u0437\u044b\u043a",
-          "\u0433\u0430\u043b\u0435\u0440\u0435\u044f",
-          "\u043f\u0440\u0435\u0432\u044c\u044e",
-          "\u043f\u043b\u0430\u0432\u043d\u044b\u0435 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u044b",
-          "\u0446\u0432\u0435\u0442\u0430"
+          "colour"
         ]
       },
       {
@@ -319,16 +263,7 @@
           "logout",
           "sign out",
           "email verification",
-          "verify email",
-          "\u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c",
-          "\u043f\u0430\u0440\u043e\u043b\u044c",
-          "\u0441\u043c\u0435\u043d\u0430 \u043f\u0430\u0440\u043e\u043b\u044f",
-          "\u0434\u0432\u0443\u0445\u0444\u0430\u043a\u0442\u043e\u0440\u043d\u0430\u044f",
-          "\u0434\u0432\u0443\u0445\u044d\u0442\u0430\u043f\u043d\u0430\u044f",
-          "\u0441\u0435\u0441\u0441\u0438\u0438",
-          "\u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0430",
-          "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c email",
-          "\u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043f\u043e\u0447\u0442\u0443"
+          "verify email"
         ]
       },
       {
@@ -346,14 +281,7 @@
           "expires",
           "expire",
           "invalidate",
-          "token",
-          "\u0441\u0441\u044b\u043b\u043a\u0438",
-          "\u043e\u0431\u0449\u0438\u0439 \u0434\u043e\u0441\u0442\u0443\u043f",
-          "\u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0435 \u0441\u0441\u044b\u043b\u043a\u0438",
-          "\u043f\u043e\u0434\u0435\u043b\u0438\u0442\u044c\u0441\u044f",
-          "\u0448\u0435\u0440\u0438\u043d\u0433",
-          "\u0441\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f",
-          "\u0442\u043e\u043a\u0435\u043d"
+          "token"
         ]
       },
       {
@@ -376,14 +304,7 @@
           "macos webdav",
           "linux webdav",
           "credentials",
-          "one-time token",
-          "\u0432\u0435\u0431\u0434\u0430\u0432",
-          "\u0434\u043e\u0441\u0442\u0443\u043f webdav",
-          "\u0442\u043e\u043a\u0435\u043d webdav",
-          "\u0441\u0435\u0442\u0435\u0432\u043e\u0439 \u0434\u0438\u0441\u043a",
-          "\u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0434\u0438\u0441\u043a",
-          "\u043c\u043e\u043d\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c",
-          "\u0443\u0447\u0435\u0442\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435"
+          "one-time token"
         ]
       }
     ]

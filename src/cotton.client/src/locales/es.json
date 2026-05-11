@@ -37,9 +37,7 @@
           "deduplicación",
           "duplicados",
           "privacidad",
-          "seguridad",
-          "дедупликация",
-          "дедубликация"
+          "seguridad"
         ],
         "highlightSettingId": "allowCrossUserDeduplication",
         "adminOnly": true
@@ -56,8 +54,7 @@
           "search index",
           "índice global",
           "indexación",
-          "búsqueda",
-          "глобальный индекс"
+          "búsqueda"
         ],
         "highlightSettingId": "allowGlobalIndexing",
         "adminOnly": true
@@ -78,8 +75,7 @@
           "bug reports",
           "privacy",
           "telemetría",
-          "diagnóstico",
-          "телеметрия"
+          "diagnóstico"
         ],
         "highlightSettingId": "telemetry",
         "adminOnly": true
@@ -100,8 +96,7 @@
           "ssl",
           "tls",
           "correo",
-          "notificaciones",
-          "смтп"
+          "notificaciones"
         ],
         "adminOnly": true
       },

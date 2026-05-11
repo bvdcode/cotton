@@ -16,7 +16,6 @@ import {
   Deselect,
   Home,
   MoreVert,
-  Search,
   SelectAll,
   UploadFile,
   ViewModule,
@@ -53,8 +52,6 @@ export interface PageHeaderProps {
   onHomeClick: () => void;
   onViewModeCycle: () => void;
   showViewModeToggle?: boolean;
-  showSearch?: boolean;
-  onSearchClick?: () => void;
   statsNamespace?: string;
 
   // Optional actions
@@ -89,8 +86,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onHomeClick,
   onViewModeCycle,
   showViewModeToggle = true,
-  showSearch = false,
-  onSearchClick,
   statsNamespace = "files",
   showUpload = false,
   showNewFolder = false,
@@ -105,7 +100,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   customActionItems,
 }) => {
   const { t } = useTranslation(["files", "trash", "common"]);
-  const { t: tSearch } = useTranslation("search");
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
   const actionButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
@@ -206,16 +200,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         });
       }
 
-      if (showSearch && onSearchClick) {
-        actions.push({
-          key: "search",
-          icon: <Search />,
-          title: tSearch("open"),
-          onClick: onSearchClick,
-          disabled: false,
-        });
-      }
-
       if (customActionItems && customActionItems.length > 0) {
         actions.push(...customActionItems);
       }
@@ -235,15 +219,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       onToggleSelectionMode,
       onUploadClick,
       onViewModeCycle,
-      onSearchClick,
       selectedCount,
       selectionMode,
-      showSearch,
       showNewFolder,
       showUpload,
       showViewModeToggle,
       t,
-      tSearch,
       viewIcon,
       customActionItems,
     ],

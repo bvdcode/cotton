@@ -8,6 +8,7 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace Cotton.Server.Handlers.Layouts;
 
@@ -37,7 +38,13 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.Page);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
-        string searchKey = NameValidator.NormalizeAndGetNameKey(request.Query);
+        string searchKey = NameValidator.GetNameKey(
+            request.Query.Normalize(NormalizationForm.FormC).Trim());
+
+        if (searchKey.Length == 0)
+        {
+            return new SearchLayoutsResultDto();
+        }
 
         var nodesQuery = _dbContext.Nodes
             .AsNoTracking()
