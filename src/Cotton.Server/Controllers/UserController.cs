@@ -101,9 +101,9 @@ namespace Cotton.Server.Controllers
 
         [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpGet]
-        public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetUsers([FromQuery] bool calculateStorageUsage, CancellationToken cancellationToken)
         {
-            AdminGetUsersQuery query = new();
+            AdminGetUsersQuery query = new() { CalculateStorageUsage = calculateStorageUsage };
             IEnumerable<AdminUserDto> users = await _mediator.Send(query, cancellationToken);
             return Ok(users);
         }

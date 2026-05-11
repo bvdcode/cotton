@@ -9,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Handlers.Users
 {
-    public class AdminGetUsersQuery : IRequest<IEnumerable<AdminUserDto>> { }
+    public class AdminGetUsersQuery : IRequest<IEnumerable<AdminUserDto>>
+    { 
+        public bool CalculateStorageUsage { get; set; }
+    }
 
     public class AdminGetUsersQueryHandler(CottonDbContext _dbContext) : IRequestHandler<AdminGetUsersQuery, IEnumerable<AdminUserDto>>
     {
@@ -34,7 +37,7 @@ namespace Cotton.Server.Handlers.Users
                 })
                 .ToDictionaryAsync(x => x.UserId, x => x, cancellationToken);
 
-            var storageUsage = await _dbContext.ChunkOwnerships
+            Dictionary<Guid, long> storageUsage = request.CalculateStorageUsage ? await _dbContext.ChunkOwnerships
                 .AsNoTracking()
                 .Where(x => userIds.Contains(x.OwnerId))
                 .GroupBy(x => x.OwnerId)
@@ -43,7 +46,7 @@ namespace Cotton.Server.Handlers.Users
                     UserId = g.Key,
                     StorageUsedBytes = g.Sum(x => x.Chunk.StoredSizeBytes)
                 })
-                .ToDictionaryAsync(x => x.UserId, x => x.StorageUsedBytes, cancellationToken);
+                .ToDictionaryAsync(x => x.UserId, x => x.StorageUsedBytes, cancellationToken) : [];
 
             return users.Select(u =>
             {
