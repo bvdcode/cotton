@@ -1,4 +1,5 @@
 import { Divider, Stack, Typography } from "@mui/material";
+import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PrivacyTogglesSetting } from "./PrivacyTogglesSetting";
 import { GeoIpLookupSetting } from "./GeoIpLookupSetting";
@@ -6,6 +7,10 @@ import { AdminPageSurface } from "../components/AdminPageSurface";
 
 export const AdminPrivacySettingsPage = () => {
   const { t } = useTranslation("admin");
+  const location = useLocation();
+  const highlightSettingId =
+    (location.state as { highlightSettingId?: string } | null)
+      ?.highlightSettingId ?? null;
 
   return (
     <Stack>
@@ -20,7 +25,10 @@ export const AdminPrivacySettingsPage = () => {
             </Typography>
           </Stack>
 
-          <PrivacyTogglesSetting />
+          <PrivacyTogglesSetting
+            highlightSettingId={highlightSettingId}
+            highlightKey={location.key}
+          />
           <GeoIpLookupSetting />
         </Stack>
       </AdminPageSurface>

@@ -32,7 +32,7 @@ import {
   VerifyEmailPage,
 } from "../pages";
 import { AppLayout, PublicLayout } from "./layouts";
-import { Folder, Home, Delete, Search } from "@mui/icons-material";
+import { Folder, Home, Delete } from "@mui/icons-material";
 import { SetupWizardPage } from "../pages/setup/SetupWizardPage";
 import { SetupGate } from "../features/settings/SetupGate";
 
@@ -124,13 +124,6 @@ export function AppRoutes() {
       translationKey: "trash",
       element: <TrashPage />,
     },
-    {
-      path: "/search",
-      icon: <Search />,
-      protected: true,
-      translationKey: "search",
-      element: <SearchPage />,
-    },
   ];
 
   return (
@@ -157,6 +150,8 @@ export function AppRoutes() {
             element={route.element}
           />
         ))}
+
+        <Route path="/search" element={<SearchPage />} />
 
         <Route
           path="/admin"

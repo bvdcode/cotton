@@ -44,6 +44,7 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
+import { openSearchModal } from "../../features/search";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -288,6 +289,8 @@ export const FilesPage: React.FC = () => {
       onHomeClick: goHome,
       onViewModeCycle: cycleViewMode,
       showViewModeToggle: !isHugeFolder,
+      showSearch: true,
+      onSearchClick: openSearchModal,
       showUpload: !!nodeId,
       showNewFolder: !!nodeId,
       onUploadClick: fileUpload.handleUploadClick,

@@ -16,6 +16,7 @@ import React, { useEffect } from "react";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
+import { OPEN_SEARCH_EVENT, SearchModal } from "../../features/search";
 import { useSettingsStore } from "../../shared/store/settingsStore";
 import { AudioPlayerBar } from "../components/AudioPlayerBar";
 
@@ -33,10 +34,15 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const settingsLoading = useSettingsStore((s) => s.loading);
   const settingsError = useSettingsStore((s) => s.error);
   const fetchSettings = useSettingsStore((s) => s.fetchSettings);
+  const [searchOpen, setSearchOpen] = React.useState(false);
 
   const navTextColor = theme.palette.text.primary;
   const navActiveBg = alpha(navTextColor, 0.14);
   const navHoverBg = alpha(navTextColor, 0.2);
+
+  const openSearch = React.useCallback(() => {
+    setSearchOpen(true);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -53,6 +59,26 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
     settingsError,
     fetchSettings,
   ]);
+
+  useEffect(() => {
+    const handleOpenSearch = () => openSearch();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (event.key.toLocaleLowerCase() !== "f") return;
+
+      event.preventDefault();
+      openSearch();
+    };
+
+    window.addEventListener(OPEN_SEARCH_EVENT, handleOpenSearch);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener(OPEN_SEARCH_EVENT, handleOpenSearch);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openSearch]);
 
   return (
     <Box
@@ -167,6 +193,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
 
       <UploadFilePicker />
       <UploadQueueWidget />
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </Box>
   );
 };

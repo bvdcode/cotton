@@ -4,7 +4,226 @@
     "searchPlaceholder": "Поиск файлов и папок...",
     "error": "Поиск не удался. Попробуйте снова.",
     "enterQueryHint": "Начните вводить для поиска...",
-    "noResults": "Файлы или папки не найдены"
+    "noResults": "Файлы или папки не найдены",
+    "open": "Поиск",
+    "modal": {
+      "title": "Поиск",
+      "placeholder": "Искать файлы, папки, настройки...",
+      "emptyQuery": "Начните вводить запрос для поиска файлов, папок и настроек.",
+      "resultsCount": "Найдено: {{count}}"
+    },
+    "types": {
+      "folder": "Папка",
+      "file": "Файл",
+      "setting": "Настройка"
+    },
+    "actions": {
+      "openFile": "Открыть файл",
+      "openFolder": "Открыть папку",
+      "openSetting": "Открыть настройки"
+    },
+    "dictionary": [
+      {
+        "id": "privacy-deduplication",
+        "title": "Cross-user deduplication",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "deduplication",
+          "deduplicate",
+          "dedup",
+          "duplicates",
+          "privacy",
+          "security",
+          "cross-user",
+          "дедупликация",
+          "дедубликация",
+          "дубликаты",
+          "приватность",
+          "безопасность"
+        ],
+        "highlightSettingId": "allowCrossUserDeduplication",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-global-indexing",
+        "title": "Global indexing",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "global indexing",
+          "indexing",
+          "deep search",
+          "search index",
+          "глобальный индекс",
+          "индексация",
+          "поиск"
+        ],
+        "highlightSettingId": "allowGlobalIndexing",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-telemetry",
+        "title": "Telemetry",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "telemetry",
+          "diagnostics",
+          "privacy",
+          "телеметрия",
+          "диагностика"
+        ],
+        "highlightSettingId": "telemetry",
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-smtp",
+        "title": "SMTP configuration",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "smtp",
+          "mail",
+          "email",
+          "email settings",
+          "notifications",
+          "smtp server",
+          "from address",
+          "ssl",
+          "tls",
+          "смтп",
+          "почта",
+          "уведомления"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-email-mode",
+        "title": "Notification mode",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "notifications",
+          "email mode",
+          "mail mode",
+          "cotton cloud mail",
+          "custom smtp",
+          "уведомления",
+          "режим почты"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-settings",
+        "title": "Storage settings",
+        "description": "Storage",
+        "path": "/admin/storage-settings",
+        "keywords": [
+          "storage",
+          "storage backend",
+          "s3",
+          "bucket",
+          "endpoint",
+          "region",
+          "access key",
+          "secret key",
+          "хранилище",
+          "бакет",
+          "секретный ключ"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-statistics",
+        "title": "Storage statistics",
+        "description": "Storage and statistics",
+        "path": "/admin/storage-statistics",
+        "keywords": [
+          "storage statistics",
+          "stats",
+          "gc",
+          "garbage collector",
+          "chunks",
+          "dedup saved",
+          "compression saved",
+          "статистика",
+          "хранилище",
+          "чанки",
+          "сборка мусора"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "database-backup",
+        "title": "Database backup",
+        "description": "Admin",
+        "path": "/admin/database-backup",
+        "keywords": [
+          "backup",
+          "database",
+          "restore",
+          "dump",
+          "manifest",
+          "бэкап",
+          "резервная копия",
+          "база данных",
+          "дамп"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "users",
+        "title": "Users",
+        "description": "Admin",
+        "path": "/admin/users",
+        "keywords": [
+          "users",
+          "accounts",
+          "admin users",
+          "role",
+          "sessions",
+          "пользователи",
+          "аккаунты",
+          "роли",
+          "сессии"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "groups",
+        "title": "Groups",
+        "description": "Admin",
+        "path": "/admin/groups",
+        "keywords": [
+          "groups",
+          "user groups",
+          "группы",
+          "группы пользователей"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "general-settings",
+        "title": "General settings",
+        "description": "Admin",
+        "path": "/admin/general-settings",
+        "keywords": [
+          "general settings",
+          "public url",
+          "public base url",
+          "timezone",
+          "server usage",
+          "setup wizard",
+          "computation mode",
+          "общие настройки",
+          "публичный url",
+          "часовой пояс",
+          "мастер настройки"
+        ],
+        "adminOnly": true
+      }
+    ]
   },
   "common": {
     "languageName": "Русский",

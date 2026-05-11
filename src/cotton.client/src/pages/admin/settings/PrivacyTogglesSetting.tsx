@@ -4,7 +4,15 @@ import { settingsApi } from "../../../shared/api/settingsApi";
 import { TelemetryHelpButton } from "../../../shared/ui/TelemetryHelpButton";
 import { BooleanSwitchSetting } from "./BooleanSwitchSetting";
 
-export const PrivacyTogglesSetting = () => {
+type PrivacyTogglesSettingProps = {
+  highlightSettingId?: string | null;
+  highlightKey?: string;
+};
+
+export const PrivacyTogglesSetting = ({
+  highlightSettingId = null,
+  highlightKey,
+}: PrivacyTogglesSettingProps) => {
   const { t } = useTranslation("admin");
 
   return (
@@ -16,6 +24,8 @@ export const PrivacyTogglesSetting = () => {
         toastIdPrefix="admin-general:telemetry"
         load={settingsApi.getTelemetry}
         save={settingsApi.setTelemetry}
+        highlight={highlightSettingId === "telemetry"}
+        highlightKey={highlightKey}
       />
       <BooleanSwitchSetting
         title={t("settings.general.fields.allowDeduplication")}
@@ -23,6 +33,8 @@ export const PrivacyTogglesSetting = () => {
         toastIdPrefix="admin-general:allow-deduplication"
         load={settingsApi.getAllowCrossUserDeduplication}
         save={settingsApi.setAllowCrossUserDeduplication}
+        highlight={highlightSettingId === "allowCrossUserDeduplication"}
+        highlightKey={highlightKey}
       />
       <BooleanSwitchSetting
         title={t("settings.general.fields.allowGlobalIndexing")}
@@ -30,6 +42,8 @@ export const PrivacyTogglesSetting = () => {
         toastIdPrefix="admin-general:allow-global-indexing"
         load={settingsApi.getAllowGlobalIndexing}
         save={settingsApi.setAllowGlobalIndexing}
+        highlight={highlightSettingId === "allowGlobalIndexing"}
+        highlightKey={highlightKey}
       />
     </Stack>
   );

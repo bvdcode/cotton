@@ -11,6 +11,8 @@ type BooleanSwitchSettingProps = {
   toastIdPrefix: string;
   load: () => Promise<boolean>;
   save: (value: boolean) => Promise<void>;
+  highlight?: boolean;
+  highlightKey?: string;
 };
 
 export const BooleanSwitchSetting = ({
@@ -20,6 +22,8 @@ export const BooleanSwitchSetting = ({
   toastIdPrefix,
   load,
   save,
+  highlight = false,
+  highlightKey,
 }: BooleanSwitchSettingProps) => {
   const { t } = useTranslation("admin");
 
@@ -39,6 +43,8 @@ export const BooleanSwitchSetting = ({
       titleAction={titleAction}
       description={description}
       status={status}
+      highlight={highlight}
+      highlightKey={highlightKey}
       action={
         <Switch
           checked={value}

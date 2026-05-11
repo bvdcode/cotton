@@ -4,7 +4,226 @@
     "searchPlaceholder": "Search files and folders...",
     "error": "Search failed. Please try again.",
     "enterQueryHint": "Start typing to search...",
-    "noResults": "No files or folders found"
+    "noResults": "No files or folders found",
+    "open": "Search",
+    "modal": {
+      "title": "Search",
+      "placeholder": "Search files, folders, settings...",
+      "emptyQuery": "Start typing to search files, folders, and settings.",
+      "resultsCount": "{{count}} results"
+    },
+    "types": {
+      "folder": "Folder",
+      "file": "File",
+      "setting": "Setting"
+    },
+    "actions": {
+      "openFile": "Open file",
+      "openFolder": "Open folder",
+      "openSetting": "Open settings"
+    },
+    "dictionary": [
+      {
+        "id": "privacy-deduplication",
+        "title": "Cross-user deduplication",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "deduplication",
+          "deduplicate",
+          "dedup",
+          "duplicates",
+          "privacy",
+          "security",
+          "cross-user",
+          "\u0434\u0435\u0434\u0443\u043f\u043b\u0438\u043a\u0430\u0446\u0438\u044f",
+          "\u0434\u0435\u0434\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044f",
+          "\u0434\u0443\u0431\u043b\u0438\u043a\u0430\u0442\u044b",
+          "\u043f\u0440\u0438\u0432\u0430\u0442\u043d\u043e\u0441\u0442\u044c",
+          "\u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c"
+        ],
+        "highlightSettingId": "allowCrossUserDeduplication",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-global-indexing",
+        "title": "Global indexing",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "global indexing",
+          "indexing",
+          "deep search",
+          "search index",
+          "\u0433\u043b\u043e\u0431\u0430\u043b\u044c\u043d\u044b\u0439 \u0438\u043d\u0434\u0435\u043a\u0441",
+          "\u0438\u043d\u0434\u0435\u043a\u0441\u0430\u0446\u0438\u044f",
+          "\u043f\u043e\u0438\u0441\u043a"
+        ],
+        "highlightSettingId": "allowGlobalIndexing",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-telemetry",
+        "title": "Telemetry",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "telemetry",
+          "diagnostics",
+          "privacy",
+          "\u0442\u0435\u043b\u0435\u043c\u0435\u0442\u0440\u0438\u044f",
+          "\u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430"
+        ],
+        "highlightSettingId": "telemetry",
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-smtp",
+        "title": "SMTP configuration",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "smtp",
+          "mail",
+          "email",
+          "email settings",
+          "notifications",
+          "smtp server",
+          "from address",
+          "ssl",
+          "tls",
+          "\u0441\u043c\u0442\u043f",
+          "\u043f\u043e\u0447\u0442\u0430",
+          "\u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-email-mode",
+        "title": "Notification mode",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "notifications",
+          "email mode",
+          "mail mode",
+          "cotton cloud mail",
+          "custom smtp",
+          "\u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f",
+          "\u0440\u0435\u0436\u0438\u043c \u043f\u043e\u0447\u0442\u044b"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-settings",
+        "title": "Storage settings",
+        "description": "Storage",
+        "path": "/admin/storage-settings",
+        "keywords": [
+          "storage",
+          "storage backend",
+          "s3",
+          "bucket",
+          "endpoint",
+          "region",
+          "access key",
+          "secret key",
+          "\u0445\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0435",
+          "\u0431\u0430\u043a\u0435\u0442",
+          "\u0441\u0435\u043a\u0440\u0435\u0442\u043d\u044b\u0439 \u043a\u043b\u044e\u0447"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-statistics",
+        "title": "Storage statistics",
+        "description": "Storage and statistics",
+        "path": "/admin/storage-statistics",
+        "keywords": [
+          "storage statistics",
+          "stats",
+          "gc",
+          "garbage collector",
+          "chunks",
+          "dedup saved",
+          "compression saved",
+          "\u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430",
+          "\u0445\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0435",
+          "\u0447\u0430\u043d\u043a\u0438",
+          "\u0441\u0431\u043e\u0440\u043a\u0430 \u043c\u0443\u0441\u043e\u0440\u0430"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "database-backup",
+        "title": "Database backup",
+        "description": "Admin",
+        "path": "/admin/database-backup",
+        "keywords": [
+          "backup",
+          "database",
+          "restore",
+          "dump",
+          "manifest",
+          "\u0431\u044d\u043a\u0430\u043f",
+          "\u0440\u0435\u0437\u0435\u0440\u0432\u043d\u0430\u044f \u043a\u043e\u043f\u0438\u044f",
+          "\u0431\u0430\u0437\u0430 \u0434\u0430\u043d\u043d\u044b\u0445",
+          "\u0434\u0430\u043c\u043f"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "users",
+        "title": "Users",
+        "description": "Admin",
+        "path": "/admin/users",
+        "keywords": [
+          "users",
+          "accounts",
+          "admin users",
+          "role",
+          "sessions",
+          "\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438",
+          "\u0430\u043a\u043a\u0430\u0443\u043d\u0442\u044b",
+          "\u0440\u043e\u043b\u0438",
+          "\u0441\u0435\u0441\u0441\u0438\u0438"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "groups",
+        "title": "Groups",
+        "description": "Admin",
+        "path": "/admin/groups",
+        "keywords": [
+          "groups",
+          "user groups",
+          "\u0433\u0440\u0443\u043f\u043f\u044b",
+          "\u0433\u0440\u0443\u043f\u043f\u044b \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "general-settings",
+        "title": "General settings",
+        "description": "Admin",
+        "path": "/admin/general-settings",
+        "keywords": [
+          "general settings",
+          "public url",
+          "public base url",
+          "timezone",
+          "server usage",
+          "setup wizard",
+          "computation mode",
+          "\u043e\u0431\u0449\u0438\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438",
+          "\u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 url",
+          "\u0447\u0430\u0441\u043e\u0432\u043e\u0439 \u043f\u043e\u044f\u0441",
+          "\u043c\u0430\u0441\u0442\u0435\u0440 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438"
+        ],
+        "adminOnly": true
+      }
+    ]
   },
   "notifications": {
     "title": "Notifications",
