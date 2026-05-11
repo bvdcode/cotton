@@ -16,7 +16,6 @@ import {
   ToolbarButton,
   GridActionsCellItem,
   type GridColDef,
-  useGridApiContext,
   useGridRootProps,
 } from "@mui/x-data-grid";
 import { GridToolbar } from "@mui/x-data-grid/internals";
@@ -73,7 +72,6 @@ const UsersGridToolbar = ({
   onCreate,
   onRefresh,
 }: UsersGridToolbarProps) => {
-  const apiRef = useGridApiContext();
   const rootProps = useGridRootProps();
   const ColumnSelectorIcon = rootProps.slots.columnSelectorIcon;
   const FilterIcon = rootProps.slots.openFilterButtonIcon;
@@ -101,7 +99,7 @@ const UsersGridToolbar = ({
           </Tooltip>
 
           {!rootProps.disableColumnSelector && (
-            <Tooltip title={apiRef.current.getLocaleText("toolbarColumns")}>
+            <Tooltip title={rootProps.localeText.toolbarColumns}>
               <ColumnsPanelTrigger render={<ToolbarButton />}>
                 <ColumnSelectorIcon fontSize="small" />
               </ColumnsPanelTrigger>
@@ -109,7 +107,7 @@ const UsersGridToolbar = ({
           )}
 
           {!rootProps.disableColumnFilter && (
-            <Tooltip title={apiRef.current.getLocaleText("toolbarFilters")}>
+            <Tooltip title={rootProps.localeText.toolbarFilters}>
               <FilterPanelTrigger
                 render={(triggerProps, state) => (
                   <ToolbarButton
