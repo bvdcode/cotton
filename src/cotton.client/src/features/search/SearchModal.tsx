@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+} from "react";
 import {
   Alert,
   Box,
@@ -29,15 +37,19 @@ import {
   VideoFile,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { Virtuoso } from "react-virtuoso";
 import { useNavigate } from "react-router-dom";
 import { UserRole } from "../auth/types";
 import { useAuthStore } from "../../shared/store/authStore";
 import { useLayoutsStore } from "../../shared/store/layoutsStore";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import { formatBytes } from "../../shared/utils/formatBytes";
-import type { NodeDto } from "../../shared/api/layoutsApi";
+import {
+  layoutsApi,
+  type LayoutSearchResultDto,
+  type NodeDto,
+} from "../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
-import { useLayoutSearch } from "../../pages/search/hooks/useLayoutSearch";
 import { useFileInteractionHandlers } from "../../pages/files/hooks/useFileInteractionHandlers";
 import { FilePreviewModal, MediaLightbox } from "../../pages/files/components";
 import {
@@ -90,6 +102,8 @@ interface SearchModalProps {
 }
 
 const MIN_SETTING_QUERY_LENGTH = 3;
+const SEARCH_PAGE_SIZE = 80;
+const SEARCH_DEBOUNCE_MS = 260;
 
 const normalizeSearchText = (value: string): string =>
   value
@@ -125,6 +139,55 @@ const getSmallFileIcon = (fileName: string) => {
   return <InsertDriveFile color="action" sx={iconSx} />;
 };
 
+const mergeSearchResults = (
+  previous: LayoutSearchResultDto | null,
+  next: LayoutSearchResultDto,
+): LayoutSearchResultDto => {
+  if (!previous) return next;
+
+  return {
+    nodes: [...(previous.nodes ?? []), ...(next.nodes ?? [])],
+    files: [...(previous.files ?? []), ...(next.files ?? [])],
+    nodePaths: {
+      ...(previous.nodePaths ?? {}),
+      ...(next.nodePaths ?? {}),
+    },
+    filePaths: {
+      ...(previous.filePaths ?? {}),
+      ...(next.filePaths ?? {}),
+    },
+  };
+};
+
+const SearchResultsScroller = forwardRef<
+  HTMLDivElement,
+  ComponentPropsWithoutRef<"div">
+>((props, ref) => (
+  <Box
+    ref={ref}
+    {...props}
+    sx={{
+      overflowX: "hidden",
+      scrollbarWidth: "thin",
+      "&::-webkit-scrollbar": {
+        width: 8,
+      },
+      "&::-webkit-scrollbar-track": {
+        bgcolor: "transparent",
+      },
+      "&::-webkit-scrollbar-thumb": {
+        bgcolor: "action.disabled",
+        borderRadius: 1,
+      },
+      "&::-webkit-scrollbar-thumb:hover": {
+        bgcolor: "action.active",
+      },
+    }}
+  />
+));
+
+SearchResultsScroller.displayName = "SearchResultsScroller";
+
 export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const { t } = useTranslation("search");
   const { t: tCommon } = useTranslation("common");
@@ -132,21 +195,24 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const searchGenerationRef = useRef(0);
+  const requestedPageRef = useRef(0);
   const userRole = useAuthStore((s) => s.user?.role ?? null);
   const { rootNode, ensureHomeData } = useLayoutsStore();
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [results, setResults] = useState<LayoutSearchResultDto | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadedPage, setLoadedPage] = useState(0);
+  const [loadingInitial, setLoadingInitial] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const layoutId = rootNode?.layoutId;
-
-  const searchState = useLayoutSearch({
-    layoutId,
-    debounceMs: 160,
-    pageSize: 40,
-  });
-
-  const { query, totalCount, loading, error, results, setQuery, setPage } =
-    searchState;
-  const hasQuery = query.trim().length > 0;
+  const trimmedQuery = query.trim();
+  const hasQuery = trimmedQuery.length > 0;
+  const hasSearchQuery = debouncedQuery.length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -165,8 +231,83 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   }, [open]);
 
   useEffect(() => {
-    setPage(1);
-  }, [query, setPage]);
+    if (!trimmedQuery) {
+      setDebouncedQuery("");
+      return;
+    }
+
+    const handle = window.setTimeout(() => {
+      setDebouncedQuery(trimmedQuery);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(handle);
+  }, [trimmedQuery]);
+
+  const fetchSearchPage = useCallback(
+    async (
+      pageToLoad: number,
+      mode: "replace" | "append",
+      generation = searchGenerationRef.current,
+    ) => {
+      if (!layoutId || !debouncedQuery) return;
+
+      setError(null);
+      if (mode === "replace") {
+        setLoadingInitial(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const response = await layoutsApi.search({
+          layoutId,
+          query: debouncedQuery,
+          page: pageToLoad,
+          pageSize: SEARCH_PAGE_SIZE,
+        });
+
+        if (generation !== searchGenerationRef.current) return;
+
+        setResults((previous) =>
+          mode === "replace"
+            ? response.data
+            : mergeSearchResults(previous, response.data),
+        );
+        setTotalCount(response.totalCount);
+        setLoadedPage(pageToLoad);
+      } catch (err) {
+        if (generation !== searchGenerationRef.current) return;
+        requestedPageRef.current = Math.max(0, pageToLoad - 1);
+        console.error("Failed to search layouts", err);
+        setError("searchFailed");
+      } finally {
+        if (generation !== searchGenerationRef.current) return;
+        if (mode === "replace") {
+          setLoadingInitial(false);
+        } else {
+          setLoadingMore(false);
+        }
+      }
+    },
+    [debouncedQuery, layoutId],
+  );
+
+  useEffect(() => {
+    const generation = searchGenerationRef.current + 1;
+    searchGenerationRef.current = generation;
+    setResults(null);
+    setTotalCount(0);
+    setLoadedPage(0);
+    requestedPageRef.current = 0;
+    setLoadingInitial(false);
+    setLoadingMore(false);
+    setError(null);
+
+    if (!layoutId || !debouncedQuery) return;
+
+    requestedPageRef.current = 1;
+    void fetchSearchPage(1, "replace", generation);
+  }, [debouncedQuery, fetchSearchPage, layoutId]);
 
   const rawDictionary = t("dictionary", { returnObjects: true }) as unknown;
 
@@ -181,7 +322,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   }, [rawDictionary, userRole]);
 
   const matchedDictionaryRows = useMemo(() => {
-    const normalizedQuery = normalizeSearchText(query.trim());
+    const normalizedQuery = normalizeSearchText(debouncedQuery);
     if (normalizedQuery.length < MIN_SETTING_QUERY_LENGTH) return [];
 
     return dictionaryEntries
@@ -221,14 +362,14 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
       .filter((match): match is DictionaryMatch => Boolean(match))
       .sort((a, b) => a.score - b.score || a.row.id.localeCompare(b.row.id))
       .map((match) => match.row);
-  }, [dictionaryEntries, query]);
+  }, [debouncedQuery, dictionaryEntries]);
 
   const fileListSource = useSearchFileList({
     results,
-    loading,
+    loading: loadingInitial,
     error,
     totalCount,
-    hasQuery,
+    hasQuery: hasSearchQuery,
     rootNodeName: rootNode?.name,
   });
 
@@ -255,10 +396,36 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   );
 
   const rows = useMemo(
-    () => (hasQuery ? [...matchedDictionaryRows, ...contentRows] : []),
-    [contentRows, hasQuery, matchedDictionaryRows],
+    () => (hasSearchQuery ? [...matchedDictionaryRows, ...contentRows] : []),
+    [contentRows, hasSearchQuery, matchedDictionaryRows],
   );
-  const resultCount = hasQuery ? matchedDictionaryRows.length + totalCount : 0;
+  const loadedContentCount =
+    (results?.nodes?.length ?? 0) + (results?.files?.length ?? 0);
+  const hasMoreContent = hasSearchQuery && loadedContentCount < totalCount;
+  const resultCount = hasSearchQuery ? matchedDictionaryRows.length + totalCount : 0;
+  const waitingForResults =
+    hasQuery &&
+    (trimmedQuery !== debouncedQuery || (loadingInitial && rows.length === 0));
+
+  const loadNextPage = useCallback(() => {
+    if (!hasMoreContent || loadingInitial || loadingMore || loadedPage <= 0) {
+      return;
+    }
+
+    const nextPage = loadedPage + 1;
+    if (requestedPageRef.current >= nextPage) {
+      return;
+    }
+
+    requestedPageRef.current = nextPage;
+    void fetchSearchPage(nextPage, "append");
+  }, [
+    fetchSearchPage,
+    hasMoreContent,
+    loadedPage,
+    loadingInitial,
+    loadingMore,
+  ]);
 
   const sortedFiles = useMemo(() => {
     if (!results) return [];
@@ -322,7 +489,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     [navigate, onClose],
   );
 
-  const renderPreview = (row: SearchRow) => {
+  const renderPreview = useCallback((row: SearchRow) => {
     if (row.kind === "setting") {
       return <Settings color="primary" sx={{ fontSize: 28 }} />;
     }
@@ -358,9 +525,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     }
 
     return getSmallFileIcon(row.file.name);
-  };
+  }, [failedPreviews]);
 
-  const getRowText = (row: SearchRow) => {
+  const getRowText = useCallback((row: SearchRow) => {
     if (row.kind === "setting") {
       return {
         title: row.entry.title,
@@ -383,9 +550,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
       meta: row.path ? `${row.path} - ${size}` : size,
       action: t("actions.openFile"),
     };
-  };
+  }, [t]);
 
-  const activateRow = (row: SearchRow) => {
+  const activateRow = useCallback((row: SearchRow) => {
     if (row.kind === "setting") {
       openSetting(row.entry);
       return;
@@ -397,7 +564,94 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     }
 
     openFile(row.file);
-  };
+  }, [openFile, openFolder, openSetting]);
+
+  const renderSearchRow = useCallback(
+    (index: number, row: SearchRow) => {
+      const text = getRowText(row);
+      return (
+        <ButtonBase
+          onClick={() => activateRow(row)}
+          sx={{
+            width: "100%",
+            minHeight: 68,
+            justifyContent: "stretch",
+            textAlign: "left",
+            px: 1.25,
+            py: 1,
+            borderBottom: index < rows.length - 1 ? 1 : 0,
+            borderColor: "divider",
+            bgcolor: "background.default",
+            "&:hover": {
+              bgcolor: "action.hover",
+            },
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1.25}
+            alignItems="center"
+            width="100%"
+            minWidth={0}
+          >
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                flexShrink: 0,
+                borderRadius: 1,
+                bgcolor: "action.hover",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              {renderPreview(row)}
+            </Box>
+
+            <Stack spacing={0.25} minWidth={0} flex={1}>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                noWrap
+                title={text.title}
+              >
+                {text.title}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                noWrap
+                title={text.meta}
+              >
+                {text.meta}
+              </Typography>
+            </Stack>
+
+            <Tooltip title={text.action}>
+              <IconButton
+                size="small"
+                aria-label={text.action}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  activateRow(row);
+                }}
+                sx={{ flexShrink: 0 }}
+              >
+                {row.kind === "folder" ? (
+                  <FolderOpen fontSize="small" />
+                ) : (
+                  <OpenInNew fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </ButtonBase>
+      );
+    },
+    [activateRow, getRowText, renderPreview, rows.length],
+  );
 
   return (
     <>
@@ -408,12 +662,21 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
         maxWidth={false}
         slotProps={{
           paper: {
-            sx: {
-              width: { xs: "100%", sm: 880, lg: 1040 },
-              height: { xs: "100%", sm: 680 },
+            sx: (theme) => ({
+              width: {
+                xs: "100%",
+                sm: hasQuery ? 880 : 720,
+                lg: hasQuery ? 1040 : 760,
+              },
+              height: { xs: "100%", sm: hasQuery ? 680 : 112 },
               maxHeight: { xs: "100%", sm: "calc(100vh - 32px)" },
               borderRadius: { xs: 0, sm: 1.5 },
-            },
+              bgcolor: "background.default",
+              transition: theme.transitions.create(["height", "width"], {
+                duration: theme.transitions.duration.shorter,
+                easing: theme.transitions.easing.easeInOut,
+              }),
+            }),
           },
         }}
       >
@@ -425,6 +688,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             minHeight: 0,
             justifyContent: "flex-start",
             overflow: "hidden",
+            bgcolor: "background.default",
             p: { xs: 1.5, sm: 2 },
           }}
         >
@@ -460,9 +724,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                       >
                         <Close />
                       </IconButton>
-                    ) : loading ? (
+                    ) : waitingForResults ? (
                       <CircularProgress size={18} />
-                    ) : hasQuery ? (
+                    ) : hasSearchQuery ? (
                       <Typography
                         variant="caption"
                         color="text.secondary"
@@ -494,114 +758,58 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 bgcolor: "background.default",
               }}
             >
-              <Box
-                sx={{
-                  height: "100%",
-                  overflowY: "auto",
-                  bgcolor: "background.default",
-                }}
-              >
-                {rows.length === 0 && !loading ? (
-                  <Box
-                    sx={{
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      px: 3,
-                      textAlign: "center",
-                    }}
-                  >
-                    <Typography color="text.secondary">
-                      {t("noResults")}
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Stack divider={<Box sx={{ borderBottom: 1, borderColor: "divider" }} />}>
-                    {rows.map((row) => {
-                      const text = getRowText(row);
-                      return (
-                        <ButtonBase
-                          key={row.id}
-                          onClick={() => activateRow(row)}
+              {waitingForResults ? (
+                <Box
+                  sx={{
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <CircularProgress size={24} />
+                </Box>
+              ) : rows.length === 0 ? (
+                <Box
+                  sx={{
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    px: 3,
+                    textAlign: "center",
+                  }}
+                >
+                  <Typography color="text.secondary">
+                    {t("noResults")}
+                  </Typography>
+                </Box>
+              ) : (
+                <Virtuoso
+                  style={{ height: "100%" }}
+                  data={rows}
+                  overscan={600}
+                  defaultItemHeight={68}
+                  components={{
+                    Scroller: SearchResultsScroller,
+                    Footer: () =>
+                      loadingMore ? (
+                        <Box
                           sx={{
-                            width: "100%",
-                            minHeight: 68,
-                            justifyContent: "stretch",
-                            textAlign: "left",
-                            px: 1.25,
-                            py: 1,
-                            "&:hover": {
-                              bgcolor: "action.hover",
-                            },
+                            display: "flex",
+                            justifyContent: "center",
+                            py: 1.5,
                           }}
                         >
-                          <Stack
-                            direction="row"
-                            spacing={1.25}
-                            alignItems="center"
-                            width="100%"
-                            minWidth={0}
-                          >
-                            <Box
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                flexShrink: 0,
-                                borderRadius: 1,
-                                bgcolor: "action.hover",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {renderPreview(row)}
-                            </Box>
-
-                            <Stack spacing={0.25} minWidth={0} flex={1}>
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                noWrap
-                                title={text.title}
-                              >
-                                {text.title}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                noWrap
-                                title={text.meta}
-                              >
-                                {text.meta}
-                              </Typography>
-                            </Stack>
-
-                            <Tooltip title={text.action}>
-                              <IconButton
-                                size="small"
-                                aria-label={text.action}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  activateRow(row);
-                                }}
-                                sx={{ flexShrink: 0 }}
-                              >
-                                {row.kind === "folder" ? (
-                                  <FolderOpen fontSize="small" />
-                                ) : (
-                                  <OpenInNew fontSize="small" />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        </ButtonBase>
-                      );
-                    })}
-                  </Stack>
-                )}
-              </Box>
+                          <CircularProgress size={18} />
+                        </Box>
+                      ) : null,
+                  }}
+                  computeItemKey={(_, row) => row.id}
+                  endReached={loadNextPage}
+                  itemContent={renderSearchRow}
+                />
+              )}
             </Box>
           )}
         </DialogContent>
