@@ -14,6 +14,7 @@ import type { SelectChangeEvent } from "@mui/material/Select";
 import BackupIcon from "@mui/icons-material/Backup";
 import GroupsIcon from "@mui/icons-material/Groups";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
 import StorageIcon from "@mui/icons-material/Storage";
@@ -23,8 +24,9 @@ import { useTranslation } from "react-i18next";
 
 type AdminMenuItem = {
   id:
-    | "users"
     | "generalSettings"
+    | "users"
+    | "groups"
     | "privacySettings"
     | "storage"
     | "notificationsSettings"
@@ -42,18 +44,24 @@ export const AdminLayoutPage = () => {
 
   const items: AdminMenuItem[] = [
     {
-      id: "users",
-      to: "/admin/users",
-      title: t("menu.usersAndGroups", {
-        defaultValue: "Users and groups",
-      }),
-      icon: <GroupsIcon />,
-    },
-    {
       id: "generalSettings",
       to: "/admin/general-settings",
       title: t("menu.generalSettings"),
       icon: <SettingsIcon />,
+    },
+    {
+      id: "users",
+      to: "/admin/users",
+      title: t("menu.users"),
+      icon: <PersonIcon />,
+    },
+    {
+      id: "groups",
+      to: "/admin/groups",
+      title: t("menu.groups", {
+        defaultValue: "Groups",
+      }),
+      icon: <GroupsIcon />,
     },
     {
       id: "privacySettings",

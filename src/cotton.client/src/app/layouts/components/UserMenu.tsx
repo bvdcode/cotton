@@ -182,7 +182,7 @@ export const UserMenu = () => {
           <MenuItem
             onClick={() => {
               handleClose();
-              navigate("/admin/users");
+              navigate("/admin");
             }}
           >
             <ListItemIcon>

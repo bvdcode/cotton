@@ -10,6 +10,7 @@ export { SharePage } from "./share/SharePage";
 export {
 	AdminLayoutPage,
 	AdminUsersPage,
+	AdminGroupsPage,
 	AdminDatabaseBackupPage,
 	AdminStorageStatisticsPage,
 	AdminGeneralSettingsPage,

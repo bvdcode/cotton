@@ -21,6 +21,7 @@ import {
   SharePage,
   AdminLayoutPage,
   AdminUsersPage,
+  AdminGroupsPage,
   AdminDatabaseBackupPage,
   AdminStorageStatisticsPage,
   AdminStorageSettingsPage,
@@ -165,8 +166,9 @@ export function AppRoutes() {
             </RequireAdmin>
           }
         >
-          <Route index element={<Navigate to="users" replace />} />
+          <Route index element={<Navigate to="general-settings" replace />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="groups" element={<AdminGroupsPage />} />
           <Route path="database-backup" element={<AdminDatabaseBackupPage />} />
           <Route
             path="storage-statistics"

@@ -9,7 +9,6 @@ type ConsoleErrorSource =
 type BrowserDetails = {
   name: string;
   version: string;
-  userAgent: string;
 };
 
 type ConsoleErrorEntry = {
@@ -107,7 +106,6 @@ const detectBrowser = (): BrowserDetails => {
     return {
       name,
       version: match?.[1] ?? "unknown",
-      userAgent: ua,
     };
   };
 
@@ -130,7 +128,6 @@ const detectBrowser = (): BrowserDetails => {
   return {
     name: "Unknown",
     version: "unknown",
-    userAgent: ua,
   };
 };
 
@@ -323,7 +320,6 @@ ${version}
 - Cotton version: ${version}
 - Browser: ${browser.name}
 - Browser version: ${browser.version}
-- User-Agent: ${browser.userAgent}
 - OS: ${os}
 - User role: ${role}
 - Current URL: ${maskCurrentUrlHost(currentUrl)}
