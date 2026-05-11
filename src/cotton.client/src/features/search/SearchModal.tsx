@@ -808,7 +808,6 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             display: "flex",
             flexDirection: "column",
             gap: 1,
-            minHeight: 0,
             justifyContent: "flex-start",
             overflow: "hidden",
             bgcolor: "background.default",
@@ -848,8 +847,8 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                         <Close />
                       </IconButton>
                     ) : waitingForResults ? (
-                      <CircularProgress size={18} />
-                    ) : hasSearchQuery ? (
+                      <CircularProgress size={24} />
+                    ) : hasSearchQuery && resultCount > 0 ? (
                       <Typography
                         variant="caption"
                         color="text.secondary"
