@@ -2,7 +2,6 @@ import {
   Alert,
   Badge,
   Box,
-  Paper,
   Stack,
   Tooltip,
   Typography,
@@ -29,6 +28,7 @@ import { UserRole } from "../../../features/auth/types";
 import { CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
 import { formatDateOnly } from "../../../shared/utils/dateOnly";
+import { AdminPageSurface } from "../components/AdminPageSurface";
 
 type LoadState =
   | { kind: "idle" }
@@ -338,67 +338,60 @@ export const AdminUsersPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
-        <Paper
+      <AdminPageSurface width="wide">
+        <Stack p={3} pb={2} spacing={0.5}>
+          <Typography variant="h5" fontWeight={700}>
+            {t("users.title")}
+          </Typography>
+        </Stack>
+
+        {loadState.kind === "error" && (
+          <Box px={3} pb={2}>
+            <Alert severity="error">{loadState.message}</Alert>
+          </Box>
+        )}
+
+        <Box
           sx={{
-            width: "min(100%, 880px)",
-            overflow: "hidden",
+            height: { xs: 520, md: 640 },
+            minHeight: 420,
+            maxHeight: "calc(100dvh - 220px)",
+            borderTop: "1px solid",
+            borderColor: "divider",
           }}
         >
-          <Stack p={3} pb={2} spacing={0.5}>
-            <Typography variant="h5" fontWeight={700}>
-              {t("users.title")}
-            </Typography>
-          </Stack>
-
-          {loadState.kind === "error" && (
-            <Box px={3} pb={2}>
-              <Alert severity="error">{loadState.message}</Alert>
-            </Box>
-          )}
-
-          <Box
-            sx={{
-              height: { xs: 520, md: 640 },
-              minHeight: 420,
-              maxHeight: "calc(100dvh - 220px)",
-              borderTop: "1px solid",
-              borderColor: "divider",
+          <DataGrid
+            rows={users}
+            columns={columns}
+            getRowId={(row) => row.id}
+            loading={isLoading}
+            disableRowSelectionOnClick
+            showToolbar
+            label={t("users.title")}
+            pageSizeOptions={[10, 25, 50, 100]}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 25,
+                  page: 0,
+                },
+              },
             }}
-          >
-            <DataGrid
-              rows={users}
-              columns={columns}
-              getRowId={(row) => row.id}
-              loading={isLoading}
-              disableRowSelectionOnClick
-              showToolbar
-              label={t("users.title")}
-              pageSizeOptions={[10, 25, 50, 100]}
-              initialState={{
-                pagination: {
-                  paginationModel: {
-                    pageSize: 25,
-                    page: 0,
-                  },
-                },
-              }}
-              pagination
-              slots={{ toolbar: GridToolbarSlot }}
-              sx={{
-                height: "100%",
-                border: 0,
-                "& .MuiDataGrid-toolbar": {
-                  px: 1,
-                  py: 0.75,
-                  borderBottom: "1px solid",
-                  borderColor: "divider",
-                },
-              }}
-            />
-          </Box>
-        </Paper>
-      </Box>
+            pagination
+            slots={{ toolbar: GridToolbarSlot }}
+            sx={{
+              height: "100%",
+              border: 0,
+              "& .MuiDataGrid-toolbar": {
+                px: 1,
+                py: 0.75,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+              },
+            }}
+          />
+        </Box>
+      </AdminPageSurface>
 
       <CreateUserDialog
         open={createOpen}

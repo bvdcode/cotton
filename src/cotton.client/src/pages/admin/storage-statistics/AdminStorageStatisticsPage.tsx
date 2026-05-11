@@ -4,7 +4,6 @@ import {
   Button,
   CircularProgress,
   LinearProgress,
-  Paper,
   Stack,
   Tooltip,
   ToggleButton,
@@ -32,6 +31,7 @@ import {
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { AdminStorageBackendSettings } from "../settings/AdminStorageBackendSettings";
 import { storageSpaceOptions } from "../settings/adminGeneralSettingsModel";
+import { AdminPageSurface } from "../components/AdminPageSurface";
 
 type LoadState =
   | { kind: "idle" }
@@ -468,13 +468,7 @@ export const AdminStorageStatisticsPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
-      <Paper
-        sx={{
-          width: "min(100%, 880px)",
-          overflow: "hidden",
-        }}
-      >
+      <AdminPageSurface>
         <Stack p={3} spacing={3}>
           <Stack
             direction={{ xs: "column", md: "row" }}
@@ -723,8 +717,7 @@ export const AdminStorageStatisticsPage = () => {
             </Stack>
           )}
         </Stack>
-      </Paper>
-      </Box>
+      </AdminPageSurface>
     </Stack>
   );
 };

@@ -2,7 +2,6 @@ import {
   Box,
   Divider,
   IconButton,
-  Paper,
   Stack,
   Tooltip,
   Typography,
@@ -14,6 +13,7 @@ import { ComputationModeSetting } from "./ComputationModeSetting";
 import { PublicBaseUrlSetting } from "./PublicBaseUrlSetting";
 import { ServerUsageSetting } from "./ServerUsageSetting";
 import { TimezoneSetting } from "./TimezoneSetting";
+import { AdminPageSurface } from "../components/AdminPageSurface";
 
 export const AdminGeneralSettingsPage = () => {
   const { t } = useTranslation("admin");
@@ -21,14 +21,7 @@ export const AdminGeneralSettingsPage = () => {
 
   return (
     <Stack>
-      <Paper
-        sx={{
-          maxWidth: 880,
-          width: "100%",
-          mx: "auto",
-          overflow: "hidden",
-        }}
-      >
+      <AdminPageSurface>
         <Stack p={3} spacing={3} divider={<Divider flexItem />}>
           <Box
             display="flex"
@@ -55,7 +48,7 @@ export const AdminGeneralSettingsPage = () => {
           <ComputationModeSetting />
           <ServerUsageSetting />
         </Stack>
-      </Paper>
+      </AdminPageSurface>
     </Stack>
   );
 };

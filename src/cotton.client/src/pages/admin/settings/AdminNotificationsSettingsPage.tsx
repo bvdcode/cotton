@@ -1,8 +1,6 @@
 import {
   Alert,
-  Box,
   Divider,
-  Paper,
   Stack,
   Typography,
 } from "@mui/material";
@@ -24,6 +22,7 @@ import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { EmailModeSelector } from "./EmailModeSelector";
 import { SmtpConfigForm } from "./SmtpConfigForm";
 import type { SaveStatus } from "./useAutoSavedSetting";
+import { AdminPageSurface } from "../components/AdminPageSurface";
 
 const SAVED_FLASH_MS = 1500;
 type FlashTimers = {
@@ -201,13 +200,7 @@ export const AdminNotificationsSettingsPage = () => {
 
   return (
     <Stack>
-      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
-      <Paper
-        sx={{
-          width: "min(100%, 880px)",
-          overflow: "hidden",
-        }}
-      >
+      <AdminPageSurface>
         <Stack p={3} spacing={3} divider={<Divider flexItem />}>
           <Typography variant="h5" fontWeight={700}>
             {t("notificationsSettings.title")}
@@ -235,8 +228,7 @@ export const AdminNotificationsSettingsPage = () => {
             />
           )}
         </Stack>
-      </Paper>
-      </Box>
+      </AdminPageSurface>
     </Stack>
   );
 };

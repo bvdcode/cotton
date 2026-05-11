@@ -4,7 +4,6 @@ import {
   Button,
   CircularProgress,
   LinearProgress,
-  Paper,
   Skeleton,
   Stack,
   Typography,
@@ -18,6 +17,7 @@ import {
 } from "../../../shared/api/adminApi";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import { AdminPageSurface } from "../components/AdminPageSurface";
 
 type LoadState =
   | { kind: "idle" }
@@ -197,13 +197,7 @@ export const AdminDatabaseBackupPage = () => {
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
-      <Paper
-        sx={{
-          width: "min(100%, 880px)",
-          overflow: "hidden",
-        }}
-      >
+      <AdminPageSurface>
         <Stack p={3} spacing={3}>
           <Stack
             direction={{ xs: "column", md: "row" }}
@@ -334,8 +328,7 @@ export const AdminDatabaseBackupPage = () => {
             {t("databaseBackup.state.restoreIfEmptyHint")}
           </Alert>
         </Stack>
-      </Paper>
-      </Box>
+      </AdminPageSurface>
     </Stack>
   );
 };

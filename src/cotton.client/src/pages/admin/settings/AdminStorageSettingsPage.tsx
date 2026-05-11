@@ -6,7 +6,6 @@ import {
   CircularProgress,
   Divider,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   ToggleButton,
@@ -31,6 +30,7 @@ import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { SettingsSection } from "./SettingsSection";
 import { storageSpaceOptions } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
+import { AdminPageSurface } from "../components/AdminPageSurface";
 
 const SAVED_FLASH_MS = 1500;
 type FlashTimers = {
@@ -261,13 +261,7 @@ export const AdminStorageSettingsPage = () => {
 
   return (
     <Stack>
-      <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
-      <Paper
-        sx={{
-          width: "min(100%, 880px)",
-          overflow: "hidden",
-        }}
-      >
+      <AdminPageSurface>
         <Stack p={3} spacing={3} divider={<Divider flexItem />}>
           <Typography variant="h5" fontWeight={700}>
             {t("storageSettings.title")}
@@ -414,8 +408,7 @@ export const AdminStorageSettingsPage = () => {
             </ToggleButtonGroup>
           </SettingsSection>
         </Stack>
-      </Paper>
-      </Box>
+      </AdminPageSurface>
     </Stack>
   );
 };
