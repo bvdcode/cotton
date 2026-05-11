@@ -41,9 +41,6 @@ export const shareFolder = async (
 
     switch (outcome.kind) {
       case "shared":
-        toast.success(t("share.folderShared", { ns: "files", name: folderName }), {
-          toastId: `share-folder-shared-${nodeId}`,
-        });
         return;
       case "copied":
         toast.success(t("share.folderCopied", { ns: "files", name: folderName }), {
