@@ -92,9 +92,21 @@ export interface GetGcChunksTimelineRequest {
   toUtc?: string;
 }
 
+export interface AdminGetUsersRequest {
+  calculateStorageUsage?: boolean;
+  signal?: AbortSignal;
+}
+
 export const adminApi = {
-  getUsers: async (): Promise<AdminUserDto[]> => {
-    const response = await httpClient.get<AdminUserDto[]>("users");
+  getUsers: async (
+    request?: AdminGetUsersRequest,
+  ): Promise<AdminUserDto[]> => {
+    const response = await httpClient.get<AdminUserDto[]>("users", {
+      params: {
+        calculateStorageUsage: request?.calculateStorageUsage || undefined,
+      },
+      signal: request?.signal,
+    });
     return response.data;
   },
 

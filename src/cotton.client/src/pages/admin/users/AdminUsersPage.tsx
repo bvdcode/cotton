@@ -3,11 +3,12 @@ import {
   Badge,
   Box,
   Chip,
+  CircularProgress,
   Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ColumnsPanelTrigger,
@@ -24,7 +25,10 @@ import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-import { getApiErrorMessage } from "../../../shared/api/httpClient";
+import {
+  getApiErrorMessage,
+  isAxiosError,
+} from "../../../shared/api/httpClient";
 import { adminApi, type AdminUserDto } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
 import { CreateUserDialog } from "./CreateUserDialog";
@@ -56,6 +60,12 @@ const formatStorageBytes = (bytes: number): string => {
     maximumFractionDigits: fractionDigits,
   }).format(value)} ${units[unitIndex]}`;
 };
+
+const isRequestCancelled = (
+  error: unknown,
+  signal: AbortSignal,
+): boolean =>
+  signal.aborted || (isAxiosError(error) && error.code === "ERR_CANCELED");
 
 interface UsersGridToolbarProps {
   createLabel: string;
@@ -137,8 +147,10 @@ export const AdminUsersPage = () => {
 
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
+  const [storageUsageLoading, setStorageUsageLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUserDto | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const usersRequestControllerRef = useRef<AbortController | null>(null);
 
   const roleLabel = useMemo(() => {
     return (r: UserRole) => {
@@ -148,26 +160,106 @@ export const AdminUsersPage = () => {
     };
   }, [t]);
 
-  const fetchUsers = useCallback(async () => {
-    setLoadState({ kind: "loading" });
+  const loadStorageUsage = useCallback(async (signal: AbortSignal) => {
     try {
-      const result = await adminApi.getUsers();
+      const result = await adminApi.getUsers({
+        calculateStorageUsage: true,
+        signal,
+      });
+
+      if (signal.aborted) {
+        return;
+      }
+
+      const storageUsageByUserId = new Map(
+        result.map((user) => [user.id, user.storageUsedBytes]),
+      );
+
+      setUsers((current) =>
+        current.map((user) => {
+          const storageUsedBytes = storageUsageByUserId.get(user.id);
+          return storageUsedBytes === undefined
+            ? user
+            : { ...user, storageUsedBytes };
+        }),
+      );
+    } catch (error) {
+      if (isRequestCancelled(error, signal)) {
+        return;
+      }
+
+      // The fast user list is still useful; leave storage usage at its
+      // server-provided fallback if the secondary calculation fails.
+    } finally {
+      if (!signal.aborted) {
+        setStorageUsageLoading(false);
+      }
+    }
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    usersRequestControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    usersRequestControllerRef.current = controller;
+    const { signal } = controller;
+    let storageUsageStarted = false;
+
+    setLoadState({ kind: "loading" });
+    setStorageUsageLoading(false);
+
+    try {
+      const result = await adminApi.getUsers({ signal });
+
+      if (signal.aborted) {
+        return;
+      }
+
       setUsers(result);
       setLoadState({ kind: "idle" });
-    } catch (e) {
-      const message = getApiErrorMessage(e);
+
+      if (result.length === 0) {
+        if (usersRequestControllerRef.current === controller) {
+          usersRequestControllerRef.current = null;
+        }
+        return;
+      }
+
+      setStorageUsageLoading(true);
+      storageUsageStarted = true;
+      void loadStorageUsage(signal).finally(() => {
+        if (usersRequestControllerRef.current === controller) {
+          usersRequestControllerRef.current = null;
+        }
+      });
+    } catch (error) {
+      if (isRequestCancelled(error, signal)) {
+        return;
+      }
+
+      const message = getApiErrorMessage(error);
       if (message) {
         setLoadState({ kind: "error", message });
         return;
       }
 
       setLoadState({ kind: "error", message: t("users.errors.loadFailed") });
+    } finally {
+      if (
+        !storageUsageStarted &&
+        usersRequestControllerRef.current === controller
+      ) {
+        usersRequestControllerRef.current = null;
+      }
     }
-  }, [t]);
+  }, [loadStorageUsage, t]);
 
   const isLoading = loadState.kind === "loading";
   const createLabel = t("users.create.button");
   const refreshLabel = t("users.refresh");
+  const storageUsageCalculatingLabel = t("users.storageUsage.calculating", {
+    defaultValue: "Calculating storage usage",
+  });
 
   const columns: GridColDef<AdminUserDto>[] = useMemo(
     () => [
@@ -270,13 +362,21 @@ export const AdminUsersPage = () => {
             alignItems="center"
             justifyContent="flex-end"
           >
-            <Typography
-              variant="body2"
-              fontWeight={600}
-              sx={{ fontVariantNumeric: "tabular-nums" }}
-            >
-              {formatStorageBytes(params.row.storageUsedBytes)}
-            </Typography>
+            {storageUsageLoading ? (
+              <CircularProgress
+                aria-label={storageUsageCalculatingLabel}
+                size={16}
+                thickness={5}
+              />
+            ) : (
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {formatStorageBytes(params.row.storageUsedBytes)}
+              </Typography>
+            )}
           </Box>
         ),
       },
@@ -320,35 +420,17 @@ export const AdminUsersPage = () => {
         ],
       },
     ],
-    [roleLabel, t],
+    [roleLabel, storageUsageCalculatingLabel, storageUsageLoading, t],
   );
 
   useEffect(() => {
-    let cancelled = false;
-
-    adminApi
-      .getUsers()
-      .then((result) => {
-        if (!cancelled) {
-          setUsers(result);
-          setLoadState({ kind: "idle" });
-        }
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        const message = getApiErrorMessage(e);
-        if (message) {
-          setLoadState({ kind: "error", message });
-          return;
-        }
-
-        setLoadState({ kind: "error", message: t("users.errors.loadFailed") });
-      });
+    void fetchUsers();
 
     return () => {
-      cancelled = true;
+      usersRequestControllerRef.current?.abort();
+      usersRequestControllerRef.current = null;
     };
-  }, [t]);
+  }, [fetchUsers]);
 
   const GridToolbarSlot = useMemo(() => {
     const ToolbarSlot = () => (
