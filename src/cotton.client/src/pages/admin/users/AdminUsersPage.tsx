@@ -1,11 +1,4 @@
-import {
-  Alert,
-  Badge,
-  Box,
-  Stack,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Alert, Badge, Box, Stack, Tooltip, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -338,7 +331,7 @@ export const AdminUsersPage = () => {
 
   return (
     <Stack spacing={2}>
-      <AdminPageSurface width="wide">
+      <AdminPageSurface>
         <Stack p={3} pb={2} spacing={0.5}>
           <Typography variant="h5" fontWeight={700}>
             {t("users.title")}

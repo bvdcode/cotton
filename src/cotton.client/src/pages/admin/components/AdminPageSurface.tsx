@@ -1,26 +1,17 @@
 import { Box, Paper } from "@mui/material";
 import type { ReactNode } from "react";
 
-export const ADMIN_PAGE_SURFACE_WIDTHS = {
-  default: 880,
-  wide: 1280,
-} as const;
-
-export type AdminPageSurfaceWidth = keyof typeof ADMIN_PAGE_SURFACE_WIDTHS;
+export const ADMIN_PAGE_SURFACE_WIDTH = 1280;
 
 interface AdminPageSurfaceProps {
   children: ReactNode;
-  width?: AdminPageSurfaceWidth;
 }
 
-export const AdminPageSurface = ({
-  children,
-  width = "default",
-}: AdminPageSurfaceProps) => (
+export const AdminPageSurface = ({ children }: AdminPageSurfaceProps) => (
   <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
     <Paper
       sx={{
-        width: `min(100%, ${ADMIN_PAGE_SURFACE_WIDTHS[width]}px)`,
+        width: `min(100%, ${ADMIN_PAGE_SURFACE_WIDTH}px)`,
         overflow: "hidden",
       }}
     >
