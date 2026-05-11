@@ -1,4 +1,12 @@
-import { Alert, Badge, Box, Stack, Tooltip, Typography } from "@mui/material";
+import {
+  Alert,
+  Badge,
+  Box,
+  Chip,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,31 +23,23 @@ import { GridToolbar } from "@mui/x-data-grid/internals";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { adminApi, type AdminUserDto } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
 import { CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
-import { formatDateOnly } from "../../../shared/utils/dateOnly";
+import {
+  formatDateOnly,
+  formatRelativeTime,
+} from "../../../shared/utils/dateOnly";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 
 type LoadState =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "error"; message: string };
-
-const formatDateTime = (iso: string | null): string => {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
 
 const formatStorageBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -179,7 +179,7 @@ export const AdminUsersPage = () => {
         field: "username",
         headerName: t("users.columns.username"),
         flex: 1,
-        minWidth: 120,
+        minWidth: 100,
       },
       {
         field: "email",
@@ -192,8 +192,19 @@ export const AdminUsersPage = () => {
       {
         field: "role",
         headerName: t("users.columns.role"),
-        width: 130,
-        valueGetter: (_, row) => roleLabel(row.role),
+        minWidth: 100,
+        renderCell: (params) => {
+          const role = params.row.role;
+          const isAdmin = role === UserRole.Admin;
+          return (
+            <Chip
+              label={roleLabel(role)}
+              color={isAdmin ? "primary" : "default"}
+              variant="outlined"
+              size="small"
+            />
+          );
+        },
         sortable: false,
       },
       {
@@ -224,23 +235,34 @@ export const AdminUsersPage = () => {
       {
         field: "isTotpEnabled",
         headerName: t("users.columns.totp"),
-        width: 80,
-        valueGetter: (_, row) =>
-          row.isTotpEnabled
-            ? t("yes", { ns: "common" })
-            : t("no", { ns: "common" }),
+        width: 60,
+        renderCell: (params) => (
+          <Box
+            height="100%"
+            width="100%"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            {params.row.isTotpEnabled ? (
+              <CheckCircleIcon sx={{ color: "success.main" }} />
+            ) : (
+              <CancelIcon sx={{ color: "error.main" }} />
+            )}
+          </Box>
+        ),
         sortable: false,
       },
       {
         field: "activeSessionCount",
         headerName: t("users.columns.sessions"),
-        width: 100,
+        width: 80,
         type: "number",
       },
       {
         field: "storageUsedBytes",
         headerName: t("users.columns.storageUsed"),
-        width: 135,
+        width: 120,
         type: "number",
         align: "right",
         headerAlign: "right",
@@ -267,7 +289,24 @@ export const AdminUsersPage = () => {
         headerName: t("users.columns.lastActivity"),
         flex: 1,
         minWidth: 140,
-        valueGetter: (_, row) => formatDateTime(row.lastActivityAt),
+        renderCell: (params) => {
+          const iso = params.row.lastActivityAt;
+          if (!iso) return "";
+          const date = new Date(iso);
+          const localDateTime = new Intl.DateTimeFormat(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }).format(date);
+          return (
+            <Tooltip title={localDateTime}>
+              <span>{formatRelativeTime(iso)}</span>
+            </Tooltip>
+          );
+        },
         sortable: false,
       },
       {

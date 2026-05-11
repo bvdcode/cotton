@@ -1,7 +1,7 @@
 import { Box, Paper } from "@mui/material";
 import type { ReactNode } from "react";
 
-export const ADMIN_PAGE_SURFACE_WIDTH = 1280;
+export const ADMIN_PAGE_SURFACE_WIDTH = 1200;
 
 interface AdminPageSurfaceProps {
   children: ReactNode;
