@@ -13,9 +13,11 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import {
   Article,
+  Close,
   Folder,
   FolderOpen,
   Image as ImageIcon,
@@ -123,6 +125,9 @@ const getSmallFileIcon = (fileName: string) => {
 
 export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const { t } = useTranslation("search");
+  const { t: tCommon } = useTranslation("common");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const userRole = useAuthStore((s) => s.user?.role ?? null);
@@ -251,6 +256,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     () => (hasQuery ? [...matchedDictionaryRows, ...contentRows] : []),
     [contentRows, hasQuery, matchedDictionaryRows],
   );
+  const resultCount = hasQuery ? matchedDictionaryRows.length + totalCount : 0;
 
   const sortedFiles = useMemo(() => {
     if (!results) return [];
@@ -396,14 +402,18 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
       <Dialog
         open={open}
         onClose={onClose}
+        fullScreen={isMobile}
         maxWidth={false}
         slotProps={{
           paper: {
             sx: {
-              width: { xs: "calc(100vw - 16px)", sm: 880, lg: 1040 },
-              height: { xs: "min(82vh, 680px)", sm: 680 },
-              maxHeight: "calc(100vh - 32px)",
-              borderRadius: 1.5,
+              width: { xs: "100%", sm: 880, lg: 1040 },
+              height: {
+                xs: "100%",
+                sm: hasQuery ? 680 : "auto",
+              },
+              maxHeight: { xs: "100%", sm: "calc(100vh - 32px)" },
+              borderRadius: { xs: 0, sm: 1.5 },
             },
           },
         }}
@@ -433,11 +443,31 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                     <Search color="action" />
                   </InputAdornment>
                 ),
-                endAdornment: loading ? (
+                endAdornment: (
                   <InputAdornment position="end">
-                    <CircularProgress size={18} />
+                    {isMobile ? (
+                      <IconButton
+                        edge="end"
+                        aria-label={tCommon("actions.close")}
+                        title={tCommon("actions.close")}
+                        onClick={onClose}
+                      >
+                        <Close />
+                      </IconButton>
+                    ) : loading ? (
+                      <CircularProgress size={18} />
+                    ) : hasQuery ? (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                        sx={{ px: 0.5 }}
+                      >
+                        {t("modal.resultsCount", { count: resultCount })}
+                      </Typography>
+                    ) : null}
                   </InputAdornment>
-                ) : undefined,
+                ),
               },
             }}
           />
@@ -448,120 +478,128 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             </Alert>
           )}
 
-          <Box
-            sx={(theme) => ({
-              flex: 1,
-              minHeight: 0,
-              overflowY: "auto",
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 1,
-              bgcolor: alpha(theme.palette.background.default, 0.65),
-            })}
-          >
-            {!hasQuery ? (
-              <Box sx={{ height: "100%" }} />
-            ) : rows.length === 0 && !loading ? (
+          {hasQuery && (
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "hidden",
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 1,
+                bgcolor: "background.paper",
+              }}
+            >
               <Box
                 sx={{
                   height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  px: 3,
-                  textAlign: "center",
+                  overflowY: "auto",
+                  bgcolor: "background.paper",
                 }}
               >
-                <Typography color="text.secondary">
-                  {t("noResults")}
-                </Typography>
-              </Box>
-            ) : (
-              <Stack divider={<Box sx={{ borderBottom: 1, borderColor: "divider" }} />}>
-                {rows.map((row) => {
-                  const text = getRowText(row);
-                  return (
-                    <ButtonBase
-                      key={row.id}
-                      onClick={() => activateRow(row)}
-                      sx={(theme) => ({
-                        width: "100%",
-                        minHeight: 68,
-                        justifyContent: "stretch",
-                        textAlign: "left",
-                        px: 1.25,
-                        py: 1,
-                        "&:hover": {
-                          bgcolor: alpha(theme.palette.primary.main, 0.06),
-                        },
-                      })}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1.25}
-                        alignItems="center"
-                        width="100%"
-                        minWidth={0}
-                      >
-                        <Box
-                          sx={(theme) => ({
-                            width: 44,
-                            height: 44,
-                            flexShrink: 0,
-                            borderRadius: 1,
-                            bgcolor: alpha(theme.palette.text.primary, 0.06),
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
-                          })}
+                {rows.length === 0 && !loading ? (
+                  <Box
+                    sx={{
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      px: 3,
+                      textAlign: "center",
+                    }}
+                  >
+                    <Typography color="text.secondary">
+                      {t("noResults")}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack divider={<Box sx={{ borderBottom: 1, borderColor: "divider" }} />}>
+                    {rows.map((row) => {
+                      const text = getRowText(row);
+                      return (
+                        <ButtonBase
+                          key={row.id}
+                          onClick={() => activateRow(row)}
+                          sx={{
+                            width: "100%",
+                            minHeight: 68,
+                            justifyContent: "stretch",
+                            textAlign: "left",
+                            px: 1.25,
+                            py: 1,
+                            "&:hover": {
+                              bgcolor: "action.hover",
+                            },
+                          }}
                         >
-                          {renderPreview(row)}
-                        </Box>
+                          <Stack
+                            direction="row"
+                            spacing={1.25}
+                            alignItems="center"
+                            width="100%"
+                            minWidth={0}
+                          >
+                            <Box
+                              sx={{
+                                width: 44,
+                                height: 44,
+                                flexShrink: 0,
+                                borderRadius: 1,
+                                bgcolor: "action.hover",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {renderPreview(row)}
+                            </Box>
 
-                        <Stack spacing={0.25} minWidth={0} flex={1}>
-                          <Typography
-                            variant="body2"
-                            fontWeight={700}
-                            noWrap
-                            title={text.title}
-                          >
-                            {text.title}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            noWrap
-                            title={text.meta}
-                          >
-                            {text.meta}
-                          </Typography>
-                        </Stack>
+                            <Stack spacing={0.25} minWidth={0} flex={1}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={700}
+                                noWrap
+                                title={text.title}
+                              >
+                                {text.title}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                noWrap
+                                title={text.meta}
+                              >
+                                {text.meta}
+                              </Typography>
+                            </Stack>
 
-                        <Tooltip title={text.action}>
-                          <IconButton
-                            size="small"
-                            aria-label={text.action}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              activateRow(row);
-                            }}
-                            sx={{ flexShrink: 0 }}
-                          >
-                            {row.kind === "folder" ? (
-                              <FolderOpen fontSize="small" />
-                            ) : (
-                              <OpenInNew fontSize="small" />
-                            )}
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </ButtonBase>
-                  );
-                })}
-              </Stack>
-            )}
-          </Box>
+                            <Tooltip title={text.action}>
+                              <IconButton
+                                size="small"
+                                aria-label={text.action}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  activateRow(row);
+                                }}
+                                sx={{ flexShrink: 0 }}
+                              >
+                                {row.kind === "folder" ? (
+                                  <FolderOpen fontSize="small" />
+                                ) : (
+                                  <OpenInNew fontSize="small" />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </ButtonBase>
+                      );
+                    })}
+                  </Stack>
+                )}
+              </Box>
+            </Box>
+          )}
         </DialogContent>
       </Dialog>
 
