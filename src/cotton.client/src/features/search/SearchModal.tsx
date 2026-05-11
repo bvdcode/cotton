@@ -128,7 +128,8 @@ const isDictionaryEntry = (value: unknown): value is SearchDictionaryEntry => {
     typeof record.path === "string" &&
     Array.isArray(keywords) &&
     keywords.every((keyword) => typeof keyword === "string") &&
-    (record.description === undefined || typeof record.description === "string") &&
+    (record.description === undefined ||
+      typeof record.description === "string") &&
     (record.highlightSettingId === undefined ||
       typeof record.highlightSettingId === "string") &&
     (record.adminOnly === undefined || typeof record.adminOnly === "boolean")
@@ -286,11 +287,12 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
         console.error("Failed to search layouts", err);
         setError("searchFailed");
       } finally {
-        if (generation !== searchGenerationRef.current) return;
-        if (mode === "replace") {
-          setLoadingInitial(false);
-        } else {
-          setLoadingMore(false);
+        if (generation === searchGenerationRef.current) {
+          if (mode === "replace") {
+            setLoadingInitial(false);
+          } else {
+            setLoadingMore(false);
+          }
         }
       }
     },
@@ -335,7 +337,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
       .map<DictionaryMatch | null>((entry) => {
         const normalizedTitle = normalizeSearchText(entry.title);
         const normalizedKeywords = entry.keywords.map(normalizeSearchText);
-        const normalizedDescription = normalizeSearchText(entry.description ?? "");
+        const normalizedDescription = normalizeSearchText(
+          entry.description ?? "",
+        );
         const haystack = [
           normalizedTitle,
           normalizedDescription,
@@ -369,7 +373,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             ? 1
             : normalizedTitle.includes(normalizedQuery) ||
                 (compactQuery.length > 0 &&
-                  normalizeCompactSearchText(entry.title).includes(compactQuery))
+                  normalizeCompactSearchText(entry.title).includes(
+                    compactQuery,
+                  ))
               ? 2
               : 3;
 
@@ -425,7 +431,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const loadedContentCount =
     (results?.nodes?.length ?? 0) + (results?.files?.length ?? 0);
   const hasMoreContent = hasSearchQuery && loadedContentCount < totalCount;
-  const resultCount = hasSearchQuery ? matchedDictionaryRows.length + totalCount : 0;
+  const resultCount = hasSearchQuery
+    ? matchedDictionaryRows.length + totalCount
+    : 0;
   const waitingForResults =
     hasQuery &&
     (trimmedQuery !== debouncedQuery || (loadingInitial && rows.length === 0));
@@ -537,82 +545,91 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     [navigate, onClose],
   );
 
-  const renderPreview = useCallback((row: SearchRow) => {
-    if (row.kind === "setting") {
-      return <Settings color="primary" sx={{ fontSize: 28 }} />;
-    }
+  const renderPreview = useCallback(
+    (row: SearchRow) => {
+      if (row.kind === "setting") {
+        return <Settings color="primary" sx={{ fontSize: 28 }} />;
+      }
 
-    if (row.kind === "folder") {
-      return <Folder color="primary" sx={{ fontSize: 30 }} />;
-    }
+      if (row.kind === "folder") {
+        return <Folder color="primary" sx={{ fontSize: 30 }} />;
+      }
 
-    const previewHash = row.file.previewHashEncryptedHex;
-    const previewUrl =
-      previewHash && !failedPreviews.has(row.file.id)
-        ? `/api/v1/preview/${encodeURIComponent(previewHash)}.webp`
-        : null;
+      const previewHash = row.file.previewHashEncryptedHex;
+      const previewUrl =
+        previewHash && !failedPreviews.has(row.file.id)
+          ? `/api/v1/preview/${encodeURIComponent(previewHash)}.webp`
+          : null;
 
-    if (previewUrl) {
-      return (
-        <Box
-          component="img"
-          src={previewUrl}
-          alt=""
-          loading="lazy"
-          onError={() => {
-            setFailedPreviews((prev) => new Set(prev).add(row.file.id));
-          }}
-          sx={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            borderRadius: 1,
-          }}
-        />
-      );
-    }
+      if (previewUrl) {
+        return (
+          <Box
+            component="img"
+            src={previewUrl}
+            alt=""
+            loading="lazy"
+            onError={() => {
+              setFailedPreviews((prev) => new Set(prev).add(row.file.id));
+            }}
+            sx={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: 1,
+            }}
+          />
+        );
+      }
 
-    return getSmallFileIcon(row.file.name);
-  }, [failedPreviews]);
+      return getSmallFileIcon(row.file.name);
+    },
+    [failedPreviews],
+  );
 
-  const getRowText = useCallback((row: SearchRow) => {
-    if (row.kind === "setting") {
+  const getRowText = useCallback(
+    (row: SearchRow) => {
+      if (row.kind === "setting") {
+        return {
+          title: row.entry.title,
+          meta: row.entry.description ?? t("types.setting"),
+          action: t("actions.openSetting"),
+        };
+      }
+
+      if (row.kind === "folder") {
+        return {
+          title: row.node.name,
+          meta: row.path ?? t("types.folder"),
+          action: t("actions.openFolder"),
+        };
+      }
+
+      const size = formatBytes(row.file.sizeBytes);
       return {
-        title: row.entry.title,
-        meta: row.entry.description ?? t("types.setting"),
-        action: t("actions.openSetting"),
+        title: row.file.name,
+        meta: row.path ? `${row.path} - ${size}` : size,
+        action: t("actions.openFile"),
       };
-    }
+    },
+    [t],
+  );
 
-    if (row.kind === "folder") {
-      return {
-        title: row.node.name,
-        meta: row.path ?? t("types.folder"),
-        action: t("actions.openFolder"),
-      };
-    }
+  const activateRow = useCallback(
+    (row: SearchRow) => {
+      if (row.kind === "setting") {
+        openSetting(row.entry);
+        return;
+      }
 
-    const size = formatBytes(row.file.sizeBytes);
-    return {
-      title: row.file.name,
-      meta: row.path ? `${row.path} - ${size}` : size,
-      action: t("actions.openFile"),
-    };
-  }, [t]);
+      if (row.kind === "folder") {
+        openFolder(row.node.id);
+        return;
+      }
 
-  const activateRow = useCallback((row: SearchRow) => {
-    if (row.kind === "setting") {
-      openSetting(row.entry);
-      return;
-    }
-
-    if (row.kind === "folder") {
-      openFolder(row.node.id);
-      return;
-    }
-
-    openFile(row.file);
-  }, [openFile, openFolder, openSetting]);
+      openFile(row.file);
+    },
+    [openFile, openFolder, openSetting],
+  );
 
   const renderSearchRow = useCallback(
     (index: number, row: SearchRow) => {
@@ -848,11 +865,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             }}
           />
 
-          {error && (
-            <Alert severity="error">
-              {t("error")}
-            </Alert>
-          )}
+          {error && <Alert severity="error">{t("error")}</Alert>}
 
           {hasQuery && (
             <Box
