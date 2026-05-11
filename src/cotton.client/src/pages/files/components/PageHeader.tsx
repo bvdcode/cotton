@@ -104,7 +104,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onDeselectAll,
   customActionItems,
 }) => {
-  const { t } = useTranslation(["files", "trash", "common", "search"]);
+  const { t } = useTranslation(["files", "trash", "common"]);
+  const { t: tSearch } = useTranslation("search");
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
   const actionsContainerRef = React.useRef<HTMLDivElement | null>(null);
   const actionButtonRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
@@ -209,10 +210,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         actions.push({
           key: "search",
           icon: <Search />,
-          title: t("open", {
-            ns: "search",
-            defaultValue: "Search",
-          }),
+          title: tSearch("open"),
           onClick: onSearchClick,
           disabled: false,
         });
@@ -245,6 +243,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       showUpload,
       showViewModeToggle,
       t,
+      tSearch,
       viewIcon,
       customActionItems,
     ],

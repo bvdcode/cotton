@@ -6,7 +6,6 @@ import {
   CircularProgress,
   Dialog,
   DialogContent,
-  DialogTitle,
   IconButton,
   InputAdornment,
   Stack,
@@ -17,7 +16,6 @@ import {
 import { alpha } from "@mui/material/styles";
 import {
   Article,
-  Close,
   Folder,
   FolderOpen,
   Image as ImageIcon,
@@ -124,7 +122,7 @@ const getSmallFileIcon = (fileName: string) => {
 };
 
 export const SearchModal = ({ open, onClose }: SearchModalProps) => {
-  const { t } = useTranslation(["search", "files", "common"]);
+  const { t } = useTranslation("search");
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const userRole = useAuthStore((s) => s.user?.role ?? null);
@@ -163,11 +161,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     setPage(1);
   }, [query, setPage]);
 
-  const rawDictionary = t("dictionary", {
-    ns: "search",
-    returnObjects: true,
-    defaultValue: [],
-  }) as unknown;
+  const rawDictionary = t("dictionary", { returnObjects: true }) as unknown;
 
   const dictionaryEntries = useMemo(() => {
     const entries = Array.isArray(rawDictionary)
@@ -362,26 +356,16 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     if (row.kind === "setting") {
       return {
         title: row.entry.title,
-        meta:
-          row.entry.description ??
-          t("types.setting", { ns: "search", defaultValue: "Setting" }),
-        action: t("actions.openSetting", {
-          ns: "search",
-          defaultValue: "Open settings",
-        }),
+        meta: row.entry.description ?? t("types.setting"),
+        action: t("actions.openSetting"),
       };
     }
 
     if (row.kind === "folder") {
       return {
         title: row.node.name,
-        meta:
-          row.path ??
-          t("types.folder", { ns: "search", defaultValue: "Folder" }),
-        action: t("actions.openFolder", {
-          ns: "search",
-          defaultValue: "Open folder",
-        }),
+        meta: row.path ?? t("types.folder"),
+        action: t("actions.openFolder"),
       };
     }
 
@@ -389,10 +373,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     return {
       title: row.file.name,
       meta: row.path ? `${row.path} - ${size}` : size,
-      action: t("actions.openFile", {
-        ns: "search",
-        defaultValue: "Open file",
-      }),
+      action: t("actions.openFile"),
     };
   };
 
@@ -409,17 +390,6 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
     openFile(row.file);
   };
-
-  const resultCaption = hasQuery
-    ? t("modal.resultsCount", {
-        ns: "search",
-        count: rows.length,
-        defaultValue: "{{count}} results",
-      })
-    : t("modal.emptyQuery", {
-        ns: "search",
-        defaultValue: "Start typing to search files, folders, and settings.",
-      });
 
   return (
     <>
@@ -438,34 +408,14 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
           },
         }}
       >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
-            pb: 1,
-          }}
-        >
-          <Typography variant="h6" fontWeight={700}>
-            {t("modal.title", { ns: "search", defaultValue: "Search" })}
-          </Typography>
-          <IconButton
-            onClick={onClose}
-            aria-label={t("common:actions.close")}
-            title={t("common:actions.close")}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-
         <DialogContent
           sx={{
             display: "flex",
             flexDirection: "column",
-            gap: 1.5,
+            gap: 1,
             minHeight: 0,
-            pt: 1,
+            overflow: "hidden",
+            p: { xs: 1.5, sm: 2 },
           }}
         >
           <TextField
@@ -475,10 +425,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             disabled={!layoutId}
-            placeholder={t("modal.placeholder", {
-              ns: "search",
-              defaultValue: "Search files, folders, settings...",
-            })}
+            placeholder={t("modal.placeholder")}
             slotProps={{
               input: {
                 startAdornment: (
@@ -497,13 +444,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
           {error && (
             <Alert severity="error">
-              {t("error", { ns: "search", defaultValue: "Search failed. Please try again." })}
+              {t("error")}
             </Alert>
           )}
-
-          <Typography variant="caption" color="text.secondary">
-            {resultCaption}
-          </Typography>
 
           <Box
             sx={(theme) => ({
@@ -517,23 +460,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             })}
           >
             {!hasQuery ? (
-              <Box
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  px: 3,
-                  textAlign: "center",
-                }}
-              >
-                <Typography color="text.secondary">
-                  {t("enterQueryHint", {
-                    ns: "search",
-                    defaultValue: "Start typing to search...",
-                  })}
-                </Typography>
-              </Box>
+              <Box sx={{ height: "100%" }} />
             ) : rows.length === 0 && !loading ? (
               <Box
                 sx={{
@@ -546,10 +473,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 }}
               >
                 <Typography color="text.secondary">
-                  {t("noResults", {
-                    ns: "search",
-                    defaultValue: "No files or folders found",
-                  })}
+                  {t("noResults")}
                 </Typography>
               </Box>
             ) : (

@@ -1,5 +1,4 @@
 import { Stack, Typography } from "@mui/material";
-import { alpha } from "@mui/material/styles";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { SaveStatus } from "./useAutoSavedSetting";
 import { AdminSettingStatusIndicator } from "./AdminSettingStatusIndicator";
@@ -29,7 +28,10 @@ export const SettingsSection = ({
   const [highlightVisible, setHighlightVisible] = useState(false);
 
   useEffect(() => {
-    if (!highlight) return;
+    if (!highlight) {
+      setHighlightVisible(false);
+      return;
+    }
 
     setHighlightVisible(true);
 
@@ -54,18 +56,6 @@ export const SettingsSection = ({
     <Stack
       ref={sectionRef}
       spacing={1.25}
-      sx={(theme) => ({
-        outline: "2px solid transparent",
-        outlineOffset: 4,
-        borderRadius: 1,
-        transition: theme.transitions.create(["outline-color", "box-shadow"], {
-          duration: theme.transitions.duration.shorter,
-        }),
-        ...(highlightVisible && {
-          outlineColor: alpha(theme.palette.warning.main, 0.9),
-          boxShadow: `0 0 0 4px ${alpha(theme.palette.warning.main, 0.18)}`,
-        }),
-      })}
     >
       <Stack
         direction="row"
@@ -80,7 +70,16 @@ export const SettingsSection = ({
             alignItems="center"
             minWidth={0}
           >
-            <Typography variant="subtitle1" fontWeight={700}>
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              color={highlightVisible ? "primary.main" : "text.primary"}
+              sx={(theme) => ({
+                transition: theme.transitions.create("color", {
+                  duration: theme.transitions.duration.shorter,
+                }),
+              })}
+            >
               {title}
             </Typography>
             {titleAction}
