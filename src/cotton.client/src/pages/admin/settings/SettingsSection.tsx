@@ -1,8 +1,7 @@
-import { Box, CircularProgress, Stack, Typography } from "@mui/material";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import { Stack, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import type { SaveStatus } from "./useAutoSavedSetting";
+import { AdminSettingStatusIndicator } from "./AdminSettingStatusIndicator";
 
 type SettingsSectionProps = {
   title: ReactNode;
@@ -11,19 +10,6 @@ type SettingsSectionProps = {
   status?: SaveStatus;
   action?: ReactNode;
   children?: ReactNode;
-};
-
-const StatusIndicator = ({ status }: { status: SaveStatus }) => {
-  if (status === "loading" || status === "saving") {
-    return <CircularProgress size={14} thickness={5} />;
-  }
-  if (status === "saved") {
-    return <CheckCircleOutlineIcon sx={{ fontSize: 16, color: "success.main" }} />;
-  }
-  if (status === "error") {
-    return <ErrorOutlineIcon sx={{ fontSize: 16, color: "error.main" }} />;
-  }
-  return null;
 };
 
 export const SettingsSection = ({
@@ -52,17 +38,7 @@ export const SettingsSection = ({
             {title}
           </Typography>
           {titleAction}
-          <Box
-            sx={{
-              width: 16,
-              height: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <StatusIndicator status={status} />
-          </Box>
+          <AdminSettingStatusIndicator status={status} />
         </Stack>
         {description && (
           <Typography variant="caption" color="text.secondary">

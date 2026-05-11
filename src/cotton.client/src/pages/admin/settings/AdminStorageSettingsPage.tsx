@@ -31,8 +31,8 @@ import { SettingsSection } from "./SettingsSection";
 import { storageSpaceOptions } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 
-const SAVED_FLASH_MS = 1500;
 type FlashTimers = {
   storageType: number | null;
   s3: number | null;
@@ -60,7 +60,7 @@ const flashStatus = (
   flashTimers[key] = window.setTimeout(() => {
     setStatus((current) => (current === "saved" ? "idle" : current));
     flashTimers[key] = null;
-  }, SAVED_FLASH_MS);
+  }, SAVED_STATUS_VISIBLE_MS);
 };
 
 export const AdminStorageSettingsPage = () => {

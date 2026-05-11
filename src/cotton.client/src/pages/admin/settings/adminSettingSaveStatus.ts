@@ -1,0 +1,1 @@
+export const SAVED_STATUS_VISIBLE_MS = 2800;

@@ -21,8 +21,7 @@ import {
   type GeneralSettingsValidationMessages,
 } from "./adminGeneralSettingsModel";
 import type { SaveStatus } from "./useAutoSavedSetting";
-
-const SAVED_FLASH_MS = 1500;
+import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 
 type LoadedState = {
   mode: GeoIpLookupMode;
@@ -109,7 +108,7 @@ export const GeoIpLookupSetting = () => {
     flashTimerRef.current = window.setTimeout(() => {
       setStatus((current) => (current === "saved" ? "idle" : current));
       flashTimerRef.current = null;
-    }, SAVED_FLASH_MS);
+    }, SAVED_STATUS_VISIBLE_MS);
   }, []);
 
   const reportError = useCallback(

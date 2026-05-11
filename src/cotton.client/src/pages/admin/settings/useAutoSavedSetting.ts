@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { showApiErrorToast } from "../../../shared/api/httpClient";
+import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 
 export type SaveStatus = "loading" | "idle" | "saving" | "saved" | "error";
 
@@ -22,8 +23,6 @@ export interface UseAutoSavedSettingResult<T> {
   status: SaveStatus;
   loadFailed: boolean;
 }
-
-const SAVED_FLASH_MS = 1500;
 
 export const useAutoSavedSetting = <T,>({
   initial,
@@ -104,7 +103,7 @@ export const useAutoSavedSetting = <T,>({
       flashTimerRef.current = window.setTimeout(() => {
         setStatus((current) => (current === "saved" ? "idle" : current));
         flashTimerRef.current = null;
-      }, SAVED_FLASH_MS);
+      }, SAVED_STATUS_VISIBLE_MS);
     } catch (error) {
       setValueState(savedValueRef.current);
       setStatus("error");

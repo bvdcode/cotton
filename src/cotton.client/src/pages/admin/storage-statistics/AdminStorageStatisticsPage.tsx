@@ -10,7 +10,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { type MouseEvent, useEffect, useMemo, useState } from "react";
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
@@ -32,6 +32,9 @@ import { formatBytes } from "../../../shared/utils/formatBytes";
 import { AdminStorageBackendSettings } from "../settings/AdminStorageBackendSettings";
 import { storageSpaceOptions } from "../settings/adminGeneralSettingsModel";
 import { AdminPageSurface } from "../components/AdminPageSurface";
+import { AdminSettingStatusIndicator } from "../settings/AdminSettingStatusIndicator";
+import type { SaveStatus } from "../settings/useAutoSavedSetting";
+import { SAVED_STATUS_VISIBLE_MS } from "../settings/adminSettingSaveStatus";
 
 type LoadState =
   | { kind: "idle" }
@@ -133,14 +136,15 @@ export const AdminStorageStatisticsPage = () => {
   const [bucket, setBucket] = useState<GcTimelineBucketKind>("day");
   const [storageSpaceMode, setStorageSpaceMode] =
     useState<StorageSpaceMode>("Optimal");
-  const [storageSpaceModeLoading, setStorageSpaceModeLoading] = useState(true);
-  const [storageSpaceModeSaving, setStorageSpaceModeSaving] = useState(false);
+  const [storageSpaceModeStatus, setStorageSpaceModeStatus] =
+    useState<SaveStatus>("loading");
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [triggerState, setTriggerState] = useState<TriggerState>({
     kind: "idle",
   });
 
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const storageSpaceModeFlashTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -186,7 +190,7 @@ export const AdminStorageStatisticsPage = () => {
     let isActive = true;
 
     const loadStorageSpaceMode = async () => {
-      setStorageSpaceModeLoading(true);
+      setStorageSpaceModeStatus("loading");
 
       try {
         const nextStorageSpaceMode = await settingsApi.getStorageSpaceMode();
@@ -196,18 +200,16 @@ export const AdminStorageStatisticsPage = () => {
         }
 
         setStorageSpaceMode(nextStorageSpaceMode);
+        setStorageSpaceModeStatus("idle");
       } catch {
         if (!isActive) {
           return;
         }
 
+        setStorageSpaceModeStatus("error");
         toast.error(t("settings.errors.loadFailed"), {
           toastId: "admin:storage-statistics:storage-space-mode:load-failed",
         });
-      } finally {
-        if (isActive) {
-          setStorageSpaceModeLoading(false);
-        }
       }
     };
 
@@ -217,6 +219,15 @@ export const AdminStorageStatisticsPage = () => {
       isActive = false;
     };
   }, [t]);
+
+  useEffect(
+    () => () => {
+      if (storageSpaceModeFlashTimerRef.current !== null) {
+        window.clearTimeout(storageSpaceModeFlashTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const handleBucketChange = (
     _: MouseEvent<HTMLElement>,
@@ -237,33 +248,40 @@ export const AdminStorageStatisticsPage = () => {
     if (
       !nextMode ||
       nextMode === storageSpaceMode ||
-      storageSpaceModeLoading ||
-      storageSpaceModeSaving
+      storageSpaceModeStatus === "loading" ||
+      storageSpaceModeStatus === "saving"
     ) {
       return;
     }
 
+    if (storageSpaceModeFlashTimerRef.current !== null) {
+      window.clearTimeout(storageSpaceModeFlashTimerRef.current);
+      storageSpaceModeFlashTimerRef.current = null;
+    }
+
     const previousMode = storageSpaceMode;
     setStorageSpaceMode(nextMode);
-    setStorageSpaceModeSaving(true);
+    setStorageSpaceModeStatus("saving");
 
     settingsApi
       .setStorageSpaceMode(nextMode)
       .then(() => {
-        toast.success(t("settings.state.saved"), {
-          toastId: "admin:storage-statistics:storage-space-mode:saved",
-        });
+        setStorageSpaceModeStatus("saved");
+        storageSpaceModeFlashTimerRef.current = window.setTimeout(() => {
+          setStorageSpaceModeStatus((current) =>
+            current === "saved" ? "idle" : current,
+          );
+          storageSpaceModeFlashTimerRef.current = null;
+        }, SAVED_STATUS_VISIBLE_MS);
       })
       .catch((error) => {
         setStorageSpaceMode(previousMode);
+        setStorageSpaceModeStatus("error");
         showApiErrorToast(
           error,
           t("settings.errors.saveFailed"),
           "admin:storage-statistics:storage-space-mode:save-failed",
         );
-      })
-      .finally(() => {
-        setStorageSpaceModeSaving(false);
       });
   };
 
@@ -300,6 +318,8 @@ export const AdminStorageStatisticsPage = () => {
   const placeholder = t("placeholder", { ns: "common" });
   const isLoading = loadState.kind === "loading";
   const isTriggering = triggerState.kind === "loading";
+  const storageSpaceModeDisabled =
+    storageSpaceModeStatus === "loading" || storageSpaceModeStatus === "saving";
   const storageSpaceModeHelp = t("settings.general.storageSpaceHelp.description");
 
   const summaryCards = useMemo(() => {
@@ -435,6 +455,7 @@ export const AdminStorageStatisticsPage = () => {
         <Typography variant="body2" color="text.secondary">
           {t("settings.general.fields.storageSpaceMode")}
         </Typography>
+        <AdminSettingStatusIndicator status={storageSpaceModeStatus} />
         <Tooltip title={storageSpaceModeHelp}>
           <HelpOutlineIcon fontSize="small" color="action" />
         </Tooltip>
@@ -444,7 +465,7 @@ export const AdminStorageStatisticsPage = () => {
         exclusive
         value={storageSpaceMode}
         onChange={handleStorageSpaceModeChange}
-        disabled={storageSpaceModeLoading || storageSpaceModeSaving}
+        disabled={storageSpaceModeDisabled}
         aria-label={t("settings.general.fields.storageSpaceMode")}
         fullWidth
         sx={{
