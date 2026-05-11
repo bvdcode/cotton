@@ -30,10 +30,8 @@ import { adminApi, type AdminUserDto } from "../../../shared/api/adminApi";
 import { UserRole } from "../../../features/auth/types";
 import { CreateUserDialog } from "./CreateUserDialog";
 import { EditUserDialog } from "./EditUserDialog";
-import {
-  formatDateOnly,
-  formatRelativeTime,
-} from "../../../shared/utils/dateOnly";
+import { formatDateOnly } from "../../../shared/utils/dateOnly";
+import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 
 type LoadState =
@@ -303,7 +301,7 @@ export const AdminUsersPage = () => {
           }).format(date);
           return (
             <Tooltip title={localDateTime}>
-              <span>{formatRelativeTime(iso)}</span>
+              <span>{formatTimeAgo(iso, t)}</span>
             </Tooltip>
           );
         },
