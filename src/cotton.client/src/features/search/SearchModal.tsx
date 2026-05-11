@@ -791,7 +791,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
                 sm: hasQuery ? 880 : 720,
                 lg: hasQuery ? 1040 : 760,
               },
-              height: { xs: "100%", sm: hasQuery ? 680 : 112 },
+              height: { xs: "100%", sm: hasQuery ? 680 : 86 },
               maxHeight: { xs: "100%", sm: "calc(100vh - 32px)" },
               borderRadius: { xs: 0, sm: 1.5 },
               bgcolor: "background.default",
