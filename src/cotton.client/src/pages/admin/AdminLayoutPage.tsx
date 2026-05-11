@@ -1,7 +1,6 @@
 import {
   Box,
   FormControl,
-  InputLabel,
   List,
   ListItemButton,
   ListItemIcon,
@@ -21,6 +20,9 @@ import StorageIcon from "@mui/icons-material/Storage";
 import type { ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ADMIN_PAGE_SURFACE_WIDTH } from "./components/AdminPageSurface";
+
+const ADMIN_NAV_WIDTH = 64;
 
 type AdminMenuItem = {
   id:
@@ -124,15 +126,11 @@ export const AdminLayoutPage = () => {
       height="100%"
       minHeight={0}
     >
-      <Paper sx={{ display: { xs: "block", md: "none" }, p: 2, mb: 2 }}>
+      <Paper sx={{ display: { xs: "block", md: "none" }, mb: 2 }}>
         <FormControl fullWidth size="small">
-          <InputLabel id="admin-menu-navigate-label">
-            {t("menu.navigate")}
-          </InputLabel>
           <Select
             labelId="admin-menu-navigate-label"
             value={selectedTo}
-            label={t("menu.navigate")}
             onChange={handleMobileNavigate}
           >
             {items.map((item) => (
@@ -148,24 +146,33 @@ export const AdminLayoutPage = () => {
         display="grid"
         flex={1}
         minHeight={0}
-        sx={{
-          gridTemplateColumns: { xs: "1fr", md: "64px minmax(0, 1fr)" },
+        sx={(theme) => ({
+          width: {
+            xs: "100%",
+            md: `min(
+              100%,
+              calc(${ADMIN_NAV_WIDTH}px + ${theme.spacing(2)} + ${ADMIN_PAGE_SURFACE_WIDTH}px)
+            )`,
+          },
+          mx: { md: "auto" },
+          alignItems: "start",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            md: `${ADMIN_NAV_WIDTH}px minmax(0, 1fr)`,
+          },
           gap: 2,
-        }}
+        })}
       >
         <Paper
           sx={{
             display: { xs: "none", md: "flex" },
             flexDirection: "column",
-            minHeight: 0,
-            height: "100%",
+            alignSelf: "start",
           }}
         >
           <List
             sx={{
-              pt: 1,
-              overflowY: "auto",
-              minHeight: 0,
+              py: 1,
               display: "flex",
               flexDirection: "column",
               gap: 0.5,
@@ -203,6 +210,7 @@ export const AdminLayoutPage = () => {
         <Box
           sx={{ overflowY: "auto", overflowX: "hidden" }}
           minHeight={0}
+          minWidth={0}
           display="flex"
           flexDirection="column"
         >
