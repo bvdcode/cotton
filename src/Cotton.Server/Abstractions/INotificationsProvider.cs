@@ -15,7 +15,7 @@ namespace Cotton.Server.Abstractions
             Dictionary<string, string> parameters,
             string serverBaseUrl);
 
-        Task<bool> SendSmtpTestEmailAsync(
+        Task SendSmtpTestEmailAsync(
             Guid userId,
             string serverBaseUrl);
 

@@ -355,12 +355,14 @@ namespace Cotton.Server.Controllers
             ThrowIfInvalid(await _settings.ValidateEmailModeAsync(EmailMode.Custom));
 
             Guid userId = User.GetUserId();
-            bool sent = await _notifications.SendSmtpTestEmailAsync(userId, GetFallbackPublicBaseUrl());
-            if (!sent)
+            try
             {
-                throw new BadRequestException<CottonServerSettings>("Failed to send test email.");
+                await _notifications.SendSmtpTestEmailAsync(userId, GetFallbackPublicBaseUrl());
             }
-
+            catch (Exception ex)
+            {
+                throw new BadRequestException<CottonServerSettings>("Failed to send test email: " + ex.Message);
+            }
             return NoContent();
         }
 

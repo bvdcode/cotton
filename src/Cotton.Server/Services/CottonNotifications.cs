@@ -7,6 +7,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
+using EasyExtensions.AspNetCore.Exceptions;
 using Mapster;
 using Microsoft.AspNetCore.SignalR;
 using System.Net;
@@ -48,7 +49,7 @@ namespace Cotton.Server.Services
             }
         }
 
-        public async Task<bool> SendSmtpTestEmailAsync(
+        public async Task SendSmtpTestEmailAsync(
             Guid userId,
             string serverBaseUrl)
         {
@@ -67,18 +68,18 @@ namespace Cotton.Server.Services
             if (validationError is not null)
             {
                 _logger.LogWarning("SMTP test email validation failed: {ValidationError}", validationError);
-                return false;
+                throw new ArgumentException(validationError);
             }
 
             var user = await _dbContext.Users.FindAsync(userId);
             if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
-                return false;
+                throw new EntityNotFoundException<User>("User not found or does not have an email address.");
             }
 
             if (!SettingsProvider.TryParsePort(emailConfig.Port, out int smtpPort))
             {
-                return false;
+                throw new ArgumentException("Invalid SMTP port number.");
             }
 
             string recipientName = GetRecipientDisplayName(user);
@@ -94,17 +95,7 @@ namespace Cotton.Server.Services
 
             string subject = "Cotton SMTP test email";
             string body = BuildSmtpTestBody(recipientName, serverBaseUrl);
-
-            try
-            {
-                SendSmtpEmail(user.Email, recipientName, subject, body, smtpSettings);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send SMTP test email to {Email}.", user.Email);
-                return false;
-            }
+            SendSmtpEmail(user.Email, recipientName, subject, body, smtpSettings);
         }
 
         private async Task<bool> SendViaCloudAsync(

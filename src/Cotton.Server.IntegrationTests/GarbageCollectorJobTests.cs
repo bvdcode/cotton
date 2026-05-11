@@ -367,11 +367,11 @@ public class GarbageCollectorJobTests : IntegrationTestBase
             return Task.FromResult(true);
         }
 
-        public Task<bool> SendSmtpTestEmailAsync(
+        public Task SendSmtpTestEmailAsync(
             Guid userId,
             string serverBaseUrl)
         {
-            return Task.FromResult(true);
+            return Task.CompletedTask;
         }
 
         public Task SendNotificationAsync(
