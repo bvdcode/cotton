@@ -18,7 +18,10 @@
     "actions": {
       "openFile": "Открыть файл",
       "openFolder": "Открыть папку",
-      "openSetting": "Открыть настройки"
+      "openSetting": "Открыть настройки",
+      "downloadFile": "Скачать файл",
+      "shareFile": "Поделиться файлом",
+      "openContainingFolder": "Открыть папку с файлом"
     },
     "dictionary": [
       {

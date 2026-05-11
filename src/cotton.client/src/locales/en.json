@@ -18,7 +18,10 @@
     "actions": {
       "openFile": "Open file",
       "openFolder": "Open folder",
-      "openSetting": "Open settings"
+      "openSetting": "Open settings",
+      "downloadFile": "Download file",
+      "shareFile": "Share file",
+      "openContainingFolder": "Open containing folder"
     },
     "dictionary": [
       {

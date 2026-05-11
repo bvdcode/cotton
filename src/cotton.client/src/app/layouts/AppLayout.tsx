@@ -11,6 +11,7 @@ import {
   Button,
   Container,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import React, { useEffect } from "react";
@@ -20,7 +21,6 @@ import { useAuth } from "../../features/auth";
 import { OPEN_SEARCH_EVENT, SearchModal } from "../../features/search";
 import { useSettingsStore } from "../../shared/store/settingsStore";
 import { AudioPlayerBar } from "../components/AudioPlayerBar";
-
 
 interface AppLayoutProps {
   routes: RouteConfig[];
@@ -132,9 +132,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                     color="inherit"
                     sx={{
                       display: { xs: "inline-flex", sm: "none" },
-                      bgcolor: isActive
-                        ? navActiveBg
-                        : "transparent",
+                      bgcolor: isActive ? navActiveBg : "transparent",
                       "&:hover": {
                         bgcolor: navHoverBg,
                       },
@@ -150,29 +148,26 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
                     sx={{
                       display: { xs: "none", sm: "inline-flex" },
                       color: "inherit",
-                      bgcolor: isActive
-                        ? navActiveBg
-                        : "transparent",
+                      bgcolor: isActive ? navActiveBg : "transparent",
                       "&:hover": {
                         bgcolor: navHoverBg,
                       },
                     }}
                   >
-                    {route.translationKey ? t(route.translationKey) : route.displayName}
+                    {route.translationKey
+                      ? t(route.translationKey)
+                      : route.displayName}
                   </Button>
                 </React.Fragment>
               );
             })}
           </Box>
 
-          <IconButton
-            color="inherit"
-            aria-label={tSearch("open")}
-            title={tSearch("open")}
-            onClick={openSearch}
-          >
-            <SearchIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title={tSearch("open")}>
+            <IconButton aria-label={tSearch("open")} onClick={openSearch}>
+              <SearchIcon />
+            </IconButton>
+          </Tooltip>
           <NotificationsMenu />
           <UserMenu />
         </Toolbar>

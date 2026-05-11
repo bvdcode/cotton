@@ -135,9 +135,9 @@ export const NotificationsMenu = () => {
   return (
     <>
       <Tooltip title={t("title")}>
-        <IconButton size="small" onClick={handleOpen}>
+        <IconButton onClick={handleOpen}>
           <Badge badgeContent={unreadCount} color="error">
-            <NotificationsIcon fontSize="small" />
+            <NotificationsIcon />
           </Badge>
         </IconButton>
       </Tooltip>

@@ -26,6 +26,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import {
   Article,
   Close,
+  Download,
   Folder,
   FolderOpen,
   Image as ImageIcon,
@@ -33,6 +34,7 @@ import {
   OpenInNew,
   Search,
   Settings,
+  Share,
   TextSnippet,
   VideoFile,
 } from "@mui/icons-material";
@@ -110,6 +112,9 @@ const normalizeSearchText = (value: string): string =>
     .toLocaleLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+
+const normalizeCompactSearchText = (value: string): string =>
+  normalizeSearchText(value).replace(/[\s._\-/:\\]+/g, "");
 
 const isDictionaryEntry = (value: unknown): value is SearchDictionaryEntry => {
   if (!value || typeof value !== "object") return false;
@@ -323,6 +328,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
   const matchedDictionaryRows = useMemo(() => {
     const normalizedQuery = normalizeSearchText(debouncedQuery);
+    const compactQuery = normalizeCompactSearchText(debouncedQuery);
     if (normalizedQuery.length < MIN_SETTING_QUERY_LENGTH) return [];
 
     return dictionaryEntries
@@ -336,17 +342,34 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
           normalizeSearchText(entry.path),
           ...normalizedKeywords,
         ].join(" ");
+        const compactKeywords = entry.keywords.map(normalizeCompactSearchText);
+        const compactHaystack = [
+          normalizeCompactSearchText(entry.title),
+          normalizeCompactSearchText(entry.description ?? ""),
+          normalizeCompactSearchText(entry.path),
+          ...compactKeywords,
+        ].join(" ");
 
-        if (!haystack.includes(normalizedQuery)) return null;
+        const matchesCompact =
+          compactQuery.length > 0 && compactHaystack.includes(compactQuery);
+
+        if (!haystack.includes(normalizedQuery) && !matchesCompact) {
+          return null;
+        }
 
         const keywordStarts = normalizedKeywords.some((keyword) =>
           keyword.startsWith(normalizedQuery),
         );
+        const compactKeywordStarts =
+          compactQuery.length > 0 &&
+          compactKeywords.some((keyword) => keyword.startsWith(compactQuery));
         const score = normalizedTitle.startsWith(normalizedQuery)
           ? 0
-          : keywordStarts
+          : keywordStarts || compactKeywordStarts
             ? 1
-            : normalizedTitle.includes(normalizedQuery)
+            : normalizedTitle.includes(normalizedQuery) ||
+                (compactQuery.length > 0 &&
+                  normalizeCompactSearchText(entry.title).includes(compactQuery))
               ? 2
               : 3;
 
@@ -444,6 +467,8 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     previewState,
     closePreview,
     handleFileClick,
+    handleDownloadFile,
+    handleShareFile,
     lightboxOpen,
     lightboxIndex,
     mediaItems,
@@ -469,9 +494,32 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     [handleFileClick, handleMediaClick, onClose],
   );
 
+  const shareSearchFile = useCallback(
+    (file: NodeFileManifestDto) => {
+      void handleShareFile(file.id, file.name);
+    },
+    [handleShareFile],
+  );
+
+  const downloadSearchFile = useCallback(
+    (file: NodeFileManifestDto) => {
+      void handleDownloadFile(file.id, file.name);
+      onClose();
+    },
+    [handleDownloadFile, onClose],
+  );
+
   const openFolder = useCallback(
     (nodeId: string) => {
       navigate(`/files/${nodeId}`);
+      onClose();
+    },
+    [navigate, onClose],
+  );
+
+  const openFileFolder = useCallback(
+    (file: NodeFileManifestDto) => {
+      navigate(`/files/${file.nodeId}`);
       onClose();
     },
     [navigate, onClose],
@@ -569,6 +617,14 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const renderSearchRow = useCallback(
     (index: number, row: SearchRow) => {
       const text = getRowText(row);
+      const fileTypeInfo =
+        row.kind === "file"
+          ? getFileTypeInfo(row.file.name, row.file.contentType)
+          : null;
+      const primaryAction =
+        row.kind === "file" && fileTypeInfo?.supportsInlineView === false
+          ? t("actions.downloadFile")
+          : text.action;
       return (
         <ButtonBase
           onClick={() => activateRow(row)}
@@ -629,18 +685,59 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
               </Typography>
             </Stack>
 
-            <Tooltip title={text.action}>
+            {row.kind === "file" && (
+              <>
+                <Tooltip title={t("actions.shareFile")}>
+                  <IconButton
+                    size="small"
+                    aria-label={t("actions.shareFile")}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      shareSearchFile(row.file);
+                    }}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    <Share fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={t("actions.openContainingFolder")}>
+                  <IconButton
+                    size="small"
+                    aria-label={t("actions.openContainingFolder")}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openFileFolder(row.file);
+                    }}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    <FolderOpen fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+
+            <Tooltip title={primaryAction}>
               <IconButton
                 size="small"
-                aria-label={text.action}
+                aria-label={primaryAction}
                 onClick={(event) => {
                   event.stopPropagation();
+                  if (
+                    row.kind === "file" &&
+                    fileTypeInfo?.supportsInlineView === false
+                  ) {
+                    downloadSearchFile(row.file);
+                    return;
+                  }
                   activateRow(row);
                 }}
                 sx={{ flexShrink: 0 }}
               >
                 {row.kind === "folder" ? (
                   <FolderOpen fontSize="small" />
+                ) : row.kind === "file" &&
+                  fileTypeInfo?.supportsInlineView === false ? (
+                  <Download fontSize="small" />
                 ) : (
                   <OpenInNew fontSize="small" />
                 )}
@@ -650,7 +747,16 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
         </ButtonBase>
       );
     },
-    [activateRow, getRowText, renderPreview, rows.length],
+    [
+      activateRow,
+      downloadSearchFile,
+      getRowText,
+      openFileFolder,
+      renderPreview,
+      rows.length,
+      shareSearchFile,
+      t,
+    ],
   );
 
   return (

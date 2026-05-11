@@ -18,7 +18,10 @@
     "actions": {
       "openFile": "Abrir archivo",
       "openFolder": "Abrir carpeta",
-      "openSetting": "Abrir ajustes"
+      "openSetting": "Abrir ajustes",
+      "downloadFile": "Descargar archivo",
+      "shareFile": "Compartir archivo",
+      "openContainingFolder": "Abrir carpeta contenedora"
     },
     "dictionary": [
       {
