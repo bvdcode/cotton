@@ -11,6 +11,7 @@ using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -65,9 +66,10 @@ namespace Cotton.Server.Handlers.Files
             {
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg
+                && pg.SqlState == PostgresErrorCodes.UniqueViolation)
             {
-                // Unique index (NodeId, NameKey) lost a race; surface as 409.
+                // Unique index (NodeId, NameKey) lost a race with a concurrent insert/move; surface as 409.
                 throw new DuplicateException(nodeFile.NameKey);
             }
 
