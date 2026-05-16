@@ -142,13 +142,23 @@ public class WebDavMoveRequestHandler(
             request.UserId);
 
         var movedIds = GetMovedIds(sourceResult);
-        if (movedIds.NodeId.HasValue)
+        // Best-effort: a notification failure must not turn an already-committed move into a failed response.
+        try
         {
-            await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, ct);
+            if (movedIds.NodeId.HasValue)
+            {
+                await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, ct);
+            }
+            else if (movedIds.NodeFileId.HasValue)
+            {
+                await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, ct);
+            }
         }
-        else if (movedIds.NodeFileId.HasValue)
+        catch (Exception ex)
         {
-            await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, ct);
+            _logger.LogError(ex,
+                "WebDAV MOVE: notification failed after committed move (NodeId={NodeId}, NodeFileId={NodeFileId})",
+                movedIds.NodeId, movedIds.NodeFileId);
         }
     }
 
