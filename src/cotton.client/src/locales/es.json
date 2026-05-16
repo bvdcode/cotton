@@ -1056,6 +1056,14 @@
   },
   "files": {
     "title": "Archivos",
+    "move": {
+      "toasts": {
+        "moved_one": "{{count}} elemento movido",
+        "moved_other": "{{count}} elementos movidos",
+        "failed_one": "No se pudo mover {{count}} elemento",
+        "failed_other": "No se pudieron mover {{count}} elementos"
+      }
+    },
     "loading": {
       "title": "Cargando",
       "caption": "Obteniendo el contenido de la carpeta…"

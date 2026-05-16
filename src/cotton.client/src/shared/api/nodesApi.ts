@@ -34,6 +34,10 @@ export interface RenameNodeRequest {
   name: string;
 }
 
+export interface MoveNodeRequest {
+  parentId: Guid;
+}
+
 export const nodesApi = {
   getNode: async (nodeId: Guid): Promise<NodeDto> => {
     const response = await httpClient.get<NodeDto>(`/layouts/nodes/${nodeId}`);
@@ -92,6 +96,17 @@ export const nodesApi = {
   ): Promise<NodeDto> => {
     const response = await httpClient.patch<NodeDto>(
       `/layouts/nodes/${nodeId}/rename`,
+      request,
+    );
+    return response.data;
+  },
+
+  moveNode: async (
+    nodeId: Guid,
+    request: MoveNodeRequest,
+  ): Promise<NodeDto> => {
+    const response = await httpClient.patch<NodeDto>(
+      `/layouts/nodes/${nodeId}/move`,
       request,
     );
     return response.data;

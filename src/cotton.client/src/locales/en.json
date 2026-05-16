@@ -1034,6 +1034,14 @@
   },
   "files": {
     "title": "Files",
+    "move": {
+      "toasts": {
+        "moved_one": "Moved {{count}} item",
+        "moved_other": "Moved {{count}} items",
+        "failed_one": "Failed to move {{count}} item",
+        "failed_other": "Failed to move {{count}} items"
+      }
+    },
     "loading": {
       "title": "Loading",
       "caption": "Fetching folder contents…"

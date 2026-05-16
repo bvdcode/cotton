@@ -16,6 +16,10 @@ export interface RenameFileRequest {
   name: string;
 }
 
+export interface MoveFileRequest {
+  parentId: Guid;
+}
+
 export const filesApi = {
   createFromChunks: async (
     request: CreateFileFromChunksRequest,
@@ -64,5 +68,12 @@ export const filesApi = {
     request: RenameFileRequest,
   ): Promise<void> => {
     await httpClient.patch(`/files/${nodeFileId}/rename`, request);
+  },
+
+  moveFile: async (
+    nodeFileId: Guid,
+    request: MoveFileRequest,
+  ): Promise<void> => {
+    await httpClient.patch(`/files/${nodeFileId}/move`, request);
   },
 };
