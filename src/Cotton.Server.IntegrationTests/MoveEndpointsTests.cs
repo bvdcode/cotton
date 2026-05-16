@@ -151,6 +151,40 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MoveFile_AcrossLayouts_Returns400()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var src = await CreateFolderAsync(root.Id, "src");
+        var file = await CreateFileAsync(src.Id, "doc.txt", "across-layouts");
+
+        Guid otherLayoutRootId;
+        using (var scope = _factory!.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            var ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
+            var newLayout = new Cotton.Database.Models.Layout { OwnerId = ownerId, IsActive = false };
+            db.UserLayouts.Add(newLayout);
+            await db.SaveChangesAsync();
+
+            var newRoot = new Cotton.Database.Models.Node
+            {
+                LayoutId = newLayout.Id,
+                OwnerId = ownerId,
+                Type = Cotton.Database.Models.Enums.NodeType.Default,
+                ParentId = null,
+            };
+            newRoot.SetName("other-root");
+            db.Nodes.Add(newRoot);
+            await db.SaveChangesAsync();
+            otherLayoutRootId = newRoot.Id;
+        }
+
+        var res = await MoveFileAsync(file.Id, otherLayoutRootId);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
     public async Task MoveFile_EmptyParentId_Returns400()
     {
         await AuthenticateAsync();

@@ -59,6 +59,13 @@ namespace Cotton.Server.Handlers.Files
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw new EntityNotFoundException<Node>();
 
+            if (targetParent.LayoutId != nodeFile.Node.LayoutId)
+            {
+                // Same rationale as MoveNodeCommand: layouts are disjoint namespaces.
+                // A file moved across layouts would dangle outside its source tree's index.
+                throw new BadRequestException<Node>("Cannot move a file across layouts.");
+            }
+
             await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, nodeFile.NameKey, nodeFile.Id, cancellationToken);
 
             nodeFile.NodeId = targetParent.Id;
