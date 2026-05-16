@@ -130,7 +130,6 @@ export const ListView: React.FC<IFileListView> = ({
           return {
             id: String(r.id),
             kind: "folder",
-            name: r.name,
             sourceParentId: currentParentId,
           };
         }
@@ -138,7 +137,6 @@ export const ListView: React.FC<IFileListView> = ({
           return {
             id: String(r.id),
             kind: "file",
-            name: r.name,
             sourceParentId: r.containerNodeId ?? currentParentId,
           };
         }
