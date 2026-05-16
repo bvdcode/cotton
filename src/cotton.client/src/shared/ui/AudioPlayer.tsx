@@ -265,37 +265,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [effectivePlaylist, onTrackChange, shuffleEnabled]);
 
-  const handleEnded = React.useCallback(() => {
-    if (shuffleEnabled && shuffleOrderRef.current) {
-      const order = shuffleOrderRef.current;
-      const pos = shufflePosRef.current;
-      const nextPos = pos + 1 < order.length ? pos + 1 : pos;
-      if (nextPos === pos) {
-        return;
-      }
-
-      shufflePosRef.current = nextPos;
-      const nextIndex = order[nextPos] ?? 0;
-      setCurrentIndex(nextIndex);
-      const nextItem = effectivePlaylist[nextIndex];
-      if (nextItem) {
-        onTrackChange?.(nextItem);
-      }
-      return;
-    }
-
-    const idx = currentIndexRef.current;
-    const nextIndex = idx + 1 < effectivePlaylist.length ? idx + 1 : idx;
-    if (nextIndex === idx) {
-      return;
-    }
-
-    setCurrentIndex(nextIndex);
-    const nextItem = effectivePlaylist[nextIndex];
-    if (nextItem) {
-      onTrackChange?.(nextItem);
-    }
-  }, [effectivePlaylist, onTrackChange, shuffleEnabled]);
+  const handleEnded = handleNext;
 
   return (
     <Box
