@@ -1,6 +1,7 @@
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
 import type { SharedNodeFileDto } from "../../../shared/api/sharedFoldersApi";
+import type { MoveClipboardItem } from "../../../shared/store/moveClipboardStore";
 
 export type FileListFileDto = NodeFileManifestDto | SharedNodeFileDto;
 
@@ -249,12 +250,7 @@ export interface IFileListView {
     /** Current folder id; used to skip drops that would land on the source. */
     currentParentId: string | null;
     onMove: (
-      items: ReadonlyArray<{
-        id: string;
-        kind: "folder" | "file";
-        name: string;
-        sourceParentId: string;
-      }>,
+      items: ReadonlyArray<MoveClipboardItem>,
       targetParentId: string,
     ) => void;
   };
