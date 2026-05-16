@@ -303,6 +303,50 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MoveNode_ConcurrentSwap_DoesNotCreateCycle()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var a = await CreateFolderAsync(root.Id, "a");
+        var b = await CreateFolderAsync(root.Id, "b");
+
+        // Without the per-layout advisory lock, both descendant checks could pass
+        // on the pre-update tree and both commits would land — leaving A.parent=B
+        // and B.parent=A. With the lock the second request re-runs the descendant
+        // check inside the lock and rejects as into-descendant.
+        var moveAIntoB = MoveNodeAsync(a.Id, b.Id);
+        var moveBIntoA = MoveNodeAsync(b.Id, a.Id);
+        var results = await Task.WhenAll(moveAIntoB, moveBIntoA);
+
+        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+        int bads = results.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
+        Assert.That(oks, Is.EqualTo(1), "Exactly one swap leg must succeed.");
+        Assert.That(bads, Is.EqualTo(1), "The losing leg must be rejected (into-descendant).");
+
+        using var scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        Assert.That(await ParentWalkReachesRoot(db, a.Id), Is.True, "A must reach the root with no cycle.");
+        Assert.That(await ParentWalkReachesRoot(db, b.Id), Is.True, "B must reach the root with no cycle.");
+    }
+
+    private static async Task<bool> ParentWalkReachesRoot(CottonDbContext db, Guid startId)
+    {
+        var seen = new HashSet<Guid>();
+        Guid? current = startId;
+        while (current.HasValue)
+        {
+            if (!seen.Add(current.Value)) return false;
+            if (seen.Count > 1024) return false;
+            current = await db.Nodes
+                .AsNoTracking()
+                .Where(n => n.Id == current.Value)
+                .Select(n => n.ParentId)
+                .SingleOrDefaultAsync();
+        }
+        return true;
+    }
+
+    [Test]
     public async Task MoveNode_NonDefaultType_Returns404()
     {
         await AuthenticateAsync();

@@ -42,6 +42,24 @@ namespace Cotton.Server.Handlers.Nodes
                 throw new BadRequestException<Node>("Cannot move a node into itself.");
             }
 
+            // Folder moves mutate tree topology; without a serialization point two
+            // concurrent requests can each pass IsDescendantAsync against the pre-update
+            // tree and then commit, creating a cycle (A.parent=B and B.parent=A).
+            // We serialize per-layout via a Postgres transaction-scoped advisory lock,
+            // re-read state inside the lock, and run all checks before SaveChanges.
+            var sourceLayoutId = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
+                .Select(x => (Guid?)x.LayoutId)
+                .SingleOrDefaultAsync(cancellationToken)
+                ?? throw new EntityNotFoundException<Node>();
+
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            long lockKey = LayoutAdvisoryLockKey(sourceLayoutId);
+            await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({lockKey})",
+                cancellationToken);
+
             var node = await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(cancellationToken)
@@ -71,9 +89,6 @@ namespace Cotton.Server.Handlers.Nodes
 
             if (targetParent.LayoutId != node.LayoutId)
             {
-                // A user can own multiple layouts; nodes from different layouts live in disjoint
-                // namespaces (the unique index is keyed by LayoutId), so cross-layout moves would
-                // either bypass that index or silently orphan the subtree's LayoutId.
                 throw new BadRequestException<Node>("Cannot move a node across layouts.");
             }
 
@@ -97,12 +112,24 @@ namespace Cotton.Server.Handlers.Nodes
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg
                 && pg.SqlState == PostgresErrorCodes.UniqueViolation)
             {
-                // Unique index (LayoutId, ParentId, Type, NameKey) lost a race with a concurrent insert/move; surface as 409.
                 throw new DuplicateException(node.NameKey);
             }
 
+            await tx.CommitAsync(cancellationToken);
+
             await NotifyMoveAsync(node.Id, cancellationToken);
             return node.Adapt<NodeDto>();
+        }
+
+        private static long LayoutAdvisoryLockKey(Guid layoutId)
+        {
+            // pg_advisory_xact_lock takes a bigint. Collapse the 16-byte Guid into one
+            // deterministic int64 via XOR of its two halves. A spurious collision just
+            // means two unrelated layouts share the same lock — performance hit only.
+            var bytes = layoutId.ToByteArray();
+            long high = BitConverter.ToInt64(bytes, 0);
+            long low = BitConverter.ToInt64(bytes, 8);
+            return high ^ low;
         }
 
         private async Task<bool> IsDescendantAsync(Guid candidateChildId, Guid possibleAncestorId, Guid userId, CancellationToken ct)
