@@ -119,6 +119,22 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/move")]
+        public async Task<IActionResult> MoveFile(
+            [FromRoute] Guid nodeFileId,
+            [FromBody] MoveFileRequest request)
+        {
+            MoveFileCommand command = new()
+            {
+                NodeFileId = nodeFileId,
+                ParentId = request.ParentId,
+                UserId = User.GetUserId(),
+            };
+            var dto = await _mediator.Send(command);
+            return Ok(dto);
+        }
+
+        [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/rename")]
         public async Task<IActionResult> RenameFile(
             [FromRoute] Guid nodeFileId,

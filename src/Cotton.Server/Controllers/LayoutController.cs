@@ -105,6 +105,22 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch("nodes/{nodeId:guid}/move")]
+        public async Task<IActionResult> MoveLayoutNode(
+            [FromRoute] Guid nodeId,
+            [FromBody] MoveNodeRequest request)
+        {
+            MoveNodeCommand command = new()
+            {
+                NodeId = nodeId,
+                ParentId = request.ParentId,
+                UserId = User.GetUserId(),
+            };
+            var dto = await _mediator.Send(command);
+            return Ok(dto);
+        }
+
+        [Authorize]
         [HttpPatch("nodes/{nodeId:guid}/rename")]
         public async Task<IActionResult> RenameLayoutNode(
             [FromRoute] Guid nodeId,
