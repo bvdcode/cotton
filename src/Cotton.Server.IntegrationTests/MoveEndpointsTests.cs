@@ -267,6 +267,44 @@ public class MoveEndpointsTests : IntegrationTestBase
         Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    [Test]
+    public async Task MoveNode_AcrossLayouts_Returns400()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var moving = await CreateFolderAsync(root.Id, "moving");
+
+        // Same user, second layout: manufactured directly because the API only
+        // exposes one auto-created layout per user. Use the factory's DI scope so
+        // the DbContext is wired with the same NpgsqlDataSource as the app — a
+        // bare `new DbContextOptionsBuilder().UseNpgsql(...)` trips Postgres type
+        // OID lookups after the per-test EnsureDeleted+Create+migrations.
+        Guid otherLayoutRootId;
+        using (var scope = _factory!.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            var ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
+            var newLayout = new Cotton.Database.Models.Layout { OwnerId = ownerId, IsActive = false };
+            db.UserLayouts.Add(newLayout);
+            await db.SaveChangesAsync();
+
+            var newRoot = new Cotton.Database.Models.Node
+            {
+                LayoutId = newLayout.Id,
+                OwnerId = ownerId,
+                Type = Cotton.Database.Models.Enums.NodeType.Default,
+                ParentId = null,
+            };
+            newRoot.SetName("other-root");
+            db.Nodes.Add(newRoot);
+            await db.SaveChangesAsync();
+            otherLayoutRootId = newRoot.Id;
+        }
+
+        var res = await MoveNodeAsync(moving.Id, otherLayoutRootId);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
     // ---------------------------------------------------------------------
     // Notification failure does not fail the move
     // ---------------------------------------------------------------------
@@ -330,7 +368,11 @@ public class MoveEndpointsTests : IntegrationTestBase
             Port = 5432,
             Database = DatabaseName,
             Username = "postgres",
-            Password = "postgres"
+            Password = "postgres",
+            // Disable pooling so each test sees a fresh connection — between tests we
+            // recreate the schema (EnsureDeleted + Create + migrations) and Postgres
+            // type OIDs may change, which trips cached type lookups otherwise.
+            Pooling = false,
         };
         optionsBuilder.UseNpgsql(csb.ConnectionString);
         return new CottonDbContext(optionsBuilder.Options);

@@ -60,6 +60,14 @@ namespace Cotton.Server.Handlers.Nodes
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw new EntityNotFoundException<Node>();
 
+            if (targetParent.LayoutId != node.LayoutId)
+            {
+                // A user can own multiple layouts; nodes from different layouts live in disjoint
+                // namespaces (the unique index is keyed by LayoutId), so cross-layout moves would
+                // either bypass that index or silently orphan the subtree's LayoutId.
+                throw new BadRequestException<Node>("Cannot move a node across layouts.");
+            }
+
             if (targetParent.Type != node.Type)
             {
                 throw new BadRequestException<Node>("Target parent has incompatible node type.");
