@@ -6,6 +6,11 @@ import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
 import { TileItem, NewFolderCard } from "./TileItem";
 import { getFileTypeInfo } from "../../utils/fileTypes";
+import {
+  isMoveDrag,
+  getMoveDragSourceParents,
+} from "../../../../shared/hooks/useMoveOperations";
+import type { MoveClipboardItem } from "../../../../shared/store/moveClipboardStore";
 
 /**
  * Returns responsive tile min-width based on tile size.
@@ -152,7 +157,66 @@ export const TilesView: React.FC<IFileListView> = ({
   selectionMode = false,
   selectedIds,
   onToggleItem,
+  moveSupport,
 }) => {
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
+  const tilesById = useMemo(() => {
+    const map = new Map<string, FileSystemTile>();
+    for (const tile of tiles) {
+      const tileId = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      map.set(tileId, tile);
+    }
+    return map;
+  }, [tiles]);
+
+  const buildDragPayload = useCallback(
+    (sourceTileId: string): ReadonlyArray<MoveClipboardItem> | null => {
+      if (!moveSupport) return null;
+      const currentParentId = moveSupport.currentParentId;
+      if (!currentParentId) return null;
+
+      const toItem = (tile: FileSystemTile): MoveClipboardItem | null => {
+        if (tile.kind === "folder") {
+          return {
+            id: tile.node.id,
+            kind: "folder",
+            name: tile.node.name,
+            sourceParentId: tile.node.parentId ?? currentParentId,
+          };
+        }
+        return {
+          id: tile.file.id,
+          kind: "file",
+          name: tile.file.name,
+          sourceParentId: tile.file.nodeId ?? currentParentId,
+        };
+      };
+
+      const usingSelection =
+        selectionMode &&
+        selectedIds &&
+        selectedIds.size > 1 &&
+        selectedIds.has(sourceTileId);
+
+      if (usingSelection) {
+        const items: MoveClipboardItem[] = [];
+        for (const id of selectedIds!) {
+          const tile = tilesById.get(id);
+          if (!tile) continue;
+          const item = toItem(tile);
+          if (item) items.push(item);
+        }
+        if (items.length > 0) return items;
+      }
+
+      const tile = tilesById.get(sourceTileId);
+      if (!tile) return null;
+      const item = toItem(tile);
+      return item ? [item] : null;
+    },
+    [moveSupport, selectionMode, selectedIds, tilesById],
+  );
   const layout = useTileLayout(tileSize);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
@@ -544,9 +608,95 @@ export const TilesView: React.FC<IFileListView> = ({
     [handleKeyboardEvent],
   );
 
+  const handleMoveDragStart = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      const items = buildDragPayload(tileId);
+      if (!items || items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const dt = event.dataTransfer;
+      try {
+        dt.effectAllowed = "move";
+        const sources = new Set(items.map((i) => i.sourceParentId));
+        for (const source of sources) {
+          dt.setData(`application/x-cotton-move/${source}`, "1");
+        }
+        dt.setData("application/x-cotton-move", "1");
+        dt.setData(
+          "application/x-cotton-move-items",
+          JSON.stringify({ items }),
+        );
+      } catch {
+        // ignore
+      }
+    },
+    [buildDragPayload, moveSupport],
+  );
+
+  const handleMoveDragOver = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      if (!isMoveDrag(event.dataTransfer)) return;
+
+      const sources = getMoveDragSourceParents(event.dataTransfer);
+      // Folder cannot be a drop target for items already inside it.
+      if (sources.has(tileId)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "move";
+      if (dropTargetId !== tileId) {
+        setDropTargetId(tileId);
+      }
+    },
+    [dropTargetId, moveSupport],
+  );
+
+  const handleMoveDragLeave = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      const related = event.relatedTarget as Node | null;
+      if (related && event.currentTarget.contains(related)) return;
+      if (dropTargetId === tileId) {
+        setDropTargetId(null);
+      }
+    },
+    [dropTargetId, moveSupport],
+  );
+
+  const handleMoveDrop = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      if (!isMoveDrag(event.dataTransfer)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setDropTargetId(null);
+
+      const raw = event.dataTransfer.getData("application/x-cotton-move-items");
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw) as {
+          items: ReadonlyArray<MoveClipboardItem>;
+        };
+        if (!parsed || !Array.isArray(parsed.items)) return;
+        moveSupport.onMove(parsed.items, tileId);
+      } catch {
+        // ignore
+      }
+    },
+    [moveSupport],
+  );
+
+  const cutItemIds = moveSupport?.cutItemIds;
+
   const renderTile = useCallback(
     (tile: FileSystemTile, index: number) => {
       const tileId = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      const dimmed = cutItemIds?.has(tileId) ?? false;
+      const isFolder = tile.kind === "folder";
 
       return (
         <Box key={tileId} data-tile-index={index} data-tile-id={tileId}>
@@ -568,14 +718,44 @@ export const TilesView: React.FC<IFileListView> = ({
                     })
                 : undefined
             }
+            dimmed={dimmed}
+            draggable={!!moveSupport && !readOnly && !selectionMode}
+            onMoveDragStart={
+              moveSupport
+                ? (e) => handleMoveDragStart(tileId, e)
+                : undefined
+            }
+            onMoveDragOver={
+              moveSupport && isFolder
+                ? (e) => handleMoveDragOver(tileId, e)
+                : undefined
+            }
+            onMoveDragLeave={
+              moveSupport && isFolder
+                ? (e) => handleMoveDragLeave(tileId, e)
+                : undefined
+            }
+            onMoveDrop={
+              moveSupport && isFolder
+                ? (e) => handleMoveDrop(tileId, e)
+                : undefined
+            }
+            dropActive={isFolder && dropTargetId === tileId}
           />
         </Box>
       );
     },
     [
+      cutItemIds,
+      dropTargetId,
       fileNamePlaceholder,
       fileOperations,
       folderOperations,
+      handleMoveDragLeave,
+      handleMoveDragOver,
+      handleMoveDragStart,
+      handleMoveDrop,
+      moveSupport,
       onToggleItem,
       orderedIds,
       readOnly,

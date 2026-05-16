@@ -1,12 +1,22 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Box } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import type { GridRowParams, GridRowsProp, GridRowSelectionModel } from "@mui/x-data-grid";
+import type {
+  GridRowClassNameParams,
+  GridRowParams,
+  GridRowsProp,
+  GridRowSelectionModel,
+} from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
 import { getFileTypeInfo } from "../../utils/fileTypes";
 import type { IFileListView } from "../../types/FileListViewTypes";
 import { createFileListColumns, type FileListRow } from "./fileListColumns";
 import Loader from "../../../../shared/ui/Loader";
+import {
+  isMoveDrag,
+  getMoveDragSourceParents,
+} from "../../../../shared/hooks/useMoveOperations";
+import type { MoveClipboardItem } from "../../../../shared/store/moveClipboardStore";
 
 export const ListView: React.FC<IFileListView> = ({
   tiles,
@@ -28,6 +38,7 @@ export const ListView: React.FC<IFileListView> = ({
   selectionMode = false,
   selectedIds,
   onToggleItem,
+  moveSupport,
 }) => {
   const { t } = useTranslation("files");
   const [failedPreviews, setFailedPreviews] = React.useState<Set<string>>(
@@ -81,6 +92,207 @@ export const ListView: React.FC<IFileListView> = ({
     [rows],
   );
 
+  const rowsById = useMemo(() => {
+    const map = new Map<string, FileListRow>();
+    for (const row of rows) {
+      if (row.type === "new-folder") continue;
+      map.set(String(row.id), row);
+    }
+    return map;
+  }, [rows]);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
+  const findRowElement = useCallback(
+    (target: EventTarget | null): HTMLElement | null => {
+      if (!(target instanceof Element)) return null;
+      return target.closest<HTMLElement>("[data-id]");
+    },
+    [],
+  );
+
+  const buildDragPayloadForRow = useCallback(
+    (rowId: string): ReadonlyArray<MoveClipboardItem> | null => {
+      if (!moveSupport) return null;
+      const currentParentId = moveSupport.currentParentId;
+      if (!currentParentId) return null;
+
+      const row = rowsById.get(rowId);
+      if (!row) return null;
+
+      const rowToItem = (r: FileListRow): MoveClipboardItem | null => {
+        if (r.type === "folder") {
+          return {
+            id: String(r.id),
+            kind: "folder",
+            name: r.name,
+            sourceParentId: currentParentId,
+          };
+        }
+        if (r.type === "file") {
+          return {
+            id: String(r.id),
+            kind: "file",
+            name: r.name,
+            sourceParentId: r.containerNodeId ?? currentParentId,
+          };
+        }
+        return null;
+      };
+
+      const usingSelection =
+        selectionMode &&
+        selectedIds &&
+        selectedIds.size > 1 &&
+        selectedIds.has(rowId);
+
+      if (usingSelection) {
+        const items: MoveClipboardItem[] = [];
+        for (const id of selectedIds!) {
+          const candidate = rowsById.get(id);
+          if (!candidate) continue;
+          const item = rowToItem(candidate);
+          if (item) items.push(item);
+        }
+        if (items.length > 0) return items;
+      }
+
+      const item = rowToItem(row);
+      return item ? [item] : null;
+    },
+    [moveSupport, rowsById, selectedIds, selectionMode],
+  );
+
+  const handleContainerMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      if (event.button !== 0) return;
+      const rowEl = findRowElement(event.target);
+      if (!rowEl) return;
+      // Make rows draggable on demand so non-row interactions (text selection,
+      // sort headers, checkboxes) keep working normally.
+      rowEl.setAttribute("draggable", "true");
+    },
+    [findRowElement, moveSupport],
+  );
+
+  const handleContainerDragStart = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      const rowEl = findRowElement(event.target);
+      if (!rowEl) return;
+      const rowId = rowEl.getAttribute("data-id");
+      if (!rowId) return;
+
+      const items = buildDragPayloadForRow(rowId);
+      if (!items || items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const dt = event.dataTransfer;
+      try {
+        dt.effectAllowed = "move";
+        const sources = new Set(items.map((i) => i.sourceParentId));
+        for (const source of sources) {
+          dt.setData(`application/x-cotton-move/${source}`, "1");
+        }
+        dt.setData("application/x-cotton-move", "1");
+        dt.setData(
+          "application/x-cotton-move-items",
+          JSON.stringify({ items }),
+        );
+      } catch {
+        // ignore
+      }
+    },
+    [buildDragPayloadForRow, findRowElement, moveSupport],
+  );
+
+  const handleContainerDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      if (!isMoveDrag(event.dataTransfer)) return;
+      const rowEl = findRowElement(event.target);
+      if (!rowEl) {
+        if (dropTargetId !== null) setDropTargetId(null);
+        return;
+      }
+      const rowId = rowEl.getAttribute("data-id");
+      if (!rowId) return;
+      const row = rowsById.get(rowId);
+      if (!row || row.type !== "folder") {
+        if (dropTargetId !== null) setDropTargetId(null);
+        return;
+      }
+      const sources = getMoveDragSourceParents(event.dataTransfer);
+      if (sources.has(rowId)) return;
+
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      if (dropTargetId !== rowId) {
+        setDropTargetId(rowId);
+      }
+    },
+    [dropTargetId, findRowElement, moveSupport, rowsById],
+  );
+
+  const handleContainerDragLeave = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      const host = containerRef.current;
+      if (!host) return;
+      const related = event.relatedTarget as Node | null;
+      if (related && host.contains(related)) return;
+      setDropTargetId(null);
+    },
+    [moveSupport],
+  );
+
+  const handleContainerDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      if (!isMoveDrag(event.dataTransfer)) return;
+      const rowEl = findRowElement(event.target);
+      if (!rowEl) return;
+      const rowId = rowEl.getAttribute("data-id");
+      if (!rowId) return;
+      const row = rowsById.get(rowId);
+      if (!row || row.type !== "folder") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setDropTargetId(null);
+
+      const raw = event.dataTransfer.getData("application/x-cotton-move-items");
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw) as {
+          items: ReadonlyArray<MoveClipboardItem>;
+        };
+        if (!parsed || !Array.isArray(parsed.items)) return;
+        moveSupport.onMove(parsed.items, rowId);
+      } catch {
+        // ignore
+      }
+    },
+    [findRowElement, moveSupport, rowsById],
+  );
+
+  const cutItemIds = moveSupport?.cutItemIds;
+
+  const getRowClassName = useCallback(
+    (params: GridRowClassNameParams<FileListRow>) => {
+      const classes: string[] = [];
+      const idStr = String(params.id);
+      if (cutItemIds?.has(idStr)) classes.push("cotton-row-cut");
+      if (dropTargetId === idStr) classes.push("cotton-row-drop");
+      return classes.join(" ");
+    },
+    [cutItemIds, dropTargetId],
+  );
+
   const columns = useMemo(
     () =>
       createFileListColumns({
@@ -96,6 +308,7 @@ export const ListView: React.FC<IFileListView> = ({
           delete: t("common:actions.delete"),
           download: t("common:actions.download"),
           share: t("common:actions.share"),
+          cut: t("move.cut"),
         },
         newFolderName,
         onNewFolderNameChange,
@@ -190,11 +403,24 @@ export const ListView: React.FC<IFileListView> = ({
 
   return (
     <Box
+      ref={containerRef}
+      onMouseDown={moveSupport ? handleContainerMouseDown : undefined}
+      onDragStart={moveSupport ? handleContainerDragStart : undefined}
+      onDragOver={moveSupport ? handleContainerDragOver : undefined}
+      onDragLeave={moveSupport ? handleContainerDragLeave : undefined}
+      onDrop={moveSupport ? handleContainerDrop : undefined}
       sx={{
         width: "100%",
         height: autoHeight ? "auto" : "100%",
         minHeight: 0,
         position: "relative",
+        "& .cotton-row-cut": { opacity: 0.45 },
+        "& .cotton-row-drop": {
+          outline: "2px solid",
+          outlineColor: "primary.main",
+          outlineOffset: -2,
+          borderRadius: 1,
+        },
       }}
     >
       {loading && (
@@ -228,6 +454,7 @@ export const ListView: React.FC<IFileListView> = ({
             outline: "none",
           },
         }}
+        getRowClassName={moveSupport ? getRowClassName : undefined}
         rows={rows}
         columns={columns}
         checkboxSelection={selectionMode}

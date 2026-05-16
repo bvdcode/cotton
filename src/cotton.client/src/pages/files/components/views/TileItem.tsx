@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Checkbox } from "@mui/material";
-import { Folder, Download, Edit, Delete, Share } from "@mui/icons-material";
+import { ContentCut, Folder, Download, Edit, Delete, Share } from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
 import { InlineRenameField } from "../InlineRenameField";
@@ -165,6 +165,17 @@ interface TileItemProps {
   selectionMode?: boolean;
   selected?: boolean;
   onToggle?: (shiftKey: boolean) => void;
+  /** Renders the tile semi-transparent to indicate it is in the cut buffer. */
+  dimmed?: boolean;
+  /** Whether this tile can initiate a move drag. */
+  draggable?: boolean;
+  onMoveDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  /** Drop handlers (active only for folder targets). */
+  onMoveDragOver?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onMoveDragLeave?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onMoveDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
+  /** When true, highlights the tile as the active drop target. */
+  dropActive?: boolean;
 }
 
 /**
@@ -172,7 +183,24 @@ interface TileItemProps {
  * Extracted for reuse by both plain and virtualized grid.
  */
 export const TileItem: React.FC<TileItemProps> = React.memo(
-  ({ tile, folderOperations, fileOperations, fileNamePlaceholder, tileSize = "medium", readOnly = false, selectionMode = false, selected = false, onToggle }) => {
+  ({
+    tile,
+    folderOperations,
+    fileOperations,
+    fileNamePlaceholder,
+    tileSize = "medium",
+    readOnly = false,
+    selectionMode = false,
+    selected = false,
+    onToggle,
+    dimmed = false,
+    draggable = false,
+    onMoveDragStart,
+    onMoveDragOver,
+    onMoveDragLeave,
+    onMoveDrop,
+    dropActive = false,
+  }) => {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
@@ -288,6 +316,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ? () => folderOperations.onShare?.(tile.node.id, tile.node.name)
               : undefined
           }
+          onCut={
+            folderOperations.onCut
+              ? () => folderOperations.onCut?.(tile.node.id, tile.node.name)
+              : undefined
+          }
           onClick={(e) => {
             const shiftKey = !!(e as React.MouseEvent).shiftKey;
 
@@ -311,6 +344,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return (
         <Box
           position="relative"
+          draggable={draggable}
+          onDragStart={onMoveDragStart}
+          onDragOver={onMoveDragOver}
+          onDragLeave={onMoveDragLeave}
+          onDrop={onMoveDrop}
           onContextMenu={(e) => {
             e.preventDefault();
           }}
@@ -319,6 +357,16 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onPointerUpCapture={handlePointerUpCapture}
           onPointerCancelCapture={handlePointerCancelCapture}
           onClickCapture={handleClickCapture}
+          sx={{
+            opacity: dimmed ? 0.45 : 1,
+            transition: "opacity 120ms ease-out, box-shadow 120ms ease-out",
+            ...(dropActive && {
+              outline: "2px solid",
+              outlineColor: "primary.main",
+              outlineOffset: 1,
+              borderRadius: 1,
+            }),
+          }}
         >
           {checkbox}
           {folderContent}
@@ -435,6 +483,16 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
                 },
               ]
             : []),
+          ...(!readOnly && fileOperations.onCut
+            ? [
+                {
+                  icon: <ContentCut />,
+                  onClick: () =>
+                    fileOperations.onCut?.(tile.file.id, tile.file.name),
+                  tooltip: t("files:move.cut"),
+                },
+              ]
+            : []),
           ...(!readOnly && fileOperations.onDelete
             ? [
                 {
@@ -460,6 +518,8 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     return (
       <Box
         position="relative"
+        draggable={draggable}
+        onDragStart={onMoveDragStart}
         onContextMenu={(e) => {
           e.preventDefault();
         }}
@@ -468,6 +528,10 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         onPointerUpCapture={handlePointerUpCapture}
         onPointerCancelCapture={handlePointerCancelCapture}
         onClickCapture={handleClickCapture}
+        sx={{
+          opacity: dimmed ? 0.45 : 1,
+          transition: "opacity 120ms ease-out",
+        }}
       >
         {checkbox}
         {fileContent}

@@ -54,6 +54,7 @@ export interface FolderOperations {
   onStartRename?: (folderId: string, name: string) => void;
   onDelete?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
+  onCut?: (folderId: string, name: string) => void;
   onClick: (folderId: string) => void;
 }
 
@@ -70,6 +71,7 @@ export interface FileOperations {
   onDelete?: (fileId: string, name: string) => void;
   onDownload?: (fileId: string, name: string) => void;
   onShare?: (fileId: string, name: string) => void;
+  onCut?: (fileId: string, name: string) => void;
   onClick: (fileId: string, name: string, sizeBytes?: number) => void;
   onMediaClick?: (fileId: string) => void;
 }
@@ -236,4 +238,24 @@ export interface IFileListView {
     id: string,
     options?: { shiftKey?: boolean; orderedIds?: ReadonlyArray<string> },
   ) => void;
+
+  /**
+   * Move / clipboard support.
+   * When set, tiles become draggable and folder tiles accept drops.
+   * Items in `cutItemIds` are rendered semi-transparent.
+   */
+  moveSupport?: {
+    cutItemIds?: ReadonlySet<string>;
+    /** Current folder id; used to skip drops that would land on the source. */
+    currentParentId: string | null;
+    onMove: (
+      items: ReadonlyArray<{
+        id: string;
+        kind: "folder" | "file";
+        name: string;
+        sourceParentId: string;
+      }>,
+      targetParentId: string,
+    ) => void;
+  };
 }

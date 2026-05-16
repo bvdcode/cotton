@@ -1,6 +1,6 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
 import { Alert, Box } from "@mui/material";
-import { Delete } from "@mui/icons-material";
+import { ContentCut, ContentPaste, Delete } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import {
   FileListViewFactory,
@@ -44,6 +44,15 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
+import {
+  useMoveOperations,
+  isMoveDrag,
+  getMoveDragSourceParents,
+} from "../../shared/hooks/useMoveOperations";
+import {
+  useMoveClipboardStore,
+  type MoveClipboardItem,
+} from "../../shared/store/moveClipboardStore";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -216,6 +225,210 @@ export const FilesPage: React.FC = () => {
   const fileOps = useFileOperations(reloadCurrentNode);
   const fileSelection = useFileSelection();
 
+  const moveOps = useMoveOperations();
+  const clipboardItems = useMoveClipboardStore((s) => s.items);
+  const cutItemIds = useMemo(
+    () => new Set(clipboardItems.map((c) => c.id)),
+    [clipboardItems],
+  );
+
+  const buildClipboardItemsFromIds = React.useCallback(
+    (ids: Iterable<string>): MoveClipboardItem[] => {
+      if (!nodeId) return [];
+      const items: MoveClipboardItem[] = [];
+      const idsSet = new Set(ids);
+      for (const tile of tiles) {
+        if (tile.kind === "folder") {
+          if (!idsSet.has(tile.node.id)) continue;
+          items.push({
+            id: tile.node.id,
+            kind: "folder",
+            name: tile.node.name,
+            sourceParentId: tile.node.parentId ?? nodeId,
+          });
+        } else {
+          if (!idsSet.has(tile.file.id)) continue;
+          items.push({
+            id: tile.file.id,
+            kind: "file",
+            name: tile.file.name,
+            sourceParentId: tile.file.nodeId ?? nodeId,
+          });
+        }
+      }
+      return items;
+    },
+    [nodeId, tiles],
+  );
+
+  const handleCutSelection = React.useCallback(() => {
+    if (fileSelection.selectedCount === 0) return;
+    const items = buildClipboardItemsFromIds(fileSelection.selectedIds);
+    if (items.length === 0) return;
+    moveOps.cutItems(items);
+    showToast(t("move.toasts.cut", { ns: "files", count: items.length }));
+  }, [
+    buildClipboardItemsFromIds,
+    fileSelection.selectedCount,
+    fileSelection.selectedIds,
+    moveOps,
+    showToast,
+    t,
+  ]);
+
+  const handlePasteHere = React.useCallback(() => {
+    if (!nodeId) return;
+    if (clipboardItems.length === 0) return;
+    void moveOps.pasteInto(nodeId);
+  }, [clipboardItems.length, moveOps, nodeId]);
+
+  const handleMoveItems = React.useCallback(
+    (
+      items: ReadonlyArray<MoveClipboardItem>,
+      targetParentId: string,
+    ): void => {
+      void moveOps.moveItems(items, targetParentId);
+    },
+    [moveOps],
+  );
+
+  // Global Ctrl+X / Ctrl+V hotkeys
+  React.useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    };
+
+    const handler = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const key = event.key.toLowerCase();
+      if (key !== "x" && key !== "v") return;
+      if (isEditableTarget(event.target)) return;
+
+      if (key === "x") {
+        if (fileSelection.selectedCount === 0) return;
+        event.preventDefault();
+        handleCutSelection();
+      } else if (key === "v") {
+        if (clipboardItems.length === 0) return;
+        if (!nodeId) return;
+        event.preventDefault();
+        handlePasteHere();
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [
+    clipboardItems.length,
+    fileSelection.selectedCount,
+    handleCutSelection,
+    handlePasteHere,
+    nodeId,
+  ]);
+
+  // Drop handlers for the "Go up" action and breadcrumbs
+  const [goUpDropActive, setGoUpDropActive] = React.useState(false);
+  const goUpParentId = ancestors.length > 0
+    ? ancestors[ancestors.length - 1].id
+    : null;
+
+  const readDropPayload = React.useCallback(
+    (event: React.DragEvent<HTMLElement>): MoveClipboardItem[] | null => {
+      const raw = event.dataTransfer.getData("application/x-cotton-move-items");
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw) as {
+          items: ReadonlyArray<MoveClipboardItem>;
+        };
+        if (!parsed || !Array.isArray(parsed.items)) return null;
+        return [...parsed.items];
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  const canAcceptDropOn = React.useCallback(
+    (event: React.DragEvent<HTMLElement>, targetParentId: string): boolean => {
+      if (!isMoveDrag(event.dataTransfer)) return false;
+      const sources = getMoveDragSourceParents(event.dataTransfer);
+      // Reject drops onto the source parent (no-op move).
+      return !sources.has(targetParentId);
+    },
+    [],
+  );
+
+  const goUpDropHandlers = React.useMemo(() => {
+    if (!goUpParentId) return undefined;
+    return {
+      onDragOver: (event: React.DragEvent<HTMLElement>) => {
+        if (!canAcceptDropOn(event, goUpParentId)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        if (!goUpDropActive) setGoUpDropActive(true);
+      },
+      onDragLeave: (event: React.DragEvent<HTMLElement>) => {
+        const related = event.relatedTarget as Node | null;
+        if (related && event.currentTarget.contains(related)) return;
+        setGoUpDropActive(false);
+      },
+      onDrop: (event: React.DragEvent<HTMLElement>) => {
+        setGoUpDropActive(false);
+        if (!isMoveDrag(event.dataTransfer)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const items = readDropPayload(event);
+        if (!items || items.length === 0) return;
+        handleMoveItems(items, goUpParentId);
+      },
+      active: goUpDropActive,
+    };
+  }, [
+    canAcceptDropOn,
+    goUpDropActive,
+    goUpParentId,
+    handleMoveItems,
+    readDropPayload,
+  ]);
+
+  const breadcrumbsDropHandlers = React.useMemo(() => {
+    return {
+      canAccept: (targetCrumbId: string) => targetCrumbId !== nodeId,
+      onDragOver: (
+        targetCrumbId: string,
+        event: React.DragEvent<HTMLElement>,
+      ) => {
+        if (!canAcceptDropOn(event, targetCrumbId)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      },
+      onDrop: (
+        targetCrumbId: string,
+        event: React.DragEvent<HTMLElement>,
+      ) => {
+        if (!isMoveDrag(event.dataTransfer)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const items = readDropPayload(event);
+        if (!items || items.length === 0) return;
+        handleMoveItems(items, targetCrumbId);
+      },
+    };
+  }, [canAcceptDropOn, handleMoveItems, nodeId, readDropPayload]);
+
+  const moveSupport = useMemo(() => {
+    if (!nodeId) return undefined;
+    return {
+      cutItemIds,
+      currentParentId: nodeId,
+      onMove: handleMoveItems,
+    };
+  }, [cutItemIds, handleMoveItems, nodeId]);
+
   const smoothGalleryTransitions = useLocalPreferencesStore(
     selectGallerySmoothTransitions,
   );
@@ -248,17 +461,49 @@ export const FilesPage: React.FC = () => {
     [t],
   );
 
+  const handleCutFolder = React.useCallback(
+    (folderId: string, folderName: string) => {
+      if (!nodeId) return;
+      const item: MoveClipboardItem = {
+        id: folderId,
+        kind: "folder",
+        name: folderName,
+        sourceParentId: nodeId,
+      };
+      moveOps.cutItems([item]);
+      showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
+    },
+    [moveOps, nodeId, showToast, t],
+  );
+
+  const handleCutFile = React.useCallback(
+    (fileId: string, fileName: string) => {
+      if (!nodeId) return;
+      const item: MoveClipboardItem = {
+        id: fileId,
+        kind: "file",
+        name: fileName,
+        sourceParentId: nodeId,
+      };
+      moveOps.cutItems([item]);
+      showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
+    },
+    [moveOps, nodeId, showToast, t],
+  );
+
   // Build folder operations adapter
   const folderOperations = buildFolderOperations(
     folderOps,
     goToFolder,
     handleShareFolder,
+    handleCutFolder,
   );
 
   // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
     onShare: handleShareFile,
+    onCut: handleCutFile,
     onClick: handleFileClick,
     onMediaClick: handleMediaClick,
   });
@@ -276,6 +521,56 @@ export const FilesPage: React.FC = () => {
 
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
+
+  const customActionItems = useMemo<
+    React.ComponentProps<typeof PageHeader>["customActionItems"]
+  >(() => {
+    const items: NonNullable<
+      React.ComponentProps<typeof PageHeader>["customActionItems"]
+    > = [];
+    if (fileSelection.selectionMode && fileSelection.selectedCount > 0) {
+      items.push({
+        key: "cut-selected",
+        icon: <ContentCut />,
+        title: t("move.cut", { ns: "files" }),
+        onClick: handleCutSelection,
+        disabled: loading,
+      });
+      items.push({
+        key: "delete-selected",
+        icon: <Delete />,
+        title: t("selection.deleteSelected", { ns: "files" }),
+        onClick: () => {
+          void handleDeleteSelected();
+        },
+        disabled: loading,
+        color: "error" as const,
+      });
+    }
+    if (clipboardItems.length > 0 && nodeId) {
+      items.push({
+        key: "paste-here",
+        icon: <ContentPaste />,
+        title: t("move.pasteHere", {
+          ns: "files",
+          count: clipboardItems.length,
+        }),
+        onClick: handlePasteHere,
+        disabled: loading,
+      });
+    }
+    return items.length > 0 ? items : undefined;
+  }, [
+    clipboardItems.length,
+    fileSelection.selectionMode,
+    fileSelection.selectedCount,
+    handleCutSelection,
+    handleDeleteSelected,
+    handlePasteHere,
+    loading,
+    nodeId,
+    t,
+  ]);
 
   const pageHeaderProps = useMemo(
     (): React.ComponentProps<typeof PageHeader> => ({
@@ -297,27 +592,17 @@ export const FilesPage: React.FC = () => {
       selectedCount: fileSelection.selectedCount,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
-      customActionItems:
-        fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
-          [
-            {
-              key: "delete-selected",
-              icon: <Delete />,
-              title: t("selection.deleteSelected", { ns: "files" }),
-              onClick: () => {
-                void handleDeleteSelected();
-              },
-              disabled: loading,
-              color: "error" as const,
-            },
-          ]
-        ) : undefined,
+      customActionItems,
+      breadcrumbsDropHandlers,
+      goUpDropHandlers,
     }),
     [
       ancestors.length,
       breadcrumbs,
+      breadcrumbsDropHandlers,
+      customActionItems,
       cycleViewMode,
-      handleDeleteSelected,
+      goUpDropHandlers,
       fileSelection,
       fileUpload.handleUploadClick,
       folderOps.handleNewFolder,
@@ -328,7 +613,6 @@ export const FilesPage: React.FC = () => {
       loading,
       nodeId,
       stats,
-      t,
       tiles,
       viewMode,
     ],
@@ -375,6 +659,7 @@ export const FilesPage: React.FC = () => {
       selectionMode: fileSelection.selectionMode,
       selectedIds: fileSelection.selectedIds,
       onToggleItem: handleToggleItem,
+      moveSupport,
       pagination:
         undefined,
     }),
@@ -396,6 +681,7 @@ export const FilesPage: React.FC = () => {
       layoutType,
       listContent,
       listError,
+      moveSupport,
       t,
       tiles,
       tilesSize,

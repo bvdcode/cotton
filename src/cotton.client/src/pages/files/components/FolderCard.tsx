@@ -1,4 +1,4 @@
-import { Delete, Edit, Share } from "@mui/icons-material";
+import { ContentCut, Delete, Edit, Share } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { RenamableItemCard } from "./RenamableItemCard";
@@ -14,6 +14,7 @@ interface FolderCardProps {
   onStartRename?: () => void;
   onDelete?: () => void;
   onShare?: () => void;
+  onCut?: () => void;
   onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
   readOnly?: boolean;
@@ -29,6 +30,7 @@ export const FolderCard = ({
   onStartRename,
   onDelete,
   onShare,
+  onCut,
   onClick,
   variant = "default",
   readOnly = false,
@@ -59,6 +61,15 @@ export const FolderCard = ({
                 icon: <Edit />,
                 onClick: onStartRename,
                 tooltip: t("common:actions.rename"),
+              },
+            ]
+          : []),
+        ...(!readOnly && onCut
+          ? [
+              {
+                icon: <ContentCut />,
+                onClick: onCut,
+                tooltip: t("files:move.cut"),
               },
             ]
           : []),
