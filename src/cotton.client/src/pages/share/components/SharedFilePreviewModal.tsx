@@ -140,8 +140,56 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     setShadowsEnabled(true);
   }, [defaultModelColor, fileId, isModel, open]);
 
+  const isTextPreviewActive = open && fileType === "text" && Boolean(fileId) && Boolean(fileName);
+
+  const formatTooLargeMessage = React.useCallback(
+    (size: number): string => {
+      const sizeMB = size / 1024 / 1024;
+      const maxKB = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES / 1024;
+      return t("preview.errors.fileTooLarge", {
+        ns: "files",
+        size:
+          sizeMB >= 1
+            ? `${Math.round(sizeMB)} MB`
+            : `${Math.round(size / 1024)} KB`,
+        maxSize: `${Math.round(maxKB)} KB`,
+      });
+    },
+    [t],
+  );
+
+  const loadSharedText = React.useCallback(
+    async (signalProvider: () => boolean): Promise<void> => {
+      try {
+        const inlineUrl = sharedFoldersApi.buildFileContentUrl(
+          token,
+          fileId!,
+          "inline",
+        );
+        const response = await fetch(inlineUrl);
+        if (signalProvider()) return;
+        if (!response.ok) {
+          throw new Error(t("preview.errors.loadFailed", { ns: "files", error: "" }));
+        }
+        const text = await response.text();
+        if (signalProvider()) return;
+        setTextContent(text);
+        setLoadingText(false);
+      } catch (e) {
+        if (signalProvider()) return;
+        setTextError(
+          e instanceof Error
+            ? e.message
+            : t("preview.errors.loadFailed", { ns: "files", error: "" }),
+        );
+        setLoadingText(false);
+      }
+    },
+    [fileId, t, token],
+  );
+
   React.useEffect(() => {
-    if (!open || fileType !== "text" || !fileId || !fileName) {
+    if (!isTextPreviewActive) {
       setTextContent(null);
       setTextError(null);
       setLoadingText(false);
@@ -152,62 +200,23 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
       typeof fileSizeBytes === "number" &&
       fileSizeBytes > previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES
     ) {
-      const sizeMB = fileSizeBytes / 1024 / 1024;
-      const maxKB = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES / 1024;
-      setTextError(
-        t("preview.errors.fileTooLarge", {
-          ns: "files",
-          size: sizeMB >= 1 ? `${Math.round(sizeMB)} MB` : `${Math.round(fileSizeBytes / 1024)} KB`,
-          maxSize: `${Math.round(maxKB)} KB`,
-        }),
-      );
+      setTextError(formatTooLargeMessage(fileSizeBytes));
       setTextContent(null);
       setLoadingText(false);
       return;
     }
 
     let cancelled = false;
-
     setLoadingText(true);
     setTextError(null);
     setTextContent(null);
 
-    void (async () => {
-      try {
-        const inlineUrl = sharedFoldersApi.buildFileContentUrl(
-          token,
-          fileId,
-          "inline",
-        );
-        const response = await fetch(inlineUrl);
-
-        if (cancelled) return;
-
-        if (!response.ok) {
-          throw new Error(t("preview.errors.loadFailed", { ns: "files", error: "" }));
-        }
-
-        const text = await response.text();
-        if (!cancelled) {
-          setTextContent(text);
-          setLoadingText(false);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setTextError(
-            e instanceof Error
-              ? e.message
-              : t("preview.errors.loadFailed", { ns: "files", error: "" }),
-          );
-          setLoadingText(false);
-        }
-      }
-    })();
+    void loadSharedText(() => cancelled);
 
     return () => {
       cancelled = true;
     };
-  }, [contentType, fileId, fileName, fileSizeBytes, fileType, open, t, token]);
+  }, [fileSizeBytes, formatTooLargeMessage, isTextPreviewActive, loadSharedText]);
 
   if (!open || !fileId || !fileName) {
     return null;

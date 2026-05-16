@@ -119,45 +119,96 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     [viewMode],
   );
 
+  const buildCreationActions = React.useCallback((): PageHeaderActionItem[] => {
+    const actions: PageHeaderActionItem[] = [];
+    if (showUpload && onUploadClick) {
+      actions.push({
+        key: "upload",
+        icon: <UploadFile />,
+        title: t("actions.upload"),
+        onClick: onUploadClick,
+        disabled: loading,
+      });
+    }
+    if (showNewFolder && onNewFolderClick) {
+      actions.push({
+        key: "new-folder",
+        icon: <CreateNewFolder />,
+        title: t("actions.newFolder"),
+        onClick: onNewFolderClick,
+        disabled: loading || isCreatingFolder,
+      });
+    }
+    return actions;
+  }, [
+    isCreatingFolder,
+    loading,
+    onNewFolderClick,
+    onUploadClick,
+    showNewFolder,
+    showUpload,
+    t,
+  ]);
+
+  const buildSelectionActions = React.useCallback((): PageHeaderActionItem[] => {
+    const actions: PageHeaderActionItem[] = [];
+    if (onToggleSelectionMode) {
+      actions.push({
+        key: "selection-mode",
+        icon: selectionMode ? <CheckBox /> : <CheckBoxOutlineBlank />,
+        title: t(selectionMode ? "selection.exit" : "selection.enter"),
+        onClick: onToggleSelectionMode,
+        disabled: false,
+        active: selectionMode,
+      });
+    }
+    if (selectionMode && onSelectAll) {
+      actions.push({
+        key: "select-all",
+        icon: <SelectAll />,
+        title: t("selection.selectAll"),
+        onClick: onSelectAll,
+        disabled: false,
+      });
+    }
+    if (selectionMode && selectedCount > 0 && onDeselectAll) {
+      actions.push({
+        key: "deselect-all",
+        icon: <Deselect />,
+        title: t("selection.deselectAll"),
+        onClick: onDeselectAll,
+        disabled: false,
+      });
+    }
+    return actions;
+  }, [
+    onDeselectAll,
+    onSelectAll,
+    onToggleSelectionMode,
+    selectedCount,
+    selectionMode,
+    t,
+  ]);
+
   const actionTabs = React.useMemo(
     (): PageHeaderActionItem[] => {
       const actions: PageHeaderActionItem[] = [
         {
-        key: "go-up",
-        icon: <ArrowUpward />,
-        title: t("actions.goUp"),
-        onClick: onGoUp,
-        disabled: loading || !canGoUp,
+          key: "go-up",
+          icon: <ArrowUpward />,
+          title: t("actions.goUp"),
+          onClick: onGoUp,
+          disabled: loading || !canGoUp,
+        },
+        ...buildCreationActions(),
+        {
+          key: "home",
+          icon: <Home />,
+          title: t("breadcrumbs.root"),
+          onClick: onHomeClick,
+          disabled: false,
         },
       ];
-
-      if (showUpload && onUploadClick) {
-        actions.push({
-          key: "upload",
-          icon: <UploadFile />,
-          title: t("actions.upload"),
-          onClick: onUploadClick,
-          disabled: loading,
-        });
-      }
-
-      if (showNewFolder && onNewFolderClick) {
-        actions.push({
-          key: "new-folder",
-          icon: <CreateNewFolder />,
-          title: t("actions.newFolder"),
-          onClick: onNewFolderClick,
-          disabled: loading || isCreatingFolder,
-        });
-      }
-
-      actions.push({
-        key: "home",
-        icon: <Home />,
-        title: t("breadcrumbs.root"),
-        onClick: onHomeClick,
-        disabled: false,
-      });
 
       if (showViewModeToggle) {
         actions.push({
@@ -169,36 +220,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         });
       }
 
-      if (onToggleSelectionMode) {
-        actions.push({
-          key: "selection-mode",
-          icon: selectionMode ? <CheckBox /> : <CheckBoxOutlineBlank />,
-          title: t(selectionMode ? "selection.exit" : "selection.enter"),
-          onClick: onToggleSelectionMode,
-          disabled: false,
-          active: selectionMode,
-        });
-      }
-
-      if (selectionMode && onSelectAll) {
-        actions.push({
-          key: "select-all",
-          icon: <SelectAll />,
-          title: t("selection.selectAll"),
-          onClick: onSelectAll,
-          disabled: false,
-        });
-      }
-
-      if (selectionMode && selectedCount > 0 && onDeselectAll) {
-        actions.push({
-          key: "deselect-all",
-          icon: <Deselect />,
-          title: t("selection.deselectAll"),
-          onClick: onDeselectAll,
-          disabled: false,
-        });
-      }
+      actions.push(...buildSelectionActions());
 
       if (customActionItems && customActionItems.length > 0) {
         actions.push(...customActionItems);
@@ -207,26 +229,18 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       return actions;
     },
     [
+      buildCreationActions,
+      buildSelectionActions,
       canGoUp,
-      isCreatingFolder,
+      customActionItems,
       loading,
       nextViewTitleKey,
-      onDeselectAll,
       onGoUp,
       onHomeClick,
-      onNewFolderClick,
-      onSelectAll,
-      onToggleSelectionMode,
-      onUploadClick,
       onViewModeCycle,
-      selectedCount,
-      selectionMode,
-      showNewFolder,
-      showUpload,
       showViewModeToggle,
       t,
       viewIcon,
-      customActionItems,
     ],
   );
 

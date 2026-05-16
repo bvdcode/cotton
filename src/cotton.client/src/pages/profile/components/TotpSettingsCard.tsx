@@ -44,6 +44,25 @@ const formatDateTime = (iso: string): string => {
   }).format(date);
 };
 
+const resolveAxiosStatus = (error: unknown): number | null => {
+  if (!isAxiosError(error)) {
+    return null;
+  }
+  return error.response?.status ?? null;
+};
+
+const messageForStatus = (
+  error: unknown,
+  statusMessages: Record<number, string>,
+  fallback: string,
+): string => {
+  const status = resolveAxiosStatus(error);
+  if (status !== null && statusMessages[status]) {
+    return statusMessages[status];
+  }
+  return getApiErrorMessage(error) || fallback;
+};
+
 interface TotpSettingsCardProps {
   user: User;
   onUserUpdate: (user: User) => void;
@@ -82,21 +101,13 @@ export const TotpSettingsCard = ({
       const setup = await totpApi.setup();
       setTotpSetup(setup);
     } catch (e) {
-      if (isAxiosError(e)) {
-        const status = e.response?.status;
-        if (status === 409) {
-          setTotpError(t("totp.errors.alreadyEnabled"));
-          return;
-        }
-      }
-
-      const message = getApiErrorMessage(e);
-      if (message) {
-        setTotpError(message);
-        return;
-      }
-
-      setTotpError(t("totp.errors.setupFailed"));
+      setTotpError(
+        messageForStatus(
+          e,
+          { 409: t("totp.errors.alreadyEnabled") },
+          t("totp.errors.setupFailed"),
+        ),
+      );
     } finally {
       setTotpLoading(false);
     }
@@ -119,29 +130,17 @@ export const TotpSettingsCard = ({
       setTotpSetup(null);
       setTotpCode("");
     } catch (e) {
-      if (isAxiosError(e)) {
-        const status = e.response?.status;
-        if (status === 403) {
-          setTotpError(t("totp.errors.invalidCode"));
-          return;
-        }
-        if (status === 400) {
-          setTotpError(t("totp.errors.setupNotInitiated"));
-          return;
-        }
-        if (status === 409) {
-          setTotpError(t("totp.errors.alreadyEnabled"));
-          return;
-        }
-      }
-
-      const message = getApiErrorMessage(e);
-      if (message) {
-        setTotpError(message);
-        return;
-      }
-
-      setTotpError(t("totp.errors.confirmFailed"));
+      setTotpError(
+        messageForStatus(
+          e,
+          {
+            400: t("totp.errors.setupNotInitiated"),
+            403: t("totp.errors.invalidCode"),
+            409: t("totp.errors.alreadyEnabled"),
+          },
+          t("totp.errors.confirmFailed"),
+        ),
+      );
     } finally {
       setTotpConfirmLoading(false);
     }
@@ -182,21 +181,13 @@ export const TotpSettingsCard = ({
       setTotpSuccess(false);
       setTotpError(null);
     } catch (e) {
-      if (isAxiosError(e)) {
-        const status = e.response?.status;
-        if (status === 403) {
-          setDisableError(t("totp.errors.invalidPassword"));
-          return;
-        }
-      }
-
-      const message = getApiErrorMessage(e);
-      if (message) {
-        setDisableError(message);
-        return;
-      }
-
-      setDisableError(t("totp.errors.disableFailed"));
+      setDisableError(
+        messageForStatus(
+          e,
+          { 403: t("totp.errors.invalidPassword") },
+          t("totp.errors.disableFailed"),
+        ),
+      );
     } finally {
       setDisableLoading(false);
     }

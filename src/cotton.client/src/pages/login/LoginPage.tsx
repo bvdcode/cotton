@@ -297,31 +297,81 @@ export const LoginPage = () => {
     toast.error(message, { toastId });
   }, []);
 
-  const submitLogin = useCallback(async () => {
-    setLoading(true);
+  const validateLoginInputs = useCallback((): boolean => {
+    const trimmedUsername = username.trim();
+    const usernameFormatError =
+      trimmedUsername.length > 0 && !isEmail(trimmedUsername)
+        ? getUsernameError(trimmedUsername)
+        : null;
 
-    try {
-      const trimmedUsername = username.trim();
-      const usernameFormatError =
-        trimmedUsername.length > 0 && !isEmail(trimmedUsername)
-          ? getUsernameError(trimmedUsername)
-          : null;
+    if (usernameFormatError) {
+      showToast(usernameFormatError, "error");
+      return false;
+    }
 
-      if (usernameFormatError) {
-        showToast(usernameFormatError, "error");
-        return;
+    if (
+      requiresTwoFactor &&
+      normalizeTwoFactorCode(twoFactorCode).length < 6
+    ) {
+      showToast(t("twoFactor.required"), "error");
+      return false;
+    }
+
+    return true;
+  }, [requiresTwoFactor, showToast, t, twoFactorCode, username]);
+
+  const handleTwoFactorHint = useCallback(
+    (hint: ReturnType<typeof tryGetTwoFactorHint>): boolean => {
+      if (hint === "required") {
+        setRequiresTwoFactor(true);
+        setTwoFactorCode("");
+        return true;
+      }
+      if (hint === "invalid") {
+        setRequiresTwoFactor(true);
+        showToast(t("twoFactor.invalid"), "error");
+        return true;
+      }
+      if (hint === "locked") {
+        setRequiresTwoFactor(true);
+        showToast(t("twoFactor.locked"), "error");
+        return true;
+      }
+      return false;
+    },
+    [showToast, t],
+  );
+
+  const handleLoginSubmissionError = useCallback(
+    (e: unknown): void => {
+      if (isAxiosError(e)) {
+        const status = e.response?.status;
+        const serverMessage = getApiErrorMessage(e) ?? undefined;
+        const hint = tryGetTwoFactorHint({ status, serverMessage });
+
+        if (handleTwoFactorHint(hint)) {
+          return;
+        }
+
+        if (hasApiErrorToastBeenDispatched(e)) {
+          return;
+        }
       }
 
-      if (
-        requiresTwoFactor &&
-        normalizeTwoFactorCode(twoFactorCode).length < 6
-      ) {
-        showToast(t("twoFactor.required"), "error");
+      showToast(t("errorMessage"), "error");
+    },
+    [handleTwoFactorHint, showToast, t],
+  );
+
+  const submitLogin = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (!validateLoginInputs()) {
         return;
       }
 
       await authApi.login({
-        username: trimmedUsername,
+        username: username.trim(),
         password,
         twoFactorCode: requiresTwoFactor
           ? normalizeTwoFactorCode(twoFactorCode)
@@ -333,48 +383,20 @@ export const LoginPage = () => {
       setAuthenticated(true, user);
       navigate("/");
     } catch (e) {
-      if (isAxiosError(e)) {
-        const status = e.response?.status;
-        const serverMessage = getApiErrorMessage(e) ?? undefined;
-        const hint = tryGetTwoFactorHint({ status, serverMessage });
-
-        if (hint === "required") {
-          setRequiresTwoFactor(true);
-          setTwoFactorCode("");
-          return;
-        }
-
-        if (hint === "invalid") {
-          setRequiresTwoFactor(true);
-          showToast(t("twoFactor.invalid"), "error");
-          return;
-        }
-
-        if (hint === "locked") {
-          setRequiresTwoFactor(true);
-          showToast(t("twoFactor.locked"), "error");
-          return;
-        }
-
-        if (hasApiErrorToastBeenDispatched(e)) {
-          return;
-        }
-      }
-
-      showToast(t("errorMessage"), "error");
+      handleLoginSubmissionError(e);
     } finally {
       setLoading(false);
     }
   }, [
+    handleLoginSubmissionError,
+    navigate,
+    password,
     requiresTwoFactor,
+    setAuthenticated,
+    trustDevice,
     twoFactorCode,
     username,
-    password,
-    trustDevice,
-    t,
-    showToast,
-    setAuthenticated,
-    navigate,
+    validateLoginInputs,
   ]);
 
   const handleSubmit = useCallback(

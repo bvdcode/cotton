@@ -155,6 +155,144 @@ export const NewFolderCard: React.FC<NewFolderCardProps> = ({
   </Box>
 );
 
+interface LongPressSelectionParams {
+  onToggle?: (shiftKey: boolean) => void;
+  selectionMode: boolean;
+  readOnly: boolean;
+}
+
+const shouldIgnoreLongPressTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      ".card-menu-slot, .card-menu-button, button, a, input, textarea, [role='menuitem']",
+    ),
+  );
+};
+
+const useLongPressSelectionHandlers = ({
+  onToggle,
+  selectionMode,
+  readOnly,
+}: LongPressSelectionParams) => {
+  const longPressTimerRef = React.useRef<number | null>(null);
+  const suppressClickUntilRef = React.useRef(0);
+  const longPressStartRef = React.useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = React.useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  }, []);
+
+  const handlePointerDownCapture = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (!onToggle) return;
+      if (selectionMode) return;
+      if (readOnly) return;
+      if (e.button !== 0) return;
+      if (e.shiftKey) return;
+      if (shouldIgnoreLongPressTarget(e.target)) return;
+
+      longPressStartRef.current = { x: e.clientX, y: e.clientY };
+
+      clearLongPress();
+      longPressTimerRef.current = window.setTimeout(() => {
+        suppressClickUntilRef.current = Date.now() + 450;
+        onToggle(false);
+      }, 450);
+    },
+    [clearLongPress, onToggle, readOnly, selectionMode],
+  );
+
+  const handlePointerMoveCapture = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (longPressTimerRef.current === null) return;
+      const start = longPressStartRef.current;
+      if (!start) return;
+      const dx = Math.abs(e.clientX - start.x);
+      const dy = Math.abs(e.clientY - start.y);
+      if (dx > 8 || dy > 8) {
+        clearLongPress();
+      }
+    },
+    [clearLongPress],
+  );
+
+  const handlePointerUpCapture = React.useCallback(() => {
+    clearLongPress();
+  }, [clearLongPress]);
+
+  const handlePointerCancelCapture = React.useCallback(() => {
+    clearLongPress();
+  }, [clearLongPress]);
+
+  const handleClickCapture = React.useCallback((e: React.MouseEvent) => {
+    if (Date.now() > suppressClickUntilRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  return {
+    handlePointerDownCapture,
+    handlePointerMoveCapture,
+    handlePointerUpCapture,
+    handlePointerCancelCapture,
+    handleClickCapture,
+  };
+};
+
+interface TileFileActionDescriptor {
+  icon: React.ReactElement;
+  onClick: () => void;
+  tooltip: string;
+}
+
+const buildFileTileActions = (
+  fileOperations: FileOperations,
+  file: { id: string; name: string },
+  readOnly: boolean,
+  t: (key: string, options?: { ns: string }) => string,
+): TileFileActionDescriptor[] => {
+  const actions: TileFileActionDescriptor[] = [];
+
+  if (fileOperations.onDownload) {
+    actions.push({
+      icon: <Download />,
+      onClick: () => fileOperations.onDownload?.(file.id, file.name),
+      tooltip: t("actions.download", { ns: "common" }),
+    });
+  }
+
+  if (!readOnly && fileOperations.onShare) {
+    actions.push({
+      icon: <Share />,
+      onClick: () => fileOperations.onShare?.(file.id, file.name),
+      tooltip: t("actions.share", { ns: "common" }),
+    });
+  }
+
+  if (!readOnly && fileOperations.onStartRename) {
+    actions.push({
+      icon: <Edit />,
+      onClick: () => fileOperations.onStartRename?.(file.id, file.name),
+      tooltip: t("actions.rename", { ns: "common" }),
+    });
+  }
+
+  if (!readOnly && fileOperations.onDelete) {
+    actions.push({
+      icon: <Delete />,
+      onClick: () => fileOperations.onDelete?.(file.id, file.name),
+      tooltip: t("actions.delete", { ns: "common" }),
+    });
+  }
+
+  return actions;
+};
+
 interface TileItemProps {
   tile: FileSystemTile;
   folderOperations: FolderOperations;
@@ -177,74 +315,18 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     const isDarkMode = theme.palette.mode === "dark";
     const { t } = useTranslation(["common"]);
 
-    const longPressTimerRef = React.useRef<number | null>(null);
-    const suppressClickUntilRef = React.useRef(0);
-    const longPressStartRef = React.useRef<{ x: number; y: number } | null>(null);
-
-    const clearLongPress = React.useCallback(() => {
-      if (longPressTimerRef.current !== null) {
-        window.clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      longPressStartRef.current = null;
-    }, []);
-
-    const shouldIgnoreLongPressTarget = React.useCallback((target: EventTarget | null) => {
-      if (!(target instanceof Element)) return false;
-      return Boolean(
-        target.closest(
-          ".card-menu-slot, .card-menu-button, button, a, input, textarea, [role='menuitem']",
-        ),
-      );
-    }, []);
-
-    const handlePointerDownCapture = React.useCallback(
-      (e: React.PointerEvent) => {
-        if (!onToggle) return;
-        if (selectionMode) return;
-        if (readOnly) return;
-        if (e.button !== 0) return;
-        if (e.shiftKey) return;
-        if (shouldIgnoreLongPressTarget(e.target)) return;
-
-        longPressStartRef.current = { x: e.clientX, y: e.clientY };
-
-        clearLongPress();
-        longPressTimerRef.current = window.setTimeout(() => {
-          suppressClickUntilRef.current = Date.now() + 450;
-          onToggle(false);
-        }, 450);
-      },
-      [clearLongPress, onToggle, readOnly, selectionMode, shouldIgnoreLongPressTarget],
-    );
-
-    const handlePointerMoveCapture = React.useCallback(
-      (e: React.PointerEvent) => {
-        if (longPressTimerRef.current === null) return;
-        const start = longPressStartRef.current;
-        if (!start) return;
-        const dx = Math.abs(e.clientX - start.x);
-        const dy = Math.abs(e.clientY - start.y);
-        if (dx > 8 || dy > 8) {
-          clearLongPress();
-        }
-      },
-      [clearLongPress],
-    );
-
-    const handlePointerUpCapture = React.useCallback(() => {
-      clearLongPress();
-    }, [clearLongPress]);
-
-    const handlePointerCancelCapture = React.useCallback(() => {
-      clearLongPress();
-    }, [clearLongPress]);
-
-    const handleClickCapture = React.useCallback((e: React.MouseEvent) => {
-      if (Date.now() > suppressClickUntilRef.current) return;
-      e.preventDefault();
-      e.stopPropagation();
-    }, []);
+    const longPressHandlers = useLongPressSelectionHandlers({
+      onToggle,
+      selectionMode,
+      readOnly,
+    });
+    const {
+      handlePointerDownCapture,
+      handlePointerMoveCapture,
+      handlePointerUpCapture,
+      handlePointerCancelCapture,
+      handleClickCapture,
+    } = longPressHandlers;
 
     const checkbox = (
       <Checkbox
@@ -404,48 +486,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         subtitle={formatBytes(tile.file.sizeBytes)}
         onClick={fileClick}
         iconContainerSx={iconContainerSx}
-        actions={[
-          ...(fileOperations.onDownload
-            ? [
-                {
-                  icon: <Download />,
-                  onClick: () =>
-                    fileOperations.onDownload?.(tile.file.id, tile.file.name),
-                  tooltip: t("actions.download", { ns: "common" }),
-                },
-              ]
-            : []),
-          ...(!readOnly && fileOperations.onShare
-            ? [
-                {
-                  icon: <Share />,
-                  onClick: () =>
-                    fileOperations.onShare?.(tile.file.id, tile.file.name),
-                  tooltip: t("actions.share", { ns: "common" }),
-                },
-              ]
-            : []),
-          ...(!readOnly && fileOperations.onStartRename
-            ? [
-                {
-                  icon: <Edit />,
-                  onClick: () =>
-                    fileOperations.onStartRename?.(tile.file.id, tile.file.name),
-                  tooltip: t("actions.rename", { ns: "common" }),
-                },
-              ]
-            : []),
-          ...(!readOnly && fileOperations.onDelete
-            ? [
-                {
-                  icon: <Delete />,
-                  onClick: () =>
-                    fileOperations.onDelete?.(tile.file.id, tile.file.name),
-                  tooltip: t("actions.delete", { ns: "common" }),
-                },
-              ]
-            : []),
-        ]}
+        actions={buildFileTileActions(fileOperations, tile.file, readOnly, t)}
         isRenaming={fileOperations.isRenaming(tile.file.id)}
         renamingValue={fileOperations.getRenamingName()}
         onRenamingValueChange={fileOperations.onRenamingNameChange}

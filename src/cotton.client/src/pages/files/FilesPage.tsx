@@ -47,6 +47,22 @@ import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
+const computeListLoadingState = (
+  layoutType: InterfaceLayoutType,
+  options: {
+    listContent: unknown;
+    listError: unknown;
+    content: unknown;
+    error: unknown;
+    isContentTransitioning: boolean;
+  },
+): boolean => {
+  if (layoutType === InterfaceLayoutType.List) {
+    return !options.listContent && !options.listError;
+  }
+  return (!options.content && !options.error) || options.isContentTransitioning;
+};
+
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
   const confirm = useConfirm();
@@ -277,6 +293,31 @@ export const FilesPage: React.FC = () => {
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
 
+  const selectionCustomActions = useMemo(
+    () =>
+      fileSelection.selectionMode && fileSelection.selectedCount > 0
+        ? [
+            {
+              key: "delete-selected",
+              icon: <Delete />,
+              title: t("selection.deleteSelected", { ns: "files" }),
+              onClick: () => {
+                void handleDeleteSelected();
+              },
+              disabled: loading,
+              color: "error" as const,
+            },
+          ]
+        : undefined,
+    [
+      fileSelection.selectedCount,
+      fileSelection.selectionMode,
+      handleDeleteSelected,
+      loading,
+      t,
+    ],
+  );
+
   const pageHeaderProps = useMemo(
     (): React.ComponentProps<typeof PageHeader> => ({
       loading,
@@ -297,27 +338,12 @@ export const FilesPage: React.FC = () => {
       selectedCount: fileSelection.selectedCount,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
-      customActionItems:
-        fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
-          [
-            {
-              key: "delete-selected",
-              icon: <Delete />,
-              title: t("selection.deleteSelected", { ns: "files" }),
-              onClick: () => {
-                void handleDeleteSelected();
-              },
-              disabled: loading,
-              color: "error" as const,
-            },
-          ]
-        ) : undefined,
+      customActionItems: selectionCustomActions,
     }),
     [
       ancestors.length,
       breadcrumbs,
       cycleViewMode,
-      handleDeleteSelected,
       fileSelection,
       fileUpload.handleUploadClick,
       folderOps.handleNewFolder,
@@ -327,8 +353,8 @@ export const FilesPage: React.FC = () => {
       isHugeFolder,
       loading,
       nodeId,
+      selectionCustomActions,
       stats,
-      t,
       tiles,
       viewMode,
     ],
@@ -356,10 +382,13 @@ export const FilesPage: React.FC = () => {
       onNavigateBack: handleGoUp,
       isCreatingFolder: isCreatingInThisFolder,
       tileSize: tilesSize,
-      loading:
-        layoutType === InterfaceLayoutType.List
-          ? !listContent && !listError
-          : (!content && !error) || isContentTransitioning,
+      loading: computeListLoadingState(layoutType, {
+        listContent,
+        listError,
+        content,
+        error,
+        isContentTransitioning,
+      }),
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
       emptyStateText:

@@ -439,6 +439,196 @@ export const applyMaterialColor = (
   });
 };
 
+interface SurfaceContext {
+  preset: ModelSurfacePreset;
+  hasColorOverride: boolean;
+  originalState: MaterialSurfaceState;
+}
+
+const snapshotOriginalSurface = (
+  material: THREE.Material,
+  originalSurfaceMap: WeakMap<THREE.Material, MaterialSurfaceState>,
+): MaterialSurfaceState => {
+  const existing = originalSurfaceMap.get(material);
+  if (existing) {
+    return existing;
+  }
+
+  const state: MaterialSurfaceState = {};
+
+  if (hasStandardSurfaceProperties(material)) {
+    state.metalness = material.metalness;
+    state.roughness = material.roughness;
+  }
+  if (hasEnvMapIntensity(material)) {
+    state.envMapIntensity = material.envMapIntensity;
+  }
+  if (hasPhongShininess(material)) {
+    state.shininess = material.shininess;
+  }
+  if (hasPhongReflectivity(material)) {
+    state.reflectivity = material.reflectivity;
+  }
+  if (hasPhysicalSurfaceProperties(material)) {
+    state.clearcoat = material.clearcoat;
+    state.clearcoatRoughness = material.clearcoatRoughness;
+  }
+  if (hasFlatShadingProperty(material)) {
+    state.flatShading = material.flatShading;
+  }
+
+  originalSurfaceMap.set(material, state);
+  return state;
+};
+
+const applyStandardSurface = (
+  material: THREE.Material,
+  { preset, hasColorOverride, originalState }: SurfaceContext,
+): void => {
+  if (!hasStandardSurfaceProperties(material)) return;
+  switch (preset) {
+    case "metal":
+      material.metalness = hasColorOverride ? 1 : 0.82;
+      material.roughness = hasColorOverride ? 0.18 : 0.38;
+      return;
+    case "smooth":
+      material.metalness = 0.02;
+      material.roughness = hasColorOverride ? 0.4 : 0.52;
+      return;
+    default:
+      if (hasColorOverride) {
+        material.metalness = 0;
+        material.roughness = 0.72;
+        return;
+      }
+      if (typeof originalState.metalness === "number") {
+        material.metalness = originalState.metalness;
+      }
+      if (typeof originalState.roughness === "number") {
+        material.roughness = originalState.roughness;
+      }
+  }
+};
+
+const applyEnvMapIntensitySurface = (
+  material: THREE.Material,
+  { preset, hasColorOverride, originalState }: SurfaceContext,
+): void => {
+  if (!hasEnvMapIntensity(material)) return;
+  switch (preset) {
+    case "metal":
+      material.envMapIntensity = hasColorOverride ? 1.1 : 0.78;
+      return;
+    case "smooth":
+      material.envMapIntensity = hasColorOverride ? 0.08 : 0.22;
+      return;
+    default:
+      if (hasColorOverride) {
+        material.envMapIntensity = 0;
+      } else if (typeof originalState.envMapIntensity === "number") {
+        material.envMapIntensity = originalState.envMapIntensity;
+      }
+  }
+};
+
+const applyPhongShininessSurface = (
+  material: THREE.Material,
+  { preset, hasColorOverride, originalState }: SurfaceContext,
+): void => {
+  if (!hasPhongShininess(material)) return;
+  switch (preset) {
+    case "metal":
+      material.shininess = hasColorOverride ? 150 : 120;
+      return;
+    case "smooth":
+      material.shininess = hasColorOverride ? 42 : 36;
+      return;
+    default:
+      if (hasColorOverride) {
+        material.shininess = 14;
+      } else if (typeof originalState.shininess === "number") {
+        material.shininess = originalState.shininess;
+      }
+  }
+};
+
+const applyPhongReflectivitySurface = (
+  material: THREE.Material,
+  { preset, hasColorOverride, originalState }: SurfaceContext,
+): void => {
+  if (!hasPhongReflectivity(material)) return;
+  switch (preset) {
+    case "metal":
+      material.reflectivity = hasColorOverride ? 0.95 : 0.58;
+      return;
+    case "smooth":
+      material.reflectivity = hasColorOverride ? 0.12 : 0.2;
+      return;
+    default:
+      if (hasColorOverride) {
+        material.reflectivity = 0.03;
+      } else if (typeof originalState.reflectivity === "number") {
+        material.reflectivity = originalState.reflectivity;
+      }
+  }
+};
+
+const applyPhysicalSurface = (
+  material: THREE.Material,
+  { preset, hasColorOverride, originalState }: SurfaceContext,
+): void => {
+  if (!hasPhysicalSurfaceProperties(material)) return;
+  switch (preset) {
+    case "metal":
+      material.clearcoat = hasColorOverride ? 0.22 : 0.14;
+      material.clearcoatRoughness = hasColorOverride ? 0.18 : 0.42;
+      return;
+    case "smooth":
+      material.clearcoat = hasColorOverride ? 0.05 : 0.08;
+      material.clearcoatRoughness = hasColorOverride ? 0.62 : 0.58;
+      return;
+    default:
+      if (hasColorOverride) {
+        material.clearcoat = 0;
+        material.clearcoatRoughness = 1;
+        return;
+      }
+      if (typeof originalState.clearcoat === "number") {
+        material.clearcoat = originalState.clearcoat;
+      }
+      if (typeof originalState.clearcoatRoughness === "number") {
+        material.clearcoatRoughness = originalState.clearcoatRoughness;
+      }
+  }
+};
+
+const applyFlatShadingSurface = (
+  material: THREE.Material,
+  { preset, originalState }: SurfaceContext,
+): void => {
+  if (!hasFlatShadingProperty(material)) return;
+  if (preset === "smooth") {
+    material.flatShading = false;
+    return;
+  }
+  if (typeof originalState.flatShading === "boolean") {
+    material.flatShading = originalState.flatShading;
+  }
+};
+
+const applySurfacePresetToMaterial = (
+  material: THREE.Material,
+  context: SurfaceContext,
+): void => {
+  applyStandardSurface(material, context);
+  applyEnvMapIntensitySurface(material, context);
+  applyPhongShininessSurface(material, context);
+  applyPhongReflectivitySurface(material, context);
+  applyPhysicalSurface(material, context);
+  applyFlatShadingSurface(material, context);
+  material.needsUpdate = true;
+};
+
 export const applyMaterialSurfacePreset = (
   object: THREE.Object3D,
   surfacePreset: ModelSurfacePreset,
@@ -451,170 +641,12 @@ export const applyMaterialSurfacePreset = (
     }
 
     const applyToMaterial = (material: THREE.Material): void => {
-      if (!originalSurfaceMap.has(material)) {
-        const state: MaterialSurfaceState = {};
-
-        if (hasStandardSurfaceProperties(material)) {
-          state.metalness = material.metalness;
-          state.roughness = material.roughness;
-        }
-
-        if (hasEnvMapIntensity(material)) {
-          state.envMapIntensity = material.envMapIntensity;
-        }
-
-        if (hasPhongShininess(material)) {
-          state.shininess = material.shininess;
-        }
-
-        if (hasPhongReflectivity(material)) {
-          state.reflectivity = material.reflectivity;
-        }
-
-        if (hasPhysicalSurfaceProperties(material)) {
-          state.clearcoat = material.clearcoat;
-          state.clearcoatRoughness = material.clearcoatRoughness;
-        }
-
-        if (hasFlatShadingProperty(material)) {
-          state.flatShading = material.flatShading;
-        }
-
-        originalSurfaceMap.set(material, state);
-      }
-
-      const originalState = originalSurfaceMap.get(material);
-      if (!originalState) {
-        return;
-      }
-
-      if (hasStandardSurfaceProperties(material)) {
-        switch (surfacePreset) {
-          case "metal":
-            material.metalness = hasColorOverride ? 1 : 0.82;
-            material.roughness = hasColorOverride ? 0.18 : 0.38;
-            break;
-          case "smooth":
-            material.metalness = 0.02;
-            material.roughness = hasColorOverride ? 0.4 : 0.52;
-            break;
-          case "original":
-          default:
-            if (hasColorOverride) {
-              material.metalness = 0;
-              material.roughness = 0.72;
-            } else {
-              if (typeof originalState.metalness === "number") {
-                material.metalness = originalState.metalness;
-              }
-              if (typeof originalState.roughness === "number") {
-                material.roughness = originalState.roughness;
-              }
-            }
-            break;
-        }
-      }
-
-      if (hasEnvMapIntensity(material)) {
-        switch (surfacePreset) {
-          case "metal":
-            material.envMapIntensity = hasColorOverride ? 1.1 : 0.78;
-            break;
-          case "smooth":
-            material.envMapIntensity = hasColorOverride ? 0.08 : 0.22;
-            break;
-          case "original":
-          default:
-            if (hasColorOverride) {
-              material.envMapIntensity = 0;
-            } else if (typeof originalState.envMapIntensity === "number") {
-              material.envMapIntensity = originalState.envMapIntensity;
-            }
-            break;
-        }
-      }
-
-      if (hasPhongShininess(material)) {
-        switch (surfacePreset) {
-          case "metal":
-            material.shininess = hasColorOverride ? 150 : 120;
-            break;
-          case "smooth":
-            material.shininess = hasColorOverride ? 42 : 36;
-            break;
-          case "original":
-          default:
-            if (hasColorOverride) {
-              material.shininess = 14;
-            } else if (typeof originalState.shininess === "number") {
-              material.shininess = originalState.shininess;
-            }
-            break;
-        }
-      }
-
-      if (hasPhongReflectivity(material)) {
-        switch (surfacePreset) {
-          case "metal":
-            material.reflectivity = hasColorOverride ? 0.95 : 0.58;
-            break;
-          case "smooth":
-            material.reflectivity = hasColorOverride ? 0.12 : 0.2;
-            break;
-          case "original":
-          default:
-            if (hasColorOverride) {
-              material.reflectivity = 0.03;
-            } else if (typeof originalState.reflectivity === "number") {
-              material.reflectivity = originalState.reflectivity;
-            }
-            break;
-        }
-      }
-
-      if (hasPhysicalSurfaceProperties(material)) {
-        switch (surfacePreset) {
-          case "metal":
-            material.clearcoat = hasColorOverride ? 0.22 : 0.14;
-            material.clearcoatRoughness = hasColorOverride ? 0.18 : 0.42;
-            break;
-          case "smooth":
-            material.clearcoat = hasColorOverride ? 0.05 : 0.08;
-            material.clearcoatRoughness = hasColorOverride ? 0.62 : 0.58;
-            break;
-          case "original":
-          default:
-            if (hasColorOverride) {
-              material.clearcoat = 0;
-              material.clearcoatRoughness = 1;
-            } else {
-              if (typeof originalState.clearcoat === "number") {
-                material.clearcoat = originalState.clearcoat;
-              }
-              if (typeof originalState.clearcoatRoughness === "number") {
-                material.clearcoatRoughness = originalState.clearcoatRoughness;
-              }
-            }
-            break;
-        }
-      }
-
-      if (hasFlatShadingProperty(material)) {
-        switch (surfacePreset) {
-          case "smooth":
-            material.flatShading = false;
-            break;
-          case "metal":
-          case "original":
-          default:
-            if (typeof originalState.flatShading === "boolean") {
-              material.flatShading = originalState.flatShading;
-            }
-            break;
-        }
-      }
-
-      material.needsUpdate = true;
+      const originalState = snapshotOriginalSurface(material, originalSurfaceMap);
+      applySurfacePresetToMaterial(material, {
+        preset: surfacePreset,
+        hasColorOverride,
+        originalState,
+      });
     };
 
     if (Array.isArray(node.material)) {
