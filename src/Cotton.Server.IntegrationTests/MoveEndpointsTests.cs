@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using NUnit.Framework;
 using System.Net;
@@ -274,11 +275,8 @@ public class MoveEndpointsTests : IntegrationTestBase
         var root = await GetRootAsync();
         var moving = await CreateFolderAsync(root.Id, "moving");
 
-        // Same user, second layout: manufactured directly because the API only
-        // exposes one auto-created layout per user. Use the factory's DI scope so
-        // the DbContext is wired with the same NpgsqlDataSource as the app — a
-        // bare `new DbContextOptionsBuilder().UseNpgsql(...)` trips Postgres type
-        // OID lookups after the per-test EnsureDeleted+Create+migrations.
+        // Same user, second layout: API only auto-creates one layout per user, so
+        // we manufacture the second one directly via the factory's DI scope.
         Guid otherLayoutRootId;
         using (var scope = _factory!.Services.CreateScope())
         {
@@ -321,11 +319,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         {
             builder.ConfigureTestServices(services =>
             {
-                var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IEventNotificationService));
-                if (existing != null)
-                {
-                    services.Remove(existing);
-                }
+                services.RemoveAll<IEventNotificationService>();
                 services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
             });
         });
@@ -375,11 +369,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         {
             builder.ConfigureTestServices(services =>
             {
-                var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IEventNotificationService));
-                if (existing != null)
-                {
-                    services.Remove(existing);
-                }
+                services.RemoveAll<IEventNotificationService>();
                 services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
             });
         });
