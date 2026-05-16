@@ -318,7 +318,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           }
           onCut={
             folderOperations.onCut
-              ? () => folderOperations.onCut?.(tile.node.id, tile.node.name)
+              ? () => folderOperations.onCut?.(tile.node.id)
               : undefined
           }
           onClick={(e) => {
@@ -487,8 +487,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
             ? [
                 {
                   icon: <ContentCut />,
-                  onClick: () =>
-                    fileOperations.onCut?.(tile.file.id, tile.file.name),
+                  onClick: () => fileOperations.onCut?.(tile.file.id),
                   tooltip: t("files:move.cut"),
                 },
               ]

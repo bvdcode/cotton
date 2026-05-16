@@ -49,8 +49,8 @@ export interface UseFileMoveControllerResult {
   clipboardCount: number;
   handleCutSelection: () => void;
   handlePasteHere: () => void;
-  handleCutFolder: (folderId: string, folderName: string) => void;
-  handleCutFile: (fileId: string, fileName: string) => void;
+  handleCutFolder: (folderId: string) => void;
+  handleCutFile: (fileId: string) => void;
   goUpDropHandlers: DropHandlersForGoUp | undefined;
   breadcrumbsDropHandlers: DropHandlersForBreadcrumbs;
 }
@@ -88,7 +88,6 @@ export const useFileMoveController = ({
           items.push({
             id: tile.node.id,
             kind: "folder",
-            name: tile.node.name,
             sourceParentId: tile.node.parentId ?? nodeId,
           });
         } else {
@@ -96,7 +95,6 @@ export const useFileMoveController = ({
           items.push({
             id: tile.file.id,
             kind: "file",
-            name: tile.file.name,
             sourceParentId: tile.file.nodeId ?? nodeId,
           });
         }
@@ -223,28 +221,18 @@ export const useFileMoveController = ({
   }, [cutItemIds, handleMoveItems, nodeId]);
 
   const handleCutFolder = useCallback(
-    (folderId: string, folderName: string) => {
+    (folderId: string) => {
       if (!nodeId) return;
-      moveOps.cutItems([{
-        id: folderId,
-        kind: "folder",
-        name: folderName,
-        sourceParentId: nodeId,
-      }]);
+      moveOps.cutItems([{ id: folderId, kind: "folder", sourceParentId: nodeId }]);
       showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
     },
     [moveOps, nodeId, showToast, t],
   );
 
   const handleCutFile = useCallback(
-    (fileId: string, fileName: string) => {
+    (fileId: string) => {
       if (!nodeId) return;
-      moveOps.cutItems([{
-        id: fileId,
-        kind: "file",
-        name: fileName,
-        sourceParentId: nodeId,
-      }]);
+      moveOps.cutItems([{ id: fileId, kind: "file", sourceParentId: nodeId }]);
       showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
     },
     [moveOps, nodeId, showToast, t],

@@ -77,7 +77,7 @@ interface ColumnOptions {
     onStartRename?: (id: string, name: string) => void;
     onDelete?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
-    onCut?: (id: string, name: string) => void;
+    onCut?: (id: string) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
@@ -88,7 +88,7 @@ interface ColumnOptions {
     onStartRename?: (id: string, name: string) => void;
     onDownload?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
-    onCut?: (id: string, name: string) => void;
+    onCut?: (id: string) => void;
     onDelete?: (id: string, name: string) => void;
   };
   failedPreviews: Set<string>;
@@ -422,7 +422,7 @@ export const createActionsColumn = (
                   size="small"
                   onClick={(e) => {
                     e.stopPropagation();
-                    options.folderOperations.onCut?.(row.id, row.name);
+                    options.folderOperations.onCut?.(row.id);
                   }}
                   title={options.labels.cut}
                 >
@@ -501,7 +501,7 @@ export const createActionsColumn = (
                 size="small"
                 onClick={(e) => {
                   e.stopPropagation();
-                  options.fileOperations.onCut?.(row.id, row.name);
+                  options.fileOperations.onCut?.(row.id);
                 }}
                 title={options.labels.cut}
               >

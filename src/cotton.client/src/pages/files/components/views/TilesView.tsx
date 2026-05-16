@@ -190,7 +190,6 @@ export const TilesView: React.FC<IFileListView> = ({
           {
             id: tile.node.id,
             kind: "folder",
-            name: tile.node.name,
             sourceParentId: tile.node.parentId ?? currentParentId,
           },
         ];
@@ -199,7 +198,6 @@ export const TilesView: React.FC<IFileListView> = ({
         {
           id: tile.file.id,
           kind: "file",
-          name: tile.file.name,
           sourceParentId: tile.file.nodeId ?? currentParentId,
         },
       ];

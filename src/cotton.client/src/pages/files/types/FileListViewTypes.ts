@@ -54,7 +54,7 @@ export interface FolderOperations {
   onStartRename?: (folderId: string, name: string) => void;
   onDelete?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
-  onCut?: (folderId: string, name: string) => void;
+  onCut?: (folderId: string) => void;
   onClick: (folderId: string) => void;
 }
 
@@ -71,7 +71,7 @@ export interface FileOperations {
   onDelete?: (fileId: string, name: string) => void;
   onDownload?: (fileId: string, name: string) => void;
   onShare?: (fileId: string, name: string) => void;
-  onCut?: (fileId: string, name: string) => void;
+  onCut?: (fileId: string) => void;
   onClick: (fileId: string, name: string, sizeBytes?: number) => void;
   onMediaClick?: (fileId: string) => void;
 }
