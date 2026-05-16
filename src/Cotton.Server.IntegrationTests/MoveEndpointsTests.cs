@@ -269,6 +269,39 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MoveNode_NonDefaultType_Returns404()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var dst = await CreateFolderAsync(root.Id, "dst");
+
+        // Build a Trash-type sibling under root via the DI scope — the API does
+        // not expose creation of non-Default nodes.
+        Guid trashNodeId;
+        using (var scope = _factory!.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            var ownerId = await db.Users.AsNoTracking().Select(u => u.Id).FirstAsync();
+            var rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
+            var trash = new Cotton.Database.Models.Node
+            {
+                LayoutId = rootEntity.LayoutId,
+                OwnerId = ownerId,
+                Type = Cotton.Database.Models.Enums.NodeType.Trash,
+                ParentId = rootEntity.Id,
+            };
+            trash.SetName("trash-thing");
+            db.Nodes.Add(trash);
+            await db.SaveChangesAsync();
+            trashNodeId = trash.Id;
+        }
+
+        var res = await MoveNodeAsync(trashNodeId, dst.Id);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.NotFound),
+            "Move endpoint must reject non-Default node types as not-found (no leak).");
+    }
+
+    [Test]
     public async Task MoveNode_AcrossLayouts_Returns400()
     {
         await AuthenticateAsync();

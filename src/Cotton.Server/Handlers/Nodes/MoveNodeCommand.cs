@@ -3,6 +3,7 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -45,6 +46,13 @@ namespace Cotton.Server.Handlers.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw new EntityNotFoundException<Node>();
+
+            // Public move endpoint only handles user folders. Trash and any future
+            // special node types are managed by their own dedicated flows.
+            if (node.Type != NodeType.Default)
+            {
+                throw new EntityNotFoundException<Node>();
+            }
 
             if (node.ParentId is null)
             {
