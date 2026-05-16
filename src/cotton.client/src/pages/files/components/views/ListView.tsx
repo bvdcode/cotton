@@ -15,6 +15,8 @@ import Loader from "../../../../shared/ui/Loader";
 import {
   isMoveDrag,
   getMoveDragSourceParents,
+  writeMoveDragPayload,
+  readMoveDragPayload,
 } from "../../../../shared/hooks/useMoveOperations";
 import type { MoveClipboardItem } from "../../../../shared/store/moveClipboardStore";
 
@@ -190,22 +192,7 @@ export const ListView: React.FC<IFileListView> = ({
         event.preventDefault();
         return;
       }
-
-      const dt = event.dataTransfer;
-      try {
-        dt.effectAllowed = "move";
-        const sources = new Set(items.map((i) => i.sourceParentId));
-        for (const source of sources) {
-          dt.setData(`application/x-cotton-move/${source}`, "1");
-        }
-        dt.setData("application/x-cotton-move", "1");
-        dt.setData(
-          "application/x-cotton-move-items",
-          JSON.stringify({ items }),
-        );
-      } catch {
-        // ignore
-      }
+      writeMoveDragPayload(event.dataTransfer, { items });
     },
     [buildDragPayloadForRow, findRowElement, moveSupport],
   );
@@ -265,17 +252,15 @@ export const ListView: React.FC<IFileListView> = ({
       event.stopPropagation();
       setDropTargetId(null);
 
-      const raw = event.dataTransfer.getData("application/x-cotton-move-items");
-      if (!raw) return;
-      try {
-        const parsed = JSON.parse(raw) as {
-          items: ReadonlyArray<MoveClipboardItem>;
-        };
-        if (!parsed || !Array.isArray(parsed.items)) return;
-        moveSupport.onMove(parsed.items, rowId);
-      } catch {
-        // ignore
-      }
+      const payload = readMoveDragPayload(event.dataTransfer);
+      if (!payload) return;
+      // Reject self/source-parent drops here too — drag-over rejects visually,
+      // but a drop can still fire if the user releases between frames.
+      const filtered = payload.items.filter(
+        (item) => item.id !== rowId && item.sourceParentId !== rowId,
+      );
+      if (filtered.length === 0) return;
+      moveSupport.onMove(filtered, rowId);
     },
     [findRowElement, moveSupport, rowsById],
   );

@@ -48,6 +48,7 @@ import {
   useMoveOperations,
   isMoveDrag,
   getMoveDragSourceParents,
+  readMoveDragPayload,
 } from "../../shared/hooks/useMoveOperations";
 import {
   useMoveClipboardStore,
@@ -337,17 +338,8 @@ export const FilesPage: React.FC = () => {
 
   const readDropPayload = React.useCallback(
     (event: React.DragEvent<HTMLElement>): MoveClipboardItem[] | null => {
-      const raw = event.dataTransfer.getData("application/x-cotton-move-items");
-      if (!raw) return null;
-      try {
-        const parsed = JSON.parse(raw) as {
-          items: ReadonlyArray<MoveClipboardItem>;
-        };
-        if (!parsed || !Array.isArray(parsed.items)) return null;
-        return [...parsed.items];
-      } catch {
-        return null;
-      }
+      const payload = readMoveDragPayload(event.dataTransfer);
+      return payload ? [...payload.items] : null;
     },
     [],
   );
