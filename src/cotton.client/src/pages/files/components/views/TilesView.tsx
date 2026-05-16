@@ -179,46 +179,31 @@ export const TilesView: React.FC<IFileListView> = ({
       const currentParentId = moveSupport.currentParentId;
       if (!currentParentId) return null;
 
-      const toItem = (tile: FileSystemTile): MoveClipboardItem | null => {
-        if (tile.kind === "folder") {
-          return {
+      // Tiles are only `draggable` when `!selectionMode`, so dragging always
+      // moves the single tile under the pointer. Multi-select drag would need
+      // the `draggable` gate to change first.
+      const tile = tilesById.get(sourceTileId);
+      if (!tile) return null;
+      if (tile.kind === "folder") {
+        return [
+          {
             id: tile.node.id,
             kind: "folder",
             name: tile.node.name,
             sourceParentId: tile.node.parentId ?? currentParentId,
-          };
-        }
-        return {
+          },
+        ];
+      }
+      return [
+        {
           id: tile.file.id,
           kind: "file",
           name: tile.file.name,
           sourceParentId: tile.file.nodeId ?? currentParentId,
-        };
-      };
-
-      const usingSelection =
-        selectionMode &&
-        selectedIds &&
-        selectedIds.size > 1 &&
-        selectedIds.has(sourceTileId);
-
-      if (usingSelection) {
-        const items: MoveClipboardItem[] = [];
-        for (const id of selectedIds!) {
-          const tile = tilesById.get(id);
-          if (!tile) continue;
-          const item = toItem(tile);
-          if (item) items.push(item);
-        }
-        if (items.length > 0) return items;
-      }
-
-      const tile = tilesById.get(sourceTileId);
-      if (!tile) return null;
-      const item = toItem(tile);
-      return item ? [item] : null;
+        },
+      ];
     },
-    [moveSupport, selectionMode, selectedIds, tilesById],
+    [moveSupport, tilesById],
   );
   const layout = useTileLayout(tileSize);
   const theme = useTheme();
