@@ -310,6 +310,60 @@ public class MoveEndpointsTests : IntegrationTestBase
     // ---------------------------------------------------------------------
 
     [Test]
+    public async Task WebDavMove_NotificationFailureDoesNotFailRequest()
+    {
+        // Reset the standard factory so we can wire a throwing notifier.
+        _client?.Dispose();
+        _factory?.Dispose();
+
+        using var factory = new TestAppFactory(_overrides);
+        using var customFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IEventNotificationService));
+                if (existing != null)
+                {
+                    services.Remove(existing);
+                }
+                services.AddScoped<IEventNotificationService, ThrowingEventNotificationService>();
+            });
+        });
+        using var client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        // Provision the user + source/destination folders + a file via REST first.
+        var token = await LoginViaClientAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        var src = await CreateFolderViaClientAsync(client, root!.Id, "src");
+        var dst = await CreateFolderViaClientAsync(client, root.Id, "dst");
+        var file = await CreateFileViaClientAsync(client, src.Id, "doc.txt", "webdav-fail-notify");
+
+        // Switch to WebDAV basic auth for the MOVE request.
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+
+        using var moveRequest = new HttpRequestMessage(new HttpMethod("MOVE"), "/api/v1/webdav/src/doc.txt");
+        moveRequest.Headers.Add("Destination", "/api/v1/webdav/dst/doc.txt");
+        moveRequest.Headers.Add("Overwrite", "F");
+        var res = await client.SendAsync(moveRequest);
+
+        // WebDAV MOVE returns 201 Created when the destination did not previously exist,
+        // or 204 NoContent on overwrite. Either is success — but it MUST NOT fail
+        // because the realtime notifier threw after the move already committed.
+        Assert.That((int)res.StatusCode, Is.AnyOf(201, 204),
+            $"WebDAV MOVE must succeed despite notification failure (got {(int)res.StatusCode}).");
+
+        using (var scope = customFactory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            var moved = await db.NodeFiles.AsNoTracking().SingleAsync(x => x.Id == file.Id);
+            Assert.That(moved.NodeId, Is.EqualTo(dst.Id), "File must have been moved despite notification failure.");
+        }
+    }
+
+    [Test]
     public async Task MoveFile_NotificationFailureDoesNotFailRequest()
     {
         // Reset the standard factory so we can wire a throwing notifier.
