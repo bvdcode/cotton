@@ -14,8 +14,8 @@ import { createFileListColumns, type FileListRow } from "./fileListColumns";
 import Loader from "../../../../shared/ui/Loader";
 import {
   isMoveDrag,
-  getMoveDragSourceParents,
-  getMoveDragItemIds,
+  moveDragHasSourceParent,
+  moveDragHasItem,
   writeMoveDragPayload,
   readMoveDragPayload,
 } from "../../../../shared/hooks/useMoveOperations";
@@ -216,10 +216,8 @@ export const ListView: React.FC<IFileListView> = ({
       }
       // Reject early: (a) folder cannot be a drop target for items already inside it,
       // (b) a folder cannot be dropped onto itself.
-      const sources = getMoveDragSourceParents(event.dataTransfer);
-      if (sources.has(rowId)) return;
-      const itemIds = getMoveDragItemIds(event.dataTransfer);
-      if (itemIds.has(rowId)) return;
+      if (moveDragHasSourceParent(event.dataTransfer, rowId)) return;
+      if (moveDragHasItem(event.dataTransfer, rowId)) return;
 
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
@@ -261,8 +259,12 @@ export const ListView: React.FC<IFileListView> = ({
       if (!payload) return;
       // Reject self/source-parent drops here too — drag-over rejects visually,
       // but a drop can still fire if the user releases between frames.
+      // Compare lower-case so a mixed-case GUID never slips past.
+      const target = rowId.toLowerCase();
       const filtered = payload.items.filter(
-        (item) => item.id !== rowId && item.sourceParentId !== rowId,
+        (item) =>
+          item.id.toLowerCase() !== target &&
+          item.sourceParentId.toLowerCase() !== target,
       );
       if (filtered.length === 0) return;
       moveSupport.onMove(filtered, rowId);

@@ -34,6 +34,13 @@ export interface MoveDragPayload {
   items: ReadonlyArray<MoveClipboardItem>;
 }
 
+/**
+ * Normalize an id for drag-marker comparisons. Browsers lowercase the MIME
+ * `type` string anyway, so writing the suffix upper-case and reading it back
+ * via `DataTransfer.types` would silently miss. We always compare lower-case.
+ */
+const normalizeDragId = (id: string): string => id.toLowerCase();
+
 export const writeMoveDragPayload = (
   dataTransfer: DataTransfer,
   payload: MoveDragPayload,
@@ -42,7 +49,7 @@ export const writeMoveDragPayload = (
 
   // Tag the drag with source-parent IDs so drag-over can synchronously reject
   // drops onto the source folder without parsing the payload. UI hint only.
-  const sources = new Set(payload.items.map((i) => i.sourceParentId));
+  const sources = new Set(payload.items.map((i) => normalizeDragId(i.sourceParentId)));
   for (const source of sources) {
     dataTransfer.setData(`${MOVE_DRAG_DATA_TYPE}/${source}`, "1");
   }
@@ -50,7 +57,7 @@ export const writeMoveDragPayload = (
 
   // Same trick for per-item IDs so drag-over can reject dropping a folder onto itself.
   for (const item of payload.items) {
-    dataTransfer.setData(`${MOVE_DRAG_ITEM_TYPE}/${item.id}`, "1");
+    dataTransfer.setData(`${MOVE_DRAG_ITEM_TYPE}/${normalizeDragId(item.id)}`, "1");
   }
 
   try {
@@ -63,6 +70,24 @@ export const writeMoveDragPayload = (
     // still let drop handlers detect a move drag, just without payload.
   }
 };
+
+/**
+ * True if the drag's source-parent set contains the given id (case-insensitive).
+ * Prefer over `getMoveDragSourceParents().has(...)` from callers — handles the
+ * mixed-case GUID gotcha that browser MIME-type lowercasing creates.
+ */
+export const moveDragHasSourceParent = (
+  dataTransfer: DataTransfer | null,
+  parentId: string,
+): boolean => getMoveDragSourceParents(dataTransfer).has(normalizeDragId(parentId));
+
+/**
+ * True if the drag includes the given id as one of its items (case-insensitive).
+ */
+export const moveDragHasItem = (
+  dataTransfer: DataTransfer | null,
+  itemId: string,
+): boolean => getMoveDragItemIds(dataTransfer).has(normalizeDragId(itemId));
 
 export const isMoveDrag = (dataTransfer: DataTransfer | null): boolean => {
   if (!dataTransfer) return false;

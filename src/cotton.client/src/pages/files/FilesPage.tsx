@@ -47,7 +47,7 @@ import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import {
   useMoveOperations,
   isMoveDrag,
-  getMoveDragSourceParents,
+  moveDragHasSourceParent,
   readMoveDragPayload,
 } from "../../shared/hooks/useMoveOperations";
 import {
@@ -347,9 +347,8 @@ export const FilesPage: React.FC = () => {
   const canAcceptDropOn = React.useCallback(
     (event: React.DragEvent<HTMLElement>, targetParentId: string): boolean => {
       if (!isMoveDrag(event.dataTransfer)) return false;
-      const sources = getMoveDragSourceParents(event.dataTransfer);
       // Reject drops onto the source parent (no-op move).
-      return !sources.has(targetParentId);
+      return !moveDragHasSourceParent(event.dataTransfer, targetParentId);
     },
     [],
   );

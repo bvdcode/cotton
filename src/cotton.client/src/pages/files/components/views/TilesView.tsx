@@ -8,8 +8,8 @@ import { TileItem, NewFolderCard } from "./TileItem";
 import { getFileTypeInfo } from "../../utils/fileTypes";
 import {
   isMoveDrag,
-  getMoveDragSourceParents,
-  getMoveDragItemIds,
+  moveDragHasSourceParent,
+  moveDragHasItem,
   writeMoveDragPayload,
   readMoveDragPayload,
 } from "../../../../shared/hooks/useMoveOperations";
@@ -632,10 +632,8 @@ export const TilesView: React.FC<IFileListView> = ({
       // Reject early: (a) folder cannot be a drop target for items already inside it,
       // (b) a folder cannot be dropped onto itself. We bail without preventDefault
       // so the drop slot is visibly rejected, not silently filtered after drop.
-      const sources = getMoveDragSourceParents(event.dataTransfer);
-      if (sources.has(tileId)) return;
-      const itemIds = getMoveDragItemIds(event.dataTransfer);
-      if (itemIds.has(tileId)) return;
+      if (moveDragHasSourceParent(event.dataTransfer, tileId)) return;
+      if (moveDragHasItem(event.dataTransfer, tileId)) return;
 
       event.preventDefault();
       event.stopPropagation();
@@ -671,8 +669,12 @@ export const TilesView: React.FC<IFileListView> = ({
       if (!payload) return;
       // Reject self/source-parent drops here too — drag-over already rejects
       // visually, but a drop can still fire if the user releases between frames.
+      // Compare lower-case so a mixed-case GUID never slips past.
+      const target = tileId.toLowerCase();
       const filtered = payload.items.filter(
-        (item) => item.id !== tileId && item.sourceParentId !== tileId,
+        (item) =>
+          item.id.toLowerCase() !== target &&
+          item.sourceParentId.toLowerCase() !== target,
       );
       if (filtered.length === 0) return;
       moveSupport.onMove(filtered, tileId);
