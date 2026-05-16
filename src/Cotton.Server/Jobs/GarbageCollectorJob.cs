@@ -214,26 +214,7 @@ namespace Cotton.Server.Jobs
                 return;
             }
 
-            HashSet<string> deletingNow = new(StringComparer.OrdinalIgnoreCase);
-            foreach (var chunkToDelete in chunksToDelete)
-            {
-                string uid = Hasher.ToHexStringHash(chunkToDelete.Hash);
-                if (protectedStorageKeys.Contains(uid))
-                {
-                    await _chunkUsage.ClearGcScheduleAsync(chunkToDelete.Hash, ct);
-                    continue;
-                }
-
-                if (CurrentlyDeletingChunks.TryAdd(uid, 0))
-                {
-                    deletingNow.Add(uid);
-                }
-                else
-                {
-                    _logger.LogDebug("Chunk {ChunkId} is already being deleted by another GC run.", uid);
-                }
-            }
-
+            HashSet<string> deletingNow = await ClaimChunksForDeletionAsync(chunksToDelete, protectedStorageKeys, ct);
             if (deletingNow.Count == 0)
             {
                 return;
@@ -253,41 +234,9 @@ namespace Cotton.Server.Jobs
                         continue;
                     }
 
-                    try
+                    if (await TryDeleteClaimedChunkAsync(chunk, uid, now, protectedStorageKeys, ct))
                     {
-                        if (!await IsStillEligibleForDeletionAsync(chunk.Hash, now, protectedStorageKeys, ct))
-                        {
-                            continue;
-                        }
-
-                        await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
-                        try
-                        {
-                            await _dbContext.ChunkOwnerships
-                                .Where(o => o.ChunkHash == chunk.Hash)
-                                .ExecuteDeleteAsync(ct);
-
-                            _dbContext.Chunks.Remove(chunk);
-                            await _dbContext.SaveChangesAsync(ct);
-                            await transaction.CommitAsync(ct);
-                        }
-                        catch
-                        {
-                            await transaction.RollbackAsync(ct);
-                            throw;
-                        }
-
                         deletedChunksCounter++;
-
-                        bool deleted = await _storage.DeleteAsync(uid);
-                        if (!deleted)
-                        {
-                            _logger.LogDebug("Chunk {ChunkId} storage delete returned false.", uid);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to delete scheduled chunk {ChunkId}.", uid);
                     }
                 }
             }
@@ -300,6 +249,70 @@ namespace Cotton.Server.Jobs
             }
 
             _logger.LogInformation("Garbage collection completed - {Count} chunks deleted.", deletedChunksCounter);
+        }
+
+        private async Task<HashSet<string>> ClaimChunksForDeletionAsync(IEnumerable<Chunk> chunksToDelete, HashSet<string> protectedStorageKeys, CancellationToken ct)
+        {
+            HashSet<string> deletingNow = new(StringComparer.OrdinalIgnoreCase);
+            foreach (var chunkToDelete in chunksToDelete)
+            {
+                string uid = Hasher.ToHexStringHash(chunkToDelete.Hash);
+                if (protectedStorageKeys.Contains(uid))
+                {
+                    await _chunkUsage.ClearGcScheduleAsync(chunkToDelete.Hash, ct);
+                    continue;
+                }
+
+                if (CurrentlyDeletingChunks.TryAdd(uid, 0))
+                {
+                    deletingNow.Add(uid);
+                }
+                else
+                {
+                    _logger.LogDebug("Chunk {ChunkId} is already being deleted by another GC run.", uid);
+                }
+            }
+            return deletingNow;
+        }
+
+        private async Task<bool> TryDeleteClaimedChunkAsync(Chunk chunk, string uid, DateTime now, HashSet<string> protectedStorageKeys, CancellationToken ct)
+        {
+            try
+            {
+                if (!await IsStillEligibleForDeletionAsync(chunk.Hash, now, protectedStorageKeys, ct))
+                {
+                    return false;
+                }
+
+                await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+                try
+                {
+                    await _dbContext.ChunkOwnerships
+                        .Where(o => o.ChunkHash == chunk.Hash)
+                        .ExecuteDeleteAsync(ct);
+
+                    _dbContext.Chunks.Remove(chunk);
+                    await _dbContext.SaveChangesAsync(ct);
+                    await transaction.CommitAsync(ct);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(ct);
+                    throw;
+                }
+
+                bool deleted = await _storage.DeleteAsync(uid);
+                if (!deleted)
+                {
+                    _logger.LogDebug("Chunk {ChunkId} storage delete returned false.", uid);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete scheduled chunk {ChunkId}.", uid);
+                return false;
+            }
         }
 
         private async Task<bool> IsStillEligibleForDeletionAsync(byte[] chunkHash, DateTime now, HashSet<string> protectedStorageKeys, CancellationToken ct)

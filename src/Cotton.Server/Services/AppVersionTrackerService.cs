@@ -131,73 +131,62 @@ public class AppVersionTrackerService(
 
     private static int CompareSemanticVersions(ParsedVersion left, ParsedVersion right)
     {
-        int numberLength = Math.Max(left.Numbers.Length, right.Numbers.Length);
-        for (int i = 0; i < numberLength; i++)
+        int numberCmp = CompareVersionNumbers(left.Numbers, right.Numbers);
+        if (numberCmp != 0)
         {
-            int l = i < left.Numbers.Length ? left.Numbers[i] : 0;
-            int r = i < right.Numbers.Length ? right.Numbers[i] : 0;
+            return numberCmp;
+        }
+
+        return ComparePrereleaseTags(left.Prerelease, right.Prerelease);
+    }
+
+    private static int CompareVersionNumbers(int[] left, int[] right)
+    {
+        int length = Math.Max(left.Length, right.Length);
+        for (int i = 0; i < length; i++)
+        {
+            int l = i < left.Length ? left[i] : 0;
+            int r = i < right.Length ? right[i] : 0;
             int cmp = l.CompareTo(r);
             if (cmp != 0)
             {
                 return cmp;
             }
         }
+        return 0;
+    }
 
-        bool leftHasPrerelease = left.Prerelease.Length > 0;
-        bool rightHasPrerelease = right.Prerelease.Length > 0;
+    private static int ComparePrereleaseTags(string[] left, string[] right)
+    {
+        bool leftHasPrerelease = left.Length > 0;
+        bool rightHasPrerelease = right.Length > 0;
 
         if (!leftHasPrerelease && !rightHasPrerelease)
         {
             return 0;
         }
-
         if (!leftHasPrerelease)
         {
             return 1;
         }
-
         if (!rightHasPrerelease)
         {
             return -1;
         }
 
-        int prereleaseLength = Math.Max(left.Prerelease.Length, right.Prerelease.Length);
-        for (int i = 0; i < prereleaseLength; i++)
+        int length = Math.Max(left.Length, right.Length);
+        for (int i = 0; i < length; i++)
         {
-            if (i >= left.Prerelease.Length)
+            if (i >= left.Length)
             {
                 return -1;
             }
-
-            if (i >= right.Prerelease.Length)
+            if (i >= right.Length)
             {
                 return 1;
             }
 
-            string l = left.Prerelease[i];
-            string r = right.Prerelease[i];
-
-            bool lIsNumber = int.TryParse(l, out int lNumber);
-            bool rIsNumber = int.TryParse(r, out int rNumber);
-
-            int cmp;
-            if (lIsNumber && rIsNumber)
-            {
-                cmp = lNumber.CompareTo(rNumber);
-            }
-            else if (lIsNumber)
-            {
-                cmp = -1;
-            }
-            else if (rIsNumber)
-            {
-                cmp = 1;
-            }
-            else
-            {
-                cmp = string.CompareOrdinal(l, r);
-            }
-
+            int cmp = ComparePrereleaseIdentifier(left[i], right[i]);
             if (cmp != 0)
             {
                 return cmp;
@@ -205,6 +194,26 @@ public class AppVersionTrackerService(
         }
 
         return 0;
+    }
+
+    private static int ComparePrereleaseIdentifier(string left, string right)
+    {
+        bool leftIsNumber = int.TryParse(left, out int leftNumber);
+        bool rightIsNumber = int.TryParse(right, out int rightNumber);
+
+        if (leftIsNumber && rightIsNumber)
+        {
+            return leftNumber.CompareTo(rightNumber);
+        }
+        if (leftIsNumber)
+        {
+            return -1;
+        }
+        if (rightIsNumber)
+        {
+            return 1;
+        }
+        return string.CompareOrdinal(left, right);
     }
 
     private readonly record struct ParsedVersion(int[] Numbers, string[] Prerelease);

@@ -51,29 +51,7 @@ namespace Cotton.Server.Handlers.Files
 
             if (downloadToken == null)
             {
-                if (isHtml)
-                {
-                    var nodeShareToken = await _dbContext.NodeShareTokens
-                        .AsNoTracking()
-                        .Include(x => x.Node)
-                        .Where(x => x.Token == request.Token
-                            && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
-                        .SingleOrDefaultAsync(cancellationToken: ct);
-
-                    if (nodeShareToken != null && nodeShareToken.Node.Type == NodeType.Default)
-                    {
-                        string html = BuildRedirectHtml(
-                            baseAppUrl: baseAppUrl,
-                            token: request.Token,
-                            fileName: nodeShareToken.Name,
-                            previewHashEncryptedHex: null);
-                        return ShareFileResult.AsHtml(html);
-                    }
-
-                    return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
-                }
-
-                return ShareFileResult.AsNotFound("File not found");
+                return await ResolveMissingDownloadTokenAsync(request.Token, baseAppUrl, isHtml, now, ct);
             }
 
             if (downloadToken.NodeFile.Node.Type != NodeType.Default)
@@ -86,12 +64,11 @@ namespace Cotton.Server.Handlers.Files
             var file = downloadToken.NodeFile.FileManifest;
             if (isHtml)
             {
-                string? previewHashEncryptedHex = file.GetPreviewHashEncryptedHex();
                 string html = BuildRedirectHtml(
                     baseAppUrl: baseAppUrl,
                     token: request.Token,
                     fileName: downloadToken.FileName,
-                    previewHashEncryptedHex: previewHashEncryptedHex);
+                    previewHashEncryptedHex: file.GetPreviewHashEncryptedHex());
                 return ShareFileResult.AsHtml(html);
             }
 
@@ -109,6 +86,33 @@ namespace Cotton.Server.Handlers.Files
             }
 
             return await CreateStreamResultAsync(downloadToken, file, entityTag, lastModified, inline: isInlineFile, ct);
+        }
+
+        private async Task<ShareFileResult> ResolveMissingDownloadTokenAsync(string token, string baseAppUrl, bool isHtml, DateTime now, CancellationToken ct)
+        {
+            if (!isHtml)
+            {
+                return ShareFileResult.AsNotFound("File not found");
+            }
+
+            var nodeShareToken = await _dbContext.NodeShareTokens
+                .AsNoTracking()
+                .Include(x => x.Node)
+                .Where(x => x.Token == token
+                    && (!x.ExpiresAt.HasValue || x.ExpiresAt.Value > now))
+                .SingleOrDefaultAsync(cancellationToken: ct);
+
+            if (nodeShareToken != null && nodeShareToken.Node.Type == NodeType.Default)
+            {
+                string html = BuildRedirectHtml(
+                    baseAppUrl: baseAppUrl,
+                    token: token,
+                    fileName: nodeShareToken.Name,
+                    previewHashEncryptedHex: null);
+                return ShareFileResult.AsHtml(html);
+            }
+
+            return ShareFileResult.AsRedirect($"{baseAppUrl}/404");
         }
 
         private static (bool IsHtml, bool IsInlineFile)? TryParseViewMode(string? view)
