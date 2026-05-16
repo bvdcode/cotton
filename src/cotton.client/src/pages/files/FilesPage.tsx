@@ -44,16 +44,7 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
-import {
-  useMoveOperations,
-  isMoveDrag,
-  moveDragHasSourceParent,
-  readMoveDragPayload,
-} from "../../shared/hooks/useMoveOperations";
-import {
-  useMoveClipboardStore,
-  type MoveClipboardItem,
-} from "../../shared/store/moveClipboardStore";
+import { useFileMoveController } from "./hooks/useFileMoveController";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -226,199 +217,28 @@ export const FilesPage: React.FC = () => {
   const fileOps = useFileOperations(reloadCurrentNode);
   const fileSelection = useFileSelection();
 
-  const moveOps = useMoveOperations();
-  const clipboardItems = useMoveClipboardStore((s) => s.items);
-  const cutItemIds = useMemo(
-    () => new Set(clipboardItems.map((c) => c.id)),
-    [clipboardItems],
-  );
-
-  const buildClipboardItemsFromIds = React.useCallback(
-    (ids: Iterable<string>): MoveClipboardItem[] => {
-      if (!nodeId) return [];
-      const items: MoveClipboardItem[] = [];
-      const idsSet = new Set(ids);
-      for (const tile of tiles) {
-        if (tile.kind === "folder") {
-          if (!idsSet.has(tile.node.id)) continue;
-          items.push({
-            id: tile.node.id,
-            kind: "folder",
-            name: tile.node.name,
-            sourceParentId: tile.node.parentId ?? nodeId,
-          });
-        } else {
-          if (!idsSet.has(tile.file.id)) continue;
-          items.push({
-            id: tile.file.id,
-            kind: "file",
-            name: tile.file.name,
-            sourceParentId: tile.file.nodeId ?? nodeId,
-          });
-        }
-      }
-      return items;
-    },
-    [nodeId, tiles],
-  );
-
-  const handleCutSelection = React.useCallback(() => {
-    if (fileSelection.selectedCount === 0) return;
-    const items = buildClipboardItemsFromIds(fileSelection.selectedIds);
-    if (items.length === 0) return;
-    moveOps.cutItems(items);
-    showToast(t("move.toasts.cut", { ns: "files", count: items.length }));
-  }, [
-    buildClipboardItemsFromIds,
-    fileSelection.selectedCount,
-    fileSelection.selectedIds,
-    moveOps,
-    showToast,
-    t,
-  ]);
-
-  const handlePasteHere = React.useCallback(() => {
-    if (!nodeId) return;
-    if (clipboardItems.length === 0) return;
-    void moveOps.pasteInto(nodeId);
-  }, [clipboardItems.length, moveOps, nodeId]);
-
-  const handleMoveItems = React.useCallback(
-    (
-      items: ReadonlyArray<MoveClipboardItem>,
-      targetParentId: string,
-    ): void => {
-      void moveOps.moveItems(items, targetParentId);
-    },
-    [moveOps],
-  );
-
-  // Global Ctrl+X / Ctrl+V hotkeys
-  React.useEffect(() => {
-    const isEditableTarget = (target: EventTarget | null): boolean => {
-      if (!(target instanceof HTMLElement)) return false;
-      if (target.isContentEditable) return true;
-      const tag = target.tagName;
-      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-    };
-
-    const handler = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey)) return;
-      const key = event.key.toLowerCase();
-      if (key !== "x" && key !== "v") return;
-      if (isEditableTarget(event.target)) return;
-
-      if (key === "x") {
-        if (fileSelection.selectedCount === 0) return;
-        event.preventDefault();
-        handleCutSelection();
-      } else if (key === "v") {
-        if (clipboardItems.length === 0) return;
-        if (!nodeId) return;
-        event.preventDefault();
-        handlePasteHere();
-      }
-    };
-
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [
-    clipboardItems.length,
-    fileSelection.selectedCount,
-    handleCutSelection,
-    handlePasteHere,
-    nodeId,
-  ]);
-
-  // Drop handlers for the "Go up" action and breadcrumbs
-  const [goUpDropActive, setGoUpDropActive] = React.useState(false);
   const goUpParentId = ancestors.length > 0
     ? ancestors[ancestors.length - 1].id
     : null;
 
-  const readDropPayload = React.useCallback(
-    (event: React.DragEvent<HTMLElement>): MoveClipboardItem[] | null => {
-      const payload = readMoveDragPayload(event.dataTransfer);
-      return payload ? [...payload.items] : null;
-    },
-    [],
-  );
-
-  const canAcceptDropOn = React.useCallback(
-    (event: React.DragEvent<HTMLElement>, targetParentId: string): boolean => {
-      if (!isMoveDrag(event.dataTransfer)) return false;
-      // Reject drops onto the source parent (no-op move).
-      return !moveDragHasSourceParent(event.dataTransfer, targetParentId);
-    },
-    [],
-  );
-
-  const goUpDropHandlers = React.useMemo(() => {
-    if (!goUpParentId) return undefined;
-    return {
-      onDragOver: (event: React.DragEvent<HTMLElement>) => {
-        if (!canAcceptDropOn(event, goUpParentId)) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        if (!goUpDropActive) setGoUpDropActive(true);
-      },
-      onDragLeave: (event: React.DragEvent<HTMLElement>) => {
-        const related = event.relatedTarget as Node | null;
-        if (related && event.currentTarget.contains(related)) return;
-        setGoUpDropActive(false);
-      },
-      onDrop: (event: React.DragEvent<HTMLElement>) => {
-        setGoUpDropActive(false);
-        if (!isMoveDrag(event.dataTransfer)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const items = readDropPayload(event);
-        if (!items || items.length === 0) return;
-        handleMoveItems(items, goUpParentId);
-      },
-      active: goUpDropActive,
-    };
-  }, [
-    canAcceptDropOn,
-    goUpDropActive,
+  const {
+    moveSupport,
+    clipboardCount,
+    handleCutSelection,
+    handlePasteHere,
+    handleCutFolder,
+    handleCutFile,
+    goUpDropHandlers,
+    breadcrumbsDropHandlers,
+  } = useFileMoveController({
+    nodeId,
+    tiles,
+    selectedIds: fileSelection.selectedIds,
+    selectedCount: fileSelection.selectedCount,
     goUpParentId,
-    handleMoveItems,
-    readDropPayload,
-  ]);
-
-  const breadcrumbsDropHandlers = React.useMemo(() => {
-    return {
-      canAccept: (targetCrumbId: string) => targetCrumbId !== nodeId,
-      onDragOver: (
-        targetCrumbId: string,
-        event: React.DragEvent<HTMLElement>,
-      ) => {
-        if (!canAcceptDropOn(event, targetCrumbId)) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-      },
-      onDrop: (
-        targetCrumbId: string,
-        event: React.DragEvent<HTMLElement>,
-      ) => {
-        if (!isMoveDrag(event.dataTransfer)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const items = readDropPayload(event);
-        if (!items || items.length === 0) return;
-        handleMoveItems(items, targetCrumbId);
-      },
-    };
-  }, [canAcceptDropOn, handleMoveItems, nodeId, readDropPayload]);
-
-  const moveSupport = useMemo(() => {
-    if (!nodeId) return undefined;
-    return {
-      cutItemIds,
-      currentParentId: nodeId,
-      onMove: handleMoveItems,
-    };
-  }, [cutItemIds, handleMoveItems, nodeId]);
+    showToast,
+    t,
+  });
 
   const smoothGalleryTransitions = useLocalPreferencesStore(
     selectGallerySmoothTransitions,
@@ -450,36 +270,6 @@ export const FilesPage: React.FC = () => {
       await shareFolder(folderId, folderName, t);
     },
     [t],
-  );
-
-  const handleCutFolder = React.useCallback(
-    (folderId: string, folderName: string) => {
-      if (!nodeId) return;
-      const item: MoveClipboardItem = {
-        id: folderId,
-        kind: "folder",
-        name: folderName,
-        sourceParentId: nodeId,
-      };
-      moveOps.cutItems([item]);
-      showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
-    },
-    [moveOps, nodeId, showToast, t],
-  );
-
-  const handleCutFile = React.useCallback(
-    (fileId: string, fileName: string) => {
-      if (!nodeId) return;
-      const item: MoveClipboardItem = {
-        id: fileId,
-        kind: "file",
-        name: fileName,
-        sourceParentId: nodeId,
-      };
-      moveOps.cutItems([item]);
-      showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
-    },
-    [moveOps, nodeId, showToast, t],
   );
 
   // Build folder operations adapter
@@ -538,13 +328,13 @@ export const FilesPage: React.FC = () => {
         color: "error" as const,
       });
     }
-    if (clipboardItems.length > 0 && nodeId) {
+    if (clipboardCount > 0 && nodeId) {
       items.push({
         key: "paste-here",
         icon: <ContentPaste />,
         title: t("move.pasteHere", {
           ns: "files",
-          count: clipboardItems.length,
+          count: clipboardCount,
         }),
         onClick: handlePasteHere,
         disabled: loading,
@@ -552,7 +342,7 @@ export const FilesPage: React.FC = () => {
     }
     return items.length > 0 ? items : undefined;
   }, [
-    clipboardItems.length,
+    clipboardCount,
     fileSelection.selectionMode,
     fileSelection.selectedCount,
     handleCutSelection,
