@@ -1051,7 +1051,16 @@
   "files": {
     "title": "Файлы",
     "move": {
+      "cut": "Вырезать",
+      "pasteHere_one": "Вставить {{count}} элемент сюда",
+      "pasteHere_few": "Вставить {{count}} элемента сюда",
+      "pasteHere_many": "Вставить {{count}} элементов сюда",
+      "pasteHere_other": "Вставить {{count}} элементов сюда",
       "toasts": {
+        "cut_one": "Вырезан {{count}} элемент",
+        "cut_few": "Вырезано {{count}} элемента",
+        "cut_many": "Вырезано {{count}} элементов",
+        "cut_other": "Вырезано {{count}} элементов",
         "moved_one": "Перемещён {{count}} элемент",
         "moved_few": "Перемещено {{count}} элемента",
         "moved_many": "Перемещено {{count}} элементов",
