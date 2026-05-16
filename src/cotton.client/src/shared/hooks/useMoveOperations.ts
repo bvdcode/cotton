@@ -89,6 +89,23 @@ export const moveDragHasItem = (
   itemId: string,
 ): boolean => getMoveDragItemIds(dataTransfer).has(normalizeDragId(itemId));
 
+/**
+ * Strip items that would be a no-op or invalid for a move into `targetParentId`:
+ * items already inside the target, and the target itself. Case-insensitive — see
+ * `normalizeDragId` for the GUID-casing rationale.
+ */
+export const filterMoveItemsForTarget = (
+  items: ReadonlyArray<MoveClipboardItem>,
+  targetParentId: string,
+): MoveClipboardItem[] => {
+  const target = normalizeDragId(targetParentId);
+  return items.filter(
+    (item) =>
+      normalizeDragId(item.id) !== target &&
+      normalizeDragId(item.sourceParentId) !== target,
+  );
+};
+
 export const isMoveDrag = (dataTransfer: DataTransfer | null): boolean => {
   if (!dataTransfer) return false;
   const types = dataTransfer.types;
@@ -196,10 +213,7 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       items: ReadonlyArray<MoveClipboardItem>,
       targetParentId: string,
     ): Promise<MoveOutcome> => {
-      const candidates = items.filter(
-        (item) =>
-          item.sourceParentId !== targetParentId && item.id !== targetParentId,
-      );
+      const candidates = filterMoveItemsForTarget(items, targetParentId);
       if (candidates.length === 0) {
         return { succeeded: [], failed: [], lastErrorMessage: null };
       }

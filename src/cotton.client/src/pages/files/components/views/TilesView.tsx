@@ -12,6 +12,7 @@ import {
   moveDragHasItem,
   writeMoveDragPayload,
   readMoveDragPayload,
+  filterMoveItemsForTarget,
 } from "../../../../shared/hooks/useMoveOperations";
 import type { MoveClipboardItem } from "../../../../shared/store/moveClipboardStore";
 
@@ -652,15 +653,7 @@ export const TilesView: React.FC<IFileListView> = ({
 
       const payload = readMoveDragPayload(event.dataTransfer);
       if (!payload) return;
-      // Reject self/source-parent drops here too — drag-over already rejects
-      // visually, but a drop can still fire if the user releases between frames.
-      // Compare lower-case so a mixed-case GUID never slips past.
-      const target = tileId.toLowerCase();
-      const filtered = payload.items.filter(
-        (item) =>
-          item.id.toLowerCase() !== target &&
-          item.sourceParentId.toLowerCase() !== target,
-      );
+      const filtered = filterMoveItemsForTarget(payload.items, tileId);
       if (filtered.length === 0) return;
       moveSupport.onMove(filtered, tileId);
     },
