@@ -82,6 +82,7 @@ namespace Cotton.Server.Handlers.Files
 
             await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, nodeFile.NameKey, nodeFile.Id, cancellationToken);
 
+            Guid oldParentId = nodeFile.NodeId;
             nodeFile.NodeId = targetParent.Id;
             try
             {
@@ -95,7 +96,7 @@ namespace Cotton.Server.Handlers.Files
 
             await tx.CommitAsync(cancellationToken);
 
-            await NotifyMoveAsync(nodeFile.Id, cancellationToken);
+            await NotifyMoveAsync(nodeFile.Id, oldParentId, cancellationToken);
             return nodeFile.Adapt<NodeFileManifestDto>();
         }
 
@@ -131,13 +132,12 @@ namespace Cotton.Server.Handlers.Files
             }
         }
 
-        private async Task NotifyMoveAsync(Guid nodeFileId, CancellationToken ct)
+        private async Task NotifyMoveAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct)
         {
             // Best-effort: a notification failure must not turn an already-committed move into a failed response.
-            // TODO: include oldParentId/newParentId in a NodeFileMovedEventDto so clients can invalidate both parents.
             try
             {
-                await _eventNotification.NotifyFileMovedAsync(nodeFileId, ct);
+                await _eventNotification.NotifyFileMovedAsync(nodeFileId, oldParentId, ct);
             }
             catch (Exception ex)
             {

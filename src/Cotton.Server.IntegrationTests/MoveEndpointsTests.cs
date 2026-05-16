@@ -663,10 +663,10 @@ internal sealed class ThrowingEventNotificationService : IEventNotificationServi
     public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileMovedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+    public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeMovedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+    public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
 }

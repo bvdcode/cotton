@@ -101,6 +101,8 @@ namespace Cotton.Server.Handlers.Nodes
 
             await EnsureNoSiblingCollisionAsync(targetParent.Id, request.UserId, node.NameKey, node.Type, node.Id, cancellationToken);
 
+            // node.ParentId is non-null here (root-move was rejected above).
+            Guid oldParentId = node.ParentId!.Value;
             node.ParentId = targetParent.Id;
             try
             {
@@ -114,7 +116,7 @@ namespace Cotton.Server.Handlers.Nodes
 
             await tx.CommitAsync(cancellationToken);
 
-            await NotifyMoveAsync(node.Id, cancellationToken);
+            await NotifyMoveAsync(node.Id, oldParentId, cancellationToken);
             return node.Adapt<NodeDto>();
         }
 
@@ -180,13 +182,12 @@ namespace Cotton.Server.Handlers.Nodes
             }
         }
 
-        private async Task NotifyMoveAsync(Guid nodeId, CancellationToken ct)
+        private async Task NotifyMoveAsync(Guid nodeId, Guid oldParentId, CancellationToken ct)
         {
             // Best-effort: a notification failure must not turn an already-committed move into a failed response.
-            // TODO: include oldParentId/newParentId in a NodeMovedEventDto so clients can invalidate both parents.
             try
             {
-                await _eventNotification.NotifyNodeMovedAsync(nodeId, ct);
+                await _eventNotification.NotifyNodeMovedAsync(nodeId, oldParentId, ct);
             }
             catch (Exception ex)
             {

@@ -75,13 +75,19 @@ public class WebDavMoveRequestHandler(
             return Fail(WebDavMoveError.DestinationExists);
         }
 
+        // Capture the source's old parent before TryPerformMoveAsync mutates it,
+        // so the realtime notification can carry both old and new parent IDs.
+        Guid? oldParentId = sourceResult.IsCollection
+            ? sourceResult.Node?.ParentId
+            : sourceResult.NodeFile?.NodeId;
+
         var moveFailure = await TryPerformMoveAsync(request, sourceResult, destParentResult, ct);
         if (moveFailure is not null)
         {
             return moveFailure;
         }
 
-        await PersistAndNotifyAsync(request, sourceResult, ct);
+        await PersistAndNotifyAsync(request, sourceResult, oldParentId, ct);
 
         var movedIds = GetMovedIds(sourceResult);
         return Ok(overwriteResult.Created, movedIds.NodeId, movedIds.NodeFileId);
@@ -131,6 +137,7 @@ public class WebDavMoveRequestHandler(
     private async Task PersistAndNotifyAsync(
         WebDavMoveRequest request,
         WebDavResolveResult sourceResult,
+        Guid? oldParentId,
         CancellationToken ct)
     {
         await _dbContext.SaveChangesAsync(ct);
@@ -145,13 +152,13 @@ public class WebDavMoveRequestHandler(
         // Best-effort: a notification failure must not turn an already-committed move into a failed response.
         try
         {
-            if (movedIds.NodeId.HasValue)
+            if (movedIds.NodeId.HasValue && oldParentId.HasValue)
             {
-                await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, ct);
+                await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, oldParentId.Value, ct);
             }
-            else if (movedIds.NodeFileId.HasValue)
+            else if (movedIds.NodeFileId.HasValue && oldParentId.HasValue)
             {
-                await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, ct);
+                await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, oldParentId.Value, ct);
             }
         }
         catch (Exception ex)
