@@ -55,10 +55,7 @@ namespace Cotton.Server.Handlers.Nodes
                 ?? throw new EntityNotFoundException<Node>();
 
             await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-            long lockKey = LayoutAdvisoryLockKey(sourceLayoutId);
-            await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                $"SELECT pg_advisory_xact_lock({lockKey})",
-                cancellationToken);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
 
             var node = await _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId && x.OwnerId == request.UserId)
@@ -119,17 +116,6 @@ namespace Cotton.Server.Handlers.Nodes
 
             await NotifyMoveAsync(node.Id, cancellationToken);
             return node.Adapt<NodeDto>();
-        }
-
-        private static long LayoutAdvisoryLockKey(Guid layoutId)
-        {
-            // pg_advisory_xact_lock takes a bigint. Collapse the 16-byte Guid into one
-            // deterministic int64 via XOR of its two halves. A spurious collision just
-            // means two unrelated layouts share the same lock — performance hit only.
-            var bytes = layoutId.ToByteArray();
-            long high = BitConverter.ToInt64(bytes, 0);
-            long low = BitConverter.ToInt64(bytes, 8);
-            return high ^ low;
         }
 
         private async Task<bool> IsDescendantAsync(Guid candidateChildId, Guid possibleAncestorId, Guid userId, CancellationToken ct)

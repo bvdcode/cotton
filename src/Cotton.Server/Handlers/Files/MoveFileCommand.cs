@@ -35,6 +35,21 @@ namespace Cotton.Server.Handlers.Files
                 throw new BadRequestException<NodeFile>("Target parent id is required.");
             }
 
+            // The cross-table namespace (file vs folder with the same NameKey under
+            // the same parent) is NOT protected by a single unique index. Without a
+            // serialization point, a concurrent file move + folder move can both
+            // pass their pre-checks and commit a same-name cross-type duplicate.
+            // We take the same per-layout advisory lock that MoveNodeCommand uses.
+            var sourceLayoutId = await _dbContext.NodeFiles
+                .AsNoTracking()
+                .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
+                .Select(x => (Guid?)x.Node.LayoutId)
+                .SingleOrDefaultAsync(cancellationToken)
+                ?? throw new EntityNotFoundException<NodeFile>();
+
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, cancellationToken);
+
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
@@ -49,6 +64,7 @@ namespace Cotton.Server.Handlers.Files
 
             if (nodeFile.NodeId == request.ParentId)
             {
+                await tx.CommitAsync(cancellationToken);
                 return nodeFile.Adapt<NodeFileManifestDto>();
             }
 
@@ -61,8 +77,6 @@ namespace Cotton.Server.Handlers.Files
 
             if (targetParent.LayoutId != nodeFile.Node.LayoutId)
             {
-                // Same rationale as MoveNodeCommand: layouts are disjoint namespaces.
-                // A file moved across layouts would dangle outside its source tree's index.
                 throw new BadRequestException<Node>("Cannot move a file across layouts.");
             }
 
@@ -76,9 +90,10 @@ namespace Cotton.Server.Handlers.Files
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg
                 && pg.SqlState == PostgresErrorCodes.UniqueViolation)
             {
-                // Unique index (NodeId, NameKey) lost a race with a concurrent insert/move; surface as 409.
                 throw new DuplicateException(nodeFile.NameKey);
             }
+
+            await tx.CommitAsync(cancellationToken);
 
             await NotifyMoveAsync(nodeFile.Id, cancellationToken);
             return nodeFile.Adapt<NodeFileManifestDto>();

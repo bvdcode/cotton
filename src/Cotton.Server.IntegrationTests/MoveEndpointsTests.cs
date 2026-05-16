@@ -303,6 +303,38 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task ConcurrentMoveFileAndMoveNode_SameNameSameTarget_OnlyOneWins()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var src1 = await CreateFolderAsync(root.Id, "src1");
+        var src2 = await CreateFolderAsync(root.Id, "src2");
+        var dst = await CreateFolderAsync(root.Id, "dst");
+        var movingFile = await CreateFileAsync(src1.Id, "thing", "cross-table-race");
+        var movingFolder = await CreateFolderAsync(src2.Id, "thing");
+
+        // Without the per-layout advisory lock, file's collision pre-check and
+        // folder's collision pre-check would both pass on the pre-update tree
+        // and both commits would land — dst would end up with both a file and a
+        // folder named "thing", which the create/rename paths normally forbid.
+        var moveFile = MoveFileAsync(movingFile.Id, dst.Id);
+        var moveFolder = MoveNodeAsync(movingFolder.Id, dst.Id);
+        var results = await Task.WhenAll(moveFile, moveFolder);
+
+        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+        int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+        Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table move must win.");
+        Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
+
+        using var scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
+        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
+        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+            "Destination must have exactly one entry named 'thing' across both tables.");
+    }
+
+    [Test]
     public async Task MoveNode_ConcurrentSwap_DoesNotCreateCycle()
     {
         await AuthenticateAsync();
