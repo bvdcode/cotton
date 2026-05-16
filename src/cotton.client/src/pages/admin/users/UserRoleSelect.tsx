@@ -38,7 +38,7 @@ export const UserRoleSelect: React.FC<UserRoleSelectProps> = ({
   );
 
   const handleChange = React.useCallback(
-    (e: SelectChangeEvent<UserRole>, _child: React.ReactNode) => {
+    (e: SelectChangeEvent<UserRole>) => {
       const rawValue = e.target.value;
       const numericValue =
         typeof rawValue === "number" ? rawValue : Number(rawValue);

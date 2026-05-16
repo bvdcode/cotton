@@ -508,7 +508,6 @@ namespace Cotton.Previews
                 TryDeleteFile(normalizedPath);
                 return null;
             }
-
         }
 
         private static void TryDeleteFile(string filePath)
@@ -522,6 +521,5 @@ namespace Cotton.Previews
                 // Temporary-file cleanup failures must not hide the original render error.
             }
         }
-
     }
 }
