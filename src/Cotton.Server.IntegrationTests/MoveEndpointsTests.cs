@@ -408,8 +408,12 @@ public class MoveEndpointsTests : IntegrationTestBase
         };
         var createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createRes.EnsureSuccessStatusCode();
-        var dto = await createRes.Content.ReadFromJsonAsync<NodeFileManifestDto>();
-        return dto!;
+
+        // The from-chunks endpoint returns 200 with no body; look the created file up by name.
+        var children = await client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+        var dto = children!.Files.SingleOrDefault(f => f.Name == name)
+            ?? throw new InvalidOperationException($"Created file '{name}' not found in node {nodeId}.");
+        return dto;
     }
 
     private async Task<NodeContentDto> GetChildrenAsync(Guid nodeId)
