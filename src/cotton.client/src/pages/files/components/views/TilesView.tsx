@@ -9,6 +9,7 @@ import { getFileTypeInfo } from "../../utils/fileTypes";
 import {
   isMoveDrag,
   getMoveDragSourceParents,
+  getMoveDragItemIds,
   writeMoveDragPayload,
   readMoveDragPayload,
 } from "../../../../shared/hooks/useMoveOperations";
@@ -628,11 +629,13 @@ export const TilesView: React.FC<IFileListView> = ({
       if (!moveSupport) return;
       if (!isMoveDrag(event.dataTransfer)) return;
 
+      // Reject early: (a) folder cannot be a drop target for items already inside it,
+      // (b) a folder cannot be dropped onto itself. We bail without preventDefault
+      // so the drop slot is visibly rejected, not silently filtered after drop.
       const sources = getMoveDragSourceParents(event.dataTransfer);
-      // Reject early: folder cannot be a drop target for items already inside it,
-      // and a folder cannot be dropped onto itself. We bail without preventDefault
-      // so the drop slot is visibly rejected, not silently filtered later.
       if (sources.has(tileId)) return;
+      const itemIds = getMoveDragItemIds(event.dataTransfer);
+      if (itemIds.has(tileId)) return;
 
       event.preventDefault();
       event.stopPropagation();

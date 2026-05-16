@@ -18,6 +18,14 @@ import {
 export const MOVE_DRAG_DATA_TYPE = "application/x-cotton-move";
 
 /**
+ * Per-item marker prefix. Encodes each dragged item's id as a fake MIME suffix
+ * so drag-over can synchronously reject drops onto the items themselves
+ * (e.g. dragging folder F onto itself). `DataTransfer.getData()` is restricted
+ * during dragenter/dragover for security; `DataTransfer.types` is always readable.
+ */
+const MOVE_DRAG_ITEM_TYPE = "application/x-cotton-move-item";
+
+/**
  * Authoritative drag payload type. The drop handler is the only consumer.
  */
 export const MOVE_DRAG_DATA_MIME = "application/x-cotton-move-items";
@@ -39,6 +47,11 @@ export const writeMoveDragPayload = (
     dataTransfer.setData(`${MOVE_DRAG_DATA_TYPE}/${source}`, "1");
   }
   dataTransfer.setData(MOVE_DRAG_DATA_TYPE, "1");
+
+  // Same trick for per-item IDs so drag-over can reject dropping a folder onto itself.
+  for (const item of payload.items) {
+    dataTransfer.setData(`${MOVE_DRAG_ITEM_TYPE}/${item.id}`, "1");
+  }
 
   try {
     dataTransfer.setData(
@@ -70,6 +83,23 @@ export const getMoveDragSourceParents = (
   for (const type of Array.from(dataTransfer.types ?? [])) {
     if (type.startsWith(`${MOVE_DRAG_DATA_TYPE}/`)) {
       result.add(type.slice(MOVE_DRAG_DATA_TYPE.length + 1));
+    }
+  }
+  return result;
+};
+
+/**
+ * Returns the set of dragged item IDs as recorded by writeMoveDragPayload.
+ * Safe to call during dragenter/dragover (does not read JSON payload).
+ */
+export const getMoveDragItemIds = (
+  dataTransfer: DataTransfer | null,
+): ReadonlySet<string> => {
+  const result = new Set<string>();
+  if (!dataTransfer) return result;
+  for (const type of Array.from(dataTransfer.types ?? [])) {
+    if (type.startsWith(`${MOVE_DRAG_ITEM_TYPE}/`)) {
+      result.add(type.slice(MOVE_DRAG_ITEM_TYPE.length + 1));
     }
   }
   return result;

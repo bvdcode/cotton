@@ -15,6 +15,7 @@ import Loader from "../../../../shared/ui/Loader";
 import {
   isMoveDrag,
   getMoveDragSourceParents,
+  getMoveDragItemIds,
   writeMoveDragPayload,
   readMoveDragPayload,
 } from "../../../../shared/hooks/useMoveOperations";
@@ -213,8 +214,12 @@ export const ListView: React.FC<IFileListView> = ({
         if (dropTargetId !== null) setDropTargetId(null);
         return;
       }
+      // Reject early: (a) folder cannot be a drop target for items already inside it,
+      // (b) a folder cannot be dropped onto itself.
       const sources = getMoveDragSourceParents(event.dataTransfer);
       if (sources.has(rowId)) return;
+      const itemIds = getMoveDragItemIds(event.dataTransfer);
+      if (itemIds.has(rowId)) return;
 
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
