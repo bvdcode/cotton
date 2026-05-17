@@ -27,16 +27,67 @@ public class HlsRenditionProfileTests
     [TestCase(HlsRendition.High)]
     [TestCase(HlsRendition.Medium)]
     [TestCase(HlsRendition.Low)]
-    public void Plan_AlwaysUsesBrowserCompatibleCodecs(HlsRendition rendition)
+    public void Plan_WithoutProbeInfo_UsesBrowserCompatibleCodecs(HlsRendition rendition)
     {
         var plan = HlsRenditionProfile.Plan(rendition);
 
         Assert.Multiple(() =>
         {
+            Assert.That(plan.IsStreamCopy, Is.False);
             Assert.That(plan.VideoCodecArgs, Does.Contain("libx264"));
             Assert.That(plan.VideoCodecArgs, Does.Not.Contain("-c:v copy"));
             Assert.That(plan.AudioCodecArgs, Does.Contain("-c:a aac"));
             Assert.That(plan.AudioCodecArgs, Does.Not.Contain("-c:a copy"));
+        });
+    }
+
+    [TestCase("h264", "aac")]
+    [TestCase("H264", "AAC")]
+    [TestCase("h264", "mp3")]
+    public void Plan_Source_StreamCopiesH264WhenAudioIsCompatible(
+        string videoCodec,
+        string? audioCodec)
+    {
+        var plan = HlsRenditionProfile.Plan(HlsRendition.Source, videoCodec, audioCodec);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plan.IsStreamCopy, Is.True);
+            Assert.That(plan.VideoCodecArgs, Does.Contain("-c:v copy"));
+            Assert.That(plan.VideoCodecArgs, Does.Contain("h264_mp4toannexb"));
+            Assert.That(plan.AudioCodecArgs, Is.EqualTo("-c:a copy"));
+        });
+    }
+
+    [TestCase("hevc", "aac")]
+    [TestCase("h264", "opus")]
+    [TestCase("h264", null)]
+    [TestCase("vp9", "aac")]
+    [TestCase(null, "aac")]
+    public void Plan_Source_ReencodesWhenStreamCopyWouldBeRisky(
+        string? videoCodec,
+        string? audioCodec)
+    {
+        var plan = HlsRenditionProfile.Plan(HlsRendition.Source, videoCodec, audioCodec);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plan.IsStreamCopy, Is.False);
+            Assert.That(plan.VideoCodecArgs, Does.Contain("libx264"));
+            Assert.That(plan.AudioCodecArgs, Does.Contain("-c:a aac"));
+        });
+    }
+
+    [Test]
+    public void Plan_NonSourceRenditionsAlwaysReencode()
+    {
+        var plan = HlsRenditionProfile.Plan(HlsRendition.Medium, "h264", "aac");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plan.IsStreamCopy, Is.False);
+            Assert.That(plan.VideoCodecArgs, Does.Contain("libx264"));
+            Assert.That(plan.AudioCodecArgs, Does.Contain("-c:a aac"));
         });
     }
 

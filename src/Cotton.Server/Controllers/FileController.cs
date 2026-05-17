@@ -470,12 +470,12 @@ namespace Cotton.Server.Controllers
                 return lookup.Failure;
             }
 
-            double? duration = await ProbeDurationAsync(lookup.NodeFile!);
+            MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
             HlsRendition rendition = HlsRenditionProfile.Parse(quality);
             string encodedToken = Uri.EscapeDataString(token);
             string qualityName = rendition.ToString().ToLowerInvariant();
             string manifest = HlsManifestBuilder.Build(
-                duration ?? 0,
+                probe?.DurationSeconds ?? 0,
                 segmentIndex => Routes.V1.Files
                     + $"/{nodeFileId}/hls/seg-{segmentIndex}.ts?token={encodedToken}&quality={qualityName}");
 
@@ -502,14 +502,26 @@ namespace Cotton.Server.Controllers
                 return lookup.Failure;
             }
 
+            MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
+            if (probe?.DurationSeconds is null or <= 0)
+            {
+                return CottonResult.BadRequest("Could not determine source duration for HLS segmentation.");
+            }
+
+            var manifestPlan = HlsManifestBuilder.Plan(probe.DurationSeconds.Value);
+            if (segmentIndex >= manifestPlan.SegmentCount)
+            {
+                return CottonResult.NotFound("Segment index out of range.");
+            }
+
+            HonourDeleteAfterUse(lookup.DownloadToken!);
+
             HlsRendition rendition = HlsRenditionProfile.Parse(quality);
             string qualityName = rendition.ToString().ToLowerInvariant();
             string cacheKey = HlsSegmentCache.BuildKey(
                 lookup.NodeFile!.FileManifest.Id,
                 qualityName,
                 segmentIndex);
-
-            HonourDeleteAfterUse(lookup.DownloadToken!);
 
             if (_segmentCache.TryGet(cacheKey, out byte[]? cachedBytes))
             {
@@ -519,7 +531,11 @@ namespace Cotton.Server.Controllers
             }
 
             double startSeconds = HlsManifestBuilder.StartTimeOf(segmentIndex);
-            var encoderPlan = HlsRenditionProfile.Plan(rendition);
+            double segmentDuration = manifestPlan.DurationOf(segmentIndex);
+            var encoderPlan = HlsRenditionProfile.Plan(
+                rendition,
+                probe.VideoCodec,
+                probe.AudioCodec);
 
             Response.ContentType = VideoTranscoder.SegmentContentType;
             Response.Headers.CacheControl = "private, max-age=300";
@@ -536,7 +552,7 @@ namespace Cotton.Server.Controllers
                     sourceStream,
                     tee,
                     startSeconds,
-                    HlsManifestBuilder.SegmentDurationSeconds,
+                    segmentDuration,
                     encoderPlan,
                     HttpContext.RequestAborted);
                 transcodeSucceeded = true;
@@ -634,30 +650,30 @@ namespace Cotton.Server.Controllers
             });
         }
 
-        private async Task<double?> ProbeDurationAsync(NodeFile nodeFile)
+        private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)
         {
-            string cacheKey = $"hls-duration:{nodeFile.FileManifest.Id}";
-            if (_cache.TryGetValue<double>(cacheKey, out var cached) && cached > 0)
+            string cacheKey = $"hls-media-probe:{nodeFile.FileManifest.Id}";
+            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out var cached))
             {
                 return cached;
             }
 
-            double? probed;
+            MediaProbeInfo? probe;
             await using (var probeStream = OpenSourceStream(nodeFile))
             await using (var probeServer = new RangeStreamServer(probeStream, _logger))
             {
-                probed = await FfmpegBinary.TryGetDurationSecondsAsync(
+                probe = await FfmpegBinary.TryGetMediaProbeAsync(
                     probeServer.Url,
                     cancellationToken: HttpContext.RequestAborted)
                     .ConfigureAwait(false);
             }
 
-            if (probed is { } seconds && seconds > 0)
+            if (probe is not null)
             {
-                _cache.Set(cacheKey, seconds, TimeSpan.FromHours(1));
+                _cache.Set(cacheKey, probe, TimeSpan.FromHours(1));
             }
 
-            return probed;
+            return probe;
         }
 
         [Authorize]

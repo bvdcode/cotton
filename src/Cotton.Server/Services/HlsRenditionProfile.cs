@@ -15,7 +15,10 @@ namespace Cotton.Server.Services
 
     public static class HlsRenditionProfile
     {
-        public sealed record EncoderPlan(string VideoCodecArgs, string AudioCodecArgs)
+        private static readonly HashSet<string> StreamCopyableAudioCodecs =
+            new(StringComparer.OrdinalIgnoreCase) { "aac", "mp3" };
+
+        public sealed record EncoderPlan(string VideoCodecArgs, string AudioCodecArgs, bool IsStreamCopy)
         {
             public string CombinedArgs => $"{VideoCodecArgs} {AudioCodecArgs}";
         }
@@ -37,8 +40,19 @@ namespace Cotton.Server.Services
             };
         }
 
-        public static EncoderPlan Plan(HlsRendition rendition)
+        public static EncoderPlan Plan(HlsRendition rendition) =>
+            Plan(rendition, videoCodec: null, audioCodec: null);
+
+        public static EncoderPlan Plan(HlsRendition rendition, string? videoCodec, string? audioCodec)
         {
+            if (rendition == HlsRendition.Source && CanStreamCopy(videoCodec, audioCodec))
+            {
+                return new EncoderPlan(
+                    VideoCodecArgs: "-c:v copy -bsf:v h264_mp4toannexb",
+                    AudioCodecArgs: "-c:a copy",
+                    IsStreamCopy: true);
+            }
+
             (string preset, int crf, string videoFilter) = rendition switch
             {
                 HlsRendition.Low => ("veryfast", 28, "scale=w=trunc(min(854\\,iw)/2)*2:h=-2"),
@@ -63,7 +77,13 @@ namespace Cotton.Server.Services
                     $"{filterArg}-c:v libx264 -preset {preset} -crf {crf.ToString(CultureInfo.InvariantCulture)} "
                     + "-pix_fmt yuv420p -profile:v high -level 4.1",
                 AudioCodecArgs:
-                    $"-c:a aac -b:a {audioBitrateKbps.ToString(CultureInfo.InvariantCulture)}k -ac 2");
+                    $"-c:a aac -b:a {audioBitrateKbps.ToString(CultureInfo.InvariantCulture)}k -ac 2",
+                IsStreamCopy: false);
         }
+
+        public static bool CanStreamCopy(string? videoCodec, string? audioCodec) =>
+            string.Equals(videoCodec, "h264", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(audioCodec)
+            && StreamCopyableAudioCodecs.Contains(audioCodec);
     }
 }
