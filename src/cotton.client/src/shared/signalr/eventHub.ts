@@ -17,10 +17,12 @@ const SILENCED_METHODS: ReadonlyArray<string> = [
   "FileDeleted",
   "FileMoved",
   "FileRenamed",
+  "FileRestored",
   "NodeCreated",
   "NodeDeleted",
   "NodeMoved",
   "NodeRenamed",
+  "NodeRestored",
   "PreviewGenerated",
 ].flatMap((m) => [m, m.toLowerCase()]);
 
@@ -142,12 +144,13 @@ class EventHubService {
     }
     const set = this.listeners.get(method)!;
     const wrapped = callback;
+    const isFirstRegistration = !set.has(wrapped);
     set.add(wrapped);
 
     // SignalR allows registering handlers before and during connection start.
     // If we only register when state === Connected, we can miss attaching
     // handlers during the Connecting window and never receive events.
-    if (this.connection) {
+    if (this.connection && isFirstRegistration) {
       this.connection.on(method, wrapped);
     }
 
