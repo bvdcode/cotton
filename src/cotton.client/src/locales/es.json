@@ -491,7 +491,8 @@
     },
     "clientEncryption": {
       "folderPolicyEnabledHint": "Esta carpeta cifra nuevas subidas en tu dispositivo.",
-      "fileEncryptedHint": "Este archivo está cifrado en tu dispositivo."
+      "fileEncryptedHint": "Este archivo está cifrado en tu dispositivo.",
+      "vaultLockedForDownload": "Desbloquea el cifrado del lado del cliente en tu perfil para descargar este archivo."
     }
   },
   "audioPlayer": {

@@ -432,7 +432,8 @@
     },
     "clientEncryption": {
       "folderPolicyEnabledHint": "This folder encrypts new uploads on your device.",
-      "fileEncryptedHint": "This file is encrypted on your device."
+      "fileEncryptedHint": "This file is encrypted on your device.",
+      "vaultLockedForDownload": "Unlock client-side encryption in your profile to download this file."
     }
   },
   "audioPlayer": {

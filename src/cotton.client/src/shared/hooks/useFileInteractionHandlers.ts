@@ -1,4 +1,5 @@
 import * as React from "react";
+import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import { downloadFile } from "../utils/fileHandlers";
 import { shareFile } from "../utils/shareFile";
@@ -8,6 +9,11 @@ import { useAudioPlayerStore } from "../store/audioPlayerStore";
 import { useMediaLightbox } from "./useMediaLightbox";
 import { useFilePreview } from "./useFilePreview";
 import type { NodeFileManifestDto } from "../api/nodesApi";
+import {
+  downloadReadableFile,
+  isFileEncrypted,
+  NoKeyError,
+} from "../crypto";
 
 interface UseFileInteractionHandlersArgs {
   sortedFiles: NodeFileManifestDto[];
@@ -36,16 +42,42 @@ export const useFileInteractionHandlers = ({
   const { previewState, openPreview, closePreview } = useFilePreview();
   const openAudio = useAudioPlayerStore((s) => s.openFromSelection);
 
-  const audioPlaylist = React.useMemo(
-    () => buildAudioPlaylistFromFiles(sortedFiles),
+  const filesById = React.useMemo(
+    () => new Map(sortedFiles.map((file) => [file.id, file])),
     [sortedFiles],
+  );
+
+  const inlineReadableFiles = React.useMemo(
+    () => sortedFiles.filter((file) => !isFileEncrypted(file.metadata)),
+    [sortedFiles],
+  );
+
+  const audioPlaylist = React.useMemo(
+    () => buildAudioPlaylistFromFiles(inlineReadableFiles),
+    [inlineReadableFiles],
   );
 
   const handleDownloadFile = React.useCallback(
     async (fileId: string, fileName: string) => {
-      await downloadFile(fileId, fileName);
+      const file = filesById.get(fileId);
+
+      if (!file || !isFileEncrypted(file.metadata)) {
+        await downloadFile(fileId, fileName);
+        return;
+      }
+
+      try {
+        await downloadReadableFile(file, fileName);
+      } catch (error) {
+        if (error instanceof NoKeyError) {
+          toast.error(t("common:clientEncryption.vaultLockedForDownload"));
+          return;
+        }
+
+        throw error;
+      }
     },
-    [],
+    [filesById, t],
   );
 
   const handleShareFile = React.useCallback(
@@ -57,7 +89,18 @@ export const useFileInteractionHandlers = ({
 
   const handleFileClick = React.useCallback(
     (fileId: string, fileName: string, fileSizeBytes?: number) => {
-      if (getFileTypeInfo(fileName, null).type === "audio") {
+      const file = filesById.get(fileId);
+
+      if (file && isFileEncrypted(file.metadata)) {
+        void handleDownloadFile(fileId, fileName);
+        return;
+      }
+
+      const typeInfo = getFileTypeInfo(fileName, file?.contentType ?? null, {
+        requiresVideoTranscoding: file?.requiresVideoTranscoding ?? false,
+      });
+
+      if (typeInfo.type === "audio") {
         openAudio({ fileId, fileName, playlist: audioPlaylist });
         return;
       }
@@ -67,7 +110,7 @@ export const useFileInteractionHandlers = ({
         void handleDownloadFile(fileId, fileName);
       }
     },
-    [audioPlaylist, handleDownloadFile, openAudio, openPreview],
+    [audioPlaylist, filesById, handleDownloadFile, openAudio, openPreview],
   );
 
   const {
@@ -76,9 +119,23 @@ export const useFileInteractionHandlers = ({
     mediaItems,
     getSignedMediaUrl,
     getDownloadUrl,
-    handleMediaClick,
+    handleMediaClick: openMediaLightbox,
     setLightboxOpen,
-  } = useMediaLightbox(sortedFiles);
+  } = useMediaLightbox(inlineReadableFiles);
+
+  const handleMediaClick = React.useCallback(
+    (fileId: string) => {
+      const file = filesById.get(fileId);
+
+      if (file && isFileEncrypted(file.metadata)) {
+        void handleDownloadFile(file.id, file.name);
+        return;
+      }
+
+      openMediaLightbox(fileId);
+    },
+    [filesById, handleDownloadFile, openMediaLightbox],
+  );
 
   return {
     previewState,

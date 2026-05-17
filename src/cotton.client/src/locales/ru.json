@@ -480,7 +480,8 @@
     },
     "clientEncryption": {
       "folderPolicyEnabledHint": "Эта папка шифрует новые загрузки на вашем устройстве.",
-      "fileEncryptedHint": "Этот файл зашифрован на вашем устройстве."
+      "fileEncryptedHint": "Этот файл зашифрован на вашем устройстве.",
+      "vaultLockedForDownload": "Разблокируйте клиентское шифрование в профиле, чтобы скачать этот файл."
     }
   },
   "audioPlayer": {
