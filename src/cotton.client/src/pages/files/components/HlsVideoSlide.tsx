@@ -4,15 +4,7 @@ import hlsScriptUrl from "hls.js/dist/hls.min.js?url";
 const HLS_PLAYLIST_MIME_TYPE = "application/vnd.apple.mpegurl";
 const TRANSCODE_NOTICE_MS = 7000;
 
-interface HlsLevel {
-  name?: string;
-}
-
 interface HlsInstance {
-  levels: HlsLevel[];
-  startLevel: number;
-  currentLevel: number;
-  loadLevel: number;
   on(event: string, callback: () => void): void;
   loadSource(src: string): void;
   startLoad(startPosition?: number): void;
@@ -22,10 +14,7 @@ interface HlsInstance {
 
 interface HlsConstructor {
   new (config: {
-    autoStartLoad: boolean;
-    abrEwmaDefaultEstimate: number;
-    capLevelToPlayerSize: boolean;
-    testBandwidth: boolean;
+    autoStartLoad?: boolean;
   }): HlsInstance;
   isSupported(): boolean;
   Events: {
@@ -168,9 +157,6 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
 
       const hls = new Hls({
         autoStartLoad: false,
-        abrEwmaDefaultEstimate: 50_000_000,
-        capLevelToPlayerSize: false,
-        testBandwidth: false,
       });
       hlsInstance = hls;
 
@@ -178,17 +164,6 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
         hls.loadSource(src);
       });
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (hls.levels.length === 0) {
-          return;
-        }
-
-        const sourceByName = hls.levels.findIndex(
-          (level) => level.name === "Source",
-        );
-        const target = sourceByName >= 0 ? sourceByName : hls.levels.length - 1;
-        hls.startLevel = target;
-        hls.currentLevel = target;
-        hls.loadLevel = target;
         hls.startLoad(-1);
       });
       hls.attachMedia(videoRef.current);
