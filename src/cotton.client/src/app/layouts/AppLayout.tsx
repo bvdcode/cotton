@@ -21,6 +21,7 @@ import { useAuth } from "../../features/auth";
 import { OPEN_SEARCH_EVENT, SearchModal } from "../../features/search";
 import { useSettingsStore } from "../../shared/store/settingsStore";
 import { AudioPlayerBar } from "../components/AudioPlayerBar";
+import { ErrorBoundary } from "../../shared/ui/ErrorBoundary";
 
 interface AppLayoutProps {
   routes: RouteConfig[];
@@ -191,7 +192,9 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
           flexDirection: "column",
         })}
       >
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </Container>
 
       <AudioPlayerBar />
