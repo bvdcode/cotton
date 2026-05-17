@@ -20,6 +20,8 @@ namespace Cotton.Server.Models.Dto
             set => _metadata = value ?? [];
         }
 
+        public bool RequiresVideoTranscoding { get; set; }
+
         public string? PreviewHashEncryptedHex { get; set; }
     }
 }

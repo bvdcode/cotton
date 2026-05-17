@@ -18,6 +18,7 @@ export interface NodeFileManifestDto extends BaseDto {
   contentType: string;
   sizeBytes: number;
   metadata: Record<string, string>;
+  requiresVideoTranscoding?: boolean;
   previewHashEncryptedHex?: string | null;
 }
 export interface NodeResponse {

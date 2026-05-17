@@ -26,6 +26,7 @@ export const nodeFileManifestSchema = baseDtoSchema.extend({
   contentType: z.string(),
   sizeBytes: z.number(),
   metadata: metadataSchema,
+  requiresVideoTranscoding: z.boolean().optional().default(false),
   previewHashEncryptedHex: z.string().nullable().optional(),
 });
 
