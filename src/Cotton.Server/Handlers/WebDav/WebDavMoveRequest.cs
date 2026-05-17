@@ -62,6 +62,27 @@ public class WebDavMoveRequestHandler(
             return sourceValidationFailure;
         }
 
+        // Per-layout serialization for tree/namespace mutations. Without this,
+        // two concurrent WebDAV swap MOVEs (A→/b/a and B→/a/b) can each pass
+        // IsDescendantAsync on the pre-update tree and both commit, creating a cycle.
+        // The resolver doesn't include Node on NodeFile, so the file path looks
+        // the LayoutId up by the parent NodeId.
+        Guid sourceLayoutId;
+        if (sourceResult.IsCollection)
+        {
+            sourceLayoutId = sourceResult.Node!.LayoutId;
+        }
+        else
+        {
+            sourceLayoutId = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(n => n.Id == sourceResult.NodeFile!.NodeId)
+                .Select(n => n.LayoutId)
+                .SingleAsync(ct);
+        }
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, ct);
+
         var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
         var destParentFailure = TryGetDestinationParentFailure(destParentResult);
         if (destParentFailure is not null)
@@ -87,7 +108,10 @@ public class WebDavMoveRequestHandler(
             return moveFailure;
         }
 
-        await PersistAndNotifyAsync(request, sourceResult, oldParentId, ct);
+        await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        await NotifyAfterCommitAsync(request, sourceResult, oldParentId, ct);
 
         var movedIds = GetMovedIds(sourceResult);
         return Ok(overwriteResult.Created, movedIds.NodeId, movedIds.NodeFileId);
@@ -134,14 +158,12 @@ public class WebDavMoveRequestHandler(
         return (movedNodeId, sourceResult.NodeFile?.Id);
     }
 
-    private async Task PersistAndNotifyAsync(
+    private async Task NotifyAfterCommitAsync(
         WebDavMoveRequest request,
         WebDavResolveResult sourceResult,
         Guid? oldParentId,
         CancellationToken ct)
     {
-        await _dbContext.SaveChangesAsync(ct);
-
         _logger.LogInformation(
             "WebDAV MOVE: Moved {Source} to {Dest} for user {UserId}",
             request.SourcePath,
