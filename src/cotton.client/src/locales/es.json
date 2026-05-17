@@ -483,7 +483,11 @@
     },
     "title": "Cotton Cloud",
     "subtitle": "Asistente de configuración",
-    "ok": "Aceptar"
+    "ok": "Aceptar",
+    "pwa": {
+      "updateAvailable": "Hay una nueva versión lista.",
+      "updateAction": "Actualizar"
+    }
   },
   "audioPlayer": {
     "actions": {

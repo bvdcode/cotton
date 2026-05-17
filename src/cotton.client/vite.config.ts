@@ -34,11 +34,9 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: "prompt",
-        injectRegister: "auto",
+        injectRegister: false,
         includeAssets: ["/favicon.ico", "/assets/icons/icon.svg"],
         workbox: {
-          skipWaiting: true,
-          clientsClaim: true,
           sourcemap: true,
           cleanupOutdatedCaches: true,
           // Important: share links (/s/:token) are served by the backend and may
@@ -46,7 +44,13 @@ export default defineConfig(({ mode }) => {
           // a download click is a navigation request, and Workbox's default
           // navigate fallback can incorrectly serve index.html instead of the file.
           // Denylist /s/* from navigate fallback so it always hits the network.
-          navigateFallbackDenylist: [/^\/s\//],
+          navigateFallbackDenylist: [
+            /^\/s\//,
+            /^\/api\//,
+            /^\/files\//,
+            /^\/chunks\//,
+            /^\/preview\//,
+          ],
           // Allow larger bundles to be precached in CI (default is 2 MiB)
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         },

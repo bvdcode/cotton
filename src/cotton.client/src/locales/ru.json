@@ -472,7 +472,11 @@
     },
     "title": "Cotton Cloud",
     "subtitle": "Мастер настройки",
-    "ok": "Ладно"
+    "ok": "Ладно",
+    "pwa": {
+      "updateAvailable": "Доступна новая версия.",
+      "updateAction": "Обновить"
+    }
   },
   "audioPlayer": {
     "actions": {

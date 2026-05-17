@@ -424,6 +424,10 @@
         "files": "Total number of files"
       },
       "outro": "That's everything. No file contents, file names, usernames, or emails are sent in telemetry payloads. Standard network metadata (such as source IP) may still exist at the transport level."
+    },
+    "pwa": {
+      "updateAvailable": "A new version is ready.",
+      "updateAction": "Update"
     }
   },
   "audioPlayer": {
