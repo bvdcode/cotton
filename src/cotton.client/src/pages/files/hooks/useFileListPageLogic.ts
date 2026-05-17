@@ -23,6 +23,7 @@ export interface FileListPageLogic {
   error: string | null;
   totalCount?: number;
   isContentTransitioning: boolean;
+  hasContent: boolean;
   sortedFiles: NodeFileManifestDto[];
   interaction: ReturnType<typeof useFileInteractionHandlers>;
   capabilities: FileListCapabilities;
@@ -65,6 +66,7 @@ export const useFileListSourceLogic = ({
     error: source.error,
     totalCount: source.totalCount,
     isContentTransitioning: source.isContentTransitioning ?? false,
+    hasContent: source.hasContent ?? source.tiles.length > 0,
     sortedFiles,
     capabilities,
   };

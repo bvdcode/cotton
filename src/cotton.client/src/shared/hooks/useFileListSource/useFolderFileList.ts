@@ -51,5 +51,6 @@ export const useFolderFileList = ({
     tiles,
     refresh,
     isContentTransitioning,
+    hasContent: !!visibleContent,
   };
 };

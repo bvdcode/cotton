@@ -7,6 +7,7 @@ export interface FileListSource {
   totalCount?: number;
   refresh?: () => void | Promise<void>;
   isContentTransitioning?: boolean;
+  hasContent?: boolean;
 }
 
 export interface FileListPagination {

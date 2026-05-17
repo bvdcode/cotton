@@ -2,6 +2,7 @@ const notificationsRoot = ["notifications"] as const;
 const layoutsRoot = ["layouts"] as const;
 const adminRoot = ["admin"] as const;
 const audioRoot = ["audio"] as const;
+const trashRoot = ["trash"] as const;
 
 export const queryKeys = {
   notifications: {
@@ -38,5 +39,17 @@ export const queryKeys = {
     all: () => audioRoot,
     trackLyrics: (params: { folderNodeId: string; trackName: string }) =>
       [...audioRoot, "trackLyrics", params] as const,
+  },
+  trash: {
+    all: () => trashRoot,
+    root: () => [...trashRoot, "root"] as const,
+    meta: (nodeId: string) => [...trashRoot, "meta", nodeId] as const,
+    children: {
+      all: (nodeId: string) => [...trashRoot, "children", nodeId] as const,
+      page: (
+        nodeId: string,
+        params: { page: number; pageSize: number; depth: number },
+      ) => [...trashRoot, "children", nodeId, params] as const,
+    },
   },
 } as const;
