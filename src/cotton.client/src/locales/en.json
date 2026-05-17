@@ -385,7 +385,7 @@
       "play": "Play",
       "pause": "Pause",
       "copied": "Copied!",
-      "reload": "Reload"
+      "reload": "Refresh"
     },
     "errors": {
       "unexpectedTitle": "Something went wrong",
