@@ -28,6 +28,7 @@ const looksLikeNodeRelationKey = (key: string): boolean => {
   const normalized = normalizeKey(key);
 
   if (
+    normalized === "id" ||
     normalized === "node" ||
     normalized === "parent" ||
     normalized === "folder"

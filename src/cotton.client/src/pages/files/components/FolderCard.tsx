@@ -2,6 +2,7 @@ import {
   ContentCut,
   Delete,
   Edit,
+  LockOpenOutlined,
   LockOutlined,
   Restore,
   Share,
@@ -24,6 +25,7 @@ interface FolderCardProps {
   onDelete?: () => void;
   onShare?: () => void;
   onCut?: () => void;
+  onToggleEncryptionPolicy?: () => void;
   onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
   readOnly?: boolean;
@@ -41,6 +43,7 @@ export const FolderCard = ({
   onDelete,
   onShare,
   onCut,
+  onToggleEncryptionPolicy,
   onClick,
   variant = "default",
   readOnly = false,
@@ -89,6 +92,21 @@ export const FolderCard = ({
                 icon: <ContentCut />,
                 onClick: onCut,
                 tooltip: t("files:move.cut"),
+              },
+            ]
+          : []),
+        ...(!readOnly && onToggleEncryptionPolicy
+          ? [
+              {
+                icon: encryptionPolicyEnabled ? (
+                  <LockOpenOutlined />
+                ) : (
+                  <LockOutlined />
+                ),
+                onClick: onToggleEncryptionPolicy,
+                tooltip: encryptionPolicyEnabled
+                  ? t("files:clientEncryption.disablePolicy")
+                  : t("files:clientEncryption.enablePolicy"),
               },
             ]
           : []),

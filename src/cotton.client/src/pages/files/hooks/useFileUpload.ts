@@ -1,6 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
+import {
+  FOLDER_ENCRYPTION_POLICY_KEY,
+  isFolderEncryptionPolicyEnabled,
+  useVault,
+} from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { uploadManager } from "../../../shared/upload/UploadManager";
 import {
@@ -89,12 +95,43 @@ export const useFileUpload = (
     return label.length > 0 ? label : t("breadcrumbs.root", { ns: "files" });
   }, [breadcrumbs, t]);
 
+  const isPolicyEnabledForNode = useMemo(
+    () =>
+      (targetNodeId: string): boolean => {
+        const state = useNodesStore.getState();
+        const target = findNodeById(state, targetNodeId);
+        return isFolderEncryptionPolicyEnabled(target?.metadata);
+      },
+    [],
+  );
+
+  const decideEncrypt = useMemo(
+    () =>
+      (
+        targetNodeId: string,
+      ): { encrypt: boolean; vaultLocked: boolean } => {
+        if (!isPolicyEnabledForNode(targetNodeId)) {
+          return { encrypt: false, vaultLocked: false };
+        }
+
+        const vaultUnlocked = useVault.getState().isUnlocked;
+        return { encrypt: vaultUnlocked, vaultLocked: !vaultUnlocked };
+      },
+    [isPolicyEnabledForNode],
+  );
+
   const handleUploadFiles = useMemo(
     () => async (files: FileList | File[]) => {
       if (!nodeId) return;
 
       const list = Array.isArray(files) ? files : Array.from(files);
       if (list.length === 0) return;
+
+      const decision = decideEncrypt(nodeId);
+      if (decision.vaultLocked) {
+        onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
+        return;
+      }
 
       skipAllConflictsRef.current = false;
 
@@ -130,15 +167,24 @@ export const useFileUpload = (
         return;
       }
 
-      uploadManager.enqueue(result.files, nodeId, baseLabel);
+      uploadManager.enqueue(result.files, nodeId, baseLabel, {
+        encrypt: decision.encrypt,
+      });
     },
-    [nodeId, content, baseLabel, showConflictDialog, onToast, t],
+    [nodeId, content, baseLabel, showConflictDialog, onToast, t, decideEncrypt],
   );
 
   const handleUploadDroppedFiles = useMemo(
     () => async (dropped: DroppedFile[]) => {
       if (!nodeId) return;
       if (dropped.length === 0) return;
+
+      const rootPolicyEnabled = isPolicyEnabledForNode(nodeId);
+      const rootDecision = decideEncrypt(nodeId);
+      if (rootDecision.vaultLocked) {
+        onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
+        return;
+      }
 
       setDropPreparation((prev) => ({
         ...prev,
@@ -169,6 +215,23 @@ export const useFileUpload = (
 
       const folderIdByKey = new Map<string, string>();
       const childrenByNodeId = new Map<string, NodeContentDto>();
+      const policyEnabledByNodeId = new Map<string, boolean>([
+        [nodeId, rootPolicyEnabled],
+      ]);
+
+      const decideDroppedTargetEncryption = (
+        targetNodeId: string,
+      ): { encrypt: boolean; vaultLocked: boolean } => {
+        const policyEnabled =
+          policyEnabledByNodeId.get(targetNodeId) ??
+          isPolicyEnabledForNode(targetNodeId);
+        if (!policyEnabled) {
+          return { encrypt: false, vaultLocked: false };
+        }
+
+        const vaultUnlocked = useVault.getState().isUnlocked;
+        return { encrypt: vaultUnlocked, vaultLocked: !vaultUnlocked };
+      };
 
       const getChildrenCached = async (id: string): Promise<NodeContentDto> => {
         const cached = childrenByNodeId.get(id);
@@ -210,6 +273,10 @@ export const useFileUpload = (
         const existing = content.nodes.find((n) => n.name === desiredName);
         if (existing) {
           folderIdByKey.set(key, existing.id);
+          policyEnabledByNodeId.set(
+            existing.id,
+            isFolderEncryptionPolicyEnabled(existing.metadata),
+          );
           return { id: existing.id, name: desiredName };
         }
 
@@ -225,12 +292,21 @@ export const useFileUpload = (
           parentId,
           name: nameToCreate,
         });
+        const parentPolicyEnabled =
+          policyEnabledByNodeId.get(parentId) ??
+          isPolicyEnabledForNode(parentId);
+        const folder = parentPolicyEnabled
+          ? await nodesApi.updateNodeMetadata(created.id, {
+              [FOLDER_ENCRYPTION_POLICY_KEY]: "true",
+            })
+          : created;
+        policyEnabledByNodeId.set(folder.id, parentPolicyEnabled);
         // Update caches optimistically.
-        content.nodes.push(created);
-        useNodesStore.getState().addFolderToCache(parentId, created);
-        folderIdByKey.set(`${parentId}::${nameToCreate}`, created.id);
+        content.nodes.push(folder);
+        useNodesStore.getState().addFolderToCache(parentId, folder);
+        folderIdByKey.set(`${parentId}::${nameToCreate}`, folder.id);
 
-        return { id: created.id, name: nameToCreate };
+        return { id: folder.id, name: nameToCreate };
       };
 
       const ensureFolderPath = async (
@@ -332,7 +408,15 @@ export const useFileUpload = (
           filesFound: dropped.length,
           processed: dropped.length,
         }));
-        uploadManager.enqueue(result.files, targetNodeId, bucket.label);
+        const decision = decideDroppedTargetEncryption(targetNodeId);
+        if (decision.vaultLocked) {
+          onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
+          continue;
+        }
+
+        uploadManager.enqueue(result.files, targetNodeId, bucket.label, {
+          encrypt: decision.encrypt,
+        });
         totalEnqueued += result.files.length;
       }
 
@@ -340,7 +424,15 @@ export const useFileUpload = (
         onToast?.(t("uploadDrop.toasts.noneCopied", { ns: "files" }));
       }
     },
-    [nodeId, baseLabel, showConflictDialog, onToast, t],
+    [
+      nodeId,
+      baseLabel,
+      showConflictDialog,
+      onToast,
+      t,
+      decideEncrypt,
+      isPolicyEnabledForNode,
+    ],
   );
 
   const handleUploadClick = () => {
@@ -649,3 +741,32 @@ export const useFileUpload = (
     },
   };
 };
+
+type NodesStateView = {
+  currentNode: NodeDto | null;
+  ancestors: NodeDto[];
+  contentByNodeId: Record<string, NodeContentDto | undefined>;
+};
+
+function findNodeById(
+  state: NodesStateView,
+  id: string,
+): NodeDto | undefined {
+  if (state.currentNode?.id === id) {
+    return state.currentNode;
+  }
+
+  const ancestor = state.ancestors.find((node) => node.id === id);
+  if (ancestor) {
+    return ancestor;
+  }
+
+  for (const content of Object.values(state.contentByNodeId)) {
+    const found = content?.nodes.find((node) => node.id === id);
+    if (found) {
+      return found;
+    }
+  }
+
+  return undefined;
+}

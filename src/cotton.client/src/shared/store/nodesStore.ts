@@ -15,6 +15,7 @@ type NodesState = {
   loading: boolean;
   error: string | null;
   lastUpdatedByNodeId: Record<string, number | undefined>;
+  updateNode: (updated: NodeDto) => void;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
   optimisticRenameFile: (parentNodeId: string, fileId: string, newName: string) => void;
   optimisticSetFilePreviewHash: (
@@ -114,6 +115,51 @@ export const useNodesStore = create<NodesState>()(
       loading: false,
       error: null,
       lastUpdatedByNodeId: {},
+
+      updateNode: (updated) => {
+        set((prev) => {
+          const currentNode =
+            prev.currentNode?.id === updated.id ? updated : prev.currentNode;
+          const ancestors = prev.ancestors.some((node) => node.id === updated.id)
+            ? prev.ancestors.map((node) =>
+                node.id === updated.id ? updated : node,
+              )
+            : prev.ancestors;
+
+          let contentChanged = false;
+          const contentByNodeId: Record<
+            string,
+            NodeContentDto | undefined
+          > = {};
+          for (const [nodeId, content] of Object.entries(prev.contentByNodeId)) {
+            if (!content) {
+              contentByNodeId[nodeId] = content;
+              continue;
+            }
+
+            if (!content.nodes.some((node) => node.id === updated.id)) {
+              contentByNodeId[nodeId] = content;
+              continue;
+            }
+
+            contentChanged = true;
+            contentByNodeId[nodeId] = {
+              ...content,
+              nodes: content.nodes.map((node) =>
+                node.id === updated.id ? updated : node,
+              ),
+            };
+          }
+
+          return {
+            currentNode,
+            ancestors,
+            contentByNodeId: contentChanged
+              ? contentByNodeId
+              : prev.contentByNodeId,
+          };
+        });
+      },
 
       addFolderToCache: (parentNodeId, folder) => {
         set((prev) => {

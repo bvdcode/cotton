@@ -45,7 +45,14 @@ describe("buildFolderOperations", () => {
     const onClick = vi.fn();
     const onShare = vi.fn().mockResolvedValue(undefined);
     const onCut = vi.fn();
-    const ops = buildFolderOperations(hook, onClick, onShare, onCut);
+    const onToggleEncryptionPolicy = vi.fn();
+    const ops = buildFolderOperations(
+      hook,
+      onClick,
+      onShare,
+      onCut,
+      onToggleEncryptionPolicy,
+    );
 
     ops.onClick("folder-2");
     ops.onStartRename?.("folder-2", "Photos");
@@ -54,6 +61,7 @@ describe("buildFolderOperations", () => {
     ops.onDelete?.("folder-2", "Photos");
     ops.onShare?.("folder-2", "Photos");
     ops.onCut?.("folder-2");
+    ops.onToggleEncryptionPolicy?.("folder-2", true);
 
     expect(onClick).toHaveBeenCalledWith("folder-2");
     expect(hook.handleRenameFolder).toHaveBeenCalledWith("folder-2", "Photos");
@@ -62,6 +70,7 @@ describe("buildFolderOperations", () => {
     expect(hook.handleDeleteFolder).toHaveBeenCalledWith("folder-2", "Photos");
     expect(onShare).toHaveBeenCalledWith("folder-2", "Photos");
     expect(onCut).toHaveBeenCalledWith("folder-2");
+    expect(onToggleEncryptionPolicy).toHaveBeenCalledWith("folder-2", true);
   });
 
   it("omits optional folder actions when handlers are not supplied", () => {
@@ -69,6 +78,7 @@ describe("buildFolderOperations", () => {
 
     expect(ops.onShare).toBeUndefined();
     expect(ops.onCut).toBeUndefined();
+    expect(ops.onToggleEncryptionPolicy).toBeUndefined();
   });
 });
 

@@ -1194,7 +1194,8 @@
         "more_one": " +ещё {{count}}",
         "more_few": " +ещё {{count}}",
         "more_many": " +ещё {{count}}",
-        "more_other": " +ещё {{count}}"
+        "more_other": " +ещё {{count}}",
+        "vaultLocked": "Для зашифрованных загрузок сначала разблокируйте крипто-хранилище."
       },
       "errors": {
         "dropFailed": "Не удалось обработать перетаскивание. Попробуйте ещё раз."
@@ -1359,14 +1360,24 @@
     "size": "Размер",
     "name": "Название",
     "location": "Расположение",
-    "noFilesOrFolders": "Нет файлов и папок"
+    "noFilesOrFolders": "Нет файлов и папок",
+    "clientEncryption": {
+      "enablePolicy": "Шифровать новые загрузки",
+      "disablePolicy": "Не шифровать новые загрузки",
+      "toasts": {
+        "policyEnabled": "Новые загрузки в эту папку будут шифроваться на этом устройстве.",
+        "policyDisabled": "Новые загрузки в эту папку больше не будут шифроваться автоматически.",
+        "policyToggleFailed": "Не удалось изменить политику шифрования."
+      }
+    }
   },
   "upload": {
     "title": "Загрузки",
     "error": "Ошибка",
     "errors": {
       "serverSettingsNotLoaded": "Настройки сервера не загружены",
-      "uploadFailed": "Загрузка не удалась"
+      "uploadFailed": "Загрузка не удалась",
+      "encryptionVaultLocked": "Крипто-хранилище заблокировано"
     },
     "titleWithTotal": "Загрузки ({{total}})",
     "titleWithProgress": "Загрузки ({{completed}} / {{total}} • {{speed}}/с)",

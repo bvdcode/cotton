@@ -57,6 +57,10 @@ export interface FolderOperations {
   onDelete?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
+  onToggleEncryptionPolicy?: (
+    folderId: string,
+    currentlyEnabled: boolean,
+  ) => void;
   onClick: (folderId: string) => void;
 }
 

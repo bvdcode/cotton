@@ -23,7 +23,10 @@ import type {
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { BlurredPreviewImage } from "./BlurredPreviewImage";
-import { isFileEncrypted } from "../../../../shared/crypto";
+import {
+  isFileEncrypted,
+  isFolderEncryptionPolicyEnabled,
+} from "../../../../shared/crypto";
 
 interface TileItemProps {
   tile: FileSystemTile;
@@ -189,6 +192,15 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onCut={
             folderOperations.onCut
               ? () => folderOperations.onCut?.(tile.node.id)
+              : undefined
+          }
+          onToggleEncryptionPolicy={
+            folderOperations.onToggleEncryptionPolicy
+              ? () =>
+                  folderOperations.onToggleEncryptionPolicy?.(
+                    tile.node.id,
+                    isFolderEncryptionPolicyEnabled(tile.node.metadata),
+                  )
               : undefined
           }
           onRestore={

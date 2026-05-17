@@ -105,6 +105,45 @@ describe("addFolderToCache", () => {
   });
 });
 
+describe("updateNode", () => {
+  it("replaces a node wherever it appears in the cache", () => {
+    const current = makeNode("current", "Current");
+    const ancestor = makeNode("ancestor", "Ancestor");
+    const child = makeNode("child", "Child");
+    const updatedChild = {
+      ...child,
+      name: "Child updated",
+      metadata: { isClientEncryptionEnabled: "true" },
+    };
+
+    useNodesStore.setState({
+      currentNode: current,
+      ancestors: [ancestor, child],
+    });
+    seedParent("current", [child], []);
+
+    useNodesStore.getState().updateNode(updatedChild);
+
+    const state = useNodesStore.getState();
+    expect(state.currentNode).toBe(current);
+    expect(state.ancestors[1]).toEqual(updatedChild);
+    expect(state.contentByNodeId.current?.nodes[0]).toEqual(updatedChild);
+  });
+
+  it("updates the current node without rewriting unchanged content maps", () => {
+    const current = makeNode("current", "Current");
+    const updated = { ...current, metadata: { key: "value" } };
+    seedParent("parent-1", [makeNode("other", "Other")], []);
+    const contentBefore = useNodesStore.getState().contentByNodeId;
+
+    useNodesStore.setState({ currentNode: current });
+    useNodesStore.getState().updateNode(updated);
+
+    expect(useNodesStore.getState().currentNode).toEqual(updated);
+    expect(useNodesStore.getState().contentByNodeId).toBe(contentBefore);
+  });
+});
+
 describe("optimisticRenameFile", () => {
   it("renames the matching file", () => {
     seedParent("parent-1", [], [makeFile("f1", "old.txt")]);

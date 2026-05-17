@@ -298,6 +298,8 @@ export const ListView: React.FC<IFileListView> = ({
           cut: t("move.cut"),
           encryptedFile: t("common:clientEncryption.fileEncryptedHint"),
           encryptedFolder: t("common:clientEncryption.folderPolicyEnabledHint"),
+          enableEncryptionPolicy: t("clientEncryption.enablePolicy"),
+          disableEncryptionPolicy: t("clientEncryption.disablePolicy"),
         },
         newFolderName,
         onNewFolderNameChange,

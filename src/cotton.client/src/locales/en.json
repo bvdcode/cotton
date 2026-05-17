@@ -1164,7 +1164,8 @@
         "more_one": " +{{count}} more",
         "more_few": " +{{count}} more",
         "more_many": " +{{count}} more",
-        "more_other": " +{{count}} more"
+        "more_other": " +{{count}} more",
+        "vaultLocked": "Encrypted uploads require unlocking your encryption vault first."
       },
       "errors": {
         "dropFailed": "Failed to process dropped items. Please try again."
@@ -1325,14 +1326,24 @@
     "size": "Size",
     "name": "Name",
     "location": "Location",
-    "noFilesOrFolders": "No files or folders"
+    "noFilesOrFolders": "No files or folders",
+    "clientEncryption": {
+      "enablePolicy": "Encrypt new uploads",
+      "disablePolicy": "Stop encrypting new uploads",
+      "toasts": {
+        "policyEnabled": "New uploads to this folder will be encrypted on this device.",
+        "policyDisabled": "New uploads to this folder will no longer be encrypted automatically.",
+        "policyToggleFailed": "Could not update encryption policy."
+      }
+    }
   },
   "upload": {
     "title": "Uploads",
     "error": "Error",
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
-      "uploadFailed": "Upload failed"
+      "uploadFailed": "Upload failed",
+      "encryptionVaultLocked": "Encryption vault is locked"
     },
     "titleWithTotal": "Uploads ({{total}})",
     "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",

@@ -19,6 +19,10 @@ export const buildFolderOperations = (
   onFolderClick: (folderId: string) => void,
   onFolderShare?: (folderId: string, folderName: string) => Promise<void>,
   onFolderCut?: (folderId: string) => void,
+  onToggleEncryptionPolicy?: (
+    folderId: string,
+    currentlyEnabled: boolean,
+  ) => Promise<void> | void,
 ): FolderOperations => {
   return {
     isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
@@ -38,6 +42,11 @@ export const buildFolderOperations = (
         }
       : undefined,
     onCut: onFolderCut,
+    onToggleEncryptionPolicy: onToggleEncryptionPolicy
+      ? (folderId, currentlyEnabled) => {
+          void onToggleEncryptionPolicy(folderId, currentlyEnabled);
+        }
+      : undefined,
     onClick: onFolderClick,
   };
 };

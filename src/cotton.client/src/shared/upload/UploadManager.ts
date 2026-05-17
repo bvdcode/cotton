@@ -1,6 +1,7 @@
 import type { Guid } from "../api/layoutsApi";
 import { refreshNodeContent } from "../store/nodesActions";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
+import { NoKeyError } from "../crypto";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
 import { uploadFileToNode } from "./uploadFileToNode";
@@ -32,11 +33,16 @@ export interface UploadTask {
 
 interface UploadTaskInternal extends UploadTask {
   _file: File;
+  _encrypt: boolean;
   _startedAt?: number;
   _sawProgress?: boolean;
   _laneProbeConsumed?: boolean;
   _laneProbeTimeout?: ReturnType<typeof setTimeout>;
   _bytesTransferredForSpeed?: number;
+}
+
+export interface EnqueueOptions {
+  encrypt?: boolean;
 }
 
 export interface UploadFilePickerContext {
@@ -167,7 +173,12 @@ export class UploadManager {
     this.enqueue(files, context.nodeId, context.nodeLabel);
   }
 
-  enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
+  enqueue(
+    files: FileList | File[],
+    nodeId: Guid,
+    nodeLabel: string,
+    options?: EnqueueOptions,
+  ) {
     const list = Array.isArray(files) ? files : Array.from(files);
 
     if (!this.hasActiveTasks()) {
@@ -190,6 +201,7 @@ export class UploadManager {
         progress01: 0,
         status: "queued",
         _file: file,
+        _encrypt: options?.encrypt ?? false,
       });
     }
 
@@ -324,6 +336,7 @@ export class UploadManager {
           file: task._file,
           nodeId: task.nodeId,
           server,
+          encrypt: task._encrypt,
           onProgress: (bytesUploaded, snapshot) => {
             const prevBytesUploaded = task.bytesUploaded;
             task.bytesUploaded = Math.min(
@@ -402,7 +415,9 @@ export class UploadManager {
         task.status = "failed";
         task.completedAt = Date.now();
         task.error = e instanceof Error ? e.message : undefined;
-        task.errorKey = "uploadFailed";
+        task.errorKey = e instanceof NoKeyError
+          ? "encryptionVaultLocked"
+          : "uploadFailed";
         this.fileConcurrency.observe({
           bytes: task.bytesTotal,
           durationMs: task.completedAt - (task._startedAt ?? task.completedAt),

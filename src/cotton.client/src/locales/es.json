@@ -1186,7 +1186,8 @@
         "more_one": " +{{count}} más",
         "more_few": " +{{count}} más",
         "more_many": " +{{count}} más",
-        "more_other": " +{{count}} más"
+        "more_other": " +{{count}} más",
+        "vaultLocked": "Las subidas cifradas requieren desbloquear primero la bóveda de cifrado."
       },
       "errors": {
         "dropFailed": "No se pudieron procesar los elementos soltados. Inténtalo de nuevo."
@@ -1347,14 +1348,24 @@
     "size": "Tamaño",
     "name": "Nombre",
     "location": "Ubicación",
-    "noFilesOrFolders": "No hay archivos ni carpetas"
+    "noFilesOrFolders": "No hay archivos ni carpetas",
+    "clientEncryption": {
+      "enablePolicy": "Cifrar nuevas subidas",
+      "disablePolicy": "No cifrar nuevas subidas",
+      "toasts": {
+        "policyEnabled": "Las nuevas subidas a esta carpeta se cifrarán en este dispositivo.",
+        "policyDisabled": "Las nuevas subidas a esta carpeta ya no se cifrarán automáticamente.",
+        "policyToggleFailed": "No se pudo actualizar la política de cifrado."
+      }
+    }
   },
   "upload": {
     "title": "Subidas",
     "error": "Error",
     "errors": {
       "serverSettingsNotLoaded": "Los ajustes del servidor no se han cargado",
-      "uploadFailed": "La subida falló"
+      "uploadFailed": "La subida falló",
+      "encryptionVaultLocked": "La bóveda de cifrado está bloqueada"
     },
     "titleWithTotal": "Subidas ({{total}})",
     "titleWithProgress": "Subidas ({{completed}} / {{total}} • {{speed}}/s)",

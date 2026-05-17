@@ -39,6 +39,8 @@ import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
+import { nodesApi } from "../../shared/api/nodesApi";
+import { FOLDER_ENCRYPTION_POLICY_KEY } from "../../shared/crypto";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
@@ -276,12 +278,37 @@ export const FilesPage: React.FC = () => {
     [t],
   );
 
+  const handleToggleFolderEncryption = React.useCallback(
+    async (folderId: string, currentlyEnabled: boolean) => {
+      const nextEnabled = !currentlyEnabled;
+
+      try {
+        const updated = await nodesApi.updateNodeMetadata(folderId, {
+          [FOLDER_ENCRYPTION_POLICY_KEY]: String(nextEnabled),
+        });
+        useNodesStore.getState().updateNode(updated);
+        showToast(
+          nextEnabled
+            ? t("clientEncryption.toasts.policyEnabled", { ns: "files" })
+            : t("clientEncryption.toasts.policyDisabled", { ns: "files" }),
+        );
+      } catch {
+        showToast(
+          t("clientEncryption.toasts.policyToggleFailed", { ns: "files" }),
+          "error",
+        );
+      }
+    },
+    [showToast, t],
+  );
+
   // Build folder operations adapter
   const folderOperations = buildFolderOperations(
     folderOps,
     goToFolder,
     handleShareFolder,
     handleCutFolder,
+    handleToggleFolderEncryption,
   );
 
   // Build file operations adapter

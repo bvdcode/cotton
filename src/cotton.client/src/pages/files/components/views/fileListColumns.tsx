@@ -9,6 +9,7 @@ import {
   Folder,
   Image as ImageIcon,
   InsertDriveFile,
+  LockOpenOutlined,
   LockOutlined,
   TextSnippet,
   VideoFile,
@@ -67,6 +68,8 @@ interface ColumnOptions {
     cut: string;
     encryptedFile: string;
     encryptedFolder: string;
+    enableEncryptionPolicy: string;
+    disableEncryptionPolicy: string;
   };
   newFolderName: string;
   onNewFolderNameChange: (value: string) => void;
@@ -90,6 +93,10 @@ interface ColumnOptions {
     onDelete?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
+    onToggleEncryptionPolicy?: (
+      id: string,
+      currentlyEnabled: boolean,
+    ) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
@@ -410,6 +417,10 @@ export const createActionsColumn = (
     if (row.type === "new-folder") return null;
 
     if (row.type === "folder") {
+      const folderEncryptionPolicyEnabled = isFolderEncryptionPolicyEnabled(
+        row.metadata,
+      );
+
       return (
         <Box
           sx={{
@@ -457,6 +468,29 @@ export const createActionsColumn = (
                   title={options.labels.cut}
                 >
                   <ContentCut fontSize="small" />
+                </IconButton>
+              )}
+              {options.folderOperations.onToggleEncryptionPolicy && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onToggleEncryptionPolicy?.(
+                      row.id,
+                      folderEncryptionPolicyEnabled,
+                    );
+                  }}
+                  title={
+                    folderEncryptionPolicyEnabled
+                      ? options.labels.disableEncryptionPolicy
+                      : options.labels.enableEncryptionPolicy
+                  }
+                >
+                  {folderEncryptionPolicyEnabled ? (
+                    <LockOpenOutlined fontSize="small" />
+                  ) : (
+                    <LockOutlined fontSize="small" />
+                  )}
                 </IconButton>
               )}
               {options.folderOperations.onRestore && (
