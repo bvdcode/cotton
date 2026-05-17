@@ -1382,8 +1382,8 @@
       }
     }
   },
-  "upload": {
-    "title": "Загрузки",
+  "tasks": {
+    "title": "Задачи",
     "error": "Ошибка",
     "errors": {
       "serverSettingsNotLoaded": "Настройки сервера не загружены",
@@ -1391,9 +1391,9 @@
       "encryptionVaultLocked": "Крипто-хранилище заблокировано",
       "clientEncryptionFileTooLarge": "Этот файл слишком большой для текущей зашифрованной загрузки. Лимит: {{maxSize}}."
     },
-    "titleWithTotal": "Загрузки ({{total}})",
-    "titleWithProgress": "Загрузки ({{completed}} / {{total}} • {{speed}}/с)",
-    "titleWithErrors": "Загрузки ({{total}} • с ошибкой: {{failed}})",
+    "titleWithTotal": "Задачи ({{total}})",
+    "titleWithProgress": "Задачи ({{completed}} / {{total}} - {{speed}}/с)",
+    "titleWithErrors": "Задачи ({{total}} • с ошибкой: {{failed}})",
     "actions": {
       "expand": "Развернуть",
       "collapse": "Свернуть",
@@ -1402,7 +1402,7 @@
     },
     "status": {
       "queued": "В очереди",
-      "uploading": "Загружается",
+      "running": "Выполняется",
       "finalizing": "Завершается",
       "completed": "Завершено",
       "failed": "Ошибка"

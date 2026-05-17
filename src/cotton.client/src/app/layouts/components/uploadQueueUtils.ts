@@ -1,4 +1,5 @@
 import { formatBytes } from "../../../shared/utils/formatBytes";
+import type { AppTask } from "../../../shared/tasks";
 
 export const sortTasksByPriority = <T extends { status: string }>(
   tasks: T[],
@@ -15,7 +16,7 @@ export const sortTasksByPriority = <T extends { status: string }>(
       continue;
     }
 
-    if (task.status === "uploading" || task.status === "finalizing") {
+    if (task.status === "running" || task.status === "finalizing") {
       active.push(task);
       continue;
     }
@@ -36,25 +37,12 @@ export const sortTasksByPriority = <T extends { status: string }>(
   return [...failed, ...active, ...queued, ...completed, ...rest];
 };
 
-export type UploadTask = {
-  id: string;
-  status: "uploading" | "finalizing" | "queued" | "completed" | "failed";
-  progress01: number;
-  fileName: string;
-  nodeLabel: string;
-  uploadSpeedBytesPerSec?: number | null;
-  error?: string;
-  errorKey?: string;
-  errorParams?: Record<string, string | number>;
-  completedAt?: number;
-};
-
-export const calculateUploadStats = (tasks: UploadTask[]) => {
+export const calculateTaskStats = (tasks: AppTask[]) => {
   const total = tasks.length;
   let completed = 0;
   let failed = 0;
   let inProgress = 0;
-  const activeTasks: UploadTask[] = [];
+  const activeTasks: AppTask[] = [];
 
   for (const task of tasks) {
     if (task.status === "completed") {
@@ -67,7 +55,7 @@ export const calculateUploadStats = (tasks: UploadTask[]) => {
       continue;
     }
 
-    if (task.status === "uploading" || task.status === "finalizing") {
+    if (task.status === "running" || task.status === "finalizing") {
       inProgress += 1;
       activeTasks.push(task);
       continue;
@@ -95,7 +83,7 @@ export const calculateUploadStats = (tasks: UploadTask[]) => {
 };
 
 export const getWidgetTitle = (
-  stats: ReturnType<typeof calculateUploadStats>,
+  stats: ReturnType<typeof calculateTaskStats>,
   isCollapsed: boolean,
   _totalProgress: number,
   totalSpeed: number,

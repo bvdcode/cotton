@@ -2,10 +2,10 @@ import React from "react";
 import { Box, Divider, LinearProgress, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import type { UploadTask } from "./uploadQueueUtils";
+import type { AppTask } from "../../../shared/tasks";
 
 interface UploadTaskRowProps {
-  task: UploadTask;
+  task: AppTask;
   showDivider: boolean;
 }
 
@@ -13,7 +13,7 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
   task,
   showDivider,
 }) => {
-  const { t } = useTranslation("upload");
+  const { t } = useTranslation("tasks");
   const isFailed = task.status === "failed";
   const progressPercent =
     task.status === "completed"
@@ -27,16 +27,16 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
         <Typography
           variant="body2"
           noWrap
-          title={task.fileName}
+          title={task.label}
           sx={{ fontWeight: 500 }}
         >
-          {task.fileName}
+          {task.label}
         </Typography>
         <Typography
           variant="caption"
           color="text.secondary"
           noWrap
-          title={task.nodeLabel}
+          title={task.scopeLabel}
           sx={{
             display: "block",
             overflow: "hidden",
@@ -44,7 +44,7 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
             whiteSpace: "nowrap",
           }}
         >
-          {task.nodeLabel}
+          {task.scopeLabel}
         </Typography>
       </Box>
 
@@ -57,8 +57,8 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
 
       <Box display="flex" justifyContent="space-between" mt={0.5}>
         <Typography variant="caption" color="text.secondary">
-          {task.status === "uploading" && task.uploadSpeedBytesPerSec != null
-            ? `${formatBytes(task.uploadSpeedBytesPerSec)}/s`
+          {task.status === "running" && task.speedBytesPerSec != null
+            ? `${formatBytes(task.speedBytesPerSec)}/s`
             : t(`status.${task.status}`)}
         </Typography>
         <Typography

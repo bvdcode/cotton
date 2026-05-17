@@ -1,28 +1,28 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { Box, Paper } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { uploadManager } from "../../../shared/upload/UploadManager";
+import { taskManager } from "../../../shared/tasks";
 import { WidgetHeader } from "./WidgetHeader";
 import { UploadTaskList } from "./UploadTaskList";
 import {
   sortTasksByPriority,
-  calculateUploadStats,
+  calculateTaskStats,
   getWidgetTitle,
 } from "./uploadQueueUtils";
 
-export const UploadQueueWidget = () => {
-  const { t } = useTranslation("upload");
+export const TaskQueueWidget = () => {
+  const { t } = useTranslation("tasks");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const subscribe = useCallback(
-    (cb: () => void) => uploadManager.subscribe(cb),
+    (cb: () => void) => taskManager.subscribe(cb),
     [],
   );
-  const getSnapshot = useCallback(() => uploadManager.getSnapshot(), []);
+  const getSnapshot = useCallback(() => taskManager.getSnapshot(), []);
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const tasks = useMemo(() => sortTasksByPriority(snapshot.tasks), [snapshot.tasks]);
-  const stats = useMemo(() => calculateUploadStats(tasks), [tasks]);
-  const totalSpeed = snapshot.overall.uploadSpeedBytesPerSec;
+  const stats = useMemo(() => calculateTaskStats(tasks), [tasks]);
+  const totalSpeed = snapshot.overall.speedBytesPerSec;
   const visible = snapshot.open && stats.total > 0;
 
   const totalProgress = Math.max(
@@ -75,8 +75,8 @@ export const UploadQueueWidget = () => {
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
           onClose={() => {
             // Close clears the list to avoid keeping stale tasks.
-            // Close is hidden while uploads are active.
-            uploadManager.clearFinished({ includeCompleted: true, includeFailed: true });
+            // Close is hidden while tasks are active.
+            taskManager.clearFinished({ includeCompleted: true, includeFailed: true });
           }}
           aria={{
             expand: t("actions.expand"),
@@ -106,3 +106,5 @@ export const UploadQueueWidget = () => {
     </Box>
   );
 };
+
+export const UploadQueueWidget = TaskQueueWidget;

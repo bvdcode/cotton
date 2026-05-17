@@ -1370,8 +1370,8 @@
       }
     }
   },
-  "upload": {
-    "title": "Subidas",
+  "tasks": {
+    "title": "Tareas",
     "error": "Error",
     "errors": {
       "serverSettingsNotLoaded": "Los ajustes del servidor no se han cargado",
@@ -1379,9 +1379,9 @@
       "encryptionVaultLocked": "La bóveda de cifrado está bloqueada",
       "clientEncryptionFileTooLarge": "Este archivo es demasiado grande para las subidas cifradas actuales. Límite: {{maxSize}}."
     },
-    "titleWithTotal": "Subidas ({{total}})",
-    "titleWithProgress": "Subidas ({{completed}} / {{total}} • {{speed}}/s)",
-    "titleWithErrors": "Subidas ({{total}} • {{failed}} fallidas)",
+    "titleWithTotal": "Tareas ({{total}})",
+    "titleWithProgress": "Tareas ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithErrors": "Tareas ({{total}} • {{failed}} fallidas)",
     "actions": {
       "expand": "Expandir",
       "collapse": "Contraer",
@@ -1390,7 +1390,7 @@
     },
     "status": {
       "queued": "En cola",
-      "uploading": "Subiendo",
+      "running": "En curso",
       "finalizing": "Finalizando",
       "completed": "Completada",
       "failed": "Fallida"

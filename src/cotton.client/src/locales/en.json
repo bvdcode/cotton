@@ -1348,8 +1348,8 @@
       }
     }
   },
-  "upload": {
-    "title": "Uploads",
+  "tasks": {
+    "title": "Tasks",
     "error": "Error",
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
@@ -1357,9 +1357,9 @@
       "encryptionVaultLocked": "Encryption vault is locked",
       "clientEncryptionFileTooLarge": "This file is too large for current encrypted uploads. Limit: {{maxSize}}."
     },
-    "titleWithTotal": "Uploads ({{total}})",
-    "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",
-    "titleWithErrors": "Uploads ({{total}} • {{failed}} failed)",
+    "titleWithTotal": "Tasks ({{total}})",
+    "titleWithProgress": "Tasks ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithErrors": "Tasks ({{total}} • {{failed}} failed)",
     "actions": {
       "expand": "Expand",
       "collapse": "Collapse",
@@ -1368,7 +1368,7 @@
     },
     "status": {
       "queued": "Queued",
-      "uploading": "Uploading",
+      "running": "Running",
       "finalizing": "Finalizing",
       "completed": "Completed",
       "failed": "Failed"
