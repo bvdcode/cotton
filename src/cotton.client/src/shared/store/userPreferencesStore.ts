@@ -3,24 +3,13 @@ import type { User } from "../../features/auth/types";
 import type { ThemeMode } from "../theme";
 import { supportedLanguages, type SupportedLanguage } from "../../locales";
 import {
+  isSelfPreferenceUpdateToken,
   userPreferencesApi,
   type UserPreferences,
 } from "../api/userPreferencesApi";
 
-/**
- * Stable session token used to identify this browser tab's preference updates.
- * Server echoes it back via SignalR so we can ignore our own broadcasts.
- */
-const SESSION_TOKEN = (() => {
-  const cryptoObj = globalThis.crypto;
-  if (cryptoObj && "randomUUID" in cryptoObj) {
-    return cryptoObj.randomUUID();
-  }
-  return `pref_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-})();
-
 export const isSelfUpdateToken = (token: string): boolean =>
-  token === SESSION_TOKEN;
+  isSelfPreferenceUpdateToken(token);
 
 export const USER_PREFERENCE_KEYS = {
   themeMode: "themeMode",
@@ -118,7 +107,7 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       set({ preferences: optimistic, syncing: true });
 
       try {
-        const next = await userPreferencesApi.update(patch, { token: SESSION_TOKEN });
+        const next = await userPreferencesApi.update(patch);
         set({ preferences: next, loaded: true, syncing: false });
       } catch {
         set({ preferences: previous, syncing: false });

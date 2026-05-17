@@ -786,13 +786,15 @@
         "phraseWarning": "Store these 24 words somewhere safe before finishing setup. Anyone with this phrase can unlock encrypted files.",
         "copy": "Copy phrase",
         "copied": "Copied",
+        "download": "Download phrase",
         "phraseStored": "I have stored the backup phrase",
         "saving": "Saving...",
         "finish": "Finish setup",
         "errors": {
           "generateFailed": "Could not generate encryption keys.",
           "saveFailed": "Could not save encryption setup.",
-          "copyFailed": "Could not copy the phrase."
+          "copyFailed": "Could not copy the phrase.",
+          "downloadFailed": "Could not download the phrase."
         }
       },
       "unlockDialog": {

@@ -269,6 +269,29 @@ public class UserManagementEndpointsTests : IntegrationTestBase
         Assert.That(updated!.Username, Is.EqualTo(expectedNormalized));
     }
 
+    [Test]
+    public async Task UpdatePreferences_WithoutRealtimeToken_ReturnsUpdatedPreferences()
+    {
+        string token = await LoginAsync();
+        SetBearer(token);
+
+        using var request = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/users/me/preferences")
+        {
+            Content = JsonContent.Create(new Dictionary<string, string>
+            {
+                ["cryptoEnvelope"] = "opaque-envelope"
+            })
+        };
+
+        var response = await _client!.SendAsync(request);
+
+        response.EnsureSuccessStatusCode();
+        Dictionary<string, string>? preferences =
+            await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+        Assert.That(preferences, Is.Not.Null);
+        Assert.That(preferences!["cryptoEnvelope"], Is.EqualTo("opaque-envelope"));
+    }
+
     [TestCase("1bad")]
     [TestCase("a")]
     [TestCase("ab__cd")]

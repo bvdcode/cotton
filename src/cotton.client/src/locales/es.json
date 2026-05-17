@@ -834,13 +834,15 @@
         "phraseWarning": "Guarda estas 24 palabras en un lugar seguro antes de finalizar. Cualquier persona con esta frase podrá desbloquear archivos cifrados.",
         "copy": "Copiar frase",
         "copied": "Copiada",
+        "download": "Descargar frase",
         "phraseStored": "He guardado la frase de respaldo",
         "saving": "Guardando...",
         "finish": "Finalizar configuración",
         "errors": {
           "generateFailed": "No se pudieron generar las claves de cifrado.",
           "saveFailed": "No se pudo guardar la configuración de cifrado.",
-          "copyFailed": "No se pudo copiar la frase."
+          "copyFailed": "No se pudo copiar la frase.",
+          "downloadFailed": "No se pudo descargar la frase."
         }
       },
       "unlockDialog": {

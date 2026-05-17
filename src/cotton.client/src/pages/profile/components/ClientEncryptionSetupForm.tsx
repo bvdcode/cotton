@@ -15,6 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import DownloadIcon from "@mui/icons-material/Download";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { useMemo, useState } from "react";
@@ -92,6 +93,29 @@ export const ClientEncryptionSetupForm = ({
       setPhraseCopied(true);
     } catch {
       setError(t("clientEncryption.setupDialog.errors.copyFailed"));
+    }
+  };
+
+  const handleDownloadPhrase = () => {
+    if (!phrase) {
+      return;
+    }
+
+    try {
+      const blob = new Blob([`${phrase}\n`], {
+        type: "text/plain;charset=utf-8",
+      });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = objectUrl;
+      link.download = "cotton-client-encryption-backup-phrase.txt";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch {
+      setError(t("clientEncryption.setupDialog.errors.downloadFailed"));
     }
   };
 
@@ -310,6 +334,14 @@ export const ClientEncryptionSetupForm = ({
               {phraseCopied
                 ? t("clientEncryption.setupDialog.copied")
                 : t("clientEncryption.setupDialog.copy")}
+            </Button>
+            <Button
+              size="small"
+              startIcon={<DownloadIcon fontSize="small" />}
+              onClick={handleDownloadPhrase}
+              disabled={!phrase}
+            >
+              {t("clientEncryption.setupDialog.download")}
             </Button>
           </Stack>
           <FormControlLabel
