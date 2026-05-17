@@ -190,7 +190,9 @@ export const FilesPage: React.FC = () => {
     pendingSelectedFileIdRef.current = null;
     window.history.replaceState({}, "");
 
-    const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null);
+    const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null, {
+      requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
+    });
     if (typeInfo.type === "image" || typeInfo.type === "video") {
       handleMediaClick(file.id);
     } else {

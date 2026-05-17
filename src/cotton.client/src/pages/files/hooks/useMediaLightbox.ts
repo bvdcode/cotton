@@ -19,6 +19,9 @@ const LIGHTBOX_HISTORY_STATE = "lightbox";
 
 type MediaKind = MediaItem["kind"];
 
+const rewriteToHlsManifestUrl = (downloadUrl: string): string =>
+  downloadUrl.replace(/\/download(\?|$)/, "/hls/master.m3u8$1");
+
 /**
  * Hook for managing media lightbox state and handlers.
  * Pushes a history entry when opening so that mobile swipe-back
@@ -32,6 +35,7 @@ export const useMediaLightbox = (
     previewHashEncryptedHex?: string | null;
     largeFilePreviewPresignedToken?: string | null;
     contentType?: string | null;
+    requiresVideoTranscoding?: boolean;
   }>,
 ): MediaHandlers => {
   const [lightboxOpen, setLightboxOpenRaw] = useState(false);
@@ -72,7 +76,9 @@ export const useMediaLightbox = (
     return sortedFiles
       .map((file) => ({
         file,
-        typeInfo: getFileTypeInfo(file.name, file.contentType ?? null),
+        typeInfo: getFileTypeInfo(file.name, file.contentType ?? null, {
+          requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
+        }),
       }))
       .filter(({ typeInfo }) => typeInfo.type === "image" || typeInfo.type === "video")
       .map(({ file, typeInfo }) => {
@@ -90,6 +96,7 @@ export const useMediaLightbox = (
           previewUrl,
           mimeType: file.contentType ?? "application/octet-stream",
           sizeBytes: file.sizeBytes,
+          requiresTranscoding: file.requiresVideoTranscoding ?? false,
         };
       });
   }, [sortedFiles]);
@@ -102,17 +109,27 @@ export const useMediaLightbox = (
     return map;
   }, [mediaItems]);
 
+  const transcodableIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of mediaItems) {
+      if (item.kind === "video" && item.requiresTranscoding) {
+        ids.add(item.id);
+      }
+    }
+    return ids;
+  }, [mediaItems]);
+
   // Get signed media URL for gallery viewing.
   // Images use preview links, videos use original links for browser streaming compatibility.
   const getSignedMediaUrl = useCallback(async (fileId: string): Promise<string> => {
     const url = await filesApi.getDownloadLink(fileId, 60 * 24);
     if (mediaKindsById.get(fileId) === "video") {
-      return url;
+      return transcodableIds.has(fileId) ? rewriteToHlsManifestUrl(url) : url;
     }
 
     const separator = url.includes("?") ? "&" : "?";
     return `${url}${separator}preview=true`;
-  }, [mediaKindsById]);
+  }, [mediaKindsById, transcodableIds]);
 
   // Get download URL for the actual download button - full original file
   const getDownloadUrl = useCallback(async (fileId: string): Promise<string> => {

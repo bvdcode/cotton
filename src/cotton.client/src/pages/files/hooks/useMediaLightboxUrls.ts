@@ -5,6 +5,7 @@ import {
   isHeicFile,
 } from "../../../shared/utils/heicConverter";
 import { buildSlidesFromItems } from "../components/mediaLightboxSlides";
+import { HLS_VIDEO_SLIDE_TYPE } from "../components/mediaLightbox.types";
 import type { MediaItem, SlideWithTitle } from "../components/mediaLightbox.types";
 
 const PREVIEW_QUERY_PARAM = "preview";
@@ -35,6 +36,7 @@ interface UseMediaLightboxUrlsArgs {
   getSignedMediaUrl: (id: string) => Promise<string>;
   getDownloadUrl?: (id: string) => Promise<string>;
   preferPreview: boolean;
+  currentItemId: string | null;
 }
 
 export const useMediaLightboxUrls = ({
@@ -42,6 +44,7 @@ export const useMediaLightboxUrls = ({
   getSignedMediaUrl,
   getDownloadUrl,
   preferPreview,
+  currentItemId,
 }: UseMediaLightboxUrlsArgs) => {
   const [signedUrls, setSignedUrls] = React.useState<Record<string, string>>({});
   const [displayUrls, setDisplayUrls] = React.useState<Record<string, string>>({});
@@ -95,8 +98,8 @@ export const useMediaLightboxUrls = ({
   }, [preferPreview]);
 
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, displayUrls, signedUrls);
-  }, [items, displayUrls, signedUrls]);
+    return buildSlidesFromItems(items, displayUrls, signedUrls, currentItemId);
+  }, [items, displayUrls, signedUrls, currentItemId]);
 
   const ensureOriginalUrl = React.useCallback(
     async (item: MediaItem): Promise<string | null> => {
@@ -259,6 +262,10 @@ export const useMediaLightboxUrls = ({
         sources?: Array<{ src?: string }>;
       };
       return videoSlide.sources?.[0]?.src ?? null;
+    }
+
+    if (slide.type === HLS_VIDEO_SLIDE_TYPE) {
+      return (slide as SlideWithTitle & { src?: string }).src ?? null;
     }
 
     const imageSlide = slide as SlideWithTitle & { src?: string };

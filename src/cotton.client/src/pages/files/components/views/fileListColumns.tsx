@@ -33,6 +33,7 @@ export interface FileListRow {
   containerNodeId?: string | null;
   sizeBytes: number | null;
   contentType?: string | null;
+  requiresVideoTranscoding?: boolean;
   tile?: {
     kind: "folder" | "file";
     file?: {

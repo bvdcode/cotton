@@ -71,6 +71,30 @@ describe("getFileTypeInfo", () => {
     });
   });
 
+  it("opens server-transcodable video containers inline", () => {
+    expect(
+      getFileTypeInfo("clip.avi", "video/x-msvideo", {
+        requiresVideoTranscoding: true,
+      }),
+    ).toEqual({
+      type: "video",
+      supportsPreview: true,
+      supportsInlineView: true,
+    });
+  });
+
+  it("ignores transcoding flag on non-video content", () => {
+    expect(
+      getFileTypeInfo("notes.txt", "text/plain", {
+        requiresVideoTranscoding: true,
+      }),
+    ).toEqual({
+      type: "text",
+      supportsPreview: true,
+      supportsInlineView: true,
+    });
+  });
+
   it("classifies supported extensions", () => {
     expect(getFileTypeInfo("clip.mp4").type).toBe("video");
     expect(getFileTypeInfo("song.mp3").type).toBe("audio");

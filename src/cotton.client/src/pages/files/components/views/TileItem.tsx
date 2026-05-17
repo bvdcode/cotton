@@ -247,7 +247,9 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       );
     }
 
-    const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType);
+    const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType, {
+      requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
+    });
     const isImage = typeInfo.type === "image";
     const isVideo = typeInfo.type === "video";
     const isPdf = typeInfo.type === "pdf";

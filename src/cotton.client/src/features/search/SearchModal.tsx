@@ -148,7 +148,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
   const openFile = useCallback(
     (file: NodeFileManifestDto) => {
-      const typeInfo = getFileTypeInfo(file.name, file.contentType);
+      const typeInfo = getFileTypeInfo(file.name, file.contentType, {
+        requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
+      });
       if (typeInfo.type === "image" || typeInfo.type === "video") {
         handleMediaClick(file.id);
       } else {

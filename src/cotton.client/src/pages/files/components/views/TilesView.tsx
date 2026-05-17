@@ -426,7 +426,9 @@ export const TilesView: React.FC<IFileListView> = ({
         return;
       }
 
-      const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType ?? null);
+      const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType ?? null, {
+        requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
+      });
       if ((typeInfo.type === "image" || typeInfo.type === "video") && fileOperations.onMediaClick) {
         fileOperations.onMediaClick(tile.file.id);
         return;
