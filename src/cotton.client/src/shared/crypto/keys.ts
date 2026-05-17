@@ -161,3 +161,32 @@ export async function unwrapFileKey(
     ["encrypt", "decrypt"],
   );
 }
+
+export async function deriveMetadataKey(masterKey: CryptoKey): Promise<CryptoKey> {
+  const rawMasterKey = new Uint8Array(await subtle().exportKey("raw", masterKey));
+
+  try {
+    const hkdfKey = await subtle().importKey(
+      "raw",
+      asBufferSource(rawMasterKey),
+      "HKDF",
+      false,
+      ["deriveKey"],
+    );
+
+    return await subtle().deriveKey(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: asBufferSource(new Uint8Array(0)),
+        info: asBufferSource(new TextEncoder().encode("cotton:display-meta:v1")),
+      },
+      hkdfKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    );
+  } finally {
+    rawMasterKey.fill(0);
+  }
+}

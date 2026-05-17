@@ -6,6 +6,7 @@ import {
   nodeDtoSchema,
   restoreOutcomeSchema,
 } from "./schemas/node";
+import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
 import { z } from "zod";
 
 export interface NodeFileManifestDto extends BaseDto {
@@ -103,8 +104,12 @@ export const nodesApi = {
     });
     const content = parseValidated(url, response.data, nodeContentSchema);
     const totalCount = readRequiredIntHeader(response.headers as HeaderMap, "x-total-count");
+    const files = await applyDisplayMetaToFiles(content.files);
 
-    return { content, totalCount };
+    return {
+      content: files === content.files ? content : { ...content, files },
+      totalCount,
+    };
   },
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {

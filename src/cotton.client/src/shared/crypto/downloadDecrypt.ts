@@ -1,6 +1,7 @@
 import { filesApi } from "../api/filesApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { decryptBlobToBlob } from "./fileCipher";
+import { applyDisplayMetaToFile } from "./displayMeta";
 import { getOriginalContentType, isFileEncrypted } from "./metadataFlags";
 import { requireMasterKey } from "./vault";
 
@@ -28,12 +29,10 @@ export async function getReadableFileUrl(
   }
 
   const masterKey = requireMasterKey();
+  const decoratedFile = await applyDisplayMetaToFile(file);
+  const originalContentType = resolveOriginalContentType(file, decoratedFile);
   const signedUrl = await filesApi.getDownloadLink(file.id, expireAfterMinutes);
   const ciphertext = await fetchEncryptedBlob(signedUrl);
-  const originalContentType =
-    getOriginalContentType(file.metadata) ||
-    file.contentType ||
-    FALLBACK_CONTENT_TYPE;
   const plaintext = await decryptBlobToBlob(
     ciphertext,
     masterKey,
@@ -50,12 +49,15 @@ export async function getReadableFileUrl(
 
 export async function downloadReadableFile(
   file: NodeFileManifestDto,
-  fileName = file.name,
+  fileName?: string,
 ): Promise<void> {
-  const handle = await getReadableFileUrl(file);
+  const displayFile = isFileEncrypted(file.metadata)
+    ? await applyDisplayMetaToFile(file)
+    : file;
+  const handle = await getReadableFileUrl(displayFile);
 
   try {
-    triggerBrowserDownload(handle.url, fileName);
+    triggerBrowserDownload(handle.url, fileName ?? displayFile.name);
   } finally {
     window.setTimeout(handle.revoke, DOWNLOAD_BLOB_REVOKE_DELAY_MS);
   }
@@ -71,6 +73,21 @@ async function fetchEncryptedBlob(url: string): Promise<Blob> {
   }
 
   return await response.blob();
+}
+
+function resolveOriginalContentType(
+  sourceFile: NodeFileManifestDto,
+  decoratedFile: NodeFileManifestDto,
+): string {
+  if (decoratedFile !== sourceFile && decoratedFile.contentType) {
+    return decoratedFile.contentType;
+  }
+
+  return (
+    getOriginalContentType(sourceFile.metadata) ||
+    sourceFile.contentType ||
+    FALLBACK_CONTENT_TYPE
+  );
 }
 
 function triggerBrowserDownload(url: string, fileName: string): void {

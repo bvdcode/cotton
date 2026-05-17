@@ -138,10 +138,7 @@ describe("useFileInteractionHandlers", () => {
       result.current.handleMediaClick("encrypted-image");
     });
 
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
-      encryptedImage,
-      "secret.png",
-    );
+    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(encryptedImage);
     expect(mocks.openMediaLightbox).not.toHaveBeenCalled();
   });
 
@@ -162,10 +159,7 @@ describe("useFileInteractionHandlers", () => {
     await result.current.handleDownloadFile("encrypted-file", "secret.txt");
 
     expect(mocks.downloadFile).toHaveBeenCalledWith("plain-file", "plain.txt");
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
-      encryptedFile,
-      "secret.txt",
-    );
+    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(encryptedFile);
   });
 
   it("downloads encrypted audio clicks instead of adding ciphertext to the player", () => {
@@ -185,10 +179,7 @@ describe("useFileInteractionHandlers", () => {
       result.current.handleFileClick("encrypted-audio", "song.mp3", 4);
     });
 
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
-      encryptedAudio,
-      "song.mp3",
-    );
+    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(encryptedAudio);
     expect(mocks.openAudio).not.toHaveBeenCalled();
     expect(mocks.openPreview).not.toHaveBeenCalled();
   });

@@ -67,7 +67,7 @@ export const useFileInteractionHandlers = ({
       }
 
       try {
-        await downloadReadableFile(file, fileName);
+        await downloadReadableFile(file);
       } catch (error) {
         if (error instanceof NoKeyError) {
           toast.error(t("common:clientEncryption.vaultLockedForDownload"));

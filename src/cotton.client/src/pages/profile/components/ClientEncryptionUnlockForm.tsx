@@ -23,6 +23,7 @@ import {
   useVault,
   WrongUnlockError,
 } from "../../../shared/crypto";
+import { useNodesStore } from "../../../shared/store/nodesStore";
 
 type UnlockMode = "password" | "phrase";
 
@@ -61,6 +62,7 @@ export const ClientEncryptionUnlockForm = ({
           ? await unlockWithPassword(envelope, password)
           : await unlockWithRecovery(envelope, phrase);
       unlockVault(masterKey);
+      void useNodesStore.getState().refreshCachedFileDisplayMetadata();
       onSuccess();
     } catch (error) {
       if (error instanceof WrongUnlockError) {

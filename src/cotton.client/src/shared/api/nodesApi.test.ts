@@ -19,6 +19,13 @@ vi.mock("../store/authStore", () => ({
 
 const { httpClient } = await import("./httpClient");
 const { nodesApi } = await import("./nodesApi");
+const {
+  DISPLAY_META_KEY,
+  ENCRYPTED_FLAG_KEY,
+  encryptDisplayMeta,
+  generateMasterKey,
+  useVault,
+} = await import("../crypto");
 
 const nodeId = "node-1";
 const parentId = "parent-1";
@@ -34,12 +41,12 @@ const makeNode = (id = nodeId) => ({
   metadata: {},
 });
 
-const makeContent = () => ({
+const makeContent = (files: unknown[] = []) => ({
   id: nodeId,
   createdAt: "2026-05-17T00:00:00Z",
   updatedAt: "2026-05-17T00:00:00Z",
   nodes: [makeNode("child-1")],
-  files: [],
+  files,
 });
 
 beforeEach(() => {
@@ -48,6 +55,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  useVault.getState().lock();
 });
 
 describe("nodesApi reads", () => {
@@ -96,6 +104,40 @@ describe("nodesApi reads", () => {
     });
     expect(result.content.nodes[0].id).toBe("child-1");
     expect(result.totalCount).toBe(5);
+  });
+
+  it("decorates encrypted child file names when the vault is unlocked", async () => {
+    useVault.getState().unlock(await generateMasterKey());
+    const encryptedMeta = await encryptDisplayMeta({
+      name: "private.pdf",
+      contentType: "application/pdf",
+    });
+    vi.spyOn(httpClient, "get").mockResolvedValue({
+      data: makeContent([
+        {
+          id: "file-1",
+          createdAt: "2026-05-17T00:00:00Z",
+          updatedAt: "2026-05-17T00:00:00Z",
+          nodeId,
+          ownerId: "owner-1",
+          name: "11111111-2222-4333-8444-555555555555",
+          contentType: "application/octet-stream",
+          sizeBytes: 10,
+          metadata: {
+            [ENCRYPTED_FLAG_KEY]: "true",
+            [DISPLAY_META_KEY]: encryptedMeta,
+          },
+        },
+      ]),
+      headers: { "x-total-count": "1" },
+    });
+
+    const result = await nodesApi.getChildren(nodeId);
+
+    expect(result.content.files[0]).toMatchObject({
+      name: "private.pdf",
+      contentType: "application/pdf",
+    });
   });
 
   it("threads nodeType, pagination, and depth into children request", async () => {

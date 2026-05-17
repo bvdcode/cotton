@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NoKeyError } from "./errors";
 import { generateMasterKey } from "./keys";
-import { requireMasterKey, useVault } from "./vault";
+import { requireMasterKey, requireMetadataKey, useVault } from "./vault";
 
 describe("vault", () => {
   it("keeps the master key in tab memory only", async () => {
@@ -17,5 +17,23 @@ describe("vault", () => {
     useVault.getState().lock();
     expect(useVault.getState().masterKey).toBeNull();
     expect(useVault.getState().isUnlocked).toBe(false);
+  });
+
+  it("derives metadata keys per unlocked master key and clears them on lock", async () => {
+    const firstMasterKey = await generateMasterKey();
+    const secondMasterKey = await generateMasterKey();
+
+    useVault.getState().lock();
+    await expect(requireMetadataKey()).rejects.toBeInstanceOf(NoKeyError);
+
+    useVault.getState().unlock(firstMasterKey);
+    const firstMetadataKey = await requireMetadataKey();
+    await expect(requireMetadataKey()).resolves.toBe(firstMetadataKey);
+
+    useVault.getState().lock();
+    await expect(requireMetadataKey()).rejects.toBeInstanceOf(NoKeyError);
+
+    useVault.getState().unlock(secondMasterKey);
+    await expect(requireMetadataKey()).resolves.not.toBe(firstMetadataKey);
   });
 });

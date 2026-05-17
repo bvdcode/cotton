@@ -1,10 +1,12 @@
 import type { Guid } from "../api/layoutsApi";
 import { filesApi } from "../api/filesApi";
 import {
+  DISPLAY_META_KEY,
   ENCRYPTED_CONTENT_TYPE,
   ENCRYPTED_FLAG_KEY,
-  ORIGINAL_CONTENT_TYPE_KEY,
+  encryptDisplayMeta,
   encryptFileToBlob,
+  randomBytes,
   requireMasterKey,
 } from "../crypto";
 import { uploadConfig } from "./config";
@@ -27,15 +29,22 @@ export async function uploadFileToNode(options: {
     file.type && file.type.length > 0 ? file.type : ENCRYPTED_CONTENT_TYPE;
   let uploadBlob: Blob = file;
   let contentType = originalContentType;
+  let name = file.name;
   let metadata: Record<string, string> | undefined;
 
   if (options.encrypt) {
     const masterKey = requireMasterKey();
+    const encryptedDisplayMeta = await encryptDisplayMeta({
+      name: file.name,
+      contentType: originalContentType,
+    });
+
     uploadBlob = await encryptFileToBlob(file, masterKey);
     contentType = ENCRYPTED_CONTENT_TYPE;
+    name = createOpaqueServerFileName();
     metadata = {
       [ENCRYPTED_FLAG_KEY]: "true",
-      [ORIGINAL_CONTENT_TYPE_KEY]: originalContentType,
+      [DISPLAY_META_KEY]: encryptedDisplayMeta,
     };
   }
 
@@ -56,10 +65,29 @@ export async function uploadFileToNode(options: {
   await filesApi.createFromChunks({
     nodeId,
     chunkHashes,
-    name: file.name,
+    name,
     contentType,
     hash: fileHash,
     originalNodeFileId: null,
     metadata,
   });
+}
+
+function createOpaqueServerFileName(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  const bytes = randomBytes(16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+
+  return [
+    hex.slice(0, 4).join(""),
+    hex.slice(4, 6).join(""),
+    hex.slice(6, 8).join(""),
+    hex.slice(8, 10).join(""),
+    hex.slice(10, 16).join(""),
+  ].join("-");
 }

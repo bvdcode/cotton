@@ -1,6 +1,7 @@
 import { httpClient } from "./httpClient";
 import { InterfaceLayoutType } from "./types/InterfaceLayoutType";
 import type { NodeFileManifestDto } from "./nodesApi";
+import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
 
 export { InterfaceLayoutType };
 
@@ -95,8 +96,13 @@ export const layoutsApi = {
     const headerRaw = response.headers["x-total-count"];
     const totalCount = headerRaw ? parseInt(headerRaw, 10) : 0;
 
+    const files = await applyDisplayMetaToFiles(response.data.files);
+
     return {
-      data: response.data,
+      data:
+        files === response.data.files
+          ? response.data
+          : { ...response.data, files },
       totalCount,
     };
   },
@@ -121,6 +127,6 @@ export const layoutsApi = {
       `/layouts/${layoutId}/recent`,
       { params: { count } },
     );
-    return response.data;
+    return await applyDisplayMetaToFiles(response.data);
   },
 };

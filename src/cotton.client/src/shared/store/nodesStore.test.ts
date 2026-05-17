@@ -6,6 +6,13 @@ vi.mock("./nodesActionInternals", () => ({
 
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
+import {
+  DISPLAY_META_KEY,
+  ENCRYPTED_FLAG_KEY,
+  encryptDisplayMeta,
+  generateMasterKey,
+  useVault,
+} from "../crypto";
 import { resetNodesActionsInternals } from "./nodesActionInternals";
 import { useNodesStore } from "./nodesStore";
 
@@ -75,6 +82,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetStore();
+  useVault.getState().lock();
 });
 
 describe("addFolderToCache", () => {
@@ -223,6 +231,34 @@ describe("optimisticDeleteFile", () => {
 
     useNodesStore.getState().optimisticDeleteFile("nowhere", "anything");
     expect(useNodesStore.getState().contentByNodeId["nowhere"]).toBeUndefined();
+  });
+});
+
+describe("refreshCachedFileDisplayMetadata", () => {
+  it("updates cached encrypted file names after the vault is unlocked", async () => {
+    useVault.getState().unlock(await generateMasterKey());
+    const encryptedMeta = await encryptDisplayMeta({
+      name: "private.pdf",
+      contentType: "application/pdf",
+    });
+    seedParent("parent-1", [], [
+      makeFile("f1", "11111111-2222-4333-8444-555555555555", {
+        contentType: "application/octet-stream",
+        metadata: {
+          [ENCRYPTED_FLAG_KEY]: "true",
+          [DISPLAY_META_KEY]: encryptedMeta,
+        },
+      }),
+    ]);
+
+    await useNodesStore.getState().refreshCachedFileDisplayMetadata();
+
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0],
+    ).toMatchObject({
+      name: "private.pdf",
+      contentType: "application/pdf",
+    });
   });
 });
 

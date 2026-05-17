@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { NodeContentDto } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
+import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
 import { resetNodesActionsInternals } from "./nodesActionInternals";
 
 type NodesState = {
@@ -24,6 +25,7 @@ type NodesState = {
     previewHashEncryptedHex: string,
   ) => void;
   optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
+  refreshCachedFileDisplayMetadata: () => Promise<void>;
   reset: (cacheOwnerUserId?: string | null) => void;
 };
 
@@ -105,7 +107,7 @@ const safeSessionStorage = {
 
 export const useNodesStore = create<NodesState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       cacheOwnerUserId: null,
       currentNode: null,
       ancestors: [],
@@ -241,6 +243,47 @@ export const useNodesStore = create<NodesState>()(
               },
             },
           };
+        });
+      },
+
+      refreshCachedFileDisplayMetadata: async () => {
+        const snapshots = Object.entries(get().contentByNodeId)
+          .filter(
+            (entry): entry is [string, NodeContentDto] =>
+              entry[1] !== undefined,
+          )
+          .map(([nodeId, content]) => ({ nodeId, content }));
+
+        if (snapshots.length === 0) {
+          return;
+        }
+
+        const decorated = await Promise.all(
+          snapshots.map(async ({ nodeId, content }) => ({
+            nodeId,
+            content,
+            files: await applyDisplayMetaToFiles(content.files),
+          })),
+        );
+
+        set((prev) => {
+          let changed = false;
+          const contentByNodeId = { ...prev.contentByNodeId };
+
+          for (const item of decorated) {
+            const current = prev.contentByNodeId[item.nodeId];
+            if (current !== item.content || item.files === item.content.files) {
+              continue;
+            }
+
+            contentByNodeId[item.nodeId] = {
+              ...item.content,
+              files: item.files,
+            };
+            changed = true;
+          }
+
+          return changed ? { contentByNodeId } : {};
         });
       },
 
