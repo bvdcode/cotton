@@ -15,6 +15,8 @@ public class FileManifestServiceContentTypeTests
     [TestCase("VID_1.mov", "application/octet-stream", "video/quicktime")]
     [TestCase("VID_1.MOV", "", "video/quicktime")]
     [TestCase("VID_1.mkv", "application/octet-stream", "video/x-matroska")]
+    [TestCase("VID_1.avi", "application/octet-stream", "video/x-msvideo")]
+    [TestCase("VID_1.AVI", "", "video/x-msvideo")]
     [TestCase("AUDIO_1.opus", "application/octet-stream", "audio/opus")]
     [TestCase("AUDIO_1.flac", "application/octet-stream", "audio/flac")]
     [TestCase("AUDIO_1.m4b", "application/octet-stream", "audio/mp4")]
@@ -38,6 +40,9 @@ public class FileManifestServiceContentTypeTests
 
     [TestCase("video/mov", "video/quicktime")]
     [TestCase("video/x-quicktime", "video/quicktime")]
+    [TestCase("video/vnd.avi", "video/x-msvideo")]
+    [TestCase("video/avi", "video/x-msvideo")]
+    [TestCase("video/msvideo", "video/x-msvideo")]
     [TestCase("image/x-heic", "image/heic")]
     [TestCase("image/x-heif", "image/heif")]
     [TestCase("audio/x-flac", "audio/flac")]

@@ -28,6 +28,7 @@ namespace Cotton.Server.Services
                 [".mov"] = "video/quicktime",
                 [".qt"] = "video/quicktime",
                 [".mkv"] = "video/x-matroska",
+                [".avi"] = "video/x-msvideo",
                 [".mka"] = "audio/x-matroska",
 
                 [".opus"] = "audio/opus",
@@ -98,6 +99,9 @@ namespace Cotton.Server.Services
             {
                 "video/mov" => "video/quicktime",
                 "video/x-quicktime" => "video/quicktime",
+                "video/vnd.avi" => "video/x-msvideo",
+                "video/avi" => "video/x-msvideo",
+                "video/msvideo" => "video/x-msvideo",
                 "image/x-heic" => "image/heic",
                 "image/x-heif" => "image/heif",
                 "audio/x-flac" => "audio/flac",
