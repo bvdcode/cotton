@@ -55,33 +55,29 @@ public class WebDavMoveRequestHandler(
 {
     public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
     {
+        // First resolve: only used to compute the lock key. We re-resolve the
+        // source inside the lock to defeat the TOCTOU window — another request
+        // can move/delete/replace SourcePath between this read and the lock.
+        var preLockSource = await ResolveSourceAsync(request, ct);
+        var preLockFailure = TryGetSourceValidationFailure(request, preLockSource);
+        if (preLockFailure is not null)
+        {
+            return preLockFailure;
+        }
+
+        Guid sourceLayoutId = await GetSourceLayoutIdAsync(preLockSource, ct);
+
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, ct);
+
+        // Re-resolve inside the lock so descendant checks, oldParentId, and the
+        // mutated entity all reference the current state, not a stale snapshot.
         var sourceResult = await ResolveSourceAsync(request, ct);
         var sourceValidationFailure = TryGetSourceValidationFailure(request, sourceResult);
         if (sourceValidationFailure is not null)
         {
             return sourceValidationFailure;
         }
-
-        // Per-layout serialization for tree/namespace mutations. Without this,
-        // two concurrent WebDAV swap MOVEs (A→/b/a and B→/a/b) can each pass
-        // IsDescendantAsync on the pre-update tree and both commit, creating a cycle.
-        // The resolver doesn't include Node on NodeFile, so the file path looks
-        // the LayoutId up by the parent NodeId.
-        Guid sourceLayoutId;
-        if (sourceResult.IsCollection)
-        {
-            sourceLayoutId = sourceResult.Node!.LayoutId;
-        }
-        else
-        {
-            sourceLayoutId = await _dbContext.Nodes
-                .AsNoTracking()
-                .Where(n => n.Id == sourceResult.NodeFile!.NodeId)
-                .Select(n => n.LayoutId)
-                .SingleAsync(ct);
-        }
-        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, ct);
 
         var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
         var destParentFailure = TryGetDestinationParentFailure(destParentResult);
@@ -115,6 +111,21 @@ public class WebDavMoveRequestHandler(
 
         var movedIds = GetMovedIds(sourceResult);
         return Ok(overwriteResult.Created, movedIds.NodeId, movedIds.NodeFileId);
+    }
+
+    private async Task<Guid> GetSourceLayoutIdAsync(WebDavResolveResult source, CancellationToken ct)
+    {
+        // The resolver does not include Node on NodeFile, so we look the file's
+        // layout up by its parent NodeId.
+        if (source.IsCollection)
+        {
+            return source.Node!.LayoutId;
+        }
+        return await _dbContext.Nodes
+            .AsNoTracking()
+            .Where(n => n.Id == source.NodeFile!.NodeId)
+            .Select(n => n.LayoutId)
+            .SingleAsync(ct);
     }
 
     private static WebDavMoveResult Ok(bool created, Guid? movedNodeId, Guid? movedNodeFileId) =>
