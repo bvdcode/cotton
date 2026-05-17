@@ -1241,6 +1241,10 @@
         "switchToOriginal": "Switch to original",
         "switchToPreview": "Switch to preview"
       },
+      "video": {
+        "transcodeNotice": "Preparing this video for browser playback. First start or seeking may take a moment.",
+        "transcodeError": "This browser cannot play the prepared video stream."
+      },
       "errors": {
         "loadFailed": "Failed to load file{{error}}",
         "saveFailed": "Failed to save file content",

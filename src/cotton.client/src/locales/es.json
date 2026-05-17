@@ -1263,6 +1263,10 @@
         "switchToOriginal": "Cambiar a original",
         "switchToPreview": "Cambiar a vista previa"
       },
+      "video": {
+        "transcodeNotice": "Preparando este video para reproducirlo en el navegador. El primer inicio o la búsqueda pueden tardar un momento.",
+        "transcodeError": "Este navegador no puede reproducir el flujo de video preparado."
+      },
       "errors": {
         "loadFailed": "No se pudo cargar el archivo{{error}}",
         "saveFailed": "No se pudo guardar el contenido del archivo",

@@ -147,9 +147,6 @@ export const SharePage: React.FC = () => {
 
       switch (outcome.kind) {
         case "shared":
-          toast.success(t("toasts.shared", { ns: "share" }), {
-            toastId: "share-page-shared",
-          });
           return;
         case "copied":
           markCopied();

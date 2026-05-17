@@ -2,6 +2,7 @@ import * as React from "react";
 import hlsScriptUrl from "hls.js/dist/hls.min.js?url";
 
 const HLS_PLAYLIST_MIME_TYPE = "application/vnd.apple.mpegurl";
+const TRANSCODE_NOTICE_MS = 7000;
 
 interface HlsLevel {
   name?: string;
@@ -45,6 +46,8 @@ interface HlsVideoSlideProps {
   width?: number;
   height?: number;
   active: boolean;
+  noticeText: string;
+  errorText: string;
 }
 
 let hlsLoadPromise: Promise<HlsConstructor> | null = null;
@@ -96,8 +99,30 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
   width,
   height,
   active,
+  noticeText,
+  errorText,
 }) => {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [noticeVisible, setNoticeVisible] = React.useState(false);
+  const [loadFailed, setLoadFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!active) {
+      setNoticeVisible(false);
+      setLoadFailed(false);
+      return;
+    }
+
+    setNoticeVisible(true);
+    setLoadFailed(false);
+    const timer = window.setTimeout(() => {
+      setNoticeVisible(false);
+    }, TRANSCODE_NOTICE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [active, src]);
 
   React.useEffect(() => {
     if (!active) {
@@ -113,7 +138,21 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
     let hlsInstance: HlsInstance | null = null;
 
     void (async () => {
-      const Hls = await loadHls();
+      let Hls: HlsConstructor;
+      try {
+        Hls = await loadHls();
+      } catch {
+        if (!cancelled && videoElement.canPlayType(HLS_PLAYLIST_MIME_TYPE)) {
+          videoElement.src = src;
+          return;
+        }
+
+        if (!cancelled) {
+          setLoadFailed(true);
+        }
+        return;
+      }
+
       if (cancelled || !videoRef.current) {
         return;
       }
@@ -121,7 +160,9 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
       if (!Hls.isSupported()) {
         if (videoElement.canPlayType(HLS_PLAYLIST_MIME_TYPE)) {
           videoElement.src = src;
+          return;
         }
+        setLoadFailed(true);
         return;
       }
 
@@ -165,20 +206,32 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
   }, [src, active]);
 
   return (
-    <video
-      ref={videoRef}
-      poster={poster}
-      controls
-      playsInline
-      autoPlay
-      preload="metadata"
-      style={{
-        maxWidth: "100%",
-        maxHeight: "100%",
-        width: width ? `${width}px` : undefined,
-        height: height ? `${height}px` : undefined,
-        objectFit: "contain",
-      }}
-    />
+    <div className="media-lightbox__hls-slide">
+      <video
+        ref={videoRef}
+        poster={poster}
+        controls
+        playsInline
+        autoPlay
+        preload="metadata"
+        style={{
+          maxWidth: "100%",
+          maxHeight: "100%",
+          width: width ? `${width}px` : undefined,
+          height: height ? `${height}px` : undefined,
+          objectFit: "contain",
+        }}
+      />
+      {noticeVisible && !loadFailed && (
+        <div className="media-lightbox__hls-notice" role="status">
+          {noticeText}
+        </div>
+      )}
+      {loadFailed && (
+        <div className="media-lightbox__hls-error" role="alert">
+          {errorText}
+        </div>
+      )}
+    </div>
   );
 };

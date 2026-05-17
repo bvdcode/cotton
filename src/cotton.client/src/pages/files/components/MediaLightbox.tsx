@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import "./MediaLightbox.css";
@@ -49,7 +50,10 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   smoothTransitions = true,
   getDownloadUrl,
 }) => {
+  const { t } = useTranslation("files");
   const [index, setIndex] = React.useState(initialIndex);
+  const hlsNoticeText = t("preview.video.transcodeNotice");
+  const hlsErrorText = t("preview.video.transcodeError");
   const preferPreview = useLocalPreferencesStore(selectGalleryPreferPreview);
   const currentItemId = React.useMemo(
     () => (open ? items[index]?.id ?? null : null),
@@ -253,6 +257,8 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
               width={hlsSlide.width}
               height={hlsSlide.height}
               active={offset === 0 && hlsSlide.fileId === currentItemId}
+              noticeText={hlsNoticeText}
+              errorText={hlsErrorText}
             />
           </React.Suspense>
         );
@@ -322,7 +328,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         );
       },
     }),
-    [currentItemId, handleSlideImageError],
+    [currentItemId, handleSlideImageError, hlsErrorText, hlsNoticeText],
   );
 
   const lightboxDownload = React.useMemo(
