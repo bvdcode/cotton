@@ -13,6 +13,9 @@ import {
 } from "./shared/store/userPreferencesStore";
 import { useUserPreferencesRealtimeEvents } from "./shared/store/useUserPreferencesRealtimeEvents";
 import { ToastContainer } from "react-toastify";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "./shared/api/queries/queryClient";
 
 const EventHubBootstrap = () => {
   useEventHub();
@@ -50,18 +53,21 @@ const ToastBootstrap = () => {
 
 function App() {
   return (
-    <ThemeContextProvider>
-      <ConfirmProvider>
-        <AuthProvider>
-          <EventHubBootstrap />
-          <LanguageBootstrap />
-          <ToastBootstrap />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </AuthProvider>
-      </ConfirmProvider>
-    </ThemeContextProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeContextProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <EventHubBootstrap />
+            <LanguageBootstrap />
+            <ToastBootstrap />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </AuthProvider>
+        </ConfirmProvider>
+      </ThemeContextProvider>
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+    </QueryClientProvider>
   );
 }
 
