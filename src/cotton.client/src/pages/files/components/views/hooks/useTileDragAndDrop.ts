@@ -58,6 +58,12 @@ export const useTileDragAndDrop = ({
           id: tile.file.id,
           kind: "file",
           sourceParentId: tile.file.nodeId ?? currentParentId,
+          file: {
+            name: tile.file.name,
+            contentType: tile.file.contentType,
+            sizeBytes: tile.file.sizeBytes,
+            metadata: "metadata" in tile.file ? tile.file.metadata : {},
+          },
         },
       ];
     },

@@ -3,12 +3,25 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
+import type { NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
+import { getCachedServerSettings } from "../api/queries/serverSettings";
 import { refreshNodeContent } from "../store/nodesActions";
 import {
   useMoveClipboardStore,
   type MoveClipboardItem,
 } from "../store/moveClipboardStore";
+import { useNodesStore } from "../store/nodesStore";
+import {
+  ClientEncryptionSizeLimitError,
+  assertClientEncryptionBlobPipelineSize,
+  isFileEncrypted,
+  isFolderEncryptionPolicyEnabled,
+  useVault,
+} from "../crypto";
+import { encryptExistingFileInPlace } from "../upload";
+import { taskManager } from "../tasks";
+import { formatBytes } from "../utils/formatBytes";
 
 /**
  * Non-authoritative drag hint type. Used so synchronous drag-over handlers can
@@ -174,6 +187,33 @@ const extractErrorMessage = (error: unknown): string | null => {
   return null;
 };
 
+const findCachedNode = (nodeId: string): NodeDto | null => {
+  const state = useNodesStore.getState();
+
+  if (state.currentNode?.id === nodeId) {
+    return state.currentNode;
+  }
+
+  const ancestor = state.ancestors.find((node) => node.id === nodeId);
+  if (ancestor) {
+    return ancestor;
+  }
+
+  for (const content of Object.values(state.contentByNodeId)) {
+    const node = content?.nodes.find((item) => item.id === nodeId);
+    if (node) {
+      return node;
+    }
+  }
+
+  return null;
+};
+
+const needsEncryptionAfterMove = (item: MoveClipboardItem): boolean =>
+  item.kind === "file" &&
+  item.file !== undefined &&
+  !isFileEncrypted(item.file.metadata);
+
 interface MoveOutcome {
   succeeded: ReadonlyArray<MoveClipboardItem>;
   failed: ReadonlyArray<MoveClipboardItem>;
@@ -226,9 +266,70 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
         return { succeeded: [], failed: [], lastErrorMessage: null };
       }
 
+      const targetNode = findCachedNode(targetParentId);
+      const targetEncryptsNewFiles = isFolderEncryptionPolicyEnabled(
+        targetNode?.metadata,
+      );
+      const filesToEncrypt = targetEncryptsNewFiles
+        ? candidates.filter(needsEncryptionAfterMove)
+        : [];
+      const encryptionServerSettings =
+        filesToEncrypt.length > 0 ? getCachedServerSettings() : null;
+
+      if (filesToEncrypt.length > 0) {
+        if (!useVault.getState().isUnlocked) {
+          const message = t("common:clientEncryption.vaultLockedForDownload");
+          toast.error(message);
+          return {
+            succeeded: [],
+            failed: candidates,
+            lastErrorMessage: message,
+          };
+        }
+
+        if (!encryptionServerSettings) {
+          const message = t("tasks.errors.serverSettingsNotLoaded", {
+            ns: "files",
+          });
+          toast.error(message);
+          return {
+            succeeded: [],
+            failed: candidates,
+            lastErrorMessage: message,
+          };
+        }
+
+        try {
+          for (const item of filesToEncrypt) {
+            assertClientEncryptionBlobPipelineSize(
+              item.file?.sizeBytes ?? 0,
+              "encrypt",
+            );
+          }
+        } catch (error) {
+          const message =
+            error instanceof ClientEncryptionSizeLimitError
+              ? t("tasks.errors.clientEncryptionFileTooLarge", {
+                  ns: "files",
+                  maxSize: formatBytes(error.maxBytes),
+                })
+              : t("move.toasts.failed", {
+                  ns: "files",
+                  count: filesToEncrypt.length,
+                });
+          toast.error(message);
+          return {
+            succeeded: [],
+            failed: candidates,
+            lastErrorMessage: message,
+          };
+        }
+      }
+
       const sourceParents = new Set<string>();
       const succeeded: MoveClipboardItem[] = [];
       const failed: MoveClipboardItem[] = [];
+      const movedFilesToEncrypt: MoveClipboardItem[] = [];
       let lastErrorMessage: string | null = null;
 
       // Serial loop: the server's collision/cycle checks are pre-update reads,
@@ -243,6 +344,9 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
           }
           sourceParents.add(item.sourceParentId);
           succeeded.push(item);
+          if (targetEncryptsNewFiles && needsEncryptionAfterMove(item)) {
+            movedFilesToEncrypt.push(item);
+          }
         } catch (error) {
           failed.push(item);
           lastErrorMessage = extractErrorMessage(error) ?? lastErrorMessage;
@@ -255,6 +359,74 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       parentsToRefresh.add(targetParentId);
       for (const id of parentsToRefresh) {
         void refreshNodeContent(id);
+      }
+
+      if (movedFilesToEncrypt.length > 0) {
+        const settings = encryptionServerSettings;
+        if (!settings) return { succeeded, failed, lastErrorMessage };
+
+        for (const item of movedFilesToEncrypt) {
+          if (!item.file) continue;
+          const encryptTask = taskManager.createTask({
+            kind: "encrypt",
+            label: item.file.name,
+            scopeLabel: targetNode?.name ?? "",
+            bytesTotal: item.file.sizeBytes,
+          });
+          let encryptFinished = false;
+          try {
+            await encryptExistingFileInPlace({
+              file: {
+                id: item.id,
+                name: item.file.name,
+                contentType: item.file.contentType,
+                sizeBytes: item.file.sizeBytes,
+              },
+              targetNodeId: targetParentId,
+              server: {
+                maxChunkSizeBytes: settings.maxChunkSizeBytes,
+                supportedHashAlgorithm: settings.supportedHashAlgorithm,
+              },
+              onEncryptProgress: (bytesEncrypted, bytesTotal) => {
+                encryptTask.update({
+                  status: "running",
+                  bytesTotal,
+                  bytesCompleted: bytesEncrypted,
+                });
+              },
+              onUploadProgress: (bytesUploaded, uploadTotal) => {
+                const bytesTotal = item.file!.sizeBytes + uploadTotal;
+                encryptTask.update({
+                  status: "running",
+                  bytesTotal,
+                  bytesCompleted: item.file!.sizeBytes + bytesUploaded,
+                });
+              },
+              onFinalizing: () => {
+                encryptTask.update({ status: "finalizing" });
+              },
+            });
+            encryptFinished = true;
+            encryptTask.complete();
+          } catch (error) {
+            encryptTask.fail({
+              message: error instanceof Error ? error.message : undefined,
+              key: error instanceof ClientEncryptionSizeLimitError
+                ? "clientEncryptionFileTooLarge"
+                : "encryptionFailed",
+              params: error instanceof ClientEncryptionSizeLimitError
+                ? { maxSize: formatBytes(error.maxBytes) }
+                : undefined,
+            });
+            if (!encryptFinished) {
+              failed.push(item);
+              lastErrorMessage =
+                error instanceof Error ? error.message : lastErrorMessage;
+            }
+          }
+        }
+
+        void refreshNodeContent(targetParentId);
       }
 
       if (succeeded.length > 0) {

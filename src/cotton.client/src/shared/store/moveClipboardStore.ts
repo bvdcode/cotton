@@ -2,11 +2,19 @@ import { create } from "zustand";
 
 export type MoveClipboardKind = "folder" | "file";
 
+export interface MoveClipboardFileSnapshot {
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  metadata: Record<string, string>;
+}
+
 export interface MoveClipboardItem {
   id: string;
   kind: MoveClipboardKind;
   /** The parent node ID the item belonged to at the moment it was cut. */
   sourceParentId: string;
+  file?: MoveClipboardFileSnapshot;
 }
 
 interface MoveClipboardState {

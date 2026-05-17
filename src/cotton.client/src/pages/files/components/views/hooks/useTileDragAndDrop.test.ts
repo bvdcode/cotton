@@ -141,6 +141,12 @@ describe("useTileDragAndDrop drag start", () => {
           id: "file-1",
           kind: "file",
           sourceParentId: "file-parent",
+          file: {
+            name: "file-1.txt",
+            contentType: "text/plain",
+            sizeBytes: 1,
+            metadata: {},
+          },
         },
       ],
     });

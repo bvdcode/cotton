@@ -84,7 +84,7 @@ export async function uploadFileToNode(options: {
   });
 }
 
-function createOpaqueServerFileName(): string {
+export function createOpaqueServerFileName(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }

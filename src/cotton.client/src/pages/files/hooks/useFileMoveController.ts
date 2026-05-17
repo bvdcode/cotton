@@ -96,6 +96,12 @@ export const useFileMoveController = ({
             id: tile.file.id,
             kind: "file",
             sourceParentId: tile.file.nodeId ?? nodeId,
+            file: {
+              name: tile.file.name,
+              contentType: tile.file.contentType,
+              sizeBytes: tile.file.sizeBytes,
+              metadata: "metadata" in tile.file ? tile.file.metadata : {},
+            },
           });
         }
       }
@@ -232,10 +238,26 @@ export const useFileMoveController = ({
   const handleCutFile = useCallback(
     (fileId: string) => {
       if (!nodeId) return;
-      moveOps.cutItems([{ id: fileId, kind: "file", sourceParentId: nodeId }]);
+      const tile = tiles.find(
+        (item) => item.kind === "file" && item.file.id === fileId,
+      );
+      if (!tile || tile.kind !== "file") return;
+      moveOps.cutItems([
+        {
+          id: fileId,
+          kind: "file",
+          sourceParentId: nodeId,
+          file: {
+            name: tile.file.name,
+            contentType: tile.file.contentType,
+            sizeBytes: tile.file.sizeBytes,
+            metadata: "metadata" in tile.file ? tile.file.metadata : {},
+          },
+        },
+      ]);
       showToast(t("move.toasts.cut", { ns: "files", count: 1 }));
     },
-    [moveOps, nodeId, showToast, t],
+    [moveOps, nodeId, showToast, t, tiles],
   );
 
   return {

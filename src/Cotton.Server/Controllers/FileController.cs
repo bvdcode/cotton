@@ -366,30 +366,93 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeFileId,
             [FromBody] CreateFileRequest request)
         {
+            bool isValidName = NameValidator.TryNormalizeAndValidate(request.Name,
+                out string normalizedName,
+                out string? errorMessage);
+            if (!isValidName)
+            {
+                return CottonResult.BadRequest(errorMessage);
+            }
+
             Guid userId = User.GetUserId();
-            var nodeFile = await _dbContext.NodeFiles
-                .Include(x => x.FileManifest)
+            var layoutId = await _dbContext.NodeFiles
+                .AsNoTracking()
                 .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .Select(x => (Guid?)x.Node.LayoutId)
                 .SingleOrDefaultAsync();
-            if (nodeFile == null)
+            if (layoutId is null)
             {
                 return this.ApiNotFound("Node file not found.");
             }
+
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
-            if (nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
-            {
-                return Ok();
-            }
             List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, userId);
             var newFile = await _dbContext.FileManifests
                 .FirstOrDefaultAsync(x => x.ComputedContentHash == proposedHash || x.ProposedContentHash == proposedHash)
                 ?? await _fileManifestService.CreateNewFileManifestAsync(chunks, request.Name, request.ContentType, proposedHash);
 
-            await _history.SaveVersionAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
+            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
+
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            {
+                return this.ApiNotFound("Node file not found.");
+            }
+
+            string nameKey = NameValidator.NormalizeAndGetNameKey(normalizedName);
+            if (!string.Equals(nodeFile.NameKey, nameKey, StringComparison.Ordinal))
+            {
+                bool fileExists = await _dbContext.NodeFiles
+                    .AnyAsync(x =>
+                        x.NodeId == nodeFile.NodeId &&
+                        x.OwnerId == userId &&
+                        x.NameKey == nameKey &&
+                        x.Id != nodeFileId);
+                if (fileExists)
+                {
+                    return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
+                }
+
+                bool nodeExists = await _dbContext.Nodes
+                    .AnyAsync(x =>
+                        x.ParentId == nodeFile.NodeId &&
+                        x.OwnerId == userId &&
+                        x.Type == nodeFile.Node.Type &&
+                        x.NameKey == nameKey);
+                if (nodeExists)
+                {
+                    return this.ApiConflict("A folder with the same name key already exists in this folder: " + nameKey);
+                }
+            }
+
+            if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
+            {
+                await _history.SaveVersionAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
+                nodeFile.FileManifest = newFile;
+            }
+
+            nodeFile.SetName(normalizedName);
+            if (request.Metadata is not null)
+            {
+                nodeFile.Metadata = request.Metadata.Count > 0
+                    ? new Dictionary<string, string>(request.Metadata)
+                    : [];
+            }
+
             await _dbContext.SaveChangesAsync();
+            await tx.CommitAsync();
+
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
-            return Ok();
+
+            var mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
+            return Ok(mapped);
         }
 
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]

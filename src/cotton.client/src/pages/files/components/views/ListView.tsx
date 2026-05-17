@@ -141,6 +141,12 @@ export const ListView: React.FC<IFileListView> = ({
             id: String(r.id),
             kind: "file",
             sourceParentId: r.containerNodeId ?? currentParentId,
+            file: {
+              name: r.name,
+              contentType: r.contentType ?? "application/octet-stream",
+              sizeBytes: r.sizeBytes ?? 0,
+              metadata: r.metadata ?? {},
+            },
           };
         }
         return null;
