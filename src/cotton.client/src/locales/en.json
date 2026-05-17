@@ -1340,11 +1340,28 @@
         "currentTitle": "This folder is encrypted",
         "goHome": "Go home"
       },
+      "mixedPlain": {
+        "title": "Some files are not E2E encrypted",
+        "description_one": "{{count}} existing file is still stored without E2E encryption.",
+        "description_other": "{{count}} existing files are still stored without E2E encryption.",
+        "action": "Encrypt",
+        "running": "Encrypting"
+      },
+      "encryptedFilesRemain": {
+        "title": "Encrypted files remain encrypted",
+        "description_one": "{{count}} file stays encrypted even though new uploads are no longer encrypted automatically.",
+        "description_other": "{{count}} files stay encrypted even though new uploads are no longer encrypted automatically."
+      },
       "toasts": {
         "policyEnabled": "New uploads to this folder will be encrypted on this device.",
         "policyDisabled": "New uploads to this folder will no longer be encrypted automatically.",
         "policyToggleFailed": "Could not update encryption policy.",
-        "setupRequired": "Set up client-side encryption before opening this folder."
+        "setupRequired": "Set up client-side encryption before opening this folder.",
+        "unlockRequired": "Unlock client-side encryption first.",
+        "encryptExistingComplete_one": "Encrypted {{count}} existing file.",
+        "encryptExistingComplete_other": "Encrypted {{count}} existing files.",
+        "encryptExistingFailed_one": "Could not encrypt {{count}} file. Check the task panel.",
+        "encryptExistingFailed_other": "Could not encrypt {{count}} files. Check the task panel."
       }
     }
   },

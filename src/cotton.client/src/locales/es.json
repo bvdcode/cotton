@@ -1362,11 +1362,28 @@
         "currentTitle": "Esta carpeta esta cifrada",
         "goHome": "Ir al inicio"
       },
+      "mixedPlain": {
+        "title": "Algunos archivos no tienen E2E",
+        "description_one": "{{count}} archivo existente sigue guardado sin cifrado E2E.",
+        "description_other": "{{count}} archivos existentes siguen guardados sin cifrado E2E.",
+        "action": "Cifrar",
+        "running": "Cifrando"
+      },
+      "encryptedFilesRemain": {
+        "title": "Los archivos cifrados siguen cifrados",
+        "description_one": "{{count}} archivo seguirá cifrado aunque las nuevas subidas ya no se cifren automáticamente.",
+        "description_other": "{{count}} archivos seguirán cifrados aunque las nuevas subidas ya no se cifren automáticamente."
+      },
       "toasts": {
         "policyEnabled": "Las nuevas subidas a esta carpeta se cifrarán en este dispositivo.",
         "policyDisabled": "Las nuevas subidas a esta carpeta ya no se cifrarán automáticamente.",
         "policyToggleFailed": "No se pudo actualizar la política de cifrado.",
-        "setupRequired": "Configura el cifrado del cliente antes de abrir esta carpeta."
+        "setupRequired": "Configura el cifrado del cliente antes de abrir esta carpeta.",
+        "unlockRequired": "Desbloquea primero el cifrado del cliente.",
+        "encryptExistingComplete_one": "Se cifró {{count}} archivo existente.",
+        "encryptExistingComplete_other": "Se cifraron {{count}} archivos existentes.",
+        "encryptExistingFailed_one": "No se pudo cifrar {{count}} archivo. Revisa el panel de tareas.",
+        "encryptExistingFailed_other": "No se pudieron cifrar {{count}} archivos. Revisa el panel de tareas."
       }
     }
   },

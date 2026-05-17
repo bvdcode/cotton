@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { Alert, Box, Dialog, DialogTitle } from "@mui/material";
+import { Alert, Box, Button, Dialog, DialogTitle } from "@mui/material";
 import { ContentCut, ContentPaste, Delete } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import {
@@ -58,6 +58,7 @@ import {
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
+import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
@@ -225,6 +226,13 @@ export const FilesPage: React.FC = () => {
     },
     [],
   );
+
+  const folderEncryptionActions = useFolderClientEncryptionActions({
+    nodeId,
+    currentNode,
+    content: effectiveContent,
+    onToast: showToast,
+  });
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {
@@ -633,6 +641,60 @@ export const FilesPage: React.FC = () => {
             <Alert severity="error">{error}</Alert>
           </Box>
         )}
+        {folderEncryptionActions.folderPolicyEnabled &&
+          folderEncryptionActions.plainFiles.length > 0 && (
+            <Box mb={1} px={1}>
+              <Alert
+                severity="warning"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    disabled={folderEncryptionActions.isEncryptingPlainFiles}
+                    onClick={() => {
+                      void folderEncryptionActions.encryptPlainFiles();
+                    }}
+                  >
+                    {folderEncryptionActions.isEncryptingPlainFiles
+                      ? t("clientEncryption.mixedPlain.running", {
+                          ns: "files",
+                        })
+                      : t("clientEncryption.mixedPlain.action", {
+                          ns: "files",
+                        })}
+                  </Button>
+                }
+              >
+                <strong>
+                  {t("clientEncryption.mixedPlain.title", { ns: "files" })}
+                </strong>
+                <Box component="span" sx={{ display: "block" }}>
+                  {t("clientEncryption.mixedPlain.description", {
+                    ns: "files",
+                    count: folderEncryptionActions.plainFiles.length,
+                  })}
+                </Box>
+              </Alert>
+            </Box>
+          )}
+        {!folderEncryptionActions.folderPolicyEnabled &&
+          folderEncryptionActions.encryptedFiles.length > 0 && (
+            <Box mb={1} px={1}>
+              <Alert severity="info">
+                <strong>
+                  {t("clientEncryption.encryptedFilesRemain.title", {
+                    ns: "files",
+                  })}
+                </strong>
+                <Box component="span" sx={{ display: "block" }}>
+                  {t("clientEncryption.encryptedFilesRemain.description", {
+                    ns: "files",
+                    count: folderEncryptionActions.encryptedFiles.length,
+                  })}
+                </Box>
+              </Alert>
+            </Box>
+          )}
 
         <Box
           sx={

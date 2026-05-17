@@ -5,7 +5,8 @@ import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
-import { getCachedServerSettings } from "../api/queries/serverSettings";
+import { fetchServerSettings } from "../api/queries/serverSettings";
+import { queryClient } from "../api/queries/queryClient";
 import { refreshNodeContent } from "../store/nodesActions";
 import {
   useMoveClipboardStore,
@@ -19,8 +20,7 @@ import {
   isFolderEncryptionPolicyEnabled,
   useVault,
 } from "../crypto";
-import { encryptExistingFileInPlace } from "../upload";
-import { taskManager } from "../tasks";
+import { encryptExistingFileWithTask } from "../tasks";
 import { formatBytes } from "../utils/formatBytes";
 
 /**
@@ -273,8 +273,9 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       const filesToEncrypt = targetEncryptsNewFiles
         ? candidates.filter(needsEncryptionAfterMove)
         : [];
-      const encryptionServerSettings =
-        filesToEncrypt.length > 0 ? getCachedServerSettings() : null;
+      let encryptionServerSettings: Awaited<
+        ReturnType<typeof fetchServerSettings>
+      > | null = null;
 
       if (filesToEncrypt.length > 0) {
         if (!useVault.getState().isUnlocked) {
@@ -287,9 +288,11 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
           };
         }
 
-        if (!encryptionServerSettings) {
-          const message = t("tasks.errors.serverSettingsNotLoaded", {
-            ns: "files",
+        try {
+          encryptionServerSettings = await fetchServerSettings(queryClient);
+        } catch {
+          const message = t("errors.serverSettingsNotLoaded", {
+            ns: "tasks",
           });
           toast.error(message);
           return {
@@ -367,15 +370,9 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
 
         for (const item of movedFilesToEncrypt) {
           if (!item.file) continue;
-          const encryptTask = taskManager.createTask({
-            kind: "encrypt",
-            label: item.file.name,
-            scopeLabel: targetNode?.name ?? "",
-            bytesTotal: item.file.sizeBytes,
-          });
-          let encryptFinished = false;
+
           try {
-            await encryptExistingFileInPlace({
+            await encryptExistingFileWithTask({
               file: {
                 id: item.id,
                 name: item.file.name,
@@ -383,46 +380,16 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
                 sizeBytes: item.file.sizeBytes,
               },
               targetNodeId: targetParentId,
+              scopeLabel: targetNode?.name ?? "",
               server: {
                 maxChunkSizeBytes: settings.maxChunkSizeBytes,
                 supportedHashAlgorithm: settings.supportedHashAlgorithm,
               },
-              onEncryptProgress: (bytesEncrypted, bytesTotal) => {
-                encryptTask.update({
-                  status: "running",
-                  bytesTotal,
-                  bytesCompleted: bytesEncrypted,
-                });
-              },
-              onUploadProgress: (bytesUploaded, uploadTotal) => {
-                const bytesTotal = item.file!.sizeBytes + uploadTotal;
-                encryptTask.update({
-                  status: "running",
-                  bytesTotal,
-                  bytesCompleted: item.file!.sizeBytes + bytesUploaded,
-                });
-              },
-              onFinalizing: () => {
-                encryptTask.update({ status: "finalizing" });
-              },
             });
-            encryptFinished = true;
-            encryptTask.complete();
           } catch (error) {
-            encryptTask.fail({
-              message: error instanceof Error ? error.message : undefined,
-              key: error instanceof ClientEncryptionSizeLimitError
-                ? "clientEncryptionFileTooLarge"
-                : "encryptionFailed",
-              params: error instanceof ClientEncryptionSizeLimitError
-                ? { maxSize: formatBytes(error.maxBytes) }
-                : undefined,
-            });
-            if (!encryptFinished) {
-              failed.push(item);
-              lastErrorMessage =
-                error instanceof Error ? error.message : lastErrorMessage;
-            }
+            failed.push(item);
+            lastErrorMessage =
+              error instanceof Error ? error.message : lastErrorMessage;
           }
         }
 
