@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Button,
   Chip,
   Dialog,
@@ -10,7 +11,6 @@ import {
 import LockIcon from "@mui/icons-material/Lock";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import NoEncryptionOutlinedIcon from "@mui/icons-material/NoEncryptionOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
@@ -66,7 +66,7 @@ export const ClientEncryptionCard = ({
         : "locked"
       : "invalid";
 
-  const statusChip = getStatusChip(status, t);
+  const statusChip = status === "notSetUp" ? null : getStatusChip(status, t);
 
   return (
     <>
@@ -78,9 +78,11 @@ export const ClientEncryptionCard = ({
         description={t("clientEncryption.description")}
       >
         <Stack spacing={2} paddingY={2}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            {statusChip}
-          </Stack>
+          {statusChip && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              {statusChip}
+            </Stack>
+          )}
 
           {status === "invalid" && (
             <Alert severity="error">
@@ -94,23 +96,30 @@ export const ClientEncryptionCard = ({
             </Typography>
           )}
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            {status === "notSetUp" && (
-              <Button variant="contained" onClick={() => setSetupOpen(true)}>
+          {status === "notSetUp" ? (
+            <Box>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => setSetupOpen(true)}
+              >
                 {t("clientEncryption.actions.setup")}
               </Button>
-            )}
-            {status === "locked" && envelope && (
-              <Button variant="contained" onClick={() => setUnlockOpen(true)}>
-                {t("clientEncryption.actions.unlock")}
-              </Button>
-            )}
-            {status === "unlocked" && (
-              <Button variant="outlined" onClick={lockVault}>
-                {t("clientEncryption.actions.lock")}
-              </Button>
-            )}
-          </Stack>
+            </Box>
+          ) : (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              {status === "locked" && envelope && (
+                <Button variant="contained" onClick={() => setUnlockOpen(true)}>
+                  {t("clientEncryption.actions.unlock")}
+                </Button>
+              )}
+              {status === "unlocked" && (
+                <Button variant="outlined" onClick={lockVault}>
+                  {t("clientEncryption.actions.lock")}
+                </Button>
+              )}
+            </Stack>
+          )}
         </Stack>
       </ProfileAccordionCard>
 
@@ -153,7 +162,7 @@ export const ClientEncryptionCard = ({
 function getStatusChip(
   status: EncryptionStatus,
   t: (key: string) => string,
-): ReactElement {
+): ReactElement | null {
   if (status === "unlocked") {
     return (
       <Chip
@@ -187,11 +196,5 @@ function getStatusChip(
     );
   }
 
-  return (
-    <Chip
-      icon={<NoEncryptionOutlinedIcon />}
-      label={t("clientEncryption.status.notSetUp")}
-      size="small"
-    />
-  );
+  return null;
 }
