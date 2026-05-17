@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as THREE from "three";
-import { type ModelFormat } from "../../../utils/modelFormats";
+import { type ModelFormat } from "@shared/utils/modelFormats";
 import {
   alignModelToGround,
   applyFlipOrientation,

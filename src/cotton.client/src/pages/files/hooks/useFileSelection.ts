@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { FileSystemTile } from "../types/FileListViewTypes";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 /** Extracts the unique ID from a tile (folder or file). */
 const getTileId = (tile: FileSystemTile): string =>

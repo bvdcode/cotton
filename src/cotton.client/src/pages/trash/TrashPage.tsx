@@ -11,7 +11,7 @@ import {
   FileListViewFactory,
   PageHeader,
 } from "../files/components";
-import { Delete } from "@mui/icons-material";
+import { Delete, Restore } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
@@ -19,7 +19,8 @@ import Loader from "../../shared/ui/Loader";
 import { useTrashStore } from "../../shared/store/trashStore";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
-import { useTrashBulkActions, useTrashListData } from "./hooks";
+import { useTrashBulkActions, useTrashListData, useTrashRestoreActions } from "./hooks";
+import { RestoreConflictDialog } from "./components/RestoreConflictDialog";
 import {
   buildBreadcrumbs,
   calculateFolderStats,
@@ -32,11 +33,11 @@ import {
   selectTrashTilesSize,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
-import type { TilesSize } from "../files/types/FileListViewTypes";
+import type { TilesSize } from "@shared/types/FileListViewTypes";
 import type {
   FileOperations,
   FolderOperations,
-} from "../files/types/FileListViewTypes";
+} from "@shared/types/FileListViewTypes";
 import { useFileSelection } from "../files/hooks/useFileSelection";
 import {
   cycleFileBrowserViewMode,
@@ -50,7 +51,7 @@ type EmptyTrashProgressDialogProps = {
   progressPercent: number;
 };
 
-const EmptyTrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
+const TrashProgressDialog: React.FC<EmptyTrashProgressDialogProps> = ({
   open,
   title,
   progressPercent,
@@ -188,6 +189,21 @@ export const TrashPage: React.FC = () => {
     [isTrashRoot, effectiveContent],
   );
 
+  const {
+    restoring,
+    progress: restoreProgress,
+    errors: restoreErrors,
+    activePrompt: restorePrompt,
+    handlePromptAnswer,
+    restoreItem,
+    restoreSelected,
+    clearErrors: clearRestoreErrors,
+  } = useTrashRestoreActions({
+    fileSelection,
+    tiles,
+    refreshContent,
+  });
+
   const folderOps = useTrashFolderOperations(
     nodeId,
     refreshContent,
@@ -204,11 +220,14 @@ export const TrashPage: React.FC = () => {
       getRenamingName: () => "",
       onRenamingNameChange: () => {},
       onClick: goToFolder,
+      onRestore: (folderId: string, folderName: string) => {
+        void restoreItem({ id: folderId, kind: "folder", name: folderName });
+      },
       onDelete: (folderId: string, folderName: string) => {
         void folderOps.handleDeleteFolder(folderId, folderName);
       },
     }),
-    [folderOps, goToFolder],
+    [folderOps, goToFolder, restoreItem],
   );
 
   const fileOperations = React.useMemo<FileOperations>(
@@ -219,11 +238,14 @@ export const TrashPage: React.FC = () => {
       onClick: () => {
         // No preview/download in Trash.
       },
+      onRestore: (fileId: string, fileName: string) => {
+        void restoreItem({ id: fileId, kind: "file", name: fileName });
+      },
       onDelete: (fileId: string, fileName: string) => {
         void fileOps.handleDeleteFile(fileId, fileName);
       },
     }),
-    [fileOps],
+    [fileOps, restoreItem],
   );
 
   const stats = useMemo(
@@ -291,13 +313,23 @@ export const TrashPage: React.FC = () => {
         fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
           [
             {
+              key: "restore-selected-trash",
+              icon: <Restore />,
+              title: t("restore.action"),
+              onClick: () => {
+                void restoreSelected();
+              },
+              disabled: loading || restoring,
+              color: "primary" as const,
+            },
+            {
               key: "delete-selected-trash",
               icon: <Delete />,
               title: t("selection.deleteSelected", { ns: "files" }),
               onClick: () => {
                 void handleDeleteSelected();
               },
-              disabled: loading,
+              disabled: loading || restoring,
               color: "error" as const,
             },
           ]
@@ -327,6 +359,8 @@ export const TrashPage: React.FC = () => {
       handleGoUp,
       layoutType,
       loading,
+      restoreSelected,
+      restoring,
       stats,
       t,
       tiles,
@@ -419,6 +453,15 @@ export const TrashPage: React.FC = () => {
             <Alert severity="error">{error ?? listLoadError}</Alert>
           </Box>
         )}
+        {restoreErrors.length > 0 && (
+          <Box mb={1} px={1}>
+            <Alert severity="warning" onClose={clearRestoreErrors}>
+              <Box sx={{ whiteSpace: "pre-line" }}>
+                {restoreErrors.join("\n")}
+              </Box>
+            </Alert>
+          </Box>
+        )}
 
         <Box
           sx={
@@ -431,7 +474,7 @@ export const TrashPage: React.FC = () => {
         </Box>
       </Box>
 
-      <EmptyTrashProgressDialog
+      <TrashProgressDialog
         open={emptyingTrash}
         title={t("emptyTrash.inProgress", {
           current: emptyTrashProgress.current,
@@ -442,6 +485,26 @@ export const TrashPage: React.FC = () => {
             ? (emptyTrashProgress.current / emptyTrashProgress.total) * 100
             : 0
         }
+      />
+      <TrashProgressDialog
+        open={restoring}
+        title={t("restore.inProgress", {
+          current: restoreProgress.current,
+          total: restoreProgress.total,
+          name: restoreProgress.itemName,
+        })}
+        progressPercent={
+          restoreProgress.total > 0
+            ? (restoreProgress.current / restoreProgress.total) * 100
+            : 0
+        }
+      />
+      <RestoreConflictDialog
+        open={!!restorePrompt}
+        itemName={restorePrompt?.item.name ?? ""}
+        prompt={restorePrompt?.prompt ?? null}
+        showApplyToAll={restoreProgress.total > 1}
+        onAnswer={handlePromptAnswer}
       />
     </>
   );

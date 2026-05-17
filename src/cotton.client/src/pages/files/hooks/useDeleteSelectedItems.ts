@@ -1,6 +1,6 @@
 import * as React from "react";
 import { filesApi } from "../../../shared/api/filesApi";
-import type { FileSystemTile } from "../types/FileListViewTypes";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileSelectionState } from "./useFileSelection";
 
 type TranslationFn = (

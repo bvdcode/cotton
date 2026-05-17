@@ -8,8 +8,8 @@ import type {
   GridRowSelectionModel,
 } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
-import { getFileTypeInfo } from "../../utils/fileTypes";
-import type { IFileListView } from "../../types/FileListViewTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import type { IFileListView } from "@shared/types/FileListViewTypes";
 import { createFileListColumns, type FileListRow } from "./fileListColumns";
 import Loader from "../../../../shared/ui/Loader";
 import {
@@ -289,6 +289,7 @@ export const ListView: React.FC<IFileListView> = ({
           goToFolder: t("actions.goToFolder"),
           rename: t("common:actions.rename"),
           delete: t("common:actions.delete"),
+          restore: t("common:actions.restore"),
           download: t("common:actions.download"),
           share: t("common:actions.share"),
           cut: t("move.cut"),

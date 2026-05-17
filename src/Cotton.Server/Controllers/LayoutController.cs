@@ -226,6 +226,34 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPost("nodes/{nodeId:guid}/restore")]
+        public async Task<IActionResult> RestoreLayoutNode(
+            [FromRoute] Guid nodeId,
+            [FromBody] RestoreItemRequest? request)
+        {
+            Guid userId = User.GetUserId();
+            request ??= new RestoreItemRequest();
+
+            var outcome = await _mediator.Send(new RestoreNodeQuery(
+                userId,
+                nodeId,
+                request.CreateMissingParents,
+                request.Overwrite));
+
+            if (outcome.Status == RestoreStatus.Restored)
+            {
+                object restoredNodePayload = outcome.RestoredNode is not null
+                    ? outcome.RestoredNode
+                    : new { id = nodeId };
+                await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                    "NodeRestored",
+                    restoredNodePayload);
+            }
+
+            return Ok(outcome);
+        }
+
+        [Authorize]
         [HttpPut("nodes")]
         public async Task<IActionResult> CreateLayoutNode([FromBody] CreateNodeRequest request)
         {

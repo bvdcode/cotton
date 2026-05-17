@@ -9,7 +9,7 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import { getFileTypeInfo } from "../../../pages/files/utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { getSmallFileIcon } from "../utils/fileIcon";
 import type { SearchRow } from "../types";
 

@@ -252,11 +252,16 @@ export const useNodesStore = create<NodesState>()(
         const loadChildren = options?.loadChildren ?? true;
         lastRootResolveStartedAt = Date.now();
 
-        rootResolvePromise = (async () => {
+        const ownerAtSchedule = get().cacheOwnerUserId;
+        const isStillSameOwner = (): boolean =>
+          get().cacheOwnerUserId === ownerAtSchedule;
+
+        const currentPromise = (async () => {
           try {
             const root = await layoutsApi.resolve();
-            const state = get();
+            if (!isStillSameOwner()) return;
 
+            const state = get();
             if (state.rootNodeId === root.id) {
               return;
             }
@@ -267,7 +272,7 @@ export const useNodesStore = create<NodesState>()(
             // If the user is currently viewing the root folder, switch to the new root.
             const isViewingRoot =
               state.currentNode == null || state.currentNode.id === previousRootId;
-            if (isViewingRoot) {
+            if (isViewingRoot && isStillSameOwner()) {
               await get().loadNode(root.id, {
                 loadChildren,
                 allowRootRecovery: false,
@@ -277,8 +282,13 @@ export const useNodesStore = create<NodesState>()(
             // Non-blocking best-effort refresh.
             console.error("Failed to resolve root node in background", error);
           }
-        })().finally(() => {
-          rootResolvePromise = null;
+        })();
+
+        rootResolvePromise = currentPromise;
+        void currentPromise.finally(() => {
+          if (rootResolvePromise === currentPromise) {
+            rootResolvePromise = null;
+          }
         });
       };
 

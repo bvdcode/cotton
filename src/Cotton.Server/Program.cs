@@ -28,8 +28,20 @@ namespace Cotton.Server
     {
         public static void Main(string[] args)
         {
+            // User timezone settings are applied per request; the process clock
+            // stays UTC so platform TLS/date handling cannot drift with them.
+            Environment.SetEnvironmentVariable("TZ", "UTC");
+            TimeZoneInfo.ClearCachedData();
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions();
+            if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())
+            {
+                builder.Logging.ClearProviders();
+                builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+                builder.Logging.AddConsole();
+                builder.Logging.AddDebug();
+            }
             MapsterConfig.Register();
             builder.Services
                 .AddExceptionHandler()
@@ -62,6 +74,8 @@ namespace Cotton.Server
                 .AddScoped<INotificationsProvider, CottonNotifications>()
                 .AddScoped<IGeoLookupService, GeoLookupService>()
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
+                .AddScoped<NodeSubtreeService>()
+                .AddScoped<TrashRestoreCoordinator>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()

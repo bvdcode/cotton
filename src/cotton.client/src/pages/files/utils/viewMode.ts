@@ -1,5 +1,5 @@
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
-import type { TilesSize } from "../types/FileListViewTypes";
+import type { TilesSize } from "@shared/types/FileListViewTypes";
 
 export type FileBrowserViewMode =
   | "table"

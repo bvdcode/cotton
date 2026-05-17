@@ -1,11 +1,13 @@
 ﻿using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Nodes
 {
@@ -19,6 +21,8 @@ namespace Cotton.Server.Handlers.Nodes
     public class DeleteNodeQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
+        ILayoutNavigator _navigator,
+        NodeSubtreeService _subtree,
         ILogger<DeleteNodeQueryHandler> _logger)
             : IRequestHandler<DeleteNodeQuery>
     {
@@ -44,6 +48,34 @@ namespace Cotton.Server.Handlers.Nodes
 
         private async Task MoveToTrashAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
         {
+            await using IDbContextTransaction? tx = _dbContext.Database.CurrentTransaction is null
+                ? await _dbContext.Database.BeginTransactionAsync(ct)
+                : null;
+
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, node.LayoutId, ct);
+
+            node = await _dbContext.Nodes
+                    .Where(x => x.Id == command.NodeId && x.OwnerId == command.UserId)
+                    .SingleOrDefaultAsync(ct)
+                ?? throw new EntityNotFoundException(nameof(Node));
+
+            if (node.ParentId is null || node.Type != NodeType.Default)
+            {
+                throw new EntityNotFoundException(nameof(Node));
+            }
+
+            string? originalParentPath = await _navigator.GetNodePathFromRootAsync(
+                command.UserId,
+                node.ParentId.Value,
+                node.Type,
+                ct);
+            if (originalParentPath is not null)
+            {
+                node.Metadata = TrashRestoreCoordinator.SetOriginalParentPath(
+                    node.Metadata,
+                    originalParentPath);
+            }
+
             Node trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
             node.ParentId = trashItem.Id;
 
@@ -51,38 +83,19 @@ namespace Cotton.Server.Handlers.Nodes
             await MoveDescendantsToTrashAsync(command.UserId, node.Id, ct);
 
             await _dbContext.SaveChangesAsync(ct);
+            if (tx is not null)
+            {
+                await tx.CommitAsync(ct);
+            }
+
             _logger.LogInformation("User {UserId} deleted node {NodeId} to trash.",
                 command.UserId, command.NodeId);
         }
 
         private async Task MoveDescendantsToTrashAsync(Guid userId, Guid rootId, CancellationToken ct)
         {
-            var visited = new HashSet<Guid> { rootId };
-            var frontier = new List<Guid> { rootId };
+            var ids = (await _subtree.CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
 
-            while (frontier.Count > 0)
-            {
-                var batch = frontier.ToArray();
-                frontier.Clear();
-
-                var children = await _dbContext.Nodes
-                    .Where(x => x.OwnerId == userId
-                        && x.ParentId != null
-                        && batch.Contains(x.ParentId.Value))
-                    .Select(x => new { x.Id })
-                    .ToListAsync(ct);
-
-                foreach (var child in children)
-                {
-                    if (visited.Add(child.Id))
-                    {
-                        frontier.Add(child.Id);
-                    }
-                }
-            }
-
-            // Update in one shot. Root node's Type is also switched to trash.
-            var ids = visited.ToArray();
             await _dbContext.Nodes
                 .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
                 .ExecuteUpdateAsync(setters => setters
@@ -97,34 +110,7 @@ namespace Cotton.Server.Handlers.Nodes
 
         private async Task DeletePermanentlyAsync(DeleteNodeQuery command, Node node, CancellationToken ct)
         {
-            var nodeIds = new HashSet<Guid>();
-            var frontier = new List<Guid> { node.Id };
-            while (frontier.Count > 0)
-            {
-                var batch = frontier.ToArray();
-                frontier.Clear();
-
-                foreach (var id in batch)
-                {
-                    nodeIds.Add(id);
-                }
-
-                var childIds = await _dbContext.Nodes
-                    .AsNoTracking()
-                    .Where(x => x.OwnerId == command.UserId
-                        && x.ParentId != null
-                        && batch.Contains(x.ParentId.Value))
-                    .Select(x => x.Id)
-                    .ToListAsync(ct);
-
-                foreach (var childId in childIds)
-                {
-                    if (nodeIds.Add(childId))
-                    {
-                        frontier.Add(childId);
-                    }
-                }
-            }
+            var nodeIds = await _subtree.CollectSubtreeIdsAsync(command.UserId, node.Id, ct);
 
             await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
 

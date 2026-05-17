@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Typography } from "@mui/material";
 import type { TFunction } from "i18next";
 import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
-import { getFileIcon } from "../../files/utils/icons";
+import { getFileIcon } from "@shared/utils/icons";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { formatTimeAgo } from "../../../shared/utils/formatTimeAgo";
 

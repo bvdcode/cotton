@@ -25,7 +25,7 @@ import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
 import { useFileSelection } from "./hooks/useFileSelection";
 import { useDeleteSelectedItems } from "./hooks/useDeleteSelectedItems";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
-import { getFileTypeInfo } from "./utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   getDropPreparationCaption,
   getDropPreparationTitle,

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { FileSystemTile } from "../../../pages/files/types/FileListViewTypes";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileListSource } from "../../types/fileListSource";
 import type { NodeDto } from "../../api/layoutsApi";
 import type { NodeFileManifestDto } from "../../api/nodesApi";

@@ -1,6 +1,6 @@
-﻿using Amazon.Runtime;
 using Amazon.S3;
 using Cotton.Storage.Abstractions;
+using Cotton.Storage.Helpers;
 
 namespace Cotton.Server.Providers
 {
@@ -30,28 +30,25 @@ namespace Cotton.Server.Providers
             {
                 return _s3Client;
             }
+
             var settings = _settingsProvider.GetServerSettings();
             ArgumentNullException.ThrowIfNull(settings.S3EndpointUrl, nameof(settings.S3EndpointUrl));
             ArgumentNullException.ThrowIfNull(settings.S3AccessKeyId, nameof(settings.S3AccessKeyId));
             ArgumentNullException.ThrowIfNull(settings.S3SecretAccessKeyEncrypted, nameof(settings.S3SecretAccessKeyEncrypted));
             ArgumentNullException.ThrowIfNull(settings.S3BucketName, nameof(settings.S3BucketName));
             ArgumentNullException.ThrowIfNull(settings.S3Region, nameof(settings.S3Region));
-            var config = new AmazonS3Config
-            {
-                ServiceURL = settings.S3EndpointUrl,
-                ForcePathStyle = true,
-                AuthenticationRegion = settings.S3Region,
-                UseHttp = false,
-                MaxErrorRetry = 3,
-                Timeout = TimeSpan.FromMinutes(5),
-            };
+
             string? secretAccessKey = settings.S3SecretAccessKeyEncrypted;
             if (string.IsNullOrEmpty(secretAccessKey))
             {
                 throw new InvalidOperationException("S3 secret access key is not configured.");
             }
-            var credentials = new BasicAWSCredentials(settings.S3AccessKeyId, secretAccessKey);
-            _s3Client = new AmazonS3Client(credentials, config);
+
+            _s3Client = S3CompatibilityFactory.BuildClient(
+                settings.S3EndpointUrl,
+                settings.S3Region,
+                settings.S3AccessKeyId,
+                secretAccessKey);
             return _s3Client;
         }
     }

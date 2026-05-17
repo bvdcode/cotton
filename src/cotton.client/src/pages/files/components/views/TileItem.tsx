@@ -1,20 +1,28 @@
 import React from "react";
 import { Box, Checkbox } from "@mui/material";
-import { ContentCut, Folder, Download, Edit, Delete, Share } from "@mui/icons-material";
+import {
+  ContentCut,
+  Delete,
+  Download,
+  Edit,
+  Folder,
+  Restore,
+  Share,
+} from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
 import { InlineRenameField } from "../InlineRenameField";
-import { getFileIcon } from "../../utils/icons";
+import { getFileIcon } from "@shared/utils/icons";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
   getFileTypeInfo,
-} from "../../utils/fileTypes";
+} from "@shared/utils/fileTypes";
 import type {
   FileSystemTile,
   FolderOperations,
   FileOperations,
   TilesSize,
-} from "../../types/FileListViewTypes";
+} from "@shared/types/FileListViewTypes";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 
@@ -62,6 +70,7 @@ const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
         src={previewUrl}
         alt=""
         aria-hidden
+        draggable={false}
         sx={{
           position: "absolute",
           inset: 0,
@@ -80,6 +89,7 @@ const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
         alt={alt}
         loading="lazy"
         decoding="async"
+        draggable={false}
         onLoad={handleLoad}
         sx={(theme) => ({
           position: "relative",
@@ -321,6 +331,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ? () => folderOperations.onCut?.(tile.node.id)
               : undefined
           }
+          onRestore={
+            folderOperations.onRestore
+              ? () => folderOperations.onRestore?.(tile.node.id, tile.node.name)
+              : undefined
+          }
           onClick={(e) => {
             const shiftKey = !!(e as React.MouseEvent).shiftKey;
 
@@ -489,6 +504,16 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
                   icon: <ContentCut />,
                   onClick: () => fileOperations.onCut?.(tile.file.id),
                   tooltip: t("files:move.cut"),
+                },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onRestore
+            ? [
+                {
+                  icon: <Restore />,
+                  onClick: () =>
+                    fileOperations.onRestore?.(tile.file.id, tile.file.name),
+                  tooltip: t("actions.restore", { ns: "common" }),
                 },
               ]
             : []),

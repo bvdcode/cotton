@@ -1,5 +1,6 @@
 import { httpClient } from "./httpClient";
 import type { Guid } from "./layoutsApi";
+import type { RestoreOptions, RestoreOutcomeDto } from "./nodesApi";
 
 const downloadLinkInFlight = new Map<string, Promise<string>>();
 
@@ -75,5 +76,19 @@ export const filesApi = {
     request: MoveFileRequest,
   ): Promise<void> => {
     await httpClient.patch(`/files/${nodeFileId}/move`, request);
+  },
+
+  restoreFile: async (
+    nodeFileId: Guid,
+    options: RestoreOptions = {},
+  ): Promise<RestoreOutcomeDto> => {
+    const response = await httpClient.post<RestoreOutcomeDto>(
+      `/files/${nodeFileId}/restore`,
+      {
+        createMissingParents: options.createMissingParents ?? false,
+        overwrite: options.overwrite ?? false,
+      },
+    );
+    return response.data;
   },
 };

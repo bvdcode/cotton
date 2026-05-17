@@ -451,6 +451,7 @@
       "close": "Cerrar",
       "delete": "Eliminar",
       "rename": "Renombrar",
+      "restore": "Restaurar",
       "download": "Descargar",
       "share": "Compartir",
       "more": "Más acciones",
@@ -482,7 +483,11 @@
     },
     "title": "Cotton Cloud",
     "subtitle": "Asistente de configuración",
-    "ok": "Aceptar"
+    "ok": "Aceptar",
+    "pwa": {
+      "updateAvailable": "Hay una nueva versión lista.",
+      "updateAction": "Actualizar"
+    }
   },
   "audioPlayer": {
     "actions": {
@@ -1340,6 +1345,27 @@
       "confirmDescription": "Esta acción no se puede deshacer. Todos los elementos de la papelera se eliminarán definitivamente.",
       "inProgress": "Eliminando {{current}} de {{total}} elementos...",
       "completed": "Papelera vaciada correctamente"
+    },
+    "restore": {
+      "action": "Restaurar",
+      "inProgress": "Restaurando {{current}} de {{total}}: {{name}}",
+      "failed": "No se pudo restaurar \"{{name}}\"",
+      "notRestorable": "El elemento no se puede restaurar.",
+      "rootFolder": "la carpeta raíz",
+      "applyToAll": "Aplicar esta elección a los elementos restantes",
+      "skip": "Omitir",
+      "parentMissing": {
+        "title": "Falta la ubicación de restauración",
+        "description": "\"{{name}}\" se eliminó de \"{{path}}\", pero esa carpeta ya no existe. ¿Crear la ruta faltante y restaurarlo allí?",
+        "confirm": "Crear y restaurar"
+      },
+      "conflict": {
+        "title": "El elemento ya existe",
+        "description": "\"{{name}}\" entra en conflicto con un {{kind}} existente llamado \"{{conflictName}}\". ¿Mover el elemento existente a la papelera y restaurar este?",
+        "confirm": "Reemplazar",
+        "folderKind": "carpeta",
+        "fileKind": "archivo"
+      }
     }
   },
   "admin": {

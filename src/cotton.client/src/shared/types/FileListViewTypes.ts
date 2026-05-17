@@ -1,7 +1,7 @@
-import type { NodeDto } from "../../../shared/api/layoutsApi";
-import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
-import type { SharedNodeFileDto } from "../../../shared/api/sharedFoldersApi";
-import type { MoveClipboardItem } from "../../../shared/store/moveClipboardStore";
+import type { NodeDto } from "../api/layoutsApi";
+import type { NodeFileManifestDto } from "../api/nodesApi";
+import type { SharedNodeFileDto } from "../api/sharedFoldersApi";
+import type { MoveClipboardItem } from "../store/moveClipboardStore";
 
 export type FileListFileDto = NodeFileManifestDto | SharedNodeFileDto;
 
@@ -53,6 +53,7 @@ export interface FolderOperations {
   onConfirmRename?: () => void;
   onCancelRename?: () => void;
   onStartRename?: (folderId: string, name: string) => void;
+  onRestore?: (folderId: string, name: string) => void;
   onDelete?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
@@ -69,6 +70,7 @@ export interface FileOperations {
   onConfirmRename?: () => Promise<void>;
   onCancelRename?: () => void;
   onStartRename?: (fileId: string, name: string) => void;
+  onRestore?: (fileId: string, name: string) => void;
   onDelete?: (fileId: string, name: string) => void;
   onDownload?: (fileId: string, name: string) => void;
   onShare?: (fileId: string, name: string) => void;

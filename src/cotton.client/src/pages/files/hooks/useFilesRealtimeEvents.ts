@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
-import { eventHub } from "../../../shared/signalr";
+import {
+  eventHub,
+  FILE_AND_NODE_MUTATION_HUB_METHODS,
+  HUB_METHODS,
+  getHubMethodVariants,
+} from "../../../shared/signalr";
 import { useAuth } from "../../../features/auth";
 import { isJsonObject, type JsonValue } from "../../../shared/types/json";
 
@@ -9,19 +14,9 @@ interface UseFilesRealtimeEventsOptions {
   onPreviewGenerated?: (nodeFileId: string, previewHashEncryptedHex: string) => void;
 }
 
-const FILES_HUB_METHODS = [
-  "FileCreated",
-  "FileUpdated",
-  "FileDeleted",
-  "FileMoved",
-  "FileRenamed",
-  "NodeCreated",
-  "NodeDeleted",
-  "NodeMoved",
-  "NodeRenamed",
-] as const;
-
-const PREVIEW_GENERATED_METHOD = "PreviewGenerated";
+const PREVIEW_GENERATED_METHODS = getHubMethodVariants([
+  HUB_METHODS.PreviewGenerated,
+]);
 const GUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_PAYLOAD_SCAN_DEPTH = 4;
@@ -187,7 +182,9 @@ export function useFilesRealtimeEvents({
       // connection will retry automatically
     });
 
-    const invalidationMethods = FILES_HUB_METHODS.flatMap((m) => [m, m.toLowerCase()]);
+    const invalidationMethods = getHubMethodVariants(
+      FILE_AND_NODE_MUTATION_HUB_METHODS,
+    );
     const unsubscribes = invalidationMethods.map((method) =>
       eventHub.on(method, (...args: JsonValue[]) => {
         if (!shouldInvalidateCurrentNode(args, nodeIdRef.current)) {
@@ -216,14 +213,8 @@ export function useFilesRealtimeEvents({
       }
     };
 
-    const unsubscribePreviewGenerated = eventHub.on(
-      PREVIEW_GENERATED_METHOD,
-      handlePreviewGenerated,
-    );
-
-    const unsubscribePreviewGeneratedLower = eventHub.on(
-      PREVIEW_GENERATED_METHOD.toLowerCase(),
-      handlePreviewGenerated,
+    const unsubscribePreviewGenerated = PREVIEW_GENERATED_METHODS.map(
+      (method) => eventHub.on(method, handlePreviewGenerated),
     );
 
     return () => {
@@ -236,8 +227,9 @@ export function useFilesRealtimeEvents({
         unsubscribe();
       }
 
-      unsubscribePreviewGenerated();
-      unsubscribePreviewGeneratedLower();
+      for (const unsubscribe of unsubscribePreviewGenerated) {
+        unsubscribe();
+      }
     };
   }, [isAuthenticated, scheduleInvalidate]);
 }

@@ -12,6 +12,7 @@ import {
   TextSnippet,
   VideoFile,
   Share,
+  Restore,
 } from "@mui/icons-material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
@@ -20,7 +21,7 @@ import {
   isPdfFile,
   isTextFile,
   isVideoFile,
-} from "../../utils/fileTypes";
+} from "@shared/utils/fileTypes";
 import { InlineRenameField } from "../InlineRenameField";
 
 export interface FileListRow {
@@ -53,6 +54,7 @@ interface ColumnOptions {
     goToFolder: string;
     rename: string;
     delete: string;
+    restore: string;
     download: string;
     share: string;
     cut: string;
@@ -75,6 +77,7 @@ interface ColumnOptions {
     onConfirmRename?: () => void;
     onCancelRename?: () => void;
     onStartRename?: (id: string, name: string) => void;
+    onRestore?: (id: string, name: string) => void;
     onDelete?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
@@ -86,6 +89,7 @@ interface ColumnOptions {
     onConfirmRename?: () => Promise<void>;
     onCancelRename?: () => void;
     onStartRename?: (id: string, name: string) => void;
+    onRestore?: (id: string, name: string) => void;
     onDownload?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
@@ -134,6 +138,7 @@ export const createIconColumn = (
             src={previewUrl}
             alt=""
             loading="lazy"
+            draggable={false}
             onError={() => {
               options.setFailedPreviews((prev) =>
                 new Set(prev).add(params.row.id),
@@ -429,6 +434,18 @@ export const createActionsColumn = (
                   <ContentCut fontSize="small" />
                 </IconButton>
               )}
+              {options.folderOperations.onRestore && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onRestore?.(row.id, row.name);
+                  }}
+                  title={options.labels.restore}
+                >
+                  <Restore fontSize="small" />
+                </IconButton>
+              )}
               {options.folderOperations.onDelete && (
                 <IconButton
                   size="small"
@@ -506,6 +523,18 @@ export const createActionsColumn = (
                 title={options.labels.cut}
               >
                 <ContentCut fontSize="small" />
+              </IconButton>
+            )}
+            {options.fileOperations.onRestore && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onRestore?.(row.id, row.name);
+                }}
+                title={options.labels.restore}
+              >
+                <Restore fontSize="small" />
               </IconButton>
             )}
             {options.fileOperations.onDelete && (

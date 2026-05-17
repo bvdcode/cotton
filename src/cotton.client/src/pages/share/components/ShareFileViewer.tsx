@@ -9,7 +9,7 @@ import {
   ViewInAr,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { getFileTypeInfo, type FileType } from "../../files/utils/fileTypes";
+import { getFileTypeInfo, type FileType } from "@shared/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import {
   MediaLightbox,

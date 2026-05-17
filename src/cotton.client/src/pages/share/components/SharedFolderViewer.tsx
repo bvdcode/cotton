@@ -8,9 +8,9 @@ import type {
   FileOperations,
   FolderOperations,
   TilesSize,
-} from "../../files/types/FileListViewTypes";
-import { getFileIcon } from "../../files/utils/icons";
-import { getFileTypeInfo } from "../../files/utils/fileTypes";
+} from "@shared/types/FileListViewTypes";
+import { getFileIcon } from "@shared/utils/icons";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { useContentTiles } from "../../../shared/hooks/useContentTiles";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import type { Guid } from "../../../shared/api/layoutsApi";

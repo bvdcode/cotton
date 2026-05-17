@@ -19,7 +19,7 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { PreviewModal, PdfPreview, TextPreview, ModelPreview } from "./preview";
-import type { FileType } from "../utils/fileTypes";
+import type { FileType } from "@shared/utils/fileTypes";
 
 interface FilePreviewModalProps {
   isOpen: boolean;

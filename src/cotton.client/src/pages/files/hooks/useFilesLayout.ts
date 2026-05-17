@@ -5,7 +5,7 @@ import {
   selectFilesTilesSize,
   useLocalPreferencesStore,
 } from "../../../shared/store/localPreferencesStore";
-import type { TilesSize } from "../types/FileListViewTypes";
+import type { TilesSize } from "@shared/types/FileListViewTypes";
 import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,

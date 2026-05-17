@@ -378,6 +378,7 @@
       "close": "Close",
       "delete": "Delete",
       "rename": "Rename",
+      "restore": "Restore",
       "download": "Download",
       "share": "Share",
       "more": "More actions",
@@ -423,6 +424,10 @@
         "files": "Total number of files"
       },
       "outro": "That's everything. No file contents, file names, usernames, or emails are sent in telemetry payloads. Standard network metadata (such as source IP) may still exist at the transport level."
+    },
+    "pwa": {
+      "updateAvailable": "A new version is ready.",
+      "updateAction": "Update"
     }
   },
   "audioPlayer": {
@@ -1318,6 +1323,27 @@
       "confirmDescription": "This action cannot be undone. All items in trash will be permanently deleted.",
       "inProgress": "Deleting {{current}} of {{total}} items...",
       "completed": "Trash emptied successfully"
+    },
+    "restore": {
+      "action": "Restore",
+      "inProgress": "Restoring {{current}} of {{total}}: {{name}}",
+      "failed": "Failed to restore \"{{name}}\"",
+      "notRestorable": "Item cannot be restored.",
+      "rootFolder": "the root folder",
+      "applyToAll": "Apply this choice to remaining items",
+      "skip": "Skip",
+      "parentMissing": {
+        "title": "Restore location is missing",
+        "description": "\"{{name}}\" was deleted from \"{{path}}\", but that folder no longer exists. Create the missing folder path and restore it there?",
+        "confirm": "Create and restore"
+      },
+      "conflict": {
+        "title": "Item already exists",
+        "description": "\"{{name}}\" conflicts with an existing {{kind}} named \"{{conflictName}}\". Move the existing item to trash and restore this one?",
+        "confirm": "Replace",
+        "folderKind": "folder",
+        "fileKind": "file"
+      }
     }
   },
   "admin": {

@@ -12,7 +12,7 @@ import { useModelPreviewState } from "./hooks/useModelPreviewState";
 import {
   type ModelPreviewProps,
 } from "./modelPreviewTypes";
-import { resolveModelFormat } from "../../utils/modelFormats";
+import { resolveModelFormat } from "@shared/utils/modelFormats";
 
 export const ModelPreview: React.FC<ModelPreviewProps> = ({
   source,

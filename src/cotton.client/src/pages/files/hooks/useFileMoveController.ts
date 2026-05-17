@@ -10,7 +10,7 @@ import {
   useMoveClipboardStore,
   type MoveClipboardItem,
 } from "../../../shared/store/moveClipboardStore";
-import type { FileSystemTile } from "../types/FileListViewTypes";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 interface DropHandlersForGoUp {
   onDragOver: (event: React.DragEvent<HTMLElement>) => void;

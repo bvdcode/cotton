@@ -37,6 +37,30 @@ export interface MoveNodeRequest {
   parentId: Guid;
 }
 
+export type RestoreStatus =
+  | "Restored"
+  | "ParentMissing"
+  | "Conflict"
+  | "NotRestorable";
+
+export type RestoreConflictKind = "Folder" | "File";
+
+export interface RestoreOutcomeDto {
+  status: RestoreStatus;
+  originalParentPath?: string | null;
+  missingPath?: string | null;
+  conflictKind?: RestoreConflictKind | null;
+  conflictName?: string | null;
+  restoredNode?: NodeDto | null;
+  restoredFile?: NodeFileManifestDto | null;
+  reason?: string | null;
+}
+
+export interface RestoreOptions {
+  createMissingParents?: boolean;
+  overwrite?: boolean;
+}
+
 export const nodesApi = {
   getNode: async (nodeId: Guid): Promise<NodeDto> => {
     const response = await httpClient.get<NodeDto>(`/layouts/nodes/${nodeId}`);
@@ -107,6 +131,20 @@ export const nodesApi = {
     const response = await httpClient.patch<NodeDto>(
       `/layouts/nodes/${nodeId}/move`,
       request,
+    );
+    return response.data;
+  },
+
+  restoreNode: async (
+    nodeId: Guid,
+    options: RestoreOptions = {},
+  ): Promise<RestoreOutcomeDto> => {
+    const response = await httpClient.post<RestoreOutcomeDto>(
+      `/layouts/nodes/${nodeId}/restore`,
+      {
+        createMissingParents: options.createMissingParents ?? false,
+        overwrite: options.overwrite ?? false,
+      },
     );
     return response.data;
   },

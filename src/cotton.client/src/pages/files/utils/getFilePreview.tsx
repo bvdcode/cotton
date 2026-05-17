@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { getFileIcon } from "./icons";
+import { getFileIcon } from "@shared/utils/icons";
 
 /**
  * @deprecated Use getFileIcon from icons/index.ts instead

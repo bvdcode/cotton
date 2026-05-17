@@ -1,7 +1,7 @@
 import type {
   FolderOperations,
   FileOperations,
-} from "../../pages/files/types/FileListViewTypes";
+} from "@shared/types/FileListViewTypes";
 
 /**
  * Build folder operations adapter from hook

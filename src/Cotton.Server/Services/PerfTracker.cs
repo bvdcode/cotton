@@ -2,7 +2,7 @@
 
 namespace Cotton.Server.Services
 {
-    public class PerfTracker(SettingsProvider _settings)
+    public class PerfTracker(IServiceScopeFactory _scopeFactory)
     {
         private const int ChunkTimeoutSeconds = 10;
         private DateTime? _lastChunkCreated;
@@ -24,7 +24,9 @@ namespace Cotton.Server.Services
 
         public bool IsNightTime()
         {
-            var tzInfo = _settings.GetServerSettings().GetTimezoneInfo();
+            using var scope = _scopeFactory.CreateScope();
+            var settings = scope.ServiceProvider.GetRequiredService<SettingsProvider>();
+            var tzInfo = settings.GetServerSettings().GetTimezoneInfo();
             DateTime localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tzInfo);
             return localTime.Hour < 7 || localTime.Hour >= 22;
         }

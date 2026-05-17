@@ -119,6 +119,34 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/restore")]
+        public async Task<IActionResult> RestoreFile(
+            [FromRoute] Guid nodeFileId,
+            [FromBody] RestoreItemRequest? request)
+        {
+            Guid userId = User.GetUserId();
+            request ??= new RestoreItemRequest();
+
+            var outcome = await _mediator.Send(new RestoreFileQuery(
+                userId,
+                nodeFileId,
+                request.CreateMissingParents,
+                request.Overwrite));
+
+            if (outcome.Status == RestoreStatus.Restored)
+            {
+                object restoredFilePayload = outcome.RestoredFile is not null
+                    ? outcome.RestoredFile
+                    : new { id = nodeFileId };
+                await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                    "FileRestored",
+                    restoredFilePayload);
+            }
+
+            return Ok(outcome);
+        }
+
+        [Authorize]
         [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/move")]
         public async Task<IActionResult> MoveFile(
             [FromRoute] Guid nodeFileId,
