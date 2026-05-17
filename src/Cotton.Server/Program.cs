@@ -28,6 +28,11 @@ namespace Cotton.Server
     {
         public static void Main(string[] args)
         {
+            // User timezone settings are applied per request; the process clock
+            // stays UTC so platform TLS/date handling cannot drift with them.
+            Environment.SetEnvironmentVariable("TZ", "UTC");
+            TimeZoneInfo.ClearCachedData();
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions();
             if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())

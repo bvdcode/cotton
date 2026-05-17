@@ -172,7 +172,6 @@ namespace Cotton.Server.Controllers
             await EnsureSettingsAsync(cancellationToken);
             ThrowIfInvalid(_settings.ValidateTimezone(timezone));
             await _settings.SetPropertyAsync(x => x.Timezone, timezone!.Trim(), GetFallbackPublicBaseUrl(), cancellationToken);
-            Environment.SetEnvironmentVariable("TZ", timezone!.Trim());
             return NoContent();
         }
 
