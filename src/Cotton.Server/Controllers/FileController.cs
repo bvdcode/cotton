@@ -149,6 +149,21 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
+            var layoutId = await _dbContext.NodeFiles
+                .AsNoTracking()
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .Select(x => (Guid?)x.Node.LayoutId)
+                .SingleOrDefaultAsync();
+            if (layoutId is null)
+            {
+                return CottonResult.NotFound("File not found.");
+            }
+
+            // Per-layout namespace serialization for rename — same rationale as
+            // CreateFile / CreateNode / MoveFile / MoveNode.
+            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
+
             var nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
@@ -160,7 +175,6 @@ namespace Cotton.Server.Controllers
             }
 
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
-            // Check for duplicate files in the same folder
             bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x =>
                     x.NodeId == nodeFile.NodeId &&
@@ -172,7 +186,6 @@ namespace Cotton.Server.Controllers
                 return this.ApiConflict("A file with the same name key already exists in this folder: " + nameKey);
             }
 
-            // Check for duplicate nodes (subfolders) in the same folder
             bool nodeExists = await _dbContext.Nodes
                 .AnyAsync(x =>
                     x.ParentId == nodeFile.NodeId &&
@@ -186,6 +199,7 @@ namespace Cotton.Server.Controllers
 
             nodeFile.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
+            await tx.CommitAsync();
 
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);

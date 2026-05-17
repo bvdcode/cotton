@@ -303,6 +303,37 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task ConcurrentMoveFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var src = await CreateFolderAsync(root.Id, "src");
+        var dst = await CreateFolderAsync(root.Id, "dst");
+        var movingFile = await CreateFileAsync(src.Id, "thing", "cross-handler-race");
+
+        // Without the lock applied to CreateNode too, MoveFile would see no folder
+        // "thing" in dst and CreateNode would see no file "thing" in dst — both
+        // pre-checks pass independently and dst would end up with both.
+        var moveFile = MoveFileAsync(movingFile.Id, dst.Id);
+        var createFolder = _client!.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new CreateNodeRequest { ParentId = dst.Id, Name = "thing" });
+        var results = await Task.WhenAll(moveFile, createFolder);
+
+        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+        int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+        Assert.That(oks, Is.EqualTo(1), "Exactly one cross-handler write must win.");
+        Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
+
+        using var scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == dst.Id && f.NameKey == "thing");
+        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == dst.Id && n.NameKey == "thing");
+        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+            "Destination must have exactly one entry named 'thing' across both tables.");
+    }
+
+    [Test]
     public async Task ConcurrentMoveFileAndMoveNode_SameNameSameTarget_OnlyOneWins()
     {
         await AuthenticateAsync();

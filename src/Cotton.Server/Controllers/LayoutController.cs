@@ -135,6 +135,22 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
+            var layoutId = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.Id == nodeId && x.OwnerId == userId)
+                .Select(x => (Guid?)x.LayoutId)
+                .SingleOrDefaultAsync();
+            if (layoutId is null)
+            {
+                return CottonResult.NotFound("Node not found.");
+            }
+
+            // Serialize per-layout: rename changes NameKey, which can collide with
+            // a concurrent move/create/rename of a same-key entry in the same parent
+            // (cross-table) under shared namespace rules.
+            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layoutId.Value, default);
+
             var node = await _dbContext.Nodes
                 .Where(x => x.Id == nodeId && x.OwnerId == userId)
                 .SingleOrDefaultAsync();
@@ -143,17 +159,14 @@ namespace Cotton.Server.Controllers
                 return CottonResult.NotFound("Node not found.");
             }
 
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
 
-            // Check for duplicate nodes in the same parent
             bool nodeExists = await _dbContext.Nodes
                 .AnyAsync(x =>
                     x.ParentId == node.ParentId &&
                     x.OwnerId == userId &&
                     x.NameKey == nameKey &&
-                    x.LayoutId == layout.Id &&
+                    x.LayoutId == node.LayoutId &&
                     x.Type == node.Type &&
                     x.Id != nodeId);
             if (nodeExists)
@@ -161,7 +174,6 @@ namespace Cotton.Server.Controllers
                 return this.ApiConflict("A folder with the same name key already exists in the parent folder: " + nameKey);
             }
 
-            // Check for duplicate files in the same parent
             if (node.ParentId.HasValue)
             {
                 bool fileExists = await _dbContext.NodeFiles
@@ -177,6 +189,7 @@ namespace Cotton.Server.Controllers
 
             node.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
+            await tx.CommitAsync();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", node.Id, node.Name, node.NameKey);
             var mapped = node.Adapt<NodeDto>();
             return Ok(mapped);
@@ -235,10 +248,14 @@ namespace Cotton.Server.Controllers
             }
 
             var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
 
-            // Check for duplicate nodes in the parent
+            // Per-layout namespace serialization: a concurrent move/rename/create with
+            // the same NameKey under the same parent can otherwise commit a cross-table
+            // duplicate (folder + file with identical normalized name).
+            await using var tx = await _dbContext.Database.BeginTransactionAsync();
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, parentNode.LayoutId, default);
+
             bool nodeExists = await _dbContext.Nodes
                 .AnyAsync(x =>
                     x.ParentId == parentNode.Id &&
@@ -251,7 +268,6 @@ namespace Cotton.Server.Controllers
                 return this.ApiConflict("A folder with the same name key already exists in the target layout: " + nameKey);
             }
 
-            // Check for duplicate files in the parent
             bool fileExists = await _dbContext.NodeFiles
                 .AnyAsync(x =>
                     x.NodeId == parentNode.Id &&
@@ -272,6 +288,7 @@ namespace Cotton.Server.Controllers
             newNode.SetName(request.Name);
             await _dbContext.Nodes.AddAsync(newNode);
             await _dbContext.SaveChangesAsync();
+            await tx.CommitAsync();
             var mapped = newNode.Adapt<NodeDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeCreated", mapped);
             return Ok(mapped);

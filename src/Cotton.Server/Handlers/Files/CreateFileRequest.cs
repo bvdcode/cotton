@@ -42,8 +42,19 @@ namespace Cotton.Server.Handlers.Files
     {
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
+            // Resolve outside the lock: GetOrCreateLatestUserLayout itself may insert a
+            // brand-new layout for a fresh user, which is independent of the per-layout
+            // namespace serialization below.
             var node = await GetTargetNodeAsync(request, cancellationToken);
             string nameKey = ValidateNameAndGetKey(request.Name);
+
+            // Cross-table namespace serialization: cf. LayoutLocks.
+            // A concurrent file create + folder create/move with the same NameKey can
+            // both pass independent pre-checks otherwise — the unique indexes are
+            // per-table, so the duplicate only shows up at the application level.
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, node.LayoutId, cancellationToken);
+
             await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
 
             List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, request.UserId, cancellationToken);
@@ -53,6 +64,7 @@ namespace Cotton.Server.Handlers.Files
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
 
             var nodeFile = await CreateNodeFileAsync(node, fileManifest, request, cancellationToken);
+            await tx.CommitAsync(cancellationToken);
             return MapToDto(nodeFile, fileManifest);
         }
 
