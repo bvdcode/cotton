@@ -3,6 +3,7 @@ const layoutsRoot = ["layouts"] as const;
 const adminRoot = ["admin"] as const;
 const audioRoot = ["audio"] as const;
 const trashRoot = ["trash"] as const;
+const serverSettingsRoot = ["serverSettings"] as const;
 
 export const queryKeys = {
   notifications: {
@@ -51,5 +52,8 @@ export const queryKeys = {
         params: { page: number; pageSize: number; depth: number },
       ) => [...trashRoot, "children", nodeId, params] as const,
     },
+  },
+  serverSettings: {
+    all: () => serverSettingsRoot,
   },
 } as const;

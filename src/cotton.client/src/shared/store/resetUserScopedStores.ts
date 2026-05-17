@@ -1,6 +1,5 @@
 import { useMoveClipboardStore } from "./moveClipboardStore";
 import { useNodesStore } from "./nodesStore";
-import { useSettingsStore } from "./settingsStore";
 import { useAudioPlayerStore } from "./audioPlayerStore";
 import { useUserPreferencesStore } from "./userPreferencesStore";
 import { useSetupStatusStore } from "./setupStatusStore";
@@ -51,7 +50,6 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   clearAdminCaches(queryClient);
   clearAudioCaches(queryClient);
   clearTrashCaches(queryClient);
-  useSettingsStore.getState().reset();
   useUserPreferencesStore.getState().reset();
   useAudioPlayerStore.getState().reset();
   useSetupStatusStore.getState().reset();
