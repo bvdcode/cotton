@@ -1,6 +1,14 @@
 import React from "react";
 import { Box, Checkbox } from "@mui/material";
-import { ContentCut, Folder, Download, Edit, Delete, Share } from "@mui/icons-material";
+import {
+  ContentCut,
+  Delete,
+  Download,
+  Edit,
+  Folder,
+  Restore,
+  Share,
+} from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
 import { InlineRenameField } from "../InlineRenameField";
@@ -321,6 +329,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ? () => folderOperations.onCut?.(tile.node.id)
               : undefined
           }
+          onRestore={
+            folderOperations.onRestore
+              ? () => folderOperations.onRestore?.(tile.node.id, tile.node.name)
+              : undefined
+          }
           onClick={(e) => {
             const shiftKey = !!(e as React.MouseEvent).shiftKey;
 
@@ -489,6 +502,16 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
                   icon: <ContentCut />,
                   onClick: () => fileOperations.onCut?.(tile.file.id),
                   tooltip: t("files:move.cut"),
+                },
+              ]
+            : []),
+          ...(!readOnly && fileOperations.onRestore
+            ? [
+                {
+                  icon: <Restore />,
+                  onClick: () =>
+                    fileOperations.onRestore?.(tile.file.id, tile.file.name),
+                  tooltip: t("actions.restore", { ns: "common" }),
                 },
               ]
             : []),

@@ -1,4 +1,4 @@
-import { ContentCut, Delete, Edit, Share } from "@mui/icons-material";
+import { ContentCut, Delete, Edit, Restore, Share } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { RenamableItemCard } from "./RenamableItemCard";
@@ -12,6 +12,7 @@ interface FolderCardProps {
   onConfirmRename?: () => void;
   onCancelRename?: () => void;
   onStartRename?: () => void;
+  onRestore?: () => void;
   onDelete?: () => void;
   onShare?: () => void;
   onCut?: () => void;
@@ -28,6 +29,7 @@ export const FolderCard = ({
   onConfirmRename,
   onCancelRename,
   onStartRename,
+  onRestore,
   onDelete,
   onShare,
   onCut,
@@ -70,6 +72,15 @@ export const FolderCard = ({
                 icon: <ContentCut />,
                 onClick: onCut,
                 tooltip: t("files:move.cut"),
+              },
+            ]
+          : []),
+        ...(!readOnly && onRestore
+          ? [
+              {
+                icon: <Restore />,
+                onClick: onRestore,
+                tooltip: t("common:actions.restore"),
               },
             ]
           : []),

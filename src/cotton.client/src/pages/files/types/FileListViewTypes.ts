@@ -53,6 +53,7 @@ export interface FolderOperations {
   onConfirmRename?: () => void;
   onCancelRename?: () => void;
   onStartRename?: (folderId: string, name: string) => void;
+  onRestore?: (folderId: string, name: string) => void;
   onDelete?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
@@ -69,6 +70,7 @@ export interface FileOperations {
   onConfirmRename?: () => Promise<void>;
   onCancelRename?: () => void;
   onStartRename?: (fileId: string, name: string) => void;
+  onRestore?: (fileId: string, name: string) => void;
   onDelete?: (fileId: string, name: string) => void;
   onDownload?: (fileId: string, name: string) => void;
   onShare?: (fileId: string, name: string) => void;

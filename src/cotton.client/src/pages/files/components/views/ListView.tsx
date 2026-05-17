@@ -289,6 +289,7 @@ export const ListView: React.FC<IFileListView> = ({
           goToFolder: t("actions.goToFolder"),
           rename: t("common:actions.rename"),
           delete: t("common:actions.delete"),
+          restore: t("common:actions.restore"),
           download: t("common:actions.download"),
           share: t("common:actions.share"),
           cut: t("move.cut"),

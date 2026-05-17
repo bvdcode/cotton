@@ -378,6 +378,7 @@
       "close": "Close",
       "delete": "Delete",
       "rename": "Rename",
+      "restore": "Restore",
       "download": "Download",
       "share": "Share",
       "more": "More actions",
@@ -1318,6 +1319,27 @@
       "confirmDescription": "This action cannot be undone. All items in trash will be permanently deleted.",
       "inProgress": "Deleting {{current}} of {{total}} items...",
       "completed": "Trash emptied successfully"
+    },
+    "restore": {
+      "action": "Restore",
+      "inProgress": "Restoring {{current}} of {{total}}: {{name}}",
+      "failed": "Failed to restore \"{{name}}\"",
+      "notRestorable": "Item cannot be restored.",
+      "rootFolder": "the root folder",
+      "applyToAll": "Apply this choice to remaining items",
+      "skip": "Skip",
+      "parentMissing": {
+        "title": "Restore location is missing",
+        "description": "\"{{name}}\" was deleted from \"{{path}}\", but that folder no longer exists. Create the missing folder path and restore it there?",
+        "confirm": "Create and restore"
+      },
+      "conflict": {
+        "title": "Item already exists",
+        "description": "\"{{name}}\" conflicts with an existing {{kind}} named \"{{conflictName}}\". Move the existing item to trash and restore this one?",
+        "confirm": "Replace",
+        "folderKind": "folder",
+        "fileKind": "file"
+      }
     }
   },
   "admin": {
