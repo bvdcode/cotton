@@ -111,11 +111,6 @@ export const shouldInvalidateCurrentNode = (
   }
 
   const affectedNodeIds = collectAffectedNodeIds(args);
-  if (affectedNodeIds.size === 0) {
-    // Keep compatibility with events that do not include node identifiers.
-    return true;
-  }
-
   return affectedNodeIds.has(currentNodeId);
 };
 

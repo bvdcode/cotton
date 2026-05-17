@@ -6,8 +6,8 @@ const deletedFileId = "22222222-2222-4222-8222-222222222222";
 const otherNodeId = "33333333-3333-4333-8333-333333333333";
 
 describe("shouldInvalidateCurrentNode", () => {
-  it("treats bare GUID events as legacy payloads that require invalidation", () => {
-    expect(shouldInvalidateCurrentNode([deletedFileId], currentNodeId)).toBe(true);
+  it("ignores bare GUID payloads without structured node context", () => {
+    expect(shouldInvalidateCurrentNode([deletedFileId], currentNodeId)).toBe(false);
   });
 
   it("invalidates when structured delete payload includes the parent node", () => {
