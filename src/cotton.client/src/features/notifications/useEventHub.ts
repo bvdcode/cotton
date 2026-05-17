@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { eventHub } from "../../shared/signalr";
+import { eventHub, HUB_METHODS } from "../../shared/signalr";
 import { useNotificationsStore } from "../../shared/store/notificationsStore";
 import { selectNotificationSoundEnabled, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
 import type { JsonValue } from "../../shared/types/json";
@@ -17,8 +17,6 @@ const playNotificationSound = () => {
     // audio not available
   }
 };
-
-const HUB_METHOD = "OnNotificationReceived";
 
 export function useEventHub() {
   const { isAuthenticated } = useAuth();
@@ -38,7 +36,7 @@ export function useEventHub() {
       // connection will retry automatically
     });
 
-    const unsubscribe = eventHub.on(HUB_METHOD, (...args) => {
+    const unsubscribe = eventHub.on(HUB_METHODS.NotificationReceived, (...args) => {
       const first = (args[0] ?? null) as JsonValue;
       if (isNotificationDto(first)) {
         prependNotification(first);

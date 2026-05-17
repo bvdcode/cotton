@@ -8,27 +8,13 @@ import {
 import { getAccessToken, refreshAccessToken } from "../api/httpClient";
 import { getRefreshEnabled } from "../store/authStore";
 import type { JsonValue } from "../types/json";
+import { SILENCED_HUB_METHODS, type HubMethodOrLower } from "./hubMethods";
 
 type HubEventCallback = (...args: JsonValue[]) => void;
 
-const SILENCED_METHODS: ReadonlyArray<string> = [
-  "FileCreated",
-  "FileUpdated",
-  "FileDeleted",
-  "FileMoved",
-  "FileRenamed",
-  "FileRestored",
-  "NodeCreated",
-  "NodeDeleted",
-  "NodeMoved",
-  "NodeRenamed",
-  "NodeRestored",
-  "PreviewGenerated",
-].flatMap((m) => [m, m.toLowerCase()]);
-
 class EventHubService {
   private connection: HubConnection | null = null;
-  private listeners = new Map<string, Set<HubEventCallback>>();
+  private listeners = new Map<HubMethodOrLower, Set<HubEventCallback>>();
   private started = false;
   private startPromise: Promise<void> | null = null;
 
@@ -110,7 +96,7 @@ class EventHubService {
         // Some server versions emit lowercased method names.
         // Registering no-op handlers prevents SignalR warnings on pages
         // that don't subscribe to file-related events.
-        for (const method of SILENCED_METHODS) {
+        for (const method of SILENCED_HUB_METHODS) {
           this.connection.on(method, () => {
             // no-op
           });
@@ -138,7 +124,7 @@ class EventHubService {
     throw lastError ?? new Error("Failed to start hub");
   }
 
-  on(method: string, callback: HubEventCallback): () => void {
+  on(method: HubMethodOrLower, callback: HubEventCallback): () => void {
     if (!this.listeners.has(method)) {
       this.listeners.set(method, new Set());
     }

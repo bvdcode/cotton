@@ -1,11 +1,9 @@
 import { useEffect } from "react";
-import { eventHub } from "../signalr";
+import { eventHub, HUB_METHODS } from "../signalr";
 import { isSelfUpdateToken, useUserPreferencesStore } from "./userPreferencesStore";
 import { useAuth } from "../../features/auth";
 import type { UserPreferences } from "../api/userPreferencesApi";
 import { isJsonObject, type JsonValue } from "../types/json";
-
-const HUB_METHOD = "PreferencesUpdated";
 
 const isUserPreferences = (value: JsonValue): value is UserPreferences => {
   if (!isJsonObject(value)) return false;
@@ -40,7 +38,7 @@ export function useUserPreferencesRealtimeEvents(): void {
       // connection will retry automatically
     });
 
-    const unsubscribe = eventHub.on(HUB_METHOD, (...args: JsonValue[]) => {
+    const unsubscribe = eventHub.on(HUB_METHODS.PreferencesUpdated, (...args: JsonValue[]) => {
       if (!isPreferencesUpdatedArgs(args)) {
         return;
       }
