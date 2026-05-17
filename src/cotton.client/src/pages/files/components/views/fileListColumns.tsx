@@ -138,6 +138,7 @@ export const createIconColumn = (
             src={previewUrl}
             alt=""
             loading="lazy"
+            draggable={false}
             onError={() => {
               options.setFailedPreviews((prev) =>
                 new Set(prev).add(params.row.id),

@@ -70,6 +70,7 @@ const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
         src={previewUrl}
         alt=""
         aria-hidden
+        draggable={false}
         sx={{
           position: "absolute",
           inset: 0,
@@ -88,6 +89,7 @@ const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
         alt={alt}
         loading="lazy"
         decoding="async"
+        draggable={false}
         onLoad={handleLoad}
         sx={(theme) => ({
           position: "relative",
