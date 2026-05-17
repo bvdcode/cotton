@@ -2,8 +2,8 @@ import { useEffect } from "react";
 import { eventHub, HUB_METHODS } from "../../shared/signalr";
 import { useNotificationsStore } from "../../shared/store/notificationsStore";
 import { selectNotificationSoundEnabled, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
+import { isNotificationDto } from "../../shared/api/schemas/notification";
 import type { JsonValue } from "../../shared/types/json";
-import { isNotificationDto } from "../../shared/types/notificationGuards";
 import { useAuth } from "../auth";
 
 const playNotificationSound = () => {
