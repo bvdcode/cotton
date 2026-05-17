@@ -2,20 +2,12 @@ import { useEffect } from "react";
 import { eventHub, HUB_METHODS } from "../signalr";
 import { isSelfUpdateToken, useUserPreferencesStore } from "./userPreferencesStore";
 import { useAuth } from "../../features/auth";
+import { userPreferencesSchema } from "../api/schemas/userPreferences";
 import type { UserPreferences } from "../api/userPreferencesApi";
-import { isJsonObject, type JsonValue } from "../types/json";
+import type { JsonValue } from "../types/json";
 
 const isUserPreferences = (value: JsonValue): value is UserPreferences => {
-  if (!isJsonObject(value)) return false;
-  if (Array.isArray(value)) return false;
-
-  for (const raw of Object.values(value)) {
-    if (typeof raw !== "string") {
-      return false;
-    }
-  }
-
-  return true;
+  return userPreferencesSchema.safeParse(value).success;
 };
 
 const isPreferencesUpdatedArgs = (

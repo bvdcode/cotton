@@ -1,6 +1,6 @@
 import type { Guid } from "../api/layoutsApi";
 import { useNodesStore } from "../store/nodesStore";
-import { useSettingsStore } from "../store/settingsStore";
+import { getCachedServerSettings } from "../api/queries/serverSettings";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
 import { uploadFileToNode } from "./uploadFileToNode";
@@ -280,7 +280,7 @@ export class UploadManager {
           return;
         }
 
-        const settings = useSettingsStore.getState().data;
+        const settings = getCachedServerSettings();
         if (!settings) {
           next.status = "failed";
           next.completedAt = Date.now();

@@ -453,7 +453,8 @@
       "unexpectedTitle": "Что-то пошло не так",
       "unexpectedDescription": "Произошла непредвиденная ошибка. Пожалуйста, перезагрузите страницу.",
       "showDetails": "Показать детали",
-      "hideDetails": "Скрыть детали"
+      "hideDetails": "Скрыть детали",
+      "schemaValidationFailed": "Сервер вернул неожиданные данные"
     },
     "userMenu": {
       "profile": "Профиль",
@@ -475,7 +476,7 @@
     "ok": "Ладно",
     "pwa": {
       "updateAvailable": "Доступна новая версия.",
-      "updateAction": "Обновить страницу"
+      "updateAction": "Обновить"
     }
   },
   "audioPlayer": {
@@ -1061,6 +1062,14 @@
   },
   "files": {
     "title": "Файлы",
+    "errors": {
+      "resolveRootFailed": "Не удалось определить корневую папку",
+      "loadContentsFailed": "Не удалось загрузить содержимое папки",
+      "createFolderFailed": "Не удалось создать папку",
+      "deleteFolderFailed": "Не удалось удалить папку",
+      "renameFolderFailed": "Не удалось переименовать папку",
+      "duplicateFolderName": "Папка с таким именем уже существует"
+    },
     "move": {
       "cut": "Вырезать",
       "pasteHere_one": "Вставить {{count}} элемент сюда",
@@ -1265,6 +1274,10 @@
         "originalMode": "Режим: оригинал",
         "switchToOriginal": "Переключить на оригинал",
         "switchToPreview": "Переключить на превью"
+      },
+      "video": {
+        "transcodeNotice": "Видео подготавливается для просмотра в браузере. Первый запуск или перемотка могут занять немного времени.",
+        "transcodeError": "Этот браузер не может воспроизвести подготовленный видеопоток."
       },
       "errors": {
         "loadFailed": "Не удалось загрузить файл{{error}}",

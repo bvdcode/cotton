@@ -1,264 +1,29 @@
 import {
+  Avatar,
   Box,
-  Paper,
   Button,
   CircularProgress,
-  TextField,
   Container,
-  Typography,
-  Avatar,
-  Alert,
-  AlertTitle,
+  Paper,
   Stack,
-  IconButton,
-  Tooltip,
-  Link,
-  Divider,
+  Typography,
 } from "@mui/material";
-import {
-  GitHub,
-  Shield,
-  ShieldOutlined,
-  KeyboardArrowRight,
-} from "@mui/icons-material";
-import { useAuth } from "../../features/auth";
+import { KeyboardArrowRight } from "@mui/icons-material";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  type FormEvent,
-} from "react";
-import { authApi } from "../../shared/api/authApi";
-import {
-  getApiErrorMessage,
-  hasApiErrorToastBeenDispatched,
-  isAxiosError,
-} from "../../shared/api/httpClient";
-import { useNavigate, useLocation, Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../features/auth";
 import Loader from "../../shared/ui/Loader";
-import { OneTimeCodeInput } from "../../shared/ui/OneTimeCodeInput";
 import { useServerInfoStore } from "../../shared/store/serverInfoStore";
-import { toast } from "react-toastify";
-import { getUsernameError } from "../../shared/validation/username";
-
-type ToastSeverity = "error" | "success";
-
-type TwoFactorServerHint = "required" | "invalid" | "locked";
-
-function normalizeTwoFactorCode(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 6);
-}
-
-function isEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-function tryGetTwoFactorHint(args: {
-  status: number | undefined;
-  serverMessage: string | undefined;
-}): TwoFactorServerHint | null {
-  const { status, serverMessage } = args;
-  if (status !== 403) return null;
-  if (typeof serverMessage !== "string") return null;
-
-  const msgLower = serverMessage.toLowerCase();
-
-  if (msgLower.includes("two-factor") && msgLower.includes("required")) {
-    return "required";
-  }
-
-  if (msgLower.includes("invalid") && msgLower.includes("two-factor")) {
-    return "invalid";
-  }
-
-  if (
-    msgLower.includes("maximum") ||
-    msgLower.includes("locked") ||
-    msgLower.includes("attempts")
-  ) {
-    return "locked";
-  }
-
-  return null;
-}
-
-type FirstRunAlertProps = {
-  title: string;
-  message: string;
-};
-
-const FirstRunAlert: React.FC<FirstRunAlertProps> = ({ title, message }) => {
-  return (
-    <Alert severity="info">
-      <AlertTitle>{title}</AlertTitle>
-      {message}
-    </Alert>
-  );
-};
-
-type CredentialsFieldsProps = {
-  username: string;
-  password: string;
-  onUsernameChange: (value: string) => void;
-  onUsernameBlur: () => void;
-  onPasswordChange: (value: string) => void;
-  disabled: boolean;
-  usernameLabel: string;
-  passwordLabel: string;
-  usernameHasError: boolean;
-};
-
-const CredentialsFields: React.FC<CredentialsFieldsProps> = ({
-  username,
-  password,
-  onUsernameChange,
-  onUsernameBlur,
-  onPasswordChange,
-  disabled,
-  usernameLabel,
-  passwordLabel,
-  usernameHasError,
-}) => {
-  return (
-    <Stack spacing={2}>
-      <TextField
-        fullWidth
-        label={usernameLabel}
-        margin="none"
-        variant="outlined"
-        value={username}
-        onChange={(e) => onUsernameChange(e.target.value)}
-        onBlur={onUsernameBlur}
-        disabled={disabled}
-        error={usernameHasError}
-      />
-      <TextField
-        fullWidth
-        label={passwordLabel}
-        type="password"
-        margin="none"
-        variant="outlined"
-        value={password}
-        onChange={(e) => onPasswordChange(e.target.value)}
-        disabled={disabled}
-      />
-    </Stack>
-  );
-};
-
-type TwoFactorFieldsProps = {
-  caption: string;
-  digitAriaLabel: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled: boolean;
-};
-
-const TwoFactorFields: React.FC<TwoFactorFieldsProps> = ({
-  caption,
-  digitAriaLabel,
-  value,
-  onChange,
-  disabled,
-}) => {
-  return (
-    <Stack spacing={2.5}>
-      <Typography variant="body2" color="text.secondary" align="center">
-        {caption}
-      </Typography>
-      <OneTimeCodeInput
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        autoFocus={true}
-        inputAriaLabel={digitAriaLabel}
-      />
-    </Stack>
-  );
-};
-
-type TrustDeviceToggleProps = {
-  active: boolean;
-  onToggle: () => void;
-  disabled: boolean;
-  tooltip: string;
-};
-
-const TrustDeviceToggle: React.FC<TrustDeviceToggleProps> = ({
-  active,
-  onToggle,
-  disabled,
-  tooltip,
-}) => {
-  return (
-    <Tooltip title={tooltip}>
-      <IconButton
-        color={active ? "primary" : "default"}
-        onClick={onToggle}
-        disabled={disabled}
-        sx={{
-          border: 1,
-          borderColor: active ? "primary.main" : "divider",
-        }}
-      >
-        {active ? <Shield /> : <ShieldOutlined />}
-      </IconButton>
-    </Tooltip>
-  );
-};
-
-type ForgotPasswordLinkProps = {
-  onClick: () => void;
-  disabled: boolean;
-  label: string;
-};
-
-const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({
-  onClick,
-  disabled,
-  label,
-}) => {
-  return (
-    <Box
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
-      sx={{ mt: 1.5, textAlign: "center" }}
-    >
-      <Link
-        href="https://github.com/bvdcode/cotton"
-        target="_blank"
-        rel="noopener"
-        underline="hover"
-        color="text.secondary"
-        sx={{ display: "flex", alignItems: "center" }}
-      >
-        <GitHub fontSize="small" sx={{ mr: 0.5 }} />
-      </Link>
-      <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-      <Link
-        component="button"
-        type="button"
-        variant="caption"
-        onClick={onClick}
-        underline="hover"
-        color="text.secondary"
-        sx={{
-          pointerEvents: disabled ? "none" : "auto",
-          opacity: disabled ? 0.5 : 1,
-        }}
-      >
-        {label}
-      </Link>
-    </Box>
-  );
-};
+import { CredentialsFields } from "./components/CredentialsFields";
+import { FirstRunAlert } from "./components/FirstRunAlert";
+import { ForgotPasswordLink } from "./components/ForgotPasswordLink";
+import { TrustDeviceToggle } from "./components/TrustDeviceToggle";
+import { TwoFactorFields } from "./components/TwoFactorFields";
+import { useLoginForm } from "./useLoginForm";
 
 export const LoginPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { t } = useTranslation("login");
   const {
     isAuthenticated,
@@ -267,17 +32,8 @@ export const LoginPage = () => {
     refreshEnabled,
     hasChecked,
     ensureAuth,
-    setAuthenticated,
   } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [isUsernameBlurred, setIsUsernameBlurred] = useState(false);
-  const [trustDevice, setTrustDevice] = useState(false);
-  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
-  const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const autoSubmitTriggeredRef = useRef(false);
-  const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
+  const form = useLoginForm();
 
   const serverInfo = useServerInfoStore((s) => s.data);
   const fetchServerInfo = useServerInfoStore((s) => s.fetchServerInfo);
@@ -286,125 +42,7 @@ export const LoginPage = () => {
     fetchServerInfo();
   }, [fetchServerInfo]);
 
-  const showToast = useCallback((message: string, severity: ToastSeverity) => {
-    const toastId = `login:${severity}:${message}`;
-
-    if (severity === "success") {
-      toast.success(message, { toastId });
-      return;
-    }
-
-    toast.error(message, { toastId });
-  }, []);
-
-  const submitLogin = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const trimmedUsername = username.trim();
-      const usernameFormatError =
-        trimmedUsername.length > 0 && !isEmail(trimmedUsername)
-          ? getUsernameError(trimmedUsername)
-          : null;
-
-      if (usernameFormatError) {
-        showToast(usernameFormatError, "error");
-        return;
-      }
-
-      if (
-        requiresTwoFactor &&
-        normalizeTwoFactorCode(twoFactorCode).length < 6
-      ) {
-        showToast(t("twoFactor.required"), "error");
-        return;
-      }
-
-      await authApi.login({
-        username: trimmedUsername,
-        password,
-        twoFactorCode: requiresTwoFactor
-          ? normalizeTwoFactorCode(twoFactorCode)
-          : undefined,
-        trustDevice,
-      });
-
-      const user = await authApi.me();
-      setAuthenticated(true, user);
-      navigate("/");
-    } catch (e) {
-      if (isAxiosError(e)) {
-        const status = e.response?.status;
-        const serverMessage = getApiErrorMessage(e) ?? undefined;
-        const hint = tryGetTwoFactorHint({ status, serverMessage });
-
-        if (hint === "required") {
-          setRequiresTwoFactor(true);
-          setTwoFactorCode("");
-          return;
-        }
-
-        if (hint === "invalid") {
-          setRequiresTwoFactor(true);
-          showToast(t("twoFactor.invalid"), "error");
-          return;
-        }
-
-        if (hint === "locked") {
-          setRequiresTwoFactor(true);
-          showToast(t("twoFactor.locked"), "error");
-          return;
-        }
-
-        if (hasApiErrorToastBeenDispatched(e)) {
-          return;
-        }
-      }
-
-      showToast(t("errorMessage"), "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    requiresTwoFactor,
-    twoFactorCode,
-    username,
-    password,
-    trustDevice,
-    t,
-    showToast,
-    setAuthenticated,
-    navigate,
-  ]);
-
-  const handleSubmit = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault();
-      await submitLogin();
-    },
-    [submitLogin],
-  );
-
-  const handleForgotPassword = useCallback(async () => {
-    const trimmed = username.trim();
-    if (!trimmed || !isEmail(trimmed)) {
-      showToast(t("forgotPassword.enterEmail"), "error");
-      return;
-    }
-
-    setForgotPasswordSending(true);
-    try {
-      await authApi.forgotPassword(trimmed);
-      showToast(t("forgotPassword.sent"), "success");
-    } catch {
-      showToast(t("forgotPassword.sent"), "success");
-    } finally {
-      setForgotPasswordSending(false);
-    }
-  }, [username, t, showToast]);
-
   useEffect(() => {
-    // If we can silently restore a session, do it and keep loader overlay while it runs.
     if (!hydrated) return;
     if (!refreshEnabled) return;
     if (isAuthenticated) return;
@@ -412,32 +50,6 @@ export const LoginPage = () => {
     ensureAuth();
   }, [hydrated, refreshEnabled, isAuthenticated, hasChecked, ensureAuth]);
 
-  // Auto-submit when 2FA code is complete (6 digits)
-  useEffect(() => {
-    if (!requiresTwoFactor) {
-      autoSubmitTriggeredRef.current = false;
-      return;
-    }
-
-    const cleanCode = normalizeTwoFactorCode(twoFactorCode);
-    if (cleanCode.length === 6 && !loading && !autoSubmitTriggeredRef.current) {
-      autoSubmitTriggeredRef.current = true;
-
-      // Small delay to ensure state is stable
-      const timer = setTimeout(() => {
-        void submitLogin();
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-
-    // Reset flag when code changes (user editing)
-    if (cleanCode.length < 6) {
-      autoSubmitTriggeredRef.current = false;
-    }
-  }, [twoFactorCode, requiresTwoFactor, loading, submitLogin]);
-
-  // Redirect to home if already authenticated
   if (!isInitializing && isAuthenticated) {
     const from = (location.state as { from?: string })?.from || "/";
     return <Navigate to={from} replace />;
@@ -449,26 +61,11 @@ export const LoginPage = () => {
   const showFirstRunAlert =
     serverInfo !== null && serverInfo.canCreateInitialAdmin;
 
-  const isFirstRunMode = showFirstRunAlert && !requiresTwoFactor;
+  const isFirstRunMode = showFirstRunAlert && !form.requiresTwoFactor;
 
   const submitButtonLabel = isFirstRunMode
     ? t("firstRun.continueButton")
     : t("loginButton");
-
-  const usernameErrorText = (() => {
-    if (requiresTwoFactor) {
-      return undefined;
-    }
-
-    const trimmedUsername = username.trim();
-    if (trimmedUsername.length === 0 || isEmail(trimmedUsername)) {
-      return undefined;
-    }
-
-    return getUsernameError(trimmedUsername) ?? undefined;
-  })();
-
-  const usernameHasError = isUsernameBlurred && Boolean(usernameErrorText);
 
   return (
     <>
@@ -508,36 +105,36 @@ export const LoginPage = () => {
               sx={{ mb: 3 }}
             >
               <Typography variant="h4" component="h1">
-                {requiresTwoFactor ? t("twoFactor.title") : t("title")}
+                {form.requiresTwoFactor ? t("twoFactor.title") : t("title")}
               </Typography>
               <Avatar src="/assets/icons/icon.svg" alt="App Logo" />
             </Box>
             <Box
               component="form"
-              onSubmit={handleSubmit}
+              onSubmit={form.handleSubmit}
               noValidate
               autoComplete="off"
             >
               <Stack spacing={2.5}>
-                {!requiresTwoFactor ? (
+                {!form.requiresTwoFactor ? (
                   <CredentialsFields
-                    username={username}
-                    password={password}
-                    onUsernameChange={setUsername}
-                    onUsernameBlur={() => setIsUsernameBlurred(true)}
-                    onPasswordChange={setPassword}
-                    disabled={loading}
+                    username={form.username}
+                    password={form.password}
+                    onUsernameChange={form.setUsername}
+                    onUsernameBlur={form.markUsernameBlurred}
+                    onPasswordChange={form.setPassword}
+                    disabled={form.loading}
                     usernameLabel={t("usernameLabel")}
                     passwordLabel={t("passwordLabel")}
-                    usernameHasError={usernameHasError}
+                    usernameHasError={form.usernameHasError}
                   />
                 ) : (
                   <TwoFactorFields
                     caption={t("twoFactor.caption")}
                     digitAriaLabel={t("twoFactor.digit")}
-                    value={twoFactorCode}
-                    onChange={setTwoFactorCode}
-                    disabled={loading}
+                    value={form.twoFactorCode}
+                    onChange={form.setTwoFactorCode}
+                    disabled={form.loading}
                   />
                 )}
                 {showFirstRunAlert && (
@@ -554,11 +151,11 @@ export const LoginPage = () => {
                     alignItems: "center",
                   }}
                 >
-                  {!requiresTwoFactor && (
+                  {!form.requiresTwoFactor && (
                     <TrustDeviceToggle
-                      active={trustDevice}
-                      onToggle={() => setTrustDevice((v) => !v)}
-                      disabled={loading}
+                      active={form.trustDevice}
+                      onToggle={form.toggleTrustDevice}
+                      disabled={form.loading}
                       tooltip={t("rememberMe")}
                     />
                   )}
@@ -566,10 +163,10 @@ export const LoginPage = () => {
                     type="submit"
                     variant="contained"
                     color="primary"
-                    disabled={loading}
+                    disabled={form.loading}
                     sx={{
-                      minWidth: loading ? 44 : 0,
-                      px: loading ? 0.75 : 2.25,
+                      minWidth: form.loading ? 44 : 0,
+                      px: form.loading ? 0.75 : 2.25,
                       transition: (theme) =>
                         theme.transitions.create(["min-width", "padding"], {
                           duration: theme.transitions.duration.shorter,
@@ -588,8 +185,8 @@ export const LoginPage = () => {
                         sx={{
                           overflow: "hidden",
                           whiteSpace: "nowrap",
-                          maxWidth: loading ? 0 : 220,
-                          opacity: loading ? 0 : 1,
+                          maxWidth: form.loading ? 0 : 220,
+                          opacity: form.loading ? 0 : 1,
                           transition: (theme) =>
                             theme.transitions.create(["max-width", "opacity"], {
                               duration: theme.transitions.duration.shorter,
@@ -607,7 +204,7 @@ export const LoginPage = () => {
                           height: 20,
                         }}
                       >
-                        {loading ? (
+                        {form.loading ? (
                           <CircularProgress
                             color="inherit"
                             size={18}
@@ -623,12 +220,12 @@ export const LoginPage = () => {
               </Stack>
             </Box>
           </Paper>
-          {!requiresTwoFactor && !showFirstRunAlert && (
+          {!form.requiresTwoFactor && !showFirstRunAlert && (
             <ForgotPasswordLink
-              onClick={handleForgotPassword}
-              disabled={loading || forgotPasswordSending}
+              onClick={form.handleForgotPassword}
+              disabled={form.loading || form.forgotPasswordSending}
               label={
-                forgotPasswordSending
+                form.forgotPasswordSending
                   ? t("forgotPassword.sending")
                   : t("forgotPassword.link")
               }

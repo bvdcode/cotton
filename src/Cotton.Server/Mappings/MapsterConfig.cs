@@ -25,6 +25,13 @@ namespace Cotton.Server.Mappings
                 .Map(dest => dest.OwnerId, src => src.OwnerId)
                 .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
                 .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)
+                .Map(dest => dest.RequiresVideoTranscoding, src =>
+                    src.FileManifest.SmallFilePreviewHash != null
+                    && src.FileManifest.ContentType.StartsWith("video/")
+                    && src.FileManifest.ContentType != "video/mp4"
+                    && src.FileManifest.ContentType != "video/webm"
+                    && src.FileManifest.ContentType != "video/ogg"
+                    && src.FileManifest.ContentType != "video/quicktime")
                 .Map(d => d.PreviewHashEncryptedHex, s => s.FileManifest.GetPreviewHashEncryptedHex());
 
             TypeAdapterConfig<User, UserDto>

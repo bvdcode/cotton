@@ -6,7 +6,8 @@ import {
   getApiErrorMessage,
   showApiErrorToast,
 } from "../../../../shared/api/httpClient";
-import { useSettingsStore } from "../../../../shared/store/settingsStore";
+import { getCachedServerSettings } from "../../../../shared/api/queries/serverSettings";
+import { useServerSettings } from "../../../../shared/store/useServerSettings";
 import { uploadBlobToChunks } from "../../../../shared/upload";
 import {
   formatDateOnly,
@@ -55,8 +56,8 @@ export const useUserInfoCard = ({
   const [emailVerificationSending, setEmailVerificationSending] =
     useState(false);
 
-  const serverSettings = useSettingsStore((state) => state.data);
-  const fetchServerSettings = useSettingsStore((state) => state.fetchSettings);
+  const { data: serverSettings, fetchSettings: fetchServerSettings } =
+    useServerSettings();
 
   const fullName = useMemo(
     () =>
@@ -130,7 +131,7 @@ export const useUserInfoCard = ({
         let effectiveServerSettings = serverSettings;
         if (!effectiveServerSettings) {
           await fetchServerSettings({ force: false });
-          effectiveServerSettings = useSettingsStore.getState().data;
+          effectiveServerSettings = getCachedServerSettings() ?? null;
         }
 
         if (!effectiveServerSettings) {

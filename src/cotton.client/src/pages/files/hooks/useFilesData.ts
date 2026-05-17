@@ -1,14 +1,17 @@
 import { useEffect, useCallback, useRef } from "react";
-import type { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { useAuthStore } from "../../../shared/store/authStore";
 
 interface UseFilesDataParams {
   nodeId: string | null;
-  layoutType: InterfaceLayoutType;
   loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<void>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
 }
+
+/**
+ * Keeps the active folder content loaded and exposes helpers that operate on
+ * the current node. List mode uses the same loaded content as tile mode.
+ */
 
 export const useFilesData = ({
   nodeId,
@@ -17,16 +20,13 @@ export const useFilesData = ({
 }: UseFilesDataParams) => {
   const loadedNodeIdRef = useRef<string | null>(null);
 
-  // Derive children count reactively from cached/loaded content
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
   const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
-  const rawCachedContent = useNodesStore(
-    (s) => (nodeId ? s.contentByNodeId[nodeId] : undefined),
+  const rawCachedContent = useNodesStore((s) =>
+    nodeId ? s.contentByNodeId[nodeId] : undefined,
   );
   const cachedContent =
-    cacheOwnerUserId === currentUserId
-      ? rawCachedContent
-      : undefined;
+    cacheOwnerUserId === currentUserId ? rawCachedContent : undefined;
 
   const optimisticSetFilePreviewHash = useNodesStore(
     (s) => s.optimisticSetFilePreviewHash,
@@ -35,7 +35,6 @@ export const useFilesData = ({
     ? cachedContent.nodes.length + cachedContent.files.length
     : null;
 
-  // Keep node metadata + children in a single shared source for all view modes.
   useEffect(() => {
     if (!nodeId) {
       loadedNodeIdRef.current = null;
@@ -50,10 +49,6 @@ export const useFilesData = ({
     loadedNodeIdRef.current = nodeId;
     void loadNode(nodeId, { loadChildren: true });
   }, [cachedContent, nodeId, loadNode]);
-
-  const handlePaginationChange = useCallback(() => {
-    // No-op in Files page: list uses the same fully loaded content as tiles.
-  }, []);
 
   const handleFolderChanged = useCallback(() => {
     if (!nodeId) {
@@ -81,18 +76,12 @@ export const useFilesData = ({
         nodeFileId,
         previewHashEncryptedHex,
       );
-
     },
     [nodeId, optimisticSetFilePreviewHash],
   );
 
   return {
     childrenTotalCount,
-    listTotalCount: childrenTotalCount ?? 0,
-    listLoading: false,
-    listError: null,
-    listContent: cachedContent ?? null,
-    handlePaginationChange,
     handleFolderChanged,
     reloadCurrentNode,
     optimisticUpdateCurrentNodeFilePreviewHash,

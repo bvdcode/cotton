@@ -1,9 +1,7 @@
 import { create } from "zustand";
-import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
 import type { AudioPlaylistItem } from "../types/audio";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
-import { parseLrc, type LrcLine } from "../utils/lrc";
 
 interface AudioPlayerState {
   open: boolean;
@@ -17,14 +15,6 @@ interface AudioPlayerState {
   currentFileId: string | null;
   currentFileName: string | null;
 
-  lyricsOpen: boolean;
-  lyricsStatus: LyricsStatus;
-  lyricsLines: ReadonlyArray<LrcLine>;
-  lyricsTrackKey: string | null;
-
-  lyricsCache: Record<string, ReadonlyArray<LrcLine> | null>;
-  lyricsRequestId: number;
-
   openFromSelection: (args: {
     fileId: string;
     fileName: string;
@@ -32,12 +22,6 @@ interface AudioPlayerState {
   }) => void;
 
   toggleShuffle: () => void;
-
-  toggleLyricsOpen: () => void;
-  loadLyricsForTrack: (args: {
-    folderNodeId?: string | null;
-    audioFileName?: string | null;
-  }) => Promise<void>;
 
   setCurrentTrack: (item: AudioPlaylistItem) => void;
 
@@ -52,12 +36,6 @@ const SCAN_PAGE_SIZE = 500;
 const MAX_SCAN_DEPTH = 256;
 const MAX_FOLDERS_TO_SCAN = 2500;
 const MAX_AUDIO_FILES = 25000;
-
-type LyricsStatus = "idle" | "loading" | "ready" | "notFound" | "error";
-
-const LYRICS_PAGE_SIZE = 500;
-const MAX_LYRICS_PAGES = 200;
-const LYRICS_EXPIRE_AFTER_MINUTES = 60 * 24;
 
 const stripExtension = (fileName: string): string => {
   const idx = fileName.lastIndexOf(".");
@@ -101,22 +79,6 @@ const sortAudioPlaylist = (
   });
   return next;
 };
-
-const buildLyricsKey = (folderNodeId: string, audioFileName: string): string => {
-  const base = stripExtension(audioFileName).trim().toLowerCase();
-  return `${folderNodeId}:${base}`;
-};
-
-const buildInlineTextUrl = (downloadLink: string): string => {
-  const url = new URL(downloadLink, window.location.origin);
-  url.searchParams.set("download", "false");
-  return url.toString();
-};
-
-const hasOwn = (
-  obj: Record<string, ReadonlyArray<LrcLine> | null>,
-  key: string,
-): boolean => Object.prototype.hasOwnProperty.call(obj, key);
 
 type NodeInfo = {
   id: string;
@@ -270,13 +232,6 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
   currentFileId: null,
   currentFileName: null,
 
-  lyricsOpen: false,
-  lyricsStatus: "idle",
-  lyricsLines: [],
-  lyricsTrackKey: null,
-  lyricsCache: {},
-  lyricsRequestId: 0,
-
   openFromSelection: ({ fileId, fileName, playlist }) => {
     const effectivePlaylist = (playlist ?? []).length
       ? (playlist ?? [])
@@ -292,132 +247,6 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
 
   toggleShuffle: () => {
     set((prev) => ({ shuffleEnabled: !prev.shuffleEnabled }));
-  },
-
-  toggleLyricsOpen: () => {
-    set((prev) => {
-      if (prev.lyricsOpen) {
-        return {
-          lyricsOpen: false,
-          lyricsStatus: "idle" as const,
-          lyricsLines: [],
-          lyricsTrackKey: null,
-        };
-      }
-
-      return { lyricsOpen: true };
-    });
-  },
-
-  loadLyricsForTrack: async ({ folderNodeId, audioFileName }) => {
-    if (!folderNodeId || !audioFileName) {
-      set({
-        lyricsStatus: "notFound",
-        lyricsLines: [],
-        lyricsTrackKey: null,
-      });
-      return;
-    }
-
-    const key = buildLyricsKey(folderNodeId, audioFileName);
-    const state = get();
-    if (state.lyricsTrackKey === key && state.lyricsStatus === "ready") {
-      return;
-    }
-
-    if (hasOwn(state.lyricsCache, key)) {
-      const cached = state.lyricsCache[key] ?? null;
-      set({
-        lyricsTrackKey: key,
-        lyricsStatus: cached ? "ready" : "notFound",
-        lyricsLines: cached ?? [],
-      });
-      return;
-    }
-
-    const requestId = state.lyricsRequestId + 1;
-    set({
-      lyricsTrackKey: key,
-      lyricsStatus: "loading",
-      lyricsLines: [],
-      lyricsRequestId: requestId,
-    });
-
-    try {
-      const expectedLrcName = `${stripExtension(audioFileName)}.lrc`
-        .trim()
-        .toLowerCase();
-
-      let page = 1;
-      let fetched = 0;
-      let total = 0;
-      let lrcFileId: string | null = null;
-
-      while (page <= MAX_LYRICS_PAGES) {
-        const response = await nodesApi.getChildren(folderNodeId, {
-          page,
-          pageSize: LYRICS_PAGE_SIZE,
-          depth: 0,
-        });
-
-        total = response.totalCount;
-        fetched += response.content.nodes.length + response.content.files.length;
-
-        const match = response.content.files.find(
-          (f) => f.name.trim().toLowerCase() === expectedLrcName,
-        );
-        if (match) {
-          lrcFileId = match.id;
-          break;
-        }
-
-        if (fetched >= total) {
-          break;
-        }
-
-        page += 1;
-      }
-
-      let lines: ReadonlyArray<LrcLine> | null = null;
-      if (lrcFileId) {
-        const downloadLink = await filesApi.getDownloadLink(
-          lrcFileId,
-          LYRICS_EXPIRE_AFTER_MINUTES,
-        );
-        const url = buildInlineTextUrl(downloadLink);
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch lyrics: ${response.status}`);
-        }
-
-        const content = await response.text();
-        const parsed = parseLrc(content);
-        lines = parsed.length > 0 ? parsed : null;
-      }
-
-      set((prev) => {
-        if (prev.lyricsRequestId !== requestId) {
-          return {};
-        }
-
-        return {
-          lyricsCache: { ...prev.lyricsCache, [key]: lines },
-          lyricsStatus: lines ? "ready" : "notFound",
-          lyricsLines: lines ?? [],
-        };
-      });
-    } catch {
-      set((prev) => {
-        if (prev.lyricsRequestId !== requestId) {
-          return {};
-        }
-
-        return {
-          lyricsStatus: "error",
-          lyricsLines: [],
-        };
-      });
-    }
   },
 
   setCurrentTrack: (item) => {
@@ -469,14 +298,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
     }
   },
 
-  close: () =>
-    set({
-      open: false,
-      lyricsOpen: false,
-      lyricsStatus: "idle",
-      lyricsLines: [],
-      lyricsTrackKey: null,
-    }),
+  close: () => set({ open: false }),
 
   reset: () =>
     set({
@@ -487,12 +309,6 @@ export const useAudioPlayerStore = create<AudioPlayerState>()((set, get) => ({
       playlist: [],
       currentFileId: null,
       currentFileName: null,
-      lyricsOpen: false,
-      lyricsStatus: "idle",
-      lyricsLines: [],
-      lyricsTrackKey: null,
-      lyricsCache: {},
-      lyricsRequestId: 0,
     }),
 }));
 
@@ -502,8 +318,3 @@ export const selectAudioPlayerShuffleEnabled = (s: AudioPlayerState): boolean =>
 export const selectAudioPlayerPlaylist = (s: AudioPlayerState): ReadonlyArray<AudioPlaylistItem> => s.playlist;
 export const selectAudioPlayerCurrentFileId = (s: AudioPlayerState): string | null => s.currentFileId;
 export const selectAudioPlayerCurrentFileName = (s: AudioPlayerState): string | null => s.currentFileName;
-export const selectAudioPlayerLyricsOpen = (s: AudioPlayerState): boolean => s.lyricsOpen;
-export const selectAudioPlayerLyricsStatus = (s: AudioPlayerState): LyricsStatus => s.lyricsStatus;
-export const selectAudioPlayerLyricsLines = (
-  s: AudioPlayerState,
-): ReadonlyArray<LrcLine> => s.lyricsLines;

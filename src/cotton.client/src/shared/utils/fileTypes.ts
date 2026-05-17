@@ -21,6 +21,10 @@ export interface FileTypeInfo {
   supportsInlineView: boolean;
 }
 
+export interface FileTypeOptions {
+  requiresVideoTranscoding?: boolean;
+}
+
 const IMAGE_EXTENSIONS = [
   "jpg",
   "jpeg",
@@ -130,16 +134,26 @@ const getFileTypeFromContentType = (contentType?: string): FileType | null => {
 export const getFileTypeInfo = (
   fileName: string,
   contentType?: string | null,
+  options?: FileTypeOptions,
 ): FileTypeInfo => {
   const ext = getFileExtension(fileName);
+  const requiresVideoTranscoding = options?.requiresVideoTranscoding === true;
 
   // Browser can't reliably play many containers inline; keep video preview conservative.
   // If the extension is not in our allow-list, do not treat it as previewable video.
   if (
     contentType?.toLowerCase().startsWith("video/") === true &&
-    !VIDEO_EXTENSIONS.includes(ext)
+    !VIDEO_EXTENSIONS.includes(ext) &&
+    !requiresVideoTranscoding
   ) {
     return { type: "other", supportsPreview: false, supportsInlineView: false };
+  }
+
+  if (
+    requiresVideoTranscoding &&
+    contentType?.toLowerCase().startsWith("video/") === true
+  ) {
+    return { type: "video", supportsPreview: true, supportsInlineView: true };
   }
 
   // SVGs can arrive with XML/text MIME aliases, but they should still open in the image gallery.

@@ -4,7 +4,8 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { IFileListView, FileSystemTile } from "@shared/types/FileListViewTypes";
 import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
-import { TileItem, NewFolderCard } from "./TileItem";
+import { NewFolderCard } from "./NewFolderCard";
+import { TileItem } from "./TileItem";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   isMoveDrag,
@@ -213,7 +214,6 @@ export const TilesView: React.FC<IFileListView> = ({
   const focusAnimationFrameRef = useRef<number | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -287,13 +287,23 @@ export const TilesView: React.FC<IFileListView> = ({
     return `${orderedIds.length}:${firstId}:${lastId}`;
   }, [orderedIds]);
 
-  useEffect(() => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [previousTilesLength, setPreviousTilesLength] = useState(tiles.length);
+  const [previousSelectedIndex, setPreviousSelectedIndex] =
+    useState<number | null>(selectedIndex);
+
+  if (
+    tiles.length !== previousTilesLength ||
+    selectedIndex !== previousSelectedIndex
+  ) {
+    setPreviousTilesLength(tiles.length);
+    setPreviousSelectedIndex(selectedIndex);
     setActiveIndex((prev) => {
       if (tiles.length === 0) return null;
       if (prev === null) return selectedIndex ?? 0;
       return Math.min(prev, tiles.length - 1);
     });
-  }, [selectedIndex, tiles.length]);
+  }
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
@@ -311,12 +321,11 @@ export const TilesView: React.FC<IFileListView> = ({
     };
   }, [cancelPendingFocus]);
 
-  const focusTileByIndex = useCallback(
+  const focusTileDom = useCallback(
     (rawIndex: number, options?: { activate?: boolean }) => {
       if (tiles.length === 0) return;
 
       const nextIndex = Math.max(0, Math.min(rawIndex, tiles.length - 1));
-      setActiveIndex(nextIndex);
 
       if (shouldVirtualize) {
         virtuosoRef.current?.scrollToIndex({
@@ -365,6 +374,17 @@ export const TilesView: React.FC<IFileListView> = ({
     [cancelPendingFocus, columns, shouldVirtualize, tiles.length],
   );
 
+  const focusTileByIndex = useCallback(
+    (rawIndex: number, options?: { activate?: boolean }) => {
+      if (tiles.length === 0) return;
+
+      const nextIndex = Math.max(0, Math.min(rawIndex, tiles.length - 1));
+      setActiveIndex(nextIndex);
+      focusTileDom(nextIndex, options);
+    },
+    [focusTileDom, tiles.length],
+  );
+
   useEffect(() => {
     if (loading || tiles.length === 0) return;
 
@@ -378,8 +398,8 @@ export const TilesView: React.FC<IFileListView> = ({
     }
 
     const indexToFocus = activeIndexRef.current ?? selectedIndex ?? 0;
-    focusTileByIndex(indexToFocus);
-  }, [contentMarker, focusTileByIndex, loading, selectedIndex, tiles.length]);
+    focusTileDom(indexToFocus);
+  }, [contentMarker, focusTileDom, loading, selectedIndex, tiles.length]);
 
   const resolveCurrentIndex = useCallback(
     (target: EventTarget | null): number | null => {
@@ -406,7 +426,9 @@ export const TilesView: React.FC<IFileListView> = ({
         return;
       }
 
-      const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType ?? null);
+      const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType ?? null, {
+        requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
+      });
       if ((typeInfo.type === "image" || typeInfo.type === "video") && fileOperations.onMediaClick) {
         fileOperations.onMediaClick(tile.file.id);
         return;

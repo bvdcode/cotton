@@ -1,6 +1,5 @@
 using Cotton.Previews.Http;
 using System.Diagnostics;
-using Xabe.FFmpeg.Downloader;
 
 namespace Cotton.Previews
 {
@@ -23,7 +22,7 @@ namespace Cotton.Previews
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size = 150)
         {
-            await CheckFfmpegAsync();
+            await FfmpegBinary.EnsureAvailableAsync().ConfigureAwait(false);
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
@@ -44,7 +43,10 @@ namespace Cotton.Previews
                 }
                 else
                 {
-                    double? durationSeconds = await TryGetDurationSecondsAsync(server.Url).ConfigureAwait(false);
+                    double? durationSeconds = await FfmpegBinary.TryGetDurationSecondsAsync(
+                            server.Url,
+                            timeout: TimeSpan.FromSeconds(15))
+                        .ConfigureAwait(false);
                     double seekSeconds = ComputeSeekSeconds(durationSeconds);
                     imageBytes = await RunFfmpegHttpPngAsync(server.Url, seekSeconds).ConfigureAwait(false);
                 }
@@ -68,55 +70,6 @@ namespace Cotton.Previews
             return t;
         }
 
-        private static async Task<double?> TryGetDurationSecondsAsync(Uri url)
-        {
-            var args = $"-v error -show_entries format=duration -of default=nw=1:nk=1 \"{url}\"";
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = GetFfprobePath(),
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-            {
-                return null;
-            }
-
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            try
-            {
-                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
-            }
-            catch
-            {
-                try { process.Kill(true); } catch { }
-                return null;
-            }
-
-            var stderr = await stderrTask.ConfigureAwait(false);
-            if (process.ExitCode != 0)
-            {
-                return null;
-            }
-
-            var s = (await stdoutTask.ConfigureAwait(false)).Trim();
-            if (double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var duration))
-            {
-                return duration;
-            }
-
-            return null;
-        }
-
         private static async Task<byte[]?> TryExtractCoverArtAsync(Uri url)
         {
             var tempFile = Path.Combine(Path.GetTempPath(), $"cotton_cover_{Guid.NewGuid():N}");
@@ -129,7 +82,7 @@ namespace Cotton.Previews
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = GetFfmpegPath(),
+                    FileName = FfmpegBinary.GetFfmpegPath(),
                     Arguments = args,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -189,7 +142,7 @@ namespace Cotton.Previews
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = GetFfmpegPath(),
+                FileName = FfmpegBinary.GetFfmpegPath(),
                 Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -231,30 +184,6 @@ namespace Cotton.Previews
             }
 
             return outputMs.ToArray();
-        }
-
-        private static async Task CheckFfmpegAsync()
-        {
-            if (!File.Exists(GetFfmpegPath()) || !File.Exists(GetFfprobePath()))
-            {
-                await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official);
-
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
-                {
-                    Process.Start("chmod", "+x ffmpeg");
-                    Process.Start("chmod", "+x ffprobe");
-                }
-            }
-        }
-
-        private static string GetFfmpegPath()
-        {
-            return Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffmpeg.exe" : "./ffmpeg";
-        }
-
-        private static string GetFfprobePath()
-        {
-            return Environment.OSVersion.Platform == PlatformID.Win32NT ? "ffprobe.exe" : "./ffprobe";
         }
     }
 }

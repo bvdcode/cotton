@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { getApiErrorMessage } from "../../../../shared/api/httpClient";
+import type { AdminUserDto } from "../../../../shared/api/adminApi";
 import {
-  getApiErrorMessage,
-  isAxiosError,
-} from "../../../../shared/api/httpClient";
-import { adminApi, type AdminUserDto } from "../../../../shared/api/adminApi";
+  invalidateAdminUsers,
+  mergeUsersWithStorageUsage,
+  useAdminUsersQuery,
+} from "../../../../shared/api/queries/admin";
 
 export type LoadState =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "error"; message: string };
-
-const isRequestCancelled = (error: unknown, signal: AbortSignal): boolean =>
-  signal.aborted || (isAxiosError(error) && error.code === "ERR_CANCELED");
 
 export interface AdminUsersData {
   users: AdminUserDto[];
@@ -23,115 +23,49 @@ export interface AdminUsersData {
 
 export const useAdminUsersData = (): AdminUsersData => {
   const { t } = useTranslation("admin");
-  const [users, setUsers] = useState<AdminUserDto[]>([]);
-  const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
-  const [storageUsageLoading, setStorageUsageLoading] = useState(false);
-  const usersRequestControllerRef = useRef<AbortController | null>(null);
+  const queryClient = useQueryClient();
 
-  const loadStorageUsage = useCallback(async (signal: AbortSignal) => {
-    try {
-      const result = await adminApi.getUsers({
-        calculateStorageUsage: true,
-        signal,
-      });
+  const fastQuery = useAdminUsersQuery({ withStorage: false });
+  const storageQuery = useAdminUsersQuery({
+    withStorage: true,
+    enabled: fastQuery.isSuccess && (fastQuery.data?.length ?? 0) > 0,
+  });
 
-      if (signal.aborted) {
-        return;
-      }
+  const users = useMemo(
+    () => mergeUsersWithStorageUsage(fastQuery.data ?? [], storageQuery.data),
+    [fastQuery.data, storageQuery.data],
+  );
 
-      const storageUsageByUserId = new Map(
-        result.map((user) => [user.id, user.storageUsedBytes]),
-      );
-
-      setUsers((current) =>
-        current.map((user) => {
-          const storageUsedBytes = storageUsageByUserId.get(user.id);
-          return storageUsedBytes === undefined
-            ? user
-            : { ...user, storageUsedBytes };
-        }),
-      );
-    } catch (error) {
-      if (isRequestCancelled(error, signal)) {
-        return;
-      }
-
-      // The fast user list is still useful; leave storage usage at its
-      // server-provided fallback if the secondary calculation fails.
-    } finally {
-      if (!signal.aborted) {
-        setStorageUsageLoading(false);
-      }
+  const loadState = useMemo<LoadState>(() => {
+    if (fastQuery.isPending || fastQuery.isFetching) {
+      return { kind: "loading" };
     }
-  }, []);
 
-  const fetchUsers = useCallback(async () => {
-    usersRequestControllerRef.current?.abort();
-
-    const controller = new AbortController();
-    usersRequestControllerRef.current = controller;
-    const { signal } = controller;
-    let storageUsageStarted = false;
-
-    setLoadState({ kind: "loading" });
-    setStorageUsageLoading(false);
-
-    try {
-      const result = await adminApi.getUsers({ signal });
-
-      if (signal.aborted) {
-        return;
-      }
-
-      setUsers(result);
-      setLoadState({ kind: "idle" });
-
-      if (result.length === 0) {
-        if (usersRequestControllerRef.current === controller) {
-          usersRequestControllerRef.current = null;
-        }
-        return;
-      }
-
-      setStorageUsageLoading(true);
-      storageUsageStarted = true;
-      void loadStorageUsage(signal).finally(() => {
-        if (usersRequestControllerRef.current === controller) {
-          usersRequestControllerRef.current = null;
-        }
-      });
-    } catch (error) {
-      if (isRequestCancelled(error, signal)) {
-        return;
-      }
-
-      const message = getApiErrorMessage(error);
-      if (message) {
-        setLoadState({ kind: "error", message });
-        return;
-      }
-
-      setLoadState({ kind: "error", message: t("users.errors.loadFailed") });
-    } finally {
-      if (
-        !storageUsageStarted &&
-        usersRequestControllerRef.current === controller
-      ) {
-        usersRequestControllerRef.current = null;
-      }
+    if (fastQuery.isError) {
+      return {
+        kind: "error",
+        message:
+          getApiErrorMessage(fastQuery.error) ?? t("users.errors.loadFailed"),
+      };
     }
-  }, [loadStorageUsage, t]);
 
-  useEffect(() => {
-    void fetchUsers();
+    return { kind: "idle" };
+  }, [
+    fastQuery.error,
+    fastQuery.isError,
+    fastQuery.isFetching,
+    fastQuery.isPending,
+    t,
+  ]);
 
-    return () => {
-      usersRequestControllerRef.current?.abort();
-      usersRequestControllerRef.current = null;
-    };
-  }, [fetchUsers]);
+  const storageUsageLoading = storageQuery.fetchStatus === "fetching";
 
-  return { users, loadState, storageUsageLoading, refresh: fetchUsers };
+  const refresh = useCallback(
+    () => invalidateAdminUsers(queryClient),
+    [queryClient],
+  );
+
+  return { users, loadState, storageUsageLoading, refresh };
 };
 
 

@@ -385,13 +385,14 @@
       "play": "Play",
       "pause": "Pause",
       "copied": "Copied!",
-      "reload": "Reload"
+      "reload": "Refresh"
     },
     "errors": {
       "unexpectedTitle": "Something went wrong",
       "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
       "showDetails": "Show details",
-      "hideDetails": "Hide details"
+      "hideDetails": "Hide details",
+      "schemaValidationFailed": "Server returned unexpected data"
     },
     "userMenu": {
       "profile": "Profile",
@@ -427,7 +428,7 @@
     },
     "pwa": {
       "updateAvailable": "A new version is ready.",
-      "updateAction": "Refresh"
+      "updateAction": "Update"
     }
   },
   "audioPlayer": {
@@ -1039,6 +1040,14 @@
   },
   "files": {
     "title": "Files",
+    "errors": {
+      "resolveRootFailed": "Failed to resolve root folder",
+      "loadContentsFailed": "Failed to load folder contents",
+      "createFolderFailed": "Failed to create folder",
+      "deleteFolderFailed": "Failed to delete folder",
+      "renameFolderFailed": "Failed to rename folder",
+      "duplicateFolderName": "A folder with this name already exists"
+    },
     "move": {
       "cut": "Cut",
       "pasteHere_one": "Paste {{count}} item here",
@@ -1231,6 +1240,10 @@
         "originalMode": "Mode: original",
         "switchToOriginal": "Switch to original",
         "switchToPreview": "Switch to preview"
+      },
+      "video": {
+        "transcodeNotice": "Preparing this video for browser playback. First start or seeking may take a moment.",
+        "transcodeError": "This browser cannot play the prepared video stream."
       },
       "errors": {
         "loadFailed": "Failed to load file{{error}}",

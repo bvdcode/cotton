@@ -1,6 +1,7 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import {
   Box,
+  CircularProgress,
   IconButton,
   Popover,
   Stack,
@@ -18,8 +19,39 @@ import {
   WbSunny,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { PreviewModal, PdfPreview, TextPreview, ModelPreview } from "./preview";
+import { PreviewModal } from "./preview/PreviewModal";
 import type { FileType } from "@shared/utils/fileTypes";
+
+const PdfPreview = lazy(() =>
+  import("./preview/PdfPreview").then((module) => ({
+    default: module.PdfPreview,
+  })),
+);
+
+const TextPreview = lazy(() =>
+  import("./preview/TextPreview").then((module) => ({
+    default: module.TextPreview,
+  })),
+);
+
+const ModelPreview = lazy(() =>
+  import("./preview/ModelPreview").then((module) => ({
+    default: module.ModelPreview,
+  })),
+);
+
+const PreviewFallback: React.FC = () => (
+  <Box
+    alignItems="center"
+    display="flex"
+    height="100%"
+    justifyContent="center"
+    minHeight={120}
+    width="100%"
+  >
+    <CircularProgress size={24} />
+  </Box>
+);
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -239,19 +271,23 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       headerActions={modelHeaderActions}
     >
       {fileType === "pdf" && fileSource && (
-        <PdfPreview
-          source={fileSource}
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-        />
+        <Suspense fallback={<PreviewFallback />}>
+          <PdfPreview
+            source={fileSource}
+            fileName={fileName}
+            fileSizeBytes={fileSizeBytes}
+          />
+        </Suspense>
       )}
       {fileType === "text" && (
-        <TextPreview
-          nodeFileId={fileId}
-          fileName={fileName}
-          fileSizeBytes={fileSizeBytes}
-          onSaved={onSaved}
-        />
+        <Suspense fallback={<PreviewFallback />}>
+          <TextPreview
+            nodeFileId={fileId}
+            fileName={fileName}
+            fileSizeBytes={fileSizeBytes}
+            onSaved={onSaved}
+          />
+        </Suspense>
       )}
 
       {isModel && fileSource && (
@@ -264,18 +300,20 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           }}
         >
           <Box sx={{ flex: 1, minHeight: 0 }}>
-            <ModelPreview
-              source={fileSource}
-              fileName={fileName}
-              fileSizeBytes={fileSizeBytes}
-              materialColor={materialColor}
-              autoAlignToken={autoAlignToken}
-              autoOrientToken={autoOrientToken}
-              flipToken={flipToken}
-              lightingPreset={lightingPreset}
-              shadowsEnabled={shadowsEnabled}
-              surfacePreset={surfacePreset}
-            />
+            <Suspense fallback={<PreviewFallback />}>
+              <ModelPreview
+                source={fileSource}
+                fileName={fileName}
+                fileSizeBytes={fileSizeBytes}
+                materialColor={materialColor}
+                autoAlignToken={autoAlignToken}
+                autoOrientToken={autoOrientToken}
+                flipToken={flipToken}
+                lightingPreset={lightingPreset}
+                shadowsEnabled={shadowsEnabled}
+                surfacePreset={surfacePreset}
+              />
+            </Suspense>
           </Box>
         </Box>
       )}

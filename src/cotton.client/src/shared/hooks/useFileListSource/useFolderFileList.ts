@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 import { useNodesStore } from "../../store/nodesStore";
+import { useAuthStore } from "../../store/authStore";
 import { useContentTiles } from "../useContentTiles";
 import type { FileListSource } from "../../types/fileListSource";
 import { InterfaceLayoutType } from "../../api/layoutsApi";
@@ -9,20 +10,35 @@ interface UseFolderFileListOptions {
   nodeId: string | null;
   layoutType: InterfaceLayoutType;
   listContent?: NodeContentDto | null;
+  deferContent?: boolean;
 }
 
 export const useFolderFileList = ({
   nodeId,
   layoutType,
   listContent,
+  deferContent = false,
 }: UseFolderFileListOptions): FileListSource => {
-  const { contentByNodeId, loading, error, refreshNodeContent } = useNodesStore();
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
+  const cacheOwnerUserId = useNodesStore((s) => s.cacheOwnerUserId);
+  const rawContent = useNodesStore((s) =>
+    nodeId ? s.contentByNodeId[nodeId] : undefined,
+  );
+  const loading = useNodesStore((s) => s.loading);
+  const error = useNodesStore((s) => s.error);
+  const refreshNodeContent = useNodesStore((s) => s.refreshNodeContent);
 
-  const content = nodeId ? contentByNodeId[nodeId] : undefined;
+  const content =
+    cacheOwnerUserId === currentUserId ? rawContent : undefined;
   const effectiveContent =
     layoutType === InterfaceLayoutType.List ? (listContent ?? content) : content;
 
-  const { tiles } = useContentTiles(effectiveContent ?? undefined);
+  const deferredContent = useDeferredValue(effectiveContent);
+  const visibleContent = deferContent ? deferredContent : effectiveContent;
+  const isContentTransitioning =
+    deferContent && !!effectiveContent && deferredContent !== effectiveContent;
+
+  const { tiles } = useContentTiles(visibleContent ?? undefined);
 
   const refresh = useMemo(() => {
     if (!nodeId) return undefined;
@@ -34,5 +50,7 @@ export const useFolderFileList = ({
     error,
     tiles,
     refresh,
+    isContentTransitioning,
+    hasContent: !!visibleContent,
   };
 };

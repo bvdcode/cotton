@@ -90,6 +90,7 @@ export interface GetGcChunksTimelineRequest {
   bucket?: GcTimelineBucketKind;
   fromUtc?: string;
   toUtc?: string;
+  signal?: AbortSignal;
 }
 
 export interface AdminGetUsersRequest {
@@ -125,20 +126,22 @@ export const adminApi = {
     return response.data;
   },
 
-  getLatestDatabaseBackup:
-    async (): Promise<LatestDatabaseBackupDto | null> => {
-      try {
-        const response = await httpClient.get<LatestDatabaseBackupDto>(
-          "server/database-backup/latest",
-        );
-        return response.data;
-      } catch (error) {
-        if (isAxiosError(error) && error.response?.status === 404) {
-          return null;
-        }
-        throw error;
+  getLatestDatabaseBackup: async (
+    signal?: AbortSignal,
+  ): Promise<LatestDatabaseBackupDto | null> => {
+    try {
+      const response = await httpClient.get<LatestDatabaseBackupDto>(
+        "server/database-backup/latest",
+        { signal },
+      );
+      return response.data;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        return null;
       }
-    },
+      throw error;
+    }
+  },
 
   triggerDatabaseBackup: async (): Promise<void> => {
     await httpClient.patch("server/database-backup/trigger");
@@ -159,6 +162,7 @@ export const adminApi = {
           fromUtc: request?.fromUtc,
           toUtc: request?.toUtc,
         },
+        signal: request?.signal,
       },
     );
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Alert,
   Box,
@@ -16,7 +16,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import Loader from "../../shared/ui/Loader";
-import { useTrashStore } from "../../shared/store/trashStore";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  invalidateTrashChildren,
+  useTrashChildrenQuery,
+  useTrashNodeMetaQuery,
+  useTrashRootQuery,
+} from "../../shared/api/queries/trash";
 import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
 import { useTrashBulkActions, useTrashListData, useTrashRestoreActions } from "./hooks";
@@ -25,7 +31,6 @@ import {
   buildBreadcrumbs,
   calculateFolderStats,
 } from "../files/utils/nodeUtils";
-import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
@@ -44,6 +49,7 @@ import {
   getFileBrowserViewMode,
 } from "../files/utils/viewMode";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
+import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
 
 type EmptyTrashProgressDialogProps = {
   open: boolean;
@@ -74,18 +80,8 @@ export const TrashPage: React.FC = () => {
   const params = useParams<{ nodeId?: string }>();
   const confirm = useConfirm();
 
-  const {
-    currentNode,
-    ancestors,
-    contentByNodeId,
-    loading,
-    error,
-    loadRoot,
-    loadNode,
-    refreshNodeContent,
-  } = useTrashStore();
-
   const routeNodeId = params.nodeId;
+  const isTrashRoot = !routeNodeId;
 
   const storedLayoutType = useLocalPreferencesStore(selectTrashLayoutType);
   const layoutType = storedLayoutType ?? InterfaceLayoutType.Tiles;
@@ -99,17 +95,35 @@ export const TrashPage: React.FC = () => {
     cycleFileBrowserViewMode(viewMode, setLayoutType, setTilesSize);
   }, [setLayoutType, setTilesSize, viewMode]);
 
-  useEffect(() => {
-    const loadChildren = layoutType !== InterfaceLayoutType.List;
-    if (!routeNodeId) {
-      void loadRoot({ force: false, loadChildren });
-    } else {
-      void loadNode(routeNodeId, { loadChildren });
-    }
-  }, [routeNodeId, layoutType, loadRoot, loadNode]);
-
-  const nodeId = routeNodeId ?? currentNode?.id ?? null;
-  const content = nodeId ? contentByNodeId[nodeId] : undefined;
+  const queryClient = useQueryClient();
+  const rootQuery = useTrashRootQuery(isTrashRoot);
+  const nodeId = routeNodeId ?? rootQuery.data?.id ?? null;
+  const nodeMetaQuery = useTrashNodeMetaQuery(nodeId, {
+    isRoot: isTrashRoot,
+    enabled: !!nodeId,
+  });
+  const currentNode =
+    nodeMetaQuery.data?.node ?? (isTrashRoot ? rootQuery.data ?? null : null);
+  const ancestors = useMemo(
+    () => (isTrashRoot ? [] : (nodeMetaQuery.data?.ancestors ?? [])),
+    [isTrashRoot, nodeMetaQuery.data?.ancestors],
+  );
+  const childrenQuery = useTrashChildrenQuery({
+    nodeId,
+    isRoot: isTrashRoot,
+    enabled: layoutType !== InterfaceLayoutType.List && !!nodeId,
+  });
+  const content = childrenQuery.data?.content;
+  const loading =
+    (isTrashRoot && rootQuery.isPending) ||
+    (!!nodeId && nodeMetaQuery.isPending) ||
+    (layoutType !== InterfaceLayoutType.List &&
+      !!nodeId &&
+      childrenQuery.isPending);
+  const error =
+    rootQuery.isError || nodeMetaQuery.isError || childrenQuery.isError
+      ? t("error")
+      : null;
 
   const {
     listTotalCount,
@@ -122,7 +136,6 @@ export const TrashPage: React.FC = () => {
     nodeId,
     routeNodeId,
     layoutType,
-    fallbackContent: content,
     loadErrorText: t("error"),
   });
   const refreshContent = React.useCallback(async () => {
@@ -132,8 +145,8 @@ export const TrashPage: React.FC = () => {
       return;
     }
 
-    void refreshNodeContent(nodeId);
-  }, [layoutType, nodeId, refreshNodeContent, reloadListPage]);
+    await invalidateTrashChildren(queryClient, nodeId);
+  }, [layoutType, nodeId, queryClient, reloadListPage]);
 
   const pageTitle = useMemo(() => {
     const folderName = currentNode?.name;
@@ -158,17 +171,19 @@ export const TrashPage: React.FC = () => {
       ? (listContent ?? content)
       : content;
 
-  useTrashFileList({
+  const trashFileListSource = useTrashFileList({
     nodeId,
+    isRoot: isTrashRoot,
     layoutType,
     listContent,
   });
 
-  const { tiles } = useContentTiles(effectiveContent);
+  const { hasContent, tiles } = useFileListSourceLogic({
+    source: trashFileListSource,
+    sourceKind: "trash",
+  });
 
   const fileSelection = useFileSelection();
-
-  const isTrashRoot = !routeNodeId;
 
   const goToFolder = React.useMemo(
     () => (folderId: string) => navigate(`/trash/${folderId}`),
@@ -387,7 +402,7 @@ export const TrashPage: React.FC = () => {
       loading:
         layoutType === InterfaceLayoutType.List
           ? (!listContent && !listLoadError) || listLoading
-          : !content && !error,
+          : !hasContent && !error,
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
       emptyStateText: layoutType === InterfaceLayoutType.Tiles ? t("empty") : undefined,
@@ -410,7 +425,6 @@ export const TrashPage: React.FC = () => {
           : undefined,
     }),
     [
-      content,
       error,
       fileOperations,
       fileSelection.selectedIds,
@@ -418,6 +432,7 @@ export const TrashPage: React.FC = () => {
       folderOperations,
       handleToggleItem,
       handleGoUp,
+      hasContent,
       isCreatingInThisFolder,
       layoutType,
       listContent,
@@ -431,7 +446,7 @@ export const TrashPage: React.FC = () => {
     ],
   );
 
-  if (!content && !error && layoutType !== InterfaceLayoutType.List) {
+  if (!hasContent && !error && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 

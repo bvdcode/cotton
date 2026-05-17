@@ -19,8 +19,9 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../features/auth";
 import { OPEN_SEARCH_EVENT, SearchModal } from "../../features/search";
-import { useSettingsStore } from "../../shared/store/settingsStore";
+import { useServerSettingsQuery } from "../../shared/api/queries/serverSettings";
 import { AudioPlayerBar } from "../components/AudioPlayerBar";
+import { ErrorBoundary } from "../../shared/ui/ErrorBoundary";
 
 interface AppLayoutProps {
   routes: RouteConfig[];
@@ -32,10 +33,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const { t: tSearch } = useTranslation("search");
   const { isAuthenticated } = useAuth();
   const theme = useTheme();
-  const settingsLoaded = useSettingsStore((s) => s.loaded);
-  const settingsLoading = useSettingsStore((s) => s.loading);
-  const settingsError = useSettingsStore((s) => s.error);
-  const fetchSettings = useSettingsStore((s) => s.fetchSettings);
+  useServerSettingsQuery({ enabled: isAuthenticated });
   const [searchOpen, setSearchOpen] = React.useState(false);
 
   const navTextColor = theme.palette.text.primary;
@@ -45,22 +43,6 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
   const openSearch = React.useCallback(() => {
     setSearchOpen(true);
   }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-    if (settingsLoaded || settingsLoading || settingsError) {
-      return;
-    }
-    fetchSettings();
-  }, [
-    isAuthenticated,
-    settingsLoaded,
-    settingsLoading,
-    settingsError,
-    fetchSettings,
-  ]);
 
   useEffect(() => {
     const handleOpenSearch = () => openSearch();
@@ -191,7 +173,9 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
           flexDirection: "column",
         })}
       >
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </Container>
 
       <AudioPlayerBar />

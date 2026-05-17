@@ -1,17 +1,23 @@
-import { httpClient } from "./httpClient";
+import { httpClient, parseValidated } from "./httpClient";
+import {
+  userPreferencesSchema,
+  type UserPreferences,
+} from "./schemas/userPreferences";
 
-export type UserPreferences = Record<string, string>;
+export type { UserPreferences } from "./schemas/userPreferences";
+
+const PREFERENCES_URL = "users/me/preferences";
 
 export const userPreferencesApi = {
   update: async (
     patch: UserPreferences,
     options?: { token?: string },
   ): Promise<UserPreferences> => {
-    const response = await httpClient.patch<UserPreferences>(
-      "users/me/preferences",
+    const response = await httpClient.patch<unknown>(
+      PREFERENCES_URL,
       patch,
       options?.token ? { params: { token: options.token } } : undefined,
     );
-    return response.data;
+    return parseValidated(PREFERENCES_URL, response.data, userPreferencesSchema);
   },
 };

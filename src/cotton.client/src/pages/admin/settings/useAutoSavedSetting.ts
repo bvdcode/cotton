@@ -45,18 +45,17 @@ export const useAutoSavedSetting = <T,>({
   const savedValueRef = useRef(savedValue);
   const flashTimerRef = useRef<number | null>(null);
 
-  loadRef.current = load;
-  saveRef.current = save;
-  isEqualRef.current = isEqual;
-  errorMessageRef.current = errorMessage;
-  toastIdPrefixRef.current = toastIdPrefix;
-  savedValueRef.current = savedValue;
+  useEffect(() => {
+    loadRef.current = load;
+    saveRef.current = save;
+    isEqualRef.current = isEqual;
+    errorMessageRef.current = errorMessage;
+    toastIdPrefixRef.current = toastIdPrefix;
+    savedValueRef.current = savedValue;
+  });
 
   useEffect(() => {
     let active = true;
-
-    setStatus("loading");
-    setLoadFailed(false);
 
     loadRef
       .current()

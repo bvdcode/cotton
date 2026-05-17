@@ -1,7 +1,11 @@
-import { httpClient } from "./httpClient";
-import type { NotificationDto } from "../types/notification";
-import type { JsonValue } from "../types/json";
-import { extractNotifications } from "../types/notificationGuards";
+import { getValidated, httpClient, parseValidated } from "./httpClient";
+import {
+  notificationListResponseSchema,
+  unreadCountResponseSchema,
+  type NotificationDto,
+} from "./schemas/notification";
+
+export type { NotificationDto } from "./schemas/notification";
 
 interface NotificationsPage {
   data: NotificationDto[];
@@ -13,7 +17,7 @@ export const notificationsApi = {
     // Gridify: when value is omitted for '=' it matches null/default values.
     // We want unread => readAt is null.
     const filter = unreadOnly ? "readAt=" : undefined;
-    const response = await httpClient.get<JsonValue>("/notifications", {
+    const response = await httpClient.get<unknown>("/notifications", {
       params: {
         page,
         pageSize,
@@ -21,8 +25,20 @@ export const notificationsApi = {
       },
     });
     const headerRaw = response.headers["x-total-count"];
-    const totalCount = headerRaw ? parseInt(headerRaw, 10) : 0;
-    return { data: extractNotifications(response.data), totalCount };
+    const parsedTotalCount =
+      typeof headerRaw === "string" ? Number.parseInt(headerRaw, 10) : 0;
+    const totalCount = Number.isFinite(parsedTotalCount)
+      ? parsedTotalCount
+      : 0;
+
+    return {
+      data: parseValidated(
+        "/notifications",
+        response.data,
+        notificationListResponseSchema,
+      ),
+      totalCount,
+    };
   },
 
   markAsRead: async (id: string): Promise<void> => {
@@ -34,10 +50,11 @@ export const notificationsApi = {
   },
 
   getUnreadCount: async (): Promise<number> => {
-    const response = await httpClient.get<{ unreadCount: number }>(
+    const response = await getValidated(
       "/notifications/unread/count",
+      unreadCountResponseSchema,
     );
-    return response.data.unreadCount;
+    return response.unreadCount;
   },
 
   test: async (): Promise<void> => {

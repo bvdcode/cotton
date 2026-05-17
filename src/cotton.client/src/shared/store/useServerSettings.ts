@@ -1,12 +1,32 @@
-import { useSettingsStore } from "./settingsStore";
+import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  fetchServerSettings,
+  invalidateServerSettings,
+  useServerSettingsQuery,
+} from "../api/queries/serverSettings";
 
 export function useServerSettings() {
-  const data = useSettingsStore((s) => s.data);
-  const loading = useSettingsStore((s) => s.loading);
-  const loaded = useSettingsStore((s) => s.loaded);
-  const error = useSettingsStore((s) => s.error);
-  const lastUpdated = useSettingsStore((s) => s.lastUpdated);
-  const fetchSettings = useSettingsStore((s) => s.fetchSettings);
+  const queryClient = useQueryClient();
+  const query = useServerSettingsQuery();
 
-  return { data, loading, loaded, error, lastUpdated, fetchSettings };
+  const fetchSettings = useCallback(
+    async (options?: { force?: boolean }): Promise<void> => {
+      if (options?.force) {
+        await invalidateServerSettings(queryClient);
+      }
+
+      await fetchServerSettings(queryClient);
+    },
+    [queryClient],
+  );
+
+  return {
+    data: query.data ?? null,
+    loading: query.isFetching,
+    loaded: query.isSuccess,
+    error: query.isError ? "Failed to load settings" : null,
+    lastUpdated: query.dataUpdatedAt || null,
+    fetchSettings,
+  };
 }

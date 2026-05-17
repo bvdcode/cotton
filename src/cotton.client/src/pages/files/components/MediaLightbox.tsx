@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import "./MediaLightbox.css";
@@ -21,8 +22,10 @@ import { CircularProgress } from "@mui/material";
 import { useActivityDetection } from "../hooks/useActivityDetection";
 import type {
   MediaLightboxProps,
+  SlideHlsVideo,
   SlideWithTitle,
 } from "./mediaLightbox.types";
+import { HLS_VIDEO_SLIDE_TYPE } from "./mediaLightbox.types";
 import { useMediaLightboxUrls } from "../hooks/useMediaLightboxUrls";
 import { shareLinks } from "../../../shared/utils/shareLinks";
 import {
@@ -33,6 +36,10 @@ import {
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
 const TOUCH_CONTROLS_AUTOHIDE_MS = 2500;
+const HlsVideoSlide = React.lazy(async () => {
+  const module = await import("./HlsVideoSlide");
+  return { default: module.HlsVideoSlide };
+});
 
 export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   items,
@@ -43,8 +50,15 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   smoothTransitions = true,
   getDownloadUrl,
 }) => {
+  const { t } = useTranslation("files");
   const [index, setIndex] = React.useState(initialIndex);
+  const hlsNoticeText = t("preview.video.transcodeNotice");
+  const hlsErrorText = t("preview.video.transcodeError");
   const preferPreview = useLocalPreferencesStore(selectGalleryPreferPreview);
+  const currentItemId = React.useMemo(
+    () => (open ? items[index]?.id ?? null : null),
+    [index, items, open],
+  );
 
   const isTouchDevice = React.useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -123,6 +137,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     getSignedMediaUrl,
     getDownloadUrl,
     preferPreview,
+    currentItemId,
   });
 
   const handleCustomDownload = React.useCallback(
@@ -162,9 +177,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [resolveSlideDownloadUrl],
   );
 
-  React.useEffect(() => {
-    setIndex(initialIndex);
-  }, [initialIndex]);
+  React.useLayoutEffect(() => {
+    if (open) {
+      setIndex(initialIndex);
+    }
+  }, [initialIndex, open]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -226,6 +243,26 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       iconDownload: () => <DownloadIcon />,
       iconSlideshowPause: () => <PauseIcon />,
       iconSlideshowPlay: () => <SlideshowIcon />,
+      slide: ({ slide, offset }: { slide: Slide; offset: number }) => {
+        if (slide.type !== HLS_VIDEO_SLIDE_TYPE) {
+          return undefined;
+        }
+
+        const hlsSlide = slide as SlideHlsVideo & SlideWithTitle;
+        return (
+          <React.Suspense fallback={null}>
+            <HlsVideoSlide
+              src={hlsSlide.src}
+              poster={hlsSlide.poster}
+              width={hlsSlide.width}
+              height={hlsSlide.height}
+              active={offset === 0 && hlsSlide.fileId === currentItemId}
+              noticeText={hlsNoticeText}
+              errorText={hlsErrorText}
+            />
+          </React.Suspense>
+        );
+      },
       slideHeader: ({ slide }: { slide: Slide }) => {
         const maybeTitle = (slide as { title?: string }).title;
         const title = typeof maybeTitle === "string" ? maybeTitle : "";
@@ -291,7 +328,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         );
       },
     }),
-    [handleSlideImageError],
+    [currentItemId, handleSlideImageError, hlsErrorText, hlsNoticeText],
   );
 
   const lightboxDownload = React.useMemo(

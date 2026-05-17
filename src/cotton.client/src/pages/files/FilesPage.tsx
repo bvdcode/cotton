@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Alert, Box } from "@mui/material";
 import { ContentCut, ContentPaste, Delete } from "@mui/icons-material";
 import { toast } from "react-toastify";
@@ -18,7 +18,6 @@ import { useAuthStore } from "../../shared/store/authStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
-import { useFileInteractionHandlers } from "./hooks/useFileInteractionHandlers";
 import { useFilesLayout } from "./hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
@@ -30,11 +29,11 @@ import {
   getDropPreparationCaption,
   getDropPreparationTitle,
 } from "./utils/dropPreparation";
-import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import {
   buildFolderOperations,
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
+import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
@@ -45,6 +44,7 @@ import {
 } from "../../shared/store/localPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileMoveController } from "./hooks/useFileMoveController";
+import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -100,14 +100,11 @@ export const FilesPage: React.FC = () => {
 
   const {
     childrenTotalCount,
-    listError,
-    listContent,
     handleFolderChanged,
     reloadCurrentNode,
     optimisticUpdateCurrentNodeFilePreviewHash,
   } = useFilesData({
     nodeId,
-    layoutType,
     loadNode,
     refreshNodeContent,
   });
@@ -145,14 +142,20 @@ export const FilesPage: React.FC = () => {
     [ancestors, currentNode],
   );
 
-  const effectiveContent =
-    layoutType === InterfaceLayoutType.List ? listContent : content;
+  const effectiveContent = content;
 
-  const deferredContent = useDeferredValue(effectiveContent);
-  const isContentTransitioning =
-    !!effectiveContent && deferredContent !== effectiveContent;
+  const fileListSource = useFolderFileList({
+    nodeId,
+    layoutType,
+    deferContent: true,
+  });
 
-  const { sortedFiles, tiles } = useContentTiles(deferredContent ?? undefined);
+  const fileListLogic = useFileListPageLogic({
+    source: fileListSource,
+    sourceKind: "nodes",
+  });
+
+  const { isContentTransitioning, sortedFiles, tiles } = fileListLogic;
 
   const setScanRootNodeId = useAudioPlayerStore((s) => s.setScanRootNodeId);
 
@@ -174,9 +177,7 @@ export const FilesPage: React.FC = () => {
     getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
-  } = useFileInteractionHandlers({
-    sortedFiles,
-  });
+  } = fileListLogic.interaction;
 
   // Consume selectedFileId from router state (e.g. dashboard → open file)
   React.useEffect(() => {
@@ -189,7 +190,9 @@ export const FilesPage: React.FC = () => {
     pendingSelectedFileIdRef.current = null;
     window.history.replaceState({}, "");
 
-    const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null);
+    const typeInfo = getFileTypeInfo(file.name, file.contentType ?? null, {
+      requiresVideoTranscoding: file.requiresVideoTranscoding ?? false,
+    });
     if (typeInfo.type === "image" || typeInfo.type === "video") {
       handleMediaClick(file.id);
     } else {
@@ -245,8 +248,8 @@ export const FilesPage: React.FC = () => {
   );
 
   const stats = useMemo(
-    () => calculateFolderStats(deferredContent?.nodes, deferredContent?.files),
-    [deferredContent?.files, deferredContent?.nodes],
+    () => calculateFolderStats(effectiveContent?.nodes, effectiveContent?.files),
+    [effectiveContent?.files, effectiveContent?.nodes],
   );
 
   const goToFolder = useMemo(
@@ -423,7 +426,7 @@ export const FilesPage: React.FC = () => {
       tileSize: tilesSize,
       loading:
         layoutType === InterfaceLayoutType.List
-          ? !listContent && !listError
+          ? !content && !error
           : (!content && !error) || isContentTransitioning,
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
@@ -460,8 +463,6 @@ export const FilesPage: React.FC = () => {
       isContentTransitioning,
       isCreatingInThisFolder,
       layoutType,
-      listContent,
-      listError,
       moveSupport,
       t,
       tiles,
@@ -507,9 +508,9 @@ export const FilesPage: React.FC = () => {
         <PageHeader
           {...pageHeaderProps}
         />
-        {(error || listError) && (
+        {error && (
           <Box mb={1} px={1}>
-            <Alert severity="error">{error ?? listError}</Alert>
+            <Alert severity="error">{error}</Alert>
           </Box>
         )}
 

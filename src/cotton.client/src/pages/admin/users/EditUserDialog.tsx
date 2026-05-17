@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Button,
@@ -13,10 +13,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import {
-  adminApi,
   type AdminUserDto,
   type AdminUpdateUserRequestDto,
 } from "../../../shared/api/adminApi";
+import { useUpdateAdminUserMutation } from "../../../shared/api/queries/admin";
 import { UserRole } from "../../../features/auth/types";
 import { UserRoleSelect } from "./UserRoleSelect";
 import { UserPersonalInfoFields } from "./UserPersonalInfoFields";
@@ -31,7 +31,6 @@ interface EditUserDialogProps {
   open: boolean;
   user: AdminUserDto | null;
   onClose: () => void;
-  onSaved: () => Promise<void>;
 }
 
 /**
@@ -41,37 +40,43 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
   open,
   user,
   onClose,
-  onSaved,
+}) => {
+  if (!open || !user) {
+    return null;
+  }
+
+  return (
+    <EditUserDialogContent key={user.id} user={user} onClose={onClose} />
+  );
+};
+
+interface EditUserDialogContentProps {
+  user: AdminUserDto;
+  onClose: () => void;
+}
+
+const EditUserDialogContent: React.FC<EditUserDialogContentProps> = ({
+  user,
+  onClose,
 }) => {
   const { t } = useTranslation(["admin", "common"]);
 
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>(UserRole.User);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [username, setUsername] = useState(user.username);
+  const [email, setEmail] = useState(user.email ?? "");
+  const [role, setRole] = useState<UserRole>(user.role);
+  const [firstName, setFirstName] = useState(user.firstName ?? "");
+  const [lastName, setLastName] = useState(user.lastName ?? "");
+  const [birthDate, setBirthDate] = useState(toDateInputValue(user.birthDate));
   const [error, setError] = useState<string | null>(null);
+  const updateUserMutation = useUpdateAdminUserMutation();
+  const saving = updateUserMutation.isPending;
 
   const usernameError = getUsernameError(username);
   const usernameValid = isValidUsername(username);
 
-  useEffect(() => {
-    if (!user) return;
-    setUsername(user.username);
-    setEmail(user.email ?? "");
-    setRole(user.role);
-    setFirstName(user.firstName ?? "");
-    setLastName(user.lastName ?? "");
-    setBirthDate(toDateInputValue(user.birthDate));
-    setError(null);
-  }, [user]);
-
   const canSave = usernameValid && !saving;
 
   const handleSave = async () => {
-    if (!user) return;
     setError(null);
 
     const request: AdminUpdateUserRequestDto = {
@@ -83,10 +88,8 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
       birthDate: birthDate.length > 0 ? birthDate : null,
     };
 
-    setSaving(true);
     try {
-      await adminApi.updateUser(user.id, request);
-      await onSaved();
+      await updateUserMutation.mutateAsync({ userId: user.id, request });
       onClose();
     } catch (e) {
       const message = getApiErrorMessage(e);
@@ -96,13 +99,17 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
       }
 
       setError(t("users.errors.updateFailed"));
-    } finally {
-      setSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!saving) {
+      onClose();
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t("users.edit.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} pt={1}>
@@ -142,7 +149,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button onClick={handleClose} disabled={saving}>
           {t("actions.cancel", { ns: "common" })}
         </Button>
         <Button

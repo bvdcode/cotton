@@ -1,9 +1,9 @@
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { prependCachedNotification } from "../../shared/api/queries/notifications";
+import { notificationSchema } from "../../shared/api/schemas/notification";
 import { eventHub, HUB_METHODS } from "../../shared/signalr";
-import { useNotificationsStore } from "../../shared/store/notificationsStore";
 import { selectNotificationSoundEnabled, useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
-import type { JsonValue } from "../../shared/types/json";
-import { isNotificationDto } from "../../shared/types/notificationGuards";
 import { useAuth } from "../auth";
 
 const playNotificationSound = () => {
@@ -20,10 +20,7 @@ const playNotificationSound = () => {
 
 export function useEventHub() {
   const { isAuthenticated } = useAuth();
-  const prependNotification = useNotificationsStore(
-    (s) => s.prependNotification,
-  );
-  const fetchUnreadCount = useNotificationsStore((s) => s.fetchUnreadCount);
+  const queryClient = useQueryClient();
   const soundEnabled = useUserPreferencesStore(selectNotificationSoundEnabled);
 
   useEffect(() => {
@@ -36,19 +33,21 @@ export function useEventHub() {
       // connection will retry automatically
     });
 
-    const unsubscribe = eventHub.on(HUB_METHODS.NotificationReceived, (...args) => {
-      const first = (args[0] ?? null) as JsonValue;
-      if (isNotificationDto(first)) {
-        prependNotification(first);
-        fetchUnreadCount();
+    const unsubscribe = eventHub.on(
+      HUB_METHODS.NotificationReceived,
+      (...args) => {
+        const parsed = notificationSchema.safeParse(args[0] ?? null);
+        if (!parsed.success) return;
+
+        prependCachedNotification(queryClient, parsed.data);
         if (soundEnabled) {
           playNotificationSound();
         }
-      }
-    });
+      },
+    );
 
     return () => {
       unsubscribe();
     };
-  }, [isAuthenticated, prependNotification, fetchUnreadCount, soundEnabled]);
+  }, [isAuthenticated, queryClient, soundEnabled]);
 }

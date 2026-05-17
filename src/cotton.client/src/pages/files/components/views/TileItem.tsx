@@ -5,18 +5,14 @@ import {
   Delete,
   Download,
   Edit,
-  Folder,
   Restore,
   Share,
 } from "@mui/icons-material";
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
-import { InlineRenameField } from "../InlineRenameField";
 import { getFileIcon } from "@shared/utils/icons";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
-import {
-  getFileTypeInfo,
-} from "@shared/utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import type {
   FileSystemTile,
   FolderOperations,
@@ -25,145 +21,7 @@ import type {
 } from "@shared/types/FileListViewTypes";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
-
-interface BlurredPreviewImageProps {
-  previewUrl: string;
-  alt: string;
-  blurOpacity: number;
-  cursor: React.CSSProperties["cursor"];
-  shouldLightenBackdrop: boolean;
-  invertInDark: boolean;
-}
-
-const BlurredPreviewImage: React.FC<BlurredPreviewImageProps> = ({
-  previewUrl,
-  alt,
-  blurOpacity,
-  cursor,
-  shouldLightenBackdrop,
-  invertInDark,
-}) => {
-  const [imageFit, setImageFit] = React.useState<"contain" | "cover">(
-    "contain",
-  );
-
-  const handleLoad = React.useCallback(
-    (e: React.SyntheticEvent<HTMLImageElement>) => {
-      const img = e.currentTarget;
-      const nextFit =
-        img.naturalWidth > img.naturalHeight ? "cover" : "contain";
-      setImageFit((prev) => (prev === nextFit ? prev : nextFit));
-    },
-    [],
-  );
-
-  return (
-    <Box
-      sx={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-      }}
-    >
-      <Box
-        component="img"
-        src={previewUrl}
-        alt=""
-        aria-hidden
-        draggable={false}
-        sx={{
-          position: "absolute",
-          inset: 0,
-          display: "block",
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          filter: "blur(24px)",
-          transform: "scale(1.15)",
-          opacity: blurOpacity,
-        }}
-      />
-      <Box
-        component="img"
-        src={previewUrl}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-        onLoad={handleLoad}
-        sx={(theme) => ({
-          position: "relative",
-          display: "block",
-          width: "100%",
-          height: "100%",
-          objectFit: imageFit,
-          cursor,
-          ...(shouldLightenBackdrop && {
-            backgroundColor: alpha(theme.palette.common.white, 0.75),
-          }),
-          ...(invertInDark &&
-            theme.palette.mode === "dark" && {
-              filter: "invert(1)",
-            }),
-        })}
-      />
-    </Box>
-  );
-};
-
-interface NewFolderCardProps {
-  newFolderName: string;
-  onNewFolderNameChange: (name: string) => void;
-  onConfirmNewFolder: () => Promise<void>;
-  onCancelNewFolder: () => void;
-  folderNamePlaceholder: string;
-}
-
-export const NewFolderCard: React.FC<NewFolderCardProps> = ({
-  newFolderName,
-  onNewFolderNameChange,
-  onConfirmNewFolder,
-  onCancelNewFolder,
-  folderNamePlaceholder,
-}) => (
-  <Box
-    sx={{
-      border: "2px solid",
-      borderColor: "primary.main",
-      borderRadius: 1,
-      aspectRatio: "1 / 1",
-      display: "flex",
-      flexDirection: "column",
-      p: { xs: 1, sm: 1.25, md: 1 },
-      bgcolor: "action.hover",
-    }}
-  >
-    <Box
-      sx={{
-        width: "100%",
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 1.5,
-        overflow: "hidden",
-        "& > svg": { width: "70%", height: "70%" },
-      }}
-    >
-      <Folder sx={{ color: "primary.main" }} />
-    </Box>
-    <Box display="flex" alignItems="center" gap={0.5}>
-      <InlineRenameField
-        value={newFolderName}
-        onChange={onNewFolderNameChange}
-        onConfirm={onConfirmNewFolder}
-        onCancel={onCancelNewFolder}
-        placeholder={folderNamePlaceholder}
-      />
-    </Box>
-  </Box>
-);
+import { BlurredPreviewImage } from "./BlurredPreviewImage";
 
 interface TileItemProps {
   tile: FileSystemTile;
@@ -389,7 +247,9 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       );
     }
 
-    const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType);
+    const typeInfo = getFileTypeInfo(tile.file.name, tile.file.contentType, {
+      requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
+    });
     const isImage = typeInfo.type === "image";
     const isVideo = typeInfo.type === "video";
     const isPdf = typeInfo.type === "pdf";

@@ -22,17 +22,17 @@ import {
   selectAudioPlayerCurrentFileId,
   selectAudioPlayerCurrentFileName,
   selectAudioPlayerIsScanning,
-  selectAudioPlayerLyricsLines,
-  selectAudioPlayerLyricsOpen,
-  selectAudioPlayerLyricsStatus,
   selectAudioPlayerOpen,
   selectAudioPlayerPlaylist,
   selectAudioPlayerShuffleEnabled,
   useAudioPlayerStore,
 } from "../../shared/store/audioPlayerStore";
+import { useTrackLyricsQuery } from "../../shared/api/queries/audio";
 import { AudioPlayer } from "../../shared/ui/AudioPlayer";
 import { AudioLyricsView } from "../../shared/ui/AudioLyricsView";
-import { findActiveLrcLineIndex } from "../../shared/utils/lrc";
+import { findActiveLrcLineIndex, type LrcLine } from "../../shared/utils/lrc";
+
+type LyricsStatus = "idle" | "loading" | "ready" | "notFound" | "error";
 
 export const AudioPlayerBar: React.FC = () => {
   const { t } = useTranslation(["audioPlayer"]);
@@ -48,17 +48,17 @@ export const AudioPlayerBar: React.FC = () => {
   const currentFileId = useAudioPlayerStore(selectAudioPlayerCurrentFileId);
   const currentFileName = useAudioPlayerStore(selectAudioPlayerCurrentFileName);
   const shuffleEnabled = useAudioPlayerStore(selectAudioPlayerShuffleEnabled);
-  const lyricsOpen = useAudioPlayerStore(selectAudioPlayerLyricsOpen);
-  const lyricsStatus = useAudioPlayerStore(selectAudioPlayerLyricsStatus);
-  const lyricsLines = useAudioPlayerStore(selectAudioPlayerLyricsLines);
 
   const close = useAudioPlayerStore((s) => s.close);
   const scanRecursively = useAudioPlayerStore((s) => s.scanRecursively);
   const setCurrentTrack = useAudioPlayerStore((s) => s.setCurrentTrack);
   const toggleShuffle = useAudioPlayerStore((s) => s.toggleShuffle);
-  const toggleLyricsOpen = useAudioPlayerStore((s) => s.toggleLyricsOpen);
-  const loadLyricsForTrack = useAudioPlayerStore((s) => s.loadLyricsForTrack);
 
+  const [lyricsOpen, setLyricsOpen] = React.useState<boolean>(false);
+  const toggleLyricsOpen = React.useCallback(
+    () => setLyricsOpen((prev) => !prev),
+    [],
+  );
   const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
   const [lyricsActiveIndex, setLyricsActiveIndex] = React.useState<number>(0);
   const [lyricsCountdown, setLyricsCountdown] = React.useState<number | null>(
@@ -123,6 +123,32 @@ export const AudioPlayerBar: React.FC = () => {
   }, [currentPreviewUrl]);
 
   React.useEffect(() => {
+    if (!open) {
+      setLyricsOpen(false);
+    }
+  }, [open]);
+
+  const lyricsAudioFileName = currentItem?.name ?? currentFileName;
+  const lyricsQuery = useTrackLyricsQuery({
+    folderNodeId: currentItem?.nodeId ?? null,
+    audioFileName: lyricsAudioFileName,
+    enabled: lyricsOpen,
+  });
+  const lyricsLines = React.useMemo<ReadonlyArray<LrcLine>>(
+    () => lyricsQuery.data ?? [],
+    [lyricsQuery.data],
+  );
+  const lyricsStatus: LyricsStatus = lyricsQuery.isPending
+    ? lyricsOpen
+      ? "loading"
+      : "idle"
+    : lyricsQuery.isError
+      ? "error"
+      : lyricsLines.length > 0
+        ? "ready"
+        : "notFound";
+
+  React.useEffect(() => {
     setLyricsActiveIndex(0);
     setLyricsCountdown(null);
     setLyricsStarted(false);
@@ -134,17 +160,6 @@ export const AudioPlayerBar: React.FC = () => {
     setLyricsStarted(false);
     countdownConsumedRef.current = false;
   }, [currentFileId]);
-
-  React.useEffect(() => {
-    if (!lyricsOpen) {
-      return;
-    }
-
-    void loadLyricsForTrack({
-      folderNodeId: currentItem?.nodeId ?? null,
-      audioFileName: currentItem?.name ?? currentFileName,
-    });
-  }, [lyricsOpen, currentItem?.nodeId, currentItem?.name, currentFileName, loadLyricsForTrack]);
 
   const lyricsListenEnabled = lyricsOpen && lyricsLines.length > 0;
 

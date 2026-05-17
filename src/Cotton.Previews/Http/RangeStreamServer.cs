@@ -3,7 +3,7 @@ using System.Net;
 
 namespace Cotton.Previews.Http
 {
-    internal sealed class RangeStreamServer : IAsyncDisposable
+    public sealed class RangeStreamServer : IAsyncDisposable
     {
         private readonly record struct ByteRange(long Start, long EndInclusive)
         {
@@ -312,14 +312,11 @@ namespace Cotton.Previews.Http
                 int toRead = (int)Math.Min(buffer.Length, remaining);
                 int read;
 
-                // Lock only Seek+Read to allow interleaving of multiple concurrent requests
-                // This is critical: ffprobe/ffmpeg request full file AND moov simultaneously
-                // Without interleaving, moov request waits for 500MB+ transfer, as result is timeout
                 await _sem.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
                     _stream.Seek(currentPosition, SeekOrigin.Begin);
-                    read = _stream.Read(buffer, 0, toRead);
+                    read = await _stream.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
                 }
                 finally
                 {

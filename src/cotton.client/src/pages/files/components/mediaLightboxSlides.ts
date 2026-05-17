@@ -1,4 +1,5 @@
 import type { SlideWithTitle, MediaItem } from "./mediaLightbox.types";
+import { HLS_VIDEO_SLIDE_TYPE } from "./mediaLightbox.types";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 
 export const TRANSPARENT_PLACEHOLDER =
@@ -33,6 +34,7 @@ export function buildSlidesFromItems(
   items: MediaItem[],
   displayUrls: Record<string, string>,
   signedUrls: Record<string, string>,
+  currentItemId: string | null,
 ): SlideWithTitle[] {
   const total = items.length;
 
@@ -81,6 +83,35 @@ export function buildSlidesFromItems(
         download: true,
         share: true,
       };
+    }
+
+    if (item.requiresTranscoding) {
+      if (item.id !== currentItemId) {
+        return {
+          fileId: item.id,
+          fileName: item.name,
+          type: "image",
+          src: poster || TRANSPARENT_PLACEHOLDER,
+          width: item.width,
+          height: item.height,
+          title,
+          download: true,
+          share: true,
+        };
+      }
+
+      return {
+        fileId: item.id,
+        fileName: item.name,
+        type: HLS_VIDEO_SLIDE_TYPE,
+        src: signedUrl,
+        poster,
+        width: item.width,
+        height: item.height,
+        title,
+        download: true,
+        share: true,
+      } as SlideWithTitle;
     }
 
     return {

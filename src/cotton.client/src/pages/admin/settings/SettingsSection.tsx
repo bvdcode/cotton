@@ -26,14 +26,19 @@ export const SettingsSection = ({
 }: SettingsSectionProps) => {
   const sectionRef = useRef<HTMLDivElement | null>(null);
   const [highlightVisible, setHighlightVisible] = useState(false);
+  const [prevHighlight, setPrevHighlight] = useState(highlight);
+  const [prevHighlightKey, setPrevHighlightKey] = useState(highlightKey);
+
+  // Keep the visual flag derived from props during render; the effect below
+  // only owns browser side effects and delayed fade-out.
+  if (highlight !== prevHighlight || highlightKey !== prevHighlightKey) {
+    setPrevHighlight(highlight);
+    setPrevHighlightKey(highlightKey);
+    setHighlightVisible(highlight);
+  }
 
   useEffect(() => {
-    if (!highlight) {
-      setHighlightVisible(false);
-      return;
-    }
-
-    setHighlightVisible(true);
+    if (!highlight) return;
 
     const handle = window.setTimeout(() => {
       sectionRef.current?.scrollIntoView({

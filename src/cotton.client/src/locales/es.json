@@ -464,7 +464,8 @@
       "unexpectedTitle": "Algo salió mal",
       "unexpectedDescription": "Ocurrió un error inesperado. Vuelve a cargar la página.",
       "showDetails": "Mostrar detalles",
-      "hideDetails": "Ocultar detalles"
+      "hideDetails": "Ocultar detalles",
+      "schemaValidationFailed": "El servidor devolvió datos inesperados"
     },
     "userMenu": {
       "profile": "Perfil",
@@ -486,7 +487,7 @@
     "ok": "Aceptar",
     "pwa": {
       "updateAvailable": "Hay una nueva versión lista.",
-      "updateAction": "Actualizar página"
+      "updateAction": "Actualizar"
     }
   },
   "audioPlayer": {
@@ -1061,6 +1062,14 @@
   },
   "files": {
     "title": "Archivos",
+    "errors": {
+      "resolveRootFailed": "No se pudo resolver la carpeta raíz",
+      "loadContentsFailed": "No se pudo cargar el contenido de la carpeta",
+      "createFolderFailed": "No se pudo crear la carpeta",
+      "deleteFolderFailed": "No se pudo eliminar la carpeta",
+      "renameFolderFailed": "No se pudo renombrar la carpeta",
+      "duplicateFolderName": "Ya existe una carpeta con este nombre"
+    },
     "move": {
       "cut": "Cortar",
       "pasteHere_one": "Pegar {{count}} elemento aquí",
@@ -1253,6 +1262,10 @@
         "originalMode": "Modo: original",
         "switchToOriginal": "Cambiar a original",
         "switchToPreview": "Cambiar a vista previa"
+      },
+      "video": {
+        "transcodeNotice": "Preparando este video para reproducirlo en el navegador. El primer inicio o la búsqueda pueden tardar un momento.",
+        "transcodeError": "Este navegador no puede reproducir el flujo de video preparado."
       },
       "errors": {
         "loadFailed": "No se pudo cargar el archivo{{error}}",

@@ -10,6 +10,7 @@ export interface SharedNodeFileDto {
   name: string;
   contentType: string;
   sizeBytes: number;
+  requiresVideoTranscoding?: boolean;
   previewHashEncryptedHex?: string | null;
 }
 

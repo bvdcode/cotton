@@ -1,6 +1,12 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import axios, {
+  type AxiosError,
+  type AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from "axios";
+import { z } from "zod";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
 import { toast } from "react-toastify";
+import { translateError } from "../i18n/translateError";
 
 export { isAxiosError } from "axios";
 
@@ -244,6 +250,42 @@ export const httpClient = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+const SCHEMA_VALIDATION_TOAST_ID = "api-schema-validation";
+
+const reportSchemaFailure = (url: string, error: z.ZodError): void => {
+  console.error(`[httpClient] Schema validation failed for ${url}:`, error);
+
+  if (typeof window !== "undefined") {
+    toast.error(translateError("common", "errors.schemaValidationFailed"), {
+      toastId: `${SCHEMA_VALIDATION_TOAST_ID}:${url}`,
+    });
+  }
+};
+
+export const parseValidated = <TSchema extends z.ZodTypeAny>(
+  url: string,
+  data: unknown,
+  schema: TSchema,
+): z.infer<TSchema> => {
+  const result = schema.safeParse(data);
+
+  if (!result.success) {
+    reportSchemaFailure(url, result.error);
+    throw result.error;
+  }
+
+  return result.data;
+};
+
+export const getValidated = async <TSchema extends z.ZodTypeAny>(
+  url: string,
+  schema: TSchema,
+  config?: AxiosRequestConfig,
+): Promise<z.infer<TSchema>> => {
+  const response = await httpClient.get<unknown>(url, config);
+  return parseValidated(url, response.data, schema);
+};
 
 // Refresh state
 let isRefreshing = false;

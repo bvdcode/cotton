@@ -23,7 +23,12 @@ import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@mui/material/styles";
-import { useNotificationsStore } from "../../../shared/store/notificationsStore";
+import {
+  useMarkAllAsReadMutation,
+  useMarkAsReadMutation,
+  useNotificationsQuery,
+  useUnreadCountQuery,
+} from "../../../shared/api/queries/notifications";
 import {
   selectNotificationSoundEnabled,
   selectNotificationsShowOnlyUnread,
@@ -41,12 +46,6 @@ export const NotificationsMenu = () => {
   const listRef = useRef<HTMLUListElement | null>(null);
   const sentinelRef = useRef<HTMLLIElement | null>(null);
 
-  const notifications = useNotificationsStore((s) =>
-    Array.isArray(s.notifications) ? s.notifications : [],
-  );
-  const setUnreadOnlyFilter = useNotificationsStore(
-    (s) => s.setUnreadOnlyFilter,
-  );
   const soundEnabled = useUserPreferencesStore(selectNotificationSoundEnabled);
   const showOnlyUnread = useUserPreferencesStore(
     selectNotificationsShowOnlyUnread,
@@ -57,21 +56,42 @@ export const NotificationsMenu = () => {
   const setShowOnlyUnread = useUserPreferencesStore(
     (s) => s.setNotificationsShowOnlyUnread,
   );
-  const unreadCount = useNotificationsStore((s) => s.unreadCount);
-  const hasMore = useNotificationsStore((s) => s.hasMore);
-  const fetchFirstPage = useNotificationsStore((s) => s.fetchFirstPage);
-  const fetchNextPage = useNotificationsStore((s) => s.fetchNextPage);
-  const fetchUnreadCount = useNotificationsStore((s) => s.fetchUnreadCount);
-  const markAsRead = useNotificationsStore((s) => s.markAsRead);
-  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead);
+  const notificationsQuery = useNotificationsQuery({
+    unreadOnly: showOnlyUnread,
+    enabled: open,
+  });
+  const {
+    data: notificationsData,
+    fetchNextPage: fetchNextNotificationsPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch: refetchNotifications,
+  } = notificationsQuery;
+  const {
+    data: unreadCount = 0,
+    refetch: refetchUnreadCount,
+  } = useUnreadCountQuery();
+  const { mutate: markAsRead } = useMarkAsReadMutation();
+  const { mutate: markAllAsRead } = useMarkAllAsReadMutation();
+
+  const notifications = useMemo(
+    () => notificationsData?.pages.flatMap((page) => page.data) ?? [],
+    [notificationsData],
+  );
+  const hasMore = hasNextPage;
+  const fetchNextPage = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextNotificationsPage();
+    }
+  }, [fetchNextNotificationsPage, hasNextPage, isFetchingNextPage]);
 
   const handleOpen = useCallback(
     (e: React.MouseEvent<HTMLElement>) => {
       setAnchorEl(e.currentTarget);
-      fetchFirstPage();
-      fetchUnreadCount();
+      void refetchNotifications();
+      void refetchUnreadCount();
     },
-    [fetchFirstPage, fetchUnreadCount],
+    [refetchNotifications, refetchUnreadCount],
   );
 
   const handleClose = useCallback(() => {
@@ -87,8 +107,8 @@ export const NotificationsMenu = () => {
     [markAsRead],
   );
 
-  const handleMarkAllAsRead = useCallback(async () => {
-    await markAllAsRead();
+  const handleMarkAllAsRead = useCallback(() => {
+    markAllAsRead();
   }, [markAllAsRead]);
 
   useEffect(() => {
@@ -174,11 +194,7 @@ export const NotificationsMenu = () => {
             >
               <IconButton
                 size="small"
-                onClick={() => {
-                  const newValue = !showOnlyUnread;
-                  setShowOnlyUnread(newValue);
-                  setUnreadOnlyFilter(newValue);
-                }}
+                onClick={() => setShowOnlyUnread(!showOnlyUnread)}
               >
                 {showOnlyUnread ? (
                   <FilterListOff fontSize="small" />

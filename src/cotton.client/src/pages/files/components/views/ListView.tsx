@@ -71,6 +71,7 @@ export const ListView: React.FC<IFileListView> = ({
         containerNodeId: tile.file.nodeId ?? null,
         sizeBytes: tile.file.sizeBytes,
         contentType: tile.file.contentType ?? null,
+        requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
         tile,
       };
     });
@@ -355,7 +356,9 @@ export const ListView: React.FC<IFileListView> = ({
     }
 
     if (!fileOperations.isRenaming(row.id)) {
-      const typeInfo = getFileTypeInfo(row.name, row.contentType ?? null);
+      const typeInfo = getFileTypeInfo(row.name, row.contentType ?? null, {
+        requiresVideoTranscoding: row.requiresVideoTranscoding ?? false,
+      });
       if (typeInfo.type === "image" || typeInfo.type === "video") {
         fileOperations.onMediaClick?.(row.id);
       } else {

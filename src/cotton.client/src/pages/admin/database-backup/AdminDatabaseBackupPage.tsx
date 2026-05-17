@@ -8,21 +8,16 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
-  adminApi,
-  type LatestDatabaseBackupDto,
-} from "../../../shared/api/adminApi";
+  useLatestDatabaseBackupQuery,
+  useTriggerDatabaseBackupMutation,
+} from "../../../shared/api/queries/admin";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { AdminPageSurface } from "../components/AdminPageSurface";
-
-type LoadState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "error"; message: string };
 
 type TriggerFeedback =
   | { kind: "idle" }
@@ -49,76 +44,27 @@ const formatDateTime = (value: string): string => {
 export const AdminDatabaseBackupPage = () => {
   const { t } = useTranslation(["admin", "common"]);
 
-  const [backup, setBackup] = useState<LatestDatabaseBackupDto | null>(null);
-  const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [triggerFeedback, setTriggerFeedback] = useState<TriggerFeedback>({
     kind: "idle",
   });
 
-  const loadLatestBackup = useCallback(async () => {
-    try {
-      const latest = await adminApi.getLatestDatabaseBackup();
-      setBackup(latest);
-      setLoadState({ kind: "idle" });
-    } catch (error) {
-      const message = getApiErrorMessage(error);
-      if (message) {
-        setLoadState({ kind: "error", message });
-        return;
-      }
-
-      setLoadState({
-        kind: "error",
-        message: t("databaseBackup.errors.loadFailed"),
-      });
-    }
-  }, [t]);
+  const backupQuery = useLatestDatabaseBackupQuery();
+  const backup = backupQuery.data ?? null;
+  const triggerBackupMutation = useTriggerDatabaseBackupMutation();
 
   const refreshLatestBackup = useCallback(async () => {
-    setLoadState({ kind: "loading" });
-    await loadLatestBackup();
-  }, [loadLatestBackup]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    adminApi
-      .getLatestDatabaseBackup()
-      .then((latest) => {
-        if (cancelled) return;
-        setBackup(latest);
-        setLoadState({ kind: "idle" });
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-
-        const message = getApiErrorMessage(error);
-        if (message) {
-          setLoadState({ kind: "error", message });
-          return;
-        }
-
-        setLoadState({
-          kind: "error",
-          message: t("databaseBackup.errors.loadFailed"),
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
+    await backupQuery.refetch();
+  }, [backupQuery]);
 
   const handleTriggerBackup = useCallback(async () => {
     setTriggerFeedback({ kind: "loading" });
 
     try {
-      await adminApi.triggerDatabaseBackup();
+      await triggerBackupMutation.mutateAsync();
       setTriggerFeedback({ kind: "idle" });
       toast.success(t("databaseBackup.state.triggerSuccess"), {
         toastId: "admin:database-backup:trigger:success",
       });
-      await refreshLatestBackup();
     } catch (error) {
       const message = getApiErrorMessage(error);
       if (message) {
@@ -131,13 +77,17 @@ export const AdminDatabaseBackupPage = () => {
         message: t("databaseBackup.errors.triggerFailed"),
       });
     }
-  }, [refreshLatestBackup, t]);
+  }, [triggerBackupMutation, t]);
 
   const placeholder = t("placeholder", { ns: "common" });
-  const isLoading = loadState.kind === "loading";
+  const isLoading = backupQuery.isPending || backupQuery.isFetching;
+  const loadErrorMessage = backupQuery.isError
+    ? getApiErrorMessage(backupQuery.error) ??
+      t("databaseBackup.errors.loadFailed")
+    : null;
   const isTriggering = triggerFeedback.kind === "loading";
-  const isInitialLoading = isLoading && backup === null;
-  const isRefreshing = isLoading && backup !== null;
+  const isInitialLoading = backupQuery.isPending;
+  const isRefreshing = backupQuery.isFetching && !backupQuery.isPending;
 
   const cards = useMemo(() => {
     if (!backup) {
@@ -241,8 +191,8 @@ export const AdminDatabaseBackupPage = () => {
             </Stack>
           </Stack>
 
-          {loadState.kind === "error" && (
-            <Alert severity="error">{loadState.message}</Alert>
+          {loadErrorMessage && (
+            <Alert severity="error">{loadErrorMessage}</Alert>
           )}
 
           {triggerFeedback.kind === "error" && (
@@ -284,7 +234,7 @@ export const AdminDatabaseBackupPage = () => {
             </Box>
           )}
 
-          {!isLoading && loadState.kind !== "error" && backup === null && (
+          {!isLoading && !loadErrorMessage && backup === null && (
             <Alert severity="info">{t("databaseBackup.state.empty")}</Alert>
           )}
 
