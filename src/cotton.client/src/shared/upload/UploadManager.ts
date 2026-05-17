@@ -361,6 +361,13 @@ export class UploadManager {
 
     if (update.label !== undefined) task.label = update.label;
     if (update.scopeLabel !== undefined) task.scopeLabel = update.scopeLabel;
+    if (update.bytesTotal !== undefined) {
+      task.bytesTotal = Math.max(0, update.bytesTotal);
+      task.bytesCompleted = Math.min(task.bytesCompleted, task.bytesTotal);
+      task.progress01 = task.bytesTotal > 0
+        ? task.bytesCompleted / task.bytesTotal
+        : 1;
+    }
     if (update.status !== undefined) {
       task.status = update.status;
       if (update.status === "completed" || update.status === "failed") {
@@ -493,6 +500,10 @@ export class UploadManager {
 
     const taskEstimator = new RollingBytesPerSecondEstimator({ windowMs: 1500, minDurationMs: 250 });
     let lastEmitTime = 0;
+    const encryptionTaskRef: { current: AppTaskHandle | null } = {
+      current: null,
+    };
+    let encryptionTaskFinished = false;
 
     task._laneProbeTimeout = setTimeout(() => {
       this.maybeOpenLaneForHeadOfLine(task, Date.now());
@@ -507,6 +518,23 @@ export class UploadManager {
           nodeId: task.nodeId,
           server,
           encrypt: task._encrypt,
+          onEncryptProgress: (bytesEncrypted, bytesTotal) => {
+            encryptionTaskRef.current ??= this.createTask({
+              kind: "encrypt",
+              label: task.fileName,
+              scopeLabel: task.nodeLabel,
+              bytesTotal,
+            });
+            encryptionTaskRef.current.update({
+              status: "running",
+              bytesTotal,
+              bytesCompleted: bytesEncrypted,
+            });
+          },
+          onEncryptComplete: () => {
+            encryptionTaskFinished = true;
+            encryptionTaskRef.current?.complete();
+          },
           onProgress: (bytesUploaded, snapshot) => {
             const prevBytesUploaded = task.bytesUploaded;
             task.bytesUploaded = Math.min(
@@ -582,6 +610,20 @@ export class UploadManager {
 
         this.scheduleNodeRefresh(task.nodeId);
       } catch (e) {
+        if (encryptionTaskRef.current && !encryptionTaskFinished) {
+          encryptionTaskRef.current.fail({
+            message: e instanceof Error ? e.message : undefined,
+            key: e instanceof NoKeyError
+              ? "encryptionVaultLocked"
+              : e instanceof ClientEncryptionSizeLimitError
+                ? "clientEncryptionFileTooLarge"
+                : "encryptionFailed",
+            params: e instanceof ClientEncryptionSizeLimitError
+              ? { maxSize: formatBytes(e.maxBytes) }
+              : undefined,
+          });
+        }
+
         task.status = "failed";
         task.completedAt = Date.now();
         task.error = e instanceof Error ? e.message : undefined;

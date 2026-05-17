@@ -67,6 +67,40 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     expect(Array.from(await blobToBytes(decrypted))).toEqual(Array.from(plaintext));
   });
 
+  it("reports encrypt and decrypt chunk progress", async () => {
+    const masterKey = await generateMasterKey();
+    const plaintext = new Uint8Array(20_000);
+    fillRandom(plaintext);
+    const encryptedProgress: number[] = [];
+    const decryptedProgress: number[] = [];
+
+    const encrypted = await encryptFileToBlob(
+      new Blob([plaintext]),
+      masterKey,
+      8192,
+      {
+        onProgress: (bytesProcessed, bytesTotal) => {
+          expect(bytesTotal).toBe(plaintext.byteLength);
+          encryptedProgress.push(bytesProcessed);
+        },
+      },
+    );
+    await decryptBlobToBlob(
+      encrypted,
+      masterKey,
+      ENCRYPTED_CONTENT_TYPE,
+      {
+        onProgress: (bytesProcessed, bytesTotal) => {
+          expect(bytesTotal).toBe(plaintext.byteLength);
+          decryptedProgress.push(bytesProcessed);
+        },
+      },
+    );
+
+    expect(encryptedProgress).toEqual([0, 8192, 16384, 20000]);
+    expect(decryptedProgress).toEqual([0, 8192, 16384, 20000]);
+  });
+
   it("round-trips an empty blob", async () => {
     const masterKey = await generateMasterKey();
 

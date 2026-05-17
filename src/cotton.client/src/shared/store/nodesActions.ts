@@ -1,6 +1,10 @@
 import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
+import {
+  FOLDER_ENCRYPTION_POLICY_KEY,
+  isFolderEncryptionPolicyEnabled,
+} from "../crypto";
 import { translateError } from "../i18n/translateError";
 import {
   ROOT_RESOLVE_MIN_INTERVAL_MS,
@@ -18,6 +22,11 @@ type ResolveSnapshot = {
   contentByNodeId: Record<string, NodeContentDto | undefined>;
   ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
 };
+
+type NodeLookupSnapshot = Pick<
+  ResolveSnapshot,
+  "currentNode" | "ancestors" | "contentByNodeId"
+>;
 
 async function fetchAllNodeChildren(nodeId: string): Promise<NodeContentDto> {
   const firstPage = await nodesApi.getChildren(nodeId, {
@@ -124,6 +133,29 @@ async function resolveNodeAndAncestors(
   const ancestors = local?.ancestors ?? (await nodesApi.getAncestors(nodeId));
 
   return { node, ancestors };
+}
+
+function findCachedNodeById(
+  state: NodeLookupSnapshot,
+  nodeId: string,
+): NodeDto | null {
+  if (state.currentNode?.id === nodeId) {
+    return state.currentNode;
+  }
+
+  const ancestor = state.ancestors.find((node) => node.id === nodeId);
+  if (ancestor) {
+    return ancestor;
+  }
+
+  for (const content of Object.values(state.contentByNodeId)) {
+    const found = content?.nodes.find((node) => node.id === nodeId);
+    if (found) {
+      return found;
+    }
+  }
+
+  return null;
 }
 
 const scheduleRootResolve = (options?: {
@@ -389,6 +421,14 @@ export const createFolder = async (
       parentId: parentNodeId,
       name: trimmed,
     });
+    const parentPolicyEnabled = isFolderEncryptionPolicyEnabled(
+      findCachedNodeById(useNodesStore.getState(), parentNodeId)?.metadata,
+    );
+    const folder = parentPolicyEnabled
+      ? await nodesApi.updateNodeMetadata(created.id, {
+          [FOLDER_ENCRYPTION_POLICY_KEY]: "true",
+        })
+      : created;
 
     useNodesStore.setState((prev) => {
       const existing = prev.contentByNodeId[parentNodeId];
@@ -399,7 +439,7 @@ export const createFolder = async (
           ...prev.contentByNodeId,
           [parentNodeId]: {
             ...existing,
-            nodes: [...existing.nodes, created],
+            nodes: [...existing.nodes, folder],
           },
         },
         loading: false,
@@ -407,7 +447,7 @@ export const createFolder = async (
     });
 
     void refreshNodeContent(parentNodeId);
-    return created;
+    return folder;
   } catch (error) {
     console.error("Failed to create folder", error);
     useNodesStore.setState({

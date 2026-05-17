@@ -50,6 +50,7 @@ export interface CreateAppTaskOptions {
 
 export interface UpdateAppTaskOptions {
   status?: AppTaskStatus;
+  bytesTotal?: number;
   bytesCompleted?: number;
   progress01?: number;
   speedBytesPerSec?: number | null;

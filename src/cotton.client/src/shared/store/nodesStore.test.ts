@@ -6,6 +6,7 @@ vi.mock("./nodesActionInternals", () => ({
 
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeContentDto, NodeFileManifestDto } from "../api/nodesApi";
+import { NODES_STORAGE_KEY } from "../config/storageKeys";
 import {
   DISPLAY_META_KEY,
   ENCRYPTED_FLAG_KEY,
@@ -76,6 +77,7 @@ const resetStore = () => {
 };
 
 beforeEach(() => {
+  sessionStorage.clear();
   resetStore();
   vi.clearAllMocks();
 });
@@ -83,6 +85,7 @@ beforeEach(() => {
 afterEach(() => {
   resetStore();
   useVault.getState().lock();
+  sessionStorage.clear();
 });
 
 describe("addFolderToCache", () => {
@@ -259,6 +262,42 @@ describe("refreshCachedFileDisplayMetadata", () => {
       name: "private.pdf",
       contentType: "application/pdf",
     });
+  });
+
+  it("does not persist decrypted encrypted file display metadata", async () => {
+    useVault.getState().unlock(await generateMasterKey());
+    const encryptedMeta = await encryptDisplayMeta({
+      name: "private.pdf",
+      contentType: "application/pdf",
+    });
+    const parent = makeNode("parent-1", "Parent");
+    useNodesStore.setState({
+      currentNode: parent,
+      rootNodeId: parent.id,
+    });
+    seedParent("parent-1", [], [
+      makeFile("f1", "11111111-2222-4333-8444-555555555555", {
+        contentType: "application/octet-stream",
+        metadata: {
+          [ENCRYPTED_FLAG_KEY]: "true",
+          [DISPLAY_META_KEY]: encryptedMeta,
+        },
+      }),
+    ]);
+
+    await useNodesStore.getState().refreshCachedFileDisplayMetadata();
+
+    const raw = sessionStorage.getItem(NODES_STORAGE_KEY) ?? "";
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0],
+    ).toMatchObject({
+      name: "private.pdf",
+      contentType: "application/pdf",
+    });
+    expect(raw).toContain("11111111-2222-4333-8444-555555555555");
+    expect(raw).toContain("application/octet-stream");
+    expect(raw).not.toContain("private.pdf");
+    expect(raw).not.toContain("application/pdf");
   });
 });
 

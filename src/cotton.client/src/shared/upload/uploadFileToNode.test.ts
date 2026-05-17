@@ -83,6 +83,8 @@ describe("uploadFileToNode", () => {
     const file = new File(["secret"], "private.pdf", {
       type: "application/pdf",
     });
+    const onEncryptProgress = vi.fn();
+    const onEncryptComplete = vi.fn();
 
     useVault.getState().unlock(masterKey);
 
@@ -91,6 +93,8 @@ describe("uploadFileToNode", () => {
       nodeId: "node-1",
       server: { maxChunkSizeBytes: 1024, supportedHashAlgorithm: "sha256" },
       encrypt: true,
+      onEncryptProgress,
+      onEncryptComplete,
     });
 
     const request = createFromChunksMock.mock.calls[0]?.[0];
@@ -114,6 +118,9 @@ describe("uploadFileToNode", () => {
     });
 
     expect(uploadBlobToChunksMock.mock.calls[0]?.[0].blob).not.toBe(file);
+    expect(onEncryptProgress).toHaveBeenCalledWith(0, file.size);
+    expect(onEncryptProgress).toHaveBeenLastCalledWith(file.size, file.size);
+    expect(onEncryptComplete).toHaveBeenCalledOnce();
   });
 
   it("rejects oversized encrypted uploads before reading or uploading bytes", async () => {

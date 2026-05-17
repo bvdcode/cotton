@@ -11,11 +11,16 @@ export const DISPLAY_META_KEY = "en";
 const NONCE_BYTES = 12;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+const OPAQUE_FILE_VALUES = Symbol("cotton.opaqueFileValues");
 
 export interface DisplayMeta {
   name: string;
   contentType: string;
 }
+
+type FileWithOpaqueValues = NodeFileManifestDto & {
+  [OPAQUE_FILE_VALUES]?: Pick<NodeFileManifestDto, "name" | "contentType">;
+};
 
 export async function encryptDisplayMeta(meta: DisplayMeta): Promise<string> {
   const normalized = normalizeDisplayMeta(meta);
@@ -75,11 +80,22 @@ export async function applyDisplayMetaToFile(
 
   try {
     const displayMeta = await decryptDisplayMeta(encryptedDisplayMeta);
-    return {
+    const opaque = (file as FileWithOpaqueValues)[OPAQUE_FILE_VALUES] ?? {
+      name: file.name,
+      contentType: file.contentType,
+    };
+    const decorated: FileWithOpaqueValues = {
       ...file,
       name: displayMeta.name,
       contentType: displayMeta.contentType,
     };
+    Object.defineProperty(decorated, OPAQUE_FILE_VALUES, {
+      value: opaque,
+      enumerable: false,
+      configurable: false,
+    });
+
+    return decorated;
   } catch {
     return file;
   }
@@ -96,6 +112,25 @@ export async function applyDisplayMetaToFiles(
   return decorated.some((file, index) => file !== files[index])
     ? decorated
     : files;
+}
+
+export function toPersistableFileDisplayMetadata(
+  file: NodeFileManifestDto,
+): NodeFileManifestDto | null {
+  if (!isFileEncrypted(file.metadata)) {
+    return file;
+  }
+
+  const opaque = (file as FileWithOpaqueValues)[OPAQUE_FILE_VALUES];
+  if (opaque) {
+    return {
+      ...file,
+      name: opaque.name,
+      contentType: opaque.contentType,
+    };
+  }
+
+  return useVault.getState().isUnlocked ? null : file;
 }
 
 function normalizeDisplayMeta(meta: DisplayMeta): DisplayMeta {

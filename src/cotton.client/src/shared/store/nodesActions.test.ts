@@ -5,6 +5,7 @@ vi.mock("../api/nodesApi", () => ({
     createNode: vi.fn(),
     deleteNode: vi.fn(),
     renameNode: vi.fn(),
+    updateNodeMetadata: vi.fn(),
     getNode: vi.fn(),
     getAncestors: vi.fn(),
     getChildren: vi.fn(),
@@ -119,6 +120,42 @@ describe("createFolder", () => {
         .contentByNodeId["parent-1"]?.nodes.map((n) => n.name),
     ).toEqual(["Drafts", "Photos"]);
     expect(useNodesStore.getState().loading).toBe(false);
+  });
+
+  it("inherits the parent client-side encryption policy", async () => {
+    const encryptedParent = {
+      ...makeNode("parent-1", "Vault"),
+      metadata: { isClientEncryptionEnabled: "true" },
+    };
+    useNodesStore.setState({ currentNode: encryptedParent });
+    seedFolder("parent-1", []);
+    const created = makeNode("b", "Private");
+    const encryptedCreated = {
+      ...created,
+      metadata: { isClientEncryptionEnabled: "true" },
+    };
+    vi.mocked(nodesApi.createNode).mockResolvedValue(created);
+    vi.mocked(nodesApi.updateNodeMetadata).mockResolvedValue(encryptedCreated);
+
+    const result = await createFolder("parent-1", "Private");
+
+    expect(result).toEqual(encryptedCreated);
+    expect(nodesApi.updateNodeMetadata).toHaveBeenCalledWith("b", {
+      isClientEncryptionEnabled: "true",
+    });
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.nodes[0]?.metadata,
+    ).toEqual({ isClientEncryptionEnabled: "true" });
+  });
+
+  it("does not patch metadata for folders created under plain parents", async () => {
+    seedFolder("parent-1", []);
+    const created = makeNode("b", "Public");
+    vi.mocked(nodesApi.createNode).mockResolvedValue(created);
+
+    await createFolder("parent-1", "Public");
+
+    expect(nodesApi.updateNodeMetadata).not.toHaveBeenCalled();
   });
 
   it("sets an error message on API failure", async () => {

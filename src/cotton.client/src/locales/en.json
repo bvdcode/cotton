@@ -1355,7 +1355,9 @@
       "serverSettingsNotLoaded": "Server settings are not loaded",
       "uploadFailed": "Upload failed",
       "encryptionVaultLocked": "Encryption vault is locked",
-      "clientEncryptionFileTooLarge": "This file is too large for current encrypted uploads. Limit: {{maxSize}}."
+      "encryptionFailed": "Encryption failed",
+      "decryptionFailed": "Decryption failed",
+      "clientEncryptionFileTooLarge": "This file is too large for current encrypted file processing. Limit: {{maxSize}}."
     },
     "titleWithTotal": "Tasks ({{total}})",
     "titleWithProgress": "Tasks ({{completed}} / {{total}} - {{speed}}/s)",

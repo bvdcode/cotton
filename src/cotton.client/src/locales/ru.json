@@ -1389,7 +1389,9 @@
       "serverSettingsNotLoaded": "Настройки сервера не загружены",
       "uploadFailed": "Загрузка не удалась",
       "encryptionVaultLocked": "Крипто-хранилище заблокировано",
-      "clientEncryptionFileTooLarge": "Этот файл слишком большой для текущей зашифрованной загрузки. Лимит: {{maxSize}}."
+      "encryptionFailed": "Шифрование не удалось",
+      "decryptionFailed": "Расшифровка не удалась",
+      "clientEncryptionFileTooLarge": "Этот файл слишком большой для текущей зашифрованной обработки. Лимит: {{maxSize}}."
     },
     "titleWithTotal": "Задачи ({{total}})",
     "titleWithProgress": "Задачи ({{completed}} / {{total}} - {{speed}}/с)",

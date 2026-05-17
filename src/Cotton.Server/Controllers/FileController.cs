@@ -119,9 +119,16 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
+            Guid? parentNodeId = await _dbContext.NodeFiles
+                .AsNoTracking()
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .Select(x => (Guid?)x.NodeId)
+                .SingleOrDefaultAsync();
             DeleteFileQuery query = new(userId, nodeFileId, skipTrash);
             await _mediator.Send(query);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("FileDeleted", nodeFileId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                "FileDeleted",
+                new NodeFileDeletedEventDto(nodeFileId, parentNodeId));
             return NoContent();
         }
 

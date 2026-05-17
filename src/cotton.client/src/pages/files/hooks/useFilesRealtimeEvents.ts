@@ -93,10 +93,6 @@ const collectAffectedNodeIds = (args: JsonValue[]): Set<string> => {
   const ids = new Set<string>();
 
   for (const arg of args) {
-    if (typeof arg === "string" && isGuid(arg)) {
-      ids.add(arg);
-    }
-
     const nestedIds = collectAffectedNodeIdsFromValue(arg, 0, false);
     for (const id of nestedIds) {
       ids.add(id);
@@ -106,7 +102,7 @@ const collectAffectedNodeIds = (args: JsonValue[]): Set<string> => {
   return ids;
 };
 
-const shouldInvalidateCurrentNode = (
+export const shouldInvalidateCurrentNode = (
   args: JsonValue[],
   currentNodeId: string | null,
 ): boolean => {

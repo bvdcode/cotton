@@ -3,7 +3,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { NodeContentDto } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
-import { applyDisplayMetaToFiles } from "../crypto/displayMeta";
+import {
+  applyDisplayMetaToFiles,
+  toPersistableFileDisplayMetadata,
+} from "../crypto/displayMeta";
 import { resetNodesActionsInternals } from "./nodesActionInternals";
 
 type NodesState = {
@@ -64,7 +67,12 @@ function buildPersistedContentSnapshot(state: {
     if (content) {
       const itemCount = content.nodes.length + content.files.length;
       if (itemCount <= MAX_PERSISTED_NODE_CONTENT_ITEMS) {
-        contentByNodeId[nodeId] = content;
+        contentByNodeId[nodeId] = {
+          ...content,
+          files: content.files
+            .map(toPersistableFileDisplayMetadata)
+            .filter((file) => file !== null),
+        };
       }
     }
 

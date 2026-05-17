@@ -24,6 +24,8 @@ export async function uploadFileToNode(options: {
   encrypt?: boolean;
   onProgress?: UploadFileToNodeCallbacks["onProgress"];
   onFinalizing?: UploadFileToNodeCallbacks["onFinalizing"];
+  onEncryptProgress?: UploadFileToNodeCallbacks["onEncryptProgress"];
+  onEncryptComplete?: UploadFileToNodeCallbacks["onEncryptComplete"];
 }): Promise<void> {
   const { file, nodeId, server } = options;
   const originalContentType =
@@ -42,7 +44,13 @@ export async function uploadFileToNode(options: {
       contentType: originalContentType,
     });
 
-    uploadBlob = await encryptFileToBlob(file, masterKey);
+    uploadBlob = await encryptFileToBlob(
+      file,
+      masterKey,
+      undefined,
+      { onProgress: options.onEncryptProgress },
+    );
+    options.onEncryptComplete?.();
     contentType = ENCRYPTED_CONTENT_TYPE;
     name = createOpaqueServerFileName();
     metadata = {

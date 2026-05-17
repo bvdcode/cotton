@@ -15,9 +15,15 @@ export interface ReadableFileHandle {
   revoke: () => void;
 }
 
+export interface ReadableFileCallbacks {
+  onDecryptProgress?: (bytesDecrypted: number, bytesTotal: number) => void;
+  onDecryptComplete?: () => void;
+}
+
 export async function getReadableFileUrl(
   file: NodeFileManifestDto,
   expireAfterMinutes?: number,
+  callbacks?: ReadableFileCallbacks,
 ): Promise<ReadableFileHandle> {
   if (!isFileEncrypted(file.metadata)) {
     const url = await filesApi.getDownloadLink(file.id, expireAfterMinutes);
@@ -40,7 +46,9 @@ export async function getReadableFileUrl(
     ciphertext,
     masterKey,
     originalContentType,
+    { onProgress: callbacks?.onDecryptProgress },
   );
+  callbacks?.onDecryptComplete?.();
   const blobUrl = URL.createObjectURL(plaintext);
 
   return {
@@ -53,11 +61,12 @@ export async function getReadableFileUrl(
 export async function downloadReadableFile(
   file: NodeFileManifestDto,
   fileName?: string,
+  callbacks?: ReadableFileCallbacks,
 ): Promise<void> {
   const displayFile = isFileEncrypted(file.metadata)
     ? await applyDisplayMetaToFile(file)
     : file;
-  const handle = await getReadableFileUrl(displayFile);
+  const handle = await getReadableFileUrl(displayFile, undefined, callbacks);
 
   try {
     triggerBrowserDownload(handle.url, fileName ?? displayFile.name);

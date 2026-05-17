@@ -6,6 +6,7 @@ import {
   decryptDisplayMeta,
   DISPLAY_META_KEY,
   encryptDisplayMeta,
+  toPersistableFileDisplayMetadata,
 } from "./displayMeta";
 import { ENCRYPTED_FLAG_KEY } from "./fileCipher";
 import { InvalidCryptoInputError } from "./errors";
@@ -129,6 +130,67 @@ describe("applyDisplayMetaToFile", () => {
     expect(decorated.contentType).toBe("application/pdf");
     expect(file.name).toBe("server-name");
     expect(file.contentType).toBe("application/octet-stream");
+  });
+
+  it("restores opaque values before persisting a decorated encrypted file", async () => {
+    useVault.getState().unlock(await generateMasterKey());
+    const encrypted = await encryptDisplayMeta({
+      name: "secret.pdf",
+      contentType: "application/pdf",
+    });
+    const file = createFile({
+      name: "11111111-2222-4333-8444-555555555555",
+      contentType: "application/octet-stream",
+      metadata: {
+        [ENCRYPTED_FLAG_KEY]: "true",
+        [DISPLAY_META_KEY]: encrypted,
+      },
+    });
+
+    const decorated = await applyDisplayMetaToFile(file);
+    const persistable = toPersistableFileDisplayMetadata(decorated);
+
+    expect(persistable).toMatchObject({
+      name: "11111111-2222-4333-8444-555555555555",
+      contentType: "application/octet-stream",
+    });
+  });
+
+  it("preserves opaque values when a decorated file is decorated again", async () => {
+    useVault.getState().unlock(await generateMasterKey());
+    const encrypted = await encryptDisplayMeta({
+      name: "secret.pdf",
+      contentType: "application/pdf",
+    });
+    const file = createFile({
+      name: "11111111-2222-4333-8444-555555555555",
+      contentType: "application/octet-stream",
+      metadata: {
+        [ENCRYPTED_FLAG_KEY]: "true",
+        [DISPLAY_META_KEY]: encrypted,
+      },
+    });
+
+    const first = await applyDisplayMetaToFile(file);
+    const second = await applyDisplayMetaToFile(first);
+
+    expect(toPersistableFileDisplayMetadata(second)).toMatchObject({
+      name: "11111111-2222-4333-8444-555555555555",
+      contentType: "application/octet-stream",
+    });
+  });
+
+  it("skips unlocked encrypted files when opaque values are unavailable", async () => {
+    useVault.getState().unlock(await generateMasterKey());
+    const file = createFile({
+      name: "secret.pdf",
+      contentType: "application/pdf",
+      metadata: {
+        [ENCRYPTED_FLAG_KEY]: "true",
+      },
+    });
+
+    expect(toPersistableFileDisplayMetadata(file)).toBeNull();
   });
 
   it("falls back to the original object when display metadata is corrupted", async () => {

@@ -281,9 +281,16 @@ namespace Cotton.Server.Controllers
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
+            Guid? parentNodeId = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.Id == nodeId && x.OwnerId == userId)
+                .Select(x => x.ParentId)
+                .SingleOrDefaultAsync();
             DeleteNodeQuery query = new(userId, nodeId, skipTrash);
             await _mediator.Send(query);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", nodeId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                "NodeDeleted",
+                new NodeDeletedEventDto(nodeId, parentNodeId));
             return Ok();
         }
 

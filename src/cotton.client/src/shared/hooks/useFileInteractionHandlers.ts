@@ -15,6 +15,7 @@ import {
   isFileEncrypted,
   NoKeyError,
 } from "../crypto";
+import { taskManager, type AppTaskHandle } from "../tasks";
 import { formatBytes } from "../utils/formatBytes";
 
 interface UseFileInteractionHandlersArgs {
@@ -68,9 +69,46 @@ export const useFileInteractionHandlers = ({
         return;
       }
 
+      const decryptTaskRef: { current: AppTaskHandle | null } = {
+        current: null,
+      };
+      let decryptTaskFinished = false;
+
       try {
-        await downloadReadableFile(file);
+        await downloadReadableFile(file, undefined, {
+          onDecryptProgress: (bytesDecrypted, bytesTotal) => {
+            decryptTaskRef.current ??= taskManager.createTask({
+              kind: "decrypt",
+              label: file.name,
+              scopeLabel: "",
+              bytesTotal,
+            });
+            decryptTaskRef.current.update({
+              status: "running",
+              bytesTotal,
+              bytesCompleted: bytesDecrypted,
+            });
+          },
+          onDecryptComplete: () => {
+            decryptTaskFinished = true;
+            decryptTaskRef.current?.complete();
+          },
+        });
       } catch (error) {
+        if (decryptTaskRef.current && !decryptTaskFinished) {
+          decryptTaskRef.current.fail({
+            message: error instanceof Error ? error.message : undefined,
+            key: error instanceof NoKeyError
+              ? "encryptionVaultLocked"
+              : error instanceof ClientEncryptionSizeLimitError
+                ? "clientEncryptionFileTooLarge"
+                : "decryptionFailed",
+            params: error instanceof ClientEncryptionSizeLimitError
+              ? { maxSize: formatBytes(error.maxBytes) }
+              : undefined,
+          });
+        }
+
         if (error instanceof NoKeyError) {
           toast.error(t("common:clientEncryption.vaultLockedForDownload"));
           return;

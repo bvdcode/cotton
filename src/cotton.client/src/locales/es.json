@@ -1377,7 +1377,9 @@
       "serverSettingsNotLoaded": "Los ajustes del servidor no se han cargado",
       "uploadFailed": "La subida falló",
       "encryptionVaultLocked": "La bóveda de cifrado está bloqueada",
-      "clientEncryptionFileTooLarge": "Este archivo es demasiado grande para las subidas cifradas actuales. Límite: {{maxSize}}."
+      "encryptionFailed": "El cifrado falló",
+      "decryptionFailed": "El descifrado falló",
+      "clientEncryptionFileTooLarge": "Este archivo es demasiado grande para el procesamiento cifrado actual. Límite: {{maxSize}}."
     },
     "titleWithTotal": "Tareas ({{total}})",
     "titleWithProgress": "Tareas ({{completed}} / {{total}} - {{speed}}/s)",

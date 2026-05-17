@@ -141,8 +141,13 @@ describe("downloadDecrypt", () => {
       statusText: "OK",
       blob: async () => encrypted,
     } as Response);
+    const onDecryptProgress = vi.fn();
+    const onDecryptComplete = vi.fn();
 
-    const handle = await getReadableFileUrl(file);
+    const handle = await getReadableFileUrl(file, undefined, {
+      onDecryptProgress,
+      onDecryptComplete,
+    });
 
     expect(handle.url).toBe("blob:decrypted");
     expect(handle.mimeType).toBe("image/png");
@@ -152,6 +157,9 @@ describe("downloadDecrypt", () => {
     const decryptedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
     expect(decryptedBlob.type).toBe("image/png");
     await expect(readBlobBytes(decryptedBlob)).resolves.toEqual([1, 2, 3, 4]);
+    expect(onDecryptProgress).toHaveBeenCalledWith(0, 4);
+    expect(onDecryptProgress).toHaveBeenLastCalledWith(4, 4);
+    expect(onDecryptComplete).toHaveBeenCalledOnce();
 
     handle.revoke();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:decrypted");

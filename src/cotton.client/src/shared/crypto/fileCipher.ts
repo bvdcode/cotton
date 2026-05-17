@@ -33,10 +33,15 @@ export const ENCRYPTED_CONTENT_TYPE = "application/octet-stream";
 
 const HEADER_PROBE_BYTES = FILE_HEADER_BYTES;
 
+export interface FileCipherProgressCallbacks {
+  onProgress?: (bytesProcessed: number, bytesTotal: number) => void;
+}
+
 export async function encryptFileToBlob(
   plaintext: Blob,
   masterKey: CryptoKey,
   chunkSize: number = DEFAULT_CHUNK_SIZE,
+  callbacks?: FileCipherProgressCallbacks,
 ): Promise<Blob> {
   assertClientEncryptionBlobPipelineSize(plaintext.size, "encrypt");
   assertCompatibleChunkSize(chunkSize);
@@ -60,6 +65,8 @@ export async function encryptFileToBlob(
 
   const parts: BlobPart[] = [asBlobPart(header)];
   const totalChunks = chunkCount(plaintext.size, chunkSize);
+  let bytesProcessed = 0;
+  callbacks?.onProgress?.(0, plaintext.size);
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
     const chunkLength = chunkPlaintextLength(chunkIndex, chunkSize, plaintext.size);
@@ -86,6 +93,8 @@ export async function encryptFileToBlob(
       ),
       asBlobPart(ciphertextChunk.ciphertext),
     );
+    bytesProcessed += chunkLength;
+    callbacks?.onProgress?.(bytesProcessed, plaintext.size);
   }
 
   return new Blob(parts, { type: ENCRYPTED_CONTENT_TYPE });
@@ -95,6 +104,7 @@ export async function decryptBlobToBlob(
   encrypted: Blob,
   masterKey: CryptoKey,
   resultContentType: string = ENCRYPTED_CONTENT_TYPE,
+  callbacks?: FileCipherProgressCallbacks,
 ): Promise<Blob> {
   assertClientEncryptionBlobPipelineSize(encrypted.size, "decrypt");
 
@@ -113,6 +123,8 @@ export async function decryptBlobToBlob(
   const parts: BlobPart[] = [];
   let cursor = headerLength;
   let remainingPlaintext = header.plaintextSize;
+  let bytesProcessed = 0;
+  callbacks?.onProgress?.(0, header.plaintextSize);
 
   for (let chunkIndex = 0; remainingPlaintext > 0; chunkIndex += 1) {
     const chunkHeaderBytes = await readBlobSlice(
@@ -157,6 +169,8 @@ export async function decryptBlobToBlob(
     parts.push(asBlobPart(plaintextChunk));
     cursor += chunkHeader.plaintextLength;
     remainingPlaintext -= chunkHeader.plaintextLength;
+    bytesProcessed += chunkHeader.plaintextLength;
+    callbacks?.onProgress?.(bytesProcessed, header.plaintextSize);
   }
 
   if (cursor !== encrypted.size) {

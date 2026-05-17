@@ -19,6 +19,13 @@ const mocks = vi.hoisted(() => ({
   openMediaLightbox: vi.fn(),
   setLightboxOpen: vi.fn(),
   mediaLightboxInputs: [] as Array<ReadonlyArray<{ id: string }>>,
+  taskHandle: {
+    id: "task-1",
+    update: vi.fn(),
+    complete: vi.fn(),
+    fail: vi.fn(),
+  },
+  createTask: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -83,6 +90,12 @@ vi.mock("../crypto", async (importOriginal) => {
   };
 });
 
+vi.mock("../tasks", () => ({
+  taskManager: {
+    createTask: mocks.createTask,
+  },
+}));
+
 function createFile(
   overrides: Partial<NodeFileManifestDto> = {},
 ): NodeFileManifestDto {
@@ -113,6 +126,11 @@ describe("useFileInteractionHandlers", () => {
     mocks.openMediaLightbox.mockReset();
     mocks.setLightboxOpen.mockReset();
     mocks.mediaLightboxInputs = [];
+    mocks.taskHandle.update.mockReset();
+    mocks.taskHandle.complete.mockReset();
+    mocks.taskHandle.fail.mockReset();
+    mocks.createTask.mockReset();
+    mocks.createTask.mockReturnValue(mocks.taskHandle);
   });
 
   it("keeps encrypted files out of inline media and downloads them from media clicks", () => {
@@ -142,7 +160,14 @@ describe("useFileInteractionHandlers", () => {
       result.current.handleMediaClick("encrypted-image");
     });
 
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(encryptedImage);
+    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
+      encryptedImage,
+      undefined,
+      expect.objectContaining({
+        onDecryptProgress: expect.any(Function),
+        onDecryptComplete: expect.any(Function),
+      }),
+    );
     expect(mocks.openMediaLightbox).not.toHaveBeenCalled();
   });
 
@@ -163,7 +188,69 @@ describe("useFileInteractionHandlers", () => {
     await result.current.handleDownloadFile("encrypted-file", "secret.txt");
 
     expect(mocks.downloadFile).toHaveBeenCalledWith("plain-file", "plain.txt");
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(encryptedFile);
+    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
+      encryptedFile,
+      undefined,
+      expect.objectContaining({
+        onDecryptProgress: expect.any(Function),
+        onDecryptComplete: expect.any(Function),
+      }),
+    );
+  });
+
+  it("publishes decrypt progress to the task manager", async () => {
+    const encryptedFile = createFile({
+      id: "encrypted-file",
+      name: "secret.txt",
+      sizeBytes: 12,
+      metadata: { [ENCRYPTED_FLAG_KEY]: "true" },
+    });
+    mocks.downloadReadableFile.mockImplementationOnce(
+      async (_file, _fileName, callbacks) => {
+        callbacks?.onDecryptProgress?.(4, 12);
+        callbacks?.onDecryptComplete?.();
+      },
+    );
+    const { result } = renderHook(() =>
+      useFileInteractionHandlers({
+        sortedFiles: [encryptedFile],
+      }),
+    );
+
+    await result.current.handleDownloadFile("encrypted-file", "secret.txt");
+
+    expect(mocks.createTask).toHaveBeenCalledWith({
+      kind: "decrypt",
+      label: "secret.txt",
+      scopeLabel: "",
+      bytesTotal: 12,
+    });
+    expect(mocks.taskHandle.update).toHaveBeenCalledWith({
+      status: "running",
+      bytesTotal: 12,
+      bytesCompleted: 4,
+    });
+    expect(mocks.taskHandle.complete).toHaveBeenCalledOnce();
+  });
+
+  it("does not create a decrypt task when validation fails before decrypting", async () => {
+    const encryptedFile = createFile({
+      id: "encrypted-file",
+      name: "secret.txt",
+      metadata: { [ENCRYPTED_FLAG_KEY]: "true" },
+    });
+    mocks.downloadReadableFile.mockRejectedValueOnce(
+      new NoKeyError("Vault is locked."),
+    );
+    const { result } = renderHook(() =>
+      useFileInteractionHandlers({
+        sortedFiles: [encryptedFile],
+      }),
+    );
+
+    await result.current.handleDownloadFile("encrypted-file", "secret.txt");
+
+    expect(mocks.createTask).not.toHaveBeenCalled();
   });
 
   it("downloads encrypted audio clicks instead of adding ciphertext to the player", () => {
@@ -183,7 +270,14 @@ describe("useFileInteractionHandlers", () => {
       result.current.handleFileClick("encrypted-audio", "song.mp3", 4);
     });
 
-    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(encryptedAudio);
+    expect(mocks.downloadReadableFile).toHaveBeenCalledWith(
+      encryptedAudio,
+      undefined,
+      expect.objectContaining({
+        onDecryptProgress: expect.any(Function),
+        onDecryptComplete: expect.any(Function),
+      }),
+    );
     expect(mocks.openAudio).not.toHaveBeenCalled();
     expect(mocks.openPreview).not.toHaveBeenCalled();
   });
