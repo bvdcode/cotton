@@ -6,6 +6,15 @@ import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
 import { TileItem, NewFolderCard } from "./TileItem";
 import { getFileTypeInfo } from "../../utils/fileTypes";
+import {
+  isMoveDrag,
+  moveDragHasSourceParent,
+  moveDragHasItem,
+  writeMoveDragPayload,
+  readMoveDragPayload,
+  filterMoveItemsForTarget,
+} from "../../../../shared/hooks/useMoveOperations";
+import type { MoveClipboardItem } from "../../../../shared/store/moveClipboardStore";
 
 /**
  * Returns responsive tile min-width based on tile size.
@@ -152,7 +161,49 @@ export const TilesView: React.FC<IFileListView> = ({
   selectionMode = false,
   selectedIds,
   onToggleItem,
+  moveSupport,
 }) => {
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
+  const tilesById = useMemo(() => {
+    const map = new Map<string, FileSystemTile>();
+    for (const tile of tiles) {
+      const tileId = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      map.set(tileId, tile);
+    }
+    return map;
+  }, [tiles]);
+
+  const buildDragPayload = useCallback(
+    (sourceTileId: string): ReadonlyArray<MoveClipboardItem> | null => {
+      if (!moveSupport) return null;
+      const currentParentId = moveSupport.currentParentId;
+      if (!currentParentId) return null;
+
+      // Tiles are only `draggable` when `!selectionMode`, so dragging always
+      // moves the single tile under the pointer. Multi-select drag would need
+      // the `draggable` gate to change first.
+      const tile = tilesById.get(sourceTileId);
+      if (!tile) return null;
+      if (tile.kind === "folder") {
+        return [
+          {
+            id: tile.node.id,
+            kind: "folder",
+            sourceParentId: tile.node.parentId ?? currentParentId,
+          },
+        ];
+      }
+      return [
+        {
+          id: tile.file.id,
+          kind: "file",
+          sourceParentId: tile.file.nodeId ?? currentParentId,
+        },
+      ];
+    },
+    [moveSupport, tilesById],
+  );
   const layout = useTileLayout(tileSize);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
@@ -544,9 +595,76 @@ export const TilesView: React.FC<IFileListView> = ({
     [handleKeyboardEvent],
   );
 
+  const handleMoveDragStart = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      const items = buildDragPayload(tileId);
+      if (!items || items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      writeMoveDragPayload(event.dataTransfer, { items });
+    },
+    [buildDragPayload, moveSupport],
+  );
+
+  const handleMoveDragOver = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      if (!isMoveDrag(event.dataTransfer)) return;
+
+      // Reject early: (a) folder cannot be a drop target for items already inside it,
+      // (b) a folder cannot be dropped onto itself. We bail without preventDefault
+      // so the drop slot is visibly rejected, not silently filtered after drop.
+      if (moveDragHasSourceParent(event.dataTransfer, tileId)) return;
+      if (moveDragHasItem(event.dataTransfer, tileId)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "move";
+      if (dropTargetId !== tileId) {
+        setDropTargetId(tileId);
+      }
+    },
+    [dropTargetId, moveSupport],
+  );
+
+  const handleMoveDragLeave = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      const related = event.relatedTarget as Node | null;
+      if (related && event.currentTarget.contains(related)) return;
+      if (dropTargetId === tileId) {
+        setDropTargetId(null);
+      }
+    },
+    [dropTargetId, moveSupport],
+  );
+
+  const handleMoveDrop = useCallback(
+    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
+      if (!moveSupport) return;
+      if (!isMoveDrag(event.dataTransfer)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setDropTargetId(null);
+
+      const payload = readMoveDragPayload(event.dataTransfer);
+      if (!payload) return;
+      const filtered = filterMoveItemsForTarget(payload.items, tileId);
+      if (filtered.length === 0) return;
+      moveSupport.onMove(filtered, tileId);
+    },
+    [moveSupport],
+  );
+
+  const cutItemIds = moveSupport?.cutItemIds;
+
   const renderTile = useCallback(
     (tile: FileSystemTile, index: number) => {
       const tileId = tile.kind === "folder" ? tile.node.id : tile.file.id;
+      const dimmed = cutItemIds?.has(tileId) ?? false;
+      const isFolder = tile.kind === "folder";
 
       return (
         <Box key={tileId} data-tile-index={index} data-tile-id={tileId}>
@@ -568,14 +686,44 @@ export const TilesView: React.FC<IFileListView> = ({
                     })
                 : undefined
             }
+            dimmed={dimmed}
+            draggable={!!moveSupport && !readOnly && !selectionMode}
+            onMoveDragStart={
+              moveSupport
+                ? (e) => handleMoveDragStart(tileId, e)
+                : undefined
+            }
+            onMoveDragOver={
+              moveSupport && isFolder
+                ? (e) => handleMoveDragOver(tileId, e)
+                : undefined
+            }
+            onMoveDragLeave={
+              moveSupport && isFolder
+                ? (e) => handleMoveDragLeave(tileId, e)
+                : undefined
+            }
+            onMoveDrop={
+              moveSupport && isFolder
+                ? (e) => handleMoveDrop(tileId, e)
+                : undefined
+            }
+            dropActive={isFolder && dropTargetId === tileId}
           />
         </Box>
       );
     },
     [
+      cutItemIds,
+      dropTargetId,
       fileNamePlaceholder,
       fileOperations,
       folderOperations,
+      handleMoveDragLeave,
+      handleMoveDragOver,
+      handleMoveDragStart,
+      handleMoveDrop,
+      moveSupport,
       onToggleItem,
       orderedIds,
       readOnly,

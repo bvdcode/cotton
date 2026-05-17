@@ -39,6 +39,11 @@ export interface PageHeaderActionItem {
   disabled?: boolean;
   color?: "primary" | "secondary" | "error";
   active?: boolean;
+  /** Optional DnD drop target handlers (e.g. Up button accepts move drop). */
+  onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragLeave?: (event: React.DragEvent<HTMLElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLElement>) => void;
+  dropActive?: boolean;
 }
 
 export interface PageHeaderProps {
@@ -70,6 +75,18 @@ export interface PageHeaderProps {
 
   // Custom actions rendered in overflow-aware action bar
   customActionItems?: PageHeaderActionItem[];
+
+  /** Optional drop handlers for breadcrumbs (move drag target). */
+  breadcrumbsDropHandlers?: React.ComponentProps<
+    typeof FileBreadcrumbs
+  >["dropHandlers"];
+  /** Optional drop handlers attached to the "Go up" action. */
+  goUpDropHandlers?: {
+    onDragOver: (event: React.DragEvent<HTMLElement>) => void;
+    onDragLeave: (event: React.DragEvent<HTMLElement>) => void;
+    onDrop: (event: React.DragEvent<HTMLElement>) => void;
+    active: boolean;
+  };
 }
 
 /**
@@ -98,6 +115,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onSelectAll,
   onDeselectAll,
   customActionItems,
+  breadcrumbsDropHandlers,
+  goUpDropHandlers,
 }) => {
   const { t } = useTranslation(["files", "trash", "common"]);
   const nextViewTitleKey = getNextFileBrowserViewTitleKey(viewMode);
@@ -128,6 +147,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         title: t("actions.goUp"),
         onClick: onGoUp,
         disabled: loading || !canGoUp,
+        onDragOver: goUpDropHandlers?.onDragOver,
+        onDragLeave: goUpDropHandlers?.onDragLeave,
+        onDrop: goUpDropHandlers?.onDrop,
+        dropActive: goUpDropHandlers?.active,
         },
       ];
 
@@ -227,6 +250,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       t,
       viewIcon,
       customActionItems,
+      goUpDropHandlers?.onDragOver,
+      goUpDropHandlers?.onDragLeave,
+      goUpDropHandlers?.onDrop,
+      goUpDropHandlers?.active,
     ],
   );
 
@@ -302,6 +329,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                   title={action.title}
                   disabled={action.disabled}
                   onClick={action.onClick}
+                  onDragOver={action.onDragOver}
+                  onDragLeave={action.onDragLeave}
+                  onDrop={action.onDrop}
                   sx={{
                     display: isVisible ? "inline-flex" : "none",
                     color:
@@ -310,6 +340,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                         : action.active || action.color === "secondary"
                           ? "secondary.main"
                           : "primary.main",
+                    ...(action.dropActive && {
+                      outline: "2px solid",
+                      outlineColor: "primary.main",
+                      outlineOffset: 2,
+                      borderRadius: "50%",
+                    }),
                   }}
                 >
                   {action.icon}
@@ -366,6 +402,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <FileBreadcrumbs
             breadcrumbs={breadcrumbs}
             onNavigateBreadcrumb={onNavigateBreadcrumb}
+            dropHandlers={breadcrumbsDropHandlers}
           />
 
           <Divider

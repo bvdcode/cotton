@@ -18,6 +18,7 @@ export const buildFolderOperations = (
   },
   onFolderClick: (folderId: string) => void,
   onFolderShare?: (folderId: string, folderName: string) => Promise<void>,
+  onFolderCut?: (folderId: string) => void,
 ): FolderOperations => {
   return {
     isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
@@ -36,6 +37,7 @@ export const buildFolderOperations = (
           void onFolderShare(folderId, folderName);
         }
       : undefined,
+    onCut: onFolderCut,
     onClick: onFolderClick,
   };
 };
@@ -56,6 +58,7 @@ export const buildFileOperations = (
   handlers: {
     onDownload?: (fileId: string, fileName: string) => Promise<void>;
     onShare?: (fileId: string, fileName: string) => Promise<void>;
+    onCut?: (fileId: string) => void;
     onClick: (fileId: string, fileName: string, fileSizeBytes?: number) => void;
     onMediaClick?: (fileId: string) => void;
   },
@@ -80,6 +83,7 @@ export const buildFileOperations = (
           void handlers.onShare?.(fileId, fileName);
         }
       : undefined,
+    onCut: handlers.onCut,
     onClick: handlers.onClick,
     onMediaClick: handlers.onMediaClick,
   };

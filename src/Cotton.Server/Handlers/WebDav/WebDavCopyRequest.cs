@@ -7,7 +7,6 @@ using Cotton.Server.Handlers.Files;
 using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
-using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -48,7 +47,6 @@ public enum WebDavCopyError
 /// </summary>
 public class WebDavCopyRequestHandler(
     CottonDbContext _dbContext,
-    ILayoutService _layouts,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
@@ -57,8 +55,8 @@ public class WebDavCopyRequestHandler(
 {
     public async Task<WebDavCopyResult> Handle(WebDavCopyRequest request, CancellationToken ct)
     {
-        var sourceResult = await ResolveSourceAsync(request, ct);
-        var sourceValidation = ValidateSourceOrGetFailure(request, sourceResult);
+        var preLockSource = await ResolveSourceAsync(request, ct);
+        var sourceValidation = ValidateSourceOrGetFailure(request, preLockSource);
         if (sourceValidation is not null)
         {
             return sourceValidation;
@@ -71,18 +69,55 @@ public class WebDavCopyRequestHandler(
             return destParentFailure;
         }
 
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
+        // Per-layout namespace serialization: COPY creates new entries in the
+        // destination parent that can collide cross-table with a concurrent
+        // create/move. For a recursive folder copy, the entire subtree creation
+        // runs inside the lock - once an intermediate node hits the DB outside
+        // the lock, concurrent operations can target it. Re-resolve source and
+        // destination parent inside the lock so stale pre-lock objects never
+        // drive the actual copy.
+        Guid lockedLayoutId = destParentResult.ParentNode!.LayoutId;
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
+
+        var sourceResult = await ResolveSourceAsync(request, ct);
+        sourceValidation = ValidateSourceOrGetFailure(request, sourceResult);
+        if (sourceValidation is not null)
+        {
+            return sourceValidation;
+        }
+
+        if (await GetSourceLayoutIdAsync(sourceResult, ct) != lockedLayoutId)
+        {
+            _logger.LogDebug("WebDAV COPY: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+            return Fail(WebDavCopyError.SourceNotFound);
+        }
+
+        destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
+        destParentFailure = TryGetDestinationParentFailure(destParentResult);
+        if (destParentFailure is not null)
+        {
+            return destParentFailure;
+        }
+
+        if (destParentResult.ParentNode!.LayoutId != lockedLayoutId)
+        {
+            _logger.LogDebug("WebDAV COPY: Destination parent layout changed while waiting for lock: {Path}", request.DestinationPath);
+            return Fail(WebDavCopyError.DestinationParentNotFound);
+        }
+
         var (created, allowed) = await HandleDestinationOverwriteAsync(request, ct);
         if (!allowed)
         {
             return Fail(WebDavCopyError.DestinationExists);
         }
 
-        var (copiedNodeId, copiedNodeFileId) = await PerformCopyAsync(request, sourceResult, destParentResult, layout.Id, ct);
-        await PersistAndNotifyAsync(
+        var (copiedNodeId, copiedNodeFileId) = await PerformCopyAsync(request, sourceResult, destParentResult, destParentResult.ParentNode!.LayoutId, ct);
+        await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        await NotifyCopyCompletedAsync(
             request,
-            sourceResult,
-            destParentResult,
             copiedNodeId,
             copiedNodeFileId,
             ct);
@@ -109,25 +144,12 @@ public class WebDavCopyRequestHandler(
         return null;
     }
 
-    private async Task PersistAndNotifyAsync(
+    private async Task NotifyCopyCompletedAsync(
         WebDavCopyRequest request,
-        WebDavResolveResult sourceResult,
-        WebDavParentResult destParentResult,
         Guid? copiedNodeId,
         Guid? copiedNodeFileId,
         CancellationToken ct)
     {
-        await _dbContext.SaveChangesAsync(ct);
-
-        if (sourceResult.NodeFile is not null)
-        {
-            await EnsureNewVersionFamilyAsync(
-                request.UserId,
-                destParentResult.ParentNode!.Id,
-                destParentResult.ResourceName!,
-                ct);
-        }
-
         _logger.LogInformation(
             "WebDAV COPY: Copied {Source} to {Dest} for user {UserId}",
             request.SourcePath,
@@ -158,6 +180,20 @@ public class WebDavCopyRequestHandler(
         }
 
         return null;
+    }
+
+    private async Task<Guid> GetSourceLayoutIdAsync(WebDavResolveResult sourceResult, CancellationToken ct)
+    {
+        if (sourceResult.IsCollection)
+        {
+            return sourceResult.Node!.LayoutId;
+        }
+
+        return await _dbContext.Nodes
+            .AsNoTracking()
+            .Where(n => n.Id == sourceResult.NodeFile!.NodeId)
+            .Select(n => n.LayoutId)
+            .SingleAsync(ct);
     }
 
     private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyRequest request, CancellationToken ct)
@@ -251,26 +287,11 @@ public class WebDavCopyRequestHandler(
 
             await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
             await _dbContext.SaveChangesAsync(ct);
+            newNodeFile.OriginalNodeFileId = newNodeFile.Id;
             return (null, newNodeFile.Id);
         }
 
         return (null, null);
-    }
-
-    private async Task EnsureNewVersionFamilyAsync(Guid userId, Guid destParentNodeId, string resourceName, CancellationToken ct)
-    {
-        var createdFile = await _dbContext.NodeFiles
-            .Where(f => f.OwnerId == userId
-                && f.NodeId == destParentNodeId
-                && f.NameKey == NameValidator.NormalizeAndGetNameKey(resourceName))
-            .OrderByDescending(f => f.CreatedAt)
-            .FirstOrDefaultAsync(ct);
-
-        if (createdFile is not null && createdFile.OriginalNodeFileId == Guid.Empty)
-        {
-            createdFile.OriginalNodeFileId = createdFile.Id;
-            await _dbContext.SaveChangesAsync(ct);
-        }
     }
 
     private async Task<Guid> CopyNodeRecursivelyAsync(

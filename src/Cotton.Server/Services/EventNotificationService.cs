@@ -15,11 +15,11 @@ public interface IEventNotificationService
     Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default);
     Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default);
     Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, CancellationToken ct = default);
-    Task NotifyFileMovedAsync(Guid nodeFileId, CancellationToken ct = default);
+    Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default);
     Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default);
     Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default);
     Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, CancellationToken ct = default);
-    Task NotifyNodeMovedAsync(Guid nodeId, CancellationToken ct = default);
+    Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default);
     Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default);
 }
 
@@ -60,7 +60,7 @@ public class EventNotificationService(
         await _hubContext.Clients.User(userId.ToString()).SendAsync("FileDeleted", nodeFileId, ct);
     }
 
-    public async Task NotifyFileMovedAsync(Guid nodeFileId, CancellationToken ct = default)
+    public async Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default)
     {
         var nodeFile = await _dbContext.NodeFiles
             .Include(x => x.FileManifest)
@@ -70,7 +70,8 @@ public class EventNotificationService(
         if (nodeFile is not null)
         {
             var dto = nodeFile.Adapt<NodeFileManifestDto>();
-            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileMoved", dto, ct);
+            var payload = new NodeFileMovedEventDto(dto, oldParentId, nodeFile.NodeId);
+            await _hubContext.Clients.User(nodeFile.OwnerId.ToString()).SendAsync("FileMoved", payload, ct);
         }
     }
 
@@ -106,16 +107,17 @@ public class EventNotificationService(
         await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", nodeId, ct);
     }
 
-    public async Task NotifyNodeMovedAsync(Guid nodeId, CancellationToken ct = default)
+    public async Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default)
     {
         var node = await _dbContext.Nodes
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == nodeId, ct);
 
-        if (node is not null)
+        if (node is not null && node.ParentId.HasValue)
         {
             var dto = node.Adapt<NodeDto>();
-            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeMoved", dto, ct);
+            var payload = new NodeMovedEventDto(dto, oldParentId, node.ParentId.Value);
+            await _hubContext.Clients.User(node.OwnerId.ToString()).SendAsync("NodeMoved", payload, ct);
         }
     }
 

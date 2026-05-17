@@ -1,6 +1,6 @@
 import React, { useDeferredValue, useEffect, useMemo } from "react";
 import { Alert, Box } from "@mui/material";
-import { Delete } from "@mui/icons-material";
+import { ContentCut, ContentPaste, Delete } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import {
   FileListViewFactory,
@@ -44,6 +44,7 @@ import {
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
+import { useFileMoveController } from "./hooks/useFileMoveController";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -216,6 +217,29 @@ export const FilesPage: React.FC = () => {
   const fileOps = useFileOperations(reloadCurrentNode);
   const fileSelection = useFileSelection();
 
+  const goUpParentId = ancestors.length > 0
+    ? ancestors[ancestors.length - 1].id
+    : null;
+
+  const {
+    moveSupport,
+    clipboardCount,
+    handleCutSelection,
+    handlePasteHere,
+    handleCutFolder,
+    handleCutFile,
+    goUpDropHandlers,
+    breadcrumbsDropHandlers,
+  } = useFileMoveController({
+    nodeId,
+    tiles,
+    selectedIds: fileSelection.selectedIds,
+    selectedCount: fileSelection.selectedCount,
+    goUpParentId,
+    showToast,
+    t,
+  });
+
   const smoothGalleryTransitions = useLocalPreferencesStore(
     selectGallerySmoothTransitions,
   );
@@ -253,12 +277,14 @@ export const FilesPage: React.FC = () => {
     folderOps,
     goToFolder,
     handleShareFolder,
+    handleCutFolder,
   );
 
   // Build file operations adapter
   const fileOperations = buildFileOperations(fileOps, {
     onDownload: handleDownloadFile,
     onShare: handleShareFile,
+    onCut: handleCutFile,
     onClick: handleFileClick,
     onMediaClick: handleMediaClick,
   });
@@ -276,6 +302,56 @@ export const FilesPage: React.FC = () => {
 
   const isCreatingInThisFolder =
     folderOps.isCreatingFolder && folderOps.newFolderParentId === nodeId;
+
+  const customActionItems = useMemo<
+    React.ComponentProps<typeof PageHeader>["customActionItems"]
+  >(() => {
+    const items: NonNullable<
+      React.ComponentProps<typeof PageHeader>["customActionItems"]
+    > = [];
+    if (fileSelection.selectionMode && fileSelection.selectedCount > 0) {
+      items.push({
+        key: "cut-selected",
+        icon: <ContentCut />,
+        title: t("move.cut", { ns: "files" }),
+        onClick: handleCutSelection,
+        disabled: loading,
+      });
+      items.push({
+        key: "delete-selected",
+        icon: <Delete />,
+        title: t("selection.deleteSelected", { ns: "files" }),
+        onClick: () => {
+          void handleDeleteSelected();
+        },
+        disabled: loading,
+        color: "error" as const,
+      });
+    }
+    if (clipboardCount > 0 && nodeId) {
+      items.push({
+        key: "paste-here",
+        icon: <ContentPaste />,
+        title: t("move.pasteHere", {
+          ns: "files",
+          count: clipboardCount,
+        }),
+        onClick: handlePasteHere,
+        disabled: loading,
+      });
+    }
+    return items.length > 0 ? items : undefined;
+  }, [
+    clipboardCount,
+    fileSelection.selectionMode,
+    fileSelection.selectedCount,
+    handleCutSelection,
+    handleDeleteSelected,
+    handlePasteHere,
+    loading,
+    nodeId,
+    t,
+  ]);
 
   const pageHeaderProps = useMemo(
     (): React.ComponentProps<typeof PageHeader> => ({
@@ -297,27 +373,17 @@ export const FilesPage: React.FC = () => {
       selectedCount: fileSelection.selectedCount,
       onSelectAll: () => fileSelection.selectAll(tiles),
       onDeselectAll: fileSelection.deselectAll,
-      customActionItems:
-        fileSelection.selectionMode && fileSelection.selectedCount > 0 ? (
-          [
-            {
-              key: "delete-selected",
-              icon: <Delete />,
-              title: t("selection.deleteSelected", { ns: "files" }),
-              onClick: () => {
-                void handleDeleteSelected();
-              },
-              disabled: loading,
-              color: "error" as const,
-            },
-          ]
-        ) : undefined,
+      customActionItems,
+      breadcrumbsDropHandlers,
+      goUpDropHandlers,
     }),
     [
       ancestors.length,
       breadcrumbs,
+      breadcrumbsDropHandlers,
+      customActionItems,
       cycleViewMode,
-      handleDeleteSelected,
+      goUpDropHandlers,
       fileSelection,
       fileUpload.handleUploadClick,
       folderOps.handleNewFolder,
@@ -328,7 +394,6 @@ export const FilesPage: React.FC = () => {
       loading,
       nodeId,
       stats,
-      t,
       tiles,
       viewMode,
     ],
@@ -375,6 +440,7 @@ export const FilesPage: React.FC = () => {
       selectionMode: fileSelection.selectionMode,
       selectedIds: fileSelection.selectedIds,
       onToggleItem: handleToggleItem,
+      moveSupport,
       pagination:
         undefined,
     }),
@@ -396,6 +462,7 @@ export const FilesPage: React.FC = () => {
       layoutType,
       listContent,
       listError,
+      moveSupport,
       t,
       tiles,
       tilesSize,

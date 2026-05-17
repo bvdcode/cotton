@@ -6,6 +6,7 @@ project.lock.json
 .DS_Store
 *.pyc
 nupkg/
+*.lscache
 
 # Visual Studio Code
 .vscode
@@ -39,3 +40,4 @@ msbuild.wrn
 data
 src/cotton.client/.github/instructions/main.instructions.md
 src/.claude/settings.local.json
+notes/

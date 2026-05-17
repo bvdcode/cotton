@@ -2,6 +2,7 @@ import React from "react";
 import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import {
   Article,
+  ContentCut,
   Delete,
   Download,
   Edit,
@@ -54,6 +55,7 @@ interface ColumnOptions {
     delete: string;
     download: string;
     share: string;
+    cut: string;
   };
   newFolderName: string;
   onNewFolderNameChange: (value: string) => void;
@@ -75,6 +77,7 @@ interface ColumnOptions {
     onStartRename?: (id: string, name: string) => void;
     onDelete?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
+    onCut?: (id: string) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
@@ -85,6 +88,7 @@ interface ColumnOptions {
     onStartRename?: (id: string, name: string) => void;
     onDownload?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
+    onCut?: (id: string) => void;
     onDelete?: (id: string, name: string) => void;
   };
   failedPreviews: Set<string>;
@@ -413,6 +417,18 @@ export const createActionsColumn = (
                   <Share fontSize="small" />
                 </IconButton>
               )}
+              {options.folderOperations.onCut && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onCut?.(row.id);
+                  }}
+                  title={options.labels.cut}
+                >
+                  <ContentCut fontSize="small" />
+                </IconButton>
+              )}
               {options.folderOperations.onDelete && (
                 <IconButton
                   size="small"
@@ -478,6 +494,18 @@ export const createActionsColumn = (
                 title={options.labels.rename}
               >
                 <Edit fontSize="small" />
+              </IconButton>
+            )}
+            {options.fileOperations.onCut && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  options.fileOperations.onCut?.(row.id);
+                }}
+                title={options.labels.cut}
+              >
+                <ContentCut fontSize="small" />
               </IconButton>
             )}
             {options.fileOperations.onDelete && (

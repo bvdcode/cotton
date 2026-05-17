@@ -8,7 +8,6 @@ using Cotton.Server.Jobs;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
-using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -54,7 +53,6 @@ public enum WebDavPutFileError
 /// Processes large files without loading them entirely into memory.
 /// </summary>
 public class WebDavPutFileRequestHandler(
-    ILayoutService _layouts,
     CottonDbContext _dbContext,
     SettingsProvider _settings,
     ISchedulerFactory _scheduler,
@@ -99,12 +97,34 @@ public class WebDavPutFileRequestHandler(
             contentType: contentType,
             ct);
 
-        await UpsertNodeFileAsync(request, target, fileManifest.Id, ct);
-        await _dbContext.SaveChangesAsync(ct);
+        // Per-layout namespace serialization for the final insert/update phase.
+        // Streaming and manifest dedup happened above - they are long-running and
+        // not namespace-sensitive (manifest dedup is by content hash, not NameKey).
+        // Re-resolve the target inside the lock: the pre-lock path result can be
+        // stale after a long upload stream, and must not drive the final upsert.
+        Guid lockedLayoutId = target.Parent.ParentNode!.LayoutId;
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
-        var resultNodeFile = await LoadResultNodeFileAsync(request, target, ct);
-        await NotifyPutCompletedAsync(request, created: target.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
-        return new WebDavPutFileResult(true, target.Created, null, resultNodeFile.Id);
+        var (lockedTarget, lockedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
+        if (lockedTargetError != null)
+        {
+            return lockedTargetError;
+        }
+
+        var finalTarget = lockedTarget!;
+        if (finalTarget.Parent.ParentNode!.LayoutId != lockedLayoutId)
+        {
+            _logger.LogDebug("WebDAV PUT: Parent layout changed while waiting for lock: {Path}", request.Path);
+            return Fail(WebDavPutFileError.ParentNotFound);
+        }
+
+        var resultNodeFile = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
+        await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
+        return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
     }
 
     private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
@@ -127,13 +147,12 @@ public class WebDavPutFileRequestHandler(
         }
 
         string nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
-        var layoutId = await GetLayoutIdAsync(request.UserId);
 
         var validationFailure = await TryGetFolderConflictFailureAsync(
                 userId: request.UserId,
                 parentNodeId: parentResult.ParentNode!.Id,
                 nameKey: nameKey,
-                layoutId: layoutId,
+                layoutId: parentResult.ParentNode.LayoutId,
                 ct)
             ?? TryGetOverwriteValidationFailure(existing, request.Overwrite);
 
@@ -183,12 +202,6 @@ public class WebDavPutFileRequestHandler(
         }
 
         return null;
-    }
-
-    private async Task<Guid> GetLayoutIdAsync(Guid userId)
-    {
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        return layout.Id;
     }
 
     private async Task<WebDavPutFileResult?> TryGetFolderConflictFailureAsync(
@@ -293,7 +306,7 @@ public class WebDavPutFileRequestHandler(
         return fileManifest;
     }
 
-    private async Task UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
+    private async Task<NodeFile> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
     {
         if (target.Existing.Found && target.Existing.NodeFile is not null)
         {
@@ -313,7 +326,7 @@ public class WebDavPutFileRequestHandler(
                 await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifestId, request.UserId, ct);
             }
 
-            return;
+            return nodeFile;
         }
 
         var createdNodeFile = new NodeFile
@@ -328,21 +341,7 @@ public class WebDavPutFileRequestHandler(
         await _dbContext.SaveChangesAsync(ct);
 
         createdNodeFile.OriginalNodeFileId = createdNodeFile.Id;
-    }
-
-    private async Task<NodeFile> LoadResultNodeFileAsync(WebDavPutFileRequest request, PutTarget target, CancellationToken ct)
-    {
-        if (target.Existing.Found && target.Existing.NodeFile is not null)
-        {
-            return await _dbContext.NodeFiles.FirstAsync(f => f.Id == target.Existing.NodeFile.Id, ct);
-        }
-
-        return await _dbContext.NodeFiles
-            .Where(f => f.NodeId == target.Parent.ParentNode!.Id
-                && f.OwnerId == request.UserId
-                && f.NameKey == target.NameKey)
-            .OrderByDescending(f => f.CreatedAt)
-            .FirstAsync(ct);
+        return createdNodeFile;
     }
 
     private async Task NotifyPutCompletedAsync(

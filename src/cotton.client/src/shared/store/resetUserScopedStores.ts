@@ -1,4 +1,5 @@
 import { useLayoutsStore } from "./layoutsStore";
+import { useMoveClipboardStore } from "./moveClipboardStore";
 import { useNodesStore } from "./nodesStore";
 import { useNotificationsStore } from "./notificationsStore";
 import { useSettingsStore } from "./settingsStore";
@@ -54,4 +55,5 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   useUserPreferencesStore.getState().reset();
   useAudioPlayerStore.getState().reset();
   useSetupStatusStore.getState().reset();
+  useMoveClipboardStore.getState().clear();
 };

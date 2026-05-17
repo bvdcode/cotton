@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, Breadcrumbs, Link as MuiLink, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
+import type React from "react";
 
 interface Breadcrumb {
   id: string;
@@ -11,15 +12,51 @@ interface Breadcrumb {
 interface FileBreadcrumbsProps {
   breadcrumbs: Breadcrumb[];
   onNavigateBreadcrumb?: (breadcrumbIndex: number) => void;
+  /** Optional drop handlers for move operations. */
+  dropHandlers?: {
+    canAccept: (targetCrumbId: string) => boolean;
+    onDragOver: (
+      targetCrumbId: string,
+      event: React.DragEvent<HTMLElement>,
+    ) => void;
+    onDrop: (
+      targetCrumbId: string,
+      event: React.DragEvent<HTMLElement>,
+    ) => void;
+  };
 }
 
 export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
   breadcrumbs,
   onNavigateBreadcrumb,
+  dropHandlers,
 }) => {
   const { t } = useTranslation("files");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const breadcrumbsRef = useRef<HTMLDivElement | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
+  const makeDropProps = (crumbId: string) => {
+    if (!dropHandlers) return null;
+    if (!dropHandlers.canAccept(crumbId)) return null;
+    return {
+      onDragOver: (event: React.DragEvent<HTMLElement>) => {
+        dropHandlers.onDragOver(crumbId, event);
+        if (event.defaultPrevented) {
+          setDropTargetId(crumbId);
+        }
+      },
+      onDragLeave: (event: React.DragEvent<HTMLElement>) => {
+        const related = event.relatedTarget as Node | null;
+        if (related && event.currentTarget.contains(related)) return;
+        setDropTargetId((prev) => (prev === crumbId ? null : prev));
+      },
+      onDrop: (event: React.DragEvent<HTMLElement>) => {
+        dropHandlers.onDrop(crumbId, event);
+        setDropTargetId(null);
+      },
+    };
+  };
 
   const filtered = useMemo(
     () =>
@@ -106,6 +143,17 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
       >
         {filtered.map(({ crumb, idx }, filteredIndex) => {
           const isLast = filteredIndex === filtered.length - 1;
+          const dropProps = makeDropProps(crumb.id);
+          const isDropTarget = dropTargetId === crumb.id;
+          const dropSx = isDropTarget
+            ? {
+                outline: "2px solid",
+                outlineColor: "primary.main",
+                outlineOffset: 2,
+                borderRadius: 0.5,
+              }
+            : undefined;
+
           if (isLast) {
             return (
               <Typography
@@ -113,6 +161,8 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
                 color="text.primary"
                 noWrap
                 title={crumb.name}
+                {...(dropProps ?? {})}
+                sx={dropSx}
               >
                 {crumb.name}
               </Typography>
@@ -128,9 +178,10 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
                 underline="hover"
                 color="inherit"
                 onClick={() => onNavigateBreadcrumb(idx)}
-                sx={{ fontSize: "1.1rem" }}
+                sx={{ fontSize: "1.1rem", ...(dropSx ?? {}) }}
                 noWrap
                 title={crumb.name}
+                {...(dropProps ?? {})}
               >
                 {crumb.name}
               </MuiLink>
@@ -144,9 +195,10 @@ export const FileBreadcrumbs: React.FC<FileBreadcrumbsProps> = ({
               underline="hover"
               color="inherit"
               to={`/files/${crumb.id}`}
-              sx={{ fontSize: "1.1rem" }}
+              sx={{ fontSize: "1.1rem", ...(dropSx ?? {}) }}
               noWrap
               title={crumb.name}
+              {...(dropProps ?? {})}
             >
               {crumb.name}
             </MuiLink>
