@@ -1353,8 +1353,8 @@
     "location": "Ubicación",
     "noFilesOrFolders": "No hay archivos ni carpetas",
     "clientEncryption": {
-      "enablePolicy": "Cifrar nuevas subidas",
-      "disablePolicy": "No cifrar nuevas subidas",
+      "enablePolicy": "Activar E2E",
+      "disablePolicy": "Desactivar E2E",
       "unlockDialog": {
         "title": "Desbloquear el cifrado del cliente",
         "currentTitle": "Esta carpeta esta cifrada",

@@ -1365,8 +1365,8 @@
     "location": "Расположение",
     "noFilesOrFolders": "Нет файлов и папок",
     "clientEncryption": {
-      "enablePolicy": "Шифровать новые загрузки",
-      "disablePolicy": "Не шифровать новые загрузки",
+      "enablePolicy": "Включить E2E",
+      "disablePolicy": "Отключить E2E",
       "unlockDialog": {
         "title": "Разблокировать клиентское шифрование",
         "currentTitle": "Эта папка зашифрована",

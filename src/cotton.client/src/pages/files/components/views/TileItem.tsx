@@ -342,7 +342,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
         variant="squareTile"
         icon={icon}
         title={tile.file.name}
-        titleAdornment={
+        cornerAdornment={
           fileEncrypted ? (
             <LockOutlined
               fontSize="small"

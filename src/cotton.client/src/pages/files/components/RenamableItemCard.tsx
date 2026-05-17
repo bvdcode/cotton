@@ -10,6 +10,7 @@ interface RenamableItemCardProps {
   renamingIcon?: ReactNode;
   title: string;
   titleAdornment?: ReactNode;
+  cornerAdornment?: ReactNode;
   subtitle?: string;
   onClick?: (event?: React.SyntheticEvent) => void;
   actions?: FileSystemItemCardAction[];
@@ -30,6 +31,7 @@ export const RenamableItemCard = ({
   renamingIcon,
   title,
   titleAdornment,
+  cornerAdornment,
   subtitle,
   onClick,
   actions,
@@ -49,6 +51,7 @@ export const RenamableItemCard = ({
         icon={icon}
         title={title}
         titleAdornment={titleAdornment}
+        cornerAdornment={cornerAdornment}
         subtitle={subtitle}
         onClick={onClick}
         actions={actions}

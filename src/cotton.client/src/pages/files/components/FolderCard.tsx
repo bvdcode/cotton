@@ -56,7 +56,7 @@ export const FolderCard = ({
       icon={getFolderIcon()}
       renamingIcon={getFolderIcon()}
       title={folder.name}
-      titleAdornment={
+      cornerAdornment={
         encryptionPolicyEnabled ? (
           <LockOutlined
             fontSize="small"

@@ -1331,8 +1331,8 @@
     "location": "Location",
     "noFilesOrFolders": "No files or folders",
     "clientEncryption": {
-      "enablePolicy": "Encrypt new uploads",
-      "disablePolicy": "Stop encrypting new uploads",
+      "enablePolicy": "Enable E2E",
+      "disablePolicy": "Disable E2E",
       "unlockDialog": {
         "title": "Unlock client-side encryption",
         "currentTitle": "This folder is encrypted",

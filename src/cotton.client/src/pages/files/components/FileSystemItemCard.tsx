@@ -22,6 +22,7 @@ export interface FileSystemItemCardProps {
   icon: ReactNode;
   title: string;
   titleAdornment?: ReactNode;
+  cornerAdornment?: ReactNode;
   subtitle?: string;
   onClick?: (event?: React.SyntheticEvent) => void;
   actions?: FileSystemItemCardAction[];
@@ -174,6 +175,7 @@ const FileSystemItemCardImpl = ({
   icon,
   title,
   titleAdornment,
+  cornerAdornment,
   subtitle,
   onClick,
   actions,
@@ -262,6 +264,32 @@ const FileSystemItemCardImpl = ({
           overflow: "hidden",
         }}
       >
+        {cornerAdornment && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 6,
+              right: 6,
+              zIndex: 2,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 22,
+              height: 22,
+              borderRadius: 0.75,
+              bgcolor: "background.paper",
+              color: "text.secondary",
+              border: "1px solid",
+              borderColor: "divider",
+              boxShadow: 1,
+              "& > svg": {
+                fontSize: 16,
+              },
+            }}
+          >
+            {cornerAdornment}
+          </Box>
+        )}
         <Box
           sx={{
             width: "100%",
