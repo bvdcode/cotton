@@ -72,6 +72,15 @@ public class WebDavCopyRequestHandler(
         }
 
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
+
+        // Per-layout namespace serialization: COPY creates new entries in the
+        // destination parent that can collide cross-table with a concurrent
+        // create/move. For a recursive folder copy, the entire subtree creation
+        // runs inside the lock — once an intermediate node hits the DB outside
+        // the lock, concurrent operations can target it.
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, destParentResult.ParentNode!.LayoutId, ct);
+
         var (created, allowed) = await HandleDestinationOverwriteAsync(request, ct);
         if (!allowed)
         {
@@ -79,7 +88,10 @@ public class WebDavCopyRequestHandler(
         }
 
         var (copiedNodeId, copiedNodeFileId) = await PerformCopyAsync(request, sourceResult, destParentResult, layout.Id, ct);
-        await PersistAndNotifyAsync(
+        await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        await EnsureVersionFamilyAndNotifyAsync(
             request,
             sourceResult,
             destParentResult,
@@ -109,7 +121,7 @@ public class WebDavCopyRequestHandler(
         return null;
     }
 
-    private async Task PersistAndNotifyAsync(
+    private async Task EnsureVersionFamilyAndNotifyAsync(
         WebDavCopyRequest request,
         WebDavResolveResult sourceResult,
         WebDavParentResult destParentResult,
@@ -117,8 +129,6 @@ public class WebDavCopyRequestHandler(
         Guid? copiedNodeFileId,
         CancellationToken ct)
     {
-        await _dbContext.SaveChangesAsync(ct);
-
         if (sourceResult.NodeFile is not null)
         {
             await EnsureNewVersionFamilyAsync(
