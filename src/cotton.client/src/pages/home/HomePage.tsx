@@ -1,31 +1,32 @@
-import { useEffect } from "react";
 import { Box, Card, CardContent, Typography, Alert } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import Loader from "../../shared/ui/Loader";
-import { useLayoutsStore } from "../../shared/store/layoutsStore";
+import {
+  useLayoutStatsQuery,
+  useRecentFilesQuery,
+  useRootNodeQuery,
+} from "../../shared/api/queries/layouts";
 import { formatBytes } from "../../shared/utils/formatBytes";
 import { RecentFilesCard } from "./components/RecentFilesCard";
 
 export const HomePage: React.FC = () => {
   const { t } = useTranslation(["home", "common"]);
-  const {
-    rootNode,
-    statsByLayoutId,
-    recentFiles,
-    loadingRoot,
-    loadingStats,
-    loadingRecent,
-    error,
-    ensureHomeData,
-  } = useLayoutsStore();
-
+  const rootQuery = useRootNodeQuery();
+  const rootNode = rootQuery.data ?? null;
   const layoutId = rootNode?.layoutId;
-  const stats = layoutId ? statsByLayoutId[layoutId] : undefined;
+  const statsQuery = useLayoutStatsQuery(layoutId);
+  const recentQuery = useRecentFilesQuery(layoutId);
 
-  useEffect(() => {
-    void ensureHomeData();
-  }, [ensureHomeData]);
-
+  const stats = statsQuery.data;
+  const recentFiles = recentQuery.data ?? [];
+  const loadingRoot = rootQuery.isPending;
+  const loadingStats = statsQuery.isPending && !!layoutId;
+  const loadingRecent = recentQuery.isPending && !!layoutId;
+  const error = rootQuery.error
+    ? "Failed to resolve root layout"
+    : statsQuery.error
+      ? "Failed to load layout stats"
+      : null;
   const isLoading = loadingRoot || loadingStats;
 
   if (isLoading && !rootNode && !stats) {

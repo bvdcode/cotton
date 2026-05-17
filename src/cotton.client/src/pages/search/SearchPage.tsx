@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Box, Alert, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useLayoutsStore } from "../../shared/store/layoutsStore";
+import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { SearchBar } from "./components/SearchBar";
 import { useLayoutSearch } from "./hooks/useLayoutSearch";
 import { FilePreviewModal } from "../files/components";
@@ -26,14 +26,10 @@ import { usePageTitle } from "../../shared/hooks/usePageTitle";
 export const SearchPage: React.FC = () => {
   const { t } = useTranslation(["search", "files"]);
   const navigate = useNavigate();
-  const { rootNode, ensureHomeData } = useLayoutsStore();
+  const rootNode = useRootNodeQuery().data ?? null;
 
   const gridHostRef = useRef<HTMLDivElement | null>(null);
   usePageTitle(t("title", { ns: "search" }));
-
-  useEffect(() => {
-    void ensureHomeData();
-  }, [ensureHomeData]);
 
   const layoutId = rootNode?.layoutId;
 

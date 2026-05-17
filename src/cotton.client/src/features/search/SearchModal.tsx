@@ -16,7 +16,7 @@ import { Close, Search } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";
 import { useNavigate } from "react-router-dom";
-import { useLayoutsStore } from "../../shared/store/layoutsStore";
+import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { useFileInteractionHandlers } from "../../pages/files/hooks/useFileInteractionHandlers";
@@ -44,7 +44,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { rootNode, ensureHomeData } = useLayoutsStore();
+  const rootNode = useRootNodeQuery().data ?? null;
   const [failedPreviews, setFailedPreviews] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
 
@@ -64,11 +64,6 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
 
   const hasSearchQuery = debouncedQuery.length > 0;
   const matchedDictionaryRows = useDictionaryMatch(debouncedQuery);
-
-  useEffect(() => {
-    if (!open) return;
-    void ensureHomeData();
-  }, [ensureHomeData, open]);
 
   useEffect(() => {
     if (!open) return;

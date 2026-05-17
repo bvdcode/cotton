@@ -1,4 +1,3 @@
-import { useLayoutsStore } from "./layoutsStore";
 import { useMoveClipboardStore } from "./moveClipboardStore";
 import { useNodesStore } from "./nodesStore";
 import { useSettingsStore } from "./settingsStore";
@@ -8,6 +7,7 @@ import { useUserPreferencesStore } from "./userPreferencesStore";
 import { useSetupStatusStore } from "./setupStatusStore";
 import { LANGUAGE_STORAGE_KEY } from "../config/storageKeys";
 import { clearNotificationCaches } from "../api/queries/notifications";
+import { clearLayoutsCaches } from "../api/queries/layouts";
 import { queryClient } from "../api/queries/queryClient";
 
 const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
@@ -43,15 +43,10 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
     useNodesStore.getState().reset(nextUserId);
   }
 
-  const layoutsOwner = useLayoutsStore.getState().cacheOwnerUserId;
-  if (layoutsOwner !== nextUserId) {
-    safeClearPersisted(useLayoutsStore.persist.clearStorage);
-    useLayoutsStore.getState().reset(nextUserId);
-  }
-
   // Non-persisted but user-scoped stores
   useTrashStore.getState().reset();
   clearNotificationCaches(queryClient);
+  clearLayoutsCaches(queryClient);
   useSettingsStore.getState().reset();
   useUserPreferencesStore.getState().reset();
   useAudioPlayerStore.getState().reset();
