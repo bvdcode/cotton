@@ -1,6 +1,11 @@
-import { httpClient } from "./httpClient";
+import { httpClient, parseValidated } from "./httpClient";
 import type { Guid } from "./layoutsApi";
-import type { RestoreOptions, RestoreOutcomeDto } from "./nodesApi";
+import type {
+  NodeFileManifestDto,
+  RestoreOptions,
+  RestoreOutcomeDto,
+} from "./nodesApi";
+import { nodeFileManifestSchema } from "./schemas/node";
 
 const downloadLinkInFlight = new Map<string, Promise<string>>();
 
@@ -17,6 +22,8 @@ export interface CreateFileFromChunksRequest {
 export interface RenameFileRequest {
   name: string;
 }
+
+export type UpdateFileMetadataRequest = Record<string, string>;
 
 export interface MoveFileRequest {
   parentId: Guid;
@@ -70,6 +77,15 @@ export const filesApi = {
     request: RenameFileRequest,
   ): Promise<void> => {
     await httpClient.patch(`/files/${nodeFileId}/rename`, request);
+  },
+
+  updateFileMetadata: async (
+    nodeFileId: Guid,
+    request: UpdateFileMetadataRequest,
+  ): Promise<NodeFileManifestDto> => {
+    const url = `/files/${nodeFileId}/metadata`;
+    const response = await httpClient.patch<unknown>(url, request);
+    return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
   moveFile: async (

@@ -179,6 +179,33 @@ describe("filesApi file mutations", () => {
     });
   });
 
+  it("updates file metadata through the scoped metadata endpoint", async () => {
+    const response = {
+      id: fileId,
+      createdAt: "2026-05-17T00:00:00Z",
+      updatedAt: "2026-05-17T00:00:01Z",
+      nodeId,
+      ownerId: "owner-1",
+      name: "encrypted.bin",
+      contentType: "application/octet-stream",
+      sizeBytes: 12,
+      metadata: { en: "encrypted-display-name" },
+      requiresVideoTranscoding: false,
+      previewHashEncryptedHex: null,
+    };
+    const patch = vi.spyOn(httpClient, "patch").mockResolvedValue({
+      data: response,
+    });
+
+    await expect(
+      filesApi.updateFileMetadata(fileId, { en: "encrypted-display-name" }),
+    ).resolves.toEqual(response);
+
+    expect(patch).toHaveBeenCalledWith(`/files/${fileId}/metadata`, {
+      en: "encrypted-display-name",
+    });
+  });
+
   it("restores files with stable default conflict options", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: { status: "Restored" },

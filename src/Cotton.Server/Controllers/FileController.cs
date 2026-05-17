@@ -242,6 +242,68 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch(Routes.V1.Files + "/{nodeFileId:guid}/metadata")]
+        [ProducesResponseType<NodeFileManifestDto>(StatusCodes.Status200OK)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateFileMetadata(
+            [FromRoute] Guid nodeFileId,
+            [FromBody] Dictionary<string, string?>? patch)
+        {
+            if (patch is null)
+            {
+                return CottonResult.BadRequest("Metadata patch is required.");
+            }
+
+            if (patch.Any(x => string.IsNullOrWhiteSpace(x.Key)))
+            {
+                return CottonResult.BadRequest("Metadata keys must be non-empty strings.");
+            }
+
+            if (patch.Any(x => x.Value is null))
+            {
+                return CottonResult.BadRequest("Metadata values must be strings.");
+            }
+
+            Guid userId = User.GetUserId();
+            var nodeFile = await _dbContext.NodeFiles
+                .Include(x => x.Node)
+                .Include(x => x.FileManifest)
+                .Where(x => x.Id == nodeFileId && x.OwnerId == userId)
+                .SingleOrDefaultAsync();
+            if (nodeFile == null || nodeFile.Node.Type != NodeType.Default)
+            {
+                return CottonResult.NotFound("File not found.");
+            }
+
+            var metadata = nodeFile.Metadata is null
+                ? []
+                : new Dictionary<string, string>(nodeFile.Metadata);
+            foreach (var (key, value) in patch)
+            {
+                metadata[key] = value!;
+            }
+
+            nodeFile.Metadata = metadata;
+            await _dbContext.SaveChangesAsync();
+
+            var mapped = nodeFile.Adapt<NodeFileManifestDto>();
+            try
+            {
+                await _hubContext.Clients.User(userId.ToString()).SendAsync("FileUpdated", mapped);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to send file metadata update notification for file {NodeFileId}",
+                    nodeFileId);
+            }
+
+            return Ok(mapped);
+        }
+
+        [Authorize]
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download-link")]
         public async Task<IActionResult> DownloadFile(
             [FromRoute] Guid nodeFileId,

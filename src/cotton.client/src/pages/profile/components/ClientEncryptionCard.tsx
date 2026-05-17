@@ -67,6 +67,11 @@ export const ClientEncryptionCard = ({
       : "invalid";
 
   const statusChip = status === "notSetUp" ? null : getStatusChip(status, t);
+  const statusHint = status === "unlocked"
+    ? t("clientEncryption.unlockedHint")
+    : status === "locked"
+      ? t("clientEncryption.lockedHint")
+      : null;
 
   return (
     <>
@@ -78,22 +83,10 @@ export const ClientEncryptionCard = ({
         description={t("clientEncryption.description")}
       >
         <Stack spacing={2} paddingY={2}>
-          {statusChip && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              {statusChip}
-            </Stack>
-          )}
-
           {status === "invalid" && (
             <Alert severity="error">
               {t("clientEncryption.invalidEnvelope")}
             </Alert>
-          )}
-
-          {status === "unlocked" && (
-            <Typography variant="body2" color="text.secondary">
-              {t("clientEncryption.unlockedHint")}
-            </Typography>
           )}
 
           {status === "notSetUp" ? (
@@ -106,20 +99,52 @@ export const ClientEncryptionCard = ({
                 {t("clientEncryption.actions.setup")}
               </Button>
             </Box>
-          ) : (
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-              {status === "locked" && envelope && (
-                <Button variant="contained" onClick={() => setUnlockOpen(true)}>
-                  {t("clientEncryption.actions.unlock")}
-                </Button>
-              )}
-              {status === "unlocked" && (
-                <Button variant="outlined" onClick={lockVault}>
-                  {t("clientEncryption.actions.lock")}
-                </Button>
-              )}
+          ) : status !== "invalid" ? (
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              alignItems={{ xs: "stretch", sm: "center" }}
+              justifyContent="space-between"
+              sx={{
+                p: 2,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                bgcolor: "background.default",
+              }}
+            >
+              <Stack spacing={1} minWidth={0}>
+                {statusChip}
+                {statusHint && (
+                  <Typography variant="body2" color="text.secondary">
+                    {statusHint}
+                  </Typography>
+                )}
+              </Stack>
+              <Box sx={{ flexShrink: 0 }}>
+                {status === "locked" && envelope && (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={() => setUnlockOpen(true)}
+                    sx={{ minWidth: 128 }}
+                  >
+                    {t("clientEncryption.actions.unlock")}
+                  </Button>
+                )}
+                {status === "unlocked" && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={lockVault}
+                    sx={{ minWidth: 128 }}
+                  >
+                    {t("clientEncryption.actions.lock")}
+                  </Button>
+                )}
+              </Box>
             </Stack>
-          )}
+          ) : null}
         </Stack>
       </ProfileAccordionCard>
 

@@ -805,6 +805,7 @@
       "sectionTitle": "Cifrado del lado del cliente",
       "description": "Protege archivos seleccionados con una clave guardada en el navegador.",
       "invalidEnvelope": "No se pueden leer los datos guardados de cifrado. No subas archivos cifrados hasta corregirlo.",
+      "lockedHint": "Desbloquea la clave cuando necesites abrir carpetas o archivos cifrados.",
       "unlockedHint": "Los archivos cifrados se pueden abrir en esta pestaña hasta que bloquees la clave o cierres sesión.",
       "status": {
         "notSetUp": "Sin configurar",

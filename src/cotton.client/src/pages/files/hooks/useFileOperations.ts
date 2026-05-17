@@ -1,12 +1,24 @@
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../shared/api/filesApi";
+import {
+  DISPLAY_META_KEY,
+  ENCRYPTED_CONTENT_TYPE,
+  encryptDisplayMeta,
+  getOriginalContentType,
+  isFileEncrypted,
+} from "../../../shared/crypto";
 import { useFileRenameDeleteOperations } from "../../../shared/hooks/useFileRenameDeleteOperations";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 
 export const useFileOperations = (onFilesChanged?: () => void) => {
   const { t } = useTranslation(["files", "common"]);
-  const { currentNode, optimisticRenameFile, optimisticDeleteFile } = useNodesStore();
+  const {
+    currentNode,
+    contentByNodeId,
+    optimisticRenameFile,
+    optimisticDeleteFile,
+  } = useNodesStore();
 
   return useFileRenameDeleteOperations({
     getDeleteDialogContent: (fileName) => ({
@@ -23,7 +35,26 @@ export const useFileOperations = (onFilesChanged?: () => void) => {
           optimisticRenameFile(parentId, fileId, newName);
         }
 
-        await filesApi.renameFile(fileId, { name: newName });
+        const currentFile = parentId
+          ? contentByNodeId[parentId]?.files.find((file) => file.id === fileId)
+          : undefined;
+
+        if (currentFile && isFileEncrypted(currentFile.metadata)) {
+          const contentType =
+            getOriginalContentType(currentFile.metadata) ||
+            currentFile.contentType ||
+            ENCRYPTED_CONTENT_TYPE;
+          const encryptedDisplayMeta = await encryptDisplayMeta({
+            name: newName,
+            contentType,
+          });
+
+          await filesApi.updateFileMetadata(fileId, {
+            [DISPLAY_META_KEY]: encryptedDisplayMeta,
+          });
+        } else {
+          await filesApi.renameFile(fileId, { name: newName });
+        }
 
         if (parentId) {
           void refreshNodeContent(parentId);

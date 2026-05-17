@@ -757,6 +757,7 @@
       "sectionTitle": "Client-side encryption",
       "description": "Protect selected files with a browser-held key.",
       "invalidEnvelope": "Saved encryption setup data cannot be read. Do not upload encrypted files until this is fixed.",
+      "lockedHint": "Unlock when you need to open encrypted folders or files.",
       "unlockedHint": "Encrypted files can be opened in this browser tab until you lock the key or sign out.",
       "status": {
         "notSetUp": "Not set up",
