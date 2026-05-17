@@ -2,6 +2,17 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+const NODE_MODULES_MARKER = "/node_modules/";
+
+function getNodeModulePath(id: string): string | undefined {
+  const normalizedId = id.replaceAll("\\", "/");
+  const markerIndex = normalizedId.lastIndexOf(NODE_MODULES_MARKER);
+
+  return markerIndex === -1
+    ? undefined
+    : normalizedId.slice(markerIndex + NODE_MODULES_MARKER.length);
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -27,6 +38,59 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: true,
           ws: true,
+        },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const modulePath = getNodeModulePath(id);
+            if (!modulePath) {
+              return undefined;
+            }
+
+            if (
+              modulePath.startsWith("three/") ||
+              modulePath.startsWith("@react-three/")
+            ) {
+              return "vendor-three";
+            }
+
+            if (
+              modulePath.startsWith("monaco-editor/") ||
+              modulePath.startsWith("@monaco-editor/")
+            ) {
+              return "vendor-monaco";
+            }
+
+            if (modulePath.startsWith("pdfjs-dist/")) {
+              return "vendor-pdfjs";
+            }
+
+            if (modulePath.startsWith("@mui/x-data-grid")) {
+              return "vendor-mui-datagrid";
+            }
+
+            if (modulePath.startsWith("@mui/icons-material/")) {
+              return "vendor-mui-icons";
+            }
+
+            if (
+              modulePath.startsWith("@mui/material/") ||
+              modulePath.startsWith("@mui/system/") ||
+              modulePath.startsWith("@mui/styled-engine/") ||
+              modulePath.startsWith("@emotion/")
+            ) {
+              return "vendor-mui";
+            }
+
+            if (modulePath.startsWith("@microsoft/signalr/")) {
+              return "vendor-signalr";
+            }
+
+            return undefined;
+          },
         },
       },
     },
