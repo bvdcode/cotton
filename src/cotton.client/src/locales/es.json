@@ -795,6 +795,66 @@
     },
     "email": {
       "verified": "Correo electrónico verificado"
+    },
+    "clientEncryption": {
+      "sectionTitle": "Cifrado del lado del cliente",
+      "description": "Protege archivos seleccionados con una clave guardada en el navegador.",
+      "invalidEnvelope": "No se pueden leer los datos guardados de cifrado. No subas archivos cifrados hasta corregirlo.",
+      "unlockedHint": "Los archivos cifrados se pueden abrir en esta pestaña hasta que bloquees la clave o cierres sesión.",
+      "status": {
+        "notSetUp": "Sin configurar",
+        "locked": "Bloqueado",
+        "unlocked": "Desbloqueado",
+        "invalid": "Requiere atención"
+      },
+      "actions": {
+        "setup": "Configurar",
+        "unlock": "Desbloquear",
+        "lock": "Bloquear"
+      },
+      "setupDialog": {
+        "title": "Configurar cifrado del lado del cliente",
+        "warning": "Si pierdes la contraseña de cifrado y la frase de respaldo de 24 palabras, no se podrán abrir los archivos cifrados. El servidor no puede restablecer esta clave.",
+        "acknowledge": "Entiendo que perder ambos secretos implica pérdida permanente de datos",
+        "cancel": "Cancelar",
+        "continue": "Continuar",
+        "back": "Atrás",
+        "passwordHint": "Elige una contraseña de cifrado fuerte. Es distinta de la contraseña de tu cuenta y no se envía al servidor.",
+        "passwordLabel": "Contraseña de cifrado",
+        "confirmPasswordLabel": "Confirmar contraseña de cifrado",
+        "passwordTooShort": "Usa al menos {{min}} caracteres.",
+        "passwordMismatch": "Las contraseñas no coinciden.",
+        "next": "Siguiente",
+        "generating": "Generando...",
+        "phraseWarning": "Guarda estas 24 palabras en un lugar seguro antes de finalizar. Cualquier persona con esta frase podrá desbloquear archivos cifrados.",
+        "copy": "Copiar frase",
+        "copied": "Copiada",
+        "phraseStored": "He guardado la frase de respaldo",
+        "saving": "Guardando...",
+        "finish": "Finalizar configuración",
+        "errors": {
+          "generateFailed": "No se pudieron generar las claves de cifrado.",
+          "saveFailed": "No se pudo guardar la configuración de cifrado.",
+          "copyFailed": "No se pudo copiar la frase."
+        }
+      },
+      "unlockDialog": {
+        "title": "Desbloquear cifrado del lado del cliente",
+        "passwordLabel": "Contraseña de cifrado",
+        "phraseLabel": "Frase de respaldo de 24 palabras",
+        "usePhrase": "Usar frase de respaldo",
+        "usePassword": "Usar contraseña",
+        "cancel": "Cancelar",
+        "submit": "Desbloquear",
+        "unlocking": "Desbloqueando...",
+        "errors": {
+          "wrongPassword": "Contraseña de cifrado incorrecta.",
+          "wrongPhrase": "Esta frase no desbloquea la clave.",
+          "invalidPhrase": "La frase no es válida o tiene un número incorrecto de palabras.",
+          "invalidEnvelope": "No se pueden leer los datos guardados de cifrado.",
+          "unknown": "No se pudo desbloquear el cifrado."
+        }
+      }
     }
   },
   "setup": {

@@ -2,6 +2,7 @@ export * from "./base64";
 export * from "./cipher";
 export * from "./container";
 export * from "./envelope";
+export * from "./envelopeStorage";
 export * from "./errors";
 export * from "./keys";
 export * from "./recoveryKey";

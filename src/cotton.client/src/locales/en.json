@@ -747,6 +747,66 @@
     },
     "email": {
       "verified": "Email verified"
+    },
+    "clientEncryption": {
+      "sectionTitle": "Client-side encryption",
+      "description": "Protect selected files with a browser-held key.",
+      "invalidEnvelope": "Saved encryption setup data cannot be read. Do not upload encrypted files until this is fixed.",
+      "unlockedHint": "Encrypted files can be opened in this browser tab until you lock the key or sign out.",
+      "status": {
+        "notSetUp": "Not set up",
+        "locked": "Locked",
+        "unlocked": "Unlocked",
+        "invalid": "Needs attention"
+      },
+      "actions": {
+        "setup": "Set up",
+        "unlock": "Unlock",
+        "lock": "Lock"
+      },
+      "setupDialog": {
+        "title": "Set up client-side encryption",
+        "warning": "If you lose both the encryption password and the 24-word backup phrase, encrypted files cannot be opened. The server cannot reset this key.",
+        "acknowledge": "I understand that losing both means permanent data loss",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "back": "Back",
+        "passwordHint": "Choose a strong encryption password. It is separate from your account password and is not sent to the server.",
+        "passwordLabel": "Encryption password",
+        "confirmPasswordLabel": "Confirm encryption password",
+        "passwordTooShort": "Use at least {{min}} characters.",
+        "passwordMismatch": "Passwords do not match.",
+        "next": "Next",
+        "generating": "Generating...",
+        "phraseWarning": "Store these 24 words somewhere safe before finishing setup. Anyone with this phrase can unlock encrypted files.",
+        "copy": "Copy phrase",
+        "copied": "Copied",
+        "phraseStored": "I have stored the backup phrase",
+        "saving": "Saving...",
+        "finish": "Finish setup",
+        "errors": {
+          "generateFailed": "Could not generate encryption keys.",
+          "saveFailed": "Could not save encryption setup.",
+          "copyFailed": "Could not copy the phrase."
+        }
+      },
+      "unlockDialog": {
+        "title": "Unlock client-side encryption",
+        "passwordLabel": "Encryption password",
+        "phraseLabel": "24-word backup phrase",
+        "usePhrase": "Use backup phrase",
+        "usePassword": "Use password instead",
+        "cancel": "Cancel",
+        "submit": "Unlock",
+        "unlocking": "Unlocking...",
+        "errors": {
+          "wrongPassword": "Wrong encryption password.",
+          "wrongPhrase": "This phrase does not unlock the key.",
+          "invalidPhrase": "The phrase is invalid or has the wrong number of words.",
+          "invalidEnvelope": "Saved encryption setup data cannot be read.",
+          "unknown": "Could not unlock encryption."
+        }
+      }
     }
   },
   "setup": {
