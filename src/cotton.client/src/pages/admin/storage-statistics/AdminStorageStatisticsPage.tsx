@@ -13,11 +13,11 @@ import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import { type GcTimelineBucketKind } from "@shared/api/adminApi";
 import {
-  adminApi,
-  type GcChunkTimelineDto,
-  type GcTimelineBucketKind,
-} from "@shared/api/adminApi";
+  useGcChunksTimelineQuery,
+  useTriggerGarbageCollectorMutation,
+} from "@shared/api/queries/admin";
 import {
   settingsApi,
   type StorageSpaceMode,
@@ -34,11 +34,6 @@ import { GcTimelineChart } from "./components/GcTimelineChart";
 import { StorageSpaceModeControl } from "./components/StorageSpaceModeControl";
 import { StorageSummaryCards } from "./components/StorageSummaryCards";
 
-type LoadState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "error"; message: string };
-
 type TriggerState =
   | { kind: "idle" }
   | { kind: "loading" }
@@ -47,59 +42,20 @@ type TriggerState =
 export const AdminStorageStatisticsPage = () => {
   const { t } = useTranslation(["admin", "common"]);
 
-  const [timeline, setTimeline] = useState<GcChunkTimelineDto | null>(null);
   const [bucket, setBucket] = useState<GcTimelineBucketKind>("day");
   const [storageSpaceMode, setStorageSpaceMode] =
     useState<StorageSpaceMode>("Optimal");
   const [storageSpaceModeStatus, setStorageSpaceModeStatus] =
     useState<SaveStatus>("loading");
-  const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [triggerState, setTriggerState] = useState<TriggerState>({
     kind: "idle",
   });
 
-  const [refreshVersion, setRefreshVersion] = useState(0);
   const storageSpaceModeFlashTimerRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    let isActive = true;
-
-    const loadTimeline = async () => {
-      try {
-        const result = await adminApi.getGcChunksTimeline({
-          bucket,
-        });
-
-        if (!isActive) {
-          return;
-        }
-
-        setTimeline(result);
-        setLoadState({ kind: "idle" });
-      } catch (error) {
-        if (!isActive) {
-          return;
-        }
-
-        const message = getApiErrorMessage(error);
-        if (message) {
-          setLoadState({ kind: "error", message });
-          return;
-        }
-
-        setLoadState({
-          kind: "error",
-          message: t("storageStatistics.errors.loadFailed"),
-        });
-      }
-    };
-
-    void loadTimeline();
-
-    return () => {
-      isActive = false;
-    };
-  }, [bucket, refreshVersion, t]);
+  const timelineQuery = useGcChunksTimelineQuery({ bucket });
+  const timeline = timelineQuery.data ?? null;
+  const triggerGcMutation = useTriggerGarbageCollectorMutation();
 
   useEffect(() => {
     let isActive = true;
@@ -152,7 +108,6 @@ export const AdminStorageStatisticsPage = () => {
       return;
     }
 
-    setLoadState({ kind: "loading" });
     setBucket(nextBucket);
   };
 
@@ -201,21 +156,18 @@ export const AdminStorageStatisticsPage = () => {
   };
 
   const refreshTimeline = () => {
-    setLoadState({ kind: "loading" });
-    setRefreshVersion((value) => value + 1);
+    void timelineQuery.refetch();
   };
 
   const handleTriggerGarbageCollector = async () => {
     setTriggerState({ kind: "loading" });
 
     try {
-      await adminApi.triggerGarbageCollector();
+      await triggerGcMutation.mutateAsync();
       setTriggerState({ kind: "idle" });
       toast.success(t("storageStatistics.state.triggerGcSuccess"), {
         toastId: "admin:storage-statistics:trigger-gc:success",
       });
-      setLoadState({ kind: "loading" });
-      setRefreshVersion((value) => value + 1);
     } catch (error) {
       const message = getApiErrorMessage(error);
       if (message) {
@@ -230,7 +182,11 @@ export const AdminStorageStatisticsPage = () => {
     }
   };
 
-  const isLoading = loadState.kind === "loading";
+  const isLoading = timelineQuery.isPending || timelineQuery.isFetching;
+  const loadErrorMessage = timelineQuery.isError
+    ? getApiErrorMessage(timelineQuery.error) ??
+      t("storageStatistics.errors.loadFailed")
+    : null;
   const isTriggering = triggerState.kind === "loading";
   const storageSpaceModeDisabled =
     storageSpaceModeStatus === "loading" || storageSpaceModeStatus === "saving";
@@ -321,8 +277,8 @@ export const AdminStorageStatisticsPage = () => {
             />
           </Box>
 
-          {loadState.kind === "error" && (
-            <Alert severity="error">{loadState.message}</Alert>
+          {loadErrorMessage && (
+            <Alert severity="error">{loadErrorMessage}</Alert>
           )}
 
           {triggerState.kind === "error" && (

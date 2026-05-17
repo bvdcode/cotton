@@ -13,12 +13,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { UserRoleSelect } from "./UserRoleSelect";
 import { UserRole } from "../../../features/auth/types";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
-import {
-  adminApi,
-  type AdminCreateUserRequestDto,
-} from "../../../shared/api/adminApi";
+import { type AdminCreateUserRequestDto } from "../../../shared/api/adminApi";
+import { useCreateAdminUserMutation } from "../../../shared/api/queries/admin";
 import {
   getUsernameError,
   isValidUsername,
@@ -28,13 +26,25 @@ import {
 interface CreateUserDialogProps {
   open: boolean;
   onClose: () => void;
-  onUserCreated: () => Promise<void>;
 }
 
 export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   open,
   onClose,
-  onUserCreated,
+}) => {
+  if (!open) {
+    return null;
+  }
+
+  return <CreateUserDialogContent onClose={onClose} />;
+};
+
+interface CreateUserDialogContentProps {
+  onClose: () => void;
+}
+
+const CreateUserDialogContent: React.FC<CreateUserDialogContentProps> = ({
+  onClose,
 }) => {
   const { t } = useTranslation(["admin", "common"]);
 
@@ -45,8 +55,9 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const createUserMutation = useCreateAdminUserMutation();
+  const createLoading = createUserMutation.isPending;
 
   const resetForm = useCallback(() => {
     setUsername("");
@@ -59,17 +70,12 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setCreateError(null);
   }, []);
 
-  useEffect(() => {
-    if (!open) {
-      resetForm();
-    }
-  }, [open, resetForm]);
-
   const usernameError = getUsernameError(username);
   const canCreate = isValidUsername(username) && !createLoading;
 
   const handleClose = () => {
     if (!createLoading) {
+      resetForm();
       onClose();
     }
   };
@@ -87,10 +93,8 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       birthDate: birthDate.length > 0 ? birthDate : null,
     };
 
-    setCreateLoading(true);
     try {
-      await adminApi.createUser(request);
-      await onUserCreated();
+      await createUserMutation.mutateAsync(request);
       resetForm();
       onClose();
     } catch (error) {
@@ -101,14 +105,12 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       }
 
       setCreateError(t("users.errors.createFailed"));
-    } finally {
-      setCreateLoading(false);
     }
   };
 
   return (
     <Dialog
-      open={open}
+      open
       onClose={handleClose}
       maxWidth="sm"
       fullWidth

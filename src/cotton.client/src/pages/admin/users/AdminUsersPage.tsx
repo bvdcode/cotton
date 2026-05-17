@@ -100,13 +100,11 @@ export const AdminUsersPage = () => {
       <CreateUserDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onUserCreated={refresh}
       />
       <EditUserDialog
         open={editingUser !== null}
         user={editingUser}
         onClose={() => setEditingUser(null)}
-        onSaved={refresh}
       />
     </Stack>
   );

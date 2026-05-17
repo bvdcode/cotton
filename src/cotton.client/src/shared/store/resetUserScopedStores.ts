@@ -8,6 +8,7 @@ import { useSetupStatusStore } from "./setupStatusStore";
 import { LANGUAGE_STORAGE_KEY } from "../config/storageKeys";
 import { clearNotificationCaches } from "../api/queries/notifications";
 import { clearLayoutsCaches } from "../api/queries/layouts";
+import { clearAdminCaches } from "../api/queries/admin";
 import { queryClient } from "../api/queries/queryClient";
 
 const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
@@ -47,6 +48,7 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   useTrashStore.getState().reset();
   clearNotificationCaches(queryClient);
   clearLayoutsCaches(queryClient);
+  clearAdminCaches(queryClient);
   useSettingsStore.getState().reset();
   useUserPreferencesStore.getState().reset();
   useAudioPlayerStore.getState().reset();
