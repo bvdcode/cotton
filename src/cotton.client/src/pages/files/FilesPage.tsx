@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { Alert, Box } from "@mui/material";
+import { Alert, Box, Dialog, DialogTitle } from "@mui/material";
 import { ContentCut, ContentPaste, Delete } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import {
@@ -40,7 +40,12 @@ import {
   buildFileOperations,
 } from "../../shared/utils/operationsAdapters";
 import { nodesApi } from "../../shared/api/nodesApi";
-import { FOLDER_ENCRYPTION_POLICY_KEY } from "../../shared/crypto";
+import {
+  FOLDER_ENCRYPTION_POLICY_KEY,
+  isFolderEncryptionPolicyEnabled,
+  readEnvelopeFromPreferences,
+  useVault,
+} from "../../shared/crypto";
 import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
@@ -53,8 +58,13 @@ import {
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
+import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
+
+type ClientEncryptionUnlockPrompt =
+  | { kind: "current" }
+  | { kind: "open"; folderId: string };
 
 export const FilesPage: React.FC = () => {
   const { t } = useTranslation(["files", "common"]);
@@ -249,18 +259,100 @@ export const FilesPage: React.FC = () => {
   const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
+  const preferences = useUserPreferencesStore((s) => s.preferences);
+  const isVaultUnlocked = useVault((state) => state.isUnlocked);
+  const clientEncryptionEnvelope = useMemo(
+    () => readEnvelopeFromPreferences(preferences),
+    [preferences],
+  );
+  const [unlockPrompt, setUnlockPrompt] =
+    React.useState<ClientEncryptionUnlockPrompt | null>(null);
+  const currentFolderRequiresUnlock =
+    Boolean(currentNode) &&
+    !isVaultUnlocked &&
+    isFolderEncryptionPolicyEnabled(currentNode?.metadata);
+  const activeUnlockPrompt = useMemo<ClientEncryptionUnlockPrompt | null>(() => {
+    if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
+      return { kind: "current" };
+    }
+
+    return unlockPrompt;
+  }, [clientEncryptionEnvelope, currentFolderRequiresUnlock, unlockPrompt]);
 
   const stats = useMemo(
     () => calculateFolderStats(effectiveContent?.nodes, effectiveContent?.files),
     [effectiveContent?.files, effectiveContent?.nodes],
   );
 
-  const goToFolder = useMemo(
-    () => (folderId: string) => navigate(`/files/${folderId}`),
-    [navigate],
+  const goToFolder = React.useCallback(
+    (folderId: string) => {
+      const targetFolder = effectiveContent?.nodes?.find(
+        (folder) => folder.id === folderId,
+      );
+      const requiresUnlock =
+        targetFolder &&
+        isFolderEncryptionPolicyEnabled(targetFolder.metadata) &&
+        !isVaultUnlocked;
+
+      if (requiresUnlock) {
+        if (!clientEncryptionEnvelope) {
+          showToast(
+            t("clientEncryption.toasts.setupRequired", { ns: "files" }),
+            "error",
+          );
+          return;
+        }
+
+        setUnlockPrompt({ kind: "open", folderId });
+        return;
+      }
+
+      navigate(`/files/${folderId}`);
+    },
+    [
+      clientEncryptionEnvelope,
+      effectiveContent?.nodes,
+      isVaultUnlocked,
+      navigate,
+      showToast,
+      t,
+    ],
   );
 
-  const goHome = useMemo(() => () => navigate("/files"), [navigate]);
+  const goHome = React.useCallback(() => navigate("/files"), [navigate]);
+
+  useEffect(() => {
+    if (!currentFolderRequiresUnlock || clientEncryptionEnvelope) {
+      return;
+    }
+
+    showToast(t("clientEncryption.toasts.setupRequired", { ns: "files" }), "error");
+    goHome();
+  }, [
+    clientEncryptionEnvelope,
+    currentFolderRequiresUnlock,
+    goHome,
+    showToast,
+    t,
+  ]);
+
+  const handleUnlockCancel = React.useCallback(() => {
+    const prompt = activeUnlockPrompt;
+    setUnlockPrompt(null);
+
+    if (prompt?.kind === "current") {
+      goHome();
+    }
+  }, [activeUnlockPrompt, goHome]);
+
+  const handleUnlockSuccess = React.useCallback(() => {
+    const prompt = activeUnlockPrompt;
+    setUnlockPrompt(null);
+
+    if (prompt?.kind === "open") {
+      navigate(`/files/${prompt.folderId}`);
+    }
+  }, [activeUnlockPrompt, navigate]);
 
   const handleGoUp = React.useCallback(() => {
     if (ancestors.length > 0) {
@@ -585,6 +677,31 @@ export const FilesPage: React.FC = () => {
         onResolve={fileUpload.conflictDialog.onResolve}
         onExited={fileUpload.conflictDialog.onExited}
       />
+
+      <Dialog
+        open={activeUnlockPrompt !== null && clientEncryptionEnvelope !== null}
+        onClose={handleUnlockCancel}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {activeUnlockPrompt?.kind === "current"
+            ? t("clientEncryption.unlockDialog.currentTitle", { ns: "files" })
+            : t("clientEncryption.unlockDialog.title", { ns: "files" })}
+        </DialogTitle>
+        {clientEncryptionEnvelope && (
+          <ClientEncryptionUnlockForm
+            envelope={clientEncryptionEnvelope}
+            onCancel={handleUnlockCancel}
+            onSuccess={handleUnlockSuccess}
+            cancelLabel={
+              activeUnlockPrompt?.kind === "current"
+                ? t("clientEncryption.unlockDialog.goHome", { ns: "files" })
+                : undefined
+            }
+          />
+        )}
+      </Dialog>
     </>
   );
 };

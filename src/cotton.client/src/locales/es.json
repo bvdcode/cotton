@@ -1355,10 +1355,16 @@
     "clientEncryption": {
       "enablePolicy": "Cifrar nuevas subidas",
       "disablePolicy": "No cifrar nuevas subidas",
+      "unlockDialog": {
+        "title": "Desbloquear el cifrado del cliente",
+        "currentTitle": "Esta carpeta esta cifrada",
+        "goHome": "Ir al inicio"
+      },
       "toasts": {
         "policyEnabled": "Las nuevas subidas a esta carpeta se cifrarán en este dispositivo.",
         "policyDisabled": "Las nuevas subidas a esta carpeta ya no se cifrarán automáticamente.",
-        "policyToggleFailed": "No se pudo actualizar la política de cifrado."
+        "policyToggleFailed": "No se pudo actualizar la política de cifrado.",
+        "setupRequired": "Configura el cifrado del cliente antes de abrir esta carpeta."
       }
     }
   },

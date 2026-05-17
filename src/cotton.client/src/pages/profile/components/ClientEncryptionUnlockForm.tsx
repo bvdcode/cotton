@@ -31,12 +31,14 @@ type ClientEncryptionUnlockFormProps = {
   envelope: Uint8Array;
   onCancel: () => void;
   onSuccess: () => void;
+  cancelLabel?: string;
 };
 
 export const ClientEncryptionUnlockForm = ({
   envelope,
   onCancel,
   onSuccess,
+  cancelLabel,
 }: ClientEncryptionUnlockFormProps) => {
   const { t } = useTranslation("profile");
   const unlockVault = useVault((state) => state.unlock);
@@ -163,7 +165,7 @@ export const ClientEncryptionUnlockForm = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel} disabled={pending}>
-          {t("clientEncryption.unlockDialog.cancel")}
+          {cancelLabel ?? t("clientEncryption.unlockDialog.cancel")}
         </Button>
         <Button variant="contained" disabled={!canSubmit} onClick={handleSubmit}>
           {pending ? (

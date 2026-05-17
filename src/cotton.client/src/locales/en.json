@@ -1333,10 +1333,16 @@
     "clientEncryption": {
       "enablePolicy": "Encrypt new uploads",
       "disablePolicy": "Stop encrypting new uploads",
+      "unlockDialog": {
+        "title": "Unlock client-side encryption",
+        "currentTitle": "This folder is encrypted",
+        "goHome": "Go home"
+      },
       "toasts": {
         "policyEnabled": "New uploads to this folder will be encrypted on this device.",
         "policyDisabled": "New uploads to this folder will no longer be encrypted automatically.",
-        "policyToggleFailed": "Could not update encryption policy."
+        "policyToggleFailed": "Could not update encryption policy.",
+        "setupRequired": "Set up client-side encryption before opening this folder."
       }
     }
   },
