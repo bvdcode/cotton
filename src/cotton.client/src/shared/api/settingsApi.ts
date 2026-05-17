@@ -1,159 +1,48 @@
-import { httpClient } from "./httpClient";
+import { getValidated, httpClient } from "./httpClient";
 import { isJsonObject, type JsonValue } from "../types/json";
+import {
+  allowCrossUserDeduplicationSchema,
+  allowGlobalIndexingSchema,
+  chunkSizeResponseSchema,
+  computionModeResponseSchema,
+  customGeoIpLookupUrlSchema,
+  emailConfigSchema,
+  emailModeResponseSchema,
+  geoIpLookupModeResponseSchema,
+  publicBaseUrlSchema,
+  publicServerInfoSchema,
+  serverSettingsResponseSchema,
+  serverUsageListSchema,
+  setupStatusSchema,
+  s3ConfigSchema,
+  storageSpaceModeResponseSchema,
+  storageTypeResponseSchema,
+  telemetrySettingSchema,
+  timezoneSchema,
+  type ComputionMode,
+  type EmailConfig,
+  type EmailMode,
+  type GeoIpLookupMode,
+  type PublicServerInfo,
+  type S3Config,
+  type ServerSettings,
+  type ServerUsage,
+  type StorageSpaceMode,
+  type StorageType,
+} from "./schemas/serverSettings";
 
-export interface PublicServerInfo {
-  canCreateInitialAdmin: boolean;
-  product: string;
-}
-
-export interface ServerSettings {
-  version: string | null;
-  maxChunkSizeBytes: number;
-  supportedHashAlgorithm: string;
-}
-
-export type StorageType = "Local" | "S3";
-export type EmailMode = "None" | "Cloud" | "Custom";
-export type ComputionMode = "Local" | "Cloud" | "Remote";
-export type StorageSpaceMode = "Optimal" | "Limited" | "Unlimited";
-export type GeoIpLookupMode =
-  | "Disabled"
-  | "CottonCloud"
-  | "MaxMindLocal"
-  | "CustomHttp";
-export type ServerUsage = "Other" | "Photos" | "Documents" | "Media";
-
-export interface S3Config {
-  accessKey: string;
-  secretKey: string;
-  endpoint: string;
-  region: string;
-  bucket: string;
-}
-
-export interface EmailConfig {
-  username: string;
-  password: string;
-  smtpServer: string;
-  port: string;
-  fromAddress: string;
-  useSSL: boolean;
-}
-
-interface SetupStatusRaw {
-  isServerInitialized: boolean;
-}
-
-interface ChunkSizeRaw {
-  maxChunkSizeBytes: number;
-}
-
-const storageTypeValues: StorageType[] = ["Local", "S3"];
-const emailModeValues: EmailMode[] = ["None", "Cloud", "Custom"];
-const computionModeValues: ComputionMode[] = ["Local", "Cloud", "Remote"];
-const storageSpaceModeValues: StorageSpaceMode[] = [
-  "Optimal",
-  "Limited",
-  "Unlimited",
-];
-const geoIpLookupModeValues: GeoIpLookupMode[] = [
-  "Disabled",
-  "CottonCloud",
-  "MaxMindLocal",
-  "CustomHttp",
-];
-const serverUsageValues: ServerUsage[] = [
-  "Other",
-  "Photos",
-  "Documents",
-  "Media",
-];
-
-const getRecordField = (value: unknown, field: string): unknown => {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-
-  return (value as Record<string, unknown>)[field];
-};
-
-const resolveMaxChunkSizeBytes = (payload: unknown): number => {
-  const maxChunkSizeBytes =
-    typeof payload === "number"
-      ? payload
-      : getRecordField(payload, "maxChunkSizeBytes");
-
-  if (
-    typeof maxChunkSizeBytes !== "number" ||
-    !Number.isFinite(maxChunkSizeBytes)
-  ) {
-    throw new Error("settings response must contain maxChunkSizeBytes");
-  }
-
-  return maxChunkSizeBytes;
-};
-
-const resolveVersion = (payload: unknown): string | null => {
-  const raw = getRecordField(payload, "version");
-  if (typeof raw === "string" && raw.trim().length > 0) {
-    return raw.trim();
-  }
-  return null;
-};
-
-const resolveSupportedHashAlgorithm = (payload: unknown): string => {
-  const rawAlgorithms = Array.isArray(payload)
-    ? payload
-    : (getRecordField(payload, "supportedHashAlgorithms") ??
-      getRecordField(payload, "supportedHashAlgorithm"));
-
-  if (typeof rawAlgorithms === "string" && rawAlgorithms.trim().length > 0) {
-    return rawAlgorithms.trim();
-  }
-
-  if (Array.isArray(rawAlgorithms)) {
-    const supportedHashAlgorithm = rawAlgorithms.find(
-      (value): value is string =>
-        typeof value === "string" && value.trim().length > 0,
-    );
-
-    if (supportedHashAlgorithm) {
-      return supportedHashAlgorithm.trim();
-    }
-  }
-
-  throw new Error(
-    "settings response must contain at least one supported hash algorithm",
-  );
-};
-
-const normalizeEnum = <T extends string>(
-  value: unknown,
-  values: readonly T[],
-  fallback: T,
-): T => {
-  if (typeof value === "number" && Number.isInteger(value)) {
-    return values[value] ?? fallback;
-  }
-
-  if (typeof value !== "string") {
-    return fallback;
-  }
-
-  const match = values.find(
-    (entry) => entry.toLowerCase() === value.toLowerCase(),
-  );
-  return match ?? fallback;
-};
-
-const getStringField = (payload: unknown, field: string): string => {
-  const value = getRecordField(payload, field);
-  return typeof value === "string" ? value : "";
-};
-
-const getBooleanField = (payload: unknown, field: string): boolean => {
-  return getRecordField(payload, field) === true;
-};
+export type {
+  ComputionMode,
+  EmailConfig,
+  EmailMode,
+  GeoIpLookupMode,
+  PublicServerInfo,
+  S3Config,
+  ServerSettings,
+  ServerUsage,
+  StorageSpaceMode,
+  StorageType,
+} from "./schemas/serverSettings";
 
 const mapUsageAnswer = (value: string): ServerUsage => {
   switch (value.toLowerCase()) {
@@ -276,51 +165,39 @@ const setupStepOrder = [
 ] as const;
 
 export const settingsApi = {
-  getPublicInfo: async (): Promise<PublicServerInfo> => {
-    const response = await httpClient.get<PublicServerInfo>("server/info");
-    return response.data;
-  },
+  getPublicInfo: (): Promise<PublicServerInfo> =>
+    getValidated("server/info", publicServerInfoSchema),
 
   getIsSetupComplete: async (): Promise<boolean> => {
-    const response = await httpClient.get<SetupStatusRaw>(
+    const response = await getValidated(
       "server/settings/is-setup-complete",
+      setupStatusSchema,
     );
 
-    return response.data.isServerInitialized;
+    return response.isServerInitialized;
   },
 
-  get: async (): Promise<ServerSettings> => {
-    const response = await httpClient.get<unknown>("server/settings");
+  get: (): Promise<ServerSettings> =>
+    getValidated("server/settings", serverSettingsResponseSchema),
 
-    return {
-      version: resolveVersion(response.data),
-      maxChunkSizeBytes: resolveMaxChunkSizeBytes(response.data),
-      supportedHashAlgorithm: resolveSupportedHashAlgorithm(response.data),
-    };
-  },
-
-  getChunkSize: async (): Promise<number> => {
-    const response = await httpClient.get<ChunkSizeRaw | number>(
+  getChunkSize: (): Promise<number> =>
+    getValidated(
       "server/settings/chunk-size",
-    );
-    return resolveMaxChunkSizeBytes(response.data);
-  },
+      chunkSizeResponseSchema,
+    ),
 
-  getTelemetry: async (): Promise<boolean> => {
-    const response = await httpClient.get<unknown>("server/settings/telemetry");
-    return getBooleanField(response.data, "telemetryEnabled");
-  },
+  getTelemetry: (): Promise<boolean> =>
+    getValidated("server/settings/telemetry", telemetrySettingSchema),
 
   setTelemetry: async (enabled: boolean): Promise<void> => {
     await httpClient.patch("server/settings/telemetry", enabled);
   },
 
-  getAllowCrossUserDeduplication: async (): Promise<boolean> => {
-    const response = await httpClient.get<unknown>(
+  getAllowCrossUserDeduplication: (): Promise<boolean> =>
+    getValidated(
       "server/settings/allow-cross-user-deduplication",
-    );
-    return getBooleanField(response.data, "allowCrossUserDeduplication");
-  },
+      allowCrossUserDeduplicationSchema,
+    ),
 
   setAllowCrossUserDeduplication: async (allow: boolean): Promise<void> => {
     await httpClient.patch(
@@ -329,141 +206,95 @@ export const settingsApi = {
     );
   },
 
-  getAllowGlobalIndexing: async (): Promise<boolean> => {
-    const response = await httpClient.get<unknown>(
+  getAllowGlobalIndexing: (): Promise<boolean> =>
+    getValidated(
       "server/settings/allow-global-indexing",
-    );
-    return getBooleanField(response.data, "allowGlobalIndexing");
-  },
+      allowGlobalIndexingSchema,
+    ),
 
   setAllowGlobalIndexing: async (allow: boolean): Promise<void> => {
     await httpClient.patch("server/settings/allow-global-indexing", allow);
   },
 
-  getServerUsage: async (): Promise<ServerUsage[]> => {
-    const response = await httpClient.get<unknown>(
+  getServerUsage: (): Promise<ServerUsage[]> =>
+    getValidated(
       "server/settings/server-usage",
-    );
-    const value = getRecordField(response.data, "serverUsage");
-    if (!Array.isArray(value)) {
-      return ["Other"];
-    }
-
-    return value.map((item) => normalizeEnum(item, serverUsageValues, "Other"));
-  },
+      serverUsageListSchema,
+    ),
 
   setServerUsage: async (usage: ServerUsage[]): Promise<void> => {
     await httpClient.patch("server/settings/server-usage", usage);
   },
 
-  getTimezone: async (): Promise<string> => {
-    const response = await httpClient.get<unknown>("server/settings/timezone");
-    return getStringField(response.data, "timezone") || "UTC";
-  },
+  getTimezone: (): Promise<string> =>
+    getValidated("server/settings/timezone", timezoneSchema),
 
   setTimezone: async (timezone: string): Promise<void> => {
     await httpClient.patch("server/settings/timezone", timezone);
   },
 
-  getPublicBaseUrl: async (): Promise<string> => {
-    const response = await httpClient.get<unknown>(
+  getPublicBaseUrl: (): Promise<string> =>
+    getValidated(
       "server/settings/public-base-url",
-    );
-    return getStringField(response.data, "publicBaseUrl");
-  },
+      publicBaseUrlSchema,
+    ),
 
   setPublicBaseUrl: async (url: string): Promise<void> => {
     await httpClient.patch("server/settings/public-base-url", url);
   },
 
-  getStorageSpaceMode: async (): Promise<StorageSpaceMode> => {
-    const response = await httpClient.get<unknown>(
+  getStorageSpaceMode: (): Promise<StorageSpaceMode> =>
+    getValidated(
       "server/settings/storage-space-mode",
-    );
-    return normalizeEnum(
-      getRecordField(response.data, "storageSpaceMode"),
-      storageSpaceModeValues,
-      "Optimal",
-    );
-  },
+      storageSpaceModeResponseSchema,
+    ),
 
   setStorageSpaceMode: async (mode: StorageSpaceMode): Promise<void> => {
     await httpClient.patch(`server/settings/storage-space-mode/${mode}`);
   },
 
-  getComputionMode: async (): Promise<ComputionMode> => {
-    const response = await httpClient.get<unknown>(
+  getComputionMode: (): Promise<ComputionMode> =>
+    getValidated(
       "server/settings/compution-mode",
-    );
-    return normalizeEnum(
-      getRecordField(response.data, "computionMode"),
-      computionModeValues,
-      "Local",
-    );
-  },
+      computionModeResponseSchema,
+    ),
 
   setComputionMode: async (mode: ComputionMode): Promise<void> => {
     await httpClient.patch(`server/settings/compution-mode/${mode}`);
   },
 
-  getStorageType: async (): Promise<StorageType> => {
-    const response = await httpClient.get<unknown>(
+  getStorageType: (): Promise<StorageType> =>
+    getValidated(
       "server/settings/storage-type",
-    );
-    return normalizeEnum(
-      getRecordField(response.data, "storageType"),
-      storageTypeValues,
-      "Local",
-    );
-  },
+      storageTypeResponseSchema,
+    ),
 
   setStorageType: async (type: StorageType): Promise<void> => {
     await httpClient.patch(`server/settings/storage-type/${type}`);
   },
 
-  getS3Config: async (): Promise<S3Config> => {
-    const response = await httpClient.get<Partial<S3Config>>(
+  getS3Config: (): Promise<S3Config> =>
+    getValidated(
       "server/settings/s3-config",
-    );
-    return {
-      accessKey: response.data.accessKey ?? "",
-      secretKey: response.data.secretKey ?? "",
-      endpoint: response.data.endpoint ?? "",
-      region: response.data.region ?? "",
-      bucket: response.data.bucket ?? "",
-    };
-  },
+      s3ConfigSchema,
+    ),
 
   setS3Config: async (config: S3Config): Promise<void> => {
     await httpClient.patch("server/settings/s3-config", config);
   },
 
-  getEmailMode: async (): Promise<EmailMode> => {
-    const response = await httpClient.get<unknown>("server/settings/email-mode");
-    return normalizeEnum(
-      getRecordField(response.data, "emailMode"),
-      emailModeValues,
-      "None",
-    );
-  },
+  getEmailMode: (): Promise<EmailMode> =>
+    getValidated("server/settings/email-mode", emailModeResponseSchema),
 
   setEmailMode: async (mode: EmailMode): Promise<void> => {
     await httpClient.patch(`server/settings/email-mode/${mode}`);
   },
 
-  getEmailConfig: async (): Promise<EmailConfig> => {
-    const response = await httpClient.get<Partial<EmailConfig>>(
+  getEmailConfig: (): Promise<EmailConfig> =>
+    getValidated(
       "server/settings/email-config",
-    );
-    return {
-      username: response.data.username ?? "",
-      password: response.data.password ?? "",
-      smtpServer: response.data.smtpServer ?? "",
-      port: response.data.port ?? "",
-      fromAddress: response.data.fromAddress ?? "",
-      useSSL: response.data.useSSL ?? false,
-    };
-  },
+      emailConfigSchema,
+    ),
 
   setEmailConfig: async (config: EmailConfig): Promise<void> => {
     await httpClient.patch("server/settings/email-config", config);
@@ -473,27 +304,21 @@ export const settingsApi = {
     await httpClient.post("server/settings/email-config/test");
   },
 
-  getGeoIpLookupMode: async (): Promise<GeoIpLookupMode> => {
-    const response = await httpClient.get<unknown>(
+  getGeoIpLookupMode: (): Promise<GeoIpLookupMode> =>
+    getValidated(
       "server/settings/geoip-lookup-mode",
-    );
-    return normalizeEnum(
-      getRecordField(response.data, "geoIpLookupMode"),
-      geoIpLookupModeValues,
-      "Disabled",
-    );
-  },
+      geoIpLookupModeResponseSchema,
+    ),
 
   setGeoIpLookupMode: async (mode: GeoIpLookupMode): Promise<void> => {
     await httpClient.patch(`server/settings/geoip-lookup-mode/${mode}`);
   },
 
-  getCustomGeoIpLookupUrl: async (): Promise<string> => {
-    const response = await httpClient.get<unknown>(
+  getCustomGeoIpLookupUrl: (): Promise<string> =>
+    getValidated(
       "server/settings/custom-geoip-lookup-url",
-    );
-    return getStringField(response.data, "customGeoIpLookupUrl");
-  },
+      customGeoIpLookupUrlSchema,
+    ),
 
   setCustomGeoIpLookupUrl: async (url: string): Promise<void> => {
     await httpClient.patch("server/settings/custom-geoip-lookup-url", url);
