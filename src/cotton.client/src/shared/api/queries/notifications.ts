@@ -123,6 +123,13 @@ export const prependCachedNotification = (
   queryClient: QueryClient,
   notification: NotificationDto,
 ): void => {
+  const wasAlreadyCached = [false, true].some((unreadOnly) => {
+    const data = queryClient.getQueryData<NotificationsInfinite>(
+      queryKeys.notifications.list({ unreadOnly }),
+    );
+    return data ? includesNotification(data, notification.id) : false;
+  });
+
   for (const unreadOnly of [false, true]) {
     if (unreadOnly && notification.readAt) continue;
 
@@ -146,7 +153,7 @@ export const prependCachedNotification = (
     );
   }
 
-  if (!notification.readAt) {
+  if (!notification.readAt && !wasAlreadyCached) {
     queryClient.setQueryData<number>(
       queryKeys.notifications.unreadCount(),
       (old) => (old ?? 0) + 1,

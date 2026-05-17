@@ -391,7 +391,8 @@
       "unexpectedTitle": "Something went wrong",
       "unexpectedDescription": "An unexpected error occurred. Please reload the page.",
       "showDetails": "Show details",
-      "hideDetails": "Hide details"
+      "hideDetails": "Hide details",
+      "schemaValidationFailed": "Server returned unexpected data"
     },
     "userMenu": {
       "profile": "Profile",
@@ -1039,6 +1040,14 @@
   },
   "files": {
     "title": "Files",
+    "errors": {
+      "resolveRootFailed": "Failed to resolve root folder",
+      "loadContentsFailed": "Failed to load folder contents",
+      "createFolderFailed": "Failed to create folder",
+      "deleteFolderFailed": "Failed to delete folder",
+      "renameFolderFailed": "Failed to rename folder",
+      "duplicateFolderName": "A folder with this name already exists"
+    },
     "move": {
       "cut": "Cut",
       "pasteHere_one": "Paste {{count}} item here",

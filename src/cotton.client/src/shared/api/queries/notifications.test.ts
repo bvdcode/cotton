@@ -98,6 +98,41 @@ describe("notification query cache helpers", () => {
     ]);
   });
 
+  it("does not increment unread count when a notification event is replayed", () => {
+    const queryClient = createQueryClient();
+    const existing = createNotification("duplicate");
+
+    queryClient.setQueryData(
+      queryKeys.notifications.list({ unreadOnly: false }),
+      createInfiniteData([[existing]]),
+    );
+    queryClient.setQueryData(queryKeys.notifications.unreadCount(), 1);
+
+    prependCachedNotification(queryClient, createNotification("duplicate"));
+
+    const allData = queryClient.getQueryData<NotificationsInfinite>(
+      queryKeys.notifications.list({ unreadOnly: false }),
+    );
+
+    expect(allData?.pages[0].data.map((item) => item.id)).toEqual([
+      "duplicate",
+    ]);
+    expect(
+      queryClient.getQueryData(queryKeys.notifications.unreadCount()),
+    ).toBe(1);
+  });
+
+  it("increments unread count even when lists are not cached yet", () => {
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(queryKeys.notifications.unreadCount(), 1);
+
+    prependCachedNotification(queryClient, createNotification("incoming"));
+
+    expect(
+      queryClient.getQueryData(queryKeys.notifications.unreadCount()),
+    ).toBe(2);
+  });
+
   it("keeps read notifications out of the unread list and count", () => {
     const queryClient = createQueryClient();
     const read = createNotification("read", "2026-05-16T00:01:00Z");

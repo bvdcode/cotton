@@ -464,7 +464,8 @@
       "unexpectedTitle": "Algo salió mal",
       "unexpectedDescription": "Ocurrió un error inesperado. Vuelve a cargar la página.",
       "showDetails": "Mostrar detalles",
-      "hideDetails": "Ocultar detalles"
+      "hideDetails": "Ocultar detalles",
+      "schemaValidationFailed": "El servidor devolvió datos inesperados"
     },
     "userMenu": {
       "profile": "Perfil",
@@ -1061,6 +1062,14 @@
   },
   "files": {
     "title": "Archivos",
+    "errors": {
+      "resolveRootFailed": "No se pudo resolver la carpeta raíz",
+      "loadContentsFailed": "No se pudo cargar el contenido de la carpeta",
+      "createFolderFailed": "No se pudo crear la carpeta",
+      "deleteFolderFailed": "No se pudo eliminar la carpeta",
+      "renameFolderFailed": "No se pudo renombrar la carpeta",
+      "duplicateFolderName": "Ya existe una carpeta con este nombre"
+    },
     "move": {
       "cut": "Cortar",
       "pasteHere_one": "Pegar {{count}} elemento aquí",

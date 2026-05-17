@@ -6,6 +6,7 @@ import axios, {
 import { z } from "zod";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
 import { toast } from "react-toastify";
+import { translateError } from "../i18n/translateError";
 
 export { isAxiosError } from "axios";
 
@@ -256,7 +257,7 @@ const reportSchemaFailure = (url: string, error: z.ZodError): void => {
   console.error(`[httpClient] Schema validation failed for ${url}:`, error);
 
   if (typeof window !== "undefined") {
-    toast.error("Server returned unexpected data", {
+    toast.error(translateError("common", "errors.schemaValidationFailed"), {
       toastId: `${SCHEMA_VALIDATION_TOAST_ID}:${url}`,
     });
   }

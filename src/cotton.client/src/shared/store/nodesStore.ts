@@ -4,6 +4,7 @@ import { nodesApi, type NodeContentDto } from "../api/nodesApi";
 import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
 import { isAxiosError } from "../api/httpClient";
+import { translateError } from "../i18n/translateError";
 
 let rootResolvePromise: Promise<void> | null = null;
 let lastRootResolveStartedAt = 0;
@@ -191,6 +192,8 @@ const safeSessionStorage = {
 
 const CHILDREN_FETCH_PAGE_SIZE = 100_000;
 
+const tFileError = (key: string): string => translateError("files", key);
+
 async function fetchAllNodeChildren(nodeId: string): Promise<NodeContentDto> {
   const firstPage = await nodesApi.getChildren(nodeId, {
     page: 1,
@@ -326,7 +329,10 @@ export const useNodesStore = create<NodesState>()(
       return root;
     } catch (error) {
       console.error("Failed to resolve root node", error);
-      set({ loading: false, error: "Failed to resolve root node" });
+      set({
+        loading: false,
+        error: tFileError("errors.resolveRootFailed"),
+      });
       return null;
     }
   },
@@ -394,7 +400,10 @@ export const useNodesStore = create<NodesState>()(
         return true;
       } catch (recoveryError) {
         console.error("Failed to recover root node", recoveryError);
-        set({ loading: false, error: "Failed to resolve root node" });
+        set({
+          loading: false,
+          error: tFileError("errors.resolveRootFailed"),
+        });
         return true;
       }
     };
@@ -440,7 +449,10 @@ export const useNodesStore = create<NodesState>()(
       if (recovered) return;
 
       console.error("Failed to load node view", error);
-      set({ loading: false, error: "Failed to load folder contents" });
+      set({
+        loading: false,
+        error: tFileError("errors.loadContentsFailed"),
+      });
     }
   },
 
@@ -498,7 +510,7 @@ export const useNodesStore = create<NodesState>()(
         (n) => n.name.toLowerCase() === normalizedName,
       );
       if (duplicate) {
-        set({ error: "A folder with this name already exists" });
+        set({ error: tFileError("errors.duplicateFolderName") });
         return null;
       }
     }
@@ -534,7 +546,10 @@ export const useNodesStore = create<NodesState>()(
       return created;
     } catch (error) {
       console.error("Failed to create folder", error);
-      set({ loading: false, error: "Failed to create folder" });
+      set({
+        loading: false,
+        error: tFileError("errors.createFolderFailed"),
+      });
       return null;
     }
   },
@@ -574,7 +589,10 @@ export const useNodesStore = create<NodesState>()(
       return true;
     } catch (error) {
       console.error("Failed to delete folder", error);
-      set({ loading: false, error: "Failed to delete folder" });
+      set({
+        loading: false,
+        error: tFileError("errors.deleteFolderFailed"),
+      });
       return false;
     }
   },
@@ -596,7 +614,7 @@ export const useNodesStore = create<NodesState>()(
         (n) => n.id !== nodeId && n.name.toLowerCase() === normalizedName,
       );
       if (duplicate) {
-        set({ error: "A folder with this name already exists" });
+        set({ error: tFileError("errors.duplicateFolderName") });
         return false;
       }
     }
@@ -635,7 +653,10 @@ export const useNodesStore = create<NodesState>()(
       return true;
     } catch (error) {
       console.error("Failed to rename folder", error);
-      set({ loading: false, error: "Failed to rename folder" });
+      set({
+        loading: false,
+        error: tFileError("errors.renameFolderFailed"),
+      });
       return false;
     }
   },
