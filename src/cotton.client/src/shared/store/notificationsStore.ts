@@ -38,8 +38,8 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
     try {
       const count = await notificationsApi.getUnreadCount();
       set({ unreadCount: count });
-    } catch {
-      // silent
+    } catch (error) {
+      console.warn("[notificationsStore] fetchUnreadCount failed", error);
     }
   },
 
@@ -53,8 +53,8 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
         page: 1,
         hasMore: result.data.length >= PAGE_SIZE,
       });
-    } catch {
-      // silent
+    } catch (error) {
+      console.warn("[notificationsStore] fetchFirstPage failed", error);
     } finally {
       set({ loading: false });
     }
@@ -76,8 +76,8 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
         page: nextPage,
         hasMore: result.data.length >= PAGE_SIZE,
       }));
-    } catch {
-      // silent
+    } catch (error) {
+      console.warn("[notificationsStore] fetchNextPage failed", error);
     } finally {
       set({ loadingMore: false });
     }
@@ -93,8 +93,8 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
         ),
         unreadCount: Math.max(0, state.unreadCount - 1),
       }));
-    } catch {
-      // silent
+    } catch (error) {
+      console.warn("[notificationsStore] markAsRead failed", error);
     }
   },
 
@@ -108,8 +108,8 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
         ),
         unreadCount: 0,
       }));
-    } catch {
-      // silent
+    } catch (error) {
+      console.warn("[notificationsStore] markAllAsRead failed", error);
     }
   },
 
