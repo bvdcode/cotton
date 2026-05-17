@@ -19,8 +19,8 @@ import {
 } from "../../files/components";
 import {
   selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 import { ReadOnlyTextViewer } from "./ReadOnlyTextViewer";
 
 interface ShareFileViewerProps {
@@ -71,7 +71,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   contentLength,
 }) => {
   const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
 

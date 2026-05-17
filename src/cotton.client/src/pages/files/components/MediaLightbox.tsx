@@ -30,8 +30,8 @@ import { useMediaLightboxUrls } from "../hooks/useMediaLightboxUrls";
 import { shareLinks } from "../../../shared/utils/shareLinks";
 import {
   selectGalleryPreferPreview,
-  useLocalPreferencesStore,
-} from "../../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];
@@ -54,7 +54,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const [index, setIndex] = React.useState(initialIndex);
   const hlsNoticeText = t("preview.video.transcodeNotice");
   const hlsErrorText = t("preview.video.transcodeError");
-  const preferPreview = useLocalPreferencesStore(selectGalleryPreferPreview);
+  const preferPreview = useUserPreferencesStore(selectGalleryPreferPreview);
   const currentItemId = React.useMemo(
     () => (open ? items[index]?.id ?? null : null),
     [index, items, open],

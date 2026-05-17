@@ -19,8 +19,8 @@ import {
 import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
 import {
   selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
 export const SearchPage: React.FC = () => {
@@ -33,7 +33,7 @@ export const SearchPage: React.FC = () => {
 
   const layoutId = rootNode?.layoutId;
 
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
 

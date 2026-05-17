@@ -30,6 +30,9 @@ export const USER_PREFERENCE_KEYS = {
   notificationsShowOnlyUnread: "notificationsShowOnlyUnread",
 
   shareLinkExpireAfterMinutes: "shareLinkExpireAfterMinutes",
+
+  gallerySmoothTransitions: "gallerySmoothTransitions",
+  galleryPreferPreview: "galleryPreferPreview",
 } as const;
 
 const DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES = 60 * 24 * 30;
@@ -37,6 +40,8 @@ const DEFAULT_THEME_MODE: ThemeMode = "system";
 
 const DEFAULT_NOTIFICATION_SOUND_ENABLED = true;
 const DEFAULT_NOTIFICATIONS_SHOW_ONLY_UNREAD = false;
+const DEFAULT_GALLERY_SMOOTH_TRANSITIONS = true;
+const DEFAULT_GALLERY_PREFER_PREVIEW = true;
 
 const parseBoolPreference = (value: string | undefined): boolean | null => {
   if (!value) return null;
@@ -82,6 +87,9 @@ interface UserPreferencesState {
   setNotificationsShowOnlyUnread: (showOnlyUnread: boolean) => void;
 
   setShareLinkExpireAfterMinutes: (expireAfterMinutes: number) => void;
+
+  setGallerySmoothTransitions: (enabled: boolean) => void;
+  setGalleryPreferPreview: (enabled: boolean) => void;
 
   reset: () => void;
 }
@@ -151,6 +159,20 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       });
     },
 
+    setGallerySmoothTransitions: (enabled) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.gallerySmoothTransitions]: enabled
+          ? "true"
+          : "false",
+      });
+    },
+
+    setGalleryPreferPreview: (enabled) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.galleryPreferPreview]: enabled ? "true" : "false",
+      });
+    },
+
     reset: () => set({ preferences: {}, loaded: false, syncing: false }),
   }),
 );
@@ -190,4 +212,18 @@ export const selectShareLinkExpireAfterMinutes = (
   const raw =
     state.preferences[USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes];
   return parseIntPreference(raw) ?? DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES;
+};
+
+export const selectGallerySmoothTransitions = (
+  state: UserPreferencesState,
+): boolean => {
+  const raw = state.preferences[USER_PREFERENCE_KEYS.gallerySmoothTransitions];
+  return parseBoolPreference(raw) ?? DEFAULT_GALLERY_SMOOTH_TRANSITIONS;
+};
+
+export const selectGalleryPreferPreview = (
+  state: UserPreferencesState,
+): boolean => {
+  const raw = state.preferences[USER_PREFERENCE_KEYS.galleryPreferPreview];
+  return parseBoolPreference(raw) ?? DEFAULT_GALLERY_PREFER_PREVIEW;
 };

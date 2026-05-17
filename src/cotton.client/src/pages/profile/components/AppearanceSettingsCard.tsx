@@ -21,16 +21,13 @@ import { useTranslation } from "react-i18next";
 import i18n from "../../../i18n";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import {
+  selectGalleryPreferPreview,
+  selectGallerySmoothTransitions,
   selectUiLanguage,
   selectThemeMode,
   useUserPreferencesStore,
 } from "../../../shared/store/userPreferencesStore";
 import type { ThemeMode } from "../../../shared/theme";
-import {
-  selectGalleryPreferPreview,
-  selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../../shared/store/localPreferencesStore";
 import { supportedLanguages, type SupportedLanguage } from "../../../locales";
 
 export const AppearanceSettingsCard = () => {
@@ -41,16 +38,16 @@ export const AppearanceSettingsCard = () => {
   const setUiLanguage = useUserPreferencesStore((s) => s.setUiLanguage);
   const preferredLanguage = useUserPreferencesStore(selectUiLanguage);
 
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
-  const setSmoothGalleryTransitions = useLocalPreferencesStore(
+  const setSmoothGalleryTransitions = useUserPreferencesStore(
     (s) => s.setGallerySmoothTransitions,
   );
-  const galleryPreferPreview = useLocalPreferencesStore(
+  const galleryPreferPreview = useUserPreferencesStore(
     selectGalleryPreferPreview,
   );
-  const setGalleryPreferPreview = useLocalPreferencesStore(
+  const setGalleryPreferPreview = useUserPreferencesStore(
     (s) => s.setGalleryPreferPreview,
   );
   const loadOriginalsEnabled = !galleryPreferPreview;

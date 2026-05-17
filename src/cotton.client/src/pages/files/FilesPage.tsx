@@ -40,8 +40,8 @@ import Loader from "../../shared/ui/Loader";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
@@ -243,7 +243,7 @@ export const FilesPage: React.FC = () => {
     t,
   });
 
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
 

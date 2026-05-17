@@ -24,8 +24,8 @@ import { FilePreviewModal, MediaLightbox } from "../../pages/files/components";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import { useDictionaryMatch } from "./hooks/useDictionaryMatch";
 import { useSearchPagination } from "./hooks/useSearchPagination";
 import { SearchResultRow } from "./components/SearchResultRow";
@@ -127,7 +127,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     return files;
   }, [results]);
 
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
 
