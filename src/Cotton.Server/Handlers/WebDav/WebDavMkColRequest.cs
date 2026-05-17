@@ -49,15 +49,7 @@ public class WebDavMkColRequestHandler(
 {
     public async Task<WebDavMkColResult> Handle(WebDavMkColRequest request, CancellationToken ct)
     {
-        // Check if path already exists
-        var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
-        if (existing.Found)
-        {
-            _logger.LogDebug("WebDAV MKCOL: Path already exists: {Path}", request.Path);
-            return new WebDavMkColResult(false, WebDavMkColError.AlreadyExists);
-        }
-
-        // Get parent node
+        // Resolve parent first to know the layout for the advisory lock.
         var parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
         if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
         {
@@ -65,7 +57,6 @@ public class WebDavMkColRequestHandler(
             return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
         }
 
-        // Validate name
         if (!NameValidator.TryNormalizeAndValidate(parentResult.ResourceName, out _, out var errorMessage))
         {
             _logger.LogDebug("WebDAV MKCOL: Invalid name: {Name}, Error: {Error}", parentResult.ResourceName, errorMessage);
@@ -74,19 +65,30 @@ public class WebDavMkColRequestHandler(
 
         var nameKey = NameValidator.NormalizeAndGetNameKey(parentResult.ResourceName);
 
-        // Check for conflicts with files
+        // Per-layout namespace serialization — see LayoutLocks.
+        // Existence and cross-table conflict checks must happen INSIDE the lock,
+        // otherwise a concurrent CreateFile/PUT with the same NameKey can land
+        // a cross-table duplicate.
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, parentResult.ParentNode.LayoutId, ct);
+
+        var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
+        if (existing.Found)
+        {
+            _logger.LogDebug("WebDAV MKCOL: Path already exists: {Path}", request.Path);
+            return new WebDavMkColResult(false, WebDavMkColError.AlreadyExists);
+        }
+
         var fileExists = await _dbContext.NodeFiles
             .AnyAsync(f => f.NodeId == parentResult.ParentNode.Id
                 && f.OwnerId == request.UserId
                 && f.NameKey == nameKey, ct);
-
         if (fileExists)
         {
             _logger.LogDebug("WebDAV MKCOL: Conflict with existing file: {Path}", request.Path);
             return new WebDavMkColResult(false, WebDavMkColError.Conflict);
         }
 
-        // Create node
         var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
         var newNode = new Node
         {
@@ -99,6 +101,7 @@ public class WebDavMkColRequestHandler(
 
         await _dbContext.Nodes.AddAsync(newNode, ct);
         await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         _logger.LogInformation("WebDAV MKCOL: Created directory {Path} for user {UserId}", request.Path, request.UserId);
 
