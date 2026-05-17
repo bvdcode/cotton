@@ -3,7 +3,7 @@ import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import { filesApi } from "../../../shared/api/filesApi";
 import type { ConfirmResult, ConfirmOptions } from "material-ui-confirm";
 import type { TFunction } from "i18next";
-import type { FileSystemTile } from "../../files/types/FileListViewTypes";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 import type { FileSelectionState } from "../../files/hooks/useFileSelection";
 
 type ConfirmFn = (options?: ConfirmOptions) => Promise<ConfirmResult>;

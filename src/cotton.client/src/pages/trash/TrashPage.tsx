@@ -33,11 +33,11 @@ import {
   selectTrashTilesSize,
   useLocalPreferencesStore,
 } from "../../shared/store/localPreferencesStore";
-import type { TilesSize } from "../files/types/FileListViewTypes";
+import type { TilesSize } from "@shared/types/FileListViewTypes";
 import type {
   FileOperations,
   FolderOperations,
-} from "../files/types/FileListViewTypes";
+} from "@shared/types/FileListViewTypes";
 import { useFileSelection } from "../files/hooks/useFileSelection";
 import {
   cycleFileBrowserViewMode,

@@ -2,7 +2,7 @@ import { ContentCut, Delete, Edit, Restore, Share } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { RenamableItemCard } from "./RenamableItemCard";
-import { getFolderIcon } from "../utils/icons";
+import { getFolderIcon } from "@shared/utils/icons";
 
 interface FolderCardProps {
   folder: NodeDto;

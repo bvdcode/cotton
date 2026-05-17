@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import { fileURLToPath, URL } from "node:url";
 
 const NODE_MODULES_MARKER = "/node_modules/";
 
@@ -19,6 +20,14 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.VITE_API_TARGET || "http://localhost:5182";
 
   return {
+    resolve: {
+      alias: {
+        "@app": fileURLToPath(new URL("./src/app", import.meta.url)),
+        "@features": fileURLToPath(new URL("./src/features", import.meta.url)),
+        "@pages": fileURLToPath(new URL("./src/pages", import.meta.url)),
+        "@shared": fileURLToPath(new URL("./src/shared", import.meta.url)),
+      },
+    },
     server: {
       proxy: {
         "/api": {

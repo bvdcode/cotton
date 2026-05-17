@@ -1,7 +1,7 @@
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import type { AudioPlaylistItem } from "../types/audio";
-import { getFileTypeInfo } from "../../pages/files/utils/fileTypes";
-import { getFileIcon } from "../../pages/files/utils/icons";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import { getFileIcon } from "@shared/utils/icons";
 
 export const buildAudioPlaylistFromFiles = (
   files: ReadonlyArray<NodeFileManifestDto>,

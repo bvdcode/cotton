@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
 import type { AudioPlaylistItem } from "../types/audio";
-import { getFileTypeInfo } from "../../pages/files/utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { parseLrc, type LrcLine } from "../utils/lrc";
 
 interface AudioPlayerState {

@@ -3,7 +3,7 @@ import type { NodeDto } from "../api/layoutsApi";
 import type {
   FileListFileDto,
   FileSystemTile,
-} from "../../pages/files/types/FileListViewTypes";
+} from "@shared/types/FileListViewTypes";
 
 interface ContentTilesSource<TFile extends FileListFileDto> {
   nodes: NodeDto[];

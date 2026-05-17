@@ -21,7 +21,7 @@ import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
 import { useFileInteractionHandlers } from "../../pages/files/hooks/useFileInteractionHandlers";
 import { FilePreviewModal, MediaLightbox } from "../../pages/files/components";
-import { getFileTypeInfo } from "../../pages/files/utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   selectGallerySmoothTransitions,
   useLocalPreferencesStore,

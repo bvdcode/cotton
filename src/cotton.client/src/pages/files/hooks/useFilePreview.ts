@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { getFileTypeInfo } from "../utils/fileTypes";
-import type { FileType } from "../utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import type { FileType } from "@shared/utils/fileTypes";
 import { previewConfig } from "../../../shared/config/previewConfig";
 
 interface PreviewState {

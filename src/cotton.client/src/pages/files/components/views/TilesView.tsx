@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import type { IFileListView, FileSystemTile } from "../../types/FileListViewTypes";
+import type { IFileListView, FileSystemTile } from "@shared/types/FileListViewTypes";
 import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
 import { TileItem, NewFolderCard } from "./TileItem";
-import { getFileTypeInfo } from "../../utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   isMoveDrag,
   moveDragHasSourceParent,

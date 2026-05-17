@@ -2,7 +2,7 @@ import React from "react";
 import { InterfaceLayoutType } from "../../../../shared/api/layoutsApi";
 import { TilesView } from "./TilesView";
 import { ListView } from "./ListView";
-import type { IFileListView } from "../../types/FileListViewTypes";
+import type { IFileListView } from "@shared/types/FileListViewTypes";
 
 /**
  * FileListViewFactory

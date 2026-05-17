@@ -1,7 +1,7 @@
-import type { NodeDto } from "../../../shared/api/layoutsApi";
-import type { NodeFileManifestDto } from "../../../shared/api/nodesApi";
-import type { SharedNodeFileDto } from "../../../shared/api/sharedFoldersApi";
-import type { MoveClipboardItem } from "../../../shared/store/moveClipboardStore";
+import type { NodeDto } from "../api/layoutsApi";
+import type { NodeFileManifestDto } from "../api/nodesApi";
+import type { SharedNodeFileDto } from "../api/sharedFoldersApi";
+import type { MoveClipboardItem } from "../store/moveClipboardStore";
 
 export type FileListFileDto = NodeFileManifestDto | SharedNodeFileDto;
 

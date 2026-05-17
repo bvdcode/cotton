@@ -7,7 +7,7 @@ import {
   type RestoreOutcomeDto,
 } from "../../../shared/api/nodesApi";
 import type { FileSelectionState } from "../../files/hooks/useFileSelection";
-import type { FileSystemTile } from "../../files/types/FileListViewTypes";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 const maxPromptHops = 3;
 

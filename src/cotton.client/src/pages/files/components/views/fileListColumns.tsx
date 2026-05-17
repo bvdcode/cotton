@@ -21,7 +21,7 @@ import {
   isPdfFile,
   isTextFile,
   isVideoFile,
-} from "../../utils/fileTypes";
+} from "@shared/utils/fileTypes";
 import { InlineRenameField } from "../InlineRenameField";
 
 export interface FileListRow {

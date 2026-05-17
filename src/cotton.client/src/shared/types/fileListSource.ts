@@ -1,4 +1,4 @@
-import type { FileSystemTile } from "../../pages/files/types/FileListViewTypes";
+import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 export interface FileListSource {
   loading: boolean;

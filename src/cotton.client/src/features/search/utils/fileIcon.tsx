@@ -10,7 +10,7 @@ import {
   isPdfFile,
   isTextFile,
   isVideoFile,
-} from "../../../pages/files/utils/fileTypes";
+} from "@shared/utils/fileTypes";
 
 export const getSmallFileIcon = (fileName: string) => {
   const iconSx = { fontSize: 28 };

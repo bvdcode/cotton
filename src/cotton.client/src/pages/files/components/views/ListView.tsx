@@ -8,8 +8,8 @@ import type {
   GridRowSelectionModel,
 } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
-import { getFileTypeInfo } from "../../utils/fileTypes";
-import type { IFileListView } from "../../types/FileListViewTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import type { IFileListView } from "@shared/types/FileListViewTypes";
 import { createFileListColumns, type FileListRow } from "./fileListColumns";
 import Loader from "../../../../shared/ui/Loader";
 import {

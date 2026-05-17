@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { filesApi } from "../../../shared/api/filesApi";
-import { getFileTypeInfo } from "../utils/fileTypes";
-import { getFileIcon } from "../utils/icons";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
+import { getFileIcon } from "@shared/utils/icons";
 import type { MediaItem } from "../components";
 
 export interface MediaHandlers {

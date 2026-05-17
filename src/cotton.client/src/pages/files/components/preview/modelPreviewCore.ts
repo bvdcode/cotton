@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { filesApi } from "../../../../shared/api/filesApi";
-import { type ModelFormat } from "../../utils/modelFormats";
+import { type ModelFormat } from "@shared/utils/modelFormats";
 import {
   type FlipOrientationVariant,
   type LightingPresetConfig,

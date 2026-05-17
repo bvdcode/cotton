@@ -12,17 +12,17 @@ import {
 import { FolderCard } from "../FolderCard";
 import { RenamableItemCard } from "../RenamableItemCard";
 import { InlineRenameField } from "../InlineRenameField";
-import { getFileIcon } from "../../utils/icons";
+import { getFileIcon } from "@shared/utils/icons";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
 import {
   getFileTypeInfo,
-} from "../../utils/fileTypes";
+} from "@shared/utils/fileTypes";
 import type {
   FileSystemTile,
   FolderOperations,
   FileOperations,
   TilesSize,
-} from "../../types/FileListViewTypes";
+} from "@shared/types/FileListViewTypes";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 

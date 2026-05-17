@@ -2,7 +2,7 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { downloadFile } from "../utils/fileHandlers";
 import { shareFile } from "../../../shared/utils/shareFile";
-import { getFileTypeInfo } from "../utils/fileTypes";
+import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { buildAudioPlaylistFromFiles } from "../../../shared/utils/audioPlaylistBuilder";
 import { useAudioPlayerStore } from "../../../shared/store/audioPlayerStore";
 import { useMediaLightbox } from "./useMediaLightbox";
