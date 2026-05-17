@@ -28,14 +28,16 @@ export interface FileListPageLogic {
   capabilities: FileListCapabilities;
 }
 
+export type FileListSourceLogic = Omit<FileListPageLogic, "interaction">;
+
 const isNodeFileManifest = (
   file: FileListFileDto,
 ): file is NodeFileManifestDto => "id" in file && "name" in file;
 
-export const useFileListPageLogic = ({
+export const useFileListSourceLogic = ({
   source,
   sourceKind,
-}: UseFileListPageLogicOptions): FileListPageLogic => {
+}: UseFileListPageLogicOptions): FileListSourceLogic => {
   const sortedFiles = useMemo<NodeFileManifestDto[]>(() => {
     const files: NodeFileManifestDto[] = [];
 
@@ -52,7 +54,6 @@ export const useFileListPageLogic = ({
     return files;
   }, [source.tiles]);
 
-  const interaction = useFileInteractionHandlers({ sortedFiles });
   const capabilities = useMemo(
     () => getFileListCapabilities(sourceKind),
     [sourceKind],
@@ -65,7 +66,20 @@ export const useFileListPageLogic = ({
     totalCount: source.totalCount,
     isContentTransitioning: source.isContentTransitioning ?? false,
     sortedFiles,
-    interaction,
     capabilities,
+  };
+};
+
+export const useFileListPageLogic = (
+  options: UseFileListPageLogicOptions,
+): FileListPageLogic => {
+  const sourceLogic = useFileListSourceLogic(options);
+  const interaction = useFileInteractionHandlers({
+    sortedFiles: sourceLogic.sortedFiles,
+  });
+
+  return {
+    ...sourceLogic,
+    interaction,
   };
 };

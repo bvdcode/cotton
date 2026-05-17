@@ -25,7 +25,6 @@ import {
   buildBreadcrumbs,
   calculateFolderStats,
 } from "../files/utils/nodeUtils";
-import { useContentTiles } from "../../shared/hooks/useContentTiles";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
@@ -44,6 +43,7 @@ import {
   getFileBrowserViewMode,
 } from "../files/utils/viewMode";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
+import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
 
 type EmptyTrashProgressDialogProps = {
   open: boolean;
@@ -158,13 +158,16 @@ export const TrashPage: React.FC = () => {
       ? (listContent ?? content)
       : content;
 
-  useTrashFileList({
+  const trashFileListSource = useTrashFileList({
     nodeId,
     layoutType,
     listContent,
   });
 
-  const { tiles } = useContentTiles(effectiveContent);
+  const { tiles } = useFileListSourceLogic({
+    source: trashFileListSource,
+    sourceKind: "trash",
+  });
 
   const fileSelection = useFileSelection();
 
