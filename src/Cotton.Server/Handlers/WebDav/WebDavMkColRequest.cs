@@ -5,7 +5,6 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
-using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -41,7 +40,6 @@ public enum WebDavMkColError
 /// </summary>
 public class WebDavMkColRequestHandler(
     CottonDbContext _dbContext,
-    ILayoutService _layouts,
     IWebDavPathResolver _pathResolver,
     IEventNotificationService _eventNotification,
     ILogger<WebDavMkColRequestHandler> _logger)
@@ -57,20 +55,33 @@ public class WebDavMkColRequestHandler(
             return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
         }
 
-        if (!NameValidator.TryNormalizeAndValidate(parentResult.ResourceName, out _, out var errorMessage))
+        var nameFailure = ValidateResourceName(parentResult.ResourceName);
+        if (nameFailure is not null)
         {
-            _logger.LogDebug("WebDAV MKCOL: Invalid name: {Name}, Error: {Error}", parentResult.ResourceName, errorMessage);
-            return new WebDavMkColResult(false, WebDavMkColError.InvalidName);
+            return nameFailure;
         }
 
-        var nameKey = NameValidator.NormalizeAndGetNameKey(parentResult.ResourceName);
-
-        // Per-layout namespace serialization — see LayoutLocks.
+        // Per-layout namespace serialization - see LayoutLocks.
         // Existence and cross-table conflict checks must happen INSIDE the lock,
         // otherwise a concurrent CreateFile/PUT with the same NameKey can land
         // a cross-table duplicate.
         await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
         await LayoutLocks.AcquireForLayoutAsync(_dbContext, parentResult.ParentNode.LayoutId, ct);
+
+        parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
+        if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
+        {
+            _logger.LogDebug("WebDAV MKCOL: Parent not found for path after locking: {Path}", request.Path);
+            return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
+        }
+
+        nameFailure = ValidateResourceName(parentResult.ResourceName);
+        if (nameFailure is not null)
+        {
+            return nameFailure;
+        }
+
+        var nameKey = NameValidator.NormalizeAndGetNameKey(parentResult.ResourceName);
 
         var existing = await _pathResolver.ResolveMetadataAsync(request.UserId, request.Path, ct);
         if (existing.Found)
@@ -89,13 +100,12 @@ public class WebDavMkColRequestHandler(
             return new WebDavMkColResult(false, WebDavMkColError.Conflict);
         }
 
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
         var newNode = new Node
         {
             OwnerId = request.UserId,
             ParentId = parentResult.ParentNode.Id,
             Type = WebDavPathResolver.DefaultNodeType,
-            LayoutId = layout.Id,
+            LayoutId = parentResult.ParentNode.LayoutId,
         };
         newNode.SetName(parentResult.ResourceName);
 
@@ -108,5 +118,16 @@ public class WebDavMkColRequestHandler(
         await _eventNotification.NotifyNodeCreatedAsync(newNode.Id, ct);
 
         return new WebDavMkColResult(true, null, newNode.Id);
+    }
+
+    private WebDavMkColResult? ValidateResourceName(string resourceName)
+    {
+        if (NameValidator.TryNormalizeAndValidate(resourceName, out _, out var errorMessage))
+        {
+            return null;
+        }
+
+        _logger.LogDebug("WebDAV MKCOL: Invalid name: {Name}, Error: {Error}", resourceName, errorMessage);
+        return new WebDavMkColResult(false, WebDavMkColError.InvalidName);
     }
 }

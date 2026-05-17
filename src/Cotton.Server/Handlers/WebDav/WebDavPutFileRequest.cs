@@ -100,32 +100,26 @@ public class WebDavPutFileRequestHandler(
             ct);
 
         // Per-layout namespace serialization for the final insert/update phase.
-        // Streaming and manifest dedup happened above — they are long-running and
+        // Streaming and manifest dedup happened above - they are long-running and
         // not namespace-sensitive (manifest dedup is by content hash, not NameKey).
-        // Re-check the cross-table folder conflict inside the lock in case a
-        // concurrent CreateNode / MoveNode / MKCOL landed a same-NameKey folder
-        // since our pre-check.
+        // Re-resolve the target inside the lock: the pre-lock path result can be
+        // stale after a long upload stream, and must not drive the final upsert.
         await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
         await LayoutLocks.AcquireForLayoutAsync(_dbContext, target.Parent.ParentNode!.LayoutId, ct);
 
-        var lockedFolderConflict = await TryGetFolderConflictFailureAsync(
-            userId: request.UserId,
-            parentNodeId: target.Parent.ParentNode.Id,
-            nameKey: target.NameKey,
-            layoutId: target.Parent.ParentNode.LayoutId,
-            ct);
-        if (lockedFolderConflict != null)
+        var (lockedTarget, lockedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
+        if (lockedTargetError != null)
         {
-            return lockedFolderConflict;
+            return lockedTargetError;
         }
 
-        await UpsertNodeFileAsync(request, target, fileManifest.Id, ct);
+        var finalTarget = lockedTarget!;
+        var resultNodeFile = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
-        var resultNodeFile = await LoadResultNodeFileAsync(request, target, ct);
-        await NotifyPutCompletedAsync(request, created: target.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
-        return new WebDavPutFileResult(true, target.Created, null, resultNodeFile.Id);
+        await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
+        return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
     }
 
     private async Task<(PutTarget? Target, WebDavPutFileResult? Error)> TryResolveAndValidateTargetAsync(WebDavPutFileRequest request, CancellationToken ct)
@@ -314,7 +308,7 @@ public class WebDavPutFileRequestHandler(
         return fileManifest;
     }
 
-    private async Task UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
+    private async Task<NodeFile> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
     {
         if (target.Existing.Found && target.Existing.NodeFile is not null)
         {
@@ -334,7 +328,7 @@ public class WebDavPutFileRequestHandler(
                 await _history.SaveVersionAndUpdateManifestAsync(nodeFile, fileManifestId, request.UserId, ct);
             }
 
-            return;
+            return nodeFile;
         }
 
         var createdNodeFile = new NodeFile
@@ -349,21 +343,7 @@ public class WebDavPutFileRequestHandler(
         await _dbContext.SaveChangesAsync(ct);
 
         createdNodeFile.OriginalNodeFileId = createdNodeFile.Id;
-    }
-
-    private async Task<NodeFile> LoadResultNodeFileAsync(WebDavPutFileRequest request, PutTarget target, CancellationToken ct)
-    {
-        if (target.Existing.Found && target.Existing.NodeFile is not null)
-        {
-            return await _dbContext.NodeFiles.FirstAsync(f => f.Id == target.Existing.NodeFile.Id, ct);
-        }
-
-        return await _dbContext.NodeFiles
-            .Where(f => f.NodeId == target.Parent.ParentNode!.Id
-                && f.OwnerId == request.UserId
-                && f.NameKey == target.NameKey)
-            .OrderByDescending(f => f.CreatedAt)
-            .FirstAsync(ct);
+        return createdNodeFile;
     }
 
     private async Task NotifyPutCompletedAsync(
