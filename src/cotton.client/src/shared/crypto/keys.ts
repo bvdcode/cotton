@@ -1,5 +1,6 @@
 import { argon2id } from "hash-wasm";
 import { asBufferSource } from "./bufferSource";
+import { GCM_TAG_BYTES } from "./container";
 import { InvalidCryptoInputError, WrongUnlockError } from "./errors";
 
 export interface Argon2idParams {
@@ -99,9 +100,9 @@ export async function deriveKek(
 }
 
 export async function generateMasterKey(): Promise<CryptoKey> {
-  return subtle().generateKey({ name: "AES-KW", length: 256 }, true, [
-    "wrapKey",
-    "unwrapKey",
+  return subtle().generateKey({ name: "AES-GCM", length: 256 }, true, [
+    "encrypt",
+    "decrypt",
   ]);
 }
 
@@ -130,9 +131,9 @@ export async function unwrapMasterKey(
       asBufferSource(wrapped),
       kek,
       { name: "AES-KW" },
-      { name: "AES-KW", length: 256 },
+      { name: "AES-GCM", length: 256 },
       true,
-      ["wrapKey", "unwrapKey"],
+      ["encrypt", "decrypt"],
     );
   } catch {
     throw new WrongUnlockError("Master key unwrap failed.");
@@ -142,24 +143,72 @@ export async function unwrapMasterKey(
 export async function wrapFileKey(
   masterKey: CryptoKey,
   fileKey: CryptoKey,
-): Promise<Uint8Array> {
-  const buffer = await subtle().wrapKey("raw", fileKey, masterKey, { name: "AES-KW" });
-  return new Uint8Array(buffer);
+  nonce: Uint8Array,
+  aad: Uint8Array,
+): Promise<{ encryptedFileKey: Uint8Array; tag: Uint8Array }> {
+  const rawFileKey = new Uint8Array(await subtle().exportKey("raw", fileKey));
+
+  try {
+    const buffer = await subtle().encrypt(
+      {
+        name: "AES-GCM",
+        iv: asBufferSource(nonce),
+        additionalData: asBufferSource(aad),
+        tagLength: GCM_TAG_BYTES * 8,
+      },
+      masterKey,
+      asBufferSource(rawFileKey),
+    );
+    const encrypted = new Uint8Array(buffer);
+
+    return {
+      encryptedFileKey: encrypted.slice(0, encrypted.length - GCM_TAG_BYTES),
+      tag: encrypted.slice(encrypted.length - GCM_TAG_BYTES),
+    };
+  } finally {
+    rawFileKey.fill(0);
+  }
 }
 
 export async function unwrapFileKey(
   masterKey: CryptoKey,
-  wrapped: Uint8Array,
+  encryptedFileKey: Uint8Array,
+  tag: Uint8Array,
+  nonce: Uint8Array,
+  aad: Uint8Array,
 ): Promise<CryptoKey> {
-  return subtle().unwrapKey(
-    "raw",
-    asBufferSource(wrapped),
-    masterKey,
-    { name: "AES-KW" },
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
+  if (tag.length !== GCM_TAG_BYTES) {
+    throw new InvalidCryptoInputError("Wrapped file key tag has an invalid length.");
+  }
+
+  const input = new Uint8Array(encryptedFileKey.length + tag.length);
+  input.set(encryptedFileKey, 0);
+  input.set(tag, encryptedFileKey.length);
+
+  const rawFileKey = new Uint8Array(
+    await subtle().decrypt(
+      {
+        name: "AES-GCM",
+        iv: asBufferSource(nonce),
+        additionalData: asBufferSource(aad),
+        tagLength: GCM_TAG_BYTES * 8,
+      },
+      masterKey,
+      asBufferSource(input),
+    ),
   );
+
+  try {
+    return await subtle().importKey(
+      "raw",
+      asBufferSource(rawFileKey),
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    );
+  } finally {
+    rawFileKey.fill(0);
+  }
 }
 
 export async function deriveMetadataKey(masterKey: CryptoKey): Promise<CryptoKey> {

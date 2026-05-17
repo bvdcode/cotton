@@ -107,7 +107,7 @@ describe("downloadDecrypt", () => {
     const encrypted = await encryptFileToBlob(
       new Blob([plaintext as BlobPart], { type: "image/png" }),
       masterKey,
-      4096,
+      8192,
     );
     const file = createFile({
       contentType: "application/octet-stream",
@@ -148,7 +148,7 @@ describe("downloadDecrypt", () => {
     const encrypted = await encryptFileToBlob(
       new Blob([plaintext as BlobPart], { type: "application/pdf" }),
       masterKey,
-      4096,
+      8192,
     );
     const fetchMock = vi.mocked(fetch);
 
@@ -186,7 +186,7 @@ describe("downloadDecrypt", () => {
         type: "application/pdf",
       }),
       masterKey,
-      4096,
+      8192,
     );
     const fetchMock = vi.mocked(fetch);
     let clickedDownloadName: string | null = null;

@@ -2,28 +2,44 @@ import {
   CorruptedContainerError,
   InvalidCryptoInputError,
   NotAContainerError,
-  UnsupportedVersionError,
 } from "./errors";
 
-export const MAGIC = new Uint8Array([
-  0x43, 0x4f, 0x54, 0x45, 0x4e, 0x43, 0x31, 0x00,
-]);
+export const MAGIC = new Uint8Array([0x43, 0x54, 0x4e, 0x31]);
 export const CONTAINER_VERSION = 1;
 export const ALG_AES_256_GCM = 1;
+export const DEFAULT_KEY_ID = 1;
 export const GCM_TAG_BYTES = 16;
-export const GCM_NONCE_PREFIX_BYTES = 8;
+export const GCM_NONCE_PREFIX_BYTES = 4;
 export const GCM_NONCE_BYTES = 12;
-export const DEFAULT_CHUNK_SIZE = 4 * 1024 * 1024;
+const FILE_KEY_BYTES = 32;
+export const FILE_HEADER_BYTES =
+  MAGIC.length +
+  4 +
+  8 +
+  4 +
+  GCM_NONCE_PREFIX_BYTES +
+  GCM_NONCE_BYTES +
+  GCM_TAG_BYTES +
+  FILE_KEY_BYTES;
+export const CHUNK_HEADER_BYTES = MAGIC.length + 4 + 8 + 4 + GCM_TAG_BYTES;
+export const DEFAULT_CHUNK_SIZE = 1 * 1024 * 1024;
+export const MIN_CHUNK_SIZE = 8 * 1024;
 export const MAX_CHUNK_SIZE = 64 * 1024 * 1024;
-export const MAX_CHUNK_COUNT = 0x1_0000_0000;
+export const MAX_CHUNK_COUNT = Number.MAX_SAFE_INTEGER;
 
 export interface ContainerHeader {
-  containerVersion: number;
-  contentAlgId: number;
-  chunkSize: number;
+  keyId: number;
   noncePrefix: Uint8Array;
-  wrappedFileKey: Uint8Array;
+  fileKeyNonce: Uint8Array;
+  fileKeyTag: Uint8Array;
+  encryptedFileKey: Uint8Array;
   plaintextSize: number;
+}
+
+export interface ChunkHeader {
+  keyId: number;
+  plaintextLength: number;
+  tag: Uint8Array;
 }
 
 export function looksLikeContainer(bytes: Uint8Array): boolean {
@@ -43,31 +59,25 @@ export function looksLikeContainer(bytes: Uint8Array): boolean {
 export function buildHeader(header: ContainerHeader): Uint8Array {
   assertSupportedHeader(header);
 
-  const fixedPrefixLength = MAGIC.length + 1 + 1 + 4 + GCM_NONCE_PREFIX_BYTES + 2;
-  const totalLength = fixedPrefixLength + header.wrappedFileKey.length + 8;
-  const output = new Uint8Array(totalLength);
+  const output = new Uint8Array(FILE_HEADER_BYTES);
   const view = new DataView(output.buffer);
   let offset = 0;
 
   output.set(MAGIC, offset);
   offset += MAGIC.length;
-  output[offset] = header.containerVersion;
-  offset += 1;
-  output[offset] = header.contentAlgId;
-  offset += 1;
-  view.setUint32(offset, header.chunkSize, false);
+  view.setInt32(offset, FILE_HEADER_BYTES, true);
+  offset += 4;
+  setInt64LittleEndian(view, offset, header.plaintextSize);
+  offset += 8;
+  view.setInt32(offset, header.keyId, true);
   offset += 4;
   output.set(header.noncePrefix, offset);
   offset += GCM_NONCE_PREFIX_BYTES;
-  view.setUint16(offset, header.wrappedFileKey.length, false);
-  offset += 2;
-  output.set(header.wrappedFileKey, offset);
-  offset += header.wrappedFileKey.length;
-
-  const high = Math.floor(header.plaintextSize / 0x1_0000_0000);
-  const low = header.plaintextSize >>> 0;
-  view.setUint32(offset, high, false);
-  view.setUint32(offset + 4, low, false);
+  output.set(header.fileKeyNonce, offset);
+  offset += GCM_NONCE_BYTES;
+  output.set(header.fileKeyTag, offset);
+  offset += GCM_TAG_BYTES;
+  output.set(header.encryptedFileKey, offset);
 
   return output;
 }
@@ -80,85 +90,161 @@ export function parseHeader(bytes: Uint8Array): {
     throw new NotAContainerError("Magic header mismatch.");
   }
 
-  const fixedPrefixLength = MAGIC.length + 1 + 1 + 4 + GCM_NONCE_PREFIX_BYTES + 2;
-  if (bytes.length < fixedPrefixLength) {
-    throw new CorruptedContainerError("Header is truncated before wrapped key length.");
+  if (bytes.length < FILE_HEADER_BYTES) {
+    throw new CorruptedContainerError("File header is truncated.");
   }
 
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let offset = MAGIC.length;
-  const containerVersion = bytes[offset];
-  offset += 1;
-  const contentAlgId = bytes[offset];
-  offset += 1;
+  const view = viewFor(bytes);
+  const headerLength = view.getInt32(MAGIC.length, true);
 
-  if (containerVersion !== CONTAINER_VERSION) {
-    throw new UnsupportedVersionError(`Unsupported container version: ${containerVersion}.`);
+  if (headerLength !== FILE_HEADER_BYTES) {
+    throw new CorruptedContainerError("Unsupported file header length.");
   }
 
-  if (contentAlgId !== ALG_AES_256_GCM) {
-    throw new UnsupportedVersionError(`Unsupported content algorithm: ${contentAlgId}.`);
-  }
-
-  const chunkSize = view.getUint32(offset, false);
+  let offset = MAGIC.length + 4;
+  const plaintextSize = getSafeInt64LittleEndian(view, offset, "Plaintext size");
+  offset += 8;
+  const keyId = view.getInt32(offset, true);
   offset += 4;
-
-  if (!isValidChunkSize(chunkSize)) {
-    throw new CorruptedContainerError(`Invalid chunk size: ${chunkSize}.`);
-  }
-
   const noncePrefix = bytes.slice(offset, offset + GCM_NONCE_PREFIX_BYTES);
   offset += GCM_NONCE_PREFIX_BYTES;
-  const wrappedFileKeyLength = view.getUint16(offset, false);
-  offset += 2;
+  const fileKeyNonce = bytes.slice(offset, offset + GCM_NONCE_BYTES);
+  offset += GCM_NONCE_BYTES;
+  const fileKeyTag = bytes.slice(offset, offset + GCM_TAG_BYTES);
+  offset += GCM_TAG_BYTES;
+  const encryptedFileKey = bytes.slice(offset, offset + FILE_KEY_BYTES);
 
-  if (offset + wrappedFileKeyLength + 8 > bytes.length) {
-    throw new CorruptedContainerError("Header is truncated inside wrapped key or size.");
-  }
-
-  const wrappedFileKey = bytes.slice(offset, offset + wrappedFileKeyLength);
-  offset += wrappedFileKeyLength;
-  const high = view.getUint32(offset, false);
-  const low = view.getUint32(offset + 4, false);
-  offset += 8;
-  const plaintextSize = high * 0x1_0000_0000 + low;
-
-  if (!Number.isSafeInteger(plaintextSize)) {
-    throw new CorruptedContainerError("Plaintext size exceeds JavaScript safe integer range.");
-  }
-
-  if (chunkCount(plaintextSize, chunkSize) > MAX_CHUNK_COUNT) {
-    throw new CorruptedContainerError("Container requires more chunks than the nonce space allows.");
-  }
+  const header: ContainerHeader = {
+    keyId,
+    noncePrefix,
+    fileKeyNonce,
+    fileKeyTag,
+    encryptedFileKey,
+    plaintextSize,
+  };
+  assertParsedHeader(header);
 
   return {
-    header: {
-      containerVersion,
-      contentAlgId,
-      chunkSize,
-      noncePrefix,
-      wrappedFileKey,
-      plaintextSize,
-    },
-    headerLength: offset,
+    header,
+    headerLength,
   };
 }
 
-export function chunkNonce(noncePrefix: Uint8Array, chunkIndex: number): Uint8Array {
-  if (noncePrefix.length !== GCM_NONCE_PREFIX_BYTES) {
-    throw new InvalidCryptoInputError(
-      `Nonce prefix must be ${GCM_NONCE_PREFIX_BYTES} bytes.`,
-    );
+export function buildKeyAad(header: Pick<
+  ContainerHeader,
+  "keyId" | "noncePrefix" | "fileKeyNonce" | "plaintextSize"
+>): Uint8Array {
+  assertKeyId(header.keyId);
+  assertByteLength(header.noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
+  assertByteLength(header.fileKeyNonce, GCM_NONCE_BYTES, "File key nonce");
+  assertPlaintextSize(header.plaintextSize);
+
+  const output = new Uint8Array(
+    MAGIC.length + 4 + 8 + 4 + GCM_NONCE_PREFIX_BYTES + GCM_NONCE_BYTES,
+  );
+  const view = new DataView(output.buffer);
+  let offset = 0;
+
+  output.set(MAGIC, offset);
+  offset += MAGIC.length;
+  view.setInt32(offset, FILE_HEADER_BYTES, true);
+  offset += 4;
+  setInt64LittleEndian(view, offset, header.plaintextSize);
+  offset += 8;
+  view.setInt32(offset, header.keyId, true);
+  offset += 4;
+  output.set(header.noncePrefix, offset);
+  offset += GCM_NONCE_PREFIX_BYTES;
+  output.set(header.fileKeyNonce, offset);
+
+  return output;
+}
+
+export function buildChunkHeader(header: ChunkHeader): Uint8Array {
+  assertKeyId(header.keyId);
+  assertPlaintextLength(header.plaintextLength);
+  assertByteLength(header.tag, GCM_TAG_BYTES, "Chunk tag");
+
+  const output = new Uint8Array(CHUNK_HEADER_BYTES);
+  const view = new DataView(output.buffer);
+  let offset = 0;
+
+  output.set(MAGIC, offset);
+  offset += MAGIC.length;
+  view.setInt32(offset, CHUNK_HEADER_BYTES, true);
+  offset += 4;
+  setInt64LittleEndian(view, offset, header.plaintextLength);
+  offset += 8;
+  view.setInt32(offset, header.keyId, true);
+  offset += 4;
+  output.set(header.tag, offset);
+
+  return output;
+}
+
+export function parseChunkHeader(bytes: Uint8Array): ChunkHeader {
+  if (!looksLikeContainer(bytes)) {
+    throw new CorruptedContainerError("Chunk header magic mismatch.");
   }
 
-  if (!Number.isInteger(chunkIndex) || chunkIndex < 0 || chunkIndex > 0xffffffff) {
-    throw new InvalidCryptoInputError("Chunk index must be a 32-bit unsigned integer.");
+  if (bytes.length < CHUNK_HEADER_BYTES) {
+    throw new CorruptedContainerError("Chunk header is truncated.");
   }
+
+  const view = viewFor(bytes);
+  const headerLength = view.getInt32(MAGIC.length, true);
+
+  if (headerLength !== CHUNK_HEADER_BYTES) {
+    throw new CorruptedContainerError("Unsupported chunk header length.");
+  }
+
+  const plaintextLength = getSafeInt64LittleEndian(
+    view,
+    MAGIC.length + 4,
+    "Chunk plaintext length",
+  );
+  const keyId = view.getInt32(MAGIC.length + 4 + 8, true);
+  const tagStart = MAGIC.length + 4 + 8 + 4;
+  const header: ChunkHeader = {
+    keyId,
+    plaintextLength,
+    tag: bytes.slice(tagStart, tagStart + GCM_TAG_BYTES),
+  };
+
+  assertParsedChunkHeader(header);
+  return header;
+}
+
+export function buildChunkAad(
+  keyId: number,
+  chunkIndex: number,
+  plaintextLength: number,
+): Uint8Array {
+  assertKeyId(keyId);
+  assertChunkIndex(chunkIndex);
+  assertPlaintextLength(plaintextLength);
+
+  const output = new Uint8Array(32);
+  const view = new DataView(output.buffer);
+
+  output.set(MAGIC, 0);
+  view.setInt32(4, CONTAINER_VERSION, true);
+  view.setInt32(8, keyId, true);
+  setInt64LittleEndian(view, 12, chunkIndex);
+  setInt64LittleEndian(view, 20, plaintextLength);
+  view.setInt32(28, 0, true);
+
+  return output;
+}
+
+export function chunkNonce(noncePrefix: Uint8Array, chunkIndex: number): Uint8Array {
+  assertByteLength(noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
+  assertChunkIndex(chunkIndex);
 
   const nonce = new Uint8Array(GCM_NONCE_BYTES);
   const view = new DataView(nonce.buffer);
   nonce.set(noncePrefix, 0);
-  view.setUint32(GCM_NONCE_PREFIX_BYTES, chunkIndex, false);
+  view.setBigUint64(GCM_NONCE_PREFIX_BYTES, BigInt(chunkIndex), true);
   return nonce;
 }
 
@@ -167,10 +253,7 @@ export function chunkPlaintextLength(
   chunkSize: number,
   plaintextSize: number,
 ): number {
-  if (!Number.isInteger(chunkIndex) || chunkIndex < 0) {
-    throw new InvalidCryptoInputError("Chunk index must be a non-negative integer.");
-  }
-
+  assertChunkIndex(chunkIndex);
   assertPlaintextShape(plaintextSize, chunkSize);
 
   const start = chunkIndex * chunkSize;
@@ -191,50 +274,107 @@ export function chunkCount(plaintextSize: number, chunkSize: number): number {
   return Math.ceil(plaintextSize / chunkSize);
 }
 
-function assertSupportedHeader(header: ContainerHeader): void {
-  if (header.containerVersion !== CONTAINER_VERSION) {
-    throw new InvalidCryptoInputError("Unsupported container version.");
-  }
-
-  if (header.contentAlgId !== ALG_AES_256_GCM) {
-    throw new InvalidCryptoInputError("Unsupported content algorithm.");
-  }
-
-  if (!isValidChunkSize(header.chunkSize)) {
+export function assertCompatibleChunkSize(chunkSize: number): void {
+  if (
+    !Number.isSafeInteger(chunkSize) ||
+    chunkSize < MIN_CHUNK_SIZE ||
+    chunkSize > MAX_CHUNK_SIZE
+  ) {
     throw new InvalidCryptoInputError("Chunk size is outside the supported range.");
   }
+}
 
-  if (header.noncePrefix.length !== GCM_NONCE_PREFIX_BYTES) {
-    throw new InvalidCryptoInputError(
-      `Nonce prefix must be ${GCM_NONCE_PREFIX_BYTES} bytes.`,
-    );
+function assertSupportedHeader(header: ContainerHeader): void {
+  assertKeyId(header.keyId);
+  assertByteLength(header.noncePrefix, GCM_NONCE_PREFIX_BYTES, "Nonce prefix");
+  assertByteLength(header.fileKeyNonce, GCM_NONCE_BYTES, "File key nonce");
+  assertByteLength(header.fileKeyTag, GCM_TAG_BYTES, "File key tag");
+  assertByteLength(header.encryptedFileKey, FILE_KEY_BYTES, "Encrypted file key");
+  assertPlaintextSize(header.plaintextSize);
+}
+
+function assertParsedHeader(header: ContainerHeader): void {
+  try {
+    assertSupportedHeader(header);
+  } catch (error) {
+    if (error instanceof InvalidCryptoInputError) {
+      throw new CorruptedContainerError("Invalid file header contents.");
+    }
+
+    throw error;
   }
+}
 
-  if (header.wrappedFileKey.length <= 0 || header.wrappedFileKey.length > 0xffff) {
-    throw new InvalidCryptoInputError("Wrapped file key length is invalid.");
-  }
+function assertParsedChunkHeader(header: ChunkHeader): void {
+  try {
+    assertKeyId(header.keyId);
+    assertPlaintextLength(header.plaintextLength);
+  } catch (error) {
+    if (error instanceof InvalidCryptoInputError) {
+      throw new CorruptedContainerError("Invalid chunk header contents.");
+    }
 
-  assertPlaintextShape(header.plaintextSize, header.chunkSize);
-
-  if (chunkCount(header.plaintextSize, header.chunkSize) > MAX_CHUNK_COUNT) {
-    throw new InvalidCryptoInputError("Plaintext requires more chunks than supported.");
+    throw error;
   }
 }
 
 function assertPlaintextShape(plaintextSize: number, chunkSize: number): void {
-  if (
-    !Number.isSafeInteger(plaintextSize) ||
-    plaintextSize < 0 ||
-    !isValidChunkSize(chunkSize)
-  ) {
-    throw new InvalidCryptoInputError("Invalid plaintext size or chunk size.");
+  assertPlaintextSize(plaintextSize);
+  assertCompatibleChunkSize(chunkSize);
+}
+
+function assertPlaintextSize(plaintextSize: number): void {
+  if (!Number.isSafeInteger(plaintextSize) || plaintextSize < 0) {
+    throw new InvalidCryptoInputError("Invalid plaintext size.");
   }
 }
 
-function isValidChunkSize(chunkSize: number): boolean {
-  return (
-    Number.isSafeInteger(chunkSize) &&
-    chunkSize > 0 &&
-    chunkSize <= MAX_CHUNK_SIZE
-  );
+function assertPlaintextLength(plaintextLength: number): void {
+  if (
+    !Number.isSafeInteger(plaintextLength) ||
+    plaintextLength <= 0 ||
+    plaintextLength > MAX_CHUNK_SIZE
+  ) {
+    throw new InvalidCryptoInputError("Invalid chunk plaintext length.");
+  }
+}
+
+function assertChunkIndex(chunkIndex: number): void {
+  if (!Number.isSafeInteger(chunkIndex) || chunkIndex < 0) {
+    throw new InvalidCryptoInputError("Chunk index must be a safe non-negative integer.");
+  }
+}
+
+function assertKeyId(keyId: number): void {
+  if (!Number.isInteger(keyId) || keyId <= 0 || keyId > 0x7fffffff) {
+    throw new InvalidCryptoInputError("Key id must be a positive 32-bit integer.");
+  }
+}
+
+function assertByteLength(bytes: Uint8Array, expected: number, name: string): void {
+  if (bytes.length !== expected) {
+    throw new InvalidCryptoInputError(`${name} must be ${expected} bytes.`);
+  }
+}
+
+function viewFor(bytes: Uint8Array): DataView {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+}
+
+function setInt64LittleEndian(view: DataView, byteOffset: number, value: number): void {
+  view.setBigInt64(byteOffset, BigInt(value), true);
+}
+
+function getSafeInt64LittleEndian(
+  view: DataView,
+  byteOffset: number,
+  fieldName: string,
+): number {
+  const raw = view.getBigInt64(byteOffset, true);
+
+  if (raw < 0n || raw > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new CorruptedContainerError(`${fieldName} exceeds JavaScript safe range.`);
+  }
+
+  return Number(raw);
 }

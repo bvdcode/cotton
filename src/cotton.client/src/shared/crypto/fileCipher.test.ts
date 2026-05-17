@@ -6,6 +6,7 @@ import {
 } from "./fileCipher";
 import { CorruptedContainerError, NotAContainerError } from "./errors";
 import { generateMasterKey } from "./keys";
+import { CHUNK_HEADER_BYTES, FILE_HEADER_BYTES, MAGIC } from "./container";
 
 async function blobToBytes(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
@@ -28,13 +29,31 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     crypto.getRandomValues(plaintext);
     const source = new Blob([plaintext], { type: "text/plain" });
 
-    const encrypted = await encryptFileToBlob(source, masterKey, 4096);
+    const encrypted = await encryptFileToBlob(source, masterKey, 8192);
     const decrypted = await decryptBlobToBlob(encrypted, masterKey, "text/plain");
 
     expect(encrypted.type).toBe(ENCRYPTED_CONTENT_TYPE);
     expect(encrypted.size).toBeGreaterThan(plaintext.byteLength);
     expect(decrypted.type).toBe("text/plain");
     expect(Array.from(await blobToBytes(decrypted))).toEqual(Array.from(plaintext));
+  });
+
+  it("writes CTN1 file and chunk headers", async () => {
+    const masterKey = await generateMasterKey();
+    const plaintext = new Uint8Array(1024);
+    crypto.getRandomValues(plaintext);
+
+    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 8192);
+    const bytes = await blobToBytes(encrypted);
+
+    expect(Array.from(bytes.slice(0, 4))).toEqual(Array.from(MAGIC));
+    expect(new DataView(bytes.buffer).getInt32(4, true)).toBe(FILE_HEADER_BYTES);
+    expect(Array.from(bytes.slice(FILE_HEADER_BYTES, FILE_HEADER_BYTES + 4))).toEqual(
+      Array.from(MAGIC),
+    );
+    expect(new DataView(bytes.buffer).getInt32(FILE_HEADER_BYTES + 4, true)).toBe(
+      CHUNK_HEADER_BYTES,
+    );
   });
 
   it("round-trips multi-chunk content", async () => {
@@ -51,10 +70,11 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
   it("round-trips an empty blob", async () => {
     const masterKey = await generateMasterKey();
 
-    const encrypted = await encryptFileToBlob(new Blob([]), masterKey, 4096);
+    const encrypted = await encryptFileToBlob(new Blob([]), masterKey, 8192);
     const decrypted = await decryptBlobToBlob(encrypted, masterKey);
 
     expect(decrypted.size).toBe(0);
+    expect(encrypted.size).toBe(FILE_HEADER_BYTES);
   });
 
   it("rejects a non-container blob", async () => {
@@ -69,7 +89,7 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const masterKey = await generateMasterKey();
     const plaintext = new Uint8Array(32_000);
     fillRandom(plaintext);
-    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 4096);
+    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 8192);
     const bytes = await blobToBytes(encrypted);
     bytes[bytes.length - 20] ^= 0x01;
 
@@ -83,7 +103,7 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const encrypted = await encryptFileToBlob(
       new Blob([new Uint8Array([1, 2, 3, 4])]),
       masterKey,
-      4096,
+      8192,
     );
     const bytes = await blobToBytes(encrypted);
     const truncated = bytes.slice(0, bytes.length - 1);
@@ -104,7 +124,7 @@ describe("encryptFileToBlob / decryptBlobToBlob", () => {
     const encrypted = await encryptFileToBlob(
       new Blob([new Uint8Array([1, 2, 3])]),
       firstMasterKey,
-      4096,
+      8192,
     );
 
     await expect(
