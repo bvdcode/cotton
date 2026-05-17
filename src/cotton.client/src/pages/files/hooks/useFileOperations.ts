@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { filesApi } from "../../../shared/api/filesApi";
 import { useFileRenameDeleteOperations } from "../../../shared/hooks/useFileRenameDeleteOperations";
+import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 
 export const useFileOperations = (onFilesChanged?: () => void) => {
   const { t } = useTranslation(["files", "common"]);
-  const { currentNode, optimisticRenameFile, optimisticDeleteFile, refreshNodeContent } =
-    useNodesStore();
+  const { currentNode, optimisticRenameFile, optimisticDeleteFile } = useNodesStore();
 
   return useFileRenameDeleteOperations({
     getDeleteDialogContent: (fileName) => ({

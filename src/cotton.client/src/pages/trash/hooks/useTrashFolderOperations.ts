@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { useNodesStore } from "../../../shared/store/nodesStore";
 import { nodesApi } from "../../../shared/api/nodesApi";
+import {
+  deleteFolder,
+  renameFolder,
+} from "../../../shared/store/nodesActions";
 import { useFolderRenameDeleteOperations } from "../../../shared/hooks/useFolderRenameDeleteOperations";
 
 /**
@@ -16,7 +19,6 @@ export const useTrashFolderOperations = (
   resolveWrapperNodeId?: (itemId: string) => string | null,
 ) => {
   const { t } = useTranslation(["trash", "common"]);
-  const { deleteFolder, renameFolder } = useNodesStore();
 
   return useFolderRenameDeleteOperations({
     getDeleteDialogContent: (folderName) => ({

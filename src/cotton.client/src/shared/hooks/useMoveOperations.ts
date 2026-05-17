@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
 import { isAxiosError } from "../api/httpClient";
-import { useNodesStore } from "../store/nodesStore";
+import { refreshNodeContent } from "../store/nodesActions";
 import {
   useMoveClipboardStore,
   type MoveClipboardItem,
@@ -226,7 +226,6 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
         return { succeeded: [], failed: [], lastErrorMessage: null };
       }
 
-      const store = useNodesStore.getState();
       const sourceParents = new Set<string>();
       const succeeded: MoveClipboardItem[] = [];
       const failed: MoveClipboardItem[] = [];
@@ -255,7 +254,7 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       const parentsToRefresh = new Set<string>(sourceParents);
       parentsToRefresh.add(targetParentId);
       for (const id of parentsToRefresh) {
-        void store.refreshNodeContent(id);
+        void refreshNodeContent(id);
       }
 
       if (succeeded.length > 0) {

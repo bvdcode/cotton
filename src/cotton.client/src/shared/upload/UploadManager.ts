@@ -1,5 +1,5 @@
 import type { Guid } from "../api/layoutsApi";
-import { useNodesStore } from "../store/nodesStore";
+import { refreshNodeContent } from "../store/nodesActions";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
@@ -257,7 +257,7 @@ export class UploadManager {
       this.refreshTimeout = null;
 
       for (const id of ids) {
-        void useNodesStore.getState().refreshNodeContent(id);
+        void refreshNodeContent(id);
       }
     }, 300);
   }

@@ -13,6 +13,13 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
 import { useNodesStore } from "../../shared/store/nodesStore";
+import {
+  deleteFolder,
+  loadNode,
+  loadRoot,
+  refreshNodeContent,
+  resolveRootInBackground,
+} from "../../shared/store/nodesActions";
 import { useAuthStore } from "../../shared/store/authStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
@@ -65,11 +72,6 @@ export const FilesPage: React.FC = () => {
     rootNodeId,
     loading,
     error,
-    loadRoot,
-    loadNode,
-    resolveRootInBackground,
-    refreshNodeContent,
-    deleteFolder,
     optimisticDeleteFile,
   } = useNodesStore();
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
@@ -83,7 +85,7 @@ export const FilesPage: React.FC = () => {
   useEffect(() => {
     if (routeNodeId || rootNodeId) return;
     void loadRoot({ force: false, loadChildren: false });
-  }, [routeNodeId, rootNodeId, loadRoot]);
+  }, [routeNodeId, rootNodeId]);
 
   // Always keep root node synced with backend resolver (non-blocking).
   useEffect(() => {
@@ -91,7 +93,7 @@ export const FilesPage: React.FC = () => {
     resolveRootInBackground({
       loadChildren: layoutType !== InterfaceLayoutType.List,
     });
-  }, [routeNodeId, layoutType, resolveRootInBackground]);
+  }, [routeNodeId, layoutType]);
 
   const nodeId = routeNodeId ?? rootNodeId ?? null;
   const isUserCacheValid = cacheOwnerUserId === currentUserId;
