@@ -24,6 +24,7 @@ import { nodesApi } from "../api/nodesApi";
 import {
   createFolder,
   deleteFolder,
+  loadNode,
   renameFolder,
 } from "./nodesActions";
 import { resetNodesActionsInternals } from "./nodesActionInternals";
@@ -80,6 +81,41 @@ beforeEach(() => {
 
 afterEach(() => {
   resetStore();
+});
+
+describe("loadNode", () => {
+  it("force reload bypasses cached content and fetches a fresh node snapshot", async () => {
+    const stale = makeNode("folder-1", "Old name");
+    const fresh = makeNode("folder-1", "New name");
+    const child = { ...makeNode("child-1", "Child"), parentId: "folder-1" };
+    seedFolder("folder-1", []);
+    useNodesStore.setState({ currentNode: stale, ancestors: [] });
+    vi.mocked(nodesApi.getNode).mockResolvedValue(fresh);
+    vi.mocked(nodesApi.getAncestors).mockResolvedValue([]);
+    vi.mocked(nodesApi.getChildren).mockResolvedValue({
+      content: {
+        id: "folder-1",
+        createdAt: "2026-05-13T00:00:00Z",
+        updatedAt: "2026-05-13T00:00:00Z",
+        nodes: [child],
+        files: [],
+      },
+      totalCount: 1,
+    });
+
+    await loadNode("folder-1", { loadChildren: true, force: true });
+
+    expect(nodesApi.getNode).toHaveBeenCalledWith("folder-1");
+    expect(nodesApi.getAncestors).toHaveBeenCalledWith("folder-1");
+    expect(nodesApi.getChildren).toHaveBeenCalledWith("folder-1", {
+      page: 1,
+      pageSize: 100000,
+    });
+    expect(useNodesStore.getState().currentNode?.name).toBe("New name");
+    expect(
+      useNodesStore.getState().contentByNodeId["folder-1"]?.nodes,
+    ).toEqual([child]);
+  });
 });
 
 describe("createFolder", () => {

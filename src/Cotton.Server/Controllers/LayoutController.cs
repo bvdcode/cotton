@@ -192,8 +192,8 @@ namespace Cotton.Server.Controllers
             node.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", node.Id, node.Name, node.NameKey);
             var mapped = node.Adapt<NodeDto>();
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
             return Ok(mapped);
         }
 

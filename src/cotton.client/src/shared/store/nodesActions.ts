@@ -250,14 +250,19 @@ export const loadRoot = async (options?: {
 
 export const loadNode = async (
   nodeId: string,
-  options?: { loadChildren?: boolean; allowRootRecovery?: boolean },
+  options?: {
+    loadChildren?: boolean;
+    allowRootRecovery?: boolean;
+    force?: boolean;
+  },
 ): Promise<void> => {
   const state = useNodesStore.getState();
   const loadChildren = options?.loadChildren ?? true;
   const allowRootRecovery = options?.allowRootRecovery ?? true;
+  const force = options?.force ?? false;
   if (state.loading && state.currentNode?.id === nodeId) return;
 
-  const cachedContent = state.contentByNodeId[nodeId];
+  const cachedContent = force ? undefined : state.contentByNodeId[nodeId];
 
   if (cachedContent) {
     useNodesStore.setState({ error: null });
@@ -320,7 +325,12 @@ export const loadNode = async (
   };
 
   try {
-    const resolved = await resolveNodeAndAncestors(nodeId, state);
+    const resolved = force
+      ? {
+          node: await nodesApi.getNode(nodeId),
+          ancestors: await nodesApi.getAncestors(nodeId),
+        }
+      : await resolveNodeAndAncestors(nodeId, state);
     const content = loadChildren
       ? (cachedContent ?? (await fetchAllNodeChildren(nodeId)))
       : undefined;
