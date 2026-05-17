@@ -334,6 +334,43 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task ConcurrentCreateFileAndCreateFolder_SameNameSameTarget_OnlyOneWins()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var target = await CreateFolderAsync(root.Id, "dst");
+        var hash = await UploadChunkViaClientAsync(_client!, "create-file-folder-race");
+
+        var createFile = _client!.PostAsJsonAsync(
+            "/api/v1/files/from-chunks",
+            new CreateFileRequest
+            {
+                ChunkHashes = [hash],
+                Name = "thing",
+                ContentType = "application/octet-stream",
+                Hash = hash,
+                NodeId = target.Id
+            });
+        var createFolder = _client!.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new CreateNodeRequest { ParentId = target.Id, Name = "thing" });
+
+        var results = await Task.WhenAll(createFile, createFolder);
+
+        int oks = results.Count(r => r.StatusCode == HttpStatusCode.OK);
+        int conflicts = results.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+        Assert.That(oks, Is.EqualTo(1), "Exactly one cross-table create must win.");
+        Assert.That(conflicts, Is.EqualTo(1), "The other must be rejected as duplicate.");
+
+        using var scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
+        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
+        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+            "Destination must have exactly one entry named 'thing' across both tables.");
+    }
+
+    [Test]
     public async Task ConcurrentMoveFileAndMoveNode_SameNameSameTarget_OnlyOneWins()
     {
         await AuthenticateAsync();
@@ -480,6 +517,36 @@ public class MoveEndpointsTests : IntegrationTestBase
     // ---------------------------------------------------------------------
     // Notification failure does not fail the move
     // ---------------------------------------------------------------------
+
+    [Test]
+    public async Task ConcurrentWebDavPutAndMkCol_SameNameSameTarget_OnlyOneWins()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var target = await CreateFolderAsync(root.Id, "webdav-race");
+
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+
+        var putFile = SendWebDavPutAsync(_client!, "/api/v1/webdav/webdav-race/thing", "webdav-put-race");
+        var mkcol = SendWebDavMkColAsync(_client!, "/api/v1/webdav/webdav-race/thing");
+        var results = await Task.WhenAll(putFile, mkcol);
+
+        int successes = results.Count(r => r.StatusCode is HttpStatusCode.Created or HttpStatusCode.NoContent);
+        int rejections = results.Count(r => r.StatusCode is HttpStatusCode.Conflict
+            or HttpStatusCode.MethodNotAllowed
+            or HttpStatusCode.PreconditionFailed);
+        Assert.That(successes, Is.EqualTo(1), "Exactly one WebDAV namespace write must win.");
+        Assert.That(rejections, Is.EqualTo(1), "The other WebDAV write must be rejected.");
+
+        using var scope = _factory!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        int fileInDst = await db.NodeFiles.AsNoTracking().CountAsync(f => f.NodeId == target.Id && f.NameKey == "thing");
+        int folderInDst = await db.Nodes.AsNoTracking().CountAsync(n => n.ParentId == target.Id && n.NameKey == "thing");
+        Assert.That(fileInDst + folderInDst, Is.EqualTo(1),
+            "Destination must have exactly one WebDAV entry named 'thing' across both tables.");
+    }
 
     [Test]
     public async Task WebDavMove_NotificationFailureDoesNotFailRequest()
@@ -641,22 +708,7 @@ public class MoveEndpointsTests : IntegrationTestBase
 
     private static async Task<NodeFileManifestDto> CreateFileViaClientAsync(HttpClient client, Guid nodeId, string name, string body)
     {
-        var content = Encoding.UTF8.GetBytes(body);
-        var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
-        using var form = new MultipartFormDataContent
-        {
-            {
-                new ByteArrayContent(content)
-                {
-                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
-                },
-                "file",
-                "chunk.bin"
-            },
-            { new StringContent(hash), "hash" }
-        };
-        var upRes = await client.PostAsync("/api/v1/chunks", form);
-        upRes.EnsureSuccessStatusCode();
+        var hash = await UploadChunkViaClientAsync(client, body);
 
         var fileReq = new CreateFileRequest
         {
@@ -674,6 +726,43 @@ public class MoveEndpointsTests : IntegrationTestBase
         var dto = children!.Files.SingleOrDefault(f => f.Name == name)
             ?? throw new InvalidOperationException($"Created file '{name}' not found in node {nodeId}.");
         return dto;
+    }
+
+    private static async Task<string> UploadChunkViaClientAsync(HttpClient client, string body)
+    {
+        var content = Encoding.UTF8.GetBytes(body);
+        var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                },
+                "file",
+                "chunk.bin"
+            },
+            { new StringContent(hash), "hash" }
+        };
+        var upRes = await client.PostAsync("/api/v1/chunks", form);
+        upRes.EnsureSuccessStatusCode();
+        return hash;
+    }
+
+    private static async Task<HttpResponseMessage> SendWebDavPutAsync(HttpClient client, string path, string body)
+    {
+        using var content = new StringContent(body, Encoding.UTF8, "text/plain");
+        using var request = new HttpRequestMessage(HttpMethod.Put, path)
+        {
+            Content = content
+        };
+        return await client.SendAsync(request);
+    }
+
+    private static async Task<HttpResponseMessage> SendWebDavMkColAsync(HttpClient client, string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod("MKCOL"), path);
+        return await client.SendAsync(request);
     }
 
     private async Task<NodeContentDto> GetChildrenAsync(Guid nodeId)

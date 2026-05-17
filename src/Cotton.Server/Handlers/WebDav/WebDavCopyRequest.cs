@@ -76,8 +76,9 @@ public class WebDavCopyRequestHandler(
         // the lock, concurrent operations can target it. Re-resolve source and
         // destination parent inside the lock so stale pre-lock objects never
         // drive the actual copy.
+        Guid lockedLayoutId = destParentResult.ParentNode!.LayoutId;
         await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, destParentResult.ParentNode!.LayoutId, ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
         var sourceResult = await ResolveSourceAsync(request, ct);
         sourceValidation = ValidateSourceOrGetFailure(request, sourceResult);
@@ -86,11 +87,23 @@ public class WebDavCopyRequestHandler(
             return sourceValidation;
         }
 
+        if (await GetSourceLayoutIdAsync(sourceResult, ct) != lockedLayoutId)
+        {
+            _logger.LogDebug("WebDAV COPY: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+            return Fail(WebDavCopyError.SourceNotFound);
+        }
+
         destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
         destParentFailure = TryGetDestinationParentFailure(destParentResult);
         if (destParentFailure is not null)
         {
             return destParentFailure;
+        }
+
+        if (destParentResult.ParentNode!.LayoutId != lockedLayoutId)
+        {
+            _logger.LogDebug("WebDAV COPY: Destination parent layout changed while waiting for lock: {Path}", request.DestinationPath);
+            return Fail(WebDavCopyError.DestinationParentNotFound);
         }
 
         var (created, allowed) = await HandleDestinationOverwriteAsync(request, ct);
@@ -167,6 +180,20 @@ public class WebDavCopyRequestHandler(
         }
 
         return null;
+    }
+
+    private async Task<Guid> GetSourceLayoutIdAsync(WebDavResolveResult sourceResult, CancellationToken ct)
+    {
+        if (sourceResult.IsCollection)
+        {
+            return sourceResult.Node!.LayoutId;
+        }
+
+        return await _dbContext.Nodes
+            .AsNoTracking()
+            .Where(n => n.Id == sourceResult.NodeFile!.NodeId)
+            .Select(n => n.LayoutId)
+            .SingleAsync(ct);
     }
 
     private async Task<WebDavResolveResult> ResolveSourceAsync(WebDavCopyRequest request, CancellationToken ct)

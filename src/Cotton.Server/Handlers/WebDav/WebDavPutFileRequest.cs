@@ -8,7 +8,6 @@ using Cotton.Server.Jobs;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
-using Cotton.Topology.Abstractions;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
@@ -54,7 +53,6 @@ public enum WebDavPutFileError
 /// Processes large files without loading them entirely into memory.
 /// </summary>
 public class WebDavPutFileRequestHandler(
-    ILayoutService _layouts,
     CottonDbContext _dbContext,
     SettingsProvider _settings,
     ISchedulerFactory _scheduler,
@@ -104,8 +102,9 @@ public class WebDavPutFileRequestHandler(
         // not namespace-sensitive (manifest dedup is by content hash, not NameKey).
         // Re-resolve the target inside the lock: the pre-lock path result can be
         // stale after a long upload stream, and must not drive the final upsert.
+        Guid lockedLayoutId = target.Parent.ParentNode!.LayoutId;
         await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, target.Parent.ParentNode!.LayoutId, ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
         var (lockedTarget, lockedTargetError) = await TryResolveAndValidateTargetAsync(request, ct);
         if (lockedTargetError != null)
@@ -114,6 +113,12 @@ public class WebDavPutFileRequestHandler(
         }
 
         var finalTarget = lockedTarget!;
+        if (finalTarget.Parent.ParentNode!.LayoutId != lockedLayoutId)
+        {
+            _logger.LogDebug("WebDAV PUT: Parent layout changed while waiting for lock: {Path}", request.Path);
+            return Fail(WebDavPutFileError.ParentNotFound);
+        }
+
         var resultNodeFile = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -142,13 +147,12 @@ public class WebDavPutFileRequestHandler(
         }
 
         string nameKey = NameValidator.NormalizeAndGetNameKey(resourceName);
-        var layoutId = await GetLayoutIdAsync(request.UserId);
 
         var validationFailure = await TryGetFolderConflictFailureAsync(
                 userId: request.UserId,
                 parentNodeId: parentResult.ParentNode!.Id,
                 nameKey: nameKey,
-                layoutId: layoutId,
+                layoutId: parentResult.ParentNode.LayoutId,
                 ct)
             ?? TryGetOverwriteValidationFailure(existing, request.Overwrite);
 
@@ -198,12 +202,6 @@ public class WebDavPutFileRequestHandler(
         }
 
         return null;
-    }
-
-    private async Task<Guid> GetLayoutIdAsync(Guid userId)
-    {
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        return layout.Id;
     }
 
     private async Task<WebDavPutFileResult?> TryGetFolderConflictFailureAsync(

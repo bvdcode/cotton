@@ -56,7 +56,7 @@ public class WebDavMoveRequestHandler(
     public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
     {
         // First resolve: only used to compute the lock key. We re-resolve the
-        // source inside the lock to defeat the TOCTOU window — another request
+        // source inside the lock to defeat the TOCTOU window: another request
         // can move/delete/replace SourcePath between this read and the lock.
         var preLockSource = await ResolveSourceAsync(request, ct);
         var preLockFailure = TryGetSourceValidationFailure(request, preLockSource);
@@ -79,11 +79,23 @@ public class WebDavMoveRequestHandler(
             return sourceValidationFailure;
         }
 
+        if (await GetSourceLayoutIdAsync(sourceResult, ct) != sourceLayoutId)
+        {
+            _logger.LogDebug("WebDAV MOVE: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+            return Fail(WebDavMoveError.SourceNotFound);
+        }
+
         var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
         var destParentFailure = TryGetDestinationParentFailure(destParentResult);
         if (destParentFailure is not null)
         {
             return destParentFailure;
+        }
+
+        if (destParentResult.ParentNode!.LayoutId != sourceLayoutId)
+        {
+            _logger.LogDebug("WebDAV MOVE: Destination parent layout differs from locked source layout: {Path}", request.DestinationPath);
+            return Fail(WebDavMoveError.DestinationParentNotFound);
         }
 
         var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);

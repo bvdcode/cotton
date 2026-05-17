@@ -65,13 +65,20 @@ public class WebDavMkColRequestHandler(
         // Existence and cross-table conflict checks must happen INSIDE the lock,
         // otherwise a concurrent CreateFile/PUT with the same NameKey can land
         // a cross-table duplicate.
+        Guid lockedLayoutId = parentResult.ParentNode.LayoutId;
         await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await LayoutLocks.AcquireForLayoutAsync(_dbContext, parentResult.ParentNode.LayoutId, ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, lockedLayoutId, ct);
 
         parentResult = await _pathResolver.GetParentNodeAsync(request.UserId, request.Path, ct);
         if (!parentResult.Found || parentResult.ParentNode is null || parentResult.ResourceName is null)
         {
             _logger.LogDebug("WebDAV MKCOL: Parent not found for path after locking: {Path}", request.Path);
+            return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
+        }
+
+        if (parentResult.ParentNode.LayoutId != lockedLayoutId)
+        {
+            _logger.LogDebug("WebDAV MKCOL: Parent layout changed while waiting for lock: {Path}", request.Path);
             return new WebDavMkColResult(false, WebDavMkColError.ParentNotFound);
         }
 

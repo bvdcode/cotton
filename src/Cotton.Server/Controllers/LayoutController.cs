@@ -238,23 +238,37 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            var parentNode = await _dbContext.Nodes
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+            var preLockParentNode = await _dbContext.Nodes
                 .AsNoTracking()
-                .Where(x => x.Id == request.ParentId && x.OwnerId == userId)
+                .Where(x => x.Id == request.ParentId
+                    && x.OwnerId == userId
+                    && x.LayoutId == layout.Id
+                    && x.Type == NodeType.Default)
                 .SingleOrDefaultAsync();
-            if (parentNode == null)
+            if (preLockParentNode == null)
             {
                 return CottonResult.NotFound("Parent node not found.");
             }
 
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
             string nameKey = NameValidator.NormalizeAndGetNameKey(request.Name);
 
             // Per-layout namespace serialization: a concurrent move/rename/create with
             // the same NameKey under the same parent can otherwise commit a cross-table
             // duplicate (folder + file with identical normalized name).
             await using var tx = await _dbContext.Database.BeginTransactionAsync();
-            await LayoutLocks.AcquireForLayoutAsync(_dbContext, parentNode.LayoutId, default);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, layout.Id, default);
+
+            var parentNode = await _dbContext.Nodes
+                .Where(x => x.Id == request.ParentId
+                    && x.OwnerId == userId
+                    && x.LayoutId == layout.Id
+                    && x.Type == NodeType.Default)
+                .SingleOrDefaultAsync();
+            if (parentNode == null)
+            {
+                return CottonResult.NotFound("Parent node not found.");
+            }
 
             bool nodeExists = await _dbContext.Nodes
                 .AnyAsync(x =>

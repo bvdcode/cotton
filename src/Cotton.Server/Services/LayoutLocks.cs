@@ -12,10 +12,11 @@ namespace Cotton.Server.Services
     /// auto-released on COMMIT or ROLLBACK of the calling transaction.
     /// </summary>
     /// <remarks>
-    /// Used by move handlers to prevent (a) concurrent folder moves creating
-    /// parent cycles and (b) concurrent file/folder moves landing the same
-    /// NameKey under the same target. Caller is responsible for opening the
-    /// surrounding transaction and committing it.
+    /// Used by namespace writers (create, rename, move, WebDAV MKCOL/PUT/COPY/MOVE)
+    /// before they validate or create a NameKey under a layout. Pure deletes usually
+    /// do not need the lock because they only remove namespace entries; a delete flow
+    /// that also creates or reparents entries should take the relevant layout lock.
+    /// Caller is responsible for opening the surrounding transaction and committing it.
     /// </remarks>
     internal static class LayoutLocks
     {
@@ -34,7 +35,7 @@ namespace Cotton.Server.Services
         {
             // pg_advisory_xact_lock takes a bigint. Collapse the 16-byte Guid into
             // one deterministic int64 via XOR of its two halves. A spurious collision
-            // just means two unrelated layouts share the same lock — performance hit
+            // just means two unrelated layouts share the same lock: performance hit
             // only, never correctness.
             var bytes = layoutId.ToByteArray();
             long high = BitConverter.ToInt64(bytes, 0);
