@@ -1,94 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Typography, useMediaQuery } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { IFileListView, FileSystemTile } from "@shared/types/FileListViewTypes";
-import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
 import { NewFolderCard } from "./NewFolderCard";
 import { TileItem } from "./TileItem";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
-import {
-  isMoveDrag,
-  moveDragHasSourceParent,
-  moveDragHasItem,
-  writeMoveDragPayload,
-  readMoveDragPayload,
-  filterMoveItemsForTarget,
-} from "../../../../shared/hooks/useMoveOperations";
-import type { MoveClipboardItem } from "../../../../shared/store/moveClipboardStore";
-
-/**
- * Returns responsive tile min-width based on tile size.
- *
- * Adjusted for mobile:
- * - small:  80px (xs) / 112px (sm+) — visibly smaller on phone
- * - medium: 112px (xs) / 152px (sm+)
- * - large:  44% on xs (guarantees max 2 columns), 208px on sm+
- */
-const useTileLayout = (tileSize: "small" | "medium" | "large") => {
-  const theme = useTheme();
-  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-
-  return useMemo(() => {
-    if (isXs) {
-      switch (tileSize) {
-        case "small":
-          return { minWidth: "80px", gap: 6 };
-        case "medium":
-          return { minWidth: "112px", gap: 8 };
-        case "large":
-          return { minWidth: "44%", gap: 10 };
-      }
-    }
-
-    switch (tileSize) {
-      case "small":
-        return { minWidth: theme.spacing(14), gap: 8 };
-      case "medium":
-        return { minWidth: theme.spacing(19), gap: 12 };
-      case "large":
-        return { minWidth: theme.spacing(26), gap: 16 };
-    }
-  }, [tileSize, isXs, theme]);
-};
+import { useTileDragAndDrop } from "./hooks/useTileDragAndDrop";
+import { useTileGridLayout } from "./hooks/useTileGridLayout";
 
 const VIRTUALIZATION_THRESHOLD = 80;
 
-const DEFAULT_COLUMNS_FALLBACK = 2;
 const FOCUS_RETRY_LIMIT = 8;
 
 const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
-
-const tryParsePx = (value: string): number | null => {
-  const trimmed = value.trim();
-  if (!trimmed.endsWith("px")) return null;
-  const parsed = Number.parseFloat(trimmed.slice(0, -2));
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
-  let current: HTMLElement | null = element?.parentElement ?? null;
-
-  while (current) {
-    const style = window.getComputedStyle(current);
-    const overflowY = style.overflowY;
-    const overflow = style.overflow;
-
-    const isScrollable =
-      overflowY === "auto" ||
-      overflowY === "scroll" ||
-      overflow === "auto" ||
-      overflow === "scroll";
-
-    if (isScrollable) {
-      return current;
-    }
-
-    current = current.parentElement;
-  }
-
-  return null;
-};
 
 const isEditableTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false;
@@ -164,100 +89,19 @@ export const TilesView: React.FC<IFileListView> = ({
   onToggleItem,
   moveSupport,
 }) => {
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-
-  const tilesById = useMemo(() => {
-    const map = new Map<string, FileSystemTile>();
-    for (const tile of tiles) {
-      const tileId = tile.kind === "folder" ? tile.node.id : tile.file.id;
-      map.set(tileId, tile);
-    }
-    return map;
-  }, [tiles]);
-
-  const buildDragPayload = useCallback(
-    (sourceTileId: string): ReadonlyArray<MoveClipboardItem> | null => {
-      if (!moveSupport) return null;
-      const currentParentId = moveSupport.currentParentId;
-      if (!currentParentId) return null;
-
-      // Tiles are only `draggable` when `!selectionMode`, so dragging always
-      // moves the single tile under the pointer. Multi-select drag would need
-      // the `draggable` gate to change first.
-      const tile = tilesById.get(sourceTileId);
-      if (!tile) return null;
-      if (tile.kind === "folder") {
-        return [
-          {
-            id: tile.node.id,
-            kind: "folder",
-            sourceParentId: tile.node.parentId ?? currentParentId,
-          },
-        ];
-      }
-      return [
-        {
-          id: tile.file.id,
-          kind: "file",
-          sourceParentId: tile.file.nodeId ?? currentParentId,
-        },
-      ];
-    },
-    [moveSupport, tilesById],
-  );
-  const layout = useTileLayout(tileSize);
-  const theme = useTheme();
-  const isXs = useMediaQuery(theme.breakpoints.down("sm"));
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const { containerRef, scrollParent, columns, gapPx, gridStyles } =
+    useTileGridLayout(tileSize);
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const activeIndexRef = useRef<number | null>(null);
   const focusAnimationFrameRef = useRef<number | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
-  const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      setContainerWidth(entry.contentRect.width);
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    setScrollParent(findScrollableParent(el));
-  }, []);
-
-  const gridTemplateColumns = `repeat(auto-fill, minmax(${layout.minWidth}, 1fr))`;
-  const gapPx = layout.gap;
-
-  const gridStyles: React.CSSProperties = {
-    display: "grid",
-    gap: `${gapPx}px`,
-    gridTemplateColumns,
-  };
-
-  const columns = useMemo(() => {
-    if (tileSize === "large" && isXs && layout.minWidth.trim().endsWith("%")) {
-      return 2;
-    }
-
-    const minWidthPx = tryParsePx(layout.minWidth);
-    if (!minWidthPx || containerWidth <= 0) {
-      return DEFAULT_COLUMNS_FALLBACK;
-    }
-
-    const calculated = Math.floor((containerWidth + gapPx) / (minWidthPx + gapPx));
-    return Math.max(1, calculated);
-  }, [containerWidth, gapPx, isXs, layout.minWidth, tileSize]);
+  const {
+    cutItemIds,
+    dropTargetId,
+    handleMoveDragStart,
+    handleMoveDragOver,
+    handleMoveDragLeave,
+    handleMoveDrop,
+  } = useTileDragAndDrop({ tiles, moveSupport });
 
   const shouldVirtualize = tiles.length > VIRTUALIZATION_THRESHOLD;
 
@@ -371,7 +215,7 @@ export const TilesView: React.FC<IFileListView> = ({
       cancelPendingFocus();
       focusAnimationFrameRef.current = window.requestAnimationFrame(tryFocus);
     },
-    [cancelPendingFocus, columns, shouldVirtualize, tiles.length],
+    [cancelPendingFocus, columns, containerRef, shouldVirtualize, tiles.length],
   );
 
   const focusTileByIndex = useCallback(
@@ -399,7 +243,14 @@ export const TilesView: React.FC<IFileListView> = ({
 
     const indexToFocus = activeIndexRef.current ?? selectedIndex ?? 0;
     focusTileDom(indexToFocus);
-  }, [contentMarker, focusTileDom, loading, selectedIndex, tiles.length]);
+  }, [
+    containerRef,
+    contentMarker,
+    focusTileDom,
+    loading,
+    selectedIndex,
+    tiles.length,
+  ]);
 
   const resolveCurrentIndex = useCallback(
     (target: EventTarget | null): number | null => {
@@ -576,7 +427,7 @@ export const TilesView: React.FC<IFileListView> = ({
     return () => {
       window.removeEventListener("keydown", handleWindowKeyDown, true);
     };
-  }, [handleKeyboardEvent]);
+  }, [containerRef, handleKeyboardEvent]);
 
   const handleFocusCapture = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
     const tileIndex = getTileIndexFromTarget(event.target);
@@ -607,7 +458,7 @@ export const TilesView: React.FC<IFileListView> = ({
         tileButton?.focus({ preventScroll: true });
       }
     },
-    [],
+    [containerRef],
   );
 
   const handleKeyDownCapture = useCallback(
@@ -616,71 +467,6 @@ export const TilesView: React.FC<IFileListView> = ({
     },
     [handleKeyboardEvent],
   );
-
-  const handleMoveDragStart = useCallback(
-    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
-      if (!moveSupport) return;
-      const items = buildDragPayload(tileId);
-      if (!items || items.length === 0) {
-        event.preventDefault();
-        return;
-      }
-      writeMoveDragPayload(event.dataTransfer, { items });
-    },
-    [buildDragPayload, moveSupport],
-  );
-
-  const handleMoveDragOver = useCallback(
-    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
-      if (!moveSupport) return;
-      if (!isMoveDrag(event.dataTransfer)) return;
-
-      // Reject early: (a) folder cannot be a drop target for items already inside it,
-      // (b) a folder cannot be dropped onto itself. We bail without preventDefault
-      // so the drop slot is visibly rejected, not silently filtered after drop.
-      if (moveDragHasSourceParent(event.dataTransfer, tileId)) return;
-      if (moveDragHasItem(event.dataTransfer, tileId)) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.dataTransfer.dropEffect = "move";
-      if (dropTargetId !== tileId) {
-        setDropTargetId(tileId);
-      }
-    },
-    [dropTargetId, moveSupport],
-  );
-
-  const handleMoveDragLeave = useCallback(
-    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
-      if (!moveSupport) return;
-      const related = event.relatedTarget as Node | null;
-      if (related && event.currentTarget.contains(related)) return;
-      if (dropTargetId === tileId) {
-        setDropTargetId(null);
-      }
-    },
-    [dropTargetId, moveSupport],
-  );
-
-  const handleMoveDrop = useCallback(
-    (tileId: string, event: React.DragEvent<HTMLDivElement>) => {
-      if (!moveSupport) return;
-      if (!isMoveDrag(event.dataTransfer)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      setDropTargetId(null);
-
-      const payload = readMoveDragPayload(event.dataTransfer);
-      if (!payload) return;
-      const filtered = filterMoveItemsForTarget(payload.items, tileId);
-      if (filtered.length === 0) return;
-      moveSupport.onMove(filtered, tileId);
-    },
-    [moveSupport],
-  );
-
-  const cutItemIds = moveSupport?.cutItemIds;
 
   const renderTile = useCallback(
     (tile: FileSystemTile, index: number) => {
