@@ -224,7 +224,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
       <SearchResultRow
         row={row}
         isLast={index >= rows.length - 1}
-        failedPreviews={failedPreviews}
+        previewFailed={
+          row.kind === "file" ? failedPreviews.has(row.file.id) : false
+        }
         onPreviewError={handlePreviewError}
         onActivate={activateRow}
         onShareFile={handleShareRow}

@@ -3,6 +3,7 @@ import { MoreVert } from "@mui/icons-material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode, MouseEvent } from "react";
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -168,7 +169,7 @@ const HoverMarqueeText = ({
   );
 };
 
-export const FileSystemItemCard = ({
+const FileSystemItemCardImpl = ({
   icon,
   title,
   subtitle,
@@ -398,3 +399,5 @@ export const FileSystemItemCard = ({
     </Box>
   );
 };
+
+export const FileSystemItemCard = memo(FileSystemItemCardImpl);
