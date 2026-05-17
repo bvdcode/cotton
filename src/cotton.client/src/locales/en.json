@@ -428,7 +428,7 @@
     },
     "pwa": {
       "updateAvailable": "A new version is ready.",
-      "updateAction": "Update"
+      "updateAction": "Refresh"
     }
   },
   "audioPlayer": {
