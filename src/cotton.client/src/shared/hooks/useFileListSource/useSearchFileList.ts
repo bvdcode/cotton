@@ -124,5 +124,7 @@ export const useSearchFileList = ({
     error,
     tiles,
     totalCount,
+    isContentTransitioning: false,
+    hasContent: hasQuery && results !== null,
   };
 };

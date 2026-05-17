@@ -9,6 +9,17 @@ import { queryKeys } from "./queryKeys";
 
 const DEFAULT_RECENT_COUNT = 15;
 
+const requireLayoutId = (
+  layoutId: string | null | undefined,
+  queryName: string,
+): string => {
+  if (!layoutId) {
+    throw new Error(`${queryName} requires a layoutId`);
+  }
+
+  return layoutId;
+};
+
 export const useRootNodeQuery = () =>
   useQuery<NodeDto>({
     queryKey: queryKeys.layouts.root(),
@@ -18,7 +29,8 @@ export const useRootNodeQuery = () =>
 export const useLayoutStatsQuery = (layoutId: string | null | undefined) =>
   useQuery<LayoutStatsDto>({
     queryKey: queryKeys.layouts.stats(layoutId ?? ""),
-    queryFn: () => layoutsApi.getStats(layoutId as string),
+    queryFn: () =>
+      layoutsApi.getStats(requireLayoutId(layoutId, "useLayoutStatsQuery")),
     enabled: !!layoutId,
   });
 
@@ -28,7 +40,11 @@ export const useRecentFilesQuery = (
 ) =>
   useQuery<NodeFileManifestDto[]>({
     queryKey: queryKeys.layouts.recent(layoutId ?? "", count),
-    queryFn: () => layoutsApi.getRecentFiles(layoutId as string, count),
+    queryFn: () =>
+      layoutsApi.getRecentFiles(
+        requireLayoutId(layoutId, "useRecentFilesQuery"),
+        count,
+      ),
     enabled: !!layoutId,
   });
 

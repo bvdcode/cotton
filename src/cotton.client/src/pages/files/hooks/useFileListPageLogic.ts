@@ -65,8 +65,8 @@ export const useFileListSourceLogic = ({
     loading: source.loading,
     error: source.error,
     totalCount: source.totalCount,
-    isContentTransitioning: source.isContentTransitioning ?? false,
-    hasContent: source.hasContent ?? source.tiles.length > 0,
+    isContentTransitioning: source.isContentTransitioning,
+    hasContent: source.hasContent,
     sortedFiles,
     capabilities,
   };
