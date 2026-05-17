@@ -1,6 +1,9 @@
-import heic2any from "heic2any";
-
 const heicUrlCache = new Map<string, string>();
+
+const loadHeic2Any = async () => {
+  const module = await import("heic2any");
+  return module.default;
+};
 
 export const isHeicFile = (fileName: string): boolean => {
   return fileName.toLowerCase().endsWith(".heic");
@@ -25,6 +28,7 @@ export const convertHeicToJpeg = async (url: string): Promise<string> => {
 
   const response = await fetch(url);
   const blob = await response.blob();
+  const heic2any = await loadHeic2Any();
   const converted = await heic2any({ blob, toType: "image/jpeg", quality: 0.92 });
   const resultBlob = Array.isArray(converted) ? converted[0] : converted;
   const objectUrl = URL.createObjectURL(resultBlob);

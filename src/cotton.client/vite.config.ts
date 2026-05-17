@@ -60,8 +60,17 @@ export default defineConfig(({ mode }) => {
             }
 
             if (
+              modulePath.startsWith("react/") ||
+              modulePath.startsWith("react-dom/") ||
+              modulePath.startsWith("scheduler/")
+            ) {
+              return "vendor-react";
+            }
+
+            if (
               modulePath.startsWith("three/") ||
-              modulePath.startsWith("@react-three/")
+              modulePath.startsWith("@react-three/") ||
+              modulePath.startsWith("three-stdlib/")
             ) {
               return "vendor-three";
             }
@@ -96,6 +105,25 @@ export default defineConfig(({ mode }) => {
 
             if (modulePath.startsWith("@microsoft/signalr/")) {
               return "vendor-signalr";
+            }
+
+            if (
+              modulePath.startsWith("@uiw/react-md-editor/") ||
+              modulePath.startsWith("@uiw/react-markdown-preview/") ||
+              modulePath.startsWith("rehype-") ||
+              modulePath.startsWith("remark-") ||
+              modulePath.startsWith("refractor/") ||
+              modulePath.startsWith("unified/") ||
+              modulePath.startsWith("mdast-") ||
+              modulePath.startsWith("micromark") ||
+              modulePath.startsWith("parse5") ||
+              modulePath.startsWith("hast-") ||
+              modulePath.startsWith("property-information") ||
+              modulePath.startsWith("character-entities") ||
+              modulePath.startsWith("decode-named-character-reference") ||
+              modulePath.startsWith("entities/")
+            ) {
+              return "vendor-markdown";
             }
 
             return undefined;

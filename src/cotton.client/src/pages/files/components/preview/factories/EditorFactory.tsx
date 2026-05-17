@@ -6,11 +6,35 @@
  * Dependency Inversion: Depends on IEditorProps abstraction
  */
 
-import type { IEditorProps } from '../editors/types';
-import { EditorMode } from '../editors/types';
-import { PlainTextEditor } from '../editors/PlainTextEditor';
-import { MarkdownEditor } from '../editors/MarkdownEditor';
-import { CodeEditor } from '../editors/CodeEditor';
+import { lazy, Suspense } from "react";
+import { Box, CircularProgress } from "@mui/material";
+import type { IEditorProps } from "../editors/types";
+import { EditorMode } from "../editors/types";
+import { PlainTextEditor } from "../editors/PlainTextEditor";
+
+const MarkdownEditor = lazy(() =>
+  import("../editors/MarkdownEditor").then((module) => ({
+    default: module.MarkdownEditor,
+  })),
+);
+
+const CodeEditor = lazy(() =>
+  import("../editors/CodeEditor").then((module) => ({
+    default: module.CodeEditor,
+  })),
+);
+
+const EditorFallback: React.FC = () => (
+  <Box
+    alignItems="center"
+    display="flex"
+    height="100%"
+    justifyContent="center"
+    minHeight={120}
+  >
+    <CircularProgress size={20} />
+  </Box>
+);
 
 interface EditorFactoryProps extends IEditorProps {
   mode: EditorMode;
@@ -31,10 +55,18 @@ export const EditorFactory: React.FC<EditorFactoryProps> = ({
       return <PlainTextEditor {...editorProps} />;
     
     case EditorMode.Markdown:
-      return <MarkdownEditor {...editorProps} />;
+      return (
+        <Suspense fallback={<EditorFallback />}>
+          <MarkdownEditor {...editorProps} />
+        </Suspense>
+      );
     
     case EditorMode.Code:
-      return <CodeEditor {...editorProps} />;
+      return (
+        <Suspense fallback={<EditorFallback />}>
+          <CodeEditor {...editorProps} />
+        </Suspense>
+      );
     
     default:
       // Fallback to text editor for unknown modes
