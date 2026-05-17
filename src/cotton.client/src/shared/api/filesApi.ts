@@ -11,6 +11,7 @@ export interface CreateFileFromChunksRequest {
   contentType: string;
   hash: string | null;
   originalNodeFileId?: Guid | null;
+  metadata?: Record<string, string>;
 }
 
 export interface RenameFileRequest {

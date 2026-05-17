@@ -103,10 +103,23 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             Name = "hello.txt",
             ContentType = "text/plain",
             Hash = chunkHashLower,
-            NodeId = root!.Id
+            NodeId = root!.Id,
+            Metadata = new Dictionary<string, string>
+            {
+                ["isClientEncrypted"] = "true",
+                ["originalContentType"] = "text/plain"
+            }
         };
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
+
+        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        Assert.That(list, Is.Not.Null);
+        var file = list!.Files.SingleOrDefault(x => x.Name == "hello.txt");
+        Assert.That(file, Is.Not.Null);
+        Assert.That(file!.Metadata, Does.ContainKey("isClientEncrypted"));
+        Assert.That(file.Metadata["isClientEncrypted"], Is.EqualTo("true"));
+        Assert.That(file.Metadata["originalContentType"], Is.EqualTo("text/plain"));
     }
 
     [Test]

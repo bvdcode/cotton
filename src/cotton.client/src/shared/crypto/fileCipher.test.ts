@@ -1,0 +1,114 @@
+import { describe, expect, it } from "vitest";
+import {
+  decryptBlobToBlob,
+  ENCRYPTED_CONTENT_TYPE,
+  encryptFileToBlob,
+} from "./fileCipher";
+import { CorruptedContainerError, NotAContainerError } from "./errors";
+import { generateMasterKey } from "./keys";
+
+async function blobToBytes(blob: Blob): Promise<Uint8Array> {
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+function fillRandom(bytes: Uint8Array): void {
+  const maxBytesPerCall = 65_536;
+
+  for (let offset = 0; offset < bytes.length; offset += maxBytesPerCall) {
+    crypto.getRandomValues(
+      bytes.subarray(offset, Math.min(offset + maxBytesPerCall, bytes.length)),
+    );
+  }
+}
+
+describe("encryptFileToBlob / decryptBlobToBlob", () => {
+  it("round-trips a single-chunk blob", async () => {
+    const masterKey = await generateMasterKey();
+    const plaintext = new Uint8Array(1024);
+    crypto.getRandomValues(plaintext);
+    const source = new Blob([plaintext], { type: "text/plain" });
+
+    const encrypted = await encryptFileToBlob(source, masterKey, 4096);
+    const decrypted = await decryptBlobToBlob(encrypted, masterKey, "text/plain");
+
+    expect(encrypted.type).toBe(ENCRYPTED_CONTENT_TYPE);
+    expect(encrypted.size).toBeGreaterThan(plaintext.byteLength);
+    expect(decrypted.type).toBe("text/plain");
+    expect(Array.from(await blobToBytes(decrypted))).toEqual(Array.from(plaintext));
+  });
+
+  it("round-trips multi-chunk content", async () => {
+    const masterKey = await generateMasterKey();
+    const plaintext = new Uint8Array(70_000);
+    fillRandom(plaintext);
+
+    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 32_768);
+    const decrypted = await decryptBlobToBlob(encrypted, masterKey);
+
+    expect(Array.from(await blobToBytes(decrypted))).toEqual(Array.from(plaintext));
+  });
+
+  it("round-trips an empty blob", async () => {
+    const masterKey = await generateMasterKey();
+
+    const encrypted = await encryptFileToBlob(new Blob([]), masterKey, 4096);
+    const decrypted = await decryptBlobToBlob(encrypted, masterKey);
+
+    expect(decrypted.size).toBe(0);
+  });
+
+  it("rejects a non-container blob", async () => {
+    const masterKey = await generateMasterKey();
+
+    await expect(
+      decryptBlobToBlob(new Blob([new Uint8Array(16)]), masterKey),
+    ).rejects.toBeInstanceOf(NotAContainerError);
+  });
+
+  it("rejects tampered ciphertext", async () => {
+    const masterKey = await generateMasterKey();
+    const plaintext = new Uint8Array(32_000);
+    fillRandom(plaintext);
+    const encrypted = await encryptFileToBlob(new Blob([plaintext]), masterKey, 4096);
+    const bytes = await blobToBytes(encrypted);
+    bytes[bytes.length - 20] ^= 0x01;
+
+    await expect(
+      decryptBlobToBlob(new Blob([bytes as BlobPart]), masterKey),
+    ).rejects.toBeInstanceOf(CorruptedContainerError);
+  });
+
+  it("rejects truncation and trailing bytes", async () => {
+    const masterKey = await generateMasterKey();
+    const encrypted = await encryptFileToBlob(
+      new Blob([new Uint8Array([1, 2, 3, 4])]),
+      masterKey,
+      4096,
+    );
+    const bytes = await blobToBytes(encrypted);
+    const truncated = bytes.slice(0, bytes.length - 1);
+    const extended = new Uint8Array(bytes.length + 1);
+    extended.set(bytes);
+
+    await expect(
+      decryptBlobToBlob(new Blob([truncated as BlobPart]), masterKey),
+    ).rejects.toBeInstanceOf(CorruptedContainerError);
+    await expect(
+      decryptBlobToBlob(new Blob([extended as BlobPart]), masterKey),
+    ).rejects.toBeInstanceOf(CorruptedContainerError);
+  });
+
+  it("rejects decryption with a different master key", async () => {
+    const firstMasterKey = await generateMasterKey();
+    const secondMasterKey = await generateMasterKey();
+    const encrypted = await encryptFileToBlob(
+      new Blob([new Uint8Array([1, 2, 3])]),
+      firstMasterKey,
+      4096,
+    );
+
+    await expect(
+      decryptBlobToBlob(encrypted, secondMasterKey),
+    ).rejects.toBeInstanceOf(CorruptedContainerError);
+  });
+});

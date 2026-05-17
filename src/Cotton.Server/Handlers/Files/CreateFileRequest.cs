@@ -28,6 +28,7 @@ namespace Cotton.Server.Handlers.Files
         public string ContentType { get; set; } = null!;
         public string Hash { get; set; } = null!;
         public Guid? OriginalNodeFileId { get; set; }
+        public Dictionary<string, string>? Metadata { get; set; }
         public bool Validate { get; set; }
         public Guid UserId { get; set; }
     }
@@ -192,6 +193,7 @@ namespace Cotton.Server.Handlers.Files
                 Node = node,
                 OwnerId = request.UserId,
                 FileManifest = fileManifest,
+                Metadata = CopyMetadata(request.Metadata),
             };
             newNodeFile.SetName(request.Name);
 
@@ -221,7 +223,15 @@ namespace Cotton.Server.Handlers.Files
                 SizeBytes = fileManifest.SizeBytes,
                 UpdatedAt = fileManifest.UpdatedAt,
                 Id = fileManifest.Id,
+                Metadata = nodeFile.Metadata ?? [],
             };
+        }
+
+        private static Dictionary<string, string> CopyMetadata(Dictionary<string, string>? metadata)
+        {
+            return metadata is { Count: > 0 }
+                ? new Dictionary<string, string>(metadata)
+                : [];
         }
     }
 }
