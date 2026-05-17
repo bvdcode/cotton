@@ -2,6 +2,7 @@ import { filesApi } from "../api/filesApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import { decryptBlobToBlob } from "./fileCipher";
 import { applyDisplayMetaToFile } from "./displayMeta";
+import { assertClientEncryptionBlobPipelineSize } from "./limits";
 import { getOriginalContentType, isFileEncrypted } from "./metadataFlags";
 import { requireMasterKey } from "./vault";
 
@@ -27,6 +28,8 @@ export async function getReadableFileUrl(
       revoke: () => {},
     };
   }
+
+  assertClientEncryptionBlobPipelineSize(file.sizeBytes, "decrypt");
 
   const masterKey = requireMasterKey();
   const decoratedFile = await applyDisplayMetaToFile(file);

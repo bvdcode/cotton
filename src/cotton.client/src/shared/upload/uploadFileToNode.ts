@@ -6,6 +6,7 @@ import {
   ENCRYPTED_FLAG_KEY,
   encryptDisplayMeta,
   encryptFileToBlob,
+  assertClientEncryptionBlobPipelineSize,
   randomBytes,
   requireMasterKey,
 } from "../crypto";
@@ -33,6 +34,8 @@ export async function uploadFileToNode(options: {
   let metadata: Record<string, string> | undefined;
 
   if (options.encrypt) {
+    assertClientEncryptionBlobPipelineSize(file.size, "encrypt");
+
     const masterKey = requireMasterKey();
     const encryptedDisplayMeta = await encryptDisplayMeta({
       name: file.name,

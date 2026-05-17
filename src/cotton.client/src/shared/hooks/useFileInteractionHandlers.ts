@@ -10,10 +10,12 @@ import { useMediaLightbox } from "./useMediaLightbox";
 import { useFilePreview } from "./useFilePreview";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import {
+  ClientEncryptionSizeLimitError,
   downloadReadableFile,
   isFileEncrypted,
   NoKeyError,
 } from "../crypto";
+import { formatBytes } from "../utils/formatBytes";
 
 interface UseFileInteractionHandlersArgs {
   sortedFiles: NodeFileManifestDto[];
@@ -71,6 +73,15 @@ export const useFileInteractionHandlers = ({
       } catch (error) {
         if (error instanceof NoKeyError) {
           toast.error(t("common:clientEncryption.vaultLockedForDownload"));
+          return;
+        }
+
+        if (error instanceof ClientEncryptionSizeLimitError) {
+          toast.error(
+            t("common:clientEncryption.fileTooLargeForDownload", {
+              maxSize: formatBytes(error.maxBytes),
+            }),
+          );
           return;
         }
 

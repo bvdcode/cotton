@@ -481,7 +481,8 @@
     "clientEncryption": {
       "folderPolicyEnabledHint": "Эта папка шифрует новые загрузки на вашем устройстве.",
       "fileEncryptedHint": "Этот файл зашифрован на вашем устройстве.",
-      "vaultLockedForDownload": "Разблокируйте клиентское шифрование в профиле, чтобы скачать этот файл."
+      "vaultLockedForDownload": "Разблокируйте клиентское шифрование в профиле, чтобы скачать этот файл.",
+      "fileTooLargeForDownload": "Этот зашифрованный файл слишком большой для текущей загрузки через браузер. Лимит: {{maxSize}}."
     }
   },
   "audioPlayer": {
@@ -1387,7 +1388,8 @@
     "errors": {
       "serverSettingsNotLoaded": "Настройки сервера не загружены",
       "uploadFailed": "Загрузка не удалась",
-      "encryptionVaultLocked": "Крипто-хранилище заблокировано"
+      "encryptionVaultLocked": "Крипто-хранилище заблокировано",
+      "clientEncryptionFileTooLarge": "Этот файл слишком большой для текущей зашифрованной загрузки. Лимит: {{maxSize}}."
     },
     "titleWithTotal": "Загрузки ({{total}})",
     "titleWithProgress": "Загрузки ({{completed}} / {{total}} • {{speed}}/с)",

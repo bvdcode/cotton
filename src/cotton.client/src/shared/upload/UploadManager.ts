@@ -1,13 +1,14 @@
 import type { Guid } from "../api/layoutsApi";
 import { refreshNodeContent } from "../store/nodesActions";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
-import { NoKeyError } from "../crypto";
+import { ClientEncryptionSizeLimitError, NoKeyError } from "../crypto";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
 import { uploadFileToNode } from "./uploadFileToNode";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
 import type { UploadServerParams } from "./types";
+import { formatBytes } from "../utils/formatBytes";
 
 export type UploadTaskStatus =
   | "queued"
@@ -27,6 +28,7 @@ export interface UploadTask {
   status: UploadTaskStatus;
   error?: string;
   errorKey?: string;
+  errorParams?: Record<string, string | number>;
   uploadSpeedBytesPerSec?: number;
   completedAt?: number;
 }
@@ -415,9 +417,16 @@ export class UploadManager {
         task.status = "failed";
         task.completedAt = Date.now();
         task.error = e instanceof Error ? e.message : undefined;
-        task.errorKey = e instanceof NoKeyError
-          ? "encryptionVaultLocked"
-          : "uploadFailed";
+        if (e instanceof NoKeyError) {
+          task.errorKey = "encryptionVaultLocked";
+          task.errorParams = undefined;
+        } else if (e instanceof ClientEncryptionSizeLimitError) {
+          task.errorKey = "clientEncryptionFileTooLarge";
+          task.errorParams = { maxSize: formatBytes(e.maxBytes) };
+        } else {
+          task.errorKey = "uploadFailed";
+          task.errorParams = undefined;
+        }
         this.fileConcurrency.observe({
           bytes: task.bytesTotal,
           durationMs: task.completedAt - (task._startedAt ?? task.completedAt),

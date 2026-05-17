@@ -25,6 +25,7 @@ import {
   unwrapFileKey,
   wrapFileKey,
 } from "./keys";
+import { assertClientEncryptionBlobPipelineSize } from "./limits";
 
 export const ENCRYPTED_FLAG_KEY = "isClientEncrypted";
 export const ORIGINAL_CONTENT_TYPE_KEY = "originalContentType";
@@ -37,6 +38,7 @@ export async function encryptFileToBlob(
   masterKey: CryptoKey,
   chunkSize: number = DEFAULT_CHUNK_SIZE,
 ): Promise<Blob> {
+  assertClientEncryptionBlobPipelineSize(plaintext.size, "encrypt");
   assertCompatibleChunkSize(chunkSize);
 
   const fileKey = await generateFileKey();
@@ -94,6 +96,8 @@ export async function decryptBlobToBlob(
   masterKey: CryptoKey,
   resultContentType: string = ENCRYPTED_CONTENT_TYPE,
 ): Promise<Blob> {
+  assertClientEncryptionBlobPipelineSize(encrypted.size, "decrypt");
+
   const headerProbe = await readBlobSlice(
     encrypted,
     0,

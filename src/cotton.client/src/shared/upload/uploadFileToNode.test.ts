@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { filesApi } from "../api/filesApi";
 import {
+  CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
+  ClientEncryptionSizeLimitError,
   decryptDisplayMeta,
   DISPLAY_META_KEY,
   ENCRYPTED_CONTENT_TYPE,
@@ -112,5 +114,27 @@ describe("uploadFileToNode", () => {
     });
 
     expect(uploadBlobToChunksMock.mock.calls[0]?.[0].blob).not.toBe(file);
+  });
+
+  it("rejects oversized encrypted uploads before reading or uploading bytes", async () => {
+    const file = new File(["x"], "huge.bin", {
+      type: "application/octet-stream",
+    });
+    Object.defineProperty(file, "size", {
+      configurable: true,
+      value: CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES + 1,
+    });
+
+    await expect(
+      uploadFileToNode({
+        file,
+        nodeId: "node-1",
+        server: { maxChunkSizeBytes: 1024, supportedHashAlgorithm: "sha256" },
+        encrypt: true,
+      }),
+    ).rejects.toBeInstanceOf(ClientEncryptionSizeLimitError);
+
+    expect(uploadBlobToChunksMock).not.toHaveBeenCalled();
+    expect(createFromChunksMock).not.toHaveBeenCalled();
   });
 });

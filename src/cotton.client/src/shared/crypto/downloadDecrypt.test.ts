@@ -6,8 +6,9 @@ import {
   ORIGINAL_CONTENT_TYPE_KEY,
   encryptFileToBlob,
 } from "./fileCipher";
-import { NoKeyError } from "./errors";
+import { ClientEncryptionSizeLimitError, NoKeyError } from "./errors";
 import { generateMasterKey } from "./keys";
+import { CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES } from "./limits";
 import { downloadReadableFile, getReadableFileUrl } from "./downloadDecrypt";
 import { DISPLAY_META_KEY, encryptDisplayMeta } from "./displayMeta";
 import { useVault } from "./vault";
@@ -96,6 +97,20 @@ describe("downloadDecrypt", () => {
     });
 
     await expect(getReadableFileUrl(file)).rejects.toBeInstanceOf(NoKeyError);
+
+    expect(getDownloadLinkMock).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized encrypted downloads before fetching ciphertext", async () => {
+    const file = createFile({
+      sizeBytes: CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES + 1,
+      metadata: { [ENCRYPTED_FLAG_KEY]: "true" },
+    });
+
+    await expect(getReadableFileUrl(file)).rejects.toBeInstanceOf(
+      ClientEncryptionSizeLimitError,
+    );
 
     expect(getDownloadLinkMock).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();

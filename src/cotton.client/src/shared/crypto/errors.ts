@@ -10,6 +10,27 @@ export class InvalidCryptoInputError extends CryptoError {}
 
 export class NoKeyError extends CryptoError {}
 
+export type ClientEncryptionBlobOperation = "encrypt" | "decrypt";
+
+export class ClientEncryptionSizeLimitError extends CryptoError {
+  public readonly operation: ClientEncryptionBlobOperation;
+  public readonly sizeBytes: number;
+  public readonly maxBytes: number;
+
+  constructor(
+    operation: ClientEncryptionBlobOperation,
+    sizeBytes: number,
+    maxBytes: number,
+  ) {
+    super(
+      `Client-side encrypted ${operation} is limited to ${maxBytes} bytes until streaming support is available.`,
+    );
+    this.operation = operation;
+    this.sizeBytes = sizeBytes;
+    this.maxBytes = maxBytes;
+  }
+}
+
 export class UnsupportedVersionError extends CryptoError {}
 
 export class NotAContainerError extends CryptoError {}

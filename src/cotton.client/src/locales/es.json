@@ -492,7 +492,8 @@
     "clientEncryption": {
       "folderPolicyEnabledHint": "Esta carpeta cifra nuevas subidas en tu dispositivo.",
       "fileEncryptedHint": "Este archivo está cifrado en tu dispositivo.",
-      "vaultLockedForDownload": "Desbloquea el cifrado del lado del cliente en tu perfil para descargar este archivo."
+      "vaultLockedForDownload": "Desbloquea el cifrado del lado del cliente en tu perfil para descargar este archivo.",
+      "fileTooLargeForDownload": "Este archivo cifrado es demasiado grande para la descarga actual en el navegador. Límite: {{maxSize}}."
     }
   },
   "audioPlayer": {
@@ -1375,7 +1376,8 @@
     "errors": {
       "serverSettingsNotLoaded": "Los ajustes del servidor no se han cargado",
       "uploadFailed": "La subida falló",
-      "encryptionVaultLocked": "La bóveda de cifrado está bloqueada"
+      "encryptionVaultLocked": "La bóveda de cifrado está bloqueada",
+      "clientEncryptionFileTooLarge": "Este archivo es demasiado grande para las subidas cifradas actuales. Límite: {{maxSize}}."
     },
     "titleWithTotal": "Subidas ({{total}})",
     "titleWithProgress": "Subidas ({{completed}} / {{total}} • {{speed}}/s)",

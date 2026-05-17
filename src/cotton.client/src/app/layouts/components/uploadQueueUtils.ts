@@ -45,6 +45,7 @@ export type UploadTask = {
   uploadSpeedBytesPerSec?: number | null;
   error?: string;
   errorKey?: string;
+  errorParams?: Record<string, string | number>;
   completedAt?: number;
 };
 

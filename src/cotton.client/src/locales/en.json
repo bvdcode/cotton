@@ -433,7 +433,8 @@
     "clientEncryption": {
       "folderPolicyEnabledHint": "This folder encrypts new uploads on your device.",
       "fileEncryptedHint": "This file is encrypted on your device.",
-      "vaultLockedForDownload": "Unlock client-side encryption in your profile to download this file."
+      "vaultLockedForDownload": "Unlock client-side encryption in your profile to download this file.",
+      "fileTooLargeForDownload": "This encrypted file is too large for the current browser download pipeline. Limit: {{maxSize}}."
     }
   },
   "audioPlayer": {
@@ -1353,7 +1354,8 @@
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
       "uploadFailed": "Upload failed",
-      "encryptionVaultLocked": "Encryption vault is locked"
+      "encryptionVaultLocked": "Encryption vault is locked",
+      "clientEncryptionFileTooLarge": "This file is too large for current encrypted uploads. Limit: {{maxSize}}."
     },
     "titleWithTotal": "Uploads ({{total}})",
     "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",

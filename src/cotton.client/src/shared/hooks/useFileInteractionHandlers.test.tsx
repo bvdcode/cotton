@@ -1,6 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NodeFileManifestDto } from "../api/nodesApi";
+import {
+  CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
+  ClientEncryptionSizeLimitError,
+} from "../crypto";
 import { ENCRYPTED_FLAG_KEY } from "../crypto/fileCipher";
 import { NoKeyError } from "../crypto/errors";
 import { useFileInteractionHandlers } from "./useFileInteractionHandlers";
@@ -203,6 +207,32 @@ describe("useFileInteractionHandlers", () => {
 
     expect(mocks.toastError).toHaveBeenCalledWith(
       "common:clientEncryption.vaultLockedForDownload",
+    );
+  });
+
+  it("shows a targeted size message for oversized encrypted downloads", async () => {
+    const encryptedFile = createFile({
+      id: "encrypted-file",
+      name: "huge.bin",
+      metadata: { [ENCRYPTED_FLAG_KEY]: "true" },
+    });
+    mocks.downloadReadableFile.mockRejectedValueOnce(
+      new ClientEncryptionSizeLimitError(
+        "decrypt",
+        CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES + 1,
+        CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES,
+      ),
+    );
+    const { result } = renderHook(() =>
+      useFileInteractionHandlers({
+        sortedFiles: [encryptedFile],
+      }),
+    );
+
+    await result.current.handleDownloadFile("encrypted-file", "huge.bin");
+
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "common:clientEncryption.fileTooLargeForDownload",
     );
   });
 });
