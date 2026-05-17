@@ -37,7 +37,7 @@ namespace Cotton.Server.Handlers.Server
                 throw new BadRequestException("Invalid bucket value. Supported values: 'hour', 'day'.");
             }
 
-            TimeZoneInfo effectiveTimeZone = ResolveTimelineTimeZone(request.TimezoneId);
+            TimeZoneInfo effectiveTimeZone = ResolveTimelineTimeZone(request.TimezoneId, _settings);
 
             DateTime now = DateTime.UtcNow;
             DateTime rangeStartUtc = (request.FromUtc ?? now).ToUniversalTime();
@@ -234,7 +234,7 @@ namespace Cotton.Server.Handlers.Server
             };
         }
 
-        private static TimeZoneInfo ResolveTimelineTimeZone(string? timezoneId)
+        private static TimeZoneInfo ResolveTimelineTimeZone(string? timezoneId, SettingsProvider settings)
         {
             if (!string.IsNullOrWhiteSpace(timezoneId)
                 && TimeZoneInfo.TryFindSystemTimeZoneById(timezoneId.Trim(), out TimeZoneInfo? headerTimeZone))
@@ -242,7 +242,7 @@ namespace Cotton.Server.Handlers.Server
                 return headerTimeZone;
             }
 
-            return TimeZoneInfo.Local;
+            return settings.GetServerSettings().GetTimezoneInfo();
         }
     }
 }
