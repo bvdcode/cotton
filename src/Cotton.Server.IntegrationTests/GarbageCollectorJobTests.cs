@@ -167,6 +167,55 @@ public class GarbageCollectorJobTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task RunOnce_DeletesScheduledOrphansAcrossInnerBatches()
+    {
+        DateTime now = DateTime.UtcNow;
+        var storage = new InMemoryStorage();
+        var keyProvider = new DatabaseBackupKeyProvider(new CottonEncryptionSettings
+        {
+            MasterEncryptionKey = "test-master-key"
+        });
+        byte[][] hashes = Enumerable
+            .Range(0, 505)
+            .Select(i => Hash($"scheduled-orphan-{i}"))
+            .ToArray();
+
+        await WriteStorageObjectsAsync(storage, hashes);
+        DbContext.Chunks.AddRange(hashes.Select(hash => CreateChunk(hash, now.AddMinutes(-1))));
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        var usage = CreateChunkUsageService(DbContext, storage, keyProvider, latestBackup: null);
+        var settingsProvider = new SettingsProvider(DbContext);
+        using var services = new ServiceCollection()
+            .AddSingleton(settingsProvider)
+            .BuildServiceProvider();
+        var job = new GarbageCollectorJob(
+            new PerfTracker(services.GetRequiredService<IServiceScopeFactory>()),
+            storage,
+            DbContext,
+            usage,
+            settingsProvider,
+            NullLogger<GarbageCollectorJob>.Instance);
+
+        await job.RunOnceAsync(now, hashes.Length);
+        DbContext.ChangeTracker.Clear();
+
+        int remainingChunks = await DbContext.Chunks.CountAsync();
+        bool anyStorageObjectLeft = false;
+        foreach (byte[] hash in hashes)
+        {
+            anyStorageObjectLeft |= await storage.ExistsAsync(Hasher.ToHexStringHash(hash));
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(remainingChunks, Is.Zero);
+            Assert.That(anyStorageObjectLeft, Is.False);
+        });
+    }
+
+    [Test]
     public async Task StorageConsistency_DoesNotRegisterProtectedBackupStorageKeys()
     {
         var storage = new InMemoryStorage();

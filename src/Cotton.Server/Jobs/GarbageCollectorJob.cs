@@ -1,4 +1,5 @@
 ﻿using Cotton.Database;
+using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
@@ -24,6 +25,10 @@ namespace Cotton.Server.Jobs
         private const int ManifestBatchSize = 1000;
         private const int MinChunkBatchSize = 1000;
         private const int MaxChunkBatchSize = 100000;
+        private const int DeleteInnerBatchSize = 500;
+        private const int ScheduleInnerBatchSize = 2000;
+        private const int StorageDeleteConcurrency = 8;
+        private static readonly TimeSpan ProgressLogInterval = TimeSpan.FromSeconds(15);
         private static readonly ConcurrentDictionary<string, byte> CurrentlyDeletingChunks = new(comparer: StringComparer.OrdinalIgnoreCase);
 
         public static bool IsChunkBeingDeleted(string uid) => CurrentlyDeletingChunks.ContainsKey(uid);
@@ -145,88 +150,90 @@ namespace Cotton.Server.Jobs
                 _ => now.AddDays(ChunkGcDelayDays),
             };
 
-            int scheduledCount = 0;
-            int scannedCount = 0;
-            var orphanedChunksQuery = _chunkUsage
-                .WhereUnreferencedByDatabase(_dbContext.Chunks)
-                .Where(c => c.GCScheduledAfter == null)
-                .OrderBy(c => c.Hash);
+            int totalScheduled = 0;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var lastProgressLogAt = TimeSpan.Zero;
 
-            while (scheduledCount < batchSize)
+            while (totalScheduled < batchSize)
             {
-                var orphanedChunks = await orphanedChunksQuery
-                    .Skip(scannedCount)
-                    .Take(batchSize)
+                int take = Math.Min(batchSize - totalScheduled, ScheduleInnerBatchSize);
+
+                IQueryable<Chunk> baseQuery = _chunkUsage.WhereUnreferencedByDatabase(_dbContext.Chunks);
+                IQueryable<Chunk> filteredQuery = _chunkUsage.WhereNotProtectedByStorageKeys(baseQuery, protectedStorageKeys);
+
+                var candidateHashes = await filteredQuery
+                    .AsNoTracking()
+                    .Where(c => c.GCScheduledAfter == null)
+                    .OrderBy(c => c.Hash)
+                    .Take(take)
+                    .Select(c => c.Hash)
                     .ToListAsync(ct);
 
-                if (orphanedChunks.Count == 0)
+                if (candidateHashes.Count == 0)
                 {
                     break;
                 }
 
-                scannedCount += orphanedChunks.Count;
-                foreach (var chunk in orphanedChunks)
+                int updated = await _dbContext.Chunks
+                    .Where(c => candidateHashes.Contains(c.Hash) && c.GCScheduledAfter == null)
+                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, deleteAfter), ct);
+
+                totalScheduled += updated;
+
+                if (stopwatch.Elapsed - lastProgressLogAt >= ProgressLogInterval && totalScheduled < batchSize)
                 {
-                    string uid = Hasher.ToHexStringHash(chunk.Hash);
-                    if (protectedStorageKeys.Contains(uid))
-                    {
-                        continue;
-                    }
-
-                    chunk.GCScheduledAfter = deleteAfter;
-                    scheduledCount++;
-
-                    if (scheduledCount == batchSize)
-                    {
-                        break;
-                    }
+                    _logger.LogInformation(
+                        "Garbage collection scheduling progress: {Scheduled} orphaned chunks scheduled so far.",
+                        totalScheduled);
+                    lastProgressLogAt = stopwatch.Elapsed;
                 }
 
-                if (orphanedChunks.Count < batchSize)
+                if (candidateHashes.Count < take)
                 {
                     break;
                 }
             }
 
-            if (scheduledCount > 0)
+            if (totalScheduled != 0)
             {
-                await _dbContext.SaveChangesAsync(ct);
-            }
-
-            if (scheduledCount != 0)
-            {
-                _logger.LogInformation("Scheduled {Count} orphaned chunks for garbage collection.", scheduledCount);
+                _logger.LogInformation("Scheduled {Count} orphaned chunks for garbage collection.", totalScheduled);
             }
         }
 
         private async Task DeleteScheduledChunksAsync(DateTime now, int batchSize, HashSet<string> protectedStorageKeys, CancellationToken ct)
         {
-            var chunksToDelete = await _chunkUsage
+            var hashesToDelete = await _chunkUsage
                 .WhereUnreferencedByDatabase(_dbContext.Chunks)
                 .Where(c => c.GCScheduledAfter != null
                     && c.GCScheduledAfter <= now)
                 .OrderBy(c => c.Hash)
                 .Take(batchSize)
+                .AsNoTracking()
+                .Select(c => c.Hash)
                 .ToListAsync(ct);
 
-            if (chunksToDelete.Count == 0)
+            if (hashesToDelete.Count == 0)
             {
                 return;
             }
 
+            List<byte[]> reservedHashes = new(hashesToDelete.Count);
             HashSet<string> deletingNow = new(StringComparer.OrdinalIgnoreCase);
-            foreach (var chunkToDelete in chunksToDelete)
+            List<byte[]> protectedHashesToClear = [];
+
+            foreach (byte[] hash in hashesToDelete)
             {
-                string uid = Hasher.ToHexStringHash(chunkToDelete.Hash);
+                string uid = Hasher.ToHexStringHash(hash);
                 if (protectedStorageKeys.Contains(uid))
                 {
-                    await _chunkUsage.ClearGcScheduleAsync(chunkToDelete.Hash, ct);
+                    protectedHashesToClear.Add(hash);
                     continue;
                 }
 
                 if (CurrentlyDeletingChunks.TryAdd(uid, 0))
                 {
                     deletingNow.Add(uid);
+                    reservedHashes.Add(hash);
                 }
                 else
                 {
@@ -234,60 +241,55 @@ namespace Cotton.Server.Jobs
                 }
             }
 
-            if (deletingNow.Count == 0)
+            if (protectedHashesToClear.Count > 0)
+            {
+                await _dbContext.Chunks
+                    .Where(c => protectedHashesToClear.Contains(c.Hash) && c.GCScheduledAfter != null)
+                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
+            }
+
+            if (reservedHashes.Count == 0)
             {
                 return;
             }
 
             int deletedChunksCounter = 0;
+            int processedCounter = 0;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var lastProgressLogAt = TimeSpan.Zero;
+
             try
             {
-                _logger.LogInformation("{Count} chunks scheduled for deletion.", deletingNow.Count);
+                _logger.LogInformation("{Count} chunks scheduled for deletion.", reservedHashes.Count);
                 await Task.Delay(5_000, ct);
 
-                foreach (var chunk in chunksToDelete)
+                for (int i = 0; i < reservedHashes.Count; i += DeleteInnerBatchSize)
                 {
-                    string uid = Hasher.ToHexStringHash(chunk.Hash);
-                    if (!deletingNow.Contains(uid) || protectedStorageKeys.Contains(uid))
-                    {
-                        continue;
-                    }
+                    int end = Math.Min(i + DeleteInnerBatchSize, reservedHashes.Count);
+                    List<byte[]> batchHashes = reservedHashes.GetRange(i, end - i);
 
                     try
                     {
-                        if (!await IsStillEligibleForDeletionAsync(chunk.Hash, now, protectedStorageKeys, ct))
-                        {
-                            continue;
-                        }
-
-                        await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
-                        try
-                        {
-                            await _dbContext.ChunkOwnerships
-                                .Where(o => o.ChunkHash == chunk.Hash)
-                                .ExecuteDeleteAsync(ct);
-
-                            _dbContext.Chunks.Remove(chunk);
-                            await _dbContext.SaveChangesAsync(ct);
-                            await transaction.CommitAsync(ct);
-                        }
-                        catch
-                        {
-                            await transaction.RollbackAsync(ct);
-                            throw;
-                        }
-
-                        deletedChunksCounter++;
-
-                        bool deleted = await _storage.DeleteAsync(uid);
-                        if (!deleted)
-                        {
-                            _logger.LogDebug("Chunk {ChunkId} storage delete returned false.", uid);
-                        }
+                        int deletedInBatch = await DeleteEligibleBatchAsync(batchHashes, now, protectedStorageKeys, ct);
+                        deletedChunksCounter += deletedInBatch;
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to delete scheduled chunk {ChunkId}.", uid);
+                        _logger.LogWarning(ex, "Failed to delete batch of {Count} scheduled chunks.", batchHashes.Count);
+                    }
+
+                    processedCounter = end;
+
+                    if (stopwatch.Elapsed - lastProgressLogAt >= ProgressLogInterval && processedCounter < reservedHashes.Count)
+                    {
+                        double rate = processedCounter / Math.Max(1.0, stopwatch.Elapsed.TotalSeconds);
+                        _logger.LogInformation(
+                            "Garbage collection progress: {Processed}/{Total} chunks, {Deleted} deleted ({Rate:F0}/s).",
+                            processedCounter,
+                            reservedHashes.Count,
+                            deletedChunksCounter,
+                            rate);
+                        lastProgressLogAt = stopwatch.Elapsed;
                     }
                 }
             }
@@ -299,31 +301,112 @@ namespace Cotton.Server.Jobs
                 }
             }
 
-            _logger.LogInformation("Garbage collection completed - {Count} chunks deleted.", deletedChunksCounter);
+            _logger.LogInformation(
+                "Garbage collection completed - {Count} chunks deleted in {Elapsed}.",
+                deletedChunksCounter,
+                stopwatch.Elapsed);
         }
 
-        private async Task<bool> IsStillEligibleForDeletionAsync(byte[] chunkHash, DateTime now, HashSet<string> protectedStorageKeys, CancellationToken ct)
+        private async Task<int> DeleteEligibleBatchAsync(
+            List<byte[]> batchHashes,
+            DateTime now,
+            HashSet<string> protectedStorageKeys,
+            CancellationToken ct)
         {
-            var current = await _dbContext.Chunks
+            var stillScheduledHashes = await _dbContext.Chunks
                 .AsNoTracking()
-                .Where(c => c.Hash == chunkHash)
-                .Select(c => new { c.GCScheduledAfter })
-                .SingleOrDefaultAsync(ct);
-            if (current == null || current.GCScheduledAfter == null || current.GCScheduledAfter > now)
+                .Where(c => batchHashes.Contains(c.Hash))
+                .Where(c => c.GCScheduledAfter != null && c.GCScheduledAfter <= now)
+                .Select(c => c.Hash)
+                .ToListAsync(ct);
+
+            if (stillScheduledHashes.Count == 0)
             {
-                return false;
+                return 0;
             }
 
-            string uid = Hasher.ToHexStringHash(chunkHash);
-            bool stillOrphaned = !await _chunkUsage.HasDatabaseReferencesAsync(chunkHash, ct)
-                && !protectedStorageKeys.Contains(uid);
-            if (!stillOrphaned)
+            var nowReferencedHashes = await _chunkUsage
+                .WhereReferencedByDatabase(_dbContext.Chunks)
+                .AsNoTracking()
+                .Where(c => stillScheduledHashes.Contains(c.Hash))
+                .Select(c => c.Hash)
+                .ToListAsync(ct);
+
+            if (nowReferencedHashes.Count > 0)
             {
-                await _chunkUsage.ClearGcScheduleAsync(chunkHash, ct);
-                return false;
+                await _dbContext.Chunks
+                    .Where(c => nowReferencedHashes.Contains(c.Hash) && c.GCScheduledAfter != null)
+                    .ExecuteUpdateAsync(c => c.SetProperty(x => x.GCScheduledAfter, (DateTime?)null), ct);
             }
 
-            return true;
+            HashSet<string> referencedUids = nowReferencedHashes
+                .Select(Hasher.ToHexStringHash)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            List<byte[]> eligibleHashes = [];
+            foreach (byte[] hash in stillScheduledHashes)
+            {
+                string uid = Hasher.ToHexStringHash(hash);
+                if (referencedUids.Contains(uid) || protectedStorageKeys.Contains(uid))
+                {
+                    continue;
+                }
+
+                eligibleHashes.Add(hash);
+            }
+
+            if (eligibleHashes.Count == 0)
+            {
+                return 0;
+            }
+
+            int dbDeleted;
+            await using (var transaction = await _dbContext.Database.BeginTransactionAsync(ct))
+            {
+                try
+                {
+                    await _dbContext.ChunkOwnerships
+                        .Where(o => eligibleHashes.Contains(o.ChunkHash))
+                        .ExecuteDeleteAsync(ct);
+
+                    dbDeleted = await _dbContext.Chunks
+                        .Where(c => eligibleHashes.Contains(c.Hash))
+                        .ExecuteDeleteAsync(ct);
+
+                    await transaction.CommitAsync(ct);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(ct);
+                    throw;
+                }
+            }
+
+            await Parallel.ForEachAsync(
+                eligibleHashes,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = StorageDeleteConcurrency,
+                    CancellationToken = ct,
+                },
+                async (hash, _) =>
+                {
+                    string uid = Hasher.ToHexStringHash(hash);
+                    try
+                    {
+                        bool deleted = await _storage.DeleteAsync(uid);
+                        if (!deleted)
+                        {
+                            _logger.LogDebug("Chunk {ChunkId} storage delete returned false.", uid);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to delete chunk {ChunkId} from storage.", uid);
+                    }
+                });
+
+            return dbDeleted;
         }
     }
 }
