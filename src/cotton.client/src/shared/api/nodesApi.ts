@@ -1,6 +1,12 @@
-import { httpClient } from "./httpClient";
+import { getValidated, httpClient, parseValidated } from "./httpClient";
 import type { BaseDto, Guid, NodeDto } from "./layoutsApi";
 import { readRequiredIntHeader, type HeaderMap } from "./utils/headerUtils";
+import {
+  nodeContentSchema,
+  nodeDtoSchema,
+  restoreOutcomeSchema,
+} from "./schemas/node";
+import { z } from "zod";
 
 export interface NodeFileManifestDto extends BaseDto {
   /**
@@ -61,24 +67,23 @@ export interface RestoreOptions {
   overwrite?: boolean;
 }
 
+const nodeListSchema = z.array(nodeDtoSchema);
+
 export const nodesApi = {
-  getNode: async (nodeId: Guid): Promise<NodeDto> => {
-    const response = await httpClient.get<NodeDto>(`/layouts/nodes/${nodeId}`);
-    return response.data;
-  },
+  getNode: (nodeId: Guid): Promise<NodeDto> =>
+    getValidated(`/layouts/nodes/${nodeId}`, nodeDtoSchema),
 
   getAncestors: async (
     nodeId: Guid,
     options?: { nodeType?: string },
-  ): Promise<NodeDto[]> => {
-    const response = await httpClient.get<NodeDto[]>(
+  ): Promise<NodeDto[]> =>
+    getValidated(
       `/layouts/nodes/${nodeId}/ancestors`,
+      nodeListSchema,
       {
         params: options?.nodeType ? { nodeType: options.nodeType } : undefined,
       },
-    );
-    return response.data;
-  },
+    ),
 
   getChildren: async (
     nodeId: Guid,
@@ -86,25 +91,25 @@ export const nodesApi = {
   ): Promise<NodeResponse> => {
     const requestedPage = options?.page ?? 1;
     const requestedPageSize = options?.pageSize ?? 1000000;
-    const response = await httpClient.get<NodeContentDto>(
-      `/layouts/nodes/${nodeId}/children`,
-      {
-        params: {
-          page: requestedPage,
-          pageSize: requestedPageSize,
-          nodeType: options?.nodeType,
-          depth: options?.depth,
-        },
+    const url = `/layouts/nodes/${nodeId}/children`;
+    const response = await httpClient.get<unknown>(url, {
+      params: {
+        page: requestedPage,
+        pageSize: requestedPageSize,
+        nodeType: options?.nodeType,
+        depth: options?.depth,
       },
-    );
+    });
+    const content = parseValidated(url, response.data, nodeContentSchema);
     const totalCount = readRequiredIntHeader(response.headers as HeaderMap, "x-total-count");
 
-    return { content: response.data, totalCount };
+    return { content, totalCount };
   },
 
   createNode: async (request: CreateNodeRequest): Promise<NodeDto> => {
-    const response = await httpClient.put<NodeDto>("layouts/nodes", request);
-    return response.data;
+    const url = "layouts/nodes";
+    const response = await httpClient.put<unknown>(url, request);
+    return parseValidated(url, response.data, nodeDtoSchema);
   },
 
   deleteNode: async (nodeId: Guid, skipTrash = false): Promise<void> => {
@@ -117,35 +122,29 @@ export const nodesApi = {
     nodeId: Guid,
     request: RenameNodeRequest,
   ): Promise<NodeDto> => {
-    const response = await httpClient.patch<NodeDto>(
-      `/layouts/nodes/${nodeId}/rename`,
-      request,
-    );
-    return response.data;
+    const url = `/layouts/nodes/${nodeId}/rename`;
+    const response = await httpClient.patch<unknown>(url, request);
+    return parseValidated(url, response.data, nodeDtoSchema);
   },
 
   moveNode: async (
     nodeId: Guid,
     request: MoveNodeRequest,
   ): Promise<NodeDto> => {
-    const response = await httpClient.patch<NodeDto>(
-      `/layouts/nodes/${nodeId}/move`,
-      request,
-    );
-    return response.data;
+    const url = `/layouts/nodes/${nodeId}/move`;
+    const response = await httpClient.patch<unknown>(url, request);
+    return parseValidated(url, response.data, nodeDtoSchema);
   },
 
   restoreNode: async (
     nodeId: Guid,
     options: RestoreOptions = {},
   ): Promise<RestoreOutcomeDto> => {
-    const response = await httpClient.post<RestoreOutcomeDto>(
-      `/layouts/nodes/${nodeId}/restore`,
-      {
-        createMissingParents: options.createMissingParents ?? false,
-        overwrite: options.overwrite ?? false,
-      },
-    );
-    return response.data;
+    const url = `/layouts/nodes/${nodeId}/restore`;
+    const response = await httpClient.post<unknown>(url, {
+      createMissingParents: options.createMissingParents ?? false,
+      overwrite: options.overwrite ?? false,
+    });
+    return parseValidated(url, response.data, restoreOutcomeSchema);
   },
 };
