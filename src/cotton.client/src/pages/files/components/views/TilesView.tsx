@@ -4,7 +4,8 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { IFileListView, FileSystemTile } from "@shared/types/FileListViewTypes";
 import { useTheme } from "@mui/material/styles";
 import Loader from "../../../../shared/ui/Loader";
-import { TileItem, NewFolderCard } from "./TileItem";
+import { NewFolderCard } from "./NewFolderCard";
+import { TileItem } from "./TileItem";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   isMoveDrag,
