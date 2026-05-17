@@ -99,8 +99,29 @@ public class WebDavPutFileRequestHandler(
             contentType: contentType,
             ct);
 
+        // Per-layout namespace serialization for the final insert/update phase.
+        // Streaming and manifest dedup happened above — they are long-running and
+        // not namespace-sensitive (manifest dedup is by content hash, not NameKey).
+        // Re-check the cross-table folder conflict inside the lock in case a
+        // concurrent CreateNode / MoveNode / MKCOL landed a same-NameKey folder
+        // since our pre-check.
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, target.Parent.ParentNode!.LayoutId, ct);
+
+        var lockedFolderConflict = await TryGetFolderConflictFailureAsync(
+            userId: request.UserId,
+            parentNodeId: target.Parent.ParentNode.Id,
+            nameKey: target.NameKey,
+            layoutId: target.Parent.ParentNode.LayoutId,
+            ct);
+        if (lockedFolderConflict != null)
+        {
+            return lockedFolderConflict;
+        }
+
         await UpsertNodeFileAsync(request, target, fileManifest.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         var resultNodeFile = await LoadResultNodeFileAsync(request, target, ct);
         await NotifyPutCompletedAsync(request, created: target.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
