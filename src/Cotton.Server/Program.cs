@@ -62,6 +62,8 @@ namespace Cotton.Server
                 .AddScoped<INotificationsProvider, CottonNotifications>()
                 .AddScoped<IGeoLookupService, GeoLookupService>()
                 .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
+                .AddScoped<NodeSubtreeService>()
+                .AddScoped<TrashRestoreCoordinator>()
                 .AddScoped<IStorageProcessor, CryptoProcessor>()
                 .AddScoped<IStorageProcessor, CompressionProcessor>()
                 .AddScoped<IStoragePipeline, FileStoragePipeline>()

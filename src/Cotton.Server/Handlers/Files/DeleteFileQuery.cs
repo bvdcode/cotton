@@ -1,11 +1,13 @@
 ﻿using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Services;
 using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cotton.Server.Handlers.Files
 {
@@ -19,6 +21,7 @@ namespace Cotton.Server.Handlers.Files
     public class DeleteFileQueryHandler(
         CottonDbContext _dbContext,
         ILayoutService _layouts,
+        ILayoutNavigator _navigator,
         ILogger<DeleteFileQueryHandler> _logger)
             : IRequestHandler<DeleteFileQuery>
     {
@@ -52,27 +55,52 @@ namespace Cotton.Server.Handlers.Files
 
         private async Task MoveToTrashAsync(DeleteFileQuery command, NodeFile nodeFile, CancellationToken ct)
         {
+            await using IDbContextTransaction? tx = _dbContext.Database.CurrentTransaction is null
+                ? await _dbContext.Database.BeginTransactionAsync(ct)
+                : null;
+
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, nodeFile.Node.LayoutId, ct);
+
+            nodeFile = await _dbContext.NodeFiles
+                    .Include(x => x.Node)
+                    .Include(x => x.DownloadTokens)
+                    .Where(x => x.Id == command.NodeFileId && x.OwnerId == command.UserId)
+                    .SingleOrDefaultAsync(ct)
+                ?? throw new EntityNotFoundException(nameof(FileManifest));
+
             if (nodeFile.Node.Type != NodeType.Default)
             {
                 throw new EntityNotFoundException(nameof(FileManifest));
             }
+
+            string? originalParentPath = await _navigator.GetNodePathFromRootAsync(
+                command.UserId,
+                nodeFile.NodeId,
+                NodeType.Default,
+                ct);
+            if (originalParentPath is not null)
+            {
+                nodeFile.Metadata = TrashRestoreCoordinator.SetOriginalParentPath(
+                    nodeFile.Metadata,
+                    originalParentPath);
+            }
+
             var trashItem = await _layouts.CreateTrashItemAsync(command.UserId);
             nodeFile.NodeId = trashItem.Id;
             foreach (var share in nodeFile.DownloadTokens)
             {
-                if (!share.ExpiresAt.HasValue)
+                if (!share.ExpiresAt.HasValue || share.ExpiresAt.Value > DateTime.UtcNow)
                 {
                     share.ExpiresAt = DateTime.UtcNow;
                 }
-                else
-                {
-                    if (share.ExpiresAt.Value > DateTime.UtcNow)
-                    {
-                        share.ExpiresAt = DateTime.UtcNow;
-                    }
-                }
             }
+
             await _dbContext.SaveChangesAsync(ct);
+            if (tx is not null)
+            {
+                await tx.CommitAsync(ct);
+            }
+
             _logger.LogInformation("User {UserId} deleted file {NodeFileId} to trash.",
                 command.UserId, command.NodeFileId);
         }

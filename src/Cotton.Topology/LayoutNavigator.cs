@@ -56,6 +56,46 @@ public sealed class LayoutNavigator(
         return currentNode;
     }
 
+    public async Task<string?> GetNodePathFromRootAsync(Guid userId, Guid nodeId, NodeType nodeType, CancellationToken ct = default)
+    {
+        const int maxDepth = 256;
+
+        var current = await _dbContext.Nodes
+            .AsNoTracking()
+            .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == nodeType)
+            .Select(x => new { x.Id, x.ParentId, x.Name })
+            .SingleOrDefaultAsync(ct);
+        if (current is null)
+        {
+            return null;
+        }
+
+        var parts = new Stack<string>();
+        var visited = new HashSet<Guid>();
+        var depth = 0;
+
+        while (current.ParentId.HasValue)
+        {
+            if (!visited.Add(current.Id) || depth++ >= maxDepth)
+            {
+                return null;
+            }
+
+            parts.Push(current.Name);
+            current = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.Id == current.ParentId.Value && x.OwnerId == userId && x.Type == nodeType)
+                .Select(x => new { x.Id, x.ParentId, x.Name })
+                .SingleOrDefaultAsync(ct);
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return string.Join(Constants.DefaultPathSeparator, parts);
+    }
+
     public async Task<(Node Parent, string ResourceName)?> ResolveParentAndNameAsync(Guid userId, string path, NodeType nodeType, CancellationToken ct = default)
     {
         var cleanPath = (path ?? string.Empty).Replace('\\', Constants.DefaultPathSeparator).Trim(Constants.DefaultPathSeparator);

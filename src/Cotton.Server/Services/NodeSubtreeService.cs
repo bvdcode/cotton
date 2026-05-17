@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Vadim Belov <https://belov.us>
+
+using Cotton.Database;
+using Cotton.Database.Models.Enums;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cotton.Server.Services;
+
+public class NodeSubtreeService(CottonDbContext _dbContext)
+{
+    public async Task<HashSet<Guid>> CollectSubtreeIdsAsync(Guid userId, Guid rootId, CancellationToken ct)
+    {
+        var visited = new HashSet<Guid> { rootId };
+        var frontier = new List<Guid> { rootId };
+
+        while (frontier.Count > 0)
+        {
+            var batch = frontier.ToArray();
+            frontier.Clear();
+
+            var children = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.OwnerId == userId
+                    && x.ParentId != null
+                    && batch.Contains(x.ParentId.Value))
+                .Select(x => x.Id)
+                .ToListAsync(ct);
+
+            foreach (var childId in children)
+            {
+                if (visited.Add(childId))
+                {
+                    frontier.Add(childId);
+                }
+            }
+        }
+
+        return visited;
+    }
+
+    public async Task SetSubtreeTypeAsync(Guid userId, Guid rootId, NodeType newType, CancellationToken ct)
+    {
+        var ids = (await CollectSubtreeIdsAsync(userId, rootId, ct)).ToArray();
+        await _dbContext.Nodes
+            .Where(x => x.OwnerId == userId && ids.Contains(x.Id))
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.Type, newType), ct);
+    }
+}
