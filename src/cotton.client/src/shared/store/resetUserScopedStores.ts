@@ -1,13 +1,14 @@
 import { useLayoutsStore } from "./layoutsStore";
 import { useMoveClipboardStore } from "./moveClipboardStore";
 import { useNodesStore } from "./nodesStore";
-import { useNotificationsStore } from "./notificationsStore";
 import { useSettingsStore } from "./settingsStore";
 import { useTrashStore } from "./trashStore";
 import { useAudioPlayerStore } from "./audioPlayerStore";
 import { useUserPreferencesStore } from "./userPreferencesStore";
 import { useSetupStatusStore } from "./setupStatusStore";
 import { LANGUAGE_STORAGE_KEY } from "../config/storageKeys";
+import { clearNotificationCaches } from "../api/queries/notifications";
+import { queryClient } from "../api/queries/queryClient";
 
 const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
   try {
@@ -50,7 +51,7 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
 
   // Non-persisted but user-scoped stores
   useTrashStore.getState().reset();
-  useNotificationsStore.getState().reset();
+  clearNotificationCaches(queryClient);
   useSettingsStore.getState().reset();
   useUserPreferencesStore.getState().reset();
   useAudioPlayerStore.getState().reset();
