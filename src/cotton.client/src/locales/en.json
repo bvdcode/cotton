@@ -429,6 +429,10 @@
     "pwa": {
       "updateAvailable": "A new version is ready.",
       "updateAction": "Refresh"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "This folder encrypts new uploads on your device.",
+      "fileEncryptedHint": "This file is encrypted on your device."
     }
   },
   "audioPlayer": {

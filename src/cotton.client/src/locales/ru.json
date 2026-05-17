@@ -477,6 +477,10 @@
     "pwa": {
       "updateAvailable": "Доступна новая версия.",
       "updateAction": "Обновить страницу"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "Эта папка шифрует новые загрузки на вашем устройстве.",
+      "fileEncryptedHint": "Этот файл зашифрован на вашем устройстве."
     }
   },
   "audioPlayer": {

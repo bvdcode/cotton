@@ -58,6 +58,7 @@ export const ListView: React.FC<IFileListView> = ({
           name: tile.node.name,
           location: tile.path ?? null,
           sizeBytes: null,
+          metadata: tile.node.metadata,
           tile,
         };
       }
@@ -71,6 +72,7 @@ export const ListView: React.FC<IFileListView> = ({
         containerNodeId: tile.file.nodeId ?? null,
         sizeBytes: tile.file.sizeBytes,
         contentType: tile.file.contentType ?? null,
+        metadata: "metadata" in tile.file ? tile.file.metadata : undefined,
         requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
         tile,
       };
@@ -294,6 +296,8 @@ export const ListView: React.FC<IFileListView> = ({
           download: t("common:actions.download"),
           share: t("common:actions.share"),
           cut: t("move.cut"),
+          encryptedFile: t("common:clientEncryption.fileEncryptedHint"),
+          encryptedFolder: t("common:clientEncryption.folderPolicyEnabledHint"),
         },
         newFolderName,
         onNewFolderNameChange,

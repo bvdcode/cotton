@@ -488,6 +488,10 @@
     "pwa": {
       "updateAvailable": "Hay una nueva versión lista.",
       "updateAction": "Actualizar página"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "Esta carpeta cifra nuevas subidas en tu dispositivo.",
+      "fileEncryptedHint": "Este archivo está cifrado en tu dispositivo."
     }
   },
   "audioPlayer": {

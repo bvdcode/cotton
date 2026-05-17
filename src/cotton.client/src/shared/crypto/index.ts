@@ -6,5 +6,6 @@ export * from "./envelopeStorage";
 export * from "./errors";
 export * from "./fileCipher";
 export * from "./keys";
+export * from "./metadataFlags";
 export * from "./recoveryKey";
 export * from "./vault";

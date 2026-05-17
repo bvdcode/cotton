@@ -5,6 +5,7 @@ import {
   Delete,
   Download,
   Edit,
+  LockOutlined,
   Restore,
   Share,
 } from "@mui/icons-material";
@@ -22,6 +23,7 @@ import type {
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { BlurredPreviewImage } from "./BlurredPreviewImage";
+import { isFileEncrypted } from "../../../../shared/crypto";
 
 interface TileItemProps {
   tile: FileSystemTile;
@@ -319,11 +321,25 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       fileOperations.onClick(tile.file.id, tile.file.name, tile.file.sizeBytes);
     };
 
+    const fileEncrypted = isFileEncrypted(
+      "metadata" in tile.file ? tile.file.metadata : undefined,
+    );
+
     const fileContent = (
       <RenamableItemCard
         variant="squareTile"
         icon={icon}
         title={tile.file.name}
+        titleAdornment={
+          fileEncrypted ? (
+            <LockOutlined
+              fontSize="small"
+              titleAccess={t("clientEncryption.fileEncryptedHint", {
+                ns: "common",
+              })}
+            />
+          ) : undefined
+        }
         subtitle={formatBytes(tile.file.sizeBytes)}
         onClick={fileClick}
         iconContainerSx={iconContainerSx}

@@ -9,6 +9,7 @@ import {
   Folder,
   Image as ImageIcon,
   InsertDriveFile,
+  LockOutlined,
   TextSnippet,
   VideoFile,
   Share,
@@ -23,6 +24,10 @@ import {
   isVideoFile,
 } from "@shared/utils/fileTypes";
 import { InlineRenameField } from "../InlineRenameField";
+import {
+  isFileEncrypted,
+  isFolderEncryptionPolicyEnabled,
+} from "../../../../shared/crypto";
 
 export interface FileListRow {
   id: string;
@@ -33,6 +38,7 @@ export interface FileListRow {
   containerNodeId?: string | null;
   sizeBytes: number | null;
   contentType?: string | null;
+  metadata?: Record<string, string>;
   requiresVideoTranscoding?: boolean;
   tile?: {
     kind: "folder" | "file";
@@ -59,6 +65,8 @@ interface ColumnOptions {
     download: string;
     share: string;
     cut: string;
+    encryptedFile: string;
+    encryptedFolder: string;
   };
   newFolderName: string;
   onNewFolderNameChange: (value: string) => void;
@@ -244,15 +252,31 @@ export const createNameColumn = (
       );
     }
 
+    const encryptionTitle =
+      row.type === "file" && isFileEncrypted(row.metadata)
+        ? options.labels.encryptedFile
+        : row.type === "folder" &&
+            isFolderEncryptionPolicyEnabled(row.metadata)
+          ? options.labels.encryptedFolder
+          : null;
+
     return (
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
+          gap: 0.5,
           height: "100%",
           width: "100%",
         }}
       >
+        {encryptionTitle && (
+          <LockOutlined
+            fontSize="small"
+            titleAccess={encryptionTitle}
+            sx={{ color: "text.secondary", flexShrink: 0 }}
+          />
+        )}
         <Typography
           variant="body2"
           noWrap

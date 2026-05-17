@@ -21,6 +21,7 @@ export interface FileSystemItemCardAction {
 export interface FileSystemItemCardProps {
   icon: ReactNode;
   title: string;
+  titleAdornment?: ReactNode;
   subtitle?: string;
   onClick?: (event?: React.SyntheticEvent) => void;
   actions?: FileSystemItemCardAction[];
@@ -172,6 +173,7 @@ const HoverMarqueeText = ({
 const FileSystemItemCardImpl = ({
   icon,
   title,
+  titleAdornment,
   subtitle,
   onClick,
   actions,
@@ -292,6 +294,18 @@ const FileSystemItemCardImpl = ({
             gap: 0.5,
           }}
         >
+          {titleAdornment && (
+            <Box
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                flexShrink: 0,
+                color: "text.secondary",
+              }}
+            >
+              {titleAdornment}
+            </Box>
+          )}
           <Typography
             component="div"
             variant="body2"
