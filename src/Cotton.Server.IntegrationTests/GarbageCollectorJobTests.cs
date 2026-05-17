@@ -15,6 +15,7 @@ using EasyExtensions.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using System.Reflection;
@@ -127,8 +128,11 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         var backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash));
         var usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
         var settingsProvider = new SettingsProvider(DbContext);
+        using var services = new ServiceCollection()
+            .AddSingleton(settingsProvider)
+            .BuildServiceProvider();
         var job = new GarbageCollectorJob(
-            new PerfTracker(settingsProvider),
+            new PerfTracker(services.GetRequiredService<IServiceScopeFactory>()),
             storage,
             DbContext,
             usage,

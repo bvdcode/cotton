@@ -30,6 +30,13 @@ namespace Cotton.Server
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions();
+            if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())
+            {
+                builder.Logging.ClearProviders();
+                builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+                builder.Logging.AddConsole();
+                builder.Logging.AddDebug();
+            }
             MapsterConfig.Register();
             builder.Services
                 .AddExceptionHandler()
