@@ -213,7 +213,15 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       items: ReadonlyArray<MoveClipboardItem>,
       targetParentId: string,
     ): Promise<MoveOutcome> => {
-      const candidates = filterMoveItemsForTarget(items, targetParentId);
+      // Only filter the truly impossible case (a folder dropped on itself).
+      // Do NOT filter by item.sourceParentId === target — that field is
+      // captured at cut-time and goes stale if another window/client moves
+      // the entity in the meantime; a paste back into the original folder
+      // would then be silently skipped on the client even though the server
+      // could perform a valid move. Visual drop-target rejection still uses
+      // the stricter `filterMoveItemsForTarget` in TilesView/ListView.
+      const target = normalizeDragId(targetParentId);
+      const candidates = items.filter((item) => normalizeDragId(item.id) !== target);
       if (candidates.length === 0) {
         return { succeeded: [], failed: [], lastErrorMessage: null };
       }
