@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => ({
   updateFileMetadata: vi.fn(),
   refreshNodeContent: vi.fn(() => Promise.resolve()),
   encryptDisplayMeta: vi.fn(async () => "encrypted-display-meta"),
+  applyDisplayMetaToFile: vi.fn(async (file: unknown) => ({
+    ...(file as object),
+    name: "new-name.png",
+    contentType: "image/png",
+  })),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -28,6 +33,7 @@ vi.mock("../../../shared/api/filesApi", () => ({
 vi.mock("../../../shared/crypto", () => ({
   DISPLAY_META_KEY: "en",
   ENCRYPTED_CONTENT_TYPE: "application/octet-stream",
+  applyDisplayMetaToFile: mocks.applyDisplayMetaToFile,
   encryptDisplayMeta: mocks.encryptDisplayMeta,
   getOriginalContentType: (metadata: Record<string, string> | undefined) =>
     metadata?.originalContentType,
@@ -89,6 +95,23 @@ describe("useFileOperations", () => {
   });
 
   it("renames encrypted files by updating encrypted display metadata", async () => {
+    const updatedServerFile = {
+      id: "file-1",
+      nodeId: "node-1",
+      ownerId: "owner-1",
+      name: "opaque-server-name",
+      contentType: "application/vnd.cotton.encrypted",
+      sizeBytes: 12,
+      metadata: {
+        isClientEncrypted: "true",
+        en: "encrypted-display-meta",
+      },
+      requiresVideoTranscoding: false,
+      previewHashEncryptedHex: null,
+      createdAt: "2026-05-17T00:00:00Z",
+      updatedAt: "2026-05-17T00:00:01Z",
+    };
+    mocks.updateFileMetadata.mockResolvedValue(updatedServerFile);
     useNodesStore.setState({
       currentNode,
       contentByNodeId: {
@@ -111,6 +134,19 @@ describe("useFileOperations", () => {
     });
     expect(mocks.updateFileMetadata).toHaveBeenCalledWith("file-1", {
       en: "encrypted-display-meta",
+    });
+    expect(mocks.applyDisplayMetaToFile).toHaveBeenCalledWith(
+      updatedServerFile,
+    );
+    expect(
+      useNodesStore.getState().contentByNodeId["node-1"]?.files[0],
+    ).toMatchObject({
+      name: "new-name.png",
+      contentType: "image/png",
+      metadata: {
+        isClientEncrypted: "true",
+        en: "encrypted-display-meta",
+      },
     });
     expect(mocks.renameFile).not.toHaveBeenCalled();
     expect(mocks.refreshNodeContent).toHaveBeenCalledWith("node-1");

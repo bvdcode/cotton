@@ -3,6 +3,7 @@ import { filesApi } from "../../../shared/api/filesApi";
 import {
   DISPLAY_META_KEY,
   ENCRYPTED_CONTENT_TYPE,
+  applyDisplayMetaToFile,
   encryptDisplayMeta,
   getOriginalContentType,
   isFileEncrypted,
@@ -16,6 +17,7 @@ export const useFileOperations = (onFilesChanged?: () => void) => {
   const {
     currentNode,
     contentByNodeId,
+    updateFileInCache,
     optimisticRenameFile,
     optimisticDeleteFile,
   } = useNodesStore();
@@ -49,9 +51,12 @@ export const useFileOperations = (onFilesChanged?: () => void) => {
             contentType,
           });
 
-          await filesApi.updateFileMetadata(fileId, {
+          const updated = await filesApi.updateFileMetadata(fileId, {
             [DISPLAY_META_KEY]: encryptedDisplayMeta,
           });
+          if (parentId) {
+            updateFileInCache(parentId, await applyDisplayMetaToFile(updated));
+          }
         } else {
           await filesApi.renameFile(fileId, { name: newName });
         }

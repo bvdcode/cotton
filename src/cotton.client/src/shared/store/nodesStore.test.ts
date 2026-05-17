@@ -180,6 +180,37 @@ describe("optimisticRenameFile", () => {
   });
 });
 
+describe("updateFileInCache", () => {
+  it("replaces the matching cached file with the full server snapshot", () => {
+    seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
+    const updated = {
+      ...makeFile("f1", "new.txt"),
+      metadata: { en: "new-display-meta" },
+      contentType: "image/png",
+    };
+
+    useNodesStore.getState().updateFileInCache("parent-1", updated);
+
+    expect(
+      useNodesStore.getState().contentByNodeId["parent-1"]?.files[0],
+    ).toEqual(updated);
+  });
+
+  it("keeps cache unchanged for missing parents or files", () => {
+    seedParent("parent-1", [], [makeFile("f1", "old.txt")]);
+    const before = useNodesStore.getState().contentByNodeId;
+
+    useNodesStore
+      .getState()
+      .updateFileInCache("parent-1", makeFile("missing", "missing.txt"));
+    useNodesStore
+      .getState()
+      .updateFileInCache("nowhere", makeFile("f1", "new.txt"));
+
+    expect(useNodesStore.getState().contentByNodeId).toBe(before);
+  });
+});
+
 describe("optimisticSetFilePreviewHash", () => {
   it("updates only the matching file", () => {
     seedParent("parent-1", [], [

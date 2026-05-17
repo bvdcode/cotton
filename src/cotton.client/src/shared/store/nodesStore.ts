@@ -21,6 +21,10 @@ type NodesState = {
   lastUpdatedByNodeId: Record<string, number | undefined>;
   updateNode: (updated: NodeDto) => void;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
+  updateFileInCache: (
+    parentNodeId: string,
+    file: NodeContentDto["files"][number],
+  ) => void;
   optimisticRenameFile: (parentNodeId: string, fileId: string, newName: string) => void;
   optimisticSetFilePreviewHash: (
     parentNodeId: string,
@@ -183,6 +187,29 @@ export const useNodesStore = create<NodesState>()(
               [parentNodeId]: {
                 ...existing,
                 nodes: [...existing.nodes, folder],
+              },
+            },
+          };
+        });
+      },
+
+      updateFileInCache: (parentNodeId, file) => {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return {};
+
+          const current = existing.files.find((item) => item.id === file.id);
+          if (!current) return {};
+          if (current === file) return {};
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                files: existing.files.map((item) =>
+                  item.id === file.id ? file : item,
+                ),
               },
             },
           };
