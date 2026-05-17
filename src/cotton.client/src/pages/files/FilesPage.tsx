@@ -100,14 +100,11 @@ export const FilesPage: React.FC = () => {
 
   const {
     childrenTotalCount,
-    listError,
-    listContent,
     handleFolderChanged,
     reloadCurrentNode,
     optimisticUpdateCurrentNodeFilePreviewHash,
   } = useFilesData({
     nodeId,
-    layoutType,
     loadNode,
     refreshNodeContent,
   });
@@ -145,13 +142,11 @@ export const FilesPage: React.FC = () => {
     [ancestors, currentNode],
   );
 
-  const effectiveContent =
-    layoutType === InterfaceLayoutType.List ? (listContent ?? content) : content;
+  const effectiveContent = content;
 
   const fileListSource = useFolderFileList({
     nodeId,
     layoutType,
-    listContent,
     deferContent: true,
   });
 
@@ -429,7 +424,7 @@ export const FilesPage: React.FC = () => {
       tileSize: tilesSize,
       loading:
         layoutType === InterfaceLayoutType.List
-          ? !listContent && !listError
+          ? !content && !error
           : (!content && !error) || isContentTransitioning,
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
@@ -466,8 +461,6 @@ export const FilesPage: React.FC = () => {
       isContentTransitioning,
       isCreatingInThisFolder,
       layoutType,
-      listContent,
-      listError,
       moveSupport,
       t,
       tiles,
@@ -513,9 +506,9 @@ export const FilesPage: React.FC = () => {
         <PageHeader
           {...pageHeaderProps}
         />
-        {(error || listError) && (
+        {error && (
           <Box mb={1} px={1}>
-            <Alert severity="error">{error ?? listError}</Alert>
+            <Alert severity="error">{error}</Alert>
           </Box>
         )}
 
