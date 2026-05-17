@@ -55,6 +55,9 @@ namespace Cotton.Server
             });
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services
+                .AddOptions<HlsSegmentCacheOptions>()
+                .Bind(builder.Configuration.GetSection("HlsSegmentCache"));
+            builder.Services
                 .AddMediator()
                 .AddQuartzJobs()
                 .AddMemoryCache()
@@ -69,6 +72,8 @@ namespace Cotton.Server
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<ChunkUsageService>()
+                .AddScoped<VideoTranscoder>()
+                .AddSingleton<HlsSegmentCache>()
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
