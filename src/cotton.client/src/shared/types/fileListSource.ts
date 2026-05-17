@@ -6,6 +6,7 @@ export interface FileListSource {
   tiles: FileSystemTile[];
   totalCount?: number;
   refresh?: () => void | Promise<void>;
+  isContentTransitioning?: boolean;
 }
 
 export interface FileListPagination {

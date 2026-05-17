@@ -10,8 +10,8 @@ import { FileListViewFactory } from "../files/components";
 import { MediaLightbox } from "../files/components";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
 import { useFileOperations } from "../files/hooks/useFileOperations";
-import { useFileInteractionHandlers } from "../files/hooks/useFileInteractionHandlers";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
+import { useFileListPageLogic } from "../files/hooks/useFileListPageLogic";
 import {
   buildFolderOperations,
   buildFileOperations,
@@ -65,15 +65,19 @@ export const SearchPage: React.FC = () => {
     [navigate],
   );
 
-  const sortedFiles = useMemo(() => {
-    if (!results) return [];
-    const files = results.files ?? [];
-    const sorted = files.slice();
-    sorted.sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { numeric: true }),
-    );
-    return sorted;
-  }, [results]);
+  const fileListSource = useSearchFileList({
+    results,
+    loading,
+    error: error ?? null,
+    totalCount,
+    hasQuery: !!query.trim(),
+    rootNodeName: rootNode?.name,
+  });
+
+  const fileListLogic = useFileListPageLogic({
+    source: fileListSource,
+    sourceKind: "search",
+  });
 
   const {
     previewState,
@@ -88,20 +92,9 @@ export const SearchPage: React.FC = () => {
     getDownloadUrl,
     handleMediaClick,
     setLightboxOpen,
-  } = useFileInteractionHandlers({
-    sortedFiles,
-  });
+  } = fileListLogic.interaction;
 
-  const fileListSource = useSearchFileList({
-    results,
-    loading,
-    error: error ?? null,
-    totalCount,
-    hasQuery: !!query.trim(),
-    rootNodeName: rootNode?.name,
-  });
-
-  const tiles = fileListSource.tiles;
+  const { tiles } = fileListLogic;
 
   const rawFolderOps = useFolderOperations(null);
   const rawFileOps = useFileOperations();
