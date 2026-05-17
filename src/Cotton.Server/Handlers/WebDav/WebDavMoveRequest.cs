@@ -55,11 +55,34 @@ public class WebDavMoveRequestHandler(
 {
     public async Task<WebDavMoveResult> Handle(WebDavMoveRequest request, CancellationToken ct)
     {
+        // First resolve: only used to compute the lock key. We re-resolve the
+        // source inside the lock to defeat the TOCTOU window: another request
+        // can move/delete/replace SourcePath between this read and the lock.
+        var preLockSource = await ResolveSourceAsync(request, ct);
+        var preLockFailure = TryGetSourceValidationFailure(request, preLockSource);
+        if (preLockFailure is not null)
+        {
+            return preLockFailure;
+        }
+
+        Guid sourceLayoutId = await GetSourceLayoutIdAsync(preLockSource, ct);
+
+        await using var tx = await _dbContext.Database.BeginTransactionAsync(ct);
+        await LayoutLocks.AcquireForLayoutAsync(_dbContext, sourceLayoutId, ct);
+
+        // Re-resolve inside the lock so descendant checks, oldParentId, and the
+        // mutated entity all reference the current state, not a stale snapshot.
         var sourceResult = await ResolveSourceAsync(request, ct);
         var sourceValidationFailure = TryGetSourceValidationFailure(request, sourceResult);
         if (sourceValidationFailure is not null)
         {
             return sourceValidationFailure;
+        }
+
+        if (await GetSourceLayoutIdAsync(sourceResult, ct) != sourceLayoutId)
+        {
+            _logger.LogDebug("WebDAV MOVE: Source layout changed while waiting for lock: {Path}", request.SourcePath);
+            return Fail(WebDavMoveError.SourceNotFound);
         }
 
         var destParentResult = await GetAndValidateDestinationParentAsync(request, ct);
@@ -69,11 +92,23 @@ public class WebDavMoveRequestHandler(
             return destParentFailure;
         }
 
+        if (destParentResult.ParentNode!.LayoutId != sourceLayoutId)
+        {
+            _logger.LogDebug("WebDAV MOVE: Destination parent layout differs from locked source layout: {Path}", request.DestinationPath);
+            return Fail(WebDavMoveError.DestinationParentNotFound);
+        }
+
         var overwriteResult = await HandleDestinationOverwriteAsync(request, ct);
         if (!overwriteResult.Allowed)
         {
             return Fail(WebDavMoveError.DestinationExists);
         }
+
+        // Capture the source's old parent before TryPerformMoveAsync mutates it,
+        // so the realtime notification can carry both old and new parent IDs.
+        Guid? oldParentId = sourceResult.IsCollection
+            ? sourceResult.Node?.ParentId
+            : sourceResult.NodeFile?.NodeId;
 
         var moveFailure = await TryPerformMoveAsync(request, sourceResult, destParentResult, ct);
         if (moveFailure is not null)
@@ -81,10 +116,28 @@ public class WebDavMoveRequestHandler(
             return moveFailure;
         }
 
-        await PersistAndNotifyAsync(request, sourceResult, ct);
+        await _dbContext.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        await NotifyAfterCommitAsync(request, sourceResult, oldParentId, ct);
 
         var movedIds = GetMovedIds(sourceResult);
         return Ok(overwriteResult.Created, movedIds.NodeId, movedIds.NodeFileId);
+    }
+
+    private async Task<Guid> GetSourceLayoutIdAsync(WebDavResolveResult source, CancellationToken ct)
+    {
+        // The resolver does not include Node on NodeFile, so we look the file's
+        // layout up by its parent NodeId.
+        if (source.IsCollection)
+        {
+            return source.Node!.LayoutId;
+        }
+        return await _dbContext.Nodes
+            .AsNoTracking()
+            .Where(n => n.Id == source.NodeFile!.NodeId)
+            .Select(n => n.LayoutId)
+            .SingleAsync(ct);
     }
 
     private static WebDavMoveResult Ok(bool created, Guid? movedNodeId, Guid? movedNodeFileId) =>
@@ -128,13 +181,12 @@ public class WebDavMoveRequestHandler(
         return (movedNodeId, sourceResult.NodeFile?.Id);
     }
 
-    private async Task PersistAndNotifyAsync(
+    private async Task NotifyAfterCommitAsync(
         WebDavMoveRequest request,
         WebDavResolveResult sourceResult,
+        Guid? oldParentId,
         CancellationToken ct)
     {
-        await _dbContext.SaveChangesAsync(ct);
-
         _logger.LogInformation(
             "WebDAV MOVE: Moved {Source} to {Dest} for user {UserId}",
             request.SourcePath,
@@ -142,13 +194,23 @@ public class WebDavMoveRequestHandler(
             request.UserId);
 
         var movedIds = GetMovedIds(sourceResult);
-        if (movedIds.NodeId.HasValue)
+        // Best-effort: a notification failure must not turn an already-committed move into a failed response.
+        try
         {
-            await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, ct);
+            if (movedIds.NodeId.HasValue && oldParentId.HasValue)
+            {
+                await _eventNotification.NotifyNodeMovedAsync(movedIds.NodeId.Value, oldParentId.Value, ct);
+            }
+            else if (movedIds.NodeFileId.HasValue && oldParentId.HasValue)
+            {
+                await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, oldParentId.Value, ct);
+            }
         }
-        else if (movedIds.NodeFileId.HasValue)
+        catch (Exception ex)
         {
-            await _eventNotification.NotifyFileMovedAsync(movedIds.NodeFileId.Value, ct);
+            _logger.LogError(ex,
+                "WebDAV MOVE: notification failed after committed move (NodeId={NodeId}, NodeFileId={NodeFileId})",
+                movedIds.NodeId, movedIds.NodeFileId);
         }
     }
 

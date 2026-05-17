@@ -11,7 +11,6 @@ export interface NodeFileManifestDto extends BaseDto {
   name: string;
   contentType: string;
   sizeBytes: number;
-  isClientEncrypted: boolean;
   metadata: Record<string, string>;
   previewHashEncryptedHex?: string | null;
 }
@@ -32,6 +31,10 @@ export interface CreateNodeRequest {
 
 export interface RenameNodeRequest {
   name: string;
+}
+
+export interface MoveNodeRequest {
+  parentId: Guid;
 }
 
 export const nodesApi = {
@@ -92,6 +95,17 @@ export const nodesApi = {
   ): Promise<NodeDto> => {
     const response = await httpClient.patch<NodeDto>(
       `/layouts/nodes/${nodeId}/rename`,
+      request,
+    );
+    return response.data;
+  },
+
+  moveNode: async (
+    nodeId: Guid,
+    request: MoveNodeRequest,
+  ): Promise<NodeDto> => {
+    const response = await httpClient.patch<NodeDto>(
+      `/layouts/nodes/${nodeId}/move`,
       request,
     );
     return response.data;

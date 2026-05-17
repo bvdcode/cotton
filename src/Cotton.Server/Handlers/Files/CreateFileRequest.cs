@@ -42,9 +42,12 @@ namespace Cotton.Server.Handlers.Files
     {
         public async Task<NodeFileManifestDto> Handle(CreateFileRequest request, CancellationToken cancellationToken)
         {
-            var node = await GetTargetNodeAsync(request, cancellationToken);
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
+
+            // Resolve once before expensive manifest/hash work so invalid targets fail fast.
+            // The target is re-read inside the layout lock before the namespace write.
+            var preLockNode = await GetTargetNodeAsync(request, layout.Id, tracking: false, cancellationToken);
             string nameKey = ValidateNameAndGetKey(request.Name);
-            await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
 
             List<Chunk> chunks = await _fileManifestService.GetChunksAsync(request.ChunkHashes, request.UserId, cancellationToken);
             byte[] proposedHash = Hasher.FromHexStringHash(request.Hash);
@@ -52,19 +55,35 @@ namespace Cotton.Server.Handlers.Files
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
 
+            // Cross-table namespace serialization: cf. LayoutLocks.
+            // Keep the lock scoped to the actual namespace mutation; chunk lookup,
+            // manifest dedup and optional hash validation can be slow but do not
+            // depend on per-parent NameKey state.
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await LayoutLocks.AcquireForLayoutAsync(_dbContext, preLockNode.LayoutId, cancellationToken);
+
+            var node = await GetTargetNodeAsync(request, preLockNode.LayoutId, tracking: true, cancellationToken);
+            await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
+
             var nodeFile = await CreateNodeFileAsync(node, fileManifest, request, cancellationToken);
+            await tx.CommitAsync(cancellationToken);
             return MapToDto(nodeFile, fileManifest);
         }
 
-        private async Task<Node> GetTargetNodeAsync(CreateFileRequest request, CancellationToken ct)
+        private async Task<Node> GetTargetNodeAsync(CreateFileRequest request, Guid layoutId, bool tracking, CancellationToken ct)
         {
-            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(request.UserId);
-            var node = await _dbContext.Nodes
+            var query = _dbContext.Nodes
                 .Where(x => x.Id == request.NodeId
                     && x.Type == NodeType.Default
                     && x.OwnerId == request.UserId
-                    && x.LayoutId == layout.Id)
-                .SingleOrDefaultAsync(cancellationToken: ct);
+                    && x.LayoutId == layoutId);
+
+            if (!tracking)
+            {
+                query = query.AsNoTracking();
+            }
+
+            var node = await query.SingleOrDefaultAsync(cancellationToken: ct);
 
             return node ?? throw new EntryPointNotFoundException("Layout node not found.");
         }

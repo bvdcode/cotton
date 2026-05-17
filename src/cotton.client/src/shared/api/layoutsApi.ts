@@ -16,6 +16,7 @@ export interface NodeDto extends BaseDto {
   layoutId: Guid;
   parentId: Guid | null;
   name: string;
+  metadata: Record<string, string>;
 }
 
 export interface LayoutStatsDto {

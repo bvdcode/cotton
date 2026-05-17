@@ -9,7 +9,9 @@ using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NUnit.Framework;
@@ -24,6 +26,9 @@ namespace Cotton.Server.IntegrationTests;
 
 public class StartupLifecycleChainTests : IntegrationTestBase
 {
+    private const string PreRestoredMigrationId = "20260427214223_AddCustomGeoIpLookupUrl";
+    private const string RestoredMigrationTailId = "20260516005639_DropNodeFilesNameKeyUniqueness";
+
     private TestAppFactory? _factory;
     private HttpClient? _client;
 
@@ -101,6 +106,28 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         Assert.That(me, Is.Not.Null);
         Assert.That(me!.Username, Is.EqualTo("testuser"));
         Assert.That(me.Role, Is.EqualTo(UserRole.Admin), "First user should be admin on non-public instance.");
+    }
+
+    [Test]
+    public async Task Startup_FromPreRestoreDatabase_AppliesRestoredMigrationTrail()
+    {
+        var creator = DbContext.GetService<IRelationalDatabaseCreator>();
+        Assert.That(creator.HasTables(), Is.False, "DB should start with no user tables in this test setup.");
+
+        DbContext.GetService<IMigrator>().Migrate(PreRestoredMigrationId);
+
+        Assert.That(await MigrationAppliedAsync(PreRestoredMigrationId), Is.True);
+        Assert.That(await MigrationAppliedAsync(RestoredMigrationTailId), Is.False);
+        Assert.That(await ColumnExistsAsync("node_files", "is_client_encrypted"), Is.True);
+        Assert.That(await ColumnExistsAsync("nodes", "metadata"), Is.False);
+
+        TokenPairResponseDto login = await LoginAsync();
+        Assert.That(login.AccessToken, Is.Not.Null.And.Not.Empty);
+
+        Assert.That(await MigrationAppliedAsync(RestoredMigrationTailId), Is.True);
+        Assert.That(await ColumnExistsAsync("nodes", "metadata"), Is.True);
+        Assert.That(await ColumnExistsAsync("node_files", "is_client_encrypted"), Is.False);
+        Assert.That(await IsIndexUniqueAsync("IX_node_files_node_id_name_key"), Is.False);
     }
 
     [Test]
@@ -286,6 +313,73 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
         JsonElement response = await _client!.GetFromJsonAsync<JsonElement>(url);
         return response;
+    }
+
+    private async Task<bool> MigrationAppliedAsync(string migrationId)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM "__EFMigrationsHistory"
+                WHERE "MigrationId" = @migration_id
+            );
+            """;
+
+        return await ExecuteScalarAsync<bool>(sql, ("migration_id", migrationId));
+    }
+
+    private async Task<bool> ColumnExistsAsync(string tableName, string columnName)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                    AND table_name = @table_name
+                    AND column_name = @column_name
+            );
+            """;
+
+        return await ExecuteScalarAsync<bool>(
+            sql,
+            ("table_name", tableName),
+            ("column_name", columnName));
+    }
+
+    private async Task<bool> IsIndexUniqueAsync(string indexName)
+    {
+        const string sql = """
+            SELECT ix.indisunique
+            FROM pg_index ix
+            JOIN pg_class index_class ON index_class.oid = ix.indexrelid
+            WHERE index_class.relname = @index_name;
+            """;
+
+        return await ExecuteScalarAsync<bool>(sql, ("index_name", indexName));
+    }
+
+    private async Task<T> ExecuteScalarAsync<T>(string sql, params (string Name, object Value)[] parameters)
+    {
+        string connectionString = DbContext.Database.GetConnectionString()
+            ?? throw new InvalidOperationException("Missing test database connection string.");
+
+        await using NpgsqlConnection connection = new(connectionString);
+        await connection.OpenAsync();
+
+        await using NpgsqlCommand command = new(sql, connection);
+        foreach ((string name, object value) in parameters)
+        {
+            command.Parameters.AddWithValue(name, value);
+        }
+
+        object? result = await command.ExecuteScalarAsync();
+        return result switch
+        {
+            T typed => typed,
+            null => throw new InvalidOperationException("Scalar query returned NULL."),
+            DBNull => throw new InvalidOperationException("Scalar query returned DB NULL."),
+            _ => throw new InvalidOperationException($"Unexpected scalar type: {result.GetType().FullName}.")
+        };
     }
 
     private void SetBearer(string accessToken)

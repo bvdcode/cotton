@@ -1056,6 +1056,19 @@
   },
   "files": {
     "title": "Archivos",
+    "move": {
+      "cut": "Cortar",
+      "pasteHere_one": "Pegar {{count}} elemento aquí",
+      "pasteHere_other": "Pegar {{count}} elementos aquí",
+      "toasts": {
+        "cut_one": "{{count}} elemento cortado",
+        "cut_other": "{{count}} elementos cortados",
+        "moved_one": "{{count}} elemento movido",
+        "moved_other": "{{count}} elementos movidos",
+        "failed_one": "No se pudo mover {{count}} elemento",
+        "failed_other": "No se pudieron mover {{count}} elementos"
+      }
+    },
     "loading": {
       "title": "Cargando",
       "caption": "Obteniendo el contenido de la carpeta…"

@@ -40,6 +40,9 @@ namespace Cotton.Database.Models
             NameKey = NameValidator.GetNameKey(normalized);
         }
 
+        [Column("metadata")]
+        public Dictionary<string, string>? Metadata { get; set; } = [];
+
         [DeleteBehavior(DeleteBehavior.Restrict)]
         public virtual Layout Layout { get; set; } = null!;
 
