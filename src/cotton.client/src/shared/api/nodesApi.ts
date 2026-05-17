@@ -137,6 +137,15 @@ export const nodesApi = {
     return parseValidated(url, response.data, nodeDtoSchema);
   },
 
+  updateNodeMetadata: async (
+    nodeId: Guid,
+    patch: Record<string, string>,
+  ): Promise<NodeDto> => {
+    const url = `/layouts/nodes/${nodeId}/metadata`;
+    const response = await httpClient.patch<unknown>(url, patch);
+    return parseValidated(url, response.data, nodeDtoSchema);
+  },
+
   restoreNode: async (
     nodeId: Guid,
     options: RestoreOptions = {},

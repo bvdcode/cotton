@@ -99,6 +99,61 @@ public class LayoutEndpointsTests : IntegrationTestBase
         Assert.That(children!.Nodes.Any(n => n.Id == child!.Id), Is.True);
     }
 
+    [Test]
+    public async Task Update_Node_Metadata_Merges_And_Persists_String_Values()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var createNodeRes = await _client.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new Models.Requests.CreateNodeRequest { ParentId = root!.Id, Name = "encrypted" });
+        createNodeRes.EnsureSuccessStatusCode();
+        var child = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        Assert.That(child, Is.Not.Null);
+
+        var firstPatch = await _client.PatchAsJsonAsync(
+            $"/api/v1/layouts/nodes/{child!.Id}/metadata",
+            new Dictionary<string, string>
+            {
+                ["isClientEncryptionEnabled"] = "true",
+                ["color"] = "blue"
+            });
+        firstPatch.EnsureSuccessStatusCode();
+        var first = await firstPatch.Content.ReadFromJsonAsync<NodeDto>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first!.Metadata["isClientEncryptionEnabled"], Is.EqualTo("true"));
+            Assert.That(first.Metadata["color"], Is.EqualTo("blue"));
+        });
+
+        var secondPatch = await _client.PatchAsJsonAsync(
+            $"/api/v1/layouts/nodes/{child.Id}/metadata",
+            new Dictionary<string, string>
+            {
+                ["isClientEncryptionEnabled"] = "false"
+            });
+        secondPatch.EnsureSuccessStatusCode();
+        var second = await secondPatch.Content.ReadFromJsonAsync<NodeDto>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(second!.Metadata["isClientEncryptionEnabled"], Is.EqualTo("false"));
+            Assert.That(second.Metadata["color"], Is.EqualTo("blue"));
+        });
+
+        var persisted = await _client.GetFromJsonAsync<NodeDto>($"/api/v1/layouts/nodes/{child.Id}");
+        Assert.Multiple(() =>
+        {
+            Assert.That(persisted!.Metadata["isClientEncryptionEnabled"], Is.EqualTo("false"));
+            Assert.That(persisted.Metadata["color"], Is.EqualTo("blue"));
+        });
+    }
+
     private async Task<string> LoginAsync()
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")

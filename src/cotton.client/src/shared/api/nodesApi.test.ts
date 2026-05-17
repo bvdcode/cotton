@@ -169,6 +169,13 @@ describe("nodesApi mutations", () => {
       parentId,
     });
 
+    await nodesApi.updateNodeMetadata(nodeId, {
+      isClientEncryptionEnabled: "true",
+    });
+    expect(patch).toHaveBeenCalledWith(`/layouts/nodes/${nodeId}/metadata`, {
+      isClientEncryptionEnabled: "true",
+    });
+
     const outcome = await nodesApi.restoreNode(nodeId, {
       createMissingParents: true,
       overwrite: true,
