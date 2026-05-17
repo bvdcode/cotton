@@ -1,12 +1,12 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
-using Amazon.S3;
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
+using Cotton.Storage.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Linq.Expressions;
@@ -402,17 +402,13 @@ namespace Cotton.Server.Providers
 
         private static async Task ValidateS3Async(S3Config s3Config)
         {
-            var config = new AmazonS3Config
-            {
-                UseHttp = false,
-                MaxErrorRetry = 5,
-                ForcePathStyle = true,
-                ServiceURL = s3Config.Endpoint,
-                AuthenticationRegion = s3Config.Region,
-                RequestChecksumCalculation = Amazon.Runtime.RequestChecksumCalculation.WHEN_REQUIRED,
-                ResponseChecksumValidation = Amazon.Runtime.ResponseChecksumValidation.WHEN_REQUIRED
-            };
-            var s3 = new AmazonS3Client(s3Config.AccessKey, s3Config.SecretKey, config);
+            var s3 = S3CompatibilityFactory.BuildClient(
+                s3Config.Endpoint,
+                s3Config.Region,
+                s3Config.AccessKey,
+                s3Config.SecretKey,
+                timeout: TimeSpan.FromSeconds(30),
+                maxErrorRetry: 5);
 
             // try write access by creating and deleting a test object
             string testKey = "cotton_server_test_object_" + Guid.NewGuid().ToString("N");
@@ -421,7 +417,7 @@ namespace Cotton.Server.Providers
                 BucketName = s3Config.Bucket,
                 Key = testKey,
                 ContentBody = "test"
-            });
+            }.WithInMemoryBodyCompatibility());
 
             // try read access by getting the test object
             var getResponse = await s3.GetObjectAsync(s3Config.Bucket, testKey);

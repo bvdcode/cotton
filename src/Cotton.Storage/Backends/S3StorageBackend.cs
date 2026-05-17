@@ -136,8 +136,7 @@ namespace Cotton.Storage.Backends
                     Key = key,
                     FilePath = tmpPath,
                     ContentType = MediaTypeNames.Application.Octet,
-                    UseChunkEncoding = false,
-                };
+                }.WithFileBodyCompatibility();
                 await s3.PutObjectAsync(req).ConfigureAwait(false);
             }
             finally
