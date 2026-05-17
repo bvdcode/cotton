@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Cotton.Database.Models
 {
     [Table("node_files")]
-    [Index(nameof(NodeId), nameof(NameKey), IsUnique = true)]
+    [Index(nameof(NodeId), nameof(NameKey))]
     [Index(nameof(FileManifestId), nameof(NodeId))]
     public class NodeFile : BaseOwnedEntity
     {
@@ -38,9 +38,6 @@ namespace Cotton.Database.Models
         /// </summary>
         [Column("name_key", TypeName = "citext")]
         public string NameKey { get; private set; } = null!;
-
-        [Column("is_client_encrypted")]
-        public bool IsClientEncrypted { get; set; }
 
         [Column("metadata")]
         public Dictionary<string, string>? Metadata { get; set; } = [];

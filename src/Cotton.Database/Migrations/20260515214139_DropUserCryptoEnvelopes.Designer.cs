@@ -5,6 +5,7 @@ using System.Net;
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    partial class CottonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515214139_DropUserCryptoEnvelopes")]
+    partial class DropUserCryptoEnvelopes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -512,6 +515,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<bool>("IsClientEncryptionEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_client_encryption_enabled");
+
                     b.Property<Guid>("LayoutId")
                         .HasColumnType("uuid")
                         .HasColumnName("layout_id");
@@ -573,6 +580,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("file_manifest_id");
 
+                    b.Property<bool>("IsClientEncrypted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_client_encrypted");
+
                     b.Property<Dictionary<string, string>>("Metadata")
                         .HasColumnType("hstore")
                         .HasColumnName("metadata");
@@ -609,7 +620,8 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("FileManifestId", "NodeId");
 
-                    b.HasIndex("NodeId", "NameKey");
+                    b.HasIndex("NodeId", "NameKey")
+                        .IsUnique();
 
                     b.ToTable("node_files");
                 });

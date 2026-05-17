@@ -5,6 +5,7 @@ using System.Net;
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    partial class CottonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515212621_CollapseCryptoEnvelopeToOpaqueBlob")]
+    partial class CollapseCryptoEnvelopeToOpaqueBlob
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -512,6 +515,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<bool>("IsClientEncryptionEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_client_encryption_enabled");
+
                     b.Property<Guid>("LayoutId")
                         .HasColumnType("uuid")
                         .HasColumnName("layout_id");
@@ -573,6 +580,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("file_manifest_id");
 
+                    b.Property<bool>("IsClientEncrypted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_client_encrypted");
+
                     b.Property<Dictionary<string, string>>("Metadata")
                         .HasColumnType("hstore")
                         .HasColumnName("metadata");
@@ -609,7 +620,8 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("FileManifestId", "NodeId");
 
-                    b.HasIndex("NodeId", "NameKey");
+                    b.HasIndex("NodeId", "NameKey")
+                        .IsUnique();
 
                     b.ToTable("node_files");
                 });
@@ -816,6 +828,38 @@ namespace Cotton.Database.Migrations
                         .IsUnique();
 
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.UserCryptoEnvelope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<byte[]>("Envelope")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("envelope");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("user_crypto_envelopes");
                 });
 
             modelBuilder.Entity("EasyExtensions.EntityFrameworkCore.Database.ExtendedRefreshToken", b =>
@@ -1038,6 +1082,17 @@ namespace Cotton.Database.Migrations
                         .WithMany("Notifications")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Cotton.Database.Models.UserCryptoEnvelope", b =>
+                {
+                    b.HasOne("Cotton.Database.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");

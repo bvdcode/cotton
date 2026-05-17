@@ -10,5 +10,12 @@ namespace Cotton.Server.Models.Dto
         public Guid LayoutId { get; set; }
         public Guid? ParentId { get; set; }
         public string Name { get; set; } = null!;
+
+        private Dictionary<string, string> _metadata = [];
+        public Dictionary<string, string> Metadata
+        {
+            get => _metadata;
+            set => _metadata = value ?? [];
+        }
     }
 }
