@@ -135,7 +135,12 @@ namespace Cotton.Server.Controllers
 
             if (outcome.Status == RestoreStatus.Restored)
             {
-                await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRestored", nodeFileId);
+                object restoredFilePayload = outcome.RestoredFile is not null
+                    ? outcome.RestoredFile
+                    : new { id = nodeFileId };
+                await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                    "FileRestored",
+                    restoredFilePayload);
             }
 
             return Ok(outcome);

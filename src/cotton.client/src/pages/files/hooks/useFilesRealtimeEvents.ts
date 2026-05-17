@@ -15,10 +15,12 @@ const FILES_HUB_METHODS = [
   "FileDeleted",
   "FileMoved",
   "FileRenamed",
+  "FileRestored",
   "NodeCreated",
   "NodeDeleted",
   "NodeMoved",
   "NodeRenamed",
+  "NodeRestored",
 ] as const;
 
 const PREVIEW_GENERATED_METHOD = "PreviewGenerated";

@@ -242,7 +242,12 @@ namespace Cotton.Server.Controllers
 
             if (outcome.Status == RestoreStatus.Restored)
             {
-                await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRestored", nodeId);
+                object restoredNodePayload = outcome.RestoredNode is not null
+                    ? outcome.RestoredNode
+                    : new { id = nodeId };
+                await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                    "NodeRestored",
+                    restoredNodePayload);
             }
 
             return Ok(outcome);
