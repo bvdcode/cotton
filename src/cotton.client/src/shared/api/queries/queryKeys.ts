@@ -1,6 +1,7 @@
 const notificationsRoot = ["notifications"] as const;
 const layoutsRoot = ["layouts"] as const;
 const adminRoot = ["admin"] as const;
+const audioRoot = ["audio"] as const;
 
 export const queryKeys = {
   notifications: {
@@ -32,5 +33,10 @@ export const queryKeys = {
       }) => [...adminRoot, "gcTimeline", params] as const,
     },
     latestDbBackup: () => [...adminRoot, "latestDbBackup"] as const,
+  },
+  audio: {
+    all: () => audioRoot,
+    trackLyrics: (params: { folderNodeId: string; trackName: string }) =>
+      [...audioRoot, "trackLyrics", params] as const,
   },
 } as const;
