@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { HLS_VIDEO_SLIDE_TYPE } from "./mediaLightbox.types";
-import type { MediaItem } from "./mediaLightbox.types";
+import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
+import type { MediaItem } from "@shared/types/mediaLightbox";
 import { buildSlidesFromItems } from "./mediaLightboxSlides";
 
 describe("buildSlidesFromItems", () => {

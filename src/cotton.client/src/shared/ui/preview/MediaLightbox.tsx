@@ -19,19 +19,19 @@ import {
   Slideshow as SlideshowIcon,
 } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
-import { useActivityDetection } from "../hooks/useActivityDetection";
+import { useActivityDetection } from "../../hooks/useActivityDetection";
 import type {
   MediaLightboxProps,
   SlideHlsVideo,
   SlideWithTitle,
-} from "./mediaLightbox.types";
-import { HLS_VIDEO_SLIDE_TYPE } from "./mediaLightbox.types";
-import { useMediaLightboxUrls } from "../hooks/useMediaLightboxUrls";
-import { shareLinks } from "../../../shared/utils/shareLinks";
+} from "@shared/types/mediaLightbox";
+import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
+import { useMediaLightboxUrls } from "./useMediaLightboxUrls";
+import { shareLinks } from "../../utils/shareLinks";
 import {
   selectGalleryPreferPreview,
   useUserPreferencesStore,
-} from "../../../shared/store/userPreferencesStore";
+} from "../../store/userPreferencesStore";
 
 const LIGHTBOX_ANIMATION_MS = 200;
 const LIGHTBOX_PREFETCH_OFFSETS: ReadonlyArray<number> = [-1, 0, 1];

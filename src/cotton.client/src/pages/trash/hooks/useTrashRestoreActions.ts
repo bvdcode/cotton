@@ -6,7 +6,7 @@ import {
   type RestoreConflictKind,
   type RestoreOutcomeDto,
 } from "../../../shared/api/nodesApi";
-import type { FileSelectionState } from "../../files/hooks/useFileSelection";
+import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 const maxPromptHops = 3;

@@ -1,6 +1,6 @@
-import type { SlideWithTitle, MediaItem } from "./mediaLightbox.types";
-import { HLS_VIDEO_SLIDE_TYPE } from "./mediaLightbox.types";
-import { formatBytes } from "../../../shared/utils/formatBytes";
+import type { SlideWithTitle, MediaItem } from "@shared/types/mediaLightbox";
+import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
+import { formatBytes } from "../../utils/formatBytes";
 
 export const TRANSPARENT_PLACEHOLDER =
   "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import type { Guid } from "../../../../../shared/api/layoutsApi";
-import { filesApi } from "../../../../../shared/api/filesApi";
+import type { Guid } from "../../../api/layoutsApi";
+import { filesApi } from "../../../api/filesApi";
 import { useTranslation } from "react-i18next";
-import { previewConfig } from "../../../../../shared/config/previewConfig";
+import { previewConfig } from "../../../config/previewConfig";
 
 export const useTextFileContent = (
   nodeFileId: Guid,

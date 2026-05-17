@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { filesApi } from "../../../shared/api/filesApi";
+import { filesApi } from "../api/filesApi";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import { getFileIcon } from "@shared/utils/icons";
-import type { MediaItem } from "../components";
+import type { MediaItem } from "../types/mediaLightbox";
 
 export interface MediaHandlers {
   lightboxOpen: boolean;

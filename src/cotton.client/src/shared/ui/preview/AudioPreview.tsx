@@ -2,7 +2,7 @@ import React from "react";
 import { Box, CircularProgress } from "@mui/material";
 import H5AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
-import { filesApi } from "../../../../shared/api/filesApi";
+import { filesApi } from "../../api/filesApi";
 
 export interface AudioPlaylistItem {
   id: string;

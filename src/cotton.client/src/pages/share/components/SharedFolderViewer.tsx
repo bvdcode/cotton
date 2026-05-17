@@ -2,7 +2,8 @@ import * as React from "react";
 import { Alert, Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
-import { MediaLightbox, PageHeader } from "../../files/components";
+import { PageHeader } from "../../files/components";
+import { MediaLightbox } from "@shared/ui/preview";
 import { FileListViewFactory } from "../../files/components/views/FileListViewFactory";
 import type {
   FileOperations,
@@ -15,14 +16,14 @@ import { useContentTiles } from "../../../shared/hooks/useContentTiles";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import type { Guid } from "../../../shared/api/layoutsApi";
 import type { SharedNodeContentDto } from "../../../shared/api/sharedFoldersApi";
-import type { MediaItem } from "../../files/components";
-import type { FileBrowserViewMode } from "../../files/utils/viewMode";
-import { useFilePreview } from "../../files/hooks/useFilePreview";
+import type { MediaItem } from "@shared/types/mediaLightbox";
+import type { FileBrowserViewMode } from "@shared/utils/viewMode";
+import { useFilePreview } from "@shared/hooks/useFilePreview";
 import { SharedFilePreviewModal } from "./SharedFilePreviewModal";
 import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,
-} from "../../files/utils/viewMode";
+} from "@shared/utils/viewMode";
 
 interface BreadcrumbNode {
   id: Guid;

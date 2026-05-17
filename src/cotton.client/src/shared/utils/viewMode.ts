@@ -1,4 +1,4 @@
-import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
+import { InterfaceLayoutType } from "../api/layoutsApi";
 import type { TilesSize } from "@shared/types/FileListViewTypes";
 
 export type FileBrowserViewMode =

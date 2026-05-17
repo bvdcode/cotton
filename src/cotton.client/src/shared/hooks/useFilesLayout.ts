@@ -1,16 +1,16 @@
 import { useCallback, useMemo } from "react";
-import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
+import { InterfaceLayoutType } from "../api/layoutsApi";
 import {
   selectFilesLayoutType,
   selectFilesTilesSize,
   useLocalPreferencesStore,
-} from "../../../shared/store/localPreferencesStore";
+} from "../store/localPreferencesStore";
 import type { TilesSize } from "@shared/types/FileListViewTypes";
 import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,
   type FileBrowserViewMode,
-} from "../utils/viewMode";
+} from "@shared/utils/viewMode";
 
 export const useFilesLayout = () => {
   const storedLayoutType = useLocalPreferencesStore(selectFilesLayoutType);

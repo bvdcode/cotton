@@ -19,8 +19,8 @@ import { useNavigate } from "react-router-dom";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
-import { useFileInteractionHandlers } from "../../pages/files/hooks/useFileInteractionHandlers";
-import { FilePreviewModal, MediaLightbox } from "../../pages/files/components";
+import { useFileInteractionHandlers } from "@shared/hooks/useFileInteractionHandlers";
+import { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   selectGallerySmoothTransitions,

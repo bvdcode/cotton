@@ -1,8 +1,8 @@
 import React from "react";
 import { Box, CircularProgress, Alert, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import type { Guid } from "../../../../../shared/api/layoutsApi";
-import { filesApi } from "../../../../../shared/api/filesApi";
+import type { Guid } from "../../../api/layoutsApi";
+import { filesApi } from "../../../api/filesApi";
 
 interface TextPreviewLoadingProps {
   loading: boolean;

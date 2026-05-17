@@ -20,4 +20,27 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: [
+      'src/shared/**/*.{ts,tsx}',
+      'src/features/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@pages/*',
+                '**/pages/*',
+              ],
+              message:
+                'shared/ and features/ must not import from pages/. Move reusable code to shared/ or pass it in from the page layer.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ])

@@ -19,23 +19,23 @@ import {
   WbSunny,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { PreviewModal } from "./preview/PreviewModal";
+import { PreviewModal } from "./PreviewModal";
 import type { FileType } from "@shared/utils/fileTypes";
 
 const PdfPreview = lazy(() =>
-  import("./preview/PdfPreview").then((module) => ({
+  import("./PdfPreview").then((module) => ({
     default: module.PdfPreview,
   })),
 );
 
 const TextPreview = lazy(() =>
-  import("./preview/TextPreview").then((module) => ({
+  import("./TextPreview").then((module) => ({
     default: module.TextPreview,
   })),
 );
 
 const ModelPreview = lazy(() =>
-  import("./preview/ModelPreview").then((module) => ({
+  import("./ModelPreview").then((module) => ({
     default: module.ModelPreview,
   })),
 );

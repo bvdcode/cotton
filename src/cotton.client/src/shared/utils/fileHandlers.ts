@@ -1,4 +1,4 @@
-import { filesApi } from "../../../shared/api/filesApi";
+import { filesApi } from "../api/filesApi";
 
 /**
  * Download a file by creating a temporary download link

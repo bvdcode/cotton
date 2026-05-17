@@ -3,10 +3,10 @@ import type { Slide } from "yet-another-react-lightbox";
 import {
   convertHeicToJpeg,
   isHeicFile,
-} from "../../../shared/utils/heicConverter";
-import { buildSlidesFromItems } from "../components/mediaLightboxSlides";
-import { HLS_VIDEO_SLIDE_TYPE } from "../components/mediaLightbox.types";
-import type { MediaItem, SlideWithTitle } from "../components/mediaLightbox.types";
+} from "../../utils/heicConverter";
+import { buildSlidesFromItems } from "./mediaLightboxSlides";
+import { HLS_VIDEO_SLIDE_TYPE } from "@shared/types/mediaLightbox";
+import type { MediaItem, SlideWithTitle } from "@shared/types/mediaLightbox";
 
 const PREVIEW_QUERY_PARAM = "preview";
 const PREVIEW_QUERY_VALUE = "true";

@@ -8,8 +8,8 @@
 import { useCallback, useMemo } from "react";
 import {
   useLocalPreferencesStore,
-} from "../../../../../shared/store/localPreferencesStore";
-import { detectMonacoLanguageFromFileName } from "../../../../../shared/utils/languageDetection";
+} from "../../../store/localPreferencesStore";
+import { detectMonacoLanguageFromFileName } from "../../../utils/languageDetection";
 
 interface UseLanguageSelectionOptions {
   fileName: string;

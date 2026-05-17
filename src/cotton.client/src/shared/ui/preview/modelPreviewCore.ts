@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { filesApi } from "../../../../shared/api/filesApi";
+import { filesApi } from "../../api/filesApi";
 import { type ModelFormat } from "@shared/utils/modelFormats";
 import {
   type FlipOrientationVariant,

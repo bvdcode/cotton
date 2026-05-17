@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
+import { InterfaceLayoutType } from "../api/layoutsApi";
 import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,

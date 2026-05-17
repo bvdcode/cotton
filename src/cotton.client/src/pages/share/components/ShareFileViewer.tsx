@@ -11,12 +11,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { getFileTypeInfo, type FileType } from "@shared/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import {
-  MediaLightbox,
-  type MediaItem,
-  ModelPreview,
-  PdfPreview,
-} from "../../files/components";
+import { MediaLightbox, ModelPreview, PdfPreview } from "@shared/ui/preview";
+import type { MediaItem } from "@shared/types/mediaLightbox";
 import {
   selectGallerySmoothTransitions,
   useUserPreferencesStore,

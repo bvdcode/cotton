@@ -5,11 +5,10 @@ import { toast } from "react-toastify";
 import {
   FileListViewFactory,
   PageHeader,
-  MediaLightbox,
-  FilePreviewModal,
   FileConflictDialog,
   DraggingOverlay,
 } from "./components";
+import { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useConfirm } from "material-ui-confirm";
@@ -18,10 +17,10 @@ import { useAuthStore } from "../../shared/store/authStore";
 import { useFolderOperations } from "./hooks/useFolderOperations";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useFileOperations } from "./hooks/useFileOperations";
-import { useFilesLayout } from "./hooks/useFilesLayout";
+import { useFilesLayout } from "@shared/hooks/useFilesLayout";
 import { useFilesData } from "./hooks/useFilesData";
 import { useFilesRealtimeEvents } from "./hooks/useFilesRealtimeEvents";
-import { useFileSelection } from "./hooks/useFileSelection";
+import { useFileSelection } from "@shared/hooks/useFileSelection";
 import { useDeleteSelectedItems } from "./hooks/useDeleteSelectedItems";
 import { buildBreadcrumbs, calculateFolderStats } from "./utils/nodeUtils";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";

@@ -1,11 +1,15 @@
 export { FolderCard } from "./FolderCard";
 export { DraggingOverlay } from "./DraggingOverlay";
 export { FileBreadcrumbs } from "./FileBreadcrumbs";
-export { MediaLightbox } from "./MediaLightbox";
-export type { MediaItem } from "./mediaLightbox.types";
+export { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
+export type { MediaItem } from "@shared/types/mediaLightbox";
 export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";
-export { FilePreviewModal } from "./FilePreviewModal";
 export { FileConflictDialog } from "./FileConflictDialog";
-export * from "./preview";
+export {
+  ModelPreview,
+  PdfPreview,
+  PreviewModal,
+  TextPreview,
+} from "@shared/ui/preview";
 export * from "./views";

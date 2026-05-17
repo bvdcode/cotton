@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { Guid } from "../../../../../shared/api/layoutsApi";
-import { filesApi } from "../../../../../shared/api/filesApi";
-import { uploadBlobToChunks } from "../../../../../shared/upload";
-import { useServerSettings } from "../../../../../shared/store/useServerSettings";
+import type { Guid } from "../../../api/layoutsApi";
+import { filesApi } from "../../../api/filesApi";
+import { uploadBlobToChunks } from "../../../upload";
+import { useServerSettings } from "../../../store/useServerSettings";
 import { useTranslation } from "react-i18next";
 
 export const useTextFileSave = (

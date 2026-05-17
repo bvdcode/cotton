@@ -28,7 +28,7 @@ import {
   getNextFileBrowserViewTitleKey,
   getTilesIconScale,
   type FileBrowserViewMode,
-} from "../utils/viewMode";
+} from "@shared/utils/viewMode";
 import { useOverflowActionKeys } from "../hooks/useOverflowActionKeys";
 
 export interface PageHeaderActionItem {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import type { FileType } from "@shared/utils/fileTypes";
-import { previewConfig } from "../../../shared/config/previewConfig";
+import { previewConfig } from "../config/previewConfig";
 
 interface PreviewState {
   isOpen: boolean;

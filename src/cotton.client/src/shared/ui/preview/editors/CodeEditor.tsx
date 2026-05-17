@@ -9,7 +9,7 @@ import { Editor } from "@monaco-editor/react";
 import { Box, CircularProgress } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import type { IEditorProps } from "./types";
-import { detectMonacoLanguageFromFileName } from "../../../../../shared/utils/languageDetection";
+import { detectMonacoLanguageFromFileName } from "../../../utils/languageDetection";
 
 /**
  * Detect programming language from file extension

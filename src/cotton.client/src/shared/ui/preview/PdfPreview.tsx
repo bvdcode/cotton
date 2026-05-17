@@ -1,9 +1,9 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { filesApi } from "../../../../shared/api/filesApi";
-import { previewConfig } from "../../../../shared/config/previewConfig";
-import { formatBytes } from "../../../../shared/utils/formatBytes";
+import { filesApi } from "../../api/filesApi";
+import { previewConfig } from "../../config/previewConfig";
+import { formatBytes } from "../../utils/formatBytes";
 import "pdfjs-dist/web/pdf_viewer.css";
 import {
   getDocument,

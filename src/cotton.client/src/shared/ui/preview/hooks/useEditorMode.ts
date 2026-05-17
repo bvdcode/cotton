@@ -9,8 +9,8 @@ import { useCallback, useMemo } from 'react';
 import { EditorMode } from '../editors/types';
 import {
   useLocalPreferencesStore,
-} from '../../../../../shared/store/localPreferencesStore';
-import { previewConfig } from '../../../../../shared/config/previewConfig';
+} from "../../../store/localPreferencesStore";
+import { previewConfig } from "../../../config/previewConfig";
 
 /**
  * File extensions supported by Monaco Editor

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box } from "@mui/material";
-import type { Guid } from "../../../../shared/api/layoutsApi";
+import type { Guid } from "../../api/layoutsApi";
 import { EditorFactory } from "./factories/EditorFactory";
 import { useEditorMode } from "./hooks/useEditorMode";
 import { useLanguageSelection } from "./hooks/useLanguageSelection";
