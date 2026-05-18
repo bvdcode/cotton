@@ -30,10 +30,12 @@ namespace Cotton.Autoconfig.Extensions
 
             string jwtKey = StringHelpers.CreateRandomString(DefaultKeyLength);
             const int masterKeyId = 1;
-            string rootMasterEncryptionKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY") ?? "devedovolovopeperepolevopopovedo";
+            string rootMasterEncryptionKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY")
+                ?? throw new InvalidOperationException(
+                    $"COTTON_MASTER_KEY must be set and be exactly {DefaultKeyLength} characters long.");
             if (rootMasterEncryptionKey.Length != DefaultKeyLength)
             {
-                throw new InvalidOperationException($"COTTON_MASTER_KEY must be set and be exactly {DefaultKeyLength} characters long.");
+                throw new InvalidOperationException($"COTTON_MASTER_KEY must be exactly {DefaultKeyLength} characters long.");
             }
             Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", null, EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", null, EnvironmentVariableTarget.User);

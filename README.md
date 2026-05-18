@@ -273,7 +273,8 @@ docker run -d --name cotton-pg \
 
 ```bash
 # COTTON_MASTER_KEY must be exactly 32 characters.
-# It is used to derive both the password pepper and the master encryption key.
+# Store it safely: losing it can make encrypted data unrecoverable.
+export COTTON_MASTER_KEY="$(openssl rand -base64 24)"
 
 docker run -d --name cotton \
   -p 8080:8080 \
@@ -283,7 +284,7 @@ docker run -d --name cotton \
   -e COTTON_PG_DATABASE="cotton_dev" \
   -e COTTON_PG_USERNAME="postgres" \
   -e COTTON_PG_PASSWORD="postgres" \
-  -e COTTON_MASTER_KEY="devedovolovopeperepolevopopovedo" \
+  -e COTTON_MASTER_KEY="$COTTON_MASTER_KEY" \
   bvdcode/cotton:latest
 ```
 
@@ -452,7 +453,7 @@ _See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Servic
 Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
 
 **Autoconfig env scrubbing**  
-`Cotton.Autoconfig` derives keys from `COTTON_MASTER_KEY`, then **wipes the env var** from Process and User environment after startup. Secrets don't linger in memory dumps or child processes.
+`Cotton.Autoconfig` requires an explicit `COTTON_MASTER_KEY`, derives keys from it, then **wipes the env var** from Process and User environment after startup. Secrets don't linger in child processes, and Cotton never falls back to a built-in development key.
 
 **Client-side upload pipeline**  
 Browser uploads hash chunks in a Web Worker (one pass for both chunk-hash and rolling file-hash), parallelize uploads (default 4 in-flight), send only missing chunks on retry. UI stays responsive even with 10k+ file folders.
@@ -625,7 +626,7 @@ _See: `src/pages/HomePage/components/TextPreview.tsx`_
   _See: `src/Cotton.Validators/NameValidator.cs`, `src/Cotton.Database/Models/Node.cs`_
 
 **Autoconfig: env scrubbing**  
-Derives `Pepper` + `MasterEncryptionKey` from `COTTON_MASTER_KEY`, then **wipes** the env var from Process and User environment after startup. Secrets don't leak to child processes or memory dumps.  
+Requires explicit `COTTON_MASTER_KEY`, derives `Pepper` + `MasterEncryptionKey` from it, then **wipes** the env var from Process and User environment after startup. Cotton never uses a built-in development master key.
 _See: `src/Cotton.Autoconfig/Extensions/ConfigurationBuilderExtensions.cs`_
 
 **Bootstrap & setup**  

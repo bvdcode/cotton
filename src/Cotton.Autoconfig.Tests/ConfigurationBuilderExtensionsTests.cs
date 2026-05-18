@@ -31,6 +31,15 @@ namespace Cotton.Autoconfig.Tests
         }
 
         [Test]
+        public void AddCottonOptions_Throws_When_MasterKey_Is_Missing()
+        {
+            Environment.SetEnvironmentVariable(EnvVar, null);
+            var builder = new ConfigurationBuilder();
+            var ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
+            Assert.That(ex!.Message, Does.Contain("COTTON_MASTER_KEY"));
+        }
+
+        [Test]
         public void AddCottonOptions_Throws_When_MasterKey_Length_Is_Not_32()
         {
             Environment.SetEnvironmentVariable(EnvVar, "too-short");
