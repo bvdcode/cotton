@@ -1490,6 +1490,11 @@
       "failed": "No se pudo restaurar \"{{name}}\"",
       "notRestorable": "El elemento no se puede restaurar.",
       "rootFolder": "la carpeta raíz",
+      "confirm": {
+        "title": "¿Restaurar elemento?",
+        "description": "\"{{name}}\" se restaurará en \"{{path}}\".",
+        "confirm": "Restaurar"
+      },
       "applyToAll": "Aplicar esta elección a los elementos restantes",
       "skip": "Omitir",
       "parentMissing": {

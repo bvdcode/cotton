@@ -1468,6 +1468,11 @@
       "failed": "Failed to restore \"{{name}}\"",
       "notRestorable": "Item cannot be restored.",
       "rootFolder": "the root folder",
+      "confirm": {
+        "title": "Restore item?",
+        "description": "\"{{name}}\" will be restored to \"{{path}}\".",
+        "confirm": "Restore"
+      },
       "applyToAll": "Apply this choice to remaining items",
       "skip": "Skip",
       "parentMissing": {
