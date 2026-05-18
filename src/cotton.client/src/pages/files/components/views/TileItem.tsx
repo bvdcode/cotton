@@ -166,10 +166,11 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     );
 
     if (tile.kind === "folder") {
+      const isRenamingFolder = folderOperations.isRenaming(tile.node.id);
       const folderContent = (
         <FolderCard
           folder={tile.node}
-          isRenaming={folderOperations.isRenaming(tile.node.id)}
+          isRenaming={isRenamingFolder}
           renamingName={folderOperations.getRenamingName()}
           onRenamingNameChange={folderOperations.onRenamingNameChange}
           onConfirmRename={folderOperations.onConfirmRename}
@@ -231,7 +232,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return (
         <Box
           position="relative"
-          draggable={draggable}
+          draggable={draggable && !isRenamingFolder}
           onDragStart={onMoveDragStart}
           onDragOver={onMoveDragOver}
           onDragLeave={onMoveDragLeave}
@@ -337,6 +338,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       "metadata" in tile.file ? tile.file.metadata : undefined,
     );
 
+    const isRenamingFile = fileOperations.isRenaming(tile.file.id);
     const fileContent = (
       <RenamableItemCard
         variant="squareTile"
@@ -416,7 +418,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ]
             : []),
         ]}
-        isRenaming={fileOperations.isRenaming(tile.file.id)}
+        isRenaming={isRenamingFile}
         renamingValue={fileOperations.getRenamingName()}
         onRenamingValueChange={fileOperations.onRenamingNameChange}
         onConfirmRename={() => {
@@ -430,7 +432,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     return (
       <Box
         position="relative"
-        draggable={draggable}
+        draggable={draggable && !isRenamingFile}
         onDragStart={onMoveDragStart}
         onContextMenu={(e) => {
           e.preventDefault();

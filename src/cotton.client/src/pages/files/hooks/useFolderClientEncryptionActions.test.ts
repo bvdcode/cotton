@@ -16,12 +16,16 @@ vi.mock("../../../shared/store/nodesActions", () => ({
 }));
 
 vi.mock("../../../shared/tasks", () => ({
+  decryptExistingFileWithTask: vi.fn(),
   encryptExistingFileWithTask: vi.fn(),
 }));
 
 import { fetchServerSettings } from "../../../shared/api/queries/serverSettings";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
-import { encryptExistingFileWithTask } from "../../../shared/tasks";
+import {
+  decryptExistingFileWithTask,
+  encryptExistingFileWithTask,
+} from "../../../shared/tasks";
 import { useFolderClientEncryptionActions } from "./useFolderClientEncryptionActions";
 
 const makeNode = (metadata: Record<string, string> = {}): NodeDto => ({
@@ -147,6 +151,71 @@ describe("useFolderClientEncryptionActions", () => {
 
     expect(fetchServerSettings).not.toHaveBeenCalled();
     expect(encryptExistingFileWithTask).not.toHaveBeenCalled();
+    expect(onToast).toHaveBeenCalledWith(
+      "clientEncryption.toasts.unlockRequired",
+      "error",
+    );
+  });
+
+  it("decrypts existing encrypted files through task-backed decryption", async () => {
+    useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
+    const onToast = vi.fn();
+    const content = makeContent([
+      makeFile("encrypted-a", { isClientEncrypted: "true" }),
+      makeFile("encrypted-b", { isClientEncrypted: "true" }),
+    ]);
+
+    const { result } = renderHook(() =>
+      useFolderClientEncryptionActions({
+        nodeId: "node-1",
+        currentNode: makeNode({}),
+        content,
+        onToast,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.decryptEncryptedFiles();
+    });
+
+    expect(fetchServerSettings).toHaveBeenCalled();
+    expect(decryptExistingFileWithTask).toHaveBeenCalledTimes(2);
+    expect(decryptExistingFileWithTask).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        file: expect.objectContaining({
+          id: "encrypted-a",
+          metadata: { isClientEncrypted: "true" },
+        }),
+        targetNodeId: "node-1",
+        scopeLabel: "Vault",
+      }),
+    );
+    expect(refreshNodeContent).toHaveBeenCalledWith("node-1");
+    expect(onToast).toHaveBeenCalledWith(
+      "clientEncryption.toasts.decryptExistingComplete",
+    );
+  });
+
+  it("requires the vault to be unlocked before decrypting existing files", async () => {
+    const onToast = vi.fn();
+    const { result } = renderHook(() =>
+      useFolderClientEncryptionActions({
+        nodeId: "node-1",
+        currentNode: makeNode({}),
+        content: makeContent([
+          makeFile("encrypted", { isClientEncrypted: "true" }),
+        ]),
+        onToast,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.decryptEncryptedFiles();
+    });
+
+    expect(fetchServerSettings).not.toHaveBeenCalled();
+    expect(decryptExistingFileWithTask).not.toHaveBeenCalled();
     expect(onToast).toHaveBeenCalledWith(
       "clientEncryption.toasts.unlockRequired",
       "error",

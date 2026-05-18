@@ -235,8 +235,11 @@ export const FilesPage: React.FC = () => {
     onToast: showToast,
   });
   const {
+    decryptEncryptedFiles,
     encryptPlainFiles,
+    encryptedFiles,
     folderPolicyEnabled,
+    isDecryptingEncryptedFiles,
     plainFiles,
   } = folderEncryptionActions;
 
@@ -258,6 +261,37 @@ export const FilesPage: React.FC = () => {
       },
     });
   }, [encryptPlainFiles, folderPolicyEnabled, nodeId, plainFiles.length, t]);
+
+  React.useEffect(() => {
+    if (
+      !nodeId ||
+      folderPolicyEnabled ||
+      encryptedFiles.length === 0 ||
+      isDecryptingEncryptedFiles
+    ) {
+      return;
+    }
+
+    showActionToast({
+      toastId: `files-cse-encrypted-${nodeId}`,
+      type: "info",
+      message: t("clientEncryption.encryptedFilesRemain.toast", {
+        ns: "files",
+        count: encryptedFiles.length,
+      }),
+      action: t("clientEncryption.encryptedFilesRemain.action", { ns: "files" }),
+      onAction: () => {
+        void decryptEncryptedFiles();
+      },
+    });
+  }, [
+    decryptEncryptedFiles,
+    encryptedFiles.length,
+    folderPolicyEnabled,
+    isDecryptingEncryptedFiles,
+    nodeId,
+    t,
+  ]);
 
   const folderOps = useFolderOperations(nodeId, handleFolderChanged);
   const fileUpload = useFileUpload(nodeId, breadcrumbs, content, {

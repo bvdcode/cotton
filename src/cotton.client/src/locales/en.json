@@ -1358,7 +1358,10 @@
       "encryptedFilesRemain": {
         "title": "Encrypted files remain encrypted",
         "description_one": "{{count}} file stays encrypted even though new uploads are no longer encrypted automatically.",
-        "description_other": "{{count}} files stay encrypted even though new uploads are no longer encrypted automatically."
+        "description_other": "{{count}} files stay encrypted even though new uploads are no longer encrypted automatically.",
+        "toast_one": "{{count}} encrypted file remains in this folder.",
+        "toast_other": "{{count}} encrypted files remain in this folder.",
+        "action": "Decrypt"
       },
       "toasts": {
         "policyEnabled": "New uploads to this folder will be encrypted on this device.",

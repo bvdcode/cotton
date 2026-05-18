@@ -13,7 +13,10 @@ import {
   useVault,
 } from "../../../shared/crypto";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
-import { encryptExistingFileWithTask } from "../../../shared/tasks";
+import {
+  decryptExistingFileWithTask,
+  encryptExistingFileWithTask,
+} from "../../../shared/tasks";
 
 type ToastVariant = "info" | "error";
 
@@ -32,6 +35,8 @@ export const useFolderClientEncryptionActions = ({
 }: UseFolderClientEncryptionActionsOptions) => {
   const { t } = useTranslation(["files", "tasks"]);
   const [isEncryptingPlainFiles, setIsEncryptingPlainFiles] = useState(false);
+  const [isDecryptingEncryptedFiles, setIsDecryptingEncryptedFiles] =
+    useState(false);
 
   const folderPolicyEnabled = isFolderEncryptionPolicyEnabled(
     currentNode?.metadata,
@@ -118,12 +123,80 @@ export const useFolderClientEncryptionActions = ({
     }
   }, [currentNode, nodeId, onToast, plainFiles, t]);
 
+  const decryptEncryptedFiles = useCallback(async (): Promise<void> => {
+    if (!nodeId || !currentNode || encryptedFiles.length === 0) {
+      return;
+    }
+
+    if (!useVault.getState().isUnlocked) {
+      onToast(
+        t("clientEncryption.toasts.unlockRequired", { ns: "files" }),
+        "error",
+      );
+      return;
+    }
+
+    setIsDecryptingEncryptedFiles(true);
+
+    let decryptedCount = 0;
+    let failedCount = 0;
+
+    try {
+      const settings = await fetchServerSettings(queryClient);
+      const server = {
+        maxChunkSizeBytes: settings.maxChunkSizeBytes,
+        supportedHashAlgorithm: settings.supportedHashAlgorithm,
+      };
+
+      for (const file of encryptedFiles) {
+        try {
+          await decryptExistingFileWithTask({
+            file: toDecryptionTaskFile(file),
+            targetNodeId: nodeId,
+            scopeLabel: currentNode.name,
+            server,
+          });
+          decryptedCount += 1;
+        } catch {
+          failedCount += 1;
+        }
+      }
+    } catch {
+      onToast(t("errors.serverSettingsNotLoaded", { ns: "tasks" }), "error");
+      return;
+    } finally {
+      setIsDecryptingEncryptedFiles(false);
+      void refreshNodeContent(nodeId);
+    }
+
+    if (decryptedCount > 0) {
+      onToast(
+        t("clientEncryption.toasts.decryptExistingComplete", {
+          ns: "files",
+          count: decryptedCount,
+        }),
+      );
+    }
+
+    if (failedCount > 0) {
+      onToast(
+        t("clientEncryption.toasts.decryptExistingFailed", {
+          ns: "files",
+          count: failedCount,
+        }),
+        "error",
+      );
+    }
+  }, [currentNode, encryptedFiles, nodeId, onToast, t]);
+
   return {
     folderPolicyEnabled,
     plainFiles,
     encryptedFiles,
     isEncryptingPlainFiles,
+    isDecryptingEncryptedFiles,
     encryptPlainFiles,
+    decryptEncryptedFiles,
   };
 };
 
@@ -132,4 +205,12 @@ const toEncryptionTaskFile = (file: NodeFileManifestDto) => ({
   name: file.name,
   contentType: file.contentType,
   sizeBytes: file.sizeBytes,
+});
+
+const toDecryptionTaskFile = (file: NodeFileManifestDto) => ({
+  id: file.id,
+  name: file.name,
+  contentType: file.contentType,
+  sizeBytes: file.sizeBytes,
+  metadata: file.metadata,
 });

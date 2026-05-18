@@ -1380,7 +1380,10 @@
       "encryptedFilesRemain": {
         "title": "Los archivos cifrados siguen cifrados",
         "description_one": "{{count}} archivo seguirá cifrado aunque las nuevas subidas ya no se cifren automáticamente.",
-        "description_other": "{{count}} archivos seguirán cifrados aunque las nuevas subidas ya no se cifren automáticamente."
+        "description_other": "{{count}} archivos seguirán cifrados aunque las nuevas subidas ya no se cifren automáticamente.",
+        "toast_one": "{{count}} archivo cifrado permanece en esta carpeta.",
+        "toast_other": "{{count}} archivos cifrados permanecen en esta carpeta.",
+        "action": "Descifrar"
       },
       "toasts": {
         "policyEnabled": "Las nuevas subidas a esta carpeta se cifrarán en este dispositivo.",

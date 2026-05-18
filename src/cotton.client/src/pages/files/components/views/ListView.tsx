@@ -119,6 +119,28 @@ export const ListView: React.FC<IFileListView> = ({
     [],
   );
 
+  const isInlineRenameTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(
+      target.closest("input, textarea, [contenteditable='true']"),
+    );
+  }, []);
+
+  const isRowRenaming = useCallback(
+    (row: FileListRow): boolean => {
+      if (row.type === "folder") {
+        return folderOperations.isRenaming(String(row.id));
+      }
+
+      if (row.type === "file") {
+        return fileOperations.isRenaming(String(row.id));
+      }
+
+      return false;
+    },
+    [fileOperations, folderOperations],
+  );
+
   const buildDragPayloadForRow = useCallback(
     (rowId: string): ReadonlyArray<MoveClipboardItem> | null => {
       if (!moveSupport) return null;
@@ -179,13 +201,18 @@ export const ListView: React.FC<IFileListView> = ({
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (!moveSupport) return;
       if (event.button !== 0) return;
+      if (isInlineRenameTarget(event.target)) return;
       const rowEl = findRowElement(event.target);
       if (!rowEl) return;
+      const rowId = rowEl.getAttribute("data-id");
+      if (!rowId) return;
+      const row = rowsById.get(rowId);
+      if (!row || isRowRenaming(row)) return;
       // Make rows draggable on demand so non-row interactions (text selection,
       // sort headers, checkboxes) keep working normally.
       rowEl.setAttribute("draggable", "true");
     },
-    [findRowElement, moveSupport],
+    [findRowElement, isInlineRenameTarget, isRowRenaming, moveSupport, rowsById],
   );
 
   const handleContainerDragStart = useCallback(
@@ -195,6 +222,11 @@ export const ListView: React.FC<IFileListView> = ({
       if (!rowEl) return;
       const rowId = rowEl.getAttribute("data-id");
       if (!rowId) return;
+      const row = rowsById.get(rowId);
+      if (!row || isRowRenaming(row)) {
+        event.preventDefault();
+        return;
+      }
 
       const items = buildDragPayloadForRow(rowId);
       if (!items || items.length === 0) {
@@ -203,7 +235,7 @@ export const ListView: React.FC<IFileListView> = ({
       }
       writeMoveDragPayload(event.dataTransfer, { items });
     },
-    [buildDragPayloadForRow, findRowElement, moveSupport],
+    [buildDragPayloadForRow, findRowElement, isRowRenaming, moveSupport, rowsById],
   );
 
   const handleContainerDragOver = useCallback(
