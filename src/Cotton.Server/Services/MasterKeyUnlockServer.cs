@@ -190,7 +190,17 @@ namespace Cotton.Server.Services
                 app.Services.GetRequiredService<ILogger<MasterKeySentinelStore>>());
             var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
 
-            app.MapGet("/", () => Results.Redirect("/unlock"));
+            app.Use(async (context, next) =>
+            {
+                if (IsUnlockEndpoint(context.Request))
+                {
+                    await next();
+                    return;
+                }
+
+                RedirectToUnlock(context);
+            });
+
             app.MapGet("/unlock", () => Results.Content(UnlockPageHtml, "text/html; charset=utf-8"));
             app.MapGet("/unlock/key", () => Results.Text(GenerateRootMasterKey(), "text/plain; charset=utf-8"));
             app.MapPost("/unlock", async (HttpContext context) =>
@@ -236,6 +246,21 @@ namespace Cotton.Server.Services
                 await app.StopAsync();
                 await app.DisposeAsync();
             }
+        }
+
+        private static bool IsUnlockEndpoint(HttpRequest request)
+        {
+            PathString path = request.Path;
+            return path.Equals("/unlock", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("/unlock/key", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void RedirectToUnlock(HttpContext context)
+        {
+            context.Response.Headers.Location = "/unlock";
+            context.Response.StatusCode = HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)
+                ? StatusCodes.Status302Found
+                : StatusCodes.Status303SeeOther;
         }
 
         private static async Task CompleteUnlockAsync(
