@@ -23,6 +23,8 @@ namespace Cotton.Server.Services
             _backend = new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, storageBasePath);
         }
 
+        public Task<bool> ExistsAsync() => _backend.ExistsAsync(SentinelStorageKey);
+
         public async Task<MasterKeySentinelResult> ValidateOrInitializeAsync(
             CottonEncryptionSettings encryptionSettings,
             CancellationToken cancellationToken = default)

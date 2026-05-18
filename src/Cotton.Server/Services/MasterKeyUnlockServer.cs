@@ -1,11 +1,14 @@
 using Cotton.Autoconfig.Extensions;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Cotton.Server.Services
 {
     public static class MasterKeyUnlockServer
     {
+        private static readonly TimeSpan FirstUnlockWindow = TimeSpan.FromMinutes(Constants.AdminAutocreateMinutesDelay);
+
         private const string UnlockPageHtml = """
 <!doctype html>
 <html lang="en">
@@ -111,6 +114,10 @@ namespace Cotton.Server.Services
     <form id="unlock-form" autocomplete="off">
       <label for="masterKey">Master key</label>
       <input id="masterKey" name="masterKey" type="password" minlength="32" maxlength="32" required spellcheck="false" autocomplete="off">
+      <div id="bootstrap-token-section" hidden>
+        <label for="bootstrapToken">Bootstrap token</label>
+        <input id="bootstrapToken" name="bootstrapToken" type="password" spellcheck="false" autocomplete="off">
+      </div>
       <div class="actions">
         <button type="submit">Unlock</button>
         <button type="button" id="generate">Generate</button>
@@ -123,11 +130,29 @@ namespace Cotton.Server.Services
     const input = document.getElementById("masterKey");
     const status = document.getElementById("status");
     const generate = document.getElementById("generate");
+    const bootstrapToken = document.getElementById("bootstrapToken");
+    const bootstrapTokenSection = document.getElementById("bootstrap-token-section");
 
     function setStatus(message, kind) {
       status.textContent = message;
       status.className = kind || "";
     }
+
+    async function loadUnlockStatus() {
+      try {
+        const response = await fetch("/unlock/status", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        bootstrapTokenSection.hidden = !data.requiresBootstrapToken;
+        bootstrapToken.required = !!data.requiresBootstrapToken;
+        if (data.requiresBootstrapToken) {
+          setStatus("First unlock requires the bootstrap token from server logs.", "");
+        }
+      } catch {
+      }
+    }
+
+    void loadUnlockStatus();
 
     generate.addEventListener("click", async () => {
       generate.disabled = true;
@@ -150,6 +175,7 @@ namespace Cotton.Server.Services
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const masterKey = input.value.trim();
+      const submittedBootstrapToken = bootstrapToken.value.trim();
       const submit = form.querySelector('button[type="submit"]');
       submit.disabled = true;
       generate.disabled = true;
@@ -158,7 +184,7 @@ namespace Cotton.Server.Services
         const response = await fetch("/unlock", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ masterKey })
+          body: JSON.stringify({ masterKey, bootstrapToken: submittedBootstrapToken })
         });
         const data = await response.json();
         if (!response.ok || !data.ok) throw new Error(data.message || "Unlock failed.");
@@ -179,6 +205,9 @@ namespace Cotton.Server.Services
         public static async Task<CottonEncryptionSettings> WaitForUnlockAsync(string[] args)
         {
             var completion = new TaskCompletionSource<CottonEncryptionSettings>(TaskCreationOptions.RunContinuationsAsynchronously);
+            DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
+            DateTimeOffset firstUnlockExpiresAtUtc = startedAtUtc.Add(FirstUnlockWindow);
+            string bootstrapToken = GenerateBootstrapToken();
             var builder = WebApplication.CreateBuilder(args);
             builder.Logging.AddFilter(
                 "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
@@ -189,6 +218,7 @@ namespace Cotton.Server.Services
             var sentinel = new MasterKeySentinelStore(
                 app.Services.GetRequiredService<ILogger<MasterKeySentinelStore>>());
             var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+            IWebHostEnvironment environment = app.Services.GetRequiredService<IWebHostEnvironment>();
 
             app.Use(async (context, next) =>
             {
@@ -202,14 +232,36 @@ namespace Cotton.Server.Services
             });
 
             app.MapGet("/unlock", () => Results.Content(UnlockPageHtml, "text/html; charset=utf-8"));
+            app.MapGet("/unlock/status", async () =>
+            {
+                bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(
+                    sentinel,
+                    environment,
+                    CancellationToken.None);
+                return Results.Ok(new UnlockStatusResponse(
+                    RequiresBootstrapToken: requiresBootstrapToken,
+                    FirstUnlockExpiresAtUtc: requiresBootstrapToken ? firstUnlockExpiresAtUtc : null));
+            });
             app.MapGet("/unlock/key", () => Results.Text(GenerateRootMasterKey(), "text/plain; charset=utf-8"));
             app.MapPost("/unlock", async (HttpContext context) =>
             {
-                string? rootMasterKey = await ReadSubmittedMasterKeyAsync(context);
+                SubmittedUnlockRequest submitted = await ReadSubmittedUnlockRequestAsync(context);
+                IResult? bootstrapError = await ValidateBootstrapTokenAsync(
+                    sentinel,
+                    environment,
+                    submitted.BootstrapToken,
+                    bootstrapToken,
+                    firstUnlockExpiresAtUtc,
+                    context.RequestAborted);
+                if (bootstrapError is not null)
+                {
+                    return bootstrapError;
+                }
+
                 CottonEncryptionSettings encryptionSettings;
                 try
                 {
-                    encryptionSettings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey ?? string.Empty);
+                    encryptionSettings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(submitted.MasterKey ?? string.Empty);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -235,7 +287,7 @@ namespace Cotton.Server.Services
                 () => completion.TrySetCanceled());
 
             await app.StartAsync();
-            LogUnlockAddresses(app, logger);
+            await LogUnlockAddressesAsync(app, logger, sentinel, environment, bootstrapToken, firstUnlockExpiresAtUtc);
 
             try
             {
@@ -252,6 +304,7 @@ namespace Cotton.Server.Services
         {
             PathString path = request.Path;
             return path.Equals("/unlock", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("/unlock/status", StringComparison.OrdinalIgnoreCase)
                 || path.Equals("/unlock/key", StringComparison.OrdinalIgnoreCase);
         }
 
@@ -273,42 +326,130 @@ namespace Cotton.Server.Services
             await host.StopAsync();
         }
 
-        private static async Task<string?> ReadSubmittedMasterKeyAsync(HttpContext context)
+        private static async Task<IResult?> ValidateBootstrapTokenAsync(
+            MasterKeySentinelStore sentinel,
+            IWebHostEnvironment environment,
+            string? submittedBootstrapToken,
+            string expectedBootstrapToken,
+            DateTimeOffset firstUnlockExpiresAtUtc,
+            CancellationToken cancellationToken)
+        {
+            if (!await RequiresBootstrapTokenAsync(sentinel, environment, cancellationToken))
+            {
+                return null;
+            }
+
+            if (DateTimeOffset.UtcNow > firstUnlockExpiresAtUtc)
+            {
+                return Results.Json(
+                    new UnlockResponse(false, "First unlock window expired. Restart Cotton and use the new bootstrap token from server logs."),
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            if (!IsBootstrapTokenValid(submittedBootstrapToken, expectedBootstrapToken))
+            {
+                return Results.Json(
+                    new UnlockResponse(false, "Bootstrap token is required for the first unlock. Check the server logs."),
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            return null;
+        }
+
+        private static async Task<bool> RequiresBootstrapTokenAsync(
+            MasterKeySentinelStore sentinel,
+            IWebHostEnvironment environment,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return !environment.IsDevelopment() && !await sentinel.ExistsAsync();
+        }
+
+        private static bool IsBootstrapTokenValid(string? submittedBootstrapToken, string expectedBootstrapToken)
+        {
+            if (string.IsNullOrWhiteSpace(submittedBootstrapToken))
+            {
+                return false;
+            }
+
+            byte[] submitted = Encoding.UTF8.GetBytes(submittedBootstrapToken.Trim());
+            byte[] expected = Encoding.UTF8.GetBytes(expectedBootstrapToken);
+            return submitted.Length == expected.Length
+                && CryptographicOperations.FixedTimeEquals(submitted, expected);
+        }
+
+        private static async Task<SubmittedUnlockRequest> ReadSubmittedUnlockRequestAsync(HttpContext context)
         {
             if (context.Request.HasFormContentType)
             {
                 IFormCollection form = await context.Request.ReadFormAsync();
-                return form["masterKey"].ToString().Trim();
+                return new SubmittedUnlockRequest(
+                    form["masterKey"].ToString().Trim(),
+                    form["bootstrapToken"].ToString().Trim());
             }
 
             UnlockRequest? request = await JsonSerializer.DeserializeAsync<UnlockRequest>(
                 context.Request.Body,
                 new JsonSerializerOptions(JsonSerializerDefaults.Web),
                 context.RequestAborted);
-            return request?.MasterKey?.Trim();
+            return new SubmittedUnlockRequest(
+                request?.MasterKey?.Trim(),
+                request?.BootstrapToken?.Trim());
         }
 
         private static string GenerateRootMasterKey() =>
             Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
 
-        private static void LogUnlockAddresses(WebApplication app, ILogger logger)
+        private static string GenerateBootstrapToken() =>
+            Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+
+        private static async Task LogUnlockAddressesAsync(
+            WebApplication app,
+            ILogger logger,
+            MasterKeySentinelStore sentinel,
+            IWebHostEnvironment environment,
+            string bootstrapToken,
+            DateTimeOffset firstUnlockExpiresAtUtc)
         {
             string[] addresses = [.. app.Urls];
+            bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(sentinel, environment);
             if (addresses.Length == 0)
             {
+                if (requiresBootstrapToken)
+                {
+                    logger.LogWarning(
+                        "COTTON_MASTER_KEY is not configured. First unlock bootstrap token is {BootstrapToken}; it expires at {ExpiresAtUtc:O}.",
+                        bootstrapToken,
+                        firstUnlockExpiresAtUtc);
+                    return;
+                }
+
                 logger.LogWarning("COTTON_MASTER_KEY is not configured. Open /unlock to provide the master key.");
                 return;
             }
 
             foreach (string address in addresses)
             {
+                string unlockUrl = address.TrimEnd('/') + "/unlock";
+                if (requiresBootstrapToken)
+                {
+                    logger.LogWarning(
+                        "COTTON_MASTER_KEY is not configured. First unlock requires bootstrap token {BootstrapToken}; it expires at {ExpiresAtUtc:O}. Unlock Cotton at {UnlockUrl}",
+                        bootstrapToken,
+                        firstUnlockExpiresAtUtc,
+                        unlockUrl);
+                    continue;
+                }
+
                 logger.LogWarning(
                     "COTTON_MASTER_KEY is not configured. Unlock Cotton at {UnlockUrl}",
-                    address.TrimEnd('/') + "/unlock");
+                    unlockUrl);
             }
         }
 
-        private sealed record UnlockRequest(string? MasterKey);
+        private sealed record UnlockRequest(string? MasterKey, string? BootstrapToken);
+        private sealed record SubmittedUnlockRequest(string? MasterKey, string? BootstrapToken);
+        private sealed record UnlockStatusResponse(bool RequiresBootstrapToken, DateTimeOffset? FirstUnlockExpiresAtUtc);
         private sealed record UnlockResponse(bool Ok, string Message);
     }
 }

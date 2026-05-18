@@ -231,6 +231,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         await WriteStorageObjectsAsync(storage, orphanHash, backupHash);
         await storage.WriteAsync(manifestStorageKey, new MemoryStream([4, 5, 6]));
         await storage.WriteAsync(keyProvider.GetScopedPointerStorageKey(), new MemoryStream([1, 2, 3]));
+        await storage.WriteAsync(MasterKeySentinelStore.SentinelStorageKey, new MemoryStream([7, 8, 9]));
 
         var backup = CreateBackupManifest(Hasher.ToHexStringHash(backupHash), manifestStorageKey);
         var usage = CreateChunkUsageService(DbContext, storage, keyProvider, backup);
@@ -248,6 +249,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
         bool backupRegistered = await DbContext.Chunks.AnyAsync(c => c.Hash == backupHash);
         bool manifestRegistered = await DbContext.Chunks.AnyAsync(c => c.Hash == Hash("backup-manifest"));
         bool pointerRegistered = await DbContext.Chunks.AnyAsync(c => c.Hash == Hasher.FromHexStringHash(keyProvider.GetScopedPointerStorageKey()));
+        bool sentinelRegistered = await DbContext.Chunks.AnyAsync(c => c.Hash == Hasher.FromHexStringHash(MasterKeySentinelStore.SentinelStorageKey));
 
         Assert.Multiple(() =>
         {
@@ -255,6 +257,7 @@ public class GarbageCollectorJobTests : IntegrationTestBase
             Assert.That(backupRegistered, Is.False);
             Assert.That(manifestRegistered, Is.False);
             Assert.That(pointerRegistered, Is.False);
+            Assert.That(sentinelRegistered, Is.False);
         });
     }
 
