@@ -42,6 +42,9 @@ namespace Cotton.Server
                 builder.Logging.AddConsole();
                 builder.Logging.AddDebug();
             }
+            builder.Logging.AddFilter(
+                "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
+                LogLevel.Error);
             MapsterConfig.Register();
             builder.Services
                 .AddExceptionHandler()
