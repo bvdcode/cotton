@@ -25,6 +25,13 @@ const GOLDEN_CONTAINER_HEX = [
   "43544e3124000000100000000000000001000000c5ef24a09009a9ed0ccc6edd0daa845f",
   "92687f5a3ed888916cd851a46a61f41e",
 ].join("");
+const EASY_EXTENSIONS_SINGLE_CHUNK_HEX = [
+  "43544e315400000020000000000000000100000001020304101112131415161718191a1b",
+  "105a66b023aeb952c3b16a92055c1160dd5f3ab5ed6c9c1462dca2b6a3d4c7fc",
+  "67e1fcbdaf77e1065f4058dce2e9ea64",
+  "43544e3124000000200000000000000001000000f7cae02a9b0ba5f0b205f417676e555a",
+  "86d0074dab5ecff2aa2da23f6adee0ef2bf2fe613fd6de9c493e03d29e28cda1",
+].join("");
 
 const GOLDEN_PLAINTEXT = new TextEncoder().encode(
   "0123456789abcdefABCDEFGHIJKLMNOP",
@@ -54,6 +61,19 @@ describe("CTN1 golden vectors", () => {
       bytesToHex(GOLDEN_PLAINTEXT),
     );
     expect(decrypted.type).toBe("text/plain");
+  });
+
+  it("decrypts the single-chunk EasyExtensions fixture", async () => {
+    const masterKey = await importMasterKey(MASTER_KEY_BYTES);
+    const decrypted = await decryptBlobToBlob(
+      new Blob([hexToBytes(EASY_EXTENSIONS_SINGLE_CHUNK_HEX) as BlobPart]),
+      masterKey,
+      "text/plain",
+    );
+
+    expect(bytesToHex(await blobToBytes(decrypted))).toBe(
+      bytesToHex(GOLDEN_PLAINTEXT),
+    );
   });
 
   it("rebuilds the fixed container byte-for-byte", async () => {
