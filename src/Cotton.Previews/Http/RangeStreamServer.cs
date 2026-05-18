@@ -115,6 +115,11 @@ namespace Cotton.Previews.Http
                 await ServeRangeAsync(ctx, reqId, range.Value, ct).ConfigureAwait(false);
                 return;
             }
+            catch (OperationCanceledException)
+            {
+                _logger?.LogDebug("[RangeServer {ServerId} Req {ReqId}] Range request cancelled by client", _serverId, reqId);
+                try { ctx.Response.Abort(); } catch { }
+            }
             catch (HttpListenerException ex) when (ex.Message.Contains("reset by peer", StringComparison.OrdinalIgnoreCase)
                                                   || ex.Message.Contains("forcibly closed", StringComparison.OrdinalIgnoreCase)
                                                   || ex.Message.Contains("broken pipe", StringComparison.OrdinalIgnoreCase))
