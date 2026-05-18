@@ -22,6 +22,7 @@ namespace Cotton.Server.Mappings
                 .NewConfig()
                 .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.Name, src => src.Name)
+                .Map(dest => dest.NodeId, src => src.NodeId)
                 .Map(dest => dest.OwnerId, src => src.OwnerId)
                 .Map(dest => dest.SizeBytes, src => src.FileManifest.SizeBytes)
                 .Map(dest => dest.ContentType, src => src.FileManifest.ContentType)

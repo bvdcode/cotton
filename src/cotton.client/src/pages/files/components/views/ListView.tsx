@@ -48,6 +48,8 @@ export const ListView: React.FC<IFileListView> = ({
   const [failedPreviews, setFailedPreviews] = React.useState<Set<string>>(
     new Set(),
   );
+  const getFolderEncryptionPolicyState =
+    folderOperations.getEncryptionPolicyState;
 
   const rows: GridRowsProp<FileListRow> = useMemo(() => {
     const baseRows: FileListRow[] = tiles.map((tile) => {
@@ -58,6 +60,9 @@ export const ListView: React.FC<IFileListView> = ({
           name: tile.node.name,
           location: tile.path ?? null,
           sizeBytes: null,
+          metadata: tile.node.metadata,
+          encryptionPolicy:
+            getFolderEncryptionPolicyState?.(tile.node),
           tile,
         };
       }
@@ -71,6 +76,7 @@ export const ListView: React.FC<IFileListView> = ({
         containerNodeId: tile.file.nodeId ?? null,
         sizeBytes: tile.file.sizeBytes,
         contentType: tile.file.contentType ?? null,
+        metadata: "metadata" in tile.file ? tile.file.metadata : undefined,
         requiresVideoTranscoding: tile.file.requiresVideoTranscoding ?? false,
         tile,
       };
@@ -87,7 +93,12 @@ export const ListView: React.FC<IFileListView> = ({
       },
       ...baseRows,
     ];
-  }, [tiles, isCreatingFolder, newFolderName]);
+  }, [
+    tiles,
+    isCreatingFolder,
+    newFolderName,
+    getFolderEncryptionPolicyState,
+  ]);
 
   const orderedIds = useMemo(
     () =>
@@ -117,6 +128,28 @@ export const ListView: React.FC<IFileListView> = ({
     [],
   );
 
+  const isInlineRenameTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(
+      target.closest("input, textarea, [contenteditable='true']"),
+    );
+  }, []);
+
+  const isRowRenaming = useCallback(
+    (row: FileListRow): boolean => {
+      if (row.type === "folder") {
+        return folderOperations.isRenaming(String(row.id));
+      }
+
+      if (row.type === "file") {
+        return fileOperations.isRenaming(String(row.id));
+      }
+
+      return false;
+    },
+    [fileOperations, folderOperations],
+  );
+
   const buildDragPayloadForRow = useCallback(
     (rowId: string): ReadonlyArray<MoveClipboardItem> | null => {
       if (!moveSupport) return null;
@@ -139,6 +172,12 @@ export const ListView: React.FC<IFileListView> = ({
             id: String(r.id),
             kind: "file",
             sourceParentId: r.containerNodeId ?? currentParentId,
+            file: {
+              name: r.name,
+              contentType: r.contentType ?? "application/octet-stream",
+              sizeBytes: r.sizeBytes ?? 0,
+              metadata: r.metadata ?? {},
+            },
           };
         }
         return null;
@@ -171,13 +210,18 @@ export const ListView: React.FC<IFileListView> = ({
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (!moveSupport) return;
       if (event.button !== 0) return;
+      if (isInlineRenameTarget(event.target)) return;
       const rowEl = findRowElement(event.target);
       if (!rowEl) return;
+      const rowId = rowEl.getAttribute("data-id");
+      if (!rowId) return;
+      const row = rowsById.get(rowId);
+      if (!row || isRowRenaming(row)) return;
       // Make rows draggable on demand so non-row interactions (text selection,
       // sort headers, checkboxes) keep working normally.
       rowEl.setAttribute("draggable", "true");
     },
-    [findRowElement, moveSupport],
+    [findRowElement, isInlineRenameTarget, isRowRenaming, moveSupport, rowsById],
   );
 
   const handleContainerDragStart = useCallback(
@@ -187,6 +231,11 @@ export const ListView: React.FC<IFileListView> = ({
       if (!rowEl) return;
       const rowId = rowEl.getAttribute("data-id");
       if (!rowId) return;
+      const row = rowsById.get(rowId);
+      if (!row || isRowRenaming(row)) {
+        event.preventDefault();
+        return;
+      }
 
       const items = buildDragPayloadForRow(rowId);
       if (!items || items.length === 0) {
@@ -195,7 +244,7 @@ export const ListView: React.FC<IFileListView> = ({
       }
       writeMoveDragPayload(event.dataTransfer, { items });
     },
-    [buildDragPayloadForRow, findRowElement, moveSupport],
+    [buildDragPayloadForRow, findRowElement, isRowRenaming, moveSupport, rowsById],
   );
 
   const handleContainerDragOver = useCallback(
@@ -294,6 +343,10 @@ export const ListView: React.FC<IFileListView> = ({
           download: t("common:actions.download"),
           share: t("common:actions.share"),
           cut: t("move.cut"),
+          encryptedFile: t("common:clientEncryption.fileEncryptedHint"),
+          encryptedFolder: t("common:clientEncryption.folderPolicyEnabledHint"),
+          enableEncryptionPolicy: t("clientEncryption.enablePolicy"),
+          disableEncryptionPolicy: t("clientEncryption.disablePolicy"),
         },
         newFolderName,
         onNewFolderNameChange,

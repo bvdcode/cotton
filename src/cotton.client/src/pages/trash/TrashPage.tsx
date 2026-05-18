@@ -43,11 +43,11 @@ import type {
   FileOperations,
   FolderOperations,
 } from "@shared/types/FileListViewTypes";
-import { useFileSelection } from "../files/hooks/useFileSelection";
+import { useFileSelection } from "@shared/hooks/useFileSelection";
 import {
   cycleFileBrowserViewMode,
   getFileBrowserViewMode,
-} from "../files/utils/viewMode";
+} from "@shared/utils/viewMode";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
 

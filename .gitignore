@@ -29,6 +29,8 @@ build/
 bld/
 [Bb]in/
 [Oo]bj/
+# MSBuild on Linux can create a literal obj\Debug directory for ESProj references.
+[Oo]bj\\*/
 [Oo]ut/
 msbuild.log
 msbuild.err
@@ -41,3 +43,4 @@ data
 src/cotton.client/.github/instructions/main.instructions.md
 src/.claude/settings.local.json
 notes/
+sixlabors.lic

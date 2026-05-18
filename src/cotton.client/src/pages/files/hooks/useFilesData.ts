@@ -4,7 +4,10 @@ import { useAuthStore } from "../../../shared/store/authStore";
 
 interface UseFilesDataParams {
   nodeId: string | null;
-  loadNode: (nodeId: string, options?: { loadChildren?: boolean }) => Promise<void>;
+  loadNode: (
+    nodeId: string,
+    options?: { loadChildren?: boolean; force?: boolean },
+  ) => Promise<void>;
   refreshNodeContent: (nodeId: string) => Promise<void>;
 }
 
@@ -62,7 +65,7 @@ export const useFilesData = ({
       return;
     }
 
-    void loadNode(nodeId, { loadChildren: true });
+    void loadNode(nodeId, { loadChildren: true, force: true });
   }, [nodeId, loadNode]);
 
   const optimisticUpdateCurrentNodeFilePreviewHash = useCallback(

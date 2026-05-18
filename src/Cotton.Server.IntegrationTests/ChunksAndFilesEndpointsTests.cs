@@ -103,10 +103,30 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
             Name = "hello.txt",
             ContentType = "text/plain",
             Hash = chunkHashLower,
-            NodeId = root!.Id
+            NodeId = root!.Id,
+            Metadata = new Dictionary<string, string>
+            {
+                ["isClientEncrypted"] = "true",
+                ["originalContentType"] = "text/plain"
+            }
         };
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
+        var created = await createFileRes.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.Id, Is.Not.EqualTo(Guid.Empty));
+        Assert.That(created.NodeId, Is.EqualTo(root!.Id));
+        Assert.That(created.Name, Is.EqualTo("hello.txt"));
+
+        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        Assert.That(list, Is.Not.Null);
+        var file = list!.Files.SingleOrDefault(x => x.Name == "hello.txt");
+        Assert.That(file, Is.Not.Null);
+        Assert.That(file!.Id, Is.EqualTo(created.Id));
+        Assert.That(file.NodeId, Is.EqualTo(root.Id));
+        Assert.That(file!.Metadata, Does.ContainKey("isClientEncrypted"));
+        Assert.That(file.Metadata["isClientEncrypted"], Is.EqualTo("true"));
+        Assert.That(file.Metadata["originalContentType"], Is.EqualTo("text/plain"));
     }
 
     [Test]
@@ -172,6 +192,39 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Update_File_Metadata_Merges_Metadata_For_Own_File()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(
+            root!,
+            "metadata.txt",
+            "metadata",
+            new Dictionary<string, string>
+            {
+                ["isClientEncrypted"] = "true",
+                ["originalContentType"] = "text/plain"
+            });
+
+        var patch = new Dictionary<string, string>
+        {
+            ["en"] = "encrypted-display-name"
+        };
+        var updateRes = await _client.PatchAsJsonAsync($"/api/v1/files/{file.Id}/metadata", patch);
+        updateRes.EnsureSuccessStatusCode();
+
+        var updated = await updateRes.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Metadata["isClientEncrypted"], Is.EqualTo("true"));
+        Assert.That(updated.Metadata["originalContentType"], Is.EqualTo("text/plain"));
+        Assert.That(updated.Metadata["en"], Is.EqualTo("encrypted-display-name"));
+    }
+
+    [Test]
     public async Task Create_File_From_Chunks_Detects_ContentType_From_FileName_When_Missing()
     {
         var token = await LoginAsync();
@@ -213,6 +266,48 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var file = list!.Files.FirstOrDefault(x => x.Name == "auto-detect.txt");
         Assert.That(file, Is.Not.Null);
         Assert.That(file!.ContentType, Is.EqualTo("text/plain"));
+    }
+
+    private async Task<Cotton.Server.Models.Dto.NodeFileManifestDto> UploadTextFileAsync(
+        Models.Dto.NodeDto root,
+        string name,
+        string text,
+        Dictionary<string, string>? metadata = null)
+    {
+        var content = Encoding.UTF8.GetBytes(text);
+        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                },
+                "file",
+                "chunk.bin"
+            },
+            { new StringContent(chunkHashLower), "hash" }
+        };
+        var upRes = await _client!.PostAsync("/api/v1/chunks", form);
+        upRes.EnsureSuccessStatusCode();
+
+        var fileReq = new CreateFileRequest
+        {
+            ChunkHashes = [chunkHashLower],
+            Name = name,
+            ContentType = "text/plain",
+            Hash = chunkHashLower,
+            NodeId = root.Id,
+            Metadata = metadata
+        };
+        var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        createFileRes.EnsureSuccessStatusCode();
+
+        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root.Id}/children");
+        Assert.That(list, Is.Not.Null);
+        var file = list!.Files.SingleOrDefault(x => x.Name == name);
+        Assert.That(file, Is.Not.Null);
+        return file!;
     }
 
     private async Task<string> LoginAsync()

@@ -599,6 +599,53 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task WebDavDelete_NotificationsUseOriginalParents()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
+
+        using var factory = new TestAppFactory(_overrides);
+        using var customFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IEventNotificationService>();
+                services.AddSingleton<WebDavDeleteEventRecorder>();
+                services.AddScoped<IEventNotificationService, RecordingWebDavDeleteEventNotificationService>();
+            });
+        });
+        using var client = customFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var token = await LoginViaClientAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var root = await client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        var fileParent = await CreateFolderViaClientAsync(client, root!.Id, "delete-file-parent");
+        var file = await CreateFileViaClientAsync(client, fileParent.Id, "doc.txt", "webdav-delete-file");
+        var folder = await CreateFolderViaClientAsync(client, root.Id, "delete-folder-parent");
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:testpassword")));
+
+        using var deleteFileRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-file-parent/doc.txt");
+        var deleteFileResponse = await client.SendAsync(deleteFileRequest);
+        Assert.That(deleteFileResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        using var deleteFolderRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/webdav/delete-folder-parent");
+        var deleteFolderResponse = await client.SendAsync(deleteFolderRequest);
+        Assert.That(deleteFolderResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var recorder = customFactory.Services.GetRequiredService<WebDavDeleteEventRecorder>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(recorder.FileDeletedNodeFileId, Is.EqualTo(file.Id));
+            Assert.That(recorder.FileDeletedParentNodeId, Is.EqualTo(fileParent.Id));
+            Assert.That(recorder.NodeDeletedNodeId, Is.EqualTo(folder.Id));
+            Assert.That(recorder.NodeDeletedParentNodeId, Is.EqualTo(root.Id));
+        });
+    }
+
+    [Test]
     public async Task MoveFile_NotificationFailureDoesNotFailRequest()
     {
         // Reset the standard factory so we can wire a throwing notifier.
@@ -721,7 +768,7 @@ public class MoveEndpointsTests : IntegrationTestBase
         var createRes = await client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createRes.EnsureSuccessStatusCode();
 
-        // The from-chunks endpoint returns 200 with no body; look the created file up by name.
+        // Read back from the folder so callers get the same projection as the files UI.
         var children = await client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
         var dto = children!.Files.SingleOrDefault(f => f.Name == name)
             ?? throw new InvalidOperationException($"Created file '{name}' not found in node {nodeId}.");
@@ -782,11 +829,47 @@ internal sealed class ThrowingEventNotificationService : IEventNotificationServi
 {
     public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+    public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
-    public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+    public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
     public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => throw new InvalidOperationException("simulated failure");
+}
+
+internal sealed class WebDavDeleteEventRecorder
+{
+    public Guid? FileDeletedNodeFileId { get; set; }
+    public Guid? FileDeletedParentNodeId { get; set; }
+    public Guid? NodeDeletedNodeId { get; set; }
+    public Guid? NodeDeletedParentNodeId { get; set; }
+}
+
+internal sealed class RecordingWebDavDeleteEventNotificationService(
+    WebDavDeleteEventRecorder recorder) : IEventNotificationService
+{
+    public Task NotifyFileCreatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyFileUpdatedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task NotifyFileDeletedAsync(Guid userId, Guid nodeFileId, Guid? parentNodeId, CancellationToken ct = default)
+    {
+        recorder.FileDeletedNodeFileId = nodeFileId;
+        recorder.FileDeletedParentNodeId = parentNodeId;
+        return Task.CompletedTask;
+    }
+
+    public Task NotifyFileMovedAsync(Guid nodeFileId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyFileRenamedAsync(Guid nodeFileId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyNodeCreatedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task NotifyNodeDeletedAsync(Guid userId, Guid nodeId, Guid? parentNodeId, CancellationToken ct = default)
+    {
+        recorder.NodeDeletedNodeId = nodeId;
+        recorder.NodeDeletedParentNodeId = parentNodeId;
+        return Task.CompletedTask;
+    }
+
+    public Task NotifyNodeMovedAsync(Guid nodeId, Guid oldParentId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task NotifyNodeRenamedAsync(Guid nodeId, CancellationToken ct = default) => Task.CompletedTask;
 }

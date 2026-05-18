@@ -5,9 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { SearchBar } from "./components/SearchBar";
 import { useLayoutSearch } from "./hooks/useLayoutSearch";
-import { FilePreviewModal } from "../files/components";
 import { FileListViewFactory } from "../files/components";
-import { MediaLightbox } from "../files/components";
+import { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
 import { useFolderOperations } from "../files/hooks/useFolderOperations";
 import { useFileOperations } from "../files/hooks/useFileOperations";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
@@ -19,8 +18,8 @@ import {
 import { InterfaceLayoutType, layoutsApi } from "../../shared/api/layoutsApi";
 import {
   selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 
 export const SearchPage: React.FC = () => {
@@ -33,7 +32,7 @@ export const SearchPage: React.FC = () => {
 
   const layoutId = rootNode?.layoutId;
 
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
 

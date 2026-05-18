@@ -20,7 +20,7 @@ import {
   WbSunny,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { PreviewModal, PdfPreview, ModelPreview } from "../../files/components/preview";
+import { PreviewModal, PdfPreview, ModelPreview } from "@shared/ui/preview";
 import type { FileType } from "@shared/utils/fileTypes";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import { previewConfig } from "../../../shared/config/previewConfig";

@@ -19,13 +19,13 @@ import { useNavigate } from "react-router-dom";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { useSearchFileList } from "../../shared/hooks/useFileListSource";
 import type { NodeFileManifestDto } from "../../shared/api/nodesApi";
-import { useFileInteractionHandlers } from "../../pages/files/hooks/useFileInteractionHandlers";
-import { FilePreviewModal, MediaLightbox } from "../../pages/files/components";
+import { useFileInteractionHandlers } from "@shared/hooks/useFileInteractionHandlers";
+import { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
 import {
   selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../shared/store/userPreferencesStore";
 import { useDictionaryMatch } from "./hooks/useDictionaryMatch";
 import { useSearchPagination } from "./hooks/useSearchPagination";
 import { SearchResultRow } from "./components/SearchResultRow";
@@ -127,7 +127,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     return files;
   }, [results]);
 
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
 
@@ -224,7 +224,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
       <SearchResultRow
         row={row}
         isLast={index >= rows.length - 1}
-        failedPreviews={failedPreviews}
+        previewFailed={
+          row.kind === "file" ? failedPreviews.has(row.file.id) : false
+        }
         onPreviewError={handlePreviewError}
         onActivate={activateRow}
         onShareFile={handleShareRow}

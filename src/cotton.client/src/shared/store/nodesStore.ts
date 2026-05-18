@@ -1,14 +1,13 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { nodesApi, type NodeContentDto } from "../api/nodesApi";
-import { layoutsApi, type NodeDto } from "../api/layoutsApi";
+import type { NodeContentDto } from "../api/nodesApi";
+import type { NodeDto } from "../api/layoutsApi";
 import { NODES_STORAGE_KEY } from "../config/storageKeys";
-import { isAxiosError } from "../api/httpClient";
-import { translateError } from "../i18n/translateError";
-
-let rootResolvePromise: Promise<void> | null = null;
-let lastRootResolveStartedAt = 0;
-const ROOT_RESOLVE_MIN_INTERVAL_MS = 600_000;
+import {
+  applyDisplayMetaToFiles,
+  toPersistableFileDisplayMetadata,
+} from "../crypto/displayMeta";
+import { resetNodesActionsInternals } from "./nodesActionInternals";
 
 type NodesState = {
   cacheOwnerUserId: string | null;
@@ -17,26 +16,15 @@ type NodesState = {
   contentByNodeId: Record<string, NodeContentDto | undefined>;
   ancestorsByNodeId: Record<string, NodeDto[] | undefined>;
   rootNodeId: string | null;
-
   loading: boolean;
   error: string | null;
   lastUpdatedByNodeId: Record<string, number | undefined>;
-
-  loadRoot: (options?: { force?: boolean; loadChildren?: boolean }) => Promise<NodeDto | null>;
-  loadNode: (
-    nodeId: string,
-    options?: { loadChildren?: boolean; allowRootRecovery?: boolean },
-  ) => Promise<void>;
-  resolveRootInBackground: (options?: { loadChildren?: boolean; force?: boolean }) => void;
-  refreshNodeContent: (nodeId: string) => Promise<void>;
+  updateNode: (updated: NodeDto) => void;
   addFolderToCache: (parentNodeId: string, folder: NodeDto) => void;
-  createFolder: (parentNodeId: string, name: string) => Promise<NodeDto | null>;
-  deleteFolder: (nodeId: string, parentNodeId?: string, skipTrash?: boolean) => Promise<boolean>;
-  renameFolder: (
-    nodeId: string,
-    newName: string,
-    parentNodeId?: string,
-  ) => Promise<boolean>;
+  updateFileInCache: (
+    parentNodeId: string,
+    file: NodeContentDto["files"][number],
+  ) => void;
   optimisticRenameFile: (parentNodeId: string, fileId: string, newName: string) => void;
   optimisticSetFilePreviewHash: (
     parentNodeId: string,
@@ -44,78 +32,13 @@ type NodesState = {
     previewHashEncryptedHex: string,
   ) => void;
   optimisticDeleteFile: (parentNodeId: string, fileId: string) => void;
+  refreshCachedFileDisplayMetadata: () => Promise<void>;
   reset: (cacheOwnerUserId?: string | null) => void;
 };
 
-async function resolveNodeAndAncestors(
-  nodeId: string,
-  state: Pick<NodesState, "currentNode" | "ancestors" | "ancestorsByNodeId" | "contentByNodeId">,
-): Promise<{ node: NodeDto; ancestors: NodeDto[] }> {
-  type LocalResolution = {
-    node: NodeDto | null;
-    ancestors: NodeDto[] | null;
-  };
-
-  const getCachedAncestors = (): NodeDto[] | null =>
-    state.ancestorsByNodeId[nodeId] ?? null;
-
-  const tryResolveFromCurrentNode = (): LocalResolution | null => {
-    if (state.currentNode?.id !== nodeId) return null;
-    return {
-      node: state.currentNode,
-      ancestors: getCachedAncestors() ?? state.ancestors,
-    };
-  };
-
-  const tryResolveFromAncestors = (): LocalResolution | null => {
-    const index = state.ancestors.findIndex((item) => item.id === nodeId);
-    if (index < 0) return null;
-    return {
-      node: state.ancestors[index],
-      ancestors: getCachedAncestors() ?? state.ancestors.slice(0, index),
-    };
-  };
-
-  const tryResolveFromCurrentChildren = (): LocalResolution | null => {
-    if (!state.currentNode) return null;
-    const parentContent = state.contentByNodeId[state.currentNode.id];
-    const found = parentContent?.nodes.find((item) => item.id === nodeId) ?? null;
-    if (!found) return null;
-
-    const ancestors = getCachedAncestors();
-    if (ancestors) {
-      return { node: found, ancestors };
-    }
-
-    if (found.parentId === state.currentNode.id) {
-      return { node: found, ancestors: [...state.ancestors, state.currentNode] };
-    }
-
-    return { node: found, ancestors: null };
-  };
-
-  const tryResolveFromAnyCachedContent = (): LocalResolution | null => {
-    for (const content of Object.values(state.contentByNodeId)) {
-      if (!content) continue;
-      const found = content.nodes.find((n) => n.id === nodeId);
-      if (found) {
-        return { node: found, ancestors: getCachedAncestors() };
-      }
-    }
-    return null;
-  };
-
-  const local =
-    tryResolveFromCurrentNode() ??
-    tryResolveFromAncestors() ??
-    tryResolveFromCurrentChildren() ??
-    tryResolveFromAnyCachedContent();
-
-  const node = local?.node ?? (await nodesApi.getNode(nodeId));
-  const ancestors = local?.ancestors ?? (await nodesApi.getAncestors(nodeId));
-
-  return { node, ancestors };
-}
+// Folders larger than this are not persisted to sessionStorage to avoid
+// exceeding the roughly 5 MB browser quota; they get refetched on reload.
+const MAX_PERSISTED_NODE_CONTENT_ITEMS = 10000;
 
 function buildPersistedContentSnapshot(state: {
   rootNodeId: string | null;
@@ -148,9 +71,15 @@ function buildPersistedContentSnapshot(state: {
     if (content) {
       const itemCount = content.nodes.length + content.files.length;
       if (itemCount <= MAX_PERSISTED_NODE_CONTENT_ITEMS) {
-        contentByNodeId[nodeId] = content;
+        contentByNodeId[nodeId] = {
+          ...content,
+          files: content.files
+            .map(toPersistableFileDisplayMetadata)
+            .filter((file) => file !== null),
+        };
       }
     }
+
     ancestorsByNodeId[nodeId] = state.ancestorsByNodeId[nodeId];
     lastUpdatedByNodeId[nodeId] = state.lastUpdatedByNodeId[nodeId];
   }
@@ -161,10 +90,6 @@ function buildPersistedContentSnapshot(state: {
     lastUpdatedByNodeId,
   };
 }
-
-// Folders larger than this are not persisted to sessionStorage to avoid
-// blowing the ~5 MB quota — they get refetched on reload instead.
-const MAX_PERSISTED_NODE_CONTENT_ITEMS = 10000;
 
 const safeSessionStorage = {
   getItem: (key: string) => sessionStorage.getItem(key),
@@ -178,11 +103,13 @@ const safeSessionStorage = {
         (error.name === "QuotaExceededError" ||
           error.name === "NS_ERROR_DOM_QUOTA_REACHED");
       if (!isQuota) throw error;
+
       try {
         sessionStorage.removeItem(key);
       } catch {
         // ignore
       }
+
       console.warn(
         `[nodesStore] sessionStorage quota exceeded for "${key}" (${value.length} chars). Skipping persistence.`,
       );
@@ -190,547 +117,10 @@ const safeSessionStorage = {
   },
 };
 
-const CHILDREN_FETCH_PAGE_SIZE = 100_000;
-
-const tFileError = (key: string): string => translateError("files", key);
-
-async function fetchAllNodeChildren(nodeId: string): Promise<NodeContentDto> {
-  const firstPage = await nodesApi.getChildren(nodeId, {
-    page: 1,
-    pageSize: CHILDREN_FETCH_PAGE_SIZE,
-  });
-
-  let merged: NodeContentDto = {
-    ...firstPage.content,
-    nodes: [...firstPage.content.nodes],
-    files: [...firstPage.content.files],
-  };
-
-  const totalCount = firstPage.totalCount;
-  let page = 2;
-
-  while (merged.nodes.length + merged.files.length < totalCount) {
-    const response = await nodesApi.getChildren(nodeId, {
-      page,
-      pageSize: CHILDREN_FETCH_PAGE_SIZE,
-    });
-
-    if (response.content.nodes.length === 0 && response.content.files.length === 0) {
-      break;
-    }
-
-    merged = {
-      ...merged,
-      nodes: [...merged.nodes, ...response.content.nodes],
-      files: [...merged.files, ...response.content.files],
-    };
-
-    page += 1;
-  }
-
-  return merged;
-}
-
 export const useNodesStore = create<NodesState>()(
   persist(
-    (set, get) => {
-      const scheduleRootResolve = (options?: {
-        loadChildren?: boolean;
-        force?: boolean;
-      }): void => {
-        // If we don't have a root yet, loadRoot() will resolve it.
-        const existingRootId = get().rootNodeId;
-        if (!existingRootId) return;
-
-        if (rootResolvePromise) return;
-
-        const force = options?.force ?? false;
-        if (!force) {
-          const elapsedSinceLastResolve = Date.now() - lastRootResolveStartedAt;
-          if (elapsedSinceLastResolve < ROOT_RESOLVE_MIN_INTERVAL_MS) {
-            return;
-          }
-        }
-
-        const loadChildren = options?.loadChildren ?? true;
-        lastRootResolveStartedAt = Date.now();
-
-        const ownerAtSchedule = get().cacheOwnerUserId;
-        const isStillSameOwner = (): boolean =>
-          get().cacheOwnerUserId === ownerAtSchedule;
-
-        const currentPromise = (async () => {
-          try {
-            const root = await layoutsApi.resolve();
-            if (!isStillSameOwner()) return;
-
-            const state = get();
-            if (state.rootNodeId === root.id) {
-              return;
-            }
-
-            const previousRootId = state.rootNodeId;
-            set({ rootNodeId: root.id });
-
-            // If the user is currently viewing the root folder, switch to the new root.
-            const isViewingRoot =
-              state.currentNode == null || state.currentNode.id === previousRootId;
-            if (isViewingRoot && isStillSameOwner()) {
-              await get().loadNode(root.id, {
-                loadChildren,
-                allowRootRecovery: false,
-              });
-            }
-          } catch (error) {
-            // Non-blocking best-effort refresh.
-            console.error("Failed to resolve root node in background", error);
-          }
-        })();
-
-        rootResolvePromise = currentPromise;
-        void currentPromise.finally(() => {
-          if (rootResolvePromise === currentPromise) {
-            rootResolvePromise = null;
-          }
-        });
-      };
-
-      return {
-  cacheOwnerUserId: null,
-  currentNode: null,
-  ancestors: [],
-  contentByNodeId: {},
-  ancestorsByNodeId: {},
-  rootNodeId: null,
-  loading: false,
-  error: null,
-  lastUpdatedByNodeId: {},
-
-  loadRoot: async (options) => {
-    const force = options?.force ?? false;
-    const loadChildren = options?.loadChildren ?? true;
-    const state = get();
-
-    if (!force && state.rootNodeId) {
-      const hasCachedContent = state.contentByNodeId[state.rootNodeId];
-      if (!loadChildren || hasCachedContent) {
-        await get().loadNode(state.rootNodeId, { loadChildren });
-
-        // Always try to keep the persisted root in sync with backend.
-        scheduleRootResolve({ loadChildren });
-        return state.currentNode;
-      }
-    }
-
-    try {
-      const root = await layoutsApi.resolve();
-      set({ rootNodeId: root.id });
-      await get().loadNode(root.id, { loadChildren });
-      return root;
-    } catch (error) {
-      console.error("Failed to resolve root node", error);
-      set({
-        loading: false,
-        error: tFileError("errors.resolveRootFailed"),
-      });
-      return null;
-    }
-  },
-
-  loadNode: async (nodeId, options) => {
-    const state = get();
-    const loadChildren = options?.loadChildren ?? true;
-    const allowRootRecovery = options?.allowRootRecovery ?? true;
-    if (state.loading && state.currentNode?.id === nodeId) return;
-
-    const cachedContent = state.contentByNodeId[nodeId];
-
-    // Only show loading spinner when no cached content exists for this node
-    if (cachedContent) {
-      set({ error: null });
-    } else {
-      set({ loading: true, error: null });
-    }
-
-    const refreshChildrenInBackground = (): void => {
-      if (!loadChildren || !cachedContent) return;
-
-      void (async () => {
-        try {
-          const fresh = await fetchAllNodeChildren(nodeId);
-          set((prev) => ({
-            contentByNodeId: {
-              ...prev.contentByNodeId,
-              [nodeId]: fresh,
-            },
-            lastUpdatedByNodeId: {
-              ...prev.lastUpdatedByNodeId,
-              [nodeId]: Date.now(),
-            },
-          }));
-        } catch {
-          // Silent: background refresh failure is non-critical
-        }
-      })();
-    };
-
-    const tryRecoverRootNodeAsync = async (statusCode?: number): Promise<boolean> => {
-      if (!allowRootRecovery) return false;
-      if (statusCode !== 404) return false;
-      if (get().rootNodeId !== nodeId) return false;
-
-      try {
-        // Persisted root can become stale after backend data reset.
-        // Recover by clearing cached root and resolving a fresh one.
-        set({
-          rootNodeId: null,
-          currentNode: null,
-          ancestors: [],
-          contentByNodeId: {},
-          ancestorsByNodeId: {},
-          lastUpdatedByNodeId: {},
-        });
-
-        const root = await layoutsApi.resolve();
-        set({ rootNodeId: root.id });
-        await get().loadNode(root.id, {
-          loadChildren,
-          allowRootRecovery: false,
-        });
-        return true;
-      } catch (recoveryError) {
-        console.error("Failed to recover root node", recoveryError);
-        set({
-          loading: false,
-          error: tFileError("errors.resolveRootFailed"),
-        });
-        return true;
-      }
-    };
-
-    try {
-      const resolved = await resolveNodeAndAncestors(nodeId, state);
-      const content = loadChildren
-        ? (cachedContent ?? (await fetchAllNodeChildren(nodeId)))
-        : undefined;
-
-      set((prev) => ({
-        currentNode: resolved.node,
-        ancestors: resolved.ancestors,
-        ancestorsByNodeId: {
-          ...prev.ancestorsByNodeId,
-          [nodeId]: resolved.ancestors,
-        },
-        contentByNodeId: loadChildren
-          ? {
-              ...prev.contentByNodeId,
-              [nodeId]: content,
-            }
-          : prev.contentByNodeId,
-        lastUpdatedByNodeId: {
-          ...prev.lastUpdatedByNodeId,
-          [nodeId]: Date.now(),
-        },
-        loading: false,
-        error: null,
-      }));
-
-      // Background refresh when cached content was used
-      refreshChildrenInBackground();
-
-      // If we're loading the current root, keep it synced in background.
-      if (allowRootRecovery && get().rootNodeId === nodeId) {
-        scheduleRootResolve({ loadChildren });
-      }
-    } catch (error) {
-      const statusCode = isAxiosError(error) ? error.response?.status : undefined;
-
-      const recovered = await tryRecoverRootNodeAsync(statusCode);
-      if (recovered) return;
-
-      console.error("Failed to load node view", error);
-      set({
-        loading: false,
-        error: tFileError("errors.loadContentsFailed"),
-      });
-    }
-  },
-
-  resolveRootInBackground: (options) => {
-    scheduleRootResolve(options);
-  },
-
-  refreshNodeContent: async (nodeId) => {
-    try {
-      const content = await fetchAllNodeChildren(nodeId);
-      set((prev) => ({
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [nodeId]: content,
-        },
-        lastUpdatedByNodeId: {
-          ...prev.lastUpdatedByNodeId,
-          [nodeId]: Date.now(),
-        },
-      }));
-    } catch (error) {
-      console.error("Failed to refresh node content", error);
-    }
-  },
-
-  addFolderToCache: (parentNodeId, folder) => {
-    set((prev) => {
-      const existing = prev.contentByNodeId[parentNodeId];
-      if (!existing) return {};
-      if (existing.nodes.some((n) => n.id === folder.id)) return {};
-      return {
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [parentNodeId]: {
-            ...existing,
-            nodes: [...existing.nodes, folder],
-          },
-        },
-      };
-    });
-  },
-
-  createFolder: async (parentNodeId, name) => {
-    const trimmed = name.trim();
-    if (trimmed.length === 0) return null;
-    if (get().loading) return null;
-
-    const state = get();
-    const currentContent = state.contentByNodeId[parentNodeId];
-
-    // Check for duplicate name (case-insensitive) in cached content
-    if (currentContent) {
-      const normalizedName = trimmed.toLowerCase();
-      const duplicate = currentContent.nodes.find(
-        (n) => n.name.toLowerCase() === normalizedName,
-      );
-      if (duplicate) {
-        set({ error: tFileError("errors.duplicateFolderName") });
-        return null;
-      }
-    }
-
-    set({ loading: true, error: null });
-
-    try {
-      const created = await nodesApi.createNode({
-        parentId: parentNodeId,
-        name: trimmed,
-      });
-
-      // Optimistic update: immediately add the new folder to local cache
-      set((prev) => {
-        const existing = prev.contentByNodeId[parentNodeId];
-        if (!existing) return { loading: false };
-
-        return {
-          contentByNodeId: {
-            ...prev.contentByNodeId,
-            [parentNodeId]: {
-              ...existing,
-              nodes: [...existing.nodes, created],
-            },
-          },
-          loading: false,
-        };
-      });
-
-      // Background refetch to ensure server state is correct
-      void get().refreshNodeContent(parentNodeId);
-
-      return created;
-    } catch (error) {
-      console.error("Failed to create folder", error);
-      set({
-        loading: false,
-        error: tFileError("errors.createFolderFailed"),
-      });
-      return null;
-    }
-  },
-
-  deleteFolder: async (nodeId, parentNodeId, skipTrash = false) => {
-    if (get().loading) return false;
-
-    set({ loading: true, error: null });
-
-    try {
-      await nodesApi.deleteNode(nodeId, skipTrash);
-
-      // Optimistic update: remove folder from local cache
-      if (parentNodeId) {
-        set((prev) => {
-          const existing = prev.contentByNodeId[parentNodeId];
-          if (!existing) return { loading: false };
-
-          return {
-            contentByNodeId: {
-              ...prev.contentByNodeId,
-              [parentNodeId]: {
-                ...existing,
-                nodes: existing.nodes.filter((n) => n.id !== nodeId),
-              },
-            },
-            loading: false,
-          };
-        });
-
-        // Background refetch to ensure server state is correct
-        void get().refreshNodeContent(parentNodeId);
-      } else {
-        set({ loading: false });
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Failed to delete folder", error);
-      set({
-        loading: false,
-        error: tFileError("errors.deleteFolderFailed"),
-      });
-      return false;
-    }
-  },
-
-  renameFolder: async (nodeId, newName, parentNodeId) => {
-    const trimmed = newName.trim();
-    if (trimmed.length === 0) return false;
-    if (get().loading) return false;
-
-    const state = get();
-    const currentContent = parentNodeId
-      ? state.contentByNodeId[parentNodeId]
-      : undefined;
-
-    // Check for duplicate name (case-insensitive) in cached content
-    if (currentContent) {
-      const normalizedName = trimmed.toLowerCase();
-      const duplicate = currentContent.nodes.find(
-        (n) => n.id !== nodeId && n.name.toLowerCase() === normalizedName,
-      );
-      if (duplicate) {
-        set({ error: tFileError("errors.duplicateFolderName") });
-        return false;
-      }
-    }
-
-    set({ loading: true, error: null });
-
-    try {
-      const updated = await nodesApi.renameNode(nodeId, { name: trimmed });
-
-      // Optimistic update: rename folder in local cache
-      if (parentNodeId) {
-        set((prev) => {
-          const existing = prev.contentByNodeId[parentNodeId];
-          if (!existing) return { loading: false };
-
-          return {
-            contentByNodeId: {
-              ...prev.contentByNodeId,
-              [parentNodeId]: {
-                ...existing,
-                nodes: existing.nodes.map((n) =>
-                  n.id === nodeId ? updated : n,
-                ),
-              },
-            },
-            loading: false,
-          };
-        });
-
-        // Background refetch to ensure server state is correct
-        void get().refreshNodeContent(parentNodeId);
-      } else {
-        set({ loading: false });
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Failed to rename folder", error);
-      set({
-        loading: false,
-        error: tFileError("errors.renameFolderFailed"),
-      });
-      return false;
-    }
-  },
-
-  optimisticRenameFile: (parentNodeId, fileId, newName) => {
-    set((prev) => {
-      const existing = prev.contentByNodeId[parentNodeId];
-      if (!existing) return {};
-      return {
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [parentNodeId]: {
-            ...existing,
-            files: existing.files.map((f) =>
-              f.id === fileId ? { ...f, name: newName } : f,
-            ),
-          },
-        },
-      };
-    });
-  },
-
-  optimisticSetFilePreviewHash: (
-    parentNodeId,
-    fileId,
-    previewHashEncryptedHex,
-  ) => {
-    set((prev) => {
-      const existing = prev.contentByNodeId[parentNodeId];
-      if (!existing) return {};
-
-      const current = existing.files.find((f) => f.id === fileId);
-      if (!current) return {};
-      if (current.previewHashEncryptedHex === previewHashEncryptedHex) {
-        return {};
-      }
-
-      return {
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [parentNodeId]: {
-            ...existing,
-            files: existing.files.map((f) =>
-              f.id === fileId
-                ? { ...f, previewHashEncryptedHex }
-                : f,
-            ),
-          },
-        },
-      };
-    });
-  },
-
-  optimisticDeleteFile: (parentNodeId, fileId) => {
-    set((prev) => {
-      const existing = prev.contentByNodeId[parentNodeId];
-      if (!existing) return {};
-      return {
-        contentByNodeId: {
-          ...prev.contentByNodeId,
-          [parentNodeId]: {
-            ...existing,
-            files: existing.files.filter((f) => f.id !== fileId),
-          },
-        },
-      };
-    });
-  },
-
-  reset: (cacheOwnerUserId) => {
-    rootResolvePromise = null;
-    lastRootResolveStartedAt = 0;
-    set((prev) => ({
-      cacheOwnerUserId: cacheOwnerUserId ?? prev.cacheOwnerUserId,
+    (set, get) => ({
+      cacheOwnerUserId: null,
       currentNode: null,
       ancestors: [],
       contentByNodeId: {},
@@ -739,10 +129,214 @@ export const useNodesStore = create<NodesState>()(
       loading: false,
       error: null,
       lastUpdatedByNodeId: {},
-    }));
-  },
-      };
-    },
+
+      updateNode: (updated) => {
+        set((prev) => {
+          const currentNode =
+            prev.currentNode?.id === updated.id ? updated : prev.currentNode;
+          const ancestors = prev.ancestors.some((node) => node.id === updated.id)
+            ? prev.ancestors.map((node) =>
+                node.id === updated.id ? updated : node,
+              )
+            : prev.ancestors;
+
+          let contentChanged = false;
+          const contentByNodeId: Record<
+            string,
+            NodeContentDto | undefined
+          > = {};
+          for (const [nodeId, content] of Object.entries(prev.contentByNodeId)) {
+            if (!content) {
+              contentByNodeId[nodeId] = content;
+              continue;
+            }
+
+            if (!content.nodes.some((node) => node.id === updated.id)) {
+              contentByNodeId[nodeId] = content;
+              continue;
+            }
+
+            contentChanged = true;
+            contentByNodeId[nodeId] = {
+              ...content,
+              nodes: content.nodes.map((node) =>
+                node.id === updated.id ? updated : node,
+              ),
+            };
+          }
+
+          return {
+            currentNode,
+            ancestors,
+            contentByNodeId: contentChanged
+              ? contentByNodeId
+              : prev.contentByNodeId,
+          };
+        });
+      },
+
+      addFolderToCache: (parentNodeId, folder) => {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return {};
+          if (existing.nodes.some((n) => n.id === folder.id)) return {};
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                nodes: [...existing.nodes, folder],
+              },
+            },
+          };
+        });
+      },
+
+      updateFileInCache: (parentNodeId, file) => {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return {};
+
+          const current = existing.files.find((item) => item.id === file.id);
+          if (!current) return {};
+          if (current === file) return {};
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                files: existing.files.map((item) =>
+                  item.id === file.id ? file : item,
+                ),
+              },
+            },
+          };
+        });
+      },
+
+      optimisticRenameFile: (parentNodeId, fileId, newName) => {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return {};
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                files: existing.files.map((f) =>
+                  f.id === fileId ? { ...f, name: newName } : f,
+                ),
+              },
+            },
+          };
+        });
+      },
+
+      optimisticSetFilePreviewHash: (
+        parentNodeId,
+        fileId,
+        previewHashEncryptedHex,
+      ) => {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return {};
+
+          const current = existing.files.find((f) => f.id === fileId);
+          if (!current) return {};
+          if (current.previewHashEncryptedHex === previewHashEncryptedHex) {
+            return {};
+          }
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                files: existing.files.map((f) =>
+                  f.id === fileId ? { ...f, previewHashEncryptedHex } : f,
+                ),
+              },
+            },
+          };
+        });
+      },
+
+      optimisticDeleteFile: (parentNodeId, fileId) => {
+        set((prev) => {
+          const existing = prev.contentByNodeId[parentNodeId];
+          if (!existing) return {};
+
+          return {
+            contentByNodeId: {
+              ...prev.contentByNodeId,
+              [parentNodeId]: {
+                ...existing,
+                files: existing.files.filter((f) => f.id !== fileId),
+              },
+            },
+          };
+        });
+      },
+
+      refreshCachedFileDisplayMetadata: async () => {
+        const snapshots = Object.entries(get().contentByNodeId)
+          .filter(
+            (entry): entry is [string, NodeContentDto] =>
+              entry[1] !== undefined,
+          )
+          .map(([nodeId, content]) => ({ nodeId, content }));
+
+        if (snapshots.length === 0) {
+          return;
+        }
+
+        const decorated = await Promise.all(
+          snapshots.map(async ({ nodeId, content }) => ({
+            nodeId,
+            content,
+            files: await applyDisplayMetaToFiles(content.files),
+          })),
+        );
+
+        set((prev) => {
+          let changed = false;
+          const contentByNodeId = { ...prev.contentByNodeId };
+
+          for (const item of decorated) {
+            const current = prev.contentByNodeId[item.nodeId];
+            if (current !== item.content || item.files === item.content.files) {
+              continue;
+            }
+
+            contentByNodeId[item.nodeId] = {
+              ...item.content,
+              files: item.files,
+            };
+            changed = true;
+          }
+
+          return changed ? { contentByNodeId } : {};
+        });
+      },
+
+      reset: (cacheOwnerUserId) => {
+        resetNodesActionsInternals();
+        set((prev) => ({
+          cacheOwnerUserId: cacheOwnerUserId ?? prev.cacheOwnerUserId,
+          currentNode: null,
+          ancestors: [],
+          contentByNodeId: {},
+          ancestorsByNodeId: {},
+          rootNodeId: null,
+          loading: false,
+          error: null,
+          lastUpdatedByNodeId: {},
+        }));
+      },
+    }),
     {
       name: NODES_STORAGE_KEY,
       storage: createJSONStorage(() => safeSessionStorage),

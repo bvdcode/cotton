@@ -7,6 +7,7 @@ import {
   Settings,
   Share,
 } from "@mui/icons-material";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import { getFileTypeInfo } from "@shared/utils/fileTypes";
@@ -16,7 +17,7 @@ import type { SearchRow } from "../types";
 interface SearchResultRowProps {
   row: SearchRow;
   isLast: boolean;
-  failedPreviews: Set<string>;
+  previewFailed: boolean;
   onPreviewError: (fileId: string) => void;
   onActivate: (row: SearchRow) => void;
   onShareFile: (row: Extract<SearchRow, { kind: "file" }>) => void;
@@ -26,7 +27,7 @@ interface SearchResultRowProps {
 
 const renderPreview = (
   row: SearchRow,
-  failedPreviews: Set<string>,
+  previewFailed: boolean,
   onPreviewError: (fileId: string) => void,
 ) => {
   if (row.kind === "setting") {
@@ -39,7 +40,7 @@ const renderPreview = (
 
   const previewHash = row.file.previewHashEncryptedHex;
   const previewUrl =
-    previewHash && !failedPreviews.has(row.file.id)
+    previewHash && !previewFailed
       ? `/api/v1/preview/${encodeURIComponent(previewHash)}.webp`
       : null;
 
@@ -64,10 +65,10 @@ const renderPreview = (
   return getSmallFileIcon(row.file.name);
 };
 
-export const SearchResultRow = ({
+const SearchResultRowImpl = ({
   row,
   isLast,
-  failedPreviews,
+  previewFailed,
   onPreviewError,
   onActivate,
   onShareFile,
@@ -156,7 +157,7 @@ export const SearchResultRow = ({
             overflow: "hidden",
           }}
         >
-          {renderPreview(row, failedPreviews, onPreviewError)}
+          {renderPreview(row, previewFailed, onPreviewError)}
         </Box>
 
         <Stack spacing={0.25} minWidth={0} flex={1}>
@@ -229,3 +230,5 @@ export const SearchResultRow = ({
     </ButtonBase>
   );
 };
+
+export const SearchResultRow = memo(SearchResultRowImpl);

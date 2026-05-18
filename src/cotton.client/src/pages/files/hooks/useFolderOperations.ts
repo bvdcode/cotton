@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNodesStore } from "../../../shared/store/nodesStore";
+import {
+  createFolder,
+  deleteFolder,
+  renameFolder,
+} from "../../../shared/store/nodesActions";
 import { useFolderRenameDeleteOperations } from "../../../shared/hooks/useFolderRenameDeleteOperations";
 
 export const useFolderOperations = (
@@ -8,7 +12,6 @@ export const useFolderOperations = (
   onFolderChanged?: () => void,
 ) => {
   const { t } = useTranslation(["files", "common"]);
-  const { createFolder, deleteFolder, renameFolder } = useNodesStore();
 
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");

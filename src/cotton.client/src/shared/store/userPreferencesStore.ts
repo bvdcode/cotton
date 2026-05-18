@@ -3,24 +3,13 @@ import type { User } from "../../features/auth/types";
 import type { ThemeMode } from "../theme";
 import { supportedLanguages, type SupportedLanguage } from "../../locales";
 import {
+  isSelfPreferenceUpdateToken,
   userPreferencesApi,
   type UserPreferences,
 } from "../api/userPreferencesApi";
 
-/**
- * Stable session token used to identify this browser tab's preference updates.
- * Server echoes it back via SignalR so we can ignore our own broadcasts.
- */
-const SESSION_TOKEN = (() => {
-  const cryptoObj = globalThis.crypto;
-  if (cryptoObj && "randomUUID" in cryptoObj) {
-    return cryptoObj.randomUUID();
-  }
-  return `pref_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-})();
-
 export const isSelfUpdateToken = (token: string): boolean =>
-  token === SESSION_TOKEN;
+  isSelfPreferenceUpdateToken(token);
 
 export const USER_PREFERENCE_KEYS = {
   themeMode: "themeMode",
@@ -30,6 +19,11 @@ export const USER_PREFERENCE_KEYS = {
   notificationsShowOnlyUnread: "notificationsShowOnlyUnread",
 
   shareLinkExpireAfterMinutes: "shareLinkExpireAfterMinutes",
+
+  gallerySmoothTransitions: "gallerySmoothTransitions",
+  galleryPreferPreview: "galleryPreferPreview",
+
+  clientEncryptionLockOnRefresh: "clientEncryptionLockOnRefresh",
 } as const;
 
 const DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES = 60 * 24 * 30;
@@ -37,6 +31,9 @@ const DEFAULT_THEME_MODE: ThemeMode = "system";
 
 const DEFAULT_NOTIFICATION_SOUND_ENABLED = true;
 const DEFAULT_NOTIFICATIONS_SHOW_ONLY_UNREAD = false;
+const DEFAULT_GALLERY_SMOOTH_TRANSITIONS = true;
+const DEFAULT_GALLERY_PREFER_PREVIEW = true;
+const DEFAULT_CLIENT_ENCRYPTION_LOCK_ON_REFRESH = false;
 
 const parseBoolPreference = (value: string | undefined): boolean | null => {
   if (!value) return null;
@@ -83,6 +80,10 @@ interface UserPreferencesState {
 
   setShareLinkExpireAfterMinutes: (expireAfterMinutes: number) => void;
 
+  setGallerySmoothTransitions: (enabled: boolean) => void;
+  setGalleryPreferPreview: (enabled: boolean) => void;
+  setClientEncryptionLockOnRefresh: (enabled: boolean) => void;
+
   reset: () => void;
 }
 
@@ -110,7 +111,7 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       set({ preferences: optimistic, syncing: true });
 
       try {
-        const next = await userPreferencesApi.update(patch, { token: SESSION_TOKEN });
+        const next = await userPreferencesApi.update(patch);
         set({ preferences: next, loaded: true, syncing: false });
       } catch {
         set({ preferences: previous, syncing: false });
@@ -148,6 +149,28 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
     setShareLinkExpireAfterMinutes: (expireAfterMinutes) => {
       void get().updatePreferences({
         [USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes]: `${expireAfterMinutes}`,
+      });
+    },
+
+    setGallerySmoothTransitions: (enabled) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.gallerySmoothTransitions]: enabled
+          ? "true"
+          : "false",
+      });
+    },
+
+    setGalleryPreferPreview: (enabled) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.galleryPreferPreview]: enabled ? "true" : "false",
+      });
+    },
+
+    setClientEncryptionLockOnRefresh: (enabled) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.clientEncryptionLockOnRefresh]: enabled
+          ? "true"
+          : "false",
       });
     },
 
@@ -190,4 +213,26 @@ export const selectShareLinkExpireAfterMinutes = (
   const raw =
     state.preferences[USER_PREFERENCE_KEYS.shareLinkExpireAfterMinutes];
   return parseIntPreference(raw) ?? DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES;
+};
+
+export const selectGallerySmoothTransitions = (
+  state: UserPreferencesState,
+): boolean => {
+  const raw = state.preferences[USER_PREFERENCE_KEYS.gallerySmoothTransitions];
+  return parseBoolPreference(raw) ?? DEFAULT_GALLERY_SMOOTH_TRANSITIONS;
+};
+
+export const selectGalleryPreferPreview = (
+  state: UserPreferencesState,
+): boolean => {
+  const raw = state.preferences[USER_PREFERENCE_KEYS.galleryPreferPreview];
+  return parseBoolPreference(raw) ?? DEFAULT_GALLERY_PREFER_PREVIEW;
+};
+
+export const selectClientEncryptionLockOnRefresh = (
+  state: UserPreferencesState,
+): boolean => {
+  const raw =
+    state.preferences[USER_PREFERENCE_KEYS.clientEncryptionLockOnRefresh];
+  return parseBoolPreference(raw) ?? DEFAULT_CLIENT_ENCRYPTION_LOCK_ON_REFRESH;
 };

@@ -19,6 +19,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -210,6 +211,72 @@ public class LayoutAndFilesTests : IntegrationTestBase
         Assert.That(login, Is.Not.Null);
         TestContext.Progress.WriteLine($"Login OK. Token: {login!.AccessToken[..Math.Min(16, login.AccessToken.Length)]}...");
         return login.AccessToken;
+    }
+
+    [Test]
+    public async Task GetChildren_NullMetadataInDb_IsSerializedAsEmptyObject()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var createNodeRes = await _client.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new CreateNodeRequest { ParentId = root!.Id, Name = "null-meta" });
+        createNodeRes.EnsureSuccessStatusCode();
+        var folder = await createNodeRes.Content.ReadFromJsonAsync<NodeDto>();
+        Assert.That(folder, Is.Not.Null);
+
+        var content = Encoding.UTF8.GetBytes("payload");
+        var hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                },
+                "file",
+                "chunk.bin"
+            },
+            { new StringContent(hash), "hash" }
+        };
+        var uploadRes = await _client.PostAsync("/api/v1/chunks", form);
+        uploadRes.EnsureSuccessStatusCode();
+
+        var fileReq = new CreateFileRequest
+        {
+            ChunkHashes = [hash],
+            Name = "legacy.txt",
+            ContentType = "text/plain",
+            Hash = hash,
+            NodeId = folder!.Id
+        };
+        var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        createFileRes.EnsureSuccessStatusCode();
+
+        int updated = await DbContext.NodeFiles
+            .Where(f => f.NodeId == folder.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(
+                x => x.Metadata,
+                (Dictionary<string, string>?)null));
+        Assert.That(updated, Is.EqualTo(1));
+
+        var listRes = await _client.GetAsync($"/api/v1/layouts/nodes/{folder.Id}/children");
+        listRes.EnsureSuccessStatusCode();
+        var rawJson = await listRes.Content.ReadAsStringAsync();
+        Assert.That(rawJson, Does.Not.Contain("\"metadata\":null"));
+
+        var list = JsonSerializer.Deserialize<NodeContentDto>(
+            rawJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Assert.That(list, Is.Not.Null);
+        var files = list!.Files.ToArray();
+        Assert.That(files, Has.Length.EqualTo(1));
+        Assert.That(files[0].Metadata, Is.Not.Null);
+        Assert.That(files[0].Metadata, Is.Empty);
     }
 
     [Test]

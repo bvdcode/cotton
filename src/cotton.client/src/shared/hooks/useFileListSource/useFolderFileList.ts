@@ -1,4 +1,5 @@
 import { useDeferredValue, useMemo } from "react";
+import { refreshNodeContent } from "../../store/nodesActions";
 import { useNodesStore } from "../../store/nodesStore";
 import { useAuthStore } from "../../store/authStore";
 import { useContentTiles } from "../useContentTiles";
@@ -26,7 +27,6 @@ export const useFolderFileList = ({
   );
   const loading = useNodesStore((s) => s.loading);
   const error = useNodesStore((s) => s.error);
-  const refreshNodeContent = useNodesStore((s) => s.refreshNodeContent);
 
   const content =
     cacheOwnerUserId === currentUserId ? rawContent : undefined;
@@ -43,7 +43,7 @@ export const useFolderFileList = ({
   const refresh = useMemo(() => {
     if (!nodeId) return undefined;
     return () => refreshNodeContent(nodeId);
-  }, [nodeId, refreshNodeContent]);
+  }, [nodeId]);
 
   return {
     loading,

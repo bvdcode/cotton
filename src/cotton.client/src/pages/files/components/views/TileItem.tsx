@@ -5,6 +5,7 @@ import {
   Delete,
   Download,
   Edit,
+  LockOutlined,
   Restore,
   Share,
 } from "@mui/icons-material";
@@ -22,6 +23,10 @@ import type {
 import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
 import { BlurredPreviewImage } from "./BlurredPreviewImage";
+import {
+  isFileEncrypted,
+  isFolderEncryptionPolicyEnabled,
+} from "../../../../shared/crypto";
 
 interface TileItemProps {
   tile: FileSystemTile;
@@ -161,10 +166,14 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     );
 
     if (tile.kind === "folder") {
+      const isRenamingFolder = folderOperations.isRenaming(tile.node.id);
+      const folderEncryptionPolicy =
+        folderOperations.getEncryptionPolicyState?.(tile.node);
       const folderContent = (
         <FolderCard
           folder={tile.node}
-          isRenaming={folderOperations.isRenaming(tile.node.id)}
+          encryptionPolicy={folderEncryptionPolicy}
+          isRenaming={isRenamingFolder}
           renamingName={folderOperations.getRenamingName()}
           onRenamingNameChange={folderOperations.onRenamingNameChange}
           onConfirmRename={folderOperations.onConfirmRename}
@@ -187,6 +196,16 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
           onCut={
             folderOperations.onCut
               ? () => folderOperations.onCut?.(tile.node.id)
+              : undefined
+          }
+          onToggleEncryptionPolicy={
+            folderOperations.onToggleEncryptionPolicy
+              ? () =>
+                  folderOperations.onToggleEncryptionPolicy?.(
+                    tile.node.id,
+                    folderEncryptionPolicy?.explicitEnabled ??
+                      isFolderEncryptionPolicyEnabled(tile.node.metadata),
+                  )
               : undefined
           }
           onRestore={
@@ -217,7 +236,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       return (
         <Box
           position="relative"
-          draggable={draggable}
+          draggable={draggable && !isRenamingFolder}
           onDragStart={onMoveDragStart}
           onDragOver={onMoveDragOver}
           onDragLeave={onMoveDragLeave}
@@ -319,11 +338,26 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
       fileOperations.onClick(tile.file.id, tile.file.name, tile.file.sizeBytes);
     };
 
+    const fileEncrypted = isFileEncrypted(
+      "metadata" in tile.file ? tile.file.metadata : undefined,
+    );
+
+    const isRenamingFile = fileOperations.isRenaming(tile.file.id);
     const fileContent = (
       <RenamableItemCard
         variant="squareTile"
         icon={icon}
         title={tile.file.name}
+        cornerAdornment={
+          fileEncrypted ? (
+            <LockOutlined
+              fontSize="small"
+              titleAccess={t("clientEncryption.fileEncryptedHint", {
+                ns: "common",
+              })}
+            />
+          ) : undefined
+        }
         subtitle={formatBytes(tile.file.sizeBytes)}
         onClick={fileClick}
         iconContainerSx={iconContainerSx}
@@ -388,7 +422,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ]
             : []),
         ]}
-        isRenaming={fileOperations.isRenaming(tile.file.id)}
+        isRenaming={isRenamingFile}
         renamingValue={fileOperations.getRenamingName()}
         onRenamingValueChange={fileOperations.onRenamingNameChange}
         onConfirmRename={() => {
@@ -402,7 +436,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
     return (
       <Box
         position="relative"
-        draggable={draggable}
+        draggable={draggable && !isRenamingFile}
         onDragStart={onMoveDragStart}
         onContextMenu={(e) => {
           e.preventDefault();

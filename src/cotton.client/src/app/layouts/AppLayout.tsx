@@ -2,7 +2,7 @@ import type { RouteConfig } from "../types";
 import { UserMenu } from "./components/UserMenu";
 import { NotificationsMenu } from "./components/NotificationsMenu";
 import { UploadFilePicker } from "./components/UploadFilePicker";
-import { UploadQueueWidget } from "./components/UploadQueueWidget";
+import { TaskQueueWidget } from "./components/UploadQueueWidget";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   AppBar,
@@ -181,7 +181,7 @@ export const AppLayout = ({ routes }: AppLayoutProps) => {
       <AudioPlayerBar />
 
       <UploadFilePicker />
-      <UploadQueueWidget />
+      <TaskQueueWidget />
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </Box>
   );

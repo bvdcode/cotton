@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 
 namespace Cotton.Server.Controllers
@@ -37,6 +38,7 @@ namespace Cotton.Server.Controllers
         CottonDbContext _dbContext,
         ILayoutService _layouts,
         IHubContext<EventHub> _hubContext,
+        ILogger<LayoutController> _logger,
         ILayoutNavigator _navigator,
         IStoragePipeline _storage) : ControllerBase
     {
@@ -190,8 +192,8 @@ namespace Cotton.Server.Controllers
             node.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", node.Id, node.Name, node.NameKey);
             var mapped = node.Adapt<NodeDto>();
+            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeRenamed", mapped);
             return Ok(mapped);
         }
 
@@ -213,15 +215,82 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpPatch("nodes/{nodeId:guid}/metadata")]
+        [ProducesResponseType<NodeDto>(StatusCodes.Status200OK)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType<CottonResult>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateLayoutNodeMetadata(
+            [FromRoute] Guid nodeId,
+            [FromBody] Dictionary<string, string?>? patch)
+        {
+            if (patch is null)
+            {
+                return CottonResult.BadRequest("Metadata patch is required.");
+            }
+
+            if (patch.Any(x => string.IsNullOrWhiteSpace(x.Key)))
+            {
+                return CottonResult.BadRequest("Metadata keys must be non-empty strings.");
+            }
+
+            if (patch.Any(x => x.Value is null))
+            {
+                return CottonResult.BadRequest("Metadata values must be strings.");
+            }
+
+            Guid userId = User.GetUserId();
+            var node = await _dbContext.Nodes
+                .Where(x => x.Id == nodeId && x.OwnerId == userId && x.Type == NodeType.Default)
+                .SingleOrDefaultAsync();
+            if (node == null)
+            {
+                return CottonResult.NotFound("Node not found.");
+            }
+
+            var metadata = node.Metadata is null
+                ? []
+                : new Dictionary<string, string>(node.Metadata);
+            foreach (var (key, value) in patch)
+            {
+                metadata[key] = value!;
+            }
+
+            node.Metadata = metadata;
+            await _dbContext.SaveChangesAsync();
+
+            var mapped = node.Adapt<NodeDto>();
+            try
+            {
+                await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeMetadataUpdated", mapped);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to send node metadata update notification for node {NodeId}",
+                    nodeId);
+            }
+
+            return Ok(mapped);
+        }
+
+        [Authorize]
         [HttpDelete("nodes/{nodeId:guid}")]
         public async Task<IActionResult> DeleteLayoutNode(
             [FromRoute] Guid nodeId,
             [FromQuery] bool skipTrash = false)
         {
             Guid userId = User.GetUserId();
+            Guid? parentNodeId = await _dbContext.Nodes
+                .AsNoTracking()
+                .Where(x => x.Id == nodeId && x.OwnerId == userId)
+                .Select(x => x.ParentId)
+                .SingleOrDefaultAsync();
             DeleteNodeQuery query = new(userId, nodeId, skipTrash);
             await _mediator.Send(query);
-            await _hubContext.Clients.User(userId.ToString()).SendAsync("NodeDeleted", nodeId);
+            await _hubContext.Clients.User(userId.ToString()).SendAsync(
+                "NodeDeleted",
+                new NodeDeletedEventDto(nodeId, parentNodeId));
             return Ok();
         }
 

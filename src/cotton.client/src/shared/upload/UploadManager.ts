@@ -1,12 +1,22 @@
 import type { Guid } from "../api/layoutsApi";
-import { useNodesStore } from "../store/nodesStore";
+import { refreshNodeContent } from "../store/nodesActions";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
+import { ClientEncryptionSizeLimitError, NoKeyError } from "../crypto";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
 import { uploadFileToNode } from "./uploadFileToNode";
 import { RollingBytesPerSecondEstimator } from "./RollingBytesPerSecondEstimator";
 import { globalHashWorkerPool } from "./hash/HashWorkerPool";
 import type { UploadServerParams } from "./types";
+import { formatBytes } from "../utils/formatBytes";
+import type {
+  AppTask,
+  AppTaskHandle,
+  AppTaskSnapshot,
+  AppTaskStatus,
+  CreateAppTaskOptions,
+  UpdateAppTaskOptions,
+} from "../tasks/types";
 
 export type UploadTaskStatus =
   | "queued"
@@ -26,17 +36,27 @@ export interface UploadTask {
   status: UploadTaskStatus;
   error?: string;
   errorKey?: string;
+  errorParams?: Record<string, string | number>;
   uploadSpeedBytesPerSec?: number;
   completedAt?: number;
 }
 
 interface UploadTaskInternal extends UploadTask {
   _file: File;
+  _encrypt: boolean;
   _startedAt?: number;
   _sawProgress?: boolean;
   _laneProbeConsumed?: boolean;
   _laneProbeTimeout?: ReturnType<typeof setTimeout>;
   _bytesTransferredForSpeed?: number;
+}
+
+interface ExternalTaskInternal extends AppTask {
+  _external: true;
+}
+
+export interface EnqueueOptions {
+  encrypt?: boolean;
 }
 
 export interface UploadFilePickerContext {
@@ -50,20 +70,15 @@ type Listener = () => void;
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-interface UploadOverallStats {
-  bytesTotal: number;
-  bytesUploaded: number;
-  progress01: number;
-  uploadSpeedBytesPerSec: number;
-}
-
 const MAX_FINISHED_TASKS = 10000;
 const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
+const FINISHED_TASK_STATUSES = new Set<AppTaskStatus>(["completed", "failed"]);
 
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
   private readonly tasks: UploadTaskInternal[] = [];
+  private readonly externalTasks: ExternalTaskInternal[] = [];
   private pumping = false;
   private activeUploads = 0;
   private readonly fileConcurrency = new AdaptiveConcurrencyController({
@@ -71,10 +86,15 @@ export class UploadManager {
     rampUpDurationMs: uploadConfig.concurrencyRampUpMs,
   });
   private open = false;
-  private snapshot: { open: boolean; tasks: UploadTask[]; overall: UploadOverallStats } = {
+  private snapshot: AppTaskSnapshot = {
     open: false,
     tasks: [],
-    overall: { bytesTotal: 0, bytesUploaded: 0, progress01: 0, uploadSpeedBytesPerSec: 0 },
+    overall: {
+      bytesTotal: 0,
+      bytesCompleted: 0,
+      progress01: 0,
+      speedBytesPerSec: 0,
+    },
   };
   private readonly refreshNodeIds = new Set<Guid>();
   private refreshTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -90,10 +110,10 @@ export class UploadManager {
 
   constructor() {
     this.pruneIntervalId = setInterval(() => {
-      if (this.tasks.length > 0) {
-        const before = this.tasks.length;
+      if (this.tasks.length > 0 || this.externalTasks.length > 0) {
+        const before = this.tasks.length + this.externalTasks.length;
         this.pruneFinishedTasks();
-        if (this.tasks.length !== before) {
+        if (this.tasks.length + this.externalTasks.length !== before) {
           this.emit();
         }
       }
@@ -114,24 +134,78 @@ export class UploadManager {
     this.emit();
   }
 
-  getSnapshot(): { open: boolean; tasks: UploadTask[]; overall: UploadOverallStats } {
+  getSnapshot(): AppTaskSnapshot {
     return this.snapshot;
+  }
+
+  createTask(options: CreateAppTaskOptions): AppTaskHandle {
+    const bytesTotal = Math.max(0, options.bytesTotal ?? 0);
+    const task: ExternalTaskInternal = {
+      _external: true,
+      id: makeId(),
+      kind: options.kind,
+      label: options.label,
+      scopeLabel: options.scopeLabel ?? "",
+      bytesTotal,
+      bytesCompleted: 0,
+      progress01: bytesTotal > 0 ? 0 : 1,
+      status: "queued",
+    };
+
+    this.externalTasks.unshift(task);
+    this.open = true;
+    this.pruneFinishedTasks();
+    this.emit();
+
+    return {
+      id: task.id,
+      update: (update) => this.updateExternalTask(task.id, update),
+      complete: () =>
+        this.updateExternalTask(task.id, {
+          status: "completed",
+          bytesCompleted: task.bytesTotal,
+          progress01: 1,
+        }),
+      fail: (error) => {
+        const current = this.externalTasks.find((x) => x.id === task.id);
+        if (!current) return;
+
+        current.status = "failed";
+        current.completedAt = Date.now();
+        current.error = error?.message;
+        current.errorKey = error?.key;
+        current.errorParams = error?.params;
+        this.emit();
+      },
+    };
   }
 
   clearFinished(options?: { includeCompleted?: boolean; includeFailed?: boolean }) {
     const includeCompleted = options?.includeCompleted ?? true;
     const includeFailed = options?.includeFailed ?? true;
 
-    const remaining = this.tasks.filter((t) => {
+    const remainingUploadTasks = this.tasks.filter((t) => {
+      if (t.status === "completed") return !includeCompleted;
+      if (t.status === "failed") return !includeFailed;
+      return true;
+    });
+    const remainingExternalTasks = this.externalTasks.filter((t) => {
       if (t.status === "completed") return !includeCompleted;
       if (t.status === "failed") return !includeFailed;
       return true;
     });
 
-    if (remaining.length === this.tasks.length) return;
+    if (
+      remainingUploadTasks.length === this.tasks.length &&
+      remainingExternalTasks.length === this.externalTasks.length
+    ) {
+      return;
+    }
 
     this.tasks.length = 0;
-    this.tasks.push(...remaining);
+    this.tasks.push(...remainingUploadTasks);
+    this.externalTasks.length = 0;
+    this.externalTasks.push(...remainingExternalTasks);
 
     this.overallBytesTotal = this.tasks.reduce((sum, t) => sum + t.bytesTotal, 0);
     this.overallBytesUploaded = this.tasks.reduce((sum, t) => sum + t.bytesUploaded, 0);
@@ -141,7 +215,7 @@ export class UploadManager {
     );
     this.overallEstimator.reset();
 
-    if (this.tasks.length === 0) {
+    if (this.tasks.length === 0 && this.externalTasks.length === 0) {
       this.open = false;
     }
 
@@ -167,7 +241,12 @@ export class UploadManager {
     this.enqueue(files, context.nodeId, context.nodeLabel);
   }
 
-  enqueue(files: FileList | File[], nodeId: Guid, nodeLabel: string) {
+  enqueue(
+    files: FileList | File[],
+    nodeId: Guid,
+    nodeLabel: string,
+    options?: EnqueueOptions,
+  ) {
     const list = Array.isArray(files) ? files : Array.from(files);
 
     if (!this.hasActiveTasks()) {
@@ -190,6 +269,7 @@ export class UploadManager {
         progress01: 0,
         status: "queued",
         _file: file,
+        _encrypt: options?.encrypt ?? false,
       });
     }
 
@@ -200,23 +280,44 @@ export class UploadManager {
   }
 
   private pruneFinishedTasks(): void {
-    const finishedStatuses: UploadTaskStatus[] = ["completed", "failed"];
     const now = Date.now();
 
     for (let i = this.tasks.length - 1; i >= 0; i--) {
       const t = this.tasks[i];
-      if (finishedStatuses.includes(t.status) && t.completedAt && now - t.completedAt > FINISHED_TASK_TTL_MS) {
+      if (FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(t.status)) && t.completedAt && now - t.completedAt > FINISHED_TASK_TTL_MS) {
         this.tasks.splice(i, 1);
       }
     }
+    for (let i = this.externalTasks.length - 1; i >= 0; i--) {
+      const t = this.externalTasks[i];
+      if (FINISHED_TASK_STATUSES.has(t.status) && t.completedAt && now - t.completedAt > FINISHED_TASK_TTL_MS) {
+        this.externalTasks.splice(i, 1);
+      }
+    }
 
-    const finished = this.tasks.filter((t) => finishedStatuses.includes(t.status));
+    const finished = this.tasks.filter((t) =>
+      FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(t.status)),
+    );
     if (finished.length > MAX_FINISHED_TASKS) {
       const toRemove = finished.length - MAX_FINISHED_TASKS;
       let removed = 0;
       for (let i = this.tasks.length - 1; i >= 0 && removed < toRemove; i--) {
-        if (finishedStatuses.includes(this.tasks[i].status)) {
+        if (FINISHED_TASK_STATUSES.has(this.toAppTaskStatus(this.tasks[i].status))) {
           this.tasks.splice(i, 1);
+          removed++;
+        }
+      }
+    }
+
+    const externalFinished = this.externalTasks.filter((t) =>
+      FINISHED_TASK_STATUSES.has(t.status),
+    );
+    if (externalFinished.length > MAX_FINISHED_TASKS) {
+      const toRemove = externalFinished.length - MAX_FINISHED_TASKS;
+      let removed = 0;
+      for (let i = this.externalTasks.length - 1; i >= 0 && removed < toRemove; i--) {
+        if (FINISHED_TASK_STATUSES.has(this.externalTasks[i].status)) {
+          this.externalTasks.splice(i, 1);
           removed++;
         }
       }
@@ -227,24 +328,112 @@ export class UploadManager {
   }
 
   private emit() {
-    const bytesTotal = this.tasks.reduce((sum, task) => sum + task.bytesTotal, 0);
-    const bytesUploaded = this.tasks.reduce((sum, task) => sum + task.bytesUploaded, 0);
-    const progress01 = bytesTotal > 0 ? bytesUploaded / bytesTotal : 0;
+    const tasks = [
+      ...this.externalTasks.map((task) => this.toPublicExternalTask(task)),
+      ...this.tasks.map((task) => this.toAppTask(task)),
+    ];
+    const bytesTotal = tasks.reduce((sum, task) => sum + task.bytesTotal, 0);
+    const bytesCompleted = tasks.reduce((sum, task) => sum + task.bytesCompleted, 0);
+    const progress01 = bytesTotal > 0 ? bytesCompleted / bytesTotal : 0;
 
     this.overallBytesTotal = bytesTotal;
-    this.overallBytesUploaded = bytesUploaded;
+    this.overallBytesUploaded = bytesCompleted;
 
     this.snapshot = {
       open: this.open,
-      tasks: this.tasks.slice(),
+      tasks,
       overall: {
         bytesTotal,
-        bytesUploaded,
+        bytesCompleted,
         progress01,
-        uploadSpeedBytesPerSec: this.overallEstimator.getSnapshot().rollingBytesPerSec,
+        speedBytesPerSec: this.overallEstimator.getSnapshot().rollingBytesPerSec,
       },
     };
     for (const l of this.listeners) l();
+  }
+
+  private updateExternalTask(
+    taskId: string,
+    update: UpdateAppTaskOptions,
+  ): void {
+    const task = this.externalTasks.find((x) => x.id === taskId);
+    if (!task) return;
+
+    if (update.label !== undefined) task.label = update.label;
+    if (update.scopeLabel !== undefined) task.scopeLabel = update.scopeLabel;
+    if (update.bytesTotal !== undefined) {
+      task.bytesTotal = Math.max(0, update.bytesTotal);
+      task.bytesCompleted = Math.min(task.bytesCompleted, task.bytesTotal);
+      task.progress01 = task.bytesTotal > 0
+        ? task.bytesCompleted / task.bytesTotal
+        : 1;
+    }
+    if (update.status !== undefined) {
+      task.status = update.status;
+      if (update.status === "completed" || update.status === "failed") {
+        task.completedAt = Date.now();
+      }
+    }
+    if (update.bytesCompleted !== undefined) {
+      task.bytesCompleted = Math.max(
+        0,
+        Math.min(task.bytesTotal, update.bytesCompleted),
+      );
+      task.progress01 = task.bytesTotal > 0
+        ? task.bytesCompleted / task.bytesTotal
+        : 1;
+    }
+    if (update.progress01 !== undefined) {
+      task.progress01 = Math.max(0, Math.min(1, update.progress01));
+      if (task.bytesTotal > 0 && update.bytesCompleted === undefined) {
+        task.bytesCompleted = Math.round(task.bytesTotal * task.progress01);
+      }
+    }
+    if (update.speedBytesPerSec !== undefined) {
+      task.speedBytesPerSec = update.speedBytesPerSec;
+    }
+
+    this.emit();
+  }
+
+  private toAppTask(task: UploadTaskInternal): AppTask {
+    return {
+      id: task.id,
+      kind: "upload",
+      label: task.fileName,
+      scopeLabel: task.nodeLabel,
+      bytesTotal: task.bytesTotal,
+      bytesCompleted: task.bytesUploaded,
+      progress01: task.progress01,
+      status: this.toAppTaskStatus(task.status),
+      speedBytesPerSec: task.uploadSpeedBytesPerSec,
+      error: task.error,
+      errorKey: task.errorKey,
+      errorParams: task.errorParams,
+      completedAt: task.completedAt,
+    };
+  }
+
+  private toPublicExternalTask(task: ExternalTaskInternal): AppTask {
+    return {
+      id: task.id,
+      kind: task.kind,
+      label: task.label,
+      scopeLabel: task.scopeLabel,
+      bytesTotal: task.bytesTotal,
+      bytesCompleted: task.bytesCompleted,
+      progress01: task.progress01,
+      status: task.status,
+      speedBytesPerSec: task.speedBytesPerSec,
+      error: task.error,
+      errorKey: task.errorKey,
+      errorParams: task.errorParams,
+      completedAt: task.completedAt,
+    };
+  }
+
+  private toAppTaskStatus(status: UploadTaskStatus): AppTaskStatus {
+    return status === "uploading" ? "running" : status;
   }
 
   private scheduleNodeRefresh(nodeId: Guid) {
@@ -257,7 +446,7 @@ export class UploadManager {
       this.refreshTimeout = null;
 
       for (const id of ids) {
-        void useNodesStore.getState().refreshNodeContent(id);
+        void refreshNodeContent(id);
       }
     }, 300);
   }
@@ -311,6 +500,10 @@ export class UploadManager {
 
     const taskEstimator = new RollingBytesPerSecondEstimator({ windowMs: 1500, minDurationMs: 250 });
     let lastEmitTime = 0;
+    const encryptionTaskRef: { current: AppTaskHandle | null } = {
+      current: null,
+    };
+    let encryptionTaskFinished = false;
 
     task._laneProbeTimeout = setTimeout(() => {
       this.maybeOpenLaneForHeadOfLine(task, Date.now());
@@ -324,6 +517,24 @@ export class UploadManager {
           file: task._file,
           nodeId: task.nodeId,
           server,
+          encrypt: task._encrypt,
+          onEncryptProgress: (bytesEncrypted, bytesTotal) => {
+            encryptionTaskRef.current ??= this.createTask({
+              kind: "encrypt",
+              label: task.fileName,
+              scopeLabel: task.nodeLabel,
+              bytesTotal,
+            });
+            encryptionTaskRef.current.update({
+              status: "running",
+              bytesTotal,
+              bytesCompleted: bytesEncrypted,
+            });
+          },
+          onEncryptComplete: () => {
+            encryptionTaskFinished = true;
+            encryptionTaskRef.current?.complete();
+          },
           onProgress: (bytesUploaded, snapshot) => {
             const prevBytesUploaded = task.bytesUploaded;
             task.bytesUploaded = Math.min(
@@ -399,10 +610,33 @@ export class UploadManager {
 
         this.scheduleNodeRefresh(task.nodeId);
       } catch (e) {
+        if (encryptionTaskRef.current && !encryptionTaskFinished) {
+          encryptionTaskRef.current.fail({
+            message: e instanceof Error ? e.message : undefined,
+            key: e instanceof NoKeyError
+              ? "encryptionVaultLocked"
+              : e instanceof ClientEncryptionSizeLimitError
+                ? "clientEncryptionFileTooLarge"
+                : "encryptionFailed",
+            params: e instanceof ClientEncryptionSizeLimitError
+              ? { maxSize: formatBytes(e.maxBytes) }
+              : undefined,
+          });
+        }
+
         task.status = "failed";
         task.completedAt = Date.now();
         task.error = e instanceof Error ? e.message : undefined;
-        task.errorKey = "uploadFailed";
+        if (e instanceof NoKeyError) {
+          task.errorKey = "encryptionVaultLocked";
+          task.errorParams = undefined;
+        } else if (e instanceof ClientEncryptionSizeLimitError) {
+          task.errorKey = "clientEncryptionFileTooLarge";
+          task.errorParams = { maxSize: formatBytes(e.maxBytes) };
+        } else {
+          task.errorKey = "uploadFailed";
+          task.errorParams = undefined;
+        }
         this.fileConcurrency.observe({
           bytes: task.bytesTotal,
           durationMs: task.completedAt - (task._startedAt ?? task.completedAt),

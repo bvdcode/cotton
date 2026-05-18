@@ -2,6 +2,8 @@ import type {
   FolderOperations,
   FileOperations,
 } from "@shared/types/FileListViewTypes";
+import type { FolderEncryptionPolicyState } from "@shared/crypto";
+import type { NodeDto } from "@shared/api/layoutsApi";
 
 /**
  * Build folder operations adapter from hook
@@ -19,6 +21,13 @@ export const buildFolderOperations = (
   onFolderClick: (folderId: string) => void,
   onFolderShare?: (folderId: string, folderName: string) => Promise<void>,
   onFolderCut?: (folderId: string) => void,
+  onToggleEncryptionPolicy?: (
+    folderId: string,
+    currentlyEnabled: boolean,
+  ) => Promise<void> | void,
+  getEncryptionPolicyState?: (
+    folder: NodeDto,
+  ) => FolderEncryptionPolicyState,
 ): FolderOperations => {
   return {
     isRenaming: (folderId: string) => folderOps.renamingFolderId === folderId,
@@ -38,6 +47,12 @@ export const buildFolderOperations = (
         }
       : undefined,
     onCut: onFolderCut,
+    onToggleEncryptionPolicy: onToggleEncryptionPolicy
+      ? (folderId, currentlyEnabled) => {
+          void onToggleEncryptionPolicy(folderId, currentlyEnabled);
+        }
+      : undefined,
+    getEncryptionPolicyState,
     onClick: onFolderClick,
   };
 };

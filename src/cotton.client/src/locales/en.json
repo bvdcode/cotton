@@ -428,7 +428,13 @@
     },
     "pwa": {
       "updateAvailable": "A new version is ready.",
-      "updateAction": "Update"
+      "updateAction": "Refresh"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "This folder encrypts new uploads on your device.",
+      "fileEncryptedHint": "This file is encrypted on your device.",
+      "vaultLockedForDownload": "Unlock client-side encryption in your profile to download this file.",
+      "fileTooLargeForDownload": "This encrypted file is too large for the current browser download pipeline. Limit: {{maxSize}}."
     }
   },
   "audioPlayer": {
@@ -747,6 +753,70 @@
     },
     "email": {
       "verified": "Email verified"
+    },
+    "clientEncryption": {
+      "sectionTitle": "Client-side encryption",
+      "description": "Protect selected files with a browser-held key.",
+      "invalidEnvelope": "Saved encryption setup data cannot be read. Do not upload encrypted files until this is fixed.",
+      "lockedHint": "Unlock when you need to open encrypted folders or files.",
+      "unlockedHint": "Encrypted files can be opened in this browser tab until you lock the key or sign out.",
+      "status": {
+        "notSetUp": "Not set up",
+        "locked": "Locked",
+        "unlocked": "Unlocked",
+        "invalid": "Needs attention"
+      },
+      "actions": {
+        "setup": "Set up",
+        "unlock": "Unlock",
+        "lock": "Lock",
+        "lockOnRefresh": "Lock on page refresh"
+      },
+      "setupDialog": {
+        "title": "Set up client-side encryption",
+        "warning": "If you lose both the encryption password and the 24-word backup phrase, encrypted files cannot be opened. The server cannot reset this key.",
+        "acknowledge": "I understand that losing both means permanent data loss",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "back": "Back",
+        "passwordHint": "Choose a strong encryption password. It is separate from your account password and is not sent to the server.",
+        "passwordLabel": "Encryption password",
+        "confirmPasswordLabel": "Confirm encryption password",
+        "passwordTooShort": "Use at least {{min}} characters.",
+        "passwordMismatch": "Passwords do not match.",
+        "next": "Next",
+        "generating": "Generating...",
+        "phraseWarning": "Store these 24 words somewhere safe before finishing setup. Anyone with this phrase can unlock encrypted files.",
+        "copy": "Copy phrase",
+        "copied": "Copied",
+        "download": "Download phrase",
+        "phraseStored": "I have stored the backup phrase",
+        "saving": "Saving...",
+        "finish": "Finish setup",
+        "errors": {
+          "generateFailed": "Could not generate encryption keys.",
+          "saveFailed": "Could not save encryption setup.",
+          "copyFailed": "Could not copy the phrase.",
+          "downloadFailed": "Could not download the phrase."
+        }
+      },
+      "unlockDialog": {
+        "title": "Unlock client-side encryption",
+        "passwordLabel": "Encryption password",
+        "phraseLabel": "24-word backup phrase",
+        "usePhrase": "Use backup phrase",
+        "usePassword": "Use password instead",
+        "cancel": "Cancel",
+        "submit": "Unlock",
+        "unlocking": "Unlocking...",
+        "errors": {
+          "wrongPassword": "Wrong encryption password.",
+          "wrongPhrase": "This phrase does not unlock the key.",
+          "invalidPhrase": "The phrase is invalid or has the wrong number of words.",
+          "invalidEnvelope": "Saved encryption setup data cannot be read.",
+          "unknown": "Could not unlock encryption."
+        }
+      }
     }
   },
   "setup": {
@@ -1100,7 +1170,8 @@
         "more_one": " +{{count}} more",
         "more_few": " +{{count}} more",
         "more_many": " +{{count}} more",
-        "more_other": " +{{count}} more"
+        "more_other": " +{{count}} more",
+        "vaultLocked": "Encrypted uploads require unlocking your encryption vault first."
       },
       "errors": {
         "dropFailed": "Failed to process dropped items. Please try again."
@@ -1261,18 +1332,68 @@
     "size": "Size",
     "name": "Name",
     "location": "Location",
-    "noFilesOrFolders": "No files or folders"
+    "noFilesOrFolders": "No files or folders",
+    "clientEncryption": {
+      "enablePolicy": "Enable E2E",
+      "disablePolicy": "Disable E2E",
+      "unlockDialog": {
+        "title": "Unlock client-side encryption",
+        "currentTitle": "This folder is encrypted",
+        "goHome": "Go home"
+      },
+      "mixedPlain": {
+        "title": "Some files are not E2E encrypted",
+        "description_one": "{{count}} existing file is still stored without E2E encryption.",
+        "description_other": "{{count}} existing files are still stored without E2E encryption.",
+        "toast_one": "{{count}} file in this folder is not E2E encrypted.",
+        "toast_other": "{{count}} files in this folder are not E2E encrypted.",
+        "action": "Encrypt",
+        "running": "Encrypting"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} encrypted file was moved to a folder without automatic E2E.",
+        "toast_other": "{{count}} encrypted files were moved to a folder without automatic E2E.",
+        "action": "Decrypt"
+      },
+      "encryptedFilesRemain": {
+        "title": "Encrypted files remain encrypted",
+        "description_one": "{{count}} file stays encrypted even though new uploads are no longer encrypted automatically.",
+        "description_other": "{{count}} files stay encrypted even though new uploads are no longer encrypted automatically.",
+        "toast_one": "{{count}} encrypted file remains in this folder.",
+        "toast_other": "{{count}} encrypted files remain in this folder.",
+        "action": "Decrypt"
+      },
+      "toasts": {
+        "policyEnabled": "New uploads to this folder will be encrypted on this device.",
+        "policyDisabled": "New uploads to this folder will no longer be encrypted automatically.",
+        "policyToggleFailed": "Could not update encryption policy.",
+        "setupRequired": "Set up client-side encryption before opening this folder.",
+        "unlockRequired": "Unlock client-side encryption first.",
+        "encryptExistingComplete_one": "Encrypted {{count}} existing file.",
+        "encryptExistingComplete_other": "Encrypted {{count}} existing files.",
+        "encryptExistingFailed_one": "Could not encrypt {{count}} file. Check the task panel.",
+        "encryptExistingFailed_other": "Could not encrypt {{count}} files. Check the task panel.",
+        "decryptExistingComplete_one": "Decrypted {{count}} file.",
+        "decryptExistingComplete_other": "Decrypted {{count}} files.",
+        "decryptExistingFailed_one": "Could not decrypt {{count}} file. Check the task panel.",
+        "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel."
+      }
+    }
   },
-  "upload": {
-    "title": "Uploads",
+  "tasks": {
+    "title": "Tasks",
     "error": "Error",
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
-      "uploadFailed": "Upload failed"
+      "uploadFailed": "Upload failed",
+      "encryptionVaultLocked": "Encryption vault is locked",
+      "encryptionFailed": "Encryption failed",
+      "decryptionFailed": "Decryption failed",
+      "clientEncryptionFileTooLarge": "This file is too large for current encrypted file processing. Limit: {{maxSize}}."
     },
-    "titleWithTotal": "Uploads ({{total}})",
-    "titleWithProgress": "Uploads ({{completed}} / {{total}} • {{speed}}/s)",
-    "titleWithErrors": "Uploads ({{total}} • {{failed}} failed)",
+    "titleWithTotal": "Tasks ({{total}})",
+    "titleWithProgress": "Tasks ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithErrors": "Tasks ({{total}} • {{failed}} failed)",
     "actions": {
       "expand": "Expand",
       "collapse": "Collapse",
@@ -1281,7 +1402,7 @@
     },
     "status": {
       "queued": "Queued",
-      "uploading": "Uploading",
+      "running": "Running",
       "finalizing": "Finalizing",
       "completed": "Completed",
       "failed": "Failed"

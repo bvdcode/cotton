@@ -6,6 +6,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -28,7 +29,7 @@ import {
   getNextFileBrowserViewTitleKey,
   getTilesIconScale,
   type FileBrowserViewMode,
-} from "../utils/viewMode";
+} from "@shared/utils/viewMode";
 import { useOverflowActionKeys } from "../hooks/useOverflowActionKeys";
 
 export interface PageHeaderActionItem {
@@ -320,50 +321,61 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             {actionTabs.map((action) => {
               const isVisible = visibleActionKeys.includes(action.key);
               return (
-                <IconButton
+                <Tooltip
                   key={action.key}
-                  ref={(el) => {
-                    actionButtonRefs.current[action.key] = el;
-                  }}
-                  aria-label={action.title}
                   title={action.title}
-                  disabled={action.disabled}
-                  onClick={action.onClick}
-                  onDragOver={action.onDragOver}
-                  onDragLeave={action.onDragLeave}
-                  onDrop={action.onDrop}
-                  sx={{
-                    display: isVisible ? "inline-flex" : "none",
-                    color:
-                      action.color === "error"
-                        ? "error.main"
-                        : action.active || action.color === "secondary"
-                          ? "secondary.main"
-                          : "primary.main",
-                    ...(action.dropActive && {
-                      outline: "2px solid",
-                      outlineColor: "primary.main",
-                      outlineOffset: 2,
-                      borderRadius: "50%",
-                    }),
-                  }}
+                  disableInteractive
                 >
-                  {action.icon}
-                </IconButton>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: isVisible ? "inline-flex" : "none",
+                    }}
+                  >
+                    <IconButton
+                      ref={(el) => {
+                        actionButtonRefs.current[action.key] = el;
+                      }}
+                      aria-label={action.title}
+                      disabled={action.disabled}
+                      onClick={action.onClick}
+                      onDragOver={action.onDragOver}
+                      onDragLeave={action.onDragLeave}
+                      onDrop={action.onDrop}
+                      sx={(theme) => ({
+                        color:
+                          action.color === "error"
+                            ? theme.palette.error.main
+                            : action.active || action.color === "secondary"
+                              ? theme.palette.secondary.main
+                              : theme.palette.primary.main,
+                        transition:
+                          "box-shadow 120ms ease-out, background-color 120ms ease-out",
+                        ...(action.dropActive && {
+                          boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
+                          backgroundColor: theme.palette.action.selected,
+                        }),
+                      })}
+                    >
+                      {action.icon}
+                    </IconButton>
+                  </Box>
+                </Tooltip>
               );
             })}
           </Box>
 
           {overflowActions.length > 0 && (
             <>
-              <IconButton
-                aria-label={t("common:actions.more")}
-                title={t("common:actions.more")}
-                onClick={(e) => setMenuAnchorEl(e.currentTarget)}
-                sx={{ color: "primary.main" }}
-              >
-                <MoreVert />
-              </IconButton>
+              <Tooltip title={t("common:actions.more")} disableInteractive>
+                <IconButton
+                  aria-label={t("common:actions.more")}
+                  onClick={(e) => setMenuAnchorEl(e.currentTarget)}
+                  sx={{ color: "primary.main" }}
+                >
+                  <MoreVert />
+                </IconButton>
+              </Tooltip>
               <Menu
                 anchorEl={menuAnchorEl}
                 open={Boolean(menuAnchorEl)}

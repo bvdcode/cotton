@@ -31,4 +31,18 @@ describe("layout query cache helpers", () => {
       queryClient.getQueryData(queryKeys.layouts.recent("layout-id", 15)),
     ).toBeUndefined();
   });
+
+  it("leaves caches in other domains untouched", () => {
+    const queryClient = createQueryClient();
+
+    queryClient.setQueryData(queryKeys.layouts.root(), { id: "root" });
+    queryClient.setQueryData(queryKeys.notifications.unreadCount(), 3);
+
+    clearLayoutsCaches(queryClient);
+
+    expect(queryClient.getQueryData(queryKeys.layouts.root())).toBeUndefined();
+    expect(
+      queryClient.getQueryData(queryKeys.notifications.unreadCount()),
+    ).toBe(3);
+  });
 });

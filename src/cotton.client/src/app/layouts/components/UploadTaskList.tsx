@@ -2,10 +2,10 @@ import React, { useCallback } from "react";
 import { Box } from "@mui/material";
 import { Virtuoso } from "react-virtuoso";
 import { UploadTaskRow } from "./UploadTaskRow";
-import type { UploadTask } from "./uploadQueueUtils";
+import type { AppTask } from "../../../shared/tasks";
 
 interface UploadTaskListProps {
-  tasks: UploadTask[];
+  tasks: AppTask[];
   listHeight: number;
 }
 
@@ -43,7 +43,7 @@ export const UploadTaskList: React.FC<UploadTaskListProps> = ({
   tasks,
   listHeight,
 }) => {
-  const renderItem = useCallback((index: number, task: UploadTask) => {
+  const renderItem = useCallback((index: number, task: AppTask) => {
     return (
       <Box px={1.5}>
         <UploadTaskRow task={task} showDivider={index > 0} />

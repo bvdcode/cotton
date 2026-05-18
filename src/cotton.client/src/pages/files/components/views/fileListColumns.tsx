@@ -9,6 +9,8 @@ import {
   Folder,
   Image as ImageIcon,
   InsertDriveFile,
+  LockOpenOutlined,
+  LockOutlined,
   TextSnippet,
   VideoFile,
   Share,
@@ -23,6 +25,11 @@ import {
   isVideoFile,
 } from "@shared/utils/fileTypes";
 import { InlineRenameField } from "../InlineRenameField";
+import {
+  isFileEncrypted,
+  isFolderEncryptionPolicyEnabled,
+  type FolderEncryptionPolicyState,
+} from "../../../../shared/crypto";
 
 export interface FileListRow {
   id: string;
@@ -33,6 +40,8 @@ export interface FileListRow {
   containerNodeId?: string | null;
   sizeBytes: number | null;
   contentType?: string | null;
+  metadata?: Record<string, string>;
+  encryptionPolicy?: FolderEncryptionPolicyState;
   requiresVideoTranscoding?: boolean;
   tile?: {
     kind: "folder" | "file";
@@ -59,6 +68,10 @@ interface ColumnOptions {
     download: string;
     share: string;
     cut: string;
+    encryptedFile: string;
+    encryptedFolder: string;
+    enableEncryptionPolicy: string;
+    disableEncryptionPolicy: string;
   };
   newFolderName: string;
   onNewFolderNameChange: (value: string) => void;
@@ -82,6 +95,10 @@ interface ColumnOptions {
     onDelete?: (id: string, name: string) => void;
     onShare?: (id: string, name: string) => void;
     onCut?: (id: string) => void;
+    onToggleEncryptionPolicy?: (
+      id: string,
+      currentlyEnabled: boolean,
+    ) => void;
   };
   fileOperations: {
     isRenaming: (id: string) => boolean;
@@ -244,15 +261,32 @@ export const createNameColumn = (
       );
     }
 
+    const encryptionTitle =
+      row.type === "file" && isFileEncrypted(row.metadata)
+        ? options.labels.encryptedFile
+        : row.type === "folder" &&
+            (row.encryptionPolicy?.effectiveEnabled ??
+              isFolderEncryptionPolicyEnabled(row.metadata))
+          ? options.labels.encryptedFolder
+          : null;
+
     return (
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
+          gap: 0.5,
           height: "100%",
           width: "100%",
         }}
       >
+        {encryptionTitle && (
+          <LockOutlined
+            fontSize="small"
+            titleAccess={encryptionTitle}
+            sx={{ color: "text.secondary", flexShrink: 0 }}
+          />
+        )}
         <Typography
           variant="body2"
           noWrap
@@ -386,6 +420,12 @@ export const createActionsColumn = (
     if (row.type === "new-folder") return null;
 
     if (row.type === "folder") {
+      const folderEncryptionPolicyEnabled =
+        row.encryptionPolicy?.explicitEnabled ??
+        isFolderEncryptionPolicyEnabled(row.metadata);
+      const folderEncryptionPolicyInherited =
+        row.encryptionPolicy?.inheritedEnabled ?? false;
+
       return (
         <Box
           sx={{
@@ -433,6 +473,30 @@ export const createActionsColumn = (
                   title={options.labels.cut}
                 >
                   <ContentCut fontSize="small" />
+                </IconButton>
+              )}
+              {options.folderOperations.onToggleEncryptionPolicy &&
+                !folderEncryptionPolicyInherited && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.folderOperations.onToggleEncryptionPolicy?.(
+                      row.id,
+                      folderEncryptionPolicyEnabled,
+                    );
+                  }}
+                  title={
+                    folderEncryptionPolicyEnabled
+                      ? options.labels.disableEncryptionPolicy
+                      : options.labels.enableEncryptionPolicy
+                  }
+                >
+                  {folderEncryptionPolicyEnabled ? (
+                    <LockOpenOutlined fontSize="small" />
+                  ) : (
+                    <LockOutlined fontSize="small" />
+                  )}
                 </IconButton>
               )}
               {options.folderOperations.onRestore && (

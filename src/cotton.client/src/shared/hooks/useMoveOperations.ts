@@ -3,12 +3,26 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
+import type { NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
-import { useNodesStore } from "../store/nodesStore";
+import { fetchServerSettings } from "../api/queries/serverSettings";
+import { queryClient } from "../api/queries/queryClient";
+import { refreshNodeContent } from "../store/nodesActions";
 import {
   useMoveClipboardStore,
   type MoveClipboardItem,
 } from "../store/moveClipboardStore";
+import { useNodesStore } from "../store/nodesStore";
+import {
+  getFolderEncryptionPolicyStateFromParentResolver,
+  isFileEncrypted,
+  useVault,
+} from "../crypto";
+import {
+  decryptExistingFileWithTask,
+  encryptExistingFileWithTask,
+} from "../tasks";
+import { showActionToast } from "../ui/ActionToast";
 
 /**
  * Non-authoritative drag hint type. Used so synchronous drag-over handlers can
@@ -174,6 +188,48 @@ const extractErrorMessage = (error: unknown): string | null => {
   return null;
 };
 
+const findCachedNode = (nodeId: string): NodeDto | null => {
+  const state = useNodesStore.getState();
+
+  if (state.currentNode?.id === nodeId) {
+    return state.currentNode;
+  }
+
+  const ancestor = state.ancestors.find((node) => node.id === nodeId);
+  if (ancestor) {
+    return ancestor;
+  }
+
+  for (const content of Object.values(state.contentByNodeId)) {
+    const node = content?.nodes.find((item) => item.id === nodeId);
+    if (node) {
+      return node;
+    }
+  }
+
+  return null;
+};
+
+const getCachedFolderEncryptionPolicyEnabled = (nodeId: string): boolean => {
+  const node = findCachedNode(nodeId);
+  if (!node) return false;
+
+  return getFolderEncryptionPolicyStateFromParentResolver(
+    node,
+    findCachedNode,
+  ).effectiveEnabled;
+};
+
+const needsEncryptionAfterMove = (item: MoveClipboardItem): boolean =>
+  item.kind === "file" &&
+  item.file !== undefined &&
+  !isFileEncrypted(item.file.metadata);
+
+const needsDecryptionAfterMove = (item: MoveClipboardItem): boolean =>
+  item.kind === "file" &&
+  item.file !== undefined &&
+  isFileEncrypted(item.file.metadata);
+
 interface MoveOutcome {
   succeeded: ReadonlyArray<MoveClipboardItem>;
   failed: ReadonlyArray<MoveClipboardItem>;
@@ -193,7 +249,7 @@ interface UseMoveOperationsResult {
 }
 
 export const useMoveOperations = (): UseMoveOperationsResult => {
-  const { t } = useTranslation(["files", "common"]);
+  const { t } = useTranslation(["files", "common", "tasks"]);
   const setItems = useMoveClipboardStore((s) => s.setItems);
   const clear = useMoveClipboardStore((s) => s.clear);
 
@@ -226,10 +282,30 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
         return { succeeded: [], failed: [], lastErrorMessage: null };
       }
 
-      const store = useNodesStore.getState();
+      const targetNode = findCachedNode(targetParentId);
+      const targetEncryptsNewFiles =
+        getCachedFolderEncryptionPolicyEnabled(targetParentId);
+      const filesToEncrypt = targetEncryptsNewFiles
+        ? candidates.filter(needsEncryptionAfterMove)
+        : [];
+      let encryptionServerSettings: Awaited<
+        ReturnType<typeof fetchServerSettings>
+      > | null = null;
+
+      if (filesToEncrypt.length > 0 && useVault.getState().isUnlocked) {
+        try {
+          encryptionServerSettings = await fetchServerSettings(queryClient);
+        } catch {
+          encryptionServerSettings = null;
+        }
+      }
+
       const sourceParents = new Set<string>();
       const succeeded: MoveClipboardItem[] = [];
       const failed: MoveClipboardItem[] = [];
+      const movedFilesToEncrypt: MoveClipboardItem[] = [];
+      const movedFilesToOfferDecrypt: MoveClipboardItem[] = [];
+      let encryptionFailedCount = 0;
       let lastErrorMessage: string | null = null;
 
       // Serial loop: the server's collision/cycle checks are pre-update reads,
@@ -244,6 +320,12 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
           }
           sourceParents.add(item.sourceParentId);
           succeeded.push(item);
+          if (targetEncryptsNewFiles && needsEncryptionAfterMove(item)) {
+            movedFilesToEncrypt.push(item);
+          }
+          if (!targetEncryptsNewFiles && needsDecryptionAfterMove(item)) {
+            movedFilesToOfferDecrypt.push(item);
+          }
         } catch (error) {
           failed.push(item);
           lastErrorMessage = extractErrorMessage(error) ?? lastErrorMessage;
@@ -255,7 +337,61 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       const parentsToRefresh = new Set<string>(sourceParents);
       parentsToRefresh.add(targetParentId);
       for (const id of parentsToRefresh) {
-        void store.refreshNodeContent(id);
+        void refreshNodeContent(id);
+      }
+
+      if (movedFilesToEncrypt.length > 0) {
+        const settings = encryptionServerSettings;
+        if (!settings) {
+          if (useVault.getState().isUnlocked) {
+            toast.error(t("errors.serverSettingsNotLoaded", { ns: "tasks" }));
+          }
+          void refreshNodeContent(targetParentId);
+        } else {
+          for (const item of movedFilesToEncrypt) {
+            if (!item.file) continue;
+
+            try {
+              await encryptExistingFileWithTask({
+                file: {
+                  id: item.id,
+                  name: item.file.name,
+                  contentType: item.file.contentType,
+                  sizeBytes: item.file.sizeBytes,
+                },
+                targetNodeId: targetParentId,
+                scopeLabel: targetNode?.name ?? "",
+                server: {
+                  maxChunkSizeBytes: settings.maxChunkSizeBytes,
+                  supportedHashAlgorithm: settings.supportedHashAlgorithm,
+                },
+              });
+            } catch {
+              encryptionFailedCount += 1;
+            }
+          }
+
+          void refreshNodeContent(targetParentId);
+        }
+      }
+
+      if (movedFilesToOfferDecrypt.length > 0) {
+        showActionToast({
+          toastId: `files-cse-decrypt-moved-${targetParentId}-${Date.now()}`,
+          message: t("clientEncryption.movedEncrypted.toast", {
+            ns: "files",
+            count: movedFilesToOfferDecrypt.length,
+          }),
+          action: t("clientEncryption.movedEncrypted.action", { ns: "files" }),
+          onAction: () => {
+            void decryptMovedEncryptedFiles({
+              files: movedFilesToOfferDecrypt,
+              targetParentId,
+              targetNodeName: targetNode?.name ?? "",
+              t,
+            });
+          },
+        });
       }
 
       if (succeeded.length > 0) {
@@ -269,6 +405,15 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
           lastErrorMessage ??
             t("move.toasts.failed", { ns: "files", count: failed.length }),
           { toastId: `move-error-${targetParentId}-${Date.now()}` },
+        );
+      }
+      if (encryptionFailedCount > 0) {
+        toast.error(
+          t("clientEncryption.toasts.encryptExistingFailed", {
+            ns: "files",
+            count: encryptionFailedCount,
+          }),
+          { toastId: `move-encrypt-error-${targetParentId}-${Date.now()}` },
         );
       }
 
@@ -313,3 +458,73 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
     moveItems: moveItemsVoid,
   };
 };
+
+async function decryptMovedEncryptedFiles(options: {
+  files: ReadonlyArray<MoveClipboardItem>;
+  targetParentId: string;
+  targetNodeName: string;
+  t: ReturnType<typeof useTranslation<["files", "common", "tasks"]>>["t"];
+}): Promise<void> {
+  const { files, targetParentId, targetNodeName, t } = options;
+
+  if (!useVault.getState().isUnlocked) {
+    toast.error(t("clientEncryption.toasts.unlockRequired", { ns: "files" }));
+    return;
+  }
+
+  let settings: Awaited<ReturnType<typeof fetchServerSettings>>;
+  try {
+    settings = await fetchServerSettings(queryClient);
+  } catch {
+    toast.error(t("errors.serverSettingsNotLoaded", { ns: "tasks" }));
+    return;
+  }
+
+  let decryptedCount = 0;
+  let failedCount = 0;
+
+  for (const item of files) {
+    if (!item.file) continue;
+
+    try {
+      await decryptExistingFileWithTask({
+        file: {
+          id: item.id,
+          name: item.file.name,
+          contentType: item.file.contentType,
+          sizeBytes: item.file.sizeBytes,
+          metadata: item.file.metadata,
+        },
+        targetNodeId: targetParentId,
+        scopeLabel: targetNodeName,
+        server: {
+          maxChunkSizeBytes: settings.maxChunkSizeBytes,
+          supportedHashAlgorithm: settings.supportedHashAlgorithm,
+        },
+      });
+      decryptedCount += 1;
+    } catch {
+      failedCount += 1;
+    }
+  }
+
+  void refreshNodeContent(targetParentId);
+
+  if (decryptedCount > 0) {
+    toast.success(
+      t("clientEncryption.toasts.decryptExistingComplete", {
+        ns: "files",
+        count: decryptedCount,
+      }),
+    );
+  }
+
+  if (failedCount > 0) {
+    toast.error(
+      t("clientEncryption.toasts.decryptExistingFailed", {
+        ns: "files",
+        count: failedCount,
+      }),
+    );
+  }
+}

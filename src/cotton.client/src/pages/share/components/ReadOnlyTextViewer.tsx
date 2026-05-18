@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Box } from "@mui/material";
-import { CodeEditor } from "../../files/components/preview/editors/CodeEditor";
-import { MarkdownEditor } from "../../files/components/preview/editors/MarkdownEditor";
-import { PlainTextEditor } from "../../files/components/preview/editors/PlainTextEditor";
+import { CodeEditor } from "@shared/ui/preview/editors/CodeEditor";
+import { MarkdownEditor } from "@shared/ui/preview/editors/MarkdownEditor";
+import { PlainTextEditor } from "@shared/ui/preview/editors/PlainTextEditor";
 import { detectMonacoLanguageFromFileName } from "../../../shared/utils/languageDetection";
 
 function detectMonacoLanguageFromContentType(

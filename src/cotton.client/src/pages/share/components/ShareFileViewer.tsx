@@ -11,16 +11,12 @@ import {
 import { useTranslation } from "react-i18next";
 import { getFileTypeInfo, type FileType } from "@shared/utils/fileTypes";
 import { formatBytes } from "../../../shared/utils/formatBytes";
-import {
-  MediaLightbox,
-  type MediaItem,
-  ModelPreview,
-  PdfPreview,
-} from "../../files/components";
+import { MediaLightbox, ModelPreview, PdfPreview } from "@shared/ui/preview";
+import type { MediaItem } from "@shared/types/mediaLightbox";
 import {
   selectGallerySmoothTransitions,
-  useLocalPreferencesStore,
-} from "../../../shared/store/localPreferencesStore";
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 import { ReadOnlyTextViewer } from "./ReadOnlyTextViewer";
 
 interface ShareFileViewerProps {
@@ -71,7 +67,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   contentLength,
 }) => {
   const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
-  const smoothGalleryTransitions = useLocalPreferencesStore(
+  const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
 

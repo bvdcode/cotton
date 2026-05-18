@@ -4,6 +4,8 @@ import {
   FILE_AND_NODE_MUTATION_HUB_METHODS,
   HUB_METHODS,
   getHubMethodVariants,
+  type HubMethod,
+  type HubMethodOrLower,
 } from "../../../shared/signalr";
 import { useAuth } from "../../../features/auth";
 import { isJsonObject, type JsonValue } from "../../../shared/types/json";
@@ -19,93 +21,15 @@ const PREVIEW_GENERATED_METHODS = getHubMethodVariants([
 ]);
 const GUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MAX_PAYLOAD_SCAN_DEPTH = 4;
-
-const normalizeKey = (key: string): string =>
-  key.replace(/[^a-z]/gi, "").toLowerCase();
-
-const looksLikeNodeRelationKey = (key: string): boolean => {
-  const normalized = normalizeKey(key);
-
-  if (
-    normalized === "node" ||
-    normalized === "parent" ||
-    normalized === "folder"
-  ) {
-    return true;
-  }
-
-  return (
-    normalized.includes("nodeid") ||
-    normalized.includes("parentid") ||
-    normalized.includes("folderid") ||
-    normalized.includes("sourceid") ||
-    normalized.includes("targetid") ||
-    normalized.includes("destinationid") ||
-    normalized.includes("fromid") ||
-    normalized.includes("toid")
-  );
-};
 
 const isGuid = (value: string): boolean => GUID_REGEX.test(value);
 
-const collectAffectedNodeIdsFromValue = (
-  value: JsonValue,
-  depth: number,
-  relationContext: boolean,
-): string[] => {
-  if (depth > MAX_PAYLOAD_SCAN_DEPTH) {
-    return [];
-  }
+const HUB_METHOD_BY_WIRE_NAME = new Map<string, HubMethod>(
+  Object.values(HUB_METHODS).map((method) => [method.toLowerCase(), method]),
+);
 
-  if (typeof value === "string") {
-    return relationContext && isGuid(value) ? [value] : [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((entry) =>
-      collectAffectedNodeIdsFromValue(entry, depth + 1, relationContext),
-    );
-  }
-
-  if (!isJsonObject(value)) {
-    return [];
-  }
-
-  const ids: string[] = [];
-
-  for (const [key, nested] of Object.entries(value)) {
-    const nextRelationContext = relationContext || looksLikeNodeRelationKey(key);
-    ids.push(
-      ...collectAffectedNodeIdsFromValue(
-        nested,
-        depth + 1,
-        nextRelationContext,
-      ),
-    );
-  }
-
-  return ids;
-};
-
-const collectAffectedNodeIds = (args: JsonValue[]): Set<string> => {
-  const ids = new Set<string>();
-
-  for (const arg of args) {
-    if (typeof arg === "string" && isGuid(arg)) {
-      ids.add(arg);
-    }
-
-    const nestedIds = collectAffectedNodeIdsFromValue(arg, 0, false);
-    for (const id of nestedIds) {
-      ids.add(id);
-    }
-  }
-
-  return ids;
-};
-
-const shouldInvalidateCurrentNode = (
+export const shouldInvalidateCurrentNode = (
+  method: HubMethodOrLower,
   args: JsonValue[],
   currentNodeId: string | null,
 ): boolean => {
@@ -113,13 +37,81 @@ const shouldInvalidateCurrentNode = (
     return false;
   }
 
-  const affectedNodeIds = collectAffectedNodeIds(args);
-  if (affectedNodeIds.size === 0) {
-    // Keep compatibility with events that do not include node identifiers.
-    return true;
+  const affectedNodeIds = getAffectedNodeIds(method, args);
+  return affectedNodeIds.has(currentNodeId);
+};
+
+const getAffectedNodeIds = (
+  method: HubMethodOrLower,
+  args: JsonValue[],
+): Set<string> => {
+  const canonicalMethod = HUB_METHOD_BY_WIRE_NAME.get(method.toLowerCase());
+  const payload = args[0];
+  const affected = new Set<string>();
+
+  if (!canonicalMethod || !isJsonObject(payload)) {
+    return affected;
   }
 
-  return affectedNodeIds.has(currentNodeId);
+  const addPayloadGuid = (key: string): void => {
+    const value = payload[key];
+    if (typeof value === "string" && isGuid(value)) {
+      affected.add(value);
+    }
+  };
+
+  const addNestedGuid = (objectKey: string, nestedKey: string): void => {
+    const nested = payload[objectKey];
+    if (!isJsonObject(nested)) {
+      return;
+    }
+
+    const value = nested[nestedKey];
+    if (typeof value === "string" && isGuid(value)) {
+      affected.add(value);
+    }
+  };
+
+  switch (canonicalMethod) {
+    case HUB_METHODS.FileCreated:
+    case HUB_METHODS.FileUpdated:
+    case HUB_METHODS.FileRenamed:
+    case HUB_METHODS.FileRestored:
+      addPayloadGuid("nodeId");
+      break;
+
+    case HUB_METHODS.FileDeleted:
+      addPayloadGuid("parentNodeId");
+      break;
+
+    case HUB_METHODS.FileMoved:
+      addPayloadGuid("oldParentId");
+      addPayloadGuid("newParentId");
+      addNestedGuid("file", "nodeId");
+      break;
+
+    case HUB_METHODS.NodeCreated:
+    case HUB_METHODS.NodeMetadataUpdated:
+    case HUB_METHODS.NodeRenamed:
+    case HUB_METHODS.NodeRestored:
+      addPayloadGuid("id");
+      addPayloadGuid("parentId");
+      break;
+
+    case HUB_METHODS.NodeDeleted:
+      addPayloadGuid("nodeId");
+      addPayloadGuid("parentNodeId");
+      break;
+
+    case HUB_METHODS.NodeMoved:
+      addPayloadGuid("oldParentId");
+      addPayloadGuid("newParentId");
+      addNestedGuid("node", "id");
+      addNestedGuid("node", "parentId");
+      break;
+  }
+
+  return affected;
 };
 
 const isPreviewGeneratedArgs = (
@@ -187,7 +179,7 @@ export function useFilesRealtimeEvents({
     );
     const unsubscribes = invalidationMethods.map((method) =>
       eventHub.on(method, (...args: JsonValue[]) => {
-        if (!shouldInvalidateCurrentNode(args, nodeIdRef.current)) {
+        if (!shouldInvalidateCurrentNode(method, args, nodeIdRef.current)) {
           return;
         }
 

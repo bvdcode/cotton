@@ -51,6 +51,13 @@ export const useSearchFileList = ({
       return `/${parts.slice(0, -1).join("/")}`;
     };
 
+    const replacePathFileName = (fullPath: string, fileName: string): string => {
+      const normalized = fullPath.trim();
+      const slashIndex = normalized.lastIndexOf("/");
+      if (slashIndex < 0) return fileName;
+      return `${normalized.slice(0, slashIndex + 1)}${fileName}`;
+    };
+
     const sortByName = <T extends { name: string }>(items: T[]): T[] => {
       const sorted = items.slice();
       sorted.sort((a, b) =>
@@ -108,7 +115,9 @@ export const useSearchFileList = ({
         const containerPath = fullPath ? getContainerPath(fullPath) : undefined;
 
         // Display the full file path (including file name) as returned by backend.
-        const displayFullPath = fullPath ? stripRootPrefix(fullPath) : undefined;
+        const displayFullPath = fullPath
+          ? stripRootPrefix(replacePathFileName(fullPath, file.name))
+          : undefined;
         return {
           kind: "file",
           file,

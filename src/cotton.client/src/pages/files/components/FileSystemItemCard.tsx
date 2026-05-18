@@ -3,6 +3,7 @@ import { MoreVert } from "@mui/icons-material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode, MouseEvent } from "react";
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -20,6 +21,8 @@ export interface FileSystemItemCardAction {
 export interface FileSystemItemCardProps {
   icon: ReactNode;
   title: string;
+  titleAdornment?: ReactNode;
+  cornerAdornment?: ReactNode;
   subtitle?: string;
   onClick?: (event?: React.SyntheticEvent) => void;
   actions?: FileSystemItemCardAction[];
@@ -168,9 +171,11 @@ const HoverMarqueeText = ({
   );
 };
 
-export const FileSystemItemCard = ({
+const FileSystemItemCardImpl = ({
   icon,
   title,
+  titleAdornment,
+  cornerAdornment,
   subtitle,
   onClick,
   actions,
@@ -259,6 +264,32 @@ export const FileSystemItemCard = ({
           overflow: "hidden",
         }}
       >
+        {cornerAdornment && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 6,
+              right: 6,
+              zIndex: 2,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 22,
+              height: 22,
+              borderRadius: 0.75,
+              bgcolor: "background.paper",
+              color: "text.secondary",
+              border: "1px solid",
+              borderColor: "divider",
+              boxShadow: 1,
+              "& > svg": {
+                fontSize: 16,
+              },
+            }}
+          >
+            {cornerAdornment}
+          </Box>
+        )}
         <Box
           sx={{
             width: "100%",
@@ -291,6 +322,18 @@ export const FileSystemItemCard = ({
             gap: 0.5,
           }}
         >
+          {titleAdornment && (
+            <Box
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                flexShrink: 0,
+                color: "text.secondary",
+              }}
+            >
+              {titleAdornment}
+            </Box>
+          )}
           <Typography
             component="div"
             variant="body2"
@@ -398,3 +441,5 @@ export const FileSystemItemCard = ({
     </Box>
   );
 };
+
+export const FileSystemItemCard = memo(FileSystemItemCardImpl);

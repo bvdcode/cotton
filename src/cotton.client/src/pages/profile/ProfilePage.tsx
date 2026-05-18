@@ -8,6 +8,7 @@ import {
   WebDavTokenCard,
   ShareLinkSettingsCard,
   EditProfileCard,
+  ClientEncryptionCard,
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { useTranslation } from "react-i18next";
@@ -46,6 +47,7 @@ export const SettingsPage = () => {
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
         <AppearanceSettingsCard />
         <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
+        <ClientEncryptionCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />
         <ShareLinkSettingsCard />
         <ChangePasswordCard />

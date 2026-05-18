@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useFileInteractionHandlers } from "./useFileInteractionHandlers";
+import { useFileInteractionHandlers } from "@shared/hooks/useFileInteractionHandlers";
 import type {
   FileListFileDto,
   FileSystemTile,

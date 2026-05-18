@@ -13,6 +13,11 @@ const stopEventPropagation = (event: React.SyntheticEvent): void => {
   event.stopPropagation();
 };
 
+const stopDragStart = (event: React.DragEvent): void => {
+  event.preventDefault();
+  event.stopPropagation();
+};
+
 export const InlineRenameField: React.FC<InlineRenameFieldProps> = ({
   value,
   onChange,
@@ -58,6 +63,7 @@ export const InlineRenameField: React.FC<InlineRenameFieldProps> = ({
       onClick={stopEventPropagation}
       onMouseDown={stopEventPropagation}
       onDoubleClick={stopEventPropagation}
+      onDragStart={stopDragStart}
     >
       <InputBase
         autoFocus

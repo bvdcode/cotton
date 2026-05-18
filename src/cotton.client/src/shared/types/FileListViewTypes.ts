@@ -1,6 +1,7 @@
 import type { NodeDto } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
 import type { SharedNodeFileDto } from "../api/sharedFoldersApi";
+import type { FolderEncryptionPolicyState } from "../crypto";
 import type { MoveClipboardItem } from "../store/moveClipboardStore";
 
 export type FileListFileDto = NodeFileManifestDto | SharedNodeFileDto;
@@ -57,6 +58,13 @@ export interface FolderOperations {
   onDelete?: (folderId: string, name: string) => void;
   onShare?: (folderId: string, name: string) => void;
   onCut?: (folderId: string) => void;
+  onToggleEncryptionPolicy?: (
+    folderId: string,
+    currentlyEnabled: boolean,
+  ) => void;
+  getEncryptionPolicyState?: (
+    folder: NodeDto,
+  ) => FolderEncryptionPolicyState;
   onClick: (folderId: string) => void;
 }
 
