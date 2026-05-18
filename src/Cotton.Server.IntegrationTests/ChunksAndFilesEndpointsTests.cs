@@ -7,6 +7,7 @@ using Cotton.Server.IntegrationTests.Common;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
@@ -268,6 +269,41 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(file!.ContentType, Is.EqualTo("text/plain"));
     }
 
+
+    [Test]
+    public async Task Share_RangeMetadataProbe_DoesNotConsume_DeleteAfterUse_Token()
+    {
+        var authToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "range-probe.txt", "0123456789abcdef");
+        var linkResponse = await _client.GetAsync($"/api/v1/files/{file.Id}/download-link?deleteAfterUse=true");
+        linkResponse.EnsureSuccessStatusCode();
+        string downloadLink = (await linkResponse.Content.ReadAsStringAsync()).Trim().Trim('"');
+        string shareToken = ExtractToken(downloadLink);
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        using var probeRequest = new HttpRequestMessage(HttpMethod.Get, $"/s/{shareToken}?view=inline");
+        probeRequest.Headers.Range = new RangeHeaderValue(0, 3);
+        var probeResponse = await _client.SendAsync(probeRequest);
+        Assert.That(probeResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.PartialContent));
+        _ = await probeResponse.Content.ReadAsByteArrayAsync();
+
+        DbContext.ChangeTracker.Clear();
+        bool existsAfterProbe = await DbContext.DownloadTokens.AnyAsync(x => x.Token == shareToken);
+        Assert.That(existsAfterProbe, Is.True);
+
+        var downloadResponse = await _client.GetAsync($"/s/{shareToken}?view=download");
+        downloadResponse.EnsureSuccessStatusCode();
+        _ = await downloadResponse.Content.ReadAsByteArrayAsync();
+
+        bool existsAfterDownload = await WaitForDownloadTokenAsync(shareToken, expectedExists: false);
+        Assert.That(existsAfterDownload, Is.False);
+    }
+
     private async Task<Cotton.Server.Models.Dto.NodeFileManifestDto> UploadTextFileAsync(
         Models.Dto.NodeDto root,
         string name,
@@ -308,6 +344,33 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         var file = list!.Files.SingleOrDefault(x => x.Name == name);
         Assert.That(file, Is.Not.Null);
         return file!;
+    }
+
+
+    private static string ExtractToken(string downloadLink)
+    {
+        const string marker = "token=";
+        int index = downloadLink.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        Assert.That(index, Is.GreaterThanOrEqualTo(0));
+        return Uri.UnescapeDataString(downloadLink[(index + marker.Length)..]);
+    }
+
+    private async Task<bool> WaitForDownloadTokenAsync(string token, bool expectedExists)
+    {
+        for (int i = 0; i < 20; i++)
+        {
+            DbContext.ChangeTracker.Clear();
+            bool exists = await DbContext.DownloadTokens.AnyAsync(x => x.Token == token);
+            if (exists == expectedExists)
+            {
+                return exists;
+            }
+
+            await Task.Delay(50);
+        }
+
+        DbContext.ChangeTracker.Clear();
+        return await DbContext.DownloadTokens.AnyAsync(x => x.Token == token);
     }
 
     private async Task<string> LoginAsync()
