@@ -16,17 +16,31 @@ namespace Cotton.Server.Services
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
         private readonly ILogger<MasterKeySentinelStore> _logger;
         private readonly FileSystemStorageBackend _backend;
+        private readonly IMasterKeyCompatibilityProbe? _compatibilityProbe;
 
-        public MasterKeySentinelStore(ILogger<MasterKeySentinelStore> logger, string? storageBasePath = null)
+        public MasterKeySentinelStore(
+            ILogger<MasterKeySentinelStore> logger,
+            string? storageBasePath = null,
+            IMasterKeyCompatibilityProbe? compatibilityProbe = null)
         {
             _logger = logger;
             _backend = new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, storageBasePath);
+            _compatibilityProbe = compatibilityProbe;
         }
 
         public Task<bool> ExistsAsync() => _backend.ExistsAsync(SentinelStorageKey);
 
+        public Task<MasterKeySentinelResult> ValidateOrInitializeAsync(
+            CottonEncryptionSettings encryptionSettings,
+            CancellationToken cancellationToken = default) =>
+            ValidateOrInitializeAsync(
+                encryptionSettings,
+                MasterKeySentinelInitializationMode.TrustProvidedKeyWhenNoProbe,
+                cancellationToken);
+
         public async Task<MasterKeySentinelResult> ValidateOrInitializeAsync(
             CottonEncryptionSettings encryptionSettings,
+            MasterKeySentinelInitializationMode initializationMode,
             CancellationToken cancellationToken = default)
         {
             try
@@ -34,27 +48,37 @@ namespace Cotton.Server.Services
                 using var cipher = CreateCipher(encryptionSettings);
                 if (await _backend.ExistsAsync(SentinelStorageKey))
                 {
-                    return await ValidateExistingAsync(cipher, cancellationToken);
+                    MasterKeySentinelResult existing = await ValidateExistingOrRepairAsync(
+                        encryptionSettings,
+                        cipher,
+                        cancellationToken);
+                    if (!existing.Success)
+                    {
+                        return existing;
+                    }
+
+                    return await ValidateExistingDataCompatibilityAsync(
+                        encryptionSettings,
+                        existing,
+                        cancellationToken);
+                }
+
+                MasterKeyCompatibilityMode compatibilityMode = initializationMode ==
+                    MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData
+                        ? MasterKeyCompatibilityMode.RequireEvidenceForExistingData
+                        : MasterKeyCompatibilityMode.AllowMissingEvidence;
+                MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
+                    encryptionSettings,
+                    compatibilityMode,
+                    cancellationToken);
+                if (!compatibility.Success)
+                {
+                    return MasterKeySentinelResult.Fail(compatibility.Error ?? "Master key could not be verified against existing Cotton data.");
                 }
 
                 await WriteNewAsync(cipher, cancellationToken);
                 _logger.LogInformation("Master key sentinel created. StorageKey={StorageKey}", SentinelStorageKey);
                 return MasterKeySentinelResult.Ok(created: true);
-            }
-            catch (CryptographicException ex)
-            {
-                _logger.LogWarning(ex, "Master key sentinel could not be decrypted.");
-                return MasterKeySentinelResult.Fail("Master key does not match this Cotton instance.");
-            }
-            catch (InvalidDataException ex)
-            {
-                _logger.LogWarning(ex, "Master key sentinel could not be decrypted.");
-                return MasterKeySentinelResult.Fail("Master key does not match this Cotton instance.");
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogWarning(ex, "Master key sentinel payload is invalid.");
-                return MasterKeySentinelResult.Fail("Master key sentinel is corrupted.");
             }
             catch (Exception ex) when (ex is FormatException or InvalidOperationException or ArgumentException)
             {
@@ -72,6 +96,80 @@ namespace Cotton.Server.Services
             {
                 throw new InvalidOperationException(result.Error ?? "Master key sentinel validation failed.");
             }
+        }
+
+        private async Task<MasterKeySentinelResult> ValidateExistingOrRepairAsync(
+            CottonEncryptionSettings encryptionSettings,
+            AesGcmStreamCipher cipher,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await ValidateExistingAsync(cipher, cancellationToken);
+            }
+            catch (Exception ex) when (IsSentinelReadFailure(ex))
+            {
+                _logger.LogWarning(ex, "Master key sentinel could not be decrypted or parsed. Checking existing data before rejecting the key.");
+                return await TryRepairExistingSentinelAsync(encryptionSettings, cipher, ex, cancellationToken);
+            }
+        }
+
+        private async Task<MasterKeySentinelResult> TryRepairExistingSentinelAsync(
+            CottonEncryptionSettings encryptionSettings,
+            AesGcmStreamCipher cipher,
+            Exception sentinelFailure,
+            CancellationToken cancellationToken)
+        {
+            MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
+                encryptionSettings,
+                MasterKeyCompatibilityMode.RequireEvidenceForExistingData,
+                cancellationToken);
+            if (!compatibility.Success || !compatibility.EvidenceFound)
+            {
+                return sentinelFailure is JsonException
+                    ? MasterKeySentinelResult.Fail("Master key sentinel is corrupted.")
+                    : MasterKeySentinelResult.Fail("Master key does not match this Cotton instance.");
+            }
+
+            await WriteNewAsync(cipher, cancellationToken, overwrite: true);
+            _logger.LogWarning(
+                "Master key sentinel was repaired after the submitted key matched existing encrypted Cotton data. StorageKey={StorageKey}",
+                SentinelStorageKey);
+            return MasterKeySentinelResult.Ok(created: true, repaired: true);
+        }
+
+        private async Task<MasterKeySentinelResult> ValidateExistingDataCompatibilityAsync(
+            CottonEncryptionSettings encryptionSettings,
+            MasterKeySentinelResult sentinelResult,
+            CancellationToken cancellationToken)
+        {
+            MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
+                encryptionSettings,
+                MasterKeyCompatibilityMode.AllowMissingEvidence,
+                cancellationToken);
+            if (!compatibility.Success)
+            {
+                return MasterKeySentinelResult.Fail(
+                    compatibility.Error ?? "Master key does not match existing encrypted Cotton data.");
+            }
+
+            return sentinelResult;
+        }
+
+        private async Task<MasterKeyCompatibilityResult> ValidateCompatibilityAsync(
+            CottonEncryptionSettings encryptionSettings,
+            MasterKeyCompatibilityMode mode,
+            CancellationToken cancellationToken)
+        {
+            if (_compatibilityProbe is null)
+            {
+                return mode == MasterKeyCompatibilityMode.RequireEvidenceForExistingData
+                    ? MasterKeyCompatibilityResult.Fail(
+                        "Existing Cotton data must be verified before changing the master-key sentinel, but no compatibility probe is configured.")
+                    : MasterKeyCompatibilityResult.Compatible(existingDataFound: false, evidenceFound: false);
+            }
+
+            return await _compatibilityProbe.ValidateAsync(encryptionSettings, mode, cancellationToken);
         }
 
         private async Task<MasterKeySentinelResult> ValidateExistingAsync(
@@ -93,9 +191,17 @@ namespace Cotton.Server.Services
             return MasterKeySentinelResult.Ok(created: false);
         }
 
-        private async Task WriteNewAsync(AesGcmStreamCipher cipher, CancellationToken cancellationToken)
+        private async Task WriteNewAsync(
+            AesGcmStreamCipher cipher,
+            CancellationToken cancellationToken,
+            bool overwrite = false)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (overwrite)
+            {
+                await _backend.DeleteAsync(SentinelStorageKey);
+            }
+
             var payload = new MasterKeySentinelPayload(
                 SchemaVersion: 1,
                 Purpose: SentinelLogicalKey,
@@ -108,7 +214,7 @@ namespace Cotton.Server.Services
             await _backend.WriteAsync(SentinelStorageKey, encrypted);
         }
 
-        private static AesGcmStreamCipher CreateCipher(CottonEncryptionSettings encryptionSettings)
+        internal static AesGcmStreamCipher CreateCipher(CottonEncryptionSettings encryptionSettings)
         {
             if (string.IsNullOrWhiteSpace(encryptionSettings.MasterEncryptionKey))
             {
@@ -120,6 +226,11 @@ namespace Cotton.Server.Services
             return new AesGcmStreamCipher(keyMaterial, encryptionSettings.MasterEncryptionKeyId, threads);
         }
 
+        private static bool IsSentinelReadFailure(Exception ex) =>
+            ex is CryptographicException
+                or InvalidDataException
+                or JsonException;
+
         private sealed record MasterKeySentinelPayload(
             int SchemaVersion,
             string Purpose,
@@ -127,9 +238,17 @@ namespace Cotton.Server.Services
             string Nonce);
     }
 
-    public sealed record MasterKeySentinelResult(bool Success, bool Created, string? Error)
+    public enum MasterKeySentinelInitializationMode
     {
-        public static MasterKeySentinelResult Ok(bool created) => new(true, created, null);
-        public static MasterKeySentinelResult Fail(string error) => new(false, false, error);
+        TrustProvidedKeyWhenNoProbe,
+        RequireCompatibilityEvidenceForExistingData
+    }
+
+    public sealed record MasterKeySentinelResult(bool Success, bool Created, bool Repaired, string? Error)
+    {
+        public static MasterKeySentinelResult Ok(bool created, bool repaired = false) =>
+            new(true, created, repaired, null);
+
+        public static MasterKeySentinelResult Fail(string error) => new(false, false, false, error);
     }
 }

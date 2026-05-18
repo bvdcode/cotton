@@ -22,9 +22,12 @@ namespace Cotton.Server.Services
                 LogLevel.Error);
 
             var app = builder.Build();
-            var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Cotton.Server.Unlock");
+            ILoggerFactory loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("Cotton.Server.Unlock");
             var sentinel = new MasterKeySentinelStore(
-                app.Services.GetRequiredService<ILogger<MasterKeySentinelStore>>());
+                app.Services.GetRequiredService<ILogger<MasterKeySentinelStore>>(),
+                compatibilityProbe: new MasterKeyCompatibilityProbe(
+                    loggerFactory.CreateLogger<MasterKeyCompatibilityProbe>()));
             var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             IWebHostEnvironment environment = app.Services.GetRequiredService<IWebHostEnvironment>();
 
@@ -85,6 +88,7 @@ namespace Cotton.Server.Services
 
                 MasterKeySentinelResult validation = await sentinel.ValidateOrInitializeAsync(
                     encryptionSettings,
+                    MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData,
                     context.RequestAborted);
                 if (!validation.Success)
                 {
@@ -92,9 +96,11 @@ namespace Cotton.Server.Services
                 }
 
                 _ = CompleteUnlockAsync(completion, app, encryptionSettings);
-                string message = validation.Created
-                    ? "Master key initialized. Cotton is starting."
-                    : "Master key accepted. Cotton is starting.";
+                string message = validation.Repaired
+                    ? "Master key sentinel repaired. Cotton is starting."
+                    : validation.Created
+                        ? "Master key initialized. Cotton is starting."
+                        : "Master key accepted. Cotton is starting.";
                 return Results.Ok(new UnlockResponse(true, message));
             });
 
