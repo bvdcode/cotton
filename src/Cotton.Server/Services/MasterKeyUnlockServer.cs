@@ -7,200 +7,8 @@ namespace Cotton.Server.Services
 {
     public static class MasterKeyUnlockServer
     {
+        private const string UnlockApiBase = Routes.V1.Base + "/unlock";
         private static readonly TimeSpan FirstUnlockWindow = TimeSpan.FromMinutes(Constants.AdminAutocreateMinutesDelay);
-
-        private const string UnlockPageHtml = """
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cotton unlock</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f6f7f9;
-      color: #111827;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root { background: #111318; color: #f3f4f6; }
-    }
-    * { box-sizing: border-box; }
-    body {
-      min-height: 100vh;
-      margin: 0;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-    }
-    main {
-      width: min(100%, 440px);
-      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-      border-radius: 8px;
-      padding: 28px;
-      background: color-mix(in srgb, canvas 94%, currentColor 6%);
-      box-shadow: 0 24px 60px rgb(15 23 42 / 12%);
-    }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      line-height: 1.2;
-      letter-spacing: 0;
-    }
-    p {
-      margin: 0 0 22px;
-      color: color-mix(in srgb, currentColor 72%, transparent);
-      line-height: 1.5;
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-      font-weight: 650;
-    }
-    input {
-      width: 100%;
-      height: 44px;
-      border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-      border-radius: 6px;
-      padding: 0 12px;
-      font: inherit;
-      background: canvas;
-      color: inherit;
-    }
-    .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 16px;
-    }
-    button {
-      min-height: 40px;
-      border: 1px solid transparent;
-      border-radius: 6px;
-      padding: 0 14px;
-      font: inherit;
-      font-weight: 650;
-      cursor: pointer;
-    }
-    button[type="submit"] {
-      flex: 1;
-      background: #2563eb;
-      color: white;
-    }
-    button[type="button"] {
-      background: transparent;
-      color: inherit;
-      border-color: color-mix(in srgb, currentColor 18%, transparent);
-    }
-    button:disabled {
-      opacity: .65;
-      cursor: wait;
-    }
-    #status {
-      min-height: 22px;
-      margin-top: 16px;
-      font-size: 14px;
-      color: color-mix(in srgb, currentColor 76%, transparent);
-    }
-    #status.error { color: #dc2626; }
-    #status.ok { color: #16a34a; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Unlock Cotton</h1>
-    <p>The main application is stopped until a valid master key is provided.</p>
-    <form id="unlock-form" autocomplete="off">
-      <label for="masterKey">Master key</label>
-      <input id="masterKey" name="masterKey" type="password" minlength="32" maxlength="32" required spellcheck="false" autocomplete="off">
-      <div id="bootstrap-token-section" hidden>
-        <label for="bootstrapToken">Bootstrap token</label>
-        <input id="bootstrapToken" name="bootstrapToken" type="password" spellcheck="false" autocomplete="off">
-      </div>
-      <div class="actions">
-        <button type="submit">Unlock</button>
-        <button type="button" id="generate">Generate</button>
-      </div>
-      <div id="status" role="status" aria-live="polite"></div>
-    </form>
-  </main>
-  <script>
-    const form = document.getElementById("unlock-form");
-    const input = document.getElementById("masterKey");
-    const status = document.getElementById("status");
-    const generate = document.getElementById("generate");
-    const bootstrapToken = document.getElementById("bootstrapToken");
-    const bootstrapTokenSection = document.getElementById("bootstrap-token-section");
-
-    function setStatus(message, kind) {
-      status.textContent = message;
-      status.className = kind || "";
-    }
-
-    async function loadUnlockStatus() {
-      try {
-        const response = await fetch("/unlock/status", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = await response.json();
-        bootstrapTokenSection.hidden = !data.requiresBootstrapToken;
-        bootstrapToken.required = !!data.requiresBootstrapToken;
-        if (data.requiresBootstrapToken) {
-          setStatus("First unlock requires the bootstrap token from server logs.", "");
-        }
-      } catch {
-      }
-    }
-
-    void loadUnlockStatus();
-
-    generate.addEventListener("click", async () => {
-      generate.disabled = true;
-      try {
-        const response = await fetch("/unlock/key", { cache: "no-store" });
-        if (!response.ok) throw new Error("Failed to generate key.");
-        const key = (await response.text()).trim();
-        input.value = key;
-        input.type = "text";
-        input.focus();
-        input.select();
-        setStatus("Generated. Store this key before unlocking.", "ok");
-      } catch (error) {
-        setStatus(error.message || "Failed to generate key.", "error");
-      } finally {
-        generate.disabled = false;
-      }
-    });
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const masterKey = input.value.trim();
-      const submittedBootstrapToken = bootstrapToken.value.trim();
-      const submit = form.querySelector('button[type="submit"]');
-      submit.disabled = true;
-      generate.disabled = true;
-      setStatus("Checking key...", "");
-      try {
-        const response = await fetch("/unlock", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ masterKey, bootstrapToken: submittedBootstrapToken })
-        });
-        const data = await response.json();
-        if (!response.ok || !data.ok) throw new Error(data.message || "Unlock failed.");
-        input.value = "";
-        setStatus(data.message || "Unlocked. Cotton is starting.", "ok");
-        setTimeout(() => window.location.replace("/"), 2400);
-      } catch (error) {
-        setStatus(error.message || "Unlock failed.", "error");
-        submit.disabled = false;
-        generate.disabled = false;
-      }
-    });
-  </script>
-</body>
-</html>
-""";
 
         public static async Task<CottonEncryptionSettings> WaitForUnlockAsync(string[] args)
         {
@@ -220,31 +28,38 @@ namespace Cotton.Server.Services
             var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             IWebHostEnvironment environment = app.Services.GetRequiredService<IWebHostEnvironment>();
 
+            app.UseDefaultFiles();
             app.Use(async (context, next) =>
             {
-                if (IsUnlockEndpoint(context.Request))
+                if (IsLockedApiRequest(context.Request) && !IsUnlockApiRequest(context.Request))
                 {
-                    await next();
+                    await WriteLockedApiResponseAsync(context);
                     return;
                 }
 
-                RedirectToUnlock(context);
+                await next();
             });
+            app.MapStaticAssets();
 
-            app.MapGet("/unlock", () => Results.Content(UnlockPageHtml, "text/html; charset=utf-8"));
-            app.MapGet("/unlock/status", async () =>
+            app.MapGet(UnlockApiBase + "/status", async (HttpContext context) =>
             {
+                DisableCaching(context);
                 bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(
                     sentinel,
                     environment,
-                    CancellationToken.None);
+                    context.RequestAborted);
                 return Results.Ok(new UnlockStatusResponse(
                     RequiresBootstrapToken: requiresBootstrapToken,
                     FirstUnlockExpiresAtUtc: requiresBootstrapToken ? firstUnlockExpiresAtUtc : null));
             });
-            app.MapGet("/unlock/key", () => Results.Text(GenerateRootMasterKey(), "text/plain; charset=utf-8"));
-            app.MapPost("/unlock", async (HttpContext context) =>
+            app.MapGet(UnlockApiBase + "/key", (HttpContext context) =>
             {
+                DisableCaching(context);
+                return Results.Text(GenerateRootMasterKey(), "text/plain; charset=utf-8");
+            });
+            app.MapPost(UnlockApiBase, async (HttpContext context) =>
+            {
+                DisableCaching(context);
                 SubmittedUnlockRequest submitted = await ReadSubmittedUnlockRequestAsync(context);
                 IResult? bootstrapError = await ValidateBootstrapTokenAsync(
                     sentinel,
@@ -283,6 +98,8 @@ namespace Cotton.Server.Services
                 return Results.Ok(new UnlockResponse(true, message));
             });
 
+            app.MapFallbackToFile("/index.html");
+
             using var stoppingRegistration = lifetime.ApplicationStopping.Register(
                 () => completion.TrySetCanceled());
 
@@ -300,20 +117,34 @@ namespace Cotton.Server.Services
             }
         }
 
-        private static bool IsUnlockEndpoint(HttpRequest request)
+        private static bool IsLockedApiRequest(HttpRequest request) =>
+            request.Path.StartsWithSegments(new PathString(Routes.V1.Base), StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsUnlockApiRequest(HttpRequest request)
         {
-            PathString path = request.Path;
-            return path.Equals("/unlock", StringComparison.OrdinalIgnoreCase)
-                || path.Equals("/unlock/status", StringComparison.OrdinalIgnoreCase)
-                || path.Equals("/unlock/key", StringComparison.OrdinalIgnoreCase);
+            PathString unlockApiPath = new(UnlockApiBase);
+            PathString unlockStatusPath = new(UnlockApiBase + "/status");
+            PathString unlockKeyPath = new(UnlockApiBase + "/key");
+
+            return request.Path.Equals(unlockApiPath, StringComparison.OrdinalIgnoreCase)
+                || request.Path.Equals(unlockStatusPath, StringComparison.OrdinalIgnoreCase)
+                || request.Path.Equals(unlockKeyPath, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void RedirectToUnlock(HttpContext context)
+        private static async Task WriteLockedApiResponseAsync(HttpContext context)
         {
-            context.Response.Headers.Location = "/unlock";
-            context.Response.StatusCode = HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)
-                ? StatusCodes.Status302Found
-                : StatusCodes.Status303SeeOther;
+            DisableCaching(context);
+            context.Response.StatusCode = StatusCodes.Status423Locked;
+            await context.Response.WriteAsJsonAsync(
+                new LockedApiResponse(true, "Cotton is locked until the master key is provided."),
+                cancellationToken: context.RequestAborted);
+        }
+
+        private static void DisableCaching(HttpContext context)
+        {
+            context.Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
+            context.Response.Headers.Pragma = "no-cache";
+            context.Response.Headers.Expires = "0";
         }
 
         private static async Task CompleteUnlockAsync(
@@ -451,5 +282,6 @@ namespace Cotton.Server.Services
         private sealed record SubmittedUnlockRequest(string? MasterKey, string? BootstrapToken);
         private sealed record UnlockStatusResponse(bool RequiresBootstrapToken, DateTimeOffset? FirstUnlockExpiresAtUtc);
         private sealed record UnlockResponse(bool Ok, string Message);
+        private sealed record LockedApiResponse(bool Locked, string Message);
     }
 }

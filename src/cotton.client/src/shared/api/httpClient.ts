@@ -166,6 +166,7 @@ const browserTimeZone = resolveBrowserTimeZone();
 let accessToken: string | null = null;
 let refreshBlocked = false;
 let logoutEventDispatched = false;
+let unlockRedirectDispatched = false;
 
 const resetAuthTransportState = (): void => {
   refreshBlocked = false;
@@ -194,6 +195,24 @@ const disableRefreshAndLogout = (): void => {
   clearAccessToken();
   useAuthStore.getState().logoutLocal();
   dispatchLogoutEventOnce();
+};
+
+const isServerLockedResponse = (error: AxiosError): boolean =>
+  error.response?.status === 423 &&
+  isRecord(error.response.data) &&
+  error.response.data.locked === true;
+
+const redirectToUnlockOnce = (): void => {
+  if (unlockRedirectDispatched || typeof window === "undefined") {
+    return;
+  }
+
+  if (window.location.pathname === "/unlock") {
+    return;
+  }
+
+  unlockRedirectDispatched = true;
+  window.location.assign("/unlock");
 };
 
 export const getAccessToken = () => accessToken;
@@ -319,6 +338,11 @@ httpClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+
+    if (isServerLockedResponse(error)) {
+      redirectToUnlockOnce();
+      return Promise.reject(error);
+    }
 
     // Check if 401 and not already retrying
     if (error.response?.status === 401 && !originalRequest._retry) {

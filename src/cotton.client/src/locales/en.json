@@ -1842,5 +1842,31 @@
       "invalidToken": "The verification link is invalid or has expired.",
       "failed": "Failed to verify email. Please try again."
     }
+  },
+  "unlock": {
+    "title": "Unlock Cotton",
+    "caption": "The server is waiting for the master key before starting the app.",
+    "checking": {
+      "title": "Checking lock state",
+      "caption": "Cotton is preparing the secure startup flow."
+    },
+    "masterKey": "Master key",
+    "bootstrapToken": "Bootstrap token",
+    "bootstrapRequired": "First unlock requires the bootstrap token from the server logs.",
+    "bootstrapRequiredWithExpiry": "First unlock requires the bootstrap token from the server logs. It expires at {{expiresAt}}.",
+    "unlock": "Unlock",
+    "unlocking": "Unlocking",
+    "generate": "Generate",
+    "generating": "Generating",
+    "generated": "Generated. Store this key before unlocking.",
+    "generatedToast": "Master key generated",
+    "generateFailed": "Failed to generate key.",
+    "unlocked": "Master key accepted. Cotton is starting.",
+    "unlockFailed": "Unlock failed.",
+    "showKey": "Show key",
+    "hideKey": "Hide key",
+    "copyKey": "Copy key",
+    "copied": "Copied",
+    "copyFailed": "Could not copy key"
   }
 }
