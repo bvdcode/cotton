@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "@features/auth";
 import { authApi } from "@shared/api/authApi";
@@ -46,6 +46,7 @@ export const useLoginForm = (): UseLoginFormResult => {
   const navigate = useNavigate();
   const { t } = useTranslation("login");
   const { setAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -56,6 +57,8 @@ export const useLoginForm = (): UseLoginFormResult => {
   const [loading, setLoading] = useState(false);
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
   const autoSubmitTriggeredRef = useRef(false);
+  const demoFillRef = useRef(false);
+  const demoSubmitRef = useRef(false);
 
   const showToast = useCallback((message: string, severity: ToastSeverity) => {
     const toastId = `login:${severity}:${message}`;
@@ -173,6 +176,21 @@ export const useLoginForm = (): UseLoginFormResult => {
       setForgotPasswordSending(false);
     }
   }, [username, t, showToast]);
+
+  useEffect(() => {
+    if (demoFillRef.current) return;
+    if (searchParams.get("demo") !== "true") return;
+    demoFillRef.current = true;
+    setUsername("demo");
+    setPassword("demo");
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!demoFillRef.current || demoSubmitRef.current) return;
+    if (username !== "demo" || password !== "demo") return;
+    demoSubmitRef.current = true;
+    void submitLogin();
+  }, [username, password, submitLogin]);
 
   useEffect(() => {
     if (!requiresTwoFactor) {
