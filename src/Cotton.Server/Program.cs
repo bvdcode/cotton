@@ -46,6 +46,12 @@ namespace Cotton.Server
                 "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
                 LogLevel.Error);
             MapsterConfig.Register();
+            builder.Services.AddHttpClient(AppVersionTrackerService.GitHubHttpClientName, client =>
+            {
+                client.BaseAddress = new Uri("https://api.github.com/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+            });
             builder.Services
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
