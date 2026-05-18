@@ -67,6 +67,7 @@ public class WebDavDeleteRequestHandler(
             {
                 return new WebDavDeleteResult(false, NotFound: true);
             }
+            Guid? originalParentId = node.ParentId;
 
             // Use existing delete handler
             var deleteQuery = new DeleteNodeQuery(request.UserId, node.Id, request.SkipTrash);
@@ -74,7 +75,7 @@ public class WebDavDeleteRequestHandler(
 
             _logger.LogInformation("WebDAV DELETE: Deleted directory {Path} for user {UserId}", request.Path, request.UserId);
 
-            await _eventNotification.NotifyNodeDeletedAsync(request.UserId, node.Id, node.ParentId, ct);
+            await _eventNotification.NotifyNodeDeletedAsync(request.UserId, node.Id, originalParentId, ct);
 
             return new WebDavDeleteResult(true, false, node.Id, null);
         }
@@ -88,6 +89,7 @@ public class WebDavDeleteRequestHandler(
             {
                 return new WebDavDeleteResult(false, NotFound: true);
             }
+            Guid originalNodeId = nodeFile.NodeId;
 
             // Use existing delete handler
             var deleteQuery = new DeleteFileQuery(request.UserId, nodeFile.Id, request.SkipTrash);
@@ -95,7 +97,7 @@ public class WebDavDeleteRequestHandler(
 
             _logger.LogInformation("WebDAV DELETE: Deleted file {Path} for user {UserId}", request.Path, request.UserId);
 
-            await _eventNotification.NotifyFileDeletedAsync(request.UserId, nodeFile.Id, nodeFile.NodeId, ct);
+            await _eventNotification.NotifyFileDeletedAsync(request.UserId, nodeFile.Id, originalNodeId, ct);
 
             return new WebDavDeleteResult(true, false, null, nodeFile.Id);
         }

@@ -818,7 +818,7 @@ namespace Cotton.Server.Controllers
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileCreated", manifest);
-            return Ok();
+            return Ok(manifest);
         }
     }
 }

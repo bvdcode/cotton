@@ -217,12 +217,20 @@ namespace Cotton.Server.Handlers.Files
             return new NodeFileManifestDto()
             {
                 ContentType = fileManifest.ContentType,
-                CreatedAt = fileManifest.CreatedAt,
+                CreatedAt = nodeFile.CreatedAt,
+                Id = nodeFile.Id,
+                NodeId = nodeFile.NodeId,
                 Name = nodeFile.Name,
                 OwnerId = nodeFile.OwnerId,
+                PreviewHashEncryptedHex = fileManifest.GetPreviewHashEncryptedHex(),
+                RequiresVideoTranscoding = fileManifest.SmallFilePreviewHash != null
+                    && fileManifest.ContentType.StartsWith("video/")
+                    && fileManifest.ContentType != "video/mp4"
+                    && fileManifest.ContentType != "video/webm"
+                    && fileManifest.ContentType != "video/ogg"
+                    && fileManifest.ContentType != "video/quicktime",
                 SizeBytes = fileManifest.SizeBytes,
-                UpdatedAt = fileManifest.UpdatedAt,
-                Id = fileManifest.Id,
+                UpdatedAt = nodeFile.UpdatedAt,
                 Metadata = nodeFile.Metadata ?? [],
             };
         }

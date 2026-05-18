@@ -112,11 +112,18 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         };
         var createFileRes = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
         createFileRes.EnsureSuccessStatusCode();
+        var created = await createFileRes.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.Id, Is.Not.EqualTo(Guid.Empty));
+        Assert.That(created.NodeId, Is.EqualTo(root!.Id));
+        Assert.That(created.Name, Is.EqualTo("hello.txt"));
 
         var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
         Assert.That(list, Is.Not.Null);
         var file = list!.Files.SingleOrDefault(x => x.Name == "hello.txt");
         Assert.That(file, Is.Not.Null);
+        Assert.That(file!.Id, Is.EqualTo(created.Id));
+        Assert.That(file.NodeId, Is.EqualTo(root.Id));
         Assert.That(file!.Metadata, Does.ContainKey("isClientEncrypted"));
         Assert.That(file.Metadata["isClientEncrypted"], Is.EqualTo("true"));
         Assert.That(file.Metadata["originalContentType"], Is.EqualTo("text/plain"));
