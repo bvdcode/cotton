@@ -264,6 +264,47 @@ public class MoveEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task MoveNode_IntoDeepUnrelatedFolder_Succeeds()
+    {
+        await AuthenticateAsync();
+        var root = await GetRootAsync();
+        var moving = await CreateFolderAsync(root.Id, "moving");
+
+        Guid deepestId;
+        using (var scope = _factory!.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            var rootEntity = await db.Nodes.AsNoTracking().SingleAsync(n => n.Id == root.Id);
+            Guid parentId = root.Id;
+
+            for (int i = 0; i < 300; i++)
+            {
+                var node = new Cotton.Database.Models.Node
+                {
+                    LayoutId = rootEntity.LayoutId,
+                    OwnerId = rootEntity.OwnerId,
+                    Type = Cotton.Database.Models.Enums.NodeType.Default,
+                    ParentId = parentId,
+                };
+                node.SetName($"deep-{i:D3}");
+                db.Nodes.Add(node);
+                await db.SaveChangesAsync();
+                parentId = node.Id;
+            }
+
+            deepestId = parentId;
+        }
+
+        var res = await MoveNodeAsync(moving.Id, deepestId);
+        Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var verifyScope = _factory!.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+        var moved = await verifyDb.Nodes.AsNoTracking().SingleAsync(n => n.Id == moving.Id);
+        Assert.That(moved.ParentId, Is.EqualTo(deepestId));
+    }
+
+    [Test]
     public async Task MoveNode_NameCollisionWithSiblingFolder_Returns409()
     {
         await AuthenticateAsync();
