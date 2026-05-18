@@ -38,27 +38,31 @@ export const useFolderClientEncryptionActions = ({
   const [isDecryptingEncryptedFiles, setIsDecryptingEncryptedFiles] =
     useState(false);
 
+  const activeNode =
+    nodeId && currentNode?.id === nodeId ? currentNode : null;
+  const activeContent =
+    nodeId && content?.id === nodeId ? content : undefined;
   const folderPolicyEnabled = isFolderEncryptionPolicyEnabled(
-    currentNode?.metadata,
+    activeNode?.metadata,
   );
 
   const plainFiles = useMemo(
     () =>
       folderPolicyEnabled
-        ? (content?.files.filter((file) => !isFileEncrypted(file.metadata)) ??
+        ? (activeContent?.files.filter((file) => !isFileEncrypted(file.metadata)) ??
           [])
         : [],
-    [content?.files, folderPolicyEnabled],
+    [activeContent?.files, folderPolicyEnabled],
   );
 
   const encryptedFiles = useMemo(
     () =>
-      content?.files.filter((file) => isFileEncrypted(file.metadata)) ?? [],
-    [content?.files],
+      activeContent?.files.filter((file) => isFileEncrypted(file.metadata)) ?? [],
+    [activeContent?.files],
   );
 
   const encryptPlainFiles = useCallback(async (): Promise<void> => {
-    if (!nodeId || !currentNode || plainFiles.length === 0) {
+    if (!nodeId || !activeNode || plainFiles.length === 0) {
       return;
     }
 
@@ -87,7 +91,7 @@ export const useFolderClientEncryptionActions = ({
           await encryptExistingFileWithTask({
             file: toEncryptionTaskFile(file),
             targetNodeId: nodeId,
-            scopeLabel: currentNode.name,
+            scopeLabel: activeNode.name,
             server,
           });
           encryptedCount += 1;
@@ -121,10 +125,10 @@ export const useFolderClientEncryptionActions = ({
         "error",
       );
     }
-  }, [currentNode, nodeId, onToast, plainFiles, t]);
+  }, [activeNode, nodeId, onToast, plainFiles, t]);
 
   const decryptEncryptedFiles = useCallback(async (): Promise<void> => {
-    if (!nodeId || !currentNode || encryptedFiles.length === 0) {
+    if (!nodeId || !activeNode || encryptedFiles.length === 0) {
       return;
     }
 
@@ -153,7 +157,7 @@ export const useFolderClientEncryptionActions = ({
           await decryptExistingFileWithTask({
             file: toDecryptionTaskFile(file),
             targetNodeId: nodeId,
-            scopeLabel: currentNode.name,
+            scopeLabel: activeNode.name,
             server,
           });
           decryptedCount += 1;
@@ -187,7 +191,7 @@ export const useFolderClientEncryptionActions = ({
         "error",
       );
     }
-  }, [currentNode, encryptedFiles, nodeId, onToast, t]);
+  }, [activeNode, encryptedFiles, nodeId, onToast, t]);
 
   return {
     folderPolicyEnabled,

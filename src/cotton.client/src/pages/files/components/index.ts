@@ -6,6 +6,7 @@ export type { MediaItem } from "@shared/types/mediaLightbox";
 export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";
 export { FileConflictDialog } from "./FileConflictDialog";
+export { FolderEncryptionActionPrompt } from "./FolderEncryptionActionPrompt";
 export {
   ModelPreview,
   PdfPreview,

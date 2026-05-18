@@ -100,6 +100,29 @@ describe("useFolderClientEncryptionActions", () => {
     ]);
   });
 
+  it("does not expose actions from stale folder content", () => {
+    const staleContent = makeContent([
+      makeFile("plain"),
+      makeFile("encrypted", { isClientEncrypted: "true" }),
+    ]);
+
+    const { result } = renderHook(() =>
+      useFolderClientEncryptionActions({
+        nodeId: "node-2",
+        currentNode: {
+          ...makeNode({ isClientEncryptionEnabled: "true" }),
+          id: "node-2",
+        },
+        content: staleContent,
+        onToast: vi.fn(),
+      }),
+    );
+
+    expect(result.current.folderPolicyEnabled).toBe(true);
+    expect(result.current.plainFiles).toEqual([]);
+    expect(result.current.encryptedFiles).toEqual([]);
+  });
+
   it("encrypts existing plain files through task-backed encryption", async () => {
     useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
     const onToast = vi.fn();

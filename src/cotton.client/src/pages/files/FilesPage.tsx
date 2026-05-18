@@ -7,6 +7,7 @@ import {
   PageHeader,
   FileConflictDialog,
   DraggingOverlay,
+  FolderEncryptionActionPrompt,
 } from "./components";
 import { FilePreviewModal, MediaLightbox } from "@shared/ui/preview";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -60,7 +61,6 @@ import { useFileMoveController } from "./hooks/useFileMoveController";
 import { useFileListPageLogic } from "./hooks/useFileListPageLogic";
 import { useFolderClientEncryptionActions } from "./hooks/useFolderClientEncryptionActions";
 import { ClientEncryptionUnlockForm } from "../profile/components/ClientEncryptionUnlockForm";
-import { showActionToast } from "../../shared/ui/ActionToast";
 
 const HUGE_FOLDER_THRESHOLD = 100_000;
 
@@ -240,56 +240,56 @@ export const FilesPage: React.FC = () => {
     encryptedFiles,
     folderPolicyEnabled,
     isDecryptingEncryptedFiles,
+    isEncryptingPlainFiles,
     plainFiles,
   } = folderEncryptionActions;
 
-  React.useEffect(() => {
-    if (!nodeId || !folderPolicyEnabled || plainFiles.length === 0) {
-      return;
+  const folderEncryptionPrompt = useMemo(() => {
+    if (folderPolicyEnabled && plainFiles.length > 0) {
+      return {
+        severity: "warning" as const,
+        message: t("clientEncryption.mixedPlain.toast", {
+          ns: "files",
+          count: plainFiles.length,
+        }),
+        action: t("clientEncryption.mixedPlain.action", { ns: "files" }),
+        disabled: isEncryptingPlainFiles,
+        onAction: () => {
+          void encryptPlainFiles();
+        },
+      };
     }
 
-    showActionToast({
-      toastId: `files-cse-plain-${nodeId}`,
-      type: "warning",
-      message: t("clientEncryption.mixedPlain.toast", {
-        ns: "files",
-        count: plainFiles.length,
-      }),
-      action: t("clientEncryption.mixedPlain.action", { ns: "files" }),
-      onAction: () => {
-        void encryptPlainFiles();
-      },
-    });
-  }, [encryptPlainFiles, folderPolicyEnabled, nodeId, plainFiles.length, t]);
-
-  React.useEffect(() => {
     if (
-      !nodeId ||
-      folderPolicyEnabled ||
-      encryptedFiles.length === 0 ||
-      isDecryptingEncryptedFiles
+      !folderPolicyEnabled &&
+      encryptedFiles.length > 0 &&
+      !isDecryptingEncryptedFiles
     ) {
-      return;
+      return {
+        severity: "info" as const,
+        message: t("clientEncryption.encryptedFilesRemain.toast", {
+          ns: "files",
+          count: encryptedFiles.length,
+        }),
+        action: t("clientEncryption.encryptedFilesRemain.action", {
+          ns: "files",
+        }),
+        disabled: false,
+        onAction: () => {
+          void decryptEncryptedFiles();
+        },
+      };
     }
 
-    showActionToast({
-      toastId: `files-cse-encrypted-${nodeId}`,
-      type: "info",
-      message: t("clientEncryption.encryptedFilesRemain.toast", {
-        ns: "files",
-        count: encryptedFiles.length,
-      }),
-      action: t("clientEncryption.encryptedFilesRemain.action", { ns: "files" }),
-      onAction: () => {
-        void decryptEncryptedFiles();
-      },
-    });
+    return null;
   }, [
     decryptEncryptedFiles,
     encryptedFiles.length,
+    encryptPlainFiles,
     folderPolicyEnabled,
     isDecryptingEncryptedFiles,
-    nodeId,
+    isEncryptingPlainFiles,
+    plainFiles.length,
     t,
   ]);
 
@@ -335,7 +335,7 @@ export const FilesPage: React.FC = () => {
   const [unlockPrompt, setUnlockPrompt] =
     React.useState<ClientEncryptionUnlockPrompt | null>(null);
   const currentFolderRequiresUnlock =
-    Boolean(currentNode) &&
+    Boolean(nodeId && currentNode?.id === nodeId) &&
     !isVaultUnlocked &&
     isFolderEncryptionPolicyEnabled(currentNode?.metadata);
   const activeUnlockPrompt = useMemo<ClientEncryptionUnlockPrompt | null>(() => {
@@ -743,6 +743,16 @@ export const FilesPage: React.FC = () => {
         onResolve={fileUpload.conflictDialog.onResolve}
         onExited={fileUpload.conflictDialog.onExited}
       />
+
+      {folderEncryptionPrompt && (
+        <FolderEncryptionActionPrompt
+          action={folderEncryptionPrompt.action}
+          disabled={folderEncryptionPrompt.disabled}
+          message={folderEncryptionPrompt.message}
+          onAction={folderEncryptionPrompt.onAction}
+          severity={folderEncryptionPrompt.severity}
+        />
+      )}
 
       <Dialog
         open={activeUnlockPrompt !== null && clientEncryptionEnvelope !== null}
