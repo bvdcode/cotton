@@ -101,5 +101,24 @@ namespace Cotton.Autoconfig.Tests
                 Assert.That(masterA, Is.Not.EqualTo(masterB));
             }
         }
+
+
+        [Test]
+        public void AddCottonOptions_With_Derived_Settings_Does_Not_Require_Env_MasterKey()
+        {
+            Environment.SetEnvironmentVariable(EnvVar, null);
+            const string root = "cccccccccccccccccccccccccccccccc";
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(root);
+
+            var cfg = new ConfigurationBuilder().AddCottonOptions(settings).Build();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(cfg[nameof(CottonEncryptionSettings.Pepper)], Is.EqualTo(settings.Pepper));
+                Assert.That(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKey)], Is.EqualTo(settings.MasterEncryptionKey));
+                Assert.That(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKeyId)], Is.EqualTo("1"));
+            }
+        }
+
     }
 }
