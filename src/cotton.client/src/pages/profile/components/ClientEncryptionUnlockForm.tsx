@@ -24,6 +24,10 @@ import {
   WrongUnlockError,
 } from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
+import {
+  selectClientEncryptionLockOnRefresh,
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 
 type UnlockMode = "password" | "phrase";
 
@@ -42,6 +46,9 @@ export const ClientEncryptionUnlockForm = ({
 }: ClientEncryptionUnlockFormProps) => {
   const { t } = useTranslation("profile");
   const unlockVault = useVault((state) => state.unlock);
+  const lockOnRefresh = useUserPreferencesStore(
+    selectClientEncryptionLockOnRefresh,
+  );
 
   const [mode, setMode] = useState<UnlockMode>("password");
   const [password, setPassword] = useState("");
@@ -63,7 +70,7 @@ export const ClientEncryptionUnlockForm = ({
         mode === "password"
           ? await unlockWithPassword(envelope, password)
           : await unlockWithRecovery(envelope, phrase);
-      unlockVault(masterKey);
+      unlockVault(masterKey, { persistToSession: !lockOnRefresh });
       void useNodesStore.getState().refreshCachedFileDisplayMetadata();
       onSuccess();
     } catch (error) {

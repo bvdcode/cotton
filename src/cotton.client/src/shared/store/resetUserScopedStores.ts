@@ -10,6 +10,7 @@ import { clearAdminCaches } from "../api/queries/admin";
 import { clearAudioCaches } from "../api/queries/audio";
 import { clearTrashCaches } from "../api/queries/trash";
 import { queryClient } from "../api/queries/queryClient";
+import { useVault } from "../crypto";
 
 const safeClearPersisted = (clearStorage: () => void | Promise<void>): void => {
   try {
@@ -39,6 +40,12 @@ export const resetUserScopedStores = (nextUserId: string | null): void => {
   }
 
   const nodesOwner = useNodesStore.getState().cacheOwnerUserId;
+  const shouldLockVault =
+    nextUserId === null || (nodesOwner !== null && nodesOwner !== nextUserId);
+  if (shouldLockVault) {
+    useVault.getState().lock();
+  }
+
   if (nodesOwner !== nextUserId) {
     safeClearPersisted(useNodesStore.persist.clearStorage);
     useNodesStore.getState().reset(nextUserId);

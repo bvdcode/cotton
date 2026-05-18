@@ -18,7 +18,12 @@ export interface DisplayMeta {
   contentType: string;
 }
 
-type FileWithOpaqueValues = NodeFileManifestDto & {
+type FileDisplayMetaFields = Pick<
+  NodeFileManifestDto,
+  "name" | "contentType" | "metadata"
+>;
+
+type FileWithOpaqueValues<TFile extends FileDisplayMetaFields> = TFile & {
   [OPAQUE_FILE_VALUES]?: Pick<NodeFileManifestDto, "name" | "contentType">;
 };
 
@@ -66,9 +71,9 @@ export async function decryptDisplayMeta(value: string): Promise<DisplayMeta> {
   return parseDisplayMeta(decoder.decode(plaintext));
 }
 
-export async function applyDisplayMetaToFile(
-  file: NodeFileManifestDto,
-): Promise<NodeFileManifestDto> {
+export async function applyDisplayMetaToFile<TFile extends FileDisplayMetaFields>(
+  file: TFile,
+): Promise<TFile> {
   if (!isFileEncrypted(file.metadata)) {
     return file;
   }
@@ -80,15 +85,15 @@ export async function applyDisplayMetaToFile(
 
   try {
     const displayMeta = await decryptDisplayMeta(encryptedDisplayMeta);
-    const opaque = (file as FileWithOpaqueValues)[OPAQUE_FILE_VALUES] ?? {
+    const opaque = (file as FileWithOpaqueValues<TFile>)[OPAQUE_FILE_VALUES] ?? {
       name: file.name,
       contentType: file.contentType,
     };
-    const decorated: FileWithOpaqueValues = {
+    const decorated: FileWithOpaqueValues<TFile> = {
       ...file,
       name: displayMeta.name,
       contentType: displayMeta.contentType,
-    };
+    } as FileWithOpaqueValues<TFile>;
     Object.defineProperty(decorated, OPAQUE_FILE_VALUES, {
       value: opaque,
       enumerable: false,
@@ -121,7 +126,9 @@ export function toPersistableFileDisplayMetadata(
     return file;
   }
 
-  const opaque = (file as FileWithOpaqueValues)[OPAQUE_FILE_VALUES];
+  const opaque = (file as FileWithOpaqueValues<NodeFileManifestDto>)[
+    OPAQUE_FILE_VALUES
+  ];
   if (opaque) {
     return {
       ...file,

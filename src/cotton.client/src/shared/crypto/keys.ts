@@ -106,6 +106,31 @@ export async function generateMasterKey(): Promise<CryptoKey> {
   ]);
 }
 
+export async function exportMasterKey(masterKey: CryptoKey): Promise<Uint8Array> {
+  const raw = new Uint8Array(await subtle().exportKey("raw", masterKey));
+
+  if (raw.length !== MASTER_KEY_BYTES) {
+    raw.fill(0);
+    throw new InvalidCryptoInputError("Master key has an invalid length.");
+  }
+
+  return raw;
+}
+
+export async function importMasterKey(raw: Uint8Array): Promise<CryptoKey> {
+  if (raw.length !== MASTER_KEY_BYTES) {
+    throw new InvalidCryptoInputError("Master key has an invalid length.");
+  }
+
+  return subtle().importKey(
+    "raw",
+    asBufferSource(raw),
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"],
+  );
+}
+
 export async function generateFileKey(): Promise<CryptoKey> {
   return subtle().generateKey({ name: "AES-GCM", length: 256 }, true, [
     "encrypt",

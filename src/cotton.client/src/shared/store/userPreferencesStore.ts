@@ -22,6 +22,8 @@ export const USER_PREFERENCE_KEYS = {
 
   gallerySmoothTransitions: "gallerySmoothTransitions",
   galleryPreferPreview: "galleryPreferPreview",
+
+  clientEncryptionLockOnRefresh: "clientEncryptionLockOnRefresh",
 } as const;
 
 const DEFAULT_SHARE_LINK_EXPIRE_AFTER_MINUTES = 60 * 24 * 30;
@@ -31,6 +33,7 @@ const DEFAULT_NOTIFICATION_SOUND_ENABLED = true;
 const DEFAULT_NOTIFICATIONS_SHOW_ONLY_UNREAD = false;
 const DEFAULT_GALLERY_SMOOTH_TRANSITIONS = true;
 const DEFAULT_GALLERY_PREFER_PREVIEW = true;
+const DEFAULT_CLIENT_ENCRYPTION_LOCK_ON_REFRESH = false;
 
 const parseBoolPreference = (value: string | undefined): boolean | null => {
   if (!value) return null;
@@ -79,6 +82,7 @@ interface UserPreferencesState {
 
   setGallerySmoothTransitions: (enabled: boolean) => void;
   setGalleryPreferPreview: (enabled: boolean) => void;
+  setClientEncryptionLockOnRefresh: (enabled: boolean) => void;
 
   reset: () => void;
 }
@@ -162,6 +166,14 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       });
     },
 
+    setClientEncryptionLockOnRefresh: (enabled) => {
+      void get().updatePreferences({
+        [USER_PREFERENCE_KEYS.clientEncryptionLockOnRefresh]: enabled
+          ? "true"
+          : "false",
+      });
+    },
+
     reset: () => set({ preferences: {}, loaded: false, syncing: false }),
   }),
 );
@@ -215,4 +227,12 @@ export const selectGalleryPreferPreview = (
 ): boolean => {
   const raw = state.preferences[USER_PREFERENCE_KEYS.galleryPreferPreview];
   return parseBoolPreference(raw) ?? DEFAULT_GALLERY_PREFER_PREVIEW;
+};
+
+export const selectClientEncryptionLockOnRefresh = (
+  state: UserPreferencesState,
+): boolean => {
+  const raw =
+    state.preferences[USER_PREFERENCE_KEYS.clientEncryptionLockOnRefresh];
+  return parseBoolPreference(raw) ?? DEFAULT_CLIENT_ENCRYPTION_LOCK_ON_REFRESH;
 };

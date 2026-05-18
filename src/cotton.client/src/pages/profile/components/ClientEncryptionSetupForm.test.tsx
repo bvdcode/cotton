@@ -94,6 +94,8 @@ describe("ClientEncryptionSetupForm", () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(preferences));
     expect(cryptoMocks.setupEnvelope).toHaveBeenCalledWith("correct horse");
     expect(cryptoMocks.persistEnvelope).toHaveBeenCalledWith(envelope);
-    expect(cryptoMocks.unlock).toHaveBeenCalledWith(masterKey);
+    expect(cryptoMocks.unlock).toHaveBeenCalledWith(masterKey, {
+      persistToSession: true,
+    });
   });
 });

@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Divider, LinearProgress, Typography } from "@mui/material";
+import type { LinearProgressProps } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../../shared/utils/formatBytes";
 import type { AppTask } from "../../../shared/tasks";
@@ -19,6 +20,7 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
     task.status === "completed"
       ? 100
       : Math.min(99, Math.floor(task.progress01 * 100));
+  const progressColor = getTaskProgressColor(task);
 
   return (
     <Box sx={{ pr: 0.5, pb: 1 }}>
@@ -51,7 +53,7 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
       <LinearProgress
         variant="determinate"
         value={progressPercent}
-        color={isFailed ? "error" : "primary"}
+        color={isFailed ? "error" : progressColor}
         sx={{ mt: 0.5 }}
       />
 
@@ -74,4 +76,21 @@ export const UploadTaskRow: React.FC<UploadTaskRowProps> = ({
       </Box>
     </Box>
   );
+};
+
+const getTaskProgressColor = (
+  task: AppTask,
+): NonNullable<LinearProgressProps["color"]> => {
+  switch (task.kind) {
+    case "encrypt":
+    case "decrypt":
+      return "secondary";
+    case "convert":
+      return "info";
+    case "system":
+      return "warning";
+    case "upload":
+    default:
+      return "primary";
+  }
 };

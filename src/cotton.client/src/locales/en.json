@@ -769,7 +769,8 @@
       "actions": {
         "setup": "Set up",
         "unlock": "Unlock",
-        "lock": "Lock"
+        "lock": "Lock",
+        "lockOnRefresh": "Lock on page refresh"
       },
       "setupDialog": {
         "title": "Set up client-side encryption",
@@ -1344,8 +1345,15 @@
         "title": "Some files are not E2E encrypted",
         "description_one": "{{count}} existing file is still stored without E2E encryption.",
         "description_other": "{{count}} existing files are still stored without E2E encryption.",
+        "toast_one": "{{count}} file in this folder is not E2E encrypted.",
+        "toast_other": "{{count}} files in this folder are not E2E encrypted.",
         "action": "Encrypt",
         "running": "Encrypting"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} encrypted file was moved to a folder without automatic E2E.",
+        "toast_other": "{{count}} encrypted files were moved to a folder without automatic E2E.",
+        "action": "Decrypt"
       },
       "encryptedFilesRemain": {
         "title": "Encrypted files remain encrypted",
@@ -1361,7 +1369,11 @@
         "encryptExistingComplete_one": "Encrypted {{count}} existing file.",
         "encryptExistingComplete_other": "Encrypted {{count}} existing files.",
         "encryptExistingFailed_one": "Could not encrypt {{count}} file. Check the task panel.",
-        "encryptExistingFailed_other": "Could not encrypt {{count}} files. Check the task panel."
+        "encryptExistingFailed_other": "Could not encrypt {{count}} files. Check the task panel.",
+        "decryptExistingComplete_one": "Decrypted {{count}} file.",
+        "decryptExistingComplete_other": "Decrypted {{count}} files.",
+        "decryptExistingFailed_one": "Could not decrypt {{count}} file. Check the task panel.",
+        "decryptExistingFailed_other": "Could not decrypt {{count}} files. Check the task panel."
       }
     }
   },

@@ -817,7 +817,8 @@
       "actions": {
         "setup": "Настроить",
         "unlock": "Разблокировать",
-        "lock": "Заблокировать"
+        "lock": "Заблокировать",
+        "lockOnRefresh": "Блокировать при обновлении страницы"
       },
       "setupDialog": {
         "title": "Настройка клиентского шифрования",
@@ -1380,8 +1381,19 @@
         "description_few": "{{count}} существующих файла пока хранятся без E2E-шифрования.",
         "description_many": "{{count}} существующих файлов пока хранятся без E2E-шифрования.",
         "description_other": "{{count}} существующих файлов пока хранятся без E2E-шифрования.",
+        "toast_one": "{{count}} файл в этой папке не зашифрован E2E.",
+        "toast_few": "{{count}} файла в этой папке не зашифрованы E2E.",
+        "toast_many": "{{count}} файлов в этой папке не зашифрованы E2E.",
+        "toast_other": "{{count}} файлов в этой папке не зашифрованы E2E.",
         "action": "Шифровать",
         "running": "Шифруем"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} зашифрованный файл перемещён в папку без автоматического E2E.",
+        "toast_few": "{{count}} зашифрованных файла перемещены в папку без автоматического E2E.",
+        "toast_many": "{{count}} зашифрованных файлов перемещены в папку без автоматического E2E.",
+        "toast_other": "{{count}} зашифрованных файлов перемещены в папку без автоматического E2E.",
+        "action": "Расшифровать"
       },
       "encryptedFilesRemain": {
         "title": "Зашифрованные файлы остаются зашифрованными",
@@ -1403,7 +1415,15 @@
         "encryptExistingFailed_one": "Не удалось зашифровать {{count}} файл. Проверьте панель задач.",
         "encryptExistingFailed_few": "Не удалось зашифровать {{count}} файла. Проверьте панель задач.",
         "encryptExistingFailed_many": "Не удалось зашифровать {{count}} файлов. Проверьте панель задач.",
-        "encryptExistingFailed_other": "Не удалось зашифровать {{count}} файлов. Проверьте панель задач."
+        "encryptExistingFailed_other": "Не удалось зашифровать {{count}} файлов. Проверьте панель задач.",
+        "decryptExistingComplete_one": "Расшифрован {{count}} файл.",
+        "decryptExistingComplete_few": "Расшифровано {{count}} файла.",
+        "decryptExistingComplete_many": "Расшифровано {{count}} файлов.",
+        "decryptExistingComplete_other": "Расшифровано {{count}} файлов.",
+        "decryptExistingFailed_one": "Не удалось расшифровать {{count}} файл. Проверьте панель задач.",
+        "decryptExistingFailed_few": "Не удалось расшифровать {{count}} файла. Проверьте панель задач.",
+        "decryptExistingFailed_many": "Не удалось расшифровать {{count}} файлов. Проверьте панель задач.",
+        "decryptExistingFailed_other": "Не удалось расшифровать {{count}} файлов. Проверьте панель задач."
       }
     }
   },

@@ -23,6 +23,10 @@ import { useTranslation } from "react-i18next";
 import { getApiErrorMessage } from "../../../shared/api/httpClient";
 import type { UserPreferences } from "../../../shared/api/userPreferencesApi";
 import { persistEnvelope, setupEnvelope, useVault } from "../../../shared/crypto";
+import {
+  selectClientEncryptionLockOnRefresh,
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 
 const MIN_PASSWORD_LENGTH = 10;
 
@@ -39,6 +43,9 @@ export const ClientEncryptionSetupForm = ({
 }: ClientEncryptionSetupFormProps) => {
   const { t } = useTranslation("profile");
   const unlockVault = useVault((state) => state.unlock);
+  const lockOnRefresh = useUserPreferencesStore(
+    selectClientEncryptionLockOnRefresh,
+  );
 
   const [step, setStep] = useState<SetupStep>("warning");
   const [acknowledged, setAcknowledged] = useState(false);
@@ -129,7 +136,7 @@ export const ClientEncryptionSetupForm = ({
 
     try {
       const preferences = await persistEnvelope(envelope);
-      unlockVault(masterKey);
+      unlockVault(masterKey, { persistToSession: !lockOnRefresh });
       onSuccess(preferences);
     } catch (error) {
       setError(

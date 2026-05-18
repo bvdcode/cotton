@@ -817,7 +817,8 @@
       "actions": {
         "setup": "Configurar",
         "unlock": "Desbloquear",
-        "lock": "Bloquear"
+        "lock": "Bloquear",
+        "lockOnRefresh": "Bloquear al recargar la página"
       },
       "setupDialog": {
         "title": "Configurar cifrado del lado del cliente",
@@ -1366,8 +1367,15 @@
         "title": "Algunos archivos no tienen E2E",
         "description_one": "{{count}} archivo existente sigue guardado sin cifrado E2E.",
         "description_other": "{{count}} archivos existentes siguen guardados sin cifrado E2E.",
+        "toast_one": "{{count}} archivo de esta carpeta no tiene E2E.",
+        "toast_other": "{{count}} archivos de esta carpeta no tienen E2E.",
         "action": "Cifrar",
         "running": "Cifrando"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} archivo cifrado se movió a una carpeta sin E2E automático.",
+        "toast_other": "{{count}} archivos cifrados se movieron a una carpeta sin E2E automático.",
+        "action": "Descifrar"
       },
       "encryptedFilesRemain": {
         "title": "Los archivos cifrados siguen cifrados",
@@ -1383,7 +1391,11 @@
         "encryptExistingComplete_one": "Se cifró {{count}} archivo existente.",
         "encryptExistingComplete_other": "Se cifraron {{count}} archivos existentes.",
         "encryptExistingFailed_one": "No se pudo cifrar {{count}} archivo. Revisa el panel de tareas.",
-        "encryptExistingFailed_other": "No se pudieron cifrar {{count}} archivos. Revisa el panel de tareas."
+        "encryptExistingFailed_other": "No se pudieron cifrar {{count}} archivos. Revisa el panel de tareas.",
+        "decryptExistingComplete_one": "Se descifró {{count}} archivo.",
+        "decryptExistingComplete_other": "Se descifraron {{count}} archivos.",
+        "decryptExistingFailed_one": "No se pudo descifrar {{count}} archivo. Revisa el panel de tareas.",
+        "decryptExistingFailed_other": "No se pudieron descifrar {{count}} archivos. Revisa el panel de tareas."
       }
     }
   },

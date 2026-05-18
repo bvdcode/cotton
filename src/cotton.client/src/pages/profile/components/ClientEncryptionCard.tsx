@@ -5,7 +5,9 @@ import {
   Chip,
   Dialog,
   DialogTitle,
+  FormControlLabel,
   Stack,
+  Switch,
   Typography,
 } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
@@ -13,15 +15,20 @@ import LockOpenIcon from "@mui/icons-material/LockOpen";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { useMemo, useState } from "react";
-import type { ReactElement } from "react";
+import type { ChangeEvent, ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import type { User } from "../../../features/auth/types";
 import {
   hasEnvelopePreference,
+  clearVaultSession,
+  persistCurrentVaultSession,
   readEnvelopeFromPreferences,
   useVault,
 } from "../../../shared/crypto";
-import { useUserPreferencesStore } from "../../../shared/store/userPreferencesStore";
+import {
+  selectClientEncryptionLockOnRefresh,
+  useUserPreferencesStore,
+} from "../../../shared/store/userPreferencesStore";
 import { ClientEncryptionSetupForm } from "./ClientEncryptionSetupForm";
 import { ClientEncryptionUnlockForm } from "./ClientEncryptionUnlockForm";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
@@ -45,6 +52,12 @@ export const ClientEncryptionCard = ({
   const hydratePreferences = useUserPreferencesStore(
     (state) => state.hydrateFromRemote,
   );
+  const lockOnRefresh = useUserPreferencesStore(
+    selectClientEncryptionLockOnRefresh,
+  );
+  const setLockOnRefresh = useUserPreferencesStore(
+    (state) => state.setClientEncryptionLockOnRefresh,
+  );
 
   const preferences = useMemo(
     () => (preferencesLoaded ? storePreferences : (user.preferences ?? {})),
@@ -57,6 +70,19 @@ export const ClientEncryptionCard = ({
   );
   const [setupOpen, setSetupOpen] = useState(false);
   const [unlockOpen, setUnlockOpen] = useState(false);
+  const handleLockOnRefreshChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const enabled = event.target.checked;
+    setLockOnRefresh(enabled);
+
+    if (enabled) {
+      clearVaultSession();
+      return;
+    }
+
+    void persistCurrentVaultSession();
+  };
 
   const status: EncryptionStatus = !hasEnvelope
     ? "notSetUp"
@@ -100,49 +126,60 @@ export const ClientEncryptionCard = ({
               </Button>
             </Box>
           ) : status !== "invalid" ? (
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={2}
-              alignItems={{ xs: "stretch", sm: "center" }}
-              justifyContent="space-between"
-              sx={{
-                p: 2,
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                bgcolor: "background.default",
-              }}
-            >
-              <Stack spacing={1} minWidth={0}>
-                {statusChip}
-                {statusHint && (
-                  <Typography variant="body2" color="text.secondary">
-                    {statusHint}
-                  </Typography>
-                )}
+            <Stack spacing={2}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={2}
+                alignItems={{ xs: "stretch", sm: "center" }}
+                justifyContent="space-between"
+                sx={{
+                  p: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  bgcolor: "background.default",
+                }}
+              >
+                <Stack spacing={1} minWidth={0}>
+                  {statusChip}
+                  {statusHint && (
+                    <Typography variant="body2" color="text.secondary">
+                      {statusHint}
+                    </Typography>
+                  )}
+                </Stack>
+                <Box sx={{ flexShrink: 0 }}>
+                  {status === "locked" && envelope && (
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={() => setUnlockOpen(true)}
+                      sx={{ minWidth: 128 }}
+                    >
+                      {t("clientEncryption.actions.unlock")}
+                    </Button>
+                  )}
+                  {status === "unlocked" && (
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      onClick={lockVault}
+                      sx={{ minWidth: 128 }}
+                    >
+                      {t("clientEncryption.actions.lock")}
+                    </Button>
+                  )}
+                </Box>
               </Stack>
-              <Box sx={{ flexShrink: 0 }}>
-                {status === "locked" && envelope && (
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={() => setUnlockOpen(true)}
-                    sx={{ minWidth: 128 }}
-                  >
-                    {t("clientEncryption.actions.unlock")}
-                  </Button>
-                )}
-                {status === "unlocked" && (
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    onClick={lockVault}
-                    sx={{ minWidth: 128 }}
-                  >
-                    {t("clientEncryption.actions.lock")}
-                  </Button>
-                )}
-              </Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={lockOnRefresh}
+                    onChange={handleLockOnRefreshChange}
+                  />
+                }
+                label={t("clientEncryption.actions.lockOnRefresh")}
+              />
             </Stack>
           ) : null}
         </Stack>
