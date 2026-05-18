@@ -372,7 +372,7 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
                 },
               ]
             : []),
-          ...(!readOnly && fileOperations.onShare
+          ...(!readOnly && fileOperations.onShare && !fileEncrypted
             ? [
                 {
                   icon: <Share />,

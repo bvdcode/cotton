@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   FileOperations,
@@ -6,6 +6,7 @@ import type {
   FolderOperations,
   IFileListView,
 } from "@shared/types/FileListViewTypes";
+import { ENCRYPTED_FLAG_KEY } from "@shared/crypto";
 import { TilesView } from "./TilesView";
 
 vi.mock("react-i18next", () => ({
@@ -213,5 +214,31 @@ describe("TilesView keyboard behavior", () => {
     fireEvent.keyDown(window, { key: "Enter" });
 
     expect(folderOperations.onClick).toHaveBeenCalledWith("second");
+  });
+
+  it("does not expose share action for encrypted file tiles", () => {
+    const encryptedTile = makeFileTile("encrypted-file", "vault.bin");
+    if (encryptedTile.kind === "file") {
+      (encryptedTile.file as { metadata: Record<string, string> }).metadata = {
+        [ENCRYPTED_FLAG_KEY]: "true",
+      };
+    }
+
+    renderTilesView({
+      tiles: [encryptedTile],
+      fileOperations: {
+        ...makeFileOperations(),
+        onShare: vi.fn(),
+      },
+    });
+
+    const menuButton = document.querySelector<HTMLButtonElement>(
+      ".card-menu-button",
+    );
+    expect(menuButton).not.toBeNull();
+
+    fireEvent.click(menuButton!);
+
+    expect(screen.queryByText("actions.share")).not.toBeInTheDocument();
   });
 });
