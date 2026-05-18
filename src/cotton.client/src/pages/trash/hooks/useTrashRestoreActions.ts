@@ -12,6 +12,16 @@ import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 const maxPromptHops = 3;
 const originalParentPathMetadataKey = "originalParentPath";
 
+const getOriginalParentPath = (tile: FileSystemTile): string => {
+  if (tile.kind === "folder") {
+    return tile.node.metadata?.[originalParentPathMetadataKey] ?? "";
+  }
+
+  return "metadata" in tile.file
+    ? (tile.file.metadata?.[originalParentPathMetadataKey] ?? "")
+    : "";
+};
+
 export type RestorableItem = {
   id: string;
   kind: "folder" | "file";
@@ -106,9 +116,7 @@ export const useTrashRestoreActions = ({
         return "";
       }
 
-      return tile.kind === "folder"
-        ? (tile.node.metadata?.[originalParentPathMetadataKey] ?? "")
-        : (tile.file.metadata?.[originalParentPathMetadataKey] ?? "");
+      return getOriginalParentPath(tile);
     },
     [tiles],
   );
