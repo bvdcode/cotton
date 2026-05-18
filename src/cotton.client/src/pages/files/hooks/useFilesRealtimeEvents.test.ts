@@ -27,6 +27,32 @@ describe("shouldInvalidateCurrentNode", () => {
     ).toBe(true);
   });
 
+  it("invalidates when an externally-created file belongs to the current node", () => {
+    expect(
+      shouldInvalidateCurrentNode(
+        HUB_METHODS.FileCreated,
+        [{ id: deletedFileId, nodeId: currentNodeId, name: "plain.txt" }],
+        currentNodeId,
+      ),
+    ).toBe(true);
+  });
+
+  it("invalidates when an externally-updated file belongs to the current node", () => {
+    expect(
+      shouldInvalidateCurrentNode(
+        HUB_METHODS.FileUpdated,
+        [
+          {
+            id: deletedFileId,
+            nodeId: currentNodeId,
+            metadata: { isClientEncrypted: "true" },
+          },
+        ],
+        currentNodeId,
+      ),
+    ).toBe(true);
+  });
+
   it("invalidates when a renamed child folder belongs to the current node", () => {
     expect(
       shouldInvalidateCurrentNode(
@@ -42,6 +68,16 @@ describe("shouldInvalidateCurrentNode", () => {
       shouldInvalidateCurrentNode(
         HUB_METHODS.FileDeleted,
         [{ nodeFileId: deletedFileId, parentNodeId: currentNodeId }],
+        currentNodeId,
+      ),
+    ).toBe(true);
+  });
+
+  it("invalidates when a deleted child folder reports the current parent", () => {
+    expect(
+      shouldInvalidateCurrentNode(
+        HUB_METHODS.NodeDeleted,
+        [{ nodeId: deletedFileId, parentNodeId: currentNodeId }],
         currentNodeId,
       ),
     ).toBe(true);

@@ -269,7 +269,11 @@ export const FilesPage: React.FC = () => {
   } = folderEncryptionActions;
 
   const folderEncryptionPrompt = useMemo(() => {
-    if (folderPolicyEnabled && plainFiles.length > 0) {
+    if (
+      folderPolicyEnabled &&
+      plainFiles.length > 0 &&
+      !isEncryptingPlainFiles
+    ) {
       return {
         severity: "warning" as const,
         message: t("clientEncryption.mixedPlain.toast", {
@@ -277,7 +281,7 @@ export const FilesPage: React.FC = () => {
           count: plainFiles.length,
         }),
         action: t("clientEncryption.mixedPlain.action", { ns: "files" }),
-        disabled: isEncryptingPlainFiles,
+        disabled: false,
         onAction: () => {
           void encryptPlainFiles();
         },
