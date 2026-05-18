@@ -1,5 +1,9 @@
-import { Button, Stack, Typography } from "@mui/material";
-import { toast, type ToastOptions, type TypeOptions } from "react-toastify";
+import { Button } from "@mui/material";
+import {
+  toast,
+  type ToastOptions,
+  type TypeOptions,
+} from "@shared/ui/notifications";
 import type { ReactNode } from "react";
 
 interface ShowActionToastOptions {
@@ -23,11 +27,8 @@ export function showActionToast({
     return;
   }
 
-  toast(
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Typography variant="body2" sx={{ flex: 1 }}>
-        {message}
-      </Typography>
+  toast(message, {
+    action: (
       <Button
         size="small"
         color={type === "warning" ? "warning" : "primary"}
@@ -39,15 +40,13 @@ export function showActionToast({
       >
         {action}
       </Button>
-    </Stack>,
-    {
-      toastId,
-      type,
-      autoClose,
-      closeOnClick: false,
-      closeButton: true,
-      position: "bottom-right",
-      draggable: false,
-    },
-  );
+    ),
+    toastId,
+    type,
+    autoClose,
+    closeOnClick: false,
+    closeButton: true,
+    position: "bottom-right",
+    draggable: false,
+  });
 }

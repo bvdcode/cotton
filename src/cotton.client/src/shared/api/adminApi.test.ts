@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("react-toastify", () => ({
+vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
 }));
 

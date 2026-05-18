@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import { filesApi } from "../api/filesApi";
 import { nodesApi } from "../api/nodesApi";
 import type { NodeDto } from "../api/layoutsApi";

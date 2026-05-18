@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import { layoutsApi } from "../api/layoutsApi";
 import {
   selectShareLinkExpireAfterMinutes,

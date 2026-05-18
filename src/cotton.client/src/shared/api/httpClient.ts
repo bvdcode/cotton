@@ -5,7 +5,7 @@ import axios, {
 } from "axios";
 import { z } from "zod";
 import { getRefreshEnabled, useAuthStore } from "../store/authStore";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import { translateError } from "../i18n/translateError";
 
 export { isAxiosError } from "axios";

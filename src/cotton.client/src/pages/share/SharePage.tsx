@@ -7,7 +7,7 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import { isAxiosError } from "../../shared/api/httpClient";
 import { sharedFoldersApi } from "../../shared/api/sharedFoldersApi";
 import { useCopyFeedback } from "../../shared/hooks/useCopyFeedback";

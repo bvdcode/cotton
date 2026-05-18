@@ -15,7 +15,7 @@ import {
   tryParseDateOnly,
 } from "../../../../shared/utils/dateOnly";
 import { formatBytes } from "../../../../shared/utils/formatBytes";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import {
   AvatarImageDecodeError,
   prepareAvatarForUpload,

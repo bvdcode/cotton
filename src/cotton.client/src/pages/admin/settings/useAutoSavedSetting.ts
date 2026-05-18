@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import { showApiErrorToast } from "../../../shared/api/httpClient";
 import { SAVED_STATUS_VISIBLE_MS } from "./adminSettingSaveStatus";
 

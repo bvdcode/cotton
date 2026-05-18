@@ -13,7 +13,7 @@ import { authApi } from "../../../shared/api/authApi";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
 import EditIcon from "@mui/icons-material/Edit";
 import type { User } from "../../../features/auth/types";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import {
   getUsernameError,
   isValidUsername,
