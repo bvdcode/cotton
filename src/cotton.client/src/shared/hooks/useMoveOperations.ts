@@ -16,8 +16,8 @@ import { useNodesStore } from "../store/nodesStore";
 import {
   ClientEncryptionSizeLimitError,
   assertClientEncryptionBlobPipelineSize,
+  getFolderEncryptionPolicyStateFromParentResolver,
   isFileEncrypted,
-  isFolderEncryptionPolicyEnabled,
   useVault,
 } from "../crypto";
 import {
@@ -213,6 +213,16 @@ const findCachedNode = (nodeId: string): NodeDto | null => {
   return null;
 };
 
+const getCachedFolderEncryptionPolicyEnabled = (nodeId: string): boolean => {
+  const node = findCachedNode(nodeId);
+  if (!node) return false;
+
+  return getFolderEncryptionPolicyStateFromParentResolver(
+    node,
+    findCachedNode,
+  ).effectiveEnabled;
+};
+
 const needsEncryptionAfterMove = (item: MoveClipboardItem): boolean =>
   item.kind === "file" &&
   item.file !== undefined &&
@@ -276,9 +286,8 @@ export const useMoveOperations = (): UseMoveOperationsResult => {
       }
 
       const targetNode = findCachedNode(targetParentId);
-      const targetEncryptsNewFiles = isFolderEncryptionPolicyEnabled(
-        targetNode?.metadata,
-      );
+      const targetEncryptsNewFiles =
+        getCachedFolderEncryptionPolicyEnabled(targetParentId);
       const filesToEncrypt = targetEncryptsNewFiles
         ? candidates.filter(needsEncryptionAfterMove)
         : [];

@@ -4,6 +4,7 @@ import type { NodeDto } from "../../../shared/api/layoutsApi";
 import { nodesApi, type NodeContentDto } from "../../../shared/api/nodesApi";
 import {
   FOLDER_ENCRYPTION_POLICY_KEY,
+  getFolderEncryptionPolicyStateFromParentResolver,
   isFolderEncryptionPolicyEnabled,
   useVault,
 } from "../../../shared/crypto";
@@ -100,7 +101,12 @@ export const useFileUpload = (
       (targetNodeId: string): boolean => {
         const state = useNodesStore.getState();
         const target = findNodeById(state, targetNodeId);
-        return isFolderEncryptionPolicyEnabled(target?.metadata);
+        if (!target) return false;
+
+        return getFolderEncryptionPolicyStateFromParentResolver(
+          target,
+          (id) => findNodeById(state, id),
+        ).effectiveEnabled;
       },
     [],
   );
@@ -272,10 +278,14 @@ export const useFileUpload = (
         const content = await getChildrenCached(parentId);
         const existing = content.nodes.find((n) => n.name === desiredName);
         if (existing) {
+          const parentPolicyEnabled =
+            policyEnabledByNodeId.get(parentId) ??
+            isPolicyEnabledForNode(parentId);
           folderIdByKey.set(key, existing.id);
           policyEnabledByNodeId.set(
             existing.id,
-            isFolderEncryptionPolicyEnabled(existing.metadata),
+            parentPolicyEnabled ||
+              isFolderEncryptionPolicyEnabled(existing.metadata),
           );
           return { id: existing.id, name: desiredName };
         }

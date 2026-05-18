@@ -48,6 +48,8 @@ export const ListView: React.FC<IFileListView> = ({
   const [failedPreviews, setFailedPreviews] = React.useState<Set<string>>(
     new Set(),
   );
+  const getFolderEncryptionPolicyState =
+    folderOperations.getEncryptionPolicyState;
 
   const rows: GridRowsProp<FileListRow> = useMemo(() => {
     const baseRows: FileListRow[] = tiles.map((tile) => {
@@ -59,6 +61,8 @@ export const ListView: React.FC<IFileListView> = ({
           location: tile.path ?? null,
           sizeBytes: null,
           metadata: tile.node.metadata,
+          encryptionPolicy:
+            getFolderEncryptionPolicyState?.(tile.node),
           tile,
         };
       }
@@ -89,7 +93,12 @@ export const ListView: React.FC<IFileListView> = ({
       },
       ...baseRows,
     ];
-  }, [tiles, isCreatingFolder, newFolderName]);
+  }, [
+    tiles,
+    isCreatingFolder,
+    newFolderName,
+    getFolderEncryptionPolicyState,
+  ]);
 
   const orderedIds = useMemo(
     () =>

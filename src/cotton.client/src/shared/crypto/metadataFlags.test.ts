@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   FOLDER_ENCRYPTION_POLICY_KEY,
+  getFolderEncryptionPolicyState,
+  getFolderEncryptionPolicyStateFromParentResolver,
   getOriginalContentType,
   isFileEncrypted,
   isFolderEncryptionPolicyEnabled,
+  type FolderEncryptionPolicyNode,
 } from "./metadataFlags";
 import { ENCRYPTED_FLAG_KEY, ORIGINAL_CONTENT_TYPE_KEY } from "./fileCipher";
 
@@ -27,6 +30,45 @@ describe("metadataFlags", () => {
       }),
     ).toBe(false);
     expect(isFolderEncryptionPolicyEnabled(undefined)).toBe(false);
+  });
+
+  it("derives effective folder policy from ancestors", () => {
+    const parent = {
+      id: "parent",
+      metadata: { [FOLDER_ENCRYPTION_POLICY_KEY]: "true" },
+    };
+    const child = { id: "child", metadata: {} };
+
+    expect(getFolderEncryptionPolicyState(child, [parent])).toEqual({
+      explicitEnabled: false,
+      inheritedEnabled: true,
+      effectiveEnabled: true,
+    });
+  });
+
+  it("walks parent links when deriving effective folder policy", () => {
+    const nodes = new Map<string, FolderEncryptionPolicyNode>([
+      [
+        "root",
+        {
+          id: "root",
+          parentId: null,
+          metadata: { [FOLDER_ENCRYPTION_POLICY_KEY]: "true" },
+        },
+      ],
+      ["parent", { id: "parent", parentId: "root", metadata: {} }],
+    ]);
+    const child = { id: "child", parentId: "parent", metadata: {} };
+
+    expect(
+      getFolderEncryptionPolicyStateFromParentResolver(child, (id) =>
+        nodes.get(id),
+      ),
+    ).toEqual({
+      explicitEnabled: false,
+      inheritedEnabled: true,
+      effectiveEnabled: true,
+    });
   });
 
   it("reads the original content type from file metadata", () => {

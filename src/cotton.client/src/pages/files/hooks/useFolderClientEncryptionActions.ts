@@ -24,6 +24,7 @@ interface UseFolderClientEncryptionActionsOptions {
   nodeId: string | null;
   currentNode: NodeDto | null;
   content: NodeContentDto | undefined;
+  folderPolicyEnabled?: boolean;
   onToast: (message: string, variant?: ToastVariant) => void;
 }
 
@@ -31,6 +32,7 @@ export const useFolderClientEncryptionActions = ({
   nodeId,
   currentNode,
   content,
+  folderPolicyEnabled: providedFolderPolicyEnabled,
   onToast,
 }: UseFolderClientEncryptionActionsOptions) => {
   const { t } = useTranslation(["files", "tasks"]);
@@ -42,9 +44,9 @@ export const useFolderClientEncryptionActions = ({
     nodeId && currentNode?.id === nodeId ? currentNode : null;
   const activeContent =
     nodeId && content?.id === nodeId ? content : undefined;
-  const folderPolicyEnabled = isFolderEncryptionPolicyEnabled(
-    activeNode?.metadata,
-  );
+  const folderPolicyEnabled =
+    providedFolderPolicyEnabled ??
+    isFolderEncryptionPolicyEnabled(activeNode?.metadata);
 
   const plainFiles = useMemo(
     () =>

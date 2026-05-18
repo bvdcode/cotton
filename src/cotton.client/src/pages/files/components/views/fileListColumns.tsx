@@ -28,6 +28,7 @@ import { InlineRenameField } from "../InlineRenameField";
 import {
   isFileEncrypted,
   isFolderEncryptionPolicyEnabled,
+  type FolderEncryptionPolicyState,
 } from "../../../../shared/crypto";
 
 export interface FileListRow {
@@ -40,6 +41,7 @@ export interface FileListRow {
   sizeBytes: number | null;
   contentType?: string | null;
   metadata?: Record<string, string>;
+  encryptionPolicy?: FolderEncryptionPolicyState;
   requiresVideoTranscoding?: boolean;
   tile?: {
     kind: "folder" | "file";
@@ -263,7 +265,8 @@ export const createNameColumn = (
       row.type === "file" && isFileEncrypted(row.metadata)
         ? options.labels.encryptedFile
         : row.type === "folder" &&
-            isFolderEncryptionPolicyEnabled(row.metadata)
+            (row.encryptionPolicy?.effectiveEnabled ??
+              isFolderEncryptionPolicyEnabled(row.metadata))
           ? options.labels.encryptedFolder
           : null;
 
@@ -417,9 +420,11 @@ export const createActionsColumn = (
     if (row.type === "new-folder") return null;
 
     if (row.type === "folder") {
-      const folderEncryptionPolicyEnabled = isFolderEncryptionPolicyEnabled(
-        row.metadata,
-      );
+      const folderEncryptionPolicyEnabled =
+        row.encryptionPolicy?.explicitEnabled ??
+        isFolderEncryptionPolicyEnabled(row.metadata);
+      const folderEncryptionPolicyInherited =
+        row.encryptionPolicy?.inheritedEnabled ?? false;
 
       return (
         <Box
@@ -470,7 +475,8 @@ export const createActionsColumn = (
                   <ContentCut fontSize="small" />
                 </IconButton>
               )}
-              {options.folderOperations.onToggleEncryptionPolicy && (
+              {options.folderOperations.onToggleEncryptionPolicy &&
+                !folderEncryptionPolicyInherited && (
                 <IconButton
                   size="small"
                   onClick={(e) => {

@@ -167,9 +167,12 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
 
     if (tile.kind === "folder") {
       const isRenamingFolder = folderOperations.isRenaming(tile.node.id);
+      const folderEncryptionPolicy =
+        folderOperations.getEncryptionPolicyState?.(tile.node);
       const folderContent = (
         <FolderCard
           folder={tile.node}
+          encryptionPolicy={folderEncryptionPolicy}
           isRenaming={isRenamingFolder}
           renamingName={folderOperations.getRenamingName()}
           onRenamingNameChange={folderOperations.onRenamingNameChange}
@@ -200,7 +203,8 @@ export const TileItem: React.FC<TileItemProps> = React.memo(
               ? () =>
                   folderOperations.onToggleEncryptionPolicy?.(
                     tile.node.id,
-                    isFolderEncryptionPolicyEnabled(tile.node.metadata),
+                    folderEncryptionPolicy?.explicitEnabled ??
+                      isFolderEncryptionPolicyEnabled(tile.node.metadata),
                   )
               : undefined
           }

@@ -3,7 +3,7 @@ import { layoutsApi, type NodeDto } from "../api/layoutsApi";
 import { isAxiosError } from "../api/httpClient";
 import {
   FOLDER_ENCRYPTION_POLICY_KEY,
-  isFolderEncryptionPolicyEnabled,
+  getFolderEncryptionPolicyStateFromParentResolver,
 } from "../crypto";
 import { translateError } from "../i18n/translateError";
 import {
@@ -431,9 +431,14 @@ export const createFolder = async (
       parentId: parentNodeId,
       name: trimmed,
     });
-    const parentPolicyEnabled = isFolderEncryptionPolicyEnabled(
-      findCachedNodeById(useNodesStore.getState(), parentNodeId)?.metadata,
-    );
+    const stateAfterCreate = useNodesStore.getState();
+    const parentNode = findCachedNodeById(stateAfterCreate, parentNodeId);
+    const parentPolicyEnabled = parentNode
+      ? getFolderEncryptionPolicyStateFromParentResolver(
+          parentNode,
+          (id) => findCachedNodeById(stateAfterCreate, id),
+        ).effectiveEnabled
+      : false;
     const folder = parentPolicyEnabled
       ? await nodesApi.updateNodeMetadata(created.id, {
           [FOLDER_ENCRYPTION_POLICY_KEY]: "true",

@@ -9,7 +9,10 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { NodeDto } from "../../../shared/api/layoutsApi";
-import { isFolderEncryptionPolicyEnabled } from "../../../shared/crypto";
+import {
+  isFolderEncryptionPolicyEnabled,
+  type FolderEncryptionPolicyState,
+} from "../../../shared/crypto";
 import { RenamableItemCard } from "./RenamableItemCard";
 import { getFolderIcon } from "@shared/utils/icons";
 
@@ -26,6 +29,7 @@ interface FolderCardProps {
   onShare?: () => void;
   onCut?: () => void;
   onToggleEncryptionPolicy?: () => void;
+  encryptionPolicy?: FolderEncryptionPolicyState;
   onClick: (event?: React.SyntheticEvent) => void;
   variant?: "default" | "squareTile";
   readOnly?: boolean;
@@ -44,12 +48,18 @@ export const FolderCard = ({
   onShare,
   onCut,
   onToggleEncryptionPolicy,
+  encryptionPolicy,
   onClick,
   variant = "default",
   readOnly = false,
 }: FolderCardProps) => {
   const { t } = useTranslation(["files", "common"]);
-  const encryptionPolicyEnabled = isFolderEncryptionPolicyEnabled(folder.metadata);
+  const explicitEncryptionPolicyEnabled =
+    encryptionPolicy?.explicitEnabled ??
+    isFolderEncryptionPolicyEnabled(folder.metadata);
+  const effectiveEncryptionPolicyEnabled =
+    encryptionPolicy?.effectiveEnabled ?? explicitEncryptionPolicyEnabled;
+  const encryptionPolicyInherited = encryptionPolicy?.inheritedEnabled ?? false;
 
   return (
     <RenamableItemCard
@@ -57,7 +67,7 @@ export const FolderCard = ({
       renamingIcon={getFolderIcon()}
       title={folder.name}
       cornerAdornment={
-        encryptionPolicyEnabled ? (
+        effectiveEncryptionPolicyEnabled ? (
           <LockOutlined
             fontSize="small"
             titleAccess={t("common:clientEncryption.folderPolicyEnabledHint")}
@@ -95,16 +105,16 @@ export const FolderCard = ({
               },
             ]
           : []),
-        ...(!readOnly && onToggleEncryptionPolicy
+        ...(!readOnly && onToggleEncryptionPolicy && !encryptionPolicyInherited
           ? [
               {
-                icon: encryptionPolicyEnabled ? (
+                icon: explicitEncryptionPolicyEnabled ? (
                   <LockOpenOutlined />
                 ) : (
                   <LockOutlined />
                 ),
                 onClick: onToggleEncryptionPolicy,
-                tooltip: encryptionPolicyEnabled
+                tooltip: explicitEncryptionPolicyEnabled
                   ? t("files:clientEncryption.disablePolicy")
                   : t("files:clientEncryption.enablePolicy"),
               },

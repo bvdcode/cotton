@@ -43,7 +43,7 @@ import {
 import { nodesApi } from "../../shared/api/nodesApi";
 import {
   FOLDER_ENCRYPTION_POLICY_KEY,
-  isFolderEncryptionPolicyEnabled,
+  getFolderEncryptionPolicyState,
   readEnvelopeFromPreferences,
   useVault,
 } from "../../shared/crypto";
@@ -158,6 +158,29 @@ export const FilesPage: React.FC = () => {
   );
 
   const effectiveContent = content;
+  const activeCurrentNode =
+    nodeId && currentNode?.id === nodeId ? currentNode : null;
+  const activeAncestors = useMemo(
+    () => (activeCurrentNode ? ancestors : []),
+    [activeCurrentNode, ancestors],
+  );
+  const currentFolderEncryptionPolicy = useMemo(
+    () =>
+      getFolderEncryptionPolicyState(activeCurrentNode, activeAncestors),
+    [activeAncestors, activeCurrentNode],
+  );
+  const childFolderEncryptionAncestors = useMemo(
+    () =>
+      activeCurrentNode
+        ? [...activeAncestors, activeCurrentNode]
+        : activeAncestors,
+    [activeAncestors, activeCurrentNode],
+  );
+  const getChildFolderEncryptionPolicyState = React.useCallback(
+    (folder: NonNullable<typeof effectiveContent>["nodes"][number]) =>
+      getFolderEncryptionPolicyState(folder, childFolderEncryptionAncestors),
+    [childFolderEncryptionAncestors],
+  );
 
   const fileListSource = useFolderFileList({
     nodeId,
@@ -232,6 +255,7 @@ export const FilesPage: React.FC = () => {
     nodeId,
     currentNode,
     content: effectiveContent,
+    folderPolicyEnabled: currentFolderEncryptionPolicy.effectiveEnabled,
     onToast: showToast,
   });
   const {
@@ -337,7 +361,7 @@ export const FilesPage: React.FC = () => {
   const currentFolderRequiresUnlock =
     Boolean(nodeId && currentNode?.id === nodeId) &&
     !isVaultUnlocked &&
-    isFolderEncryptionPolicyEnabled(currentNode?.metadata);
+    currentFolderEncryptionPolicy.effectiveEnabled;
   const activeUnlockPrompt = useMemo<ClientEncryptionUnlockPrompt | null>(() => {
     if (currentFolderRequiresUnlock && clientEncryptionEnvelope) {
       return { kind: "current" };
@@ -358,7 +382,10 @@ export const FilesPage: React.FC = () => {
       );
       const requiresUnlock =
         targetFolder &&
-        isFolderEncryptionPolicyEnabled(targetFolder.metadata) &&
+        getFolderEncryptionPolicyState(
+          targetFolder,
+          childFolderEncryptionAncestors,
+        ).effectiveEnabled &&
         !isVaultUnlocked;
 
       if (requiresUnlock) {
@@ -378,6 +405,7 @@ export const FilesPage: React.FC = () => {
     },
     [
       clientEncryptionEnvelope,
+      childFolderEncryptionAncestors,
       effectiveContent?.nodes,
       isVaultUnlocked,
       navigate,
@@ -468,6 +496,7 @@ export const FilesPage: React.FC = () => {
     handleShareFolder,
     handleCutFolder,
     handleToggleFolderEncryption,
+    getChildFolderEncryptionPolicyState,
   );
 
   // Build file operations adapter

@@ -123,6 +123,42 @@ describe("useFolderClientEncryptionActions", () => {
     expect(result.current.encryptedFiles).toEqual([]);
   });
 
+  it("uses the effective folder policy supplied by the page", () => {
+    const content = makeContent([makeFile("plain")]);
+
+    const { result } = renderHook(() =>
+      useFolderClientEncryptionActions({
+        nodeId: "node-1",
+        currentNode: makeNode({}),
+        content,
+        folderPolicyEnabled: true,
+        onToast: vi.fn(),
+      }),
+    );
+
+    expect(result.current.folderPolicyEnabled).toBe(true);
+    expect(result.current.plainFiles.map((file) => file.id)).toEqual([
+      "plain",
+    ]);
+  });
+
+  it("does not use an inherited policy while current folder data is stale", () => {
+    const content = makeContent([makeFile("plain")]);
+
+    const { result } = renderHook(() =>
+      useFolderClientEncryptionActions({
+        nodeId: "node-2",
+        currentNode: makeNode({}),
+        content,
+        folderPolicyEnabled: true,
+        onToast: vi.fn(),
+      }),
+    );
+
+    expect(result.current.folderPolicyEnabled).toBe(true);
+    expect(result.current.plainFiles).toEqual([]);
+  });
+
   it("encrypts existing plain files through task-backed encryption", async () => {
     useVault.setState({ isUnlocked: true, masterKey: {} as CryptoKey });
     const onToast = vi.fn();

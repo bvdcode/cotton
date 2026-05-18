@@ -184,6 +184,35 @@ describe("createFolder", () => {
     ).toEqual({ isClientEncryptionEnabled: "true" });
   });
 
+  it("inherits an ancestor client-side encryption policy", async () => {
+    const vault = {
+      ...makeNode("vault", "Vault"),
+      parentId: null,
+      metadata: { isClientEncryptionEnabled: "true" },
+    };
+    const parent = {
+      ...makeNode("parent-1", "Nested"),
+      parentId: "vault",
+      metadata: {},
+    };
+    useNodesStore.setState({ ancestors: [vault], currentNode: parent });
+    seedFolder("parent-1", []);
+    const created = makeNode("b", "Private");
+    const encryptedCreated = {
+      ...created,
+      metadata: { isClientEncryptionEnabled: "true" },
+    };
+    vi.mocked(nodesApi.createNode).mockResolvedValue(created);
+    vi.mocked(nodesApi.updateNodeMetadata).mockResolvedValue(encryptedCreated);
+
+    const result = await createFolder("parent-1", "Private");
+
+    expect(result).toEqual(encryptedCreated);
+    expect(nodesApi.updateNodeMetadata).toHaveBeenCalledWith("b", {
+      isClientEncryptionEnabled: "true",
+    });
+  });
+
   it("does not patch metadata for folders created under plain parents", async () => {
     seedFolder("parent-1", []);
     const created = makeNode("b", "Public");
