@@ -1,4 +1,5 @@
 import * as React from "react";
+import { looksLikeContainer } from "../../../shared/crypto/container";
 import { previewConfig } from "../../../shared/config/previewConfig";
 import { tryParseFileName } from "../utils/tryParseFileName";
 
@@ -12,6 +13,7 @@ export interface ShareFileInfo {
   contentLength: number | null;
   textContent: string | null;
   resolvedInlineUrl: string | null;
+  encryptedContainer: boolean;
 }
 
 interface LoadedShareFileInfo {
@@ -21,6 +23,7 @@ interface LoadedShareFileInfo {
   contentLength: number | null;
   textContent: string | null;
   resolvedInlineUrl: string | null;
+  encryptedContainer: boolean;
 }
 
 async function fetchHeadOrGet(url: string): Promise<Response> {
@@ -42,6 +45,29 @@ function looksLikeTextContent(contentType: string | null): boolean {
   );
 }
 
+function isOctetStream(contentType: string | null): boolean {
+  return (
+    (contentType ?? "").split(";")[0].trim().toLowerCase() ===
+    "application/octet-stream"
+  );
+}
+
+function looksLikeOpaqueServerFileName(fileName: string | null): boolean {
+  return (
+    fileName !== null &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      fileName,
+    )
+  );
+}
+
+function shouldSniffEncryptedContainer(
+  fileName: string | null,
+  contentType: string | null,
+): boolean {
+  return isOctetStream(contentType) && looksLikeOpaqueServerFileName(fileName);
+}
+
 async function tryResolveNameFromDownloadUrl(downloadUrl: string): Promise<string | null> {
   try {
     const resp = await fetch(downloadUrl, { method: "HEAD" });
@@ -49,6 +75,32 @@ async function tryResolveNameFromDownloadUrl(downloadUrl: string): Promise<strin
     return tryParseFileName(resp.headers.get("content-disposition"));
   } catch {
     return null;
+  }
+}
+
+async function sniffEncryptedContainer(
+  url: string,
+  contentLength: number | null,
+): Promise<boolean> {
+  if (typeof contentLength === "number" && contentLength < 4) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { Range: "bytes=0-3" },
+    });
+
+    if (response.status !== 206) {
+      await response.body?.cancel();
+      return false;
+    }
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return looksLikeContainer(bytes);
+  } catch {
+    return false;
   }
 }
 
@@ -69,6 +121,7 @@ async function loadShareFileInfo(args: {
         contentLength: null,
         textContent: null,
         resolvedInlineUrl: null,
+        encryptedContainer: false,
       };
     }
 
@@ -86,8 +139,13 @@ async function loadShareFileInfo(args: {
       fileName = await tryResolveNameFromDownloadUrl(downloadUrl);
     }
 
+    const encryptedContainer = shouldSniffEncryptedContainer(fileName, contentType)
+      ? await sniffEncryptedContainer(inlineUrl, contentLength)
+      : false;
+
     let textContent: string | null = null;
     if (
+      !encryptedContainer &&
       looksLikeTextContent(contentType) &&
       typeof contentLength === "number" &&
       contentLength <= previewConfig.MAX_SHARE_TEXT_PREVIEW_SIZE_BYTES
@@ -101,6 +159,7 @@ async function loadShareFileInfo(args: {
           contentLength,
           textContent: null,
           resolvedInlineUrl: inlineUrl,
+          encryptedContainer,
         };
       }
       textContent = await textResp.text();
@@ -113,6 +172,7 @@ async function loadShareFileInfo(args: {
       contentLength,
       textContent,
       resolvedInlineUrl: inlineUrl,
+      encryptedContainer,
     };
   } catch {
     return {
@@ -122,6 +182,7 @@ async function loadShareFileInfo(args: {
       contentLength: null,
       textContent: null,
       resolvedInlineUrl: null,
+      encryptedContainer: false,
     };
   }
 }
@@ -145,11 +206,19 @@ export function useShareFileInfo({
   const [contentLength, setContentLength] = React.useState<number | null>(null);
   const [textContent, setTextContent] = React.useState<string | null>(null);
   const [resolvedInlineUrl, setResolvedInlineUrl] = React.useState<string | null>(null);
+  const [encryptedContainer, setEncryptedContainer] =
+    React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (!token || !inlineUrl) {
       setLoading(false);
       setError("invalidLink");
+      setFileName(null);
+      setContentType(null);
+      setContentLength(null);
+      setTextContent(null);
+      setResolvedInlineUrl(null);
+      setEncryptedContainer(false);
       return;
     }
 
@@ -162,6 +231,7 @@ export function useShareFileInfo({
     setContentLength(null);
     setTextContent(null);
     setResolvedInlineUrl(null);
+    setEncryptedContainer(false);
 
     void (async () => {
       const result = await loadShareFileInfo({ token, inlineUrl, downloadUrl });
@@ -172,6 +242,7 @@ export function useShareFileInfo({
       setContentLength(result.contentLength);
       setTextContent(result.textContent);
       setResolvedInlineUrl(result.resolvedInlineUrl);
+      setEncryptedContainer(result.encryptedContainer);
       setError(result.error);
       setLoading(false);
     })();
@@ -189,5 +260,6 @@ export function useShareFileInfo({
     contentLength,
     textContent,
     resolvedInlineUrl,
+    encryptedContainer,
   };
 }

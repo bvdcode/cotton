@@ -1,9 +1,10 @@
 import * as React from "react";
-import { Box, Container, Typography } from "@mui/material";
+import { Box, Container, Stack, Typography } from "@mui/material";
 import {
   Description,
   Image as ImageIcon,
   InsertDriveFile,
+  LockOutlined,
   Movie,
   PictureAsPdf,
   ViewInAr,
@@ -28,6 +29,7 @@ interface ShareFileViewerProps {
   contentType: string | null;
   contentLength: number | null;
   textContent: string | null;
+  encryptedContainer: boolean;
 }
 
 function getFallbackIcon(fileType: FileType) {
@@ -181,6 +183,72 @@ const ShareTextViewer: React.FC<ShareTextViewerProps> = ({
   );
 };
 
+interface ShareEncryptedFileNoticeProps {
+  fileName: string | null;
+  contentLength: number | null;
+}
+
+const ShareEncryptedFileNotice: React.FC<ShareEncryptedFileNoticeProps> = ({
+  fileName,
+  contentLength,
+}) => {
+  const { t } = useTranslation(["share"]);
+
+  return (
+    <Box
+      width="100%"
+      height="100%"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      p={2}
+    >
+      <Stack
+        alignItems="center"
+        spacing={1}
+        maxWidth={520}
+        textAlign="center"
+      >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          sx={{
+            color: "warning.main",
+            "& > svg": { width: 64, height: 64 },
+          }}
+        >
+          <LockOutlined />
+        </Box>
+
+        <Typography variant="h6" color="text.primary">
+          {t("encryptedFile.title", { ns: "share" })}
+        </Typography>
+
+        <Typography color="text.secondary">
+          {t("encryptedFile.description", { ns: "share" })}
+        </Typography>
+
+        {fileName && (
+          <Typography
+            color="text.primary"
+            variant="body2"
+            sx={{ mt: 1, maxWidth: "100%", overflowWrap: "anywhere" }}
+          >
+            {fileName}
+          </Typography>
+        )}
+
+        {contentLength !== null && (
+          <Typography color="text.secondary" variant="caption">
+            {formatBytes(contentLength)}
+          </Typography>
+        )}
+      </Stack>
+    </Box>
+  );
+};
+
 interface ShareUnsupportedViewerProps {
   fileType: FileType;
   fileName: string | null;
@@ -258,11 +326,21 @@ export const ShareFileViewer: React.FC<ShareFileViewerProps> = ({
   contentType,
   contentLength,
   textContent,
+  encryptedContainer,
 }) => {
   const fileTypeInfo = React.useMemo(() => {
     const name = fileName ?? "";
     return getFileTypeInfo(name, contentType);
   }, [contentType, fileName]);
+
+  if (encryptedContainer) {
+    return (
+      <ShareEncryptedFileNotice
+        fileName={fileName}
+        contentLength={contentLength}
+      />
+    );
+  }
 
   if (fileTypeInfo.type === "image" || fileTypeInfo.type === "video") {
     return (

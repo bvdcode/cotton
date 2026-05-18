@@ -458,6 +458,10 @@
     "title": "Shared file",
     "loading": "Loading...",
     "unsupported": "Preview is not available for this file type.",
+    "encryptedFile": {
+      "title": "This file is end-to-end encrypted",
+      "description": "Public links cannot unlock it in the browser. You can download the encrypted container, or ask the owner to share a decrypted copy."
+    },
     "message": "Check out \"{{name}}\" on Cotton Cloud",
     "folder": {
       "title": "Shared folder",

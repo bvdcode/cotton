@@ -517,6 +517,10 @@
     "title": "Archivo compartido",
     "loading": "Cargando...",
     "unsupported": "La vista previa no está disponible para este tipo de archivo.",
+    "encryptedFile": {
+      "title": "Este archivo está cifrado de extremo a extremo",
+      "description": "Los enlaces públicos no pueden desbloquearlo en el navegador. Puedes descargar el contenedor cifrado o pedir al propietario una copia descifrada."
+    },
     "message": "Mira \"{{name}}\" en Cotton Cloud",
     "folder": {
       "title": "Carpeta compartida",

@@ -97,6 +97,7 @@ export const SharePage: React.FC = () => {
     contentLength,
     textContent,
     resolvedInlineUrl,
+    encryptedContainer,
   } = useShareFileInfo({
     token: targetKind === "file" ? token : null,
     inlineUrl,
@@ -286,6 +287,7 @@ export const SharePage: React.FC = () => {
               contentType={contentType}
               contentLength={contentLength}
               textContent={textContent}
+              encryptedContainer={encryptedContainer}
             />
           </Box>
         </>
