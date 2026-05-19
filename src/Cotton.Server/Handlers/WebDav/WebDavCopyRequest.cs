@@ -8,6 +8,7 @@ using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +40,8 @@ public enum WebDavCopyError
     DestinationParentNotFound,
     DestinationExists,
     InvalidName,
-    CannotCopyRoot
+    CannotCopyRoot,
+    QuotaExceeded
 }
 
 /// <summary>
@@ -113,7 +115,17 @@ public class WebDavCopyRequestHandler(
             return Fail(WebDavCopyError.DestinationExists);
         }
 
-        var (copiedNodeId, copiedNodeFileId, addedBytes) = await PerformCopyAsync(request, sourceResult, destParentResult, destParentResult.ParentNode!.LayoutId, ct);
+        Guid? copiedNodeId;
+        Guid? copiedNodeFileId;
+        long addedBytes;
+        try
+        {
+            (copiedNodeId, copiedNodeFileId, addedBytes) = await PerformCopyAsync(request, sourceResult, destParentResult, destParentResult.ParentNode!.LayoutId, ct);
+        }
+        catch (BadRequestException<User>)
+        {
+            return Fail(WebDavCopyError.QuotaExceeded);
+        }
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);

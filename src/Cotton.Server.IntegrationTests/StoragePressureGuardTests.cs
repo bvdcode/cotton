@@ -116,6 +116,32 @@ public class StoragePressureGuardTests : IntegrationTestBase
         Assert.That(notifications.Sent, Is.Empty);
     }
 
+    [Test]
+    public async Task EnsureCanAcceptWriteAsync_ReservesAcceptedWritesUntilCapacityRefresh()
+    {
+        var notifications = new RecordingNotificationsProvider();
+        var backend = new ReportingBackend(new StorageCapacitySnapshot(
+            Backend: "filesystem",
+            RootPath: "/storage",
+            TotalBytes: 1_000,
+            AvailableBytes: 200));
+        var guard = CreateGuard(
+            backend,
+            notifications,
+            new StoragePressureOptions
+            {
+                MinFreePercent = 0,
+                MinFreeBytes = 100,
+                CheckIntervalSeconds = 60,
+            });
+
+        await guard.EnsureCanAcceptWriteAsync(60);
+
+        Assert.ThrowsAsync<StoragePressureException>(
+            async () => await guard.EnsureCanAcceptWriteAsync(50));
+        Assert.That(backend.SnapshotReads, Is.EqualTo(1));
+    }
+
     private StoragePressureGuard CreateGuard(
         IStorageBackend backend,
         RecordingNotificationsProvider notifications,

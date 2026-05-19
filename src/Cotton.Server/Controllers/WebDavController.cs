@@ -432,6 +432,7 @@ public class WebDavController(
                 WebDavCopyError.DestinationExists => StatusCode(StatusCodes.Status412PreconditionFailed, "Destination exists and Overwrite is false"),
                 WebDavCopyError.InvalidName => BadRequest("Invalid resource name"),
                 WebDavCopyError.CannotCopyRoot => Forbid(),
+                WebDavCopyError.QuotaExceeded => StatusCode(507, "Storage quota exceeded"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }

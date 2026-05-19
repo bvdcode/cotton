@@ -24,50 +24,96 @@ public sealed class StoragePressureGuard(
 {
     private const string CapacityCacheKey = "storage-pressure:capacity";
     private const string NotificationCacheKey = "storage-pressure:notification-sent";
+    private static readonly SemaphoreSlim CapacityReservationLock = new(initialCount: 1, maxCount: 1);
     private static readonly SemaphoreSlim NotificationLock = new(initialCount: 1, maxCount: 1);
 
     public async Task EnsureCanAcceptWriteAsync(long incomingBytes, CancellationToken ct = default)
     {
+        using var reservation = await ReserveWriteAsync(incomingBytes, ct);
+        reservation.Commit();
+    }
+
+    internal async Task<StoragePressureReservation> ReserveWriteAsync(long incomingBytes, CancellationToken ct = default)
+    {
         StoragePressureOptions options = _options.Value;
         if (!options.Enabled)
         {
-            return;
-        }
-
-        StorageCapacitySnapshot? capacity = GetCachedCapacitySnapshot(options);
-        if (capacity is null || capacity.TotalBytes <= 0)
-        {
-            return;
+            return StoragePressureReservation.None;
         }
 
         long safeIncomingBytes = Math.Max(0, incomingBytes);
-        long requiredFreeBytes = options.GetRequiredFreeBytes(capacity.TotalBytes);
-        long projectedAvailableBytes = capacity.AvailableBytes - safeIncomingBytes;
-        if (projectedAvailableBytes >= requiredFreeBytes)
+        StoragePressureSnapshot? pressure = null;
+
+        await CapacityReservationLock.WaitAsync(ct);
+        try
+        {
+            CapacityCacheEntry entry = GetOrCreateCapacityEntry(options);
+            StorageCapacitySnapshot? capacity = entry.Snapshot;
+            if (capacity is null || capacity.TotalBytes <= 0)
+            {
+                return StoragePressureReservation.None;
+            }
+
+            long requiredFreeBytes = options.GetRequiredFreeBytes(capacity.TotalBytes);
+            long availableAfterReservations = Math.Max(0, capacity.AvailableBytes - entry.ReservedBytes);
+            long projectedAvailableBytes = availableAfterReservations - safeIncomingBytes;
+            if (projectedAvailableBytes >= requiredFreeBytes)
+            {
+                entry.Reserve(safeIncomingBytes);
+                return safeIncomingBytes > 0
+                    ? new StoragePressureReservation(this, safeIncomingBytes)
+                    : StoragePressureReservation.None;
+            }
+
+            pressure = new StoragePressureSnapshot(
+                capacity with { AvailableBytes = availableAfterReservations },
+                IncomingBytes: safeIncomingBytes,
+                RequiredFreeBytes: requiredFreeBytes,
+                ProjectedAvailableBytes: Math.Max(0, projectedAvailableBytes));
+        }
+        finally
+        {
+            CapacityReservationLock.Release();
+        }
+
+        StoragePressureSnapshot pressureToReport = pressure ?? throw new InvalidOperationException("Storage pressure state was not computed.");
+        await NotifyAdminsOnceAsync(pressureToReport, options, ct);
+        throw new StoragePressureException(pressureToReport);
+    }
+
+    private CapacityCacheEntry GetOrCreateCapacityEntry(StoragePressureOptions options)
+    {
+        if (_cache.TryGetValue(CapacityCacheKey, out CapacityCacheEntry? cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        StorageCapacitySnapshot? snapshot = ReadCapacitySnapshot();
+        var entry = new CapacityCacheEntry(snapshot);
+        _cache.Set(CapacityCacheKey, entry, options.CheckInterval);
+        return entry;
+    }
+
+    internal void ReleaseReservation(long bytes)
+    {
+        long safeBytes = Math.Max(0, bytes);
+        if (safeBytes == 0)
         {
             return;
         }
 
-        var pressure = new StoragePressureSnapshot(
-            capacity,
-            IncomingBytes: safeIncomingBytes,
-            RequiredFreeBytes: requiredFreeBytes,
-            ProjectedAvailableBytes: Math.Max(0, projectedAvailableBytes));
-
-        await NotifyAdminsOnceAsync(pressure, options, ct);
-        throw new StoragePressureException(pressure);
-    }
-
-    private StorageCapacitySnapshot? GetCachedCapacitySnapshot(StoragePressureOptions options)
-    {
-        if (_cache.TryGetValue(CapacityCacheKey, out CapacityCacheEntry? cached))
+        CapacityReservationLock.Wait();
+        try
         {
-            return cached?.Snapshot;
+            if (_cache.TryGetValue(CapacityCacheKey, out CapacityCacheEntry? cached))
+            {
+                cached?.Release(safeBytes);
+            }
         }
-
-        StorageCapacitySnapshot? snapshot = ReadCapacitySnapshot();
-        _cache.Set(CapacityCacheKey, new CapacityCacheEntry(snapshot), options.CheckInterval);
-        return snapshot;
+        finally
+        {
+            CapacityReservationLock.Release();
+        }
     }
 
     private StorageCapacitySnapshot? ReadCapacitySnapshot()
@@ -169,7 +215,59 @@ public sealed class StoragePressureGuard(
     }
 }
 
-internal sealed record CapacityCacheEntry(StorageCapacitySnapshot? Snapshot);
+internal sealed class CapacityCacheEntry(StorageCapacitySnapshot? snapshot)
+{
+    public StorageCapacitySnapshot? Snapshot { get; } = snapshot;
+    public long ReservedBytes { get; private set; }
+
+    public void Reserve(long bytes)
+    {
+        long safeBytes = Math.Max(0, bytes);
+        ReservedBytes = safeBytes > long.MaxValue - ReservedBytes
+            ? long.MaxValue
+            : ReservedBytes + safeBytes;
+    }
+
+    public void Release(long bytes)
+    {
+        ReservedBytes = Math.Max(0, ReservedBytes - Math.Max(0, bytes));
+    }
+}
+
+internal sealed class StoragePressureReservation : IDisposable
+{
+    public static StoragePressureReservation None => new(null, 0);
+
+    private readonly StoragePressureGuard? _owner;
+    private readonly long _bytes;
+    private bool _committed;
+    private bool _disposed;
+
+    public StoragePressureReservation(StoragePressureGuard? owner, long bytes)
+    {
+        _owner = owner;
+        _bytes = Math.Max(0, bytes);
+    }
+
+    public void Commit()
+    {
+        _committed = true;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (!_committed)
+        {
+            _owner?.ReleaseReservation(_bytes);
+        }
+    }
+}
 
 public sealed record StoragePressureSnapshot(
     StorageCapacitySnapshot Capacity,

@@ -70,9 +70,10 @@ public class ChunkIngestService(
 
         if (!existsInStorage)
         {
-            await _storagePressure.EnsureCanAcceptWriteAsync(length, ct);
+            using var writeReservation = await _storagePressure.ReserveWriteAsync(length, ct);
             using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
             await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
+            writeReservation.Commit();
         }
 
         long storedSizeBytes = await _storage.GetSizeAsync(storageKey);
