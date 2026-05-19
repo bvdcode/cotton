@@ -180,5 +180,6 @@ jobs:
         with:
           tag: ${{ needs.build.outputs.Version }}
           name: Release ${{ needs.build.outputs.Version }}
+          body: ${{ github.event.head_commit.message }}
           artifacts: "nupkg/*"
           token: ${{ secrets.GITHUB_TOKEN }}
