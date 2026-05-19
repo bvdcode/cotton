@@ -20,6 +20,8 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
     services:
       postgres:
         image: postgres:17
@@ -52,6 +54,13 @@ jobs:
           node-version-file: src/cotton.client/.nvmrc
           cache: npm
           cache-dependency-path: src/cotton.client/package-lock.json
+
+      - name: Validate SixLabors license secret
+        run: |
+          if [ -z "${SIXLABORS_LICENSE:-}" ]; then
+            echo "SIXLABORS_LICENSE secret is required for builds and tests." >&2
+            exit 1
+          fi
 
       - name: Restore .NET dependencies
         run: dotnet restore src/Cotton.sln
@@ -111,6 +120,17 @@ jobs:
           echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
           echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
 
+      - name: Write SixLabors license secret for Docker build
+        env:
+          SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+        run: |
+          if [ -z "${SIXLABORS_LICENSE:-}" ]; then
+            echo "SIXLABORS_LICENSE secret is required for Docker image builds." >&2
+            exit 1
+          fi
+          install -m 600 /dev/null /tmp/sixlabors.lic
+          printf '%s' "$SIXLABORS_LICENSE" > /tmp/sixlabors.lic
+
       - name: login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -129,6 +149,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
       - name: Build and push docker image to Docker Hub (develop)
         if: github.ref == 'refs/heads/develop'
@@ -141,6 +163,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -161,6 +185,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
       - name: Build and push docker image to GitHub Container Registry (develop)
         if: github.ref == 'refs/heads/develop'
@@ -173,6 +199,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
   release:
     name: Create Release
