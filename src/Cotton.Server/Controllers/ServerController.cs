@@ -47,9 +47,10 @@ namespace Cotton.Server.Controllers
 
         [HttpGet("security/status")]
         [Authorize(Roles = nameof(UserRole.Admin))]
-        public IActionResult GetSecurityDiagnostics()
+        public async Task<IActionResult> GetSecurityDiagnostics(CancellationToken cancellationToken)
         {
-            return Ok(_securityDiagnostics.GetSnapshot());
+            SecurityDiagnosticsDto snapshot = await _securityDiagnostics.GetSnapshotAsync(cancellationToken);
+            return Ok(snapshot);
         }
 
         [HttpPatch("database-backup/trigger")]

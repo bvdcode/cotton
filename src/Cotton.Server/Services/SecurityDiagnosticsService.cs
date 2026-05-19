@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
+using Cotton.Database;
 using Cotton.Server.Models.Dto;
+using EasyExtensions.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cotton.Server.Services
 {
     public sealed class SecurityDiagnosticsService(
+        CottonDbContext dbContext,
         ProcessHardeningStatus hardeningStatus,
         MasterKeyRuntimeState masterKeyRuntimeState)
     {
-        public SecurityDiagnosticsDto GetSnapshot()
+        public async Task<SecurityDiagnosticsDto> GetSnapshotAsync(CancellationToken cancellationToken)
         {
             LinuxProcStatus procStatus = LinuxProcessHardening.SnapshotProcStatus();
             uint? effectiveUserId = LinuxProcessHardening.TryGetEffectiveUserId();
@@ -18,6 +22,8 @@ namespace Cotton.Server.Services
             string? comPlusEnableDiagnostics = Environment.GetEnvironmentVariable("COMPlus_EnableDiagnostics");
             bool dotnetDiagnosticsDisabled = IsZero(dotnetEnableDiagnostics) || IsZero(comPlusEnableDiagnostics);
             bool isContainer = IsContainer();
+            bool isPublicInstance = Constants.IsPublicInstance;
+            AdminTotpDiagnosticsDto adminTotp = await GetAdminTotpDiagnosticsAsync(cancellationToken);
 
             var linuxProcess = new LinuxProcessSecurityDto
             {
@@ -41,35 +47,83 @@ namespace Cotton.Server.Services
                 ComPlusEnableDiagnostics = comPlusEnableDiagnostics,
             };
 
+            IReadOnlyList<SecurityDiagnosticWarningDto> warnings = BuildWarnings(
+                isContainer,
+                isPublicInstance,
+                masterKeyRuntimeState,
+                dotnetDiagnostics,
+                linuxProcess,
+                adminTotp);
+
             return new SecurityDiagnosticsDto
             {
                 OperatingSystem = Environment.OSVersion.ToString(),
                 IsLinux = OperatingSystem.IsLinux(),
                 IsContainer = isContainer,
                 MasterKeySource = masterKeyRuntimeState.Source,
+                IsPublicInstance = isPublicInstance,
                 MasterKeyEnvironmentVariableWasConfigured = masterKeyRuntimeState.EnvironmentVariableWasConfigured,
                 MasterKeyEnvironmentVariablePresentInProcess = masterKeyRuntimeState.EnvironmentVariablePresentAfterResolution,
                 DotNetDiagnostics = dotnetDiagnostics,
                 LinuxProcess = linuxProcess,
-                Warnings = BuildWarnings(isContainer, masterKeyRuntimeState, dotnetDiagnostics, linuxProcess),
+                AdminTotp = adminTotp,
+                SecurityScore = CalculateSecurityScore(warnings),
+                Warnings = warnings,
+            };
+        }
+
+        private async Task<AdminTotpDiagnosticsDto> GetAdminTotpDiagnosticsAsync(CancellationToken cancellationToken)
+        {
+            int adminCount = await dbContext.Users
+                .CountAsync(user => user.Role == UserRole.Admin, cancellationToken);
+            int adminsWithTotp = await dbContext.Users
+                .CountAsync(user => user.Role == UserRole.Admin && user.IsTotpEnabled, cancellationToken);
+
+            return new AdminTotpDiagnosticsDto
+            {
+                AdminCount = adminCount,
+                AdminsWithTotp = adminsWithTotp,
+                AdminsWithoutTotp = adminCount - adminsWithTotp,
             };
         }
 
         private static IReadOnlyList<SecurityDiagnosticWarningDto> BuildWarnings(
             bool isContainer,
+            bool isPublicInstance,
             MasterKeyRuntimeState masterKey,
             DotNetDiagnosticsDto dotnetDiagnostics,
-            LinuxProcessSecurityDto linuxProcess)
+            LinuxProcessSecurityDto linuxProcess,
+            AdminTotpDiagnosticsDto adminTotp)
         {
             var warnings = new List<SecurityDiagnosticWarningDto>();
+
+            if (isPublicInstance)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "public-instance",
+                    Severity = "warning",
+                    Message = "This instance allows public/demo account creation. Keep quotas, default content, and abuse monitoring configured before exposing it on the internet.",
+                });
+            }
 
             if (masterKey.EnvironmentVariableWasConfigured)
             {
                 warnings.Add(new SecurityDiagnosticWarningDto
                 {
                     Code = "master-key-from-environment",
-                    Severity = "info",
+                    Severity = "warning",
                     Message = "This process was unlocked from COTTON_MASTER_KEY. Cotton clears its own process environment after reading it, but container runtimes may still expose configured environment variables through deployment metadata or docker exec environments.",
+                });
+            }
+
+            if (adminTotp.AdminsWithoutTotp > 0)
+            {
+                warnings.Add(new SecurityDiagnosticWarningDto
+                {
+                    Code = "admins-without-2fa",
+                    Severity = "warning",
+                    Message = $"{adminTotp.AdminsWithoutTotp} of {adminTotp.AdminCount} admin accounts do not have 2FA enabled.",
                 });
             }
 
@@ -147,6 +201,19 @@ namespace Cotton.Server.Services
             }
 
             return warnings;
+        }
+
+        private static int CalculateSecurityScore(IReadOnlyList<SecurityDiagnosticWarningDto> warnings)
+        {
+            int penalty = warnings.Sum(warning => warning.Severity switch
+            {
+                "critical" => 3,
+                "warning" => 2,
+                "info" => 1,
+                _ => 0,
+            });
+
+            return Math.Max(0, 10 - penalty);
         }
 
         private static bool IsZero(string? value) => string.Equals(value, "0", StringComparison.Ordinal);

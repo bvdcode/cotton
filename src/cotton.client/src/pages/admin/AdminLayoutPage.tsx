@@ -14,6 +14,7 @@ import BackupIcon from "@mui/icons-material/Backup";
 import GroupsIcon from "@mui/icons-material/Groups";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import PersonIcon from "@mui/icons-material/Person";
+import SecurityIcon from "@mui/icons-material/Security";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
 import StorageIcon from "@mui/icons-material/Storage";
@@ -30,6 +31,7 @@ type AdminMenuItem = {
     | "users"
     | "groups"
     | "privacySettings"
+    | "securityDiagnostics"
     | "storage"
     | "notificationsSettings"
     | "databaseBackup";
@@ -72,6 +74,14 @@ export const AdminLayoutPage = () => {
         defaultValue: "Privacy and security",
       }),
       icon: <ShieldIcon />,
+    },
+    {
+      id: "securityDiagnostics",
+      to: "/admin/security",
+      title: t("menu.securityDiagnostics", {
+        defaultValue: "Security checkup",
+      }),
+      icon: <SecurityIcon />,
     },
     {
       id: "notificationsSettings",

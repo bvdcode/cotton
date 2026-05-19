@@ -141,7 +141,7 @@ namespace Cotton.Server
                 .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
                 .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
-                .AddSingleton<SecurityDiagnosticsService>()
+                .AddScoped<SecurityDiagnosticsService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()

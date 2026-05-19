@@ -35,6 +35,7 @@ export const queryKeys = {
       }) => [...adminRoot, "gcTimeline", params] as const,
     },
     latestDbBackup: () => [...adminRoot, "latestDbBackup"] as const,
+    securityDiagnostics: () => [...adminRoot, "securityDiagnostics"] as const,
   },
   audio: {
     all: () => audioRoot,

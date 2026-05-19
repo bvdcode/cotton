@@ -111,8 +111,21 @@ public class ServerEndpointsTests : IntegrationTestBase
             Assert.That(payload.TryGetProperty("dotNetDiagnostics", out _), Is.True);
             Assert.That(payload.TryGetProperty("linuxProcess", out _), Is.True);
             Assert.That(payload.TryGetProperty("warnings", out JsonElement warnings), Is.True);
+            Assert.That(payload.TryGetProperty("securityScore", out JsonElement score), Is.True);
+            Assert.That(payload.TryGetProperty("maxSecurityScore", out JsonElement maxScore), Is.True);
+            Assert.That(payload.TryGetProperty("isPublicInstance", out _), Is.True);
+            Assert.That(payload.TryGetProperty("adminTotp", out JsonElement adminTotp), Is.True);
             Assert.That(warnings.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(score.GetInt32(), Is.InRange(0, 10));
+            Assert.That(maxScore.GetInt32(), Is.EqualTo(10));
             Assert.That(payload.GetProperty("masterKeySource").GetString(), Is.Not.Empty);
+            Assert.That(adminTotp.GetProperty("adminCount").GetInt32(), Is.EqualTo(1));
+            Assert.That(adminTotp.GetProperty("adminsWithTotp").GetInt32(), Is.EqualTo(0));
+            Assert.That(adminTotp.GetProperty("adminsWithoutTotp").GetInt32(), Is.EqualTo(1));
+            Assert.That(
+                warnings.EnumerateArray().Any(warning =>
+                    warning.GetProperty("code").GetString() == "admins-without-2fa"),
+                Is.True);
         });
     }
 

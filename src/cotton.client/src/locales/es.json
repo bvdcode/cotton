@@ -1517,7 +1517,8 @@
       "navigate": "Sección",
       "users": "Usuarios",
       "databaseBackup": "Respaldo de base de datos",
-      "storageStatistics": "Estadísticas de almacenamiento"
+      "storageStatistics": "Estadísticas de almacenamiento",
+      "securityDiagnostics": "Revisión de seguridad"
     },
     "roles": {
       "user": "Usuario",
@@ -1653,6 +1654,94 @@
       "errors": {
         "loadFailed": "No se pudieron cargar las estadísticas de almacenamiento.",
         "triggerGcFailed": "No se pudo ejecutar GC."
+      }
+    },
+    "securityDiagnostics": {
+      "title": "Revisión de seguridad",
+      "description": "Comprobaciones del servidor para cuentas, manejo de la clave maestra y exposición de memoria del proceso.",
+      "errors": {
+        "loadFailed": "No se pudo cargar el diagnóstico de seguridad."
+      },
+      "severity": {
+        "critical": "Crítico",
+        "warning": "Advertencia",
+        "info": "Info"
+      },
+      "levels": {
+        "strong": {
+          "title": "Postura fuerte",
+          "summary": "Esta instancia tiene el endurecimiento esperado para producción. Es adecuada para exposición pública si también confías en el host y las copias de seguridad."
+        },
+        "good": {
+          "title": "Buena base self-hosted",
+          "summary": "Es adecuada para una familia o un equipo pequeño. Los puntos restantes son sobre todo endurecimiento operativo e higiene de cuentas."
+        },
+        "home": {
+          "title": "Base para uso doméstico",
+          "summary": "Es razonable para casa y tareas diarias, pero no trates el host como hostil. Una intrusión en el servidor aún podría exponer claves o acceso admin."
+        },
+        "exposed": {
+          "title": "Quedan rutas de ataque prácticas",
+          "summary": "Hay problemas que un atacante local, un contenedor comprometido o una contraseña admin robada podrían aprovechar."
+        },
+        "unsafe": {
+          "title": "No seguro para datos sensibles",
+          "summary": "Corrige primero las advertencias críticas. En este nivel, la clave maestra o el control admin pueden estar demasiado al alcance."
+        }
+      },
+      "chips": {
+        "publicInstance": "Instancia pública",
+        "privateInstance": "Instancia privada",
+        "envKey": "Clave desde entorno",
+        "memoryUnlock": "Desbloqueo en memoria",
+        "adminTotp": "{{withTotp}}/{{total}} admins con 2FA"
+      },
+      "sections": {
+        "risks": "Vectores de amenaza",
+        "instance": "Instancia y cuentas",
+        "masterKey": "Clave maestra",
+        "memory": "Exposición de memoria del proceso",
+        "runtime": "Datos de runtime"
+      },
+      "risks": {
+        "empty": "Las comprobaciones actuales del servidor no detectaron advertencias."
+      },
+      "fields": {
+        "publicInstance": "Registro público",
+        "admins": "Admins con 2FA",
+        "adminsWithoutTotp": "Admins sin 2FA",
+        "masterKeySource": "Origen",
+        "envWasConfigured": "Variable de entorno configurada",
+        "envPresent": "Variable de entorno aún presente",
+        "dotnetDiagnostics": ".NET diagnostics desactivado",
+        "processHardening": "Endurecimiento del proceso aplicado",
+        "dumpable": "Estado dumpable",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "Sistema operativo",
+        "container": "Contenedor detectado",
+        "euid": "Effective UID",
+        "noNewPrivileges": "No new privileges",
+        "seccomp": "Modo seccomp",
+        "capabilities": "Effective capabilities"
+      },
+      "values": {
+        "unknown": "Desconocido",
+        "yes": "Sí",
+        "no": "No",
+        "notDumpable": "No dumpable",
+        "dumpable": "Dumpable"
+      },
+      "threatVectors": {
+        "public-instance": "Los visitantes de internet pueden crear cuentas y almacenar contenido. Las cuotas, los datos demo y la monitorización de abuso pasan a ser parte de la frontera de seguridad.",
+        "master-key-from-environment": "Si los metadatos del despliegue, el historial de shell o la inspección del contenedor exponen variables de entorno, la clave maestra puede quedar cerca de los datos que protege.",
+        "admins-without-2fa": "La contraseña admin se convierte en el único factor. Reutilización de contraseñas, phishing o sesiones robadas pueden convertirse en control total de la instancia.",
+        "dotnet-diagnostics-enabled": "Un proceso local con permisos suficientes puede pedir al runtime .NET dumps o traces, y esos dumps pueden contener secretos vivos de memoria.",
+        "process-dumpable": "Un proceso con el mismo UID o un debugger con ptrace puede volcar la memoria del servidor y buscar la clave maestra en RAM.",
+        "sys-ptrace-capability": "Un contenedor debug o privilegiado puede inspeccionar y alterar memoria del proceso. Es justo la capacidad que las claves solo en memoria intentan evitar.",
+        "new-privileges-allowed": "Si código comprometido encuentra un helper setuid o un binario con capabilities, tiene una vía más amplia para elevar privilegios dentro del contenedor.",
+        "seccomp-disabled": "La superficie de syscalls del kernel es más amplia que el baseline normal de Docker en producción, así que un bug de escape de contenedor tiene más espacio.",
+        "running-as-root": "Una RCE se ejecutaría como root dentro del contenedor, aumentando el daño contra volúmenes montados y procesos auxiliares.",
+        "process-hardening-failed": "Cotton pidió endurecimiento del proceso, pero el proceso arrancó sin la protección esperada contra dump o ptrace."
       }
     }
   },
