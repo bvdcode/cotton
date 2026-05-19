@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
 import ru from "./ru.json";
@@ -36,6 +37,7 @@ const flatten = (
 const flatEn = flatten(en as LocaleObject);
 const flatRu = flatten(ru as LocaleObject);
 const flatEs = flatten(es as LocaleObject);
+const flatDe = flatten(de as LocaleObject);
 const enKeys = new Set(Object.keys(flatEn));
 const enBaseKeys = new Set([...enKeys].map(baseKey));
 
@@ -71,6 +73,15 @@ describe("locale parity", () => {
     expect(
       orphan,
       `Spanish locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("keeps DE keys inside the EN namespace, modulo plural suffixes", () => {
+    const orphan = findOrphans(flatDe);
+
+    expect(
+      orphan,
+      `German locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
     ).toEqual([]);
   });
 });
