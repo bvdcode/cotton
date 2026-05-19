@@ -38,18 +38,18 @@ jobs:
           --health-retries 5
     steps:
       - name: check repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           lfs: "true"
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: src/cotton.client/.nvmrc
           cache: npm
@@ -72,8 +72,9 @@ jobs:
       - name: Install preview rendering dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg f3d libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0
+          sudo apt-get install -y --no-install-recommends ffmpeg f3d xvfb xauth libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0
           f3d --version
+          xvfb-run --help >/dev/null
           ffmpeg -version
 
       - name: Run backend tests
@@ -81,7 +82,7 @@ jobs:
 
       - name: Upload backend test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: backend-test-results
           path: TestResults/**/*.trx
@@ -111,7 +112,7 @@ jobs:
       packages: write
     steps:
       - name: check repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           lfs: "true"
           fetch-depth: 0

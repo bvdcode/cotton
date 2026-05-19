@@ -377,10 +377,11 @@ namespace Cotton.Previews
             {
                 TryDeleteFile(outputPngPath);
 
+                bool useXvfb = ShouldUseXvfb();
                 using Process process = new();
                 process.StartInfo = new ProcessStartInfo
                 {
-                    FileName = "f3d",
+                    FileName = useXvfb ? "xvfb-run" : "f3d",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -390,6 +391,14 @@ namespace Cotton.Previews
                 process.StartInfo.Environment["LIBGL_ALWAYS_SOFTWARE"] = "1";
                 process.StartInfo.Environment["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe";
                 process.StartInfo.Environment["GALLIUM_DRIVER"] = "llvmpipe";
+
+                if (useXvfb)
+                {
+                    process.StartInfo.ArgumentList.Add("-a");
+                    process.StartInfo.ArgumentList.Add("-s");
+                    process.StartInfo.ArgumentList.Add($"-screen 0 {size}x{size}x24");
+                    process.StartInfo.ArgumentList.Add("f3d");
+                }
 
                 process.StartInfo.ArgumentList.Add("--dry-run");
                 if (includeVerboseArgument)
@@ -421,7 +430,7 @@ namespace Cotton.Previews
                 {
                     return new F3dRenderResult(
                         false,
-                        $"f3d exited with code {process.ExitCode} (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"f3d exited with code {process.ExitCode} (xvfb={useXvfb}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
                 }
 
                 bool hasOutput = File.Exists(outputPngPath) && new FileInfo(outputPngPath).Length > 0;
@@ -429,7 +438,7 @@ namespace Cotton.Previews
                     ? new F3dRenderResult(true, null)
                     : new F3dRenderResult(
                         false,
-                        $"f3d finished successfully but did not produce output file (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
+                        $"f3d finished successfully but did not produce output file (xvfb={useXvfb}, max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}). stdout: {LimitDiagnostic(stdoutTask.Result)} stderr: {LimitDiagnostic(stderrTask.Result)}");
             }
             catch (OperationCanceledException)
             {
@@ -439,6 +448,37 @@ namespace Cotton.Previews
             {
                 return new F3dRenderResult(false, $"f3d render failed (max-size={includeMaxSizeArgument}, no-background={includeNoBackgroundArgument}, verbose={includeVerboseArgument}): {ex.GetType().Name}: {ex.Message}");
             }
+        }
+
+        private static bool ShouldUseXvfb()
+        {
+            if (!OperatingSystem.IsLinux())
+            {
+                return false;
+            }
+
+            return string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DISPLAY"))
+                && IsExecutableOnPath("xvfb-run");
+        }
+
+        private static bool IsExecutableOnPath(string fileName)
+        {
+            string? path = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+
+            foreach (string directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string candidate = Path.Combine(directory, fileName);
+                if (File.Exists(candidate))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string LimitDiagnostic(string? text)
