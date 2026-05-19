@@ -60,6 +60,12 @@ jobs:
         working-directory: src/cotton.client
         run: npm ci
 
+      - name: Install preview rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends f3d libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0
+          f3d --version
+
       - name: Run backend tests
         run: dotnet test src/Cotton.sln --configuration Release --no-restore --logger trx --results-directory TestResults
 
