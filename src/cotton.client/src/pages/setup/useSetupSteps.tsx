@@ -157,8 +157,8 @@ export function useSetupSteps(
               selectedKey = rawValue;
             } else if (def.getDefaultValue && answers[def.key] === undefined) {
               // Set default value on first render
-              const defaultValue = def.getDefaultValue();
-              const defaultOption = options.find(opt => opt.value === defaultValue);
+              const initialValue = def.getDefaultValue();
+              const defaultOption = options.find(opt => opt.value === initialValue);
               if (defaultOption) {
                 selectedKey = defaultOption.key;
                 updateAnswer(def.key, selectedKey);

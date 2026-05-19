@@ -33,9 +33,7 @@ export const useAdminUsersColumns = ({
     };
   }, [t]);
 
-  const storageUsageCalculatingLabel = t("users.storageUsage.calculating", {
-    defaultValue: "Calculating storage usage",
-  });
+  const storageUsageCalculatingLabel = t("users.storageUsage.calculating");
 
   return useMemo(
     () => [

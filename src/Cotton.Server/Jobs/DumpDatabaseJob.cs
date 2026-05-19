@@ -195,10 +195,10 @@ namespace Cotton.Server.Jobs
             }
         }
 
-        private string GetConfigOrDefault(string key, string defaultValue)
+        private string GetConfigOrDefault(string key, string fallbackValue)
         {
             string? value = _configuration[key];
-            return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
+            return string.IsNullOrWhiteSpace(value) ? fallbackValue : value;
         }
 
         private sealed record DumpUploadResult(

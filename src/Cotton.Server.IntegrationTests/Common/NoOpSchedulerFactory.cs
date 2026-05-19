@@ -57,19 +57,19 @@ public class SchedulerDispatchProxy : DispatchProxy
         {
             Type genericType = returnType.GetGenericTypeDefinition();
             Type genericArgument = returnType.GetGenericArguments()[0];
-            object? defaultValue = GetDefaultValue(genericArgument);
+            object? fallbackValue = GetDefaultValue(genericArgument);
 
             if (genericType == typeof(Task<>))
             {
                 MethodInfo fromResultMethod = typeof(Task)
                     .GetMethod(nameof(Task.FromResult))!
                     .MakeGenericMethod(genericArgument);
-                return fromResultMethod.Invoke(null, [defaultValue]);
+                return fromResultMethod.Invoke(null, [fallbackValue]);
             }
 
             if (genericType == typeof(ValueTask<>))
             {
-                return Activator.CreateInstance(returnType, defaultValue);
+                return Activator.CreateInstance(returnType, fallbackValue);
             }
         }
 

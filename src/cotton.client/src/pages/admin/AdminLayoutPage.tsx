@@ -62,41 +62,31 @@ export const AdminLayoutPage = () => {
     {
       id: "groups",
       to: "/admin/groups",
-      title: t("menu.groups", {
-        defaultValue: "Groups",
-      }),
+      title: t("menu.groups"),
       icon: <GroupsIcon />,
     },
     {
       id: "privacySettings",
       to: "/admin/privacy-settings",
-      title: t("menu.privacySettings", {
-        defaultValue: "Privacy and security",
-      }),
+      title: t("menu.privacySettings"),
       icon: <ShieldIcon />,
     },
     {
       id: "securityDiagnostics",
       to: "/admin/security",
-      title: t("menu.securityDiagnostics", {
-        defaultValue: "Security checkup",
-      }),
+      title: t("menu.securityDiagnostics"),
       icon: <SecurityIcon />,
     },
     {
       id: "notificationsSettings",
       to: "/admin/notifications-settings",
-      title: t("menu.notificationsSettings", { defaultValue: "Notifications" }),
+      title: t("menu.notificationsSettings"),
       icon: <NotificationsActiveIcon />,
     },
     {
       id: "storage",
       to: "/admin/storage-statistics",
-      title: t("menu.storageAndStatistics", {
-        defaultValue: t("menu.storageStatistics", {
-          defaultValue: "Storage",
-        }),
-      }),
+      title: t("menu.storageAndStatistics"),
       icon: <StorageIcon />,
       activePaths: ["/admin/storage-statistics", "/admin/storage-settings"],
     },

@@ -1502,7 +1502,8 @@
       "notificationsSettings": "Notifications",
       "databaseBackup": "Database backup",
       "storageStatistics": "Storage statistics",
-      "securityDiagnostics": "Security checkup"
+      "securityDiagnostics": "Security checkup",
+      "groups": "Groups"
     },
     "roles": {
       "user": "User",
@@ -1553,6 +1554,9 @@
         "save": "Save",
         "saving": "Saving...",
         "success": "User updated."
+      },
+      "storageUsage": {
+        "calculating": "Calculating storage usage"
       }
     },
     "settings": {
@@ -1728,7 +1732,8 @@
         "saveSmtp": "Save SMTP config",
         "testSmtp": "Test SMTP",
         "saveMode": "Save email mode",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "testSmtpShort": "Test"
       },
       "state": {
         "smtpSaved": "SMTP configuration saved.",
@@ -1914,6 +1919,11 @@
         "running-as-root": "Remote code execution would run as root inside the container, which increases damage against mounted volumes and helper processes.",
         "process-hardening-failed": "Cotton requested process hardening, but the process still started without the expected dump or ptrace protection."
       }
+    },
+    "groups": {
+      "title": "Groups",
+      "description": "Manage access groups separately from individual users.",
+      "inDevelopment": "Group management is in development."
     }
   },
   "routes": {

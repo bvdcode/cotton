@@ -10,18 +10,13 @@ export const AdminGroupsPage = () => {
       <AdminPageSurface>
         <Stack p={3} spacing={2}>
           <Typography variant="h5" fontWeight={700}>
-            {t("groups.title", { defaultValue: "Groups" })}
+            {t("groups.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t("groups.description", {
-              defaultValue:
-                "Manage access groups separately from individual users.",
-            })}
+            {t("groups.description")}
           </Typography>
           <Alert severity="info">
-            {t("groups.inDevelopment", {
-              defaultValue: "Group management is in development.",
-            })}
+            {t("groups.inDevelopment")}
           </Alert>
         </Stack>
       </AdminPageSurface>

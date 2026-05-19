@@ -1550,7 +1550,13 @@
       "users": "Пользователи",
       "databaseBackup": "Бэкап базы данных",
       "storageStatistics": "Статистика хранилища",
-      "securityDiagnostics": "Проверка безопасности"
+      "securityDiagnostics": "Проверка безопасности",
+      "groups": "Группы",
+      "generalSettings": "Основные настройки",
+      "privacySettings": "Приватность и безопасность",
+      "storageSettings": "Хранилище",
+      "storageAndStatistics": "Хранилище и статистика",
+      "notificationsSettings": "Уведомления"
     },
     "roles": {
       "user": "Пользователь",
@@ -1601,6 +1607,9 @@
         "save": "Сохранить",
         "saving": "Сохранение...",
         "success": "Пользователь обновлён."
+      },
+      "storageUsage": {
+        "calculating": "Подсчёт занятого места"
       }
     },
     "databaseBackup": {
@@ -1774,6 +1783,32 @@
         "seccomp-disabled": "Поверхность syscall ядра шире, чем в обычном Docker production baseline, поэтому container escape багу проще развернуться.",
         "running-as-root": "RCE будет выполняться как root внутри контейнера, что увеличивает ущерб для примонтированных volume и вспомогательных процессов.",
         "process-hardening-failed": "Cotton запросил hardening процесса, но процесс стартовал без ожидаемой защиты от dump или ptrace."
+      }
+    },
+    "groups": {
+      "title": "Группы",
+      "description": "Управляйте группами доступа отдельно от отдельных пользователей.",
+      "inDevelopment": "Управление группами в разработке."
+    },
+    "notificationsSettings": {
+      "actions": {
+        "testSmtpShort": "Проверить"
+      },
+      "state": {
+        "testSent": "Тестовое письмо отправлено."
+      },
+      "errors": {
+        "testFailed": "Не удалось отправить тестовое письмо."
+      }
+    },
+    "settings": {
+      "general": {
+        "actions": {
+          "testGeoIpProvider": "Проверить провайдера"
+        },
+        "state": {
+          "geoIpTestPassed": "Проверка кастомного resolver прошла успешно."
+        }
       }
     }
   },

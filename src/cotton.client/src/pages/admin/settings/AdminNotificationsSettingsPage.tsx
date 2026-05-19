@@ -177,9 +177,7 @@ export const AdminNotificationsSettingsPage = () => {
     try {
       await settingsApi.testEmailConfig();
       toast.success(
-        t("notificationsSettings.state.testSent", {
-          defaultValue: "Test email sent.",
-        }),
+        t("notificationsSettings.state.testSent"),
         {
           toastId: "admin-notifications-settings:smtp-test:sent",
         },
@@ -187,9 +185,7 @@ export const AdminNotificationsSettingsPage = () => {
     } catch (error) {
       showApiErrorToast(
         error,
-        t("notificationsSettings.errors.testFailed", {
-          defaultValue: "Failed to send test email.",
-        }),
+        t("notificationsSettings.errors.testFailed"),
         "admin-notifications-settings:smtp-test:failed",
       );
     } finally {

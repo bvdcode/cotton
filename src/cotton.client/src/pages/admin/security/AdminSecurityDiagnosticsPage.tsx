@@ -26,28 +26,18 @@ import type {
 } from "../../../shared/api/adminApi";
 import { AdminPageSurface } from "../components/AdminPageSurface";
 
-const threatVectorDefaults: Record<string, string> = {
-  "public-instance":
-    "Internet visitors can create accounts and store content. Quotas, default demo data, and abuse monitoring become part of the security boundary.",
-  "master-key-from-environment":
-    "If deployment metadata, shell history, or container inspection exposes environment variables, the master key may sit close to the encrypted data it protects.",
-  "admins-without-2fa":
-    "An admin password becomes the only factor. Password reuse, phishing, or leaked browser sessions can turn into full instance control.",
-  "dotnet-diagnostics-enabled":
-    "A local process with enough rights can ask the .NET runtime for dumps or traces, and those dumps may contain live secrets from memory.",
-  "process-dumpable":
-    "A same-UID process or ptrace-capable debugger can dump the server memory and search for the in-memory master key.",
-  "sys-ptrace-capability":
-    "A debug or privileged container can inspect and alter process memory. That is exactly the capability memory-only keys try to avoid.",
-  "new-privileges-allowed":
-    "If compromised code finds a setuid helper or capability-bearing binary, it has a wider path to gain privileges inside the container.",
-  "seccomp-disabled":
-    "The kernel syscall surface is wider than Docker's normal production baseline, so a container escape bug gets more room to breathe.",
-  "running-as-root":
-    "Remote code execution would run as root inside the container, which increases damage against mounted volumes and helper processes.",
-  "process-hardening-failed":
-    "Cotton requested process hardening, but the process still started without the expected dump or ptrace protection.",
-};
+const knownThreatVectorCodes = new Set([
+  "public-instance",
+  "master-key-from-environment",
+  "admins-without-2fa",
+  "dotnet-diagnostics-enabled",
+  "process-dumpable",
+  "sys-ptrace-capability",
+  "new-privileges-allowed",
+  "seccomp-disabled",
+  "running-as-root",
+  "process-hardening-failed",
+]);
 
 interface SecurityLevel {
   title: string;
@@ -64,64 +54,39 @@ const getSecurityLevel = (
 
   if (normalizedScore >= 9) {
     return {
-      title: t("securityDiagnostics.levels.strong.title", {
-        defaultValue: "Strong posture",
-      }),
-      summary: t("securityDiagnostics.levels.strong.summary", {
-        defaultValue:
-          "This instance has the expected production hardening. It is a good fit for public exposure when you also trust the host and backups.",
-      }),
+      title: t("securityDiagnostics.levels.strong.title"),
+      summary: t("securityDiagnostics.levels.strong.summary"),
       color: "success",
     };
   }
 
   if (normalizedScore >= 7) {
     return {
-      title: t("securityDiagnostics.levels.good.title", {
-        defaultValue: "Good self-hosted baseline",
-      }),
-      summary: t("securityDiagnostics.levels.good.summary", {
-        defaultValue:
-          "This is good for a family or small team. The remaining items are mostly operational hardening and account hygiene.",
-      }),
+      title: t("securityDiagnostics.levels.good.title"),
+      summary: t("securityDiagnostics.levels.good.summary"),
       color: "success",
     };
   }
 
   if (normalizedScore >= 5) {
     return {
-      title: t("securityDiagnostics.levels.home.title", {
-        defaultValue: "Home-use baseline",
-      }),
-      summary: t("securityDiagnostics.levels.home.summary", {
-        defaultValue:
-          "This is reasonable for home and daily use, but do not treat the host as hostile. A server compromise may still expose keys or admin access.",
-      }),
+      title: t("securityDiagnostics.levels.home.title"),
+      summary: t("securityDiagnostics.levels.home.summary"),
       color: "warning",
     };
   }
 
   if (normalizedScore >= 3) {
     return {
-      title: t("securityDiagnostics.levels.exposed.title", {
-        defaultValue: "Practical attack paths remain",
-      }),
-      summary: t("securityDiagnostics.levels.exposed.summary", {
-        defaultValue:
-          "The instance has issues that a local attacker, compromised container, or stolen admin password could realistically use.",
-      }),
+      title: t("securityDiagnostics.levels.exposed.title"),
+      summary: t("securityDiagnostics.levels.exposed.summary"),
       color: "warning",
     };
   }
 
   return {
-    title: t("securityDiagnostics.levels.unsafe.title", {
-      defaultValue: "Unsafe for sensitive data",
-    }),
-    summary: t("securityDiagnostics.levels.unsafe.summary", {
-      defaultValue:
-        "Fix the critical warnings before storing valuable private data. At this level, the master key or admin control may be too easy to reach.",
-    }),
+    title: t("securityDiagnostics.levels.unsafe.title"),
+    summary: t("securityDiagnostics.levels.unsafe.summary"),
     color: "error",
   };
 };
@@ -145,36 +110,30 @@ const getSeverityLabel = (
   t: TFunction<"admin">,
 ) => {
   if (severity === "critical") {
-    return t("securityDiagnostics.severity.critical", {
-      defaultValue: "Critical",
-    });
+    return t("securityDiagnostics.severity.critical");
   }
 
   if (severity === "warning") {
-    return t("securityDiagnostics.severity.warning", {
-      defaultValue: "Warning",
-    });
+    return t("securityDiagnostics.severity.warning");
   }
 
-  return t("securityDiagnostics.severity.info", {
-    defaultValue: "Info",
-  });
+  return t("securityDiagnostics.severity.info");
 };
 
 const getThreatVector = (
   warning: SecurityDiagnosticWarningDto,
   t: TFunction<"admin">,
 ) =>
-  t(`securityDiagnostics.threatVectors.${warning.code}`, {
-    defaultValue: threatVectorDefaults[warning.code] ?? warning.message,
-  });
+  knownThreatVectorCodes.has(warning.code)
+    ? t(`securityDiagnostics.threatVectors.${warning.code}`)
+    : warning.message;
 
 const formatNullable = (
   value: string | number | boolean | null | undefined,
   t: TFunction<"admin">,
 ) =>
   value === null || value === undefined || value === ""
-    ? t("securityDiagnostics.values.unknown", { defaultValue: "Unknown" })
+    ? t("securityDiagnostics.values.unknown")
     : String(value);
 
 const yesNo = (
@@ -182,12 +141,12 @@ const yesNo = (
   t: TFunction<"admin">,
 ) => {
   if (value === null || value === undefined) {
-    return t("securityDiagnostics.values.unknown", { defaultValue: "Unknown" });
+    return t("securityDiagnostics.values.unknown");
   }
 
   return value
-    ? t("securityDiagnostics.values.yes", { defaultValue: "Yes" })
-    : t("securityDiagnostics.values.no", { defaultValue: "No" });
+    ? t("securityDiagnostics.values.yes")
+    : t("securityDiagnostics.values.no");
 };
 
 const getDumpableLabel = (
@@ -195,15 +154,11 @@ const getDumpableLabel = (
   t: TFunction<"admin">,
 ) => {
   if (linuxProcess.dumpable === 0) {
-    return t("securityDiagnostics.values.notDumpable", {
-      defaultValue: "Not dumpable",
-    });
+    return t("securityDiagnostics.values.notDumpable");
   }
 
   if (linuxProcess.dumpable === 1) {
-    return t("securityDiagnostics.values.dumpable", {
-      defaultValue: "Dumpable",
-    });
+    return t("securityDiagnostics.values.dumpable");
   }
 
   return formatNullable(linuxProcess.dumpable, t);
@@ -303,12 +258,8 @@ const SecurityDiagnosticsContent = ({
             color={diagnostics.isPublicInstance ? "warning" : "success"}
             label={
               diagnostics.isPublicInstance
-                ? t("securityDiagnostics.chips.publicInstance", {
-                    defaultValue: "Public instance",
-                  })
-                : t("securityDiagnostics.chips.privateInstance", {
-                    defaultValue: "Private instance",
-                  })
+                ? t("securityDiagnostics.chips.publicInstance")
+                : t("securityDiagnostics.chips.privateInstance")
             }
           />
           <Chip
@@ -320,12 +271,8 @@ const SecurityDiagnosticsContent = ({
             }
             label={
               diagnostics.masterKeyEnvironmentVariableWasConfigured
-                ? t("securityDiagnostics.chips.envKey", {
-                    defaultValue: "Key from environment",
-                  })
-                : t("securityDiagnostics.chips.memoryUnlock", {
-                    defaultValue: "Memory unlock",
-                  })
+                ? t("securityDiagnostics.chips.envKey")
+                : t("securityDiagnostics.chips.memoryUnlock")
             }
           />
           <Chip
@@ -336,7 +283,6 @@ const SecurityDiagnosticsContent = ({
                 : "success"
             }
             label={t("securityDiagnostics.chips.adminTotp", {
-              defaultValue: "{{withTotp}}/{{total}} admins have 2FA",
               withTotp: diagnostics.adminTotp.adminsWithTotp,
               total: diagnostics.adminTotp.adminCount,
             })}
@@ -345,9 +291,7 @@ const SecurityDiagnosticsContent = ({
       </Stack>
 
       <DiagnosticsSection
-        title={t("securityDiagnostics.sections.risks", {
-          defaultValue: "Threat vectors",
-        })}
+        title={t("securityDiagnostics.sections.risks")}
       >
         {hasWarnings ? (
           diagnostics.warnings.map((warning) => (
@@ -382,30 +326,21 @@ const SecurityDiagnosticsContent = ({
           ))
         ) : (
           <Alert severity="success">
-            {t("securityDiagnostics.risks.empty", {
-              defaultValue:
-                "No warnings were detected by the current server-side checks.",
-            })}
+            {t("securityDiagnostics.risks.empty")}
           </Alert>
         )}
       </DiagnosticsSection>
 
       <DiagnosticsSection
-        title={t("securityDiagnostics.sections.instance", {
-          defaultValue: "Instance and accounts",
-        })}
+        title={t("securityDiagnostics.sections.instance")}
       >
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.publicInstance", {
-            defaultValue: "Public registration",
-          })}
+          label={t("securityDiagnostics.fields.publicInstance")}
           value={yesNo(diagnostics.isPublicInstance, t)}
           color={diagnostics.isPublicInstance ? "warning" : "success"}
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.admins", {
-            defaultValue: "Admins with 2FA",
-          })}
+          label={t("securityDiagnostics.fields.admins")}
           value={`${diagnostics.adminTotp.adminsWithTotp}/${diagnostics.adminTotp.adminCount}`}
           color={
             diagnostics.adminTotp.adminsWithoutTotp > 0
@@ -414,9 +349,7 @@ const SecurityDiagnosticsContent = ({
           }
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.adminsWithoutTotp", {
-            defaultValue: "Admins without 2FA",
-          })}
+          label={t("securityDiagnostics.fields.adminsWithoutTotp")}
           value={String(diagnostics.adminTotp.adminsWithoutTotp)}
           color={
             diagnostics.adminTotp.adminsWithoutTotp > 0 ? "warning" : "success"
@@ -425,14 +358,10 @@ const SecurityDiagnosticsContent = ({
       </DiagnosticsSection>
 
       <DiagnosticsSection
-        title={t("securityDiagnostics.sections.masterKey", {
-          defaultValue: "Master key",
-        })}
+        title={t("securityDiagnostics.sections.masterKey")}
       >
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.masterKeySource", {
-            defaultValue: "Source",
-          })}
+          label={t("securityDiagnostics.fields.masterKeySource")}
           value={formatNullable(diagnostics.masterKeySource, t)}
           color={
             diagnostics.masterKeyEnvironmentVariableWasConfigured
@@ -441,9 +370,7 @@ const SecurityDiagnosticsContent = ({
           }
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.envWasConfigured", {
-            defaultValue: "Environment variable configured",
-          })}
+          label={t("securityDiagnostics.fields.envWasConfigured")}
           value={yesNo(
             diagnostics.masterKeyEnvironmentVariableWasConfigured,
             t,
@@ -455,9 +382,7 @@ const SecurityDiagnosticsContent = ({
           }
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.envPresent", {
-            defaultValue: "Environment variable still present",
-          })}
+          label={t("securityDiagnostics.fields.envPresent")}
           value={yesNo(
             diagnostics.masterKeyEnvironmentVariablePresentInProcess,
             t,
@@ -471,37 +396,27 @@ const SecurityDiagnosticsContent = ({
       </DiagnosticsSection>
 
       <DiagnosticsSection
-        title={t("securityDiagnostics.sections.memory", {
-          defaultValue: "Process memory exposure",
-        })}
+        title={t("securityDiagnostics.sections.memory")}
       >
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.dotnetDiagnostics", {
-            defaultValue: ".NET diagnostics disabled",
-          })}
+          label={t("securityDiagnostics.fields.dotnetDiagnostics")}
           value={yesNo(diagnostics.dotNetDiagnostics.disabled, t)}
           color={diagnostics.dotNetDiagnostics.disabled ? "success" : "warning"}
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.processHardening", {
-            defaultValue: "Process hardening applied",
-          })}
+          label={t("securityDiagnostics.fields.processHardening")}
           value={yesNo(diagnostics.linuxProcess.hardeningApplied, t)}
           color={
             diagnostics.linuxProcess.hardeningApplied ? "success" : "warning"
           }
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.dumpable", {
-            defaultValue: "Dumpable state",
-          })}
+          label={t("securityDiagnostics.fields.dumpable")}
           value={getDumpableLabel(diagnostics.linuxProcess, t)}
           color={diagnostics.linuxProcess.dumpable === 0 ? "success" : "warning"}
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.sysPtrace", {
-            defaultValue: "CAP_SYS_PTRACE",
-          })}
+          label={t("securityDiagnostics.fields.sysPtrace")}
           value={yesNo(diagnostics.linuxProcess.hasSysPtraceCapability, t)}
           color={
             diagnostics.linuxProcess.hasSysPtraceCapability
@@ -512,26 +427,18 @@ const SecurityDiagnosticsContent = ({
       </DiagnosticsSection>
 
       <DiagnosticsSection
-        title={t("securityDiagnostics.sections.runtime", {
-          defaultValue: "Runtime facts",
-        })}
+        title={t("securityDiagnostics.sections.runtime")}
       >
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.os", {
-            defaultValue: "Operating system",
-          })}
+          label={t("securityDiagnostics.fields.os")}
           value={diagnostics.operatingSystem}
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.container", {
-            defaultValue: "Container detected",
-          })}
+          label={t("securityDiagnostics.fields.container")}
           value={yesNo(diagnostics.isContainer, t)}
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.euid", {
-            defaultValue: "Effective UID",
-          })}
+          label={t("securityDiagnostics.fields.euid")}
           value={formatNullable(
             diagnostics.linuxProcess.effectiveUserId,
             t,
@@ -543,9 +450,7 @@ const SecurityDiagnosticsContent = ({
           }
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.noNewPrivileges", {
-            defaultValue: "No new privileges",
-          })}
+          label={t("securityDiagnostics.fields.noNewPrivileges")}
           value={formatNullable(
             diagnostics.linuxProcess.noNewPrivileges,
             t,
@@ -557,18 +462,14 @@ const SecurityDiagnosticsContent = ({
           }
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.seccomp", {
-            defaultValue: "Seccomp mode",
-          })}
+          label={t("securityDiagnostics.fields.seccomp")}
           value={formatNullable(diagnostics.linuxProcess.seccompMode, t)}
           color={
             diagnostics.linuxProcess.seccompMode === 0 ? "warning" : "success"
           }
         />
         <DiagnosticsRow
-          label={t("securityDiagnostics.fields.capabilities", {
-            defaultValue: "Effective capabilities",
-          })}
+          label={t("securityDiagnostics.fields.capabilities")}
           value={formatNullable(
             diagnostics.linuxProcess.effectiveCapabilitiesHex,
             t,
@@ -584,9 +485,7 @@ export const AdminSecurityDiagnosticsPage = () => {
   const diagnosticsQuery = useSecurityDiagnosticsQuery();
   const loadError = diagnosticsQuery.isError
     ? getApiErrorMessage(diagnosticsQuery.error) ??
-      t("securityDiagnostics.errors.loadFailed", {
-        defaultValue: "Failed to load security diagnostics.",
-      })
+      t("securityDiagnostics.errors.loadFailed")
     : null;
 
   return (
@@ -597,15 +496,10 @@ export const AdminSecurityDiagnosticsPage = () => {
             <SecurityIcon color="primary" />
             <Stack spacing={0.5}>
               <Typography variant="h5" fontWeight={700}>
-                {t("securityDiagnostics.title", {
-                  defaultValue: "Security checkup",
-                })}
+                {t("securityDiagnostics.title")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t("securityDiagnostics.description", {
-                  defaultValue:
-                    "Server-side checks for account hygiene, master-key handling, and process-memory exposure.",
-                })}
+                {t("securityDiagnostics.description")}
               </Typography>
             </Stack>
           </Stack>

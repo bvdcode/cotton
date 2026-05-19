@@ -1518,7 +1518,13 @@
       "users": "Usuarios",
       "databaseBackup": "Respaldo de base de datos",
       "storageStatistics": "Estadísticas de almacenamiento",
-      "securityDiagnostics": "Revisión de seguridad"
+      "securityDiagnostics": "Revisión de seguridad",
+      "groups": "Grupos",
+      "generalSettings": "Ajustes generales",
+      "privacySettings": "Privacidad y seguridad",
+      "storageSettings": "Almacenamiento",
+      "storageAndStatistics": "Almacenamiento y estadísticas",
+      "notificationsSettings": "Notificaciones"
     },
     "roles": {
       "user": "Usuario",
@@ -1569,6 +1575,9 @@
         "save": "Guardar",
         "saving": "Guardando...",
         "success": "Usuario actualizado."
+      },
+      "storageUsage": {
+        "calculating": "Calculando uso de almacenamiento"
       }
     },
     "databaseBackup": {
@@ -1742,6 +1751,32 @@
         "seccomp-disabled": "La superficie de syscalls del kernel es más amplia que el baseline normal de Docker en producción, así que un bug de escape de contenedor tiene más espacio.",
         "running-as-root": "Una RCE se ejecutaría como root dentro del contenedor, aumentando el daño contra volúmenes montados y procesos auxiliares.",
         "process-hardening-failed": "Cotton pidió endurecimiento del proceso, pero el proceso arrancó sin la protección esperada contra dump o ptrace."
+      }
+    },
+    "groups": {
+      "title": "Grupos",
+      "description": "Gestiona grupos de acceso separados de usuarios individuales.",
+      "inDevelopment": "La gestión de grupos está en desarrollo."
+    },
+    "notificationsSettings": {
+      "actions": {
+        "testSmtpShort": "Probar"
+      },
+      "state": {
+        "testSent": "Correo de prueba enviado."
+      },
+      "errors": {
+        "testFailed": "No se pudo enviar el correo de prueba."
+      }
+    },
+    "settings": {
+      "general": {
+        "actions": {
+          "testGeoIpProvider": "Probar proveedor"
+        },
+        "state": {
+          "geoIpTestPassed": "La prueba del resolvedor personalizado pasó."
+        }
       }
     }
   },
