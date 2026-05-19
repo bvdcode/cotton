@@ -539,7 +539,7 @@ export const useFileUpload = (
 
         const readAllEntries = async (): Promise<FileSystemEntry[]> => {
           const allEntries: FileSystemEntry[] = [];
-          let batch: FileSystemEntry[] = [];
+          let batch: FileSystemEntry[];
 
           do {
             batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {

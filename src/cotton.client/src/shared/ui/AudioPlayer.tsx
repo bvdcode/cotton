@@ -48,7 +48,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const playerRef = React.useRef<React.ElementRef<typeof H5AudioPlayer>>(null);
   const urlCacheRef = React.useRef<Map<string, string>>(new Map());
 
-  const currentIndexRef = React.useRef<number>(0);
   const shuffleOrderRef = React.useRef<ReadonlyArray<number> | null>(null);
   const shufflePosRef = React.useRef<number>(0);
 
@@ -62,13 +61,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     return [{ id: currentFileId, name: currentFileName }];
   }, [currentFileId, currentFileName, playlist]);
 
-  const [currentIndex, setCurrentIndex] = React.useState<number>(() =>
-    findIndexById(effectivePlaylist, currentFileId),
-  );
-
-  React.useEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
+  const currentIndex = findIndexById(effectivePlaylist, currentFileId);
 
   const rebuildShuffleOrder = React.useCallback(
     (targetPlaylist: ReadonlyArray<AudioPlaylistItem>, firstIndex: number) => {
@@ -98,10 +91,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     [],
   );
 
-  React.useEffect(() => {
-    const nextIndex = findIndexById(effectivePlaylist, currentFileId);
-    setCurrentIndex((prev) => (prev === nextIndex ? prev : nextIndex));
-  }, [effectivePlaylist, currentFileId]);
 
   React.useEffect(() => {
     if (!shuffleEnabled) {
@@ -212,7 +201,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
       shufflePosRef.current = nextPos;
       const nextIndex = order[nextPos] ?? 0;
-      setCurrentIndex(nextIndex);
       const nextItem = effectivePlaylist[nextIndex];
       if (nextItem) {
         onTrackChange?.(nextItem);
@@ -220,18 +208,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       return;
     }
 
-    const idx = currentIndexRef.current;
-    const nextIndex = idx > 0 ? idx - 1 : idx;
-    if (nextIndex === idx) {
+    const nextIndex = safeIndex > 0 ? safeIndex - 1 : safeIndex;
+    if (nextIndex === safeIndex) {
       return;
     }
 
-    setCurrentIndex(nextIndex);
     const nextItem = effectivePlaylist[nextIndex];
     if (nextItem) {
       onTrackChange?.(nextItem);
     }
-  }, [effectivePlaylist, onTrackChange, shuffleEnabled]);
+  }, [effectivePlaylist, onTrackChange, safeIndex, shuffleEnabled]);
 
   const handleNext = React.useCallback(() => {
     if (shuffleEnabled && shuffleOrderRef.current) {
@@ -244,7 +230,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
       shufflePosRef.current = nextPos;
       const nextIndex = order[nextPos] ?? 0;
-      setCurrentIndex(nextIndex);
       const nextItem = effectivePlaylist[nextIndex];
       if (nextItem) {
         onTrackChange?.(nextItem);
@@ -252,18 +237,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       return;
     }
 
-    const idx = currentIndexRef.current;
-    const nextIndex = idx + 1 < effectivePlaylist.length ? idx + 1 : idx;
-    if (nextIndex === idx) {
+    const nextIndex = safeIndex + 1 < effectivePlaylist.length ? safeIndex + 1 : safeIndex;
+    if (nextIndex === safeIndex) {
       return;
     }
 
-    setCurrentIndex(nextIndex);
     const nextItem = effectivePlaylist[nextIndex];
     if (nextItem) {
       onTrackChange?.(nextItem);
     }
-  }, [effectivePlaylist, onTrackChange, shuffleEnabled]);
+  }, [effectivePlaylist, onTrackChange, safeIndex, shuffleEnabled]);
 
   const handleEnded = React.useCallback(() => {
     if (shuffleEnabled && shuffleOrderRef.current) {
@@ -276,7 +259,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
       shufflePosRef.current = nextPos;
       const nextIndex = order[nextPos] ?? 0;
-      setCurrentIndex(nextIndex);
       const nextItem = effectivePlaylist[nextIndex];
       if (nextItem) {
         onTrackChange?.(nextItem);
@@ -284,18 +266,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       return;
     }
 
-    const idx = currentIndexRef.current;
-    const nextIndex = idx + 1 < effectivePlaylist.length ? idx + 1 : idx;
-    if (nextIndex === idx) {
+    const nextIndex = safeIndex + 1 < effectivePlaylist.length ? safeIndex + 1 : safeIndex;
+    if (nextIndex === safeIndex) {
       return;
     }
 
-    setCurrentIndex(nextIndex);
     const nextItem = effectivePlaylist[nextIndex];
     if (nextItem) {
       onTrackChange?.(nextItem);
     }
-  }, [effectivePlaylist, onTrackChange, shuffleEnabled]);
+  }, [effectivePlaylist, onTrackChange, safeIndex, shuffleEnabled]);
 
   return (
     <Box

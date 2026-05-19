@@ -68,7 +68,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
   contentType,
   contentLength,
 }) => {
-  const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
+  const [closedLightboxKey, setClosedLightboxKey] = React.useState<string | null>(null);
   const smoothGalleryTransitions = useUserPreferencesStore(
     selectGallerySmoothTransitions,
   );
@@ -78,13 +78,11 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
     return getFileTypeInfo(name, contentType);
   }, [contentType, fileName]);
 
-  React.useEffect(() => {
-    if (fileTypeInfo.type === "image" || fileTypeInfo.type === "video") {
-      setLightboxOpen(true);
-      return;
-    }
-    setLightboxOpen(false);
-  }, [fileTypeInfo.type]);
+  const lightboxKey = [token, fileTypeInfo.type].join(":");
+  const lightboxOpen = closedLightboxKey !== lightboxKey;
+  const reopenLightbox = React.useCallback(() => {
+    setClosedLightboxKey(null);
+  }, []);
 
   if (fileTypeInfo.type !== "image" && fileTypeInfo.type !== "video") {
     return null;
@@ -105,7 +103,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
         items={[item]}
         open={lightboxOpen}
         initialIndex={0}
-        onClose={() => setLightboxOpen(false)}
+        onClose={() => setClosedLightboxKey(lightboxKey)}
         getSignedMediaUrl={async () => inlineUrl}
         getDownloadUrl={downloadUrl ? async () => downloadUrl : undefined}
         smoothTransitions={smoothGalleryTransitions}
@@ -135,7 +133,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
                 component="img"
                 src={inlineUrl}
                 alt={fileName ?? ""}
-                onClick={() => setLightboxOpen(true)}
+                onClick={reopenLightbox}
                 sx={{
                   width: "100%",
                   maxHeight: "100%",
@@ -149,7 +147,7 @@ const ShareMediaViewer: React.FC<ShareMediaViewerProps> = ({
                 component="video"
                 src={inlineUrl}
                 controls
-                onPlay={() => setLightboxOpen(true)}
+                onPlay={reopenLightbox}
                 sx={{ width: "100%", maxHeight: "100%", display: "block" }}
               />
             )}

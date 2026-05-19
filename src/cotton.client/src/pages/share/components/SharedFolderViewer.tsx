@@ -30,6 +30,37 @@ interface BreadcrumbNode {
   name: string;
 }
 
+type BreadcrumbState = {
+  rootNodeId: Guid;
+  rootName: string;
+  breadcrumbs: BreadcrumbNode[];
+};
+
+type SharedFolderContentState = {
+  nodeId: Guid | null;
+  content: SharedNodeContentDto | null;
+  loading: boolean;
+  loadError: string | null;
+};
+
+const createRootBreadcrumbState = (
+  rootNodeId: Guid,
+  rootName: string,
+): BreadcrumbState => ({
+  rootNodeId,
+  rootName,
+  breadcrumbs: [{ id: rootNodeId, name: rootName }],
+});
+
+const createPendingContentState = (
+  nodeId: Guid | null,
+): SharedFolderContentState => ({
+  nodeId,
+  content: null,
+  loading: nodeId !== null,
+  loadError: null,
+});
+
 interface SharedFolderViewerProps {
   token: string;
   rootNodeId: Guid;
@@ -42,51 +73,68 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   rootName,
 }) => {
   const { t } = useTranslation(["share", "common"]);
-  const [breadcrumbs, setBreadcrumbs] = React.useState<BreadcrumbNode[]>([]);
-  const [content, setContent] = React.useState<SharedNodeContentDto | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const rootBreadcrumbs = React.useMemo<BreadcrumbNode[]>(
+    () => [{ id: rootNodeId, name: rootName }],
+    [rootName, rootNodeId],
+  );
+  const [breadcrumbState, setBreadcrumbState] =
+    React.useState<BreadcrumbState>(() =>
+      createRootBreadcrumbState(rootNodeId, rootName),
+    );
+  const breadcrumbs =
+    breadcrumbState.rootNodeId === rootNodeId &&
+    breadcrumbState.rootName === rootName
+      ? breadcrumbState.breadcrumbs
+      : rootBreadcrumbs;
+  const [contentState, setContentState] =
+    React.useState<SharedFolderContentState>(() =>
+      createPendingContentState(rootNodeId),
+    );
   const [layoutType, setLayoutType] = React.useState<InterfaceLayoutType>(InterfaceLayoutType.Tiles);
   const [tilesSize, setTilesSize] = React.useState<TilesSize>("medium");
   const [lightboxOpen, setLightboxOpen] = React.useState<boolean>(false);
   const [lightboxIndex, setLightboxIndex] = React.useState<number>(0);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
-  React.useEffect(() => {
-    setBreadcrumbs([{ id: rootNodeId, name: rootName }]);
-  }, [rootNodeId, rootName]);
-
   const currentNode = React.useMemo(
     () => breadcrumbs[breadcrumbs.length - 1] ?? null,
     [breadcrumbs],
   );
+  const effectiveContentState =
+    contentState.nodeId === (currentNode?.id ?? null)
+      ? contentState
+      : createPendingContentState(currentNode?.id ?? null);
+  const { content, loading, loadError } = effectiveContentState;
 
   React.useEffect(() => {
     if (!currentNode) return;
 
     let cancelled = false;
-
-    setLoading(true);
-    setLoadError(null);
+    const nodeId = currentNode.id;
 
     void (async () => {
       try {
         const response = await sharedFoldersApi.getChildren(token, {
-          nodeId: currentNode.id,
+          nodeId,
           page: 1,
           pageSize: 1000,
         });
 
         if (cancelled) return;
-        setContent(response.content);
+        setContentState({
+          nodeId,
+          content: response.content,
+          loading: false,
+          loadError: null,
+        });
       } catch {
         if (cancelled) return;
-        setContent(null);
-        setLoadError(t("errors.loadFailed", { ns: "share" }));
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setContentState({
+          nodeId,
+          content: null,
+          loading: false,
+          loadError: t("errors.loadFailed", { ns: "share" }),
+        });
       }
     })();
 
@@ -96,12 +144,30 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   }, [currentNode, t, token]);
 
   const handleOpenFolder = React.useCallback((folderId: Guid, folderName: string) => {
-    setBreadcrumbs((prev) => [...prev, { id: folderId, name: folderName }]);
-  }, []);
+    setBreadcrumbState((current) => {
+      const base =
+        current.rootNodeId === rootNodeId && current.rootName === rootName
+          ? current
+          : createRootBreadcrumbState(rootNodeId, rootName);
+      return {
+        ...base,
+        breadcrumbs: [...base.breadcrumbs, { id: folderId, name: folderName }],
+      };
+    });
+  }, [rootName, rootNodeId]);
 
   const handleNavigateBreadcrumb = React.useCallback((index: number) => {
-    setBreadcrumbs((prev) => prev.slice(0, index + 1));
-  }, []);
+    setBreadcrumbState((current) => {
+      const base =
+        current.rootNodeId === rootNodeId && current.rootName === rootName
+          ? current
+          : createRootBreadcrumbState(rootNodeId, rootName);
+      return {
+        ...base,
+        breadcrumbs: base.breadcrumbs.slice(0, index + 1),
+      };
+    });
+  }, [rootName, rootNodeId]);
 
   const viewMode: FileBrowserViewMode = React.useMemo(
     () => getFileBrowserViewMode(layoutType, tilesSize),

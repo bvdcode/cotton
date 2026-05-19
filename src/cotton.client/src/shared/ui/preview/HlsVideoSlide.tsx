@@ -39,6 +39,21 @@ interface HlsVideoSlideProps {
   errorText: string;
 }
 
+type HlsSlideStatusState = {
+  key: string;
+  noticeVisible: boolean;
+  loadFailed: boolean;
+};
+
+const createHlsSlideStatusState = (
+  key: string,
+  active: boolean,
+): HlsSlideStatusState => ({
+  key,
+  noticeVisible: active,
+  loadFailed: false,
+});
+
 let hlsLoadPromise: Promise<HlsConstructor> | null = null;
 
 function loadHls(): Promise<HlsConstructor> {
@@ -92,26 +107,33 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
   errorText,
 }) => {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
-  const [noticeVisible, setNoticeVisible] = React.useState(false);
-  const [loadFailed, setLoadFailed] = React.useState(false);
+  const statusKey = active ? src : "";
+  const [statusState, setStatusState] = React.useState<HlsSlideStatusState>(
+    () => createHlsSlideStatusState(statusKey, active),
+  );
+  const status =
+    statusState.key === statusKey
+      ? statusState
+      : createHlsSlideStatusState(statusKey, active);
+  const { noticeVisible, loadFailed } = status;
 
   React.useEffect(() => {
     if (!active) {
-      setNoticeVisible(false);
-      setLoadFailed(false);
       return;
     }
 
-    setNoticeVisible(true);
-    setLoadFailed(false);
     const timer = window.setTimeout(() => {
-      setNoticeVisible(false);
+      setStatusState((current) =>
+        current.key === statusKey
+          ? { ...current, noticeVisible: false }
+          : current,
+      );
     }, TRANSCODE_NOTICE_MS);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [active, src]);
+  }, [active, statusKey]);
 
   React.useEffect(() => {
     if (!active) {
@@ -137,7 +159,13 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
         }
 
         if (!cancelled) {
-          setLoadFailed(true);
+          setStatusState((current) => {
+          const base =
+            current.key === statusKey
+              ? current
+              : createHlsSlideStatusState(statusKey, active);
+          return { ...base, loadFailed: true, noticeVisible: false };
+        });
         }
         return;
       }
@@ -151,7 +179,13 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
           videoElement.src = src;
           return;
         }
-        setLoadFailed(true);
+        setStatusState((current) => {
+          const base =
+            current.key === statusKey
+              ? current
+              : createHlsSlideStatusState(statusKey, active);
+          return { ...base, loadFailed: true, noticeVisible: false };
+        });
         return;
       }
 
@@ -178,7 +212,7 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
         mountedVideo.load();
       }
     };
-  }, [src, active]);
+  }, [active, src, statusKey]);
 
   return (
     <div className="media-lightbox__hls-slide">

@@ -7,7 +7,7 @@ import {
   Divider,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { sessionsApi, type SessionDto } from "../../../shared/api/sessionsApi";
 import { SessionItem } from "./SessionItem";
 import { confirm } from "material-ui-confirm";
@@ -21,29 +21,37 @@ export const SessionsCard = () => {
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
 
-  const loadSessions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await sessionsApi.getSessions();
-      // Sort by lastSeenAt descending (most recent first)
-      const sorted = data.sort(
-        (a, b) =>
-          new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime(),
-      );
-      setSessions(sorted);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("sessions.errors.loadFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+    let active = true;
+
+    void (async () => {
+      try {
+        const data = await sessionsApi.getSessions();
+        if (!active) return;
+
+        const sorted = data.sort(
+          (a, b) =>
+            new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime(),
+        );
+        setSessions(sorted);
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+
+        setError(
+          err instanceof Error ? err.message : t("sessions.errors.loadFailed"),
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [t]);
 
   const handleRevokeSession = async (sessionId: string) => {
     confirm({

@@ -47,13 +47,14 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
     return [{ id: nodeFileId, name: fileName }];
   }, [fileName, nodeFileId, playlist]);
 
-  const [currentIndex, setCurrentIndex] = React.useState<number>(() =>
-    findIndexById(effectivePlaylist, nodeFileId),
+  const [selectedFileId, setSelectedFileId] = React.useState<string>(nodeFileId);
+  const selectedFileStillPresent = effectivePlaylist.some(
+    (item) => item.id === selectedFileId,
   );
-
-  React.useEffect(() => {
-    setCurrentIndex(findIndexById(effectivePlaylist, nodeFileId));
-  }, [effectivePlaylist, nodeFileId]);
+  const effectiveSelectedFileId = selectedFileStillPresent
+    ? selectedFileId
+    : nodeFileId;
+  const currentIndex = findIndexById(effectivePlaylist, effectiveSelectedFileId);
 
   const currentItem = effectivePlaylist[currentIndex];
 
@@ -104,21 +105,32 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
 
   const hasPlaylist = effectivePlaylist.length > 1;
 
+  const selectIndex = React.useCallback(
+    (nextIndex: number) => {
+      const nextItem = effectivePlaylist[nextIndex];
+      if (nextItem) {
+        setSelectedFileId(nextItem.id);
+      }
+    },
+    [effectivePlaylist],
+  );
+
   const handlePrevious = React.useCallback(() => {
-    setCurrentIndex((idx) => (idx > 0 ? idx - 1 : idx));
-  }, []);
+    const nextIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
+    selectIndex(nextIndex);
+  }, [currentIndex, selectIndex]);
 
   const handleNext = React.useCallback(() => {
-    setCurrentIndex((idx) =>
-      idx + 1 < effectivePlaylist.length ? idx + 1 : idx,
-    );
-  }, [effectivePlaylist.length]);
+    const nextIndex =
+      currentIndex + 1 < effectivePlaylist.length ? currentIndex + 1 : currentIndex;
+    selectIndex(nextIndex);
+  }, [currentIndex, effectivePlaylist.length, selectIndex]);
 
   const handleEnded = React.useCallback(() => {
-    setCurrentIndex((idx) =>
-      idx + 1 < effectivePlaylist.length ? idx + 1 : idx,
-    );
-  }, [effectivePlaylist.length]);
+    const nextIndex =
+      currentIndex + 1 < effectivePlaylist.length ? currentIndex + 1 : currentIndex;
+    selectIndex(nextIndex);
+  }, [currentIndex, effectivePlaylist.length, selectIndex]);
 
   return (
     <Box

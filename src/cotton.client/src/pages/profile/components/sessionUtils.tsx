@@ -16,28 +16,29 @@ interface TimeComponents {
 }
 
 const parseTimeSpan = (duration: string): TimeComponents => {
-  let days = 0;
-  let hours = 0;
-  let minutes = 0;
-
   // Check if there's a day component (contains a dot before the time part)
   const dayMatch = duration.match(/^(\d+)\.(\d{2}:\d{2}:\d{2})/);
 
   if (dayMatch) {
-    days = parseInt(dayMatch[1], 10);
     const timePart = dayMatch[2];
-    const [h, m] = timePart.split(":");
-    hours = parseInt(h, 10);
-    minutes = parseInt(m, 10);
-  } else {
-    // No day component, just time
-    const timePart = duration.split(".")[0]; // Remove fractional seconds if present
-    const [h, m] = timePart.split(":");
-    hours = parseInt(h, 10) || 0;
-    minutes = parseInt(m, 10) || 0;
+    const [hours, minutes] = timePart.split(":");
+
+    return {
+      days: parseInt(dayMatch[1], 10),
+      hours: parseInt(hours, 10),
+      minutes: parseInt(minutes, 10),
+    };
   }
 
-  return { days, hours, minutes };
+  // No day component, just time
+  const timePart = duration.split(".")[0]; // Remove fractional seconds if present
+  const [hours, minutes] = timePart.split(":");
+
+  return {
+    days: 0,
+    hours: parseInt(hours, 10) || 0,
+    minutes: parseInt(minutes, 10) || 0,
+  };
 };
 
 /**

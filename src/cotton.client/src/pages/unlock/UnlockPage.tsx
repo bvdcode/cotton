@@ -48,8 +48,6 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
 
   useEffect(() => {
     if (initialStatus !== undefined) {
-      setStatus(initialStatus);
-      setLoaded(true);
       return;
     }
 
@@ -77,8 +75,9 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
   }, [initialStatus]);
 
   const requiresBootstrapToken = status?.requiresBootstrapToken === true;
+  const firstUnlockExpiresAtUtc = status?.firstUnlockExpiresAtUtc ?? null;
   const expiresAt = useMemo(() => {
-    if (!status?.firstUnlockExpiresAtUtc) {
+    if (!firstUnlockExpiresAtUtc) {
       return null;
     }
 
@@ -86,11 +85,11 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
       return new Intl.DateTimeFormat(undefined, {
         dateStyle: "medium",
         timeStyle: "medium",
-      }).format(new Date(status.firstUnlockExpiresAtUtc));
+      }).format(new Date(firstUnlockExpiresAtUtc));
     } catch {
-      return status.firstUnlockExpiresAtUtc;
+      return firstUnlockExpiresAtUtc;
     }
-  }, [status?.firstUnlockExpiresAtUtc]);
+  }, [firstUnlockExpiresAtUtc]);
 
   if (loaded && status === null) {
     return <Navigate to="/" replace />;

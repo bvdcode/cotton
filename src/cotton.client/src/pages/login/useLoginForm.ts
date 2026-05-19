@@ -22,7 +22,10 @@ import {
   tryGetTwoFactorHint,
   type ToastSeverity,
 } from "./loginUtils";
-import { getOrCreateDemoCredentials } from "./demoCredentials";
+import {
+  getOrCreateDemoCredentials,
+  type DemoCredentials,
+} from "./demoCredentials";
 
 interface UseLoginFormResult {
   username: string;
@@ -48,9 +51,18 @@ export const useLoginForm = (): UseLoginFormResult => {
   const { t } = useTranslation("login");
   const { setAuthenticated } = useAuth();
   const [searchParams] = useSearchParams();
+  const [initialDemoCredentials] = useState<DemoCredentials | null>(() =>
+    searchParams.get("demo") === "true"
+      ? getOrCreateDemoCredentials(window.localStorage)
+      : null,
+  );
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState(
+    () => initialDemoCredentials?.username ?? "",
+  );
+  const [password, setPassword] = useState(
+    () => initialDemoCredentials?.password ?? "",
+  );
   const [isUsernameBlurred, setIsUsernameBlurred] = useState(false);
   const [trustDevice, setTrustDevice] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
@@ -58,7 +70,6 @@ export const useLoginForm = (): UseLoginFormResult => {
   const [loading, setLoading] = useState(false);
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
   const autoSubmitTriggeredRef = useRef(false);
-  const demoFillRef = useRef(false);
   const demoSubmitRef = useRef(false);
 
   const showToast = useCallback((message: string, severity: ToastSeverity) => {
@@ -179,21 +190,17 @@ export const useLoginForm = (): UseLoginFormResult => {
   }, [username, t, showToast]);
 
   useEffect(() => {
-    if (demoFillRef.current) return;
-    if (searchParams.get("demo") !== "true") return;
-    demoFillRef.current = true;
+    if (!initialDemoCredentials || demoSubmitRef.current) return;
 
-    const credentials = getOrCreateDemoCredentials(window.localStorage);
-    setUsername(credentials.username);
-    setPassword(credentials.password);
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (!demoFillRef.current || demoSubmitRef.current) return;
-    if (username.trim().length === 0 || password.length === 0) return;
     demoSubmitRef.current = true;
-    void submitLogin();
-  }, [username, password, submitLogin]);
+    const handle = window.setTimeout(() => {
+      void submitLogin();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [initialDemoCredentials, submitLogin]);
 
   useEffect(() => {
     if (!requiresTwoFactor) {

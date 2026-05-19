@@ -41,6 +41,35 @@ interface UseModelPreviewStateResult {
   preparedModel: PreparedModelScene | null;
 }
 
+type ModelLoadState = {
+  key: string;
+  hasLoadError: boolean;
+  isLoading: boolean;
+  preparedModel: PreparedModelScene | null;
+};
+
+const createIdleModelLoadState = (key: string): ModelLoadState => ({
+  key,
+  hasLoadError: false,
+  isLoading: false,
+  preparedModel: null,
+});
+
+const createLoadingModelLoadState = (key: string): ModelLoadState => ({
+  key,
+  hasLoadError: false,
+  isLoading: true,
+  preparedModel: null,
+});
+
+const buildModelLoadKey = (
+  modelFormat: ModelFormat | null,
+  sourceKey: string,
+  qualityMode: PreviewQualityMode,
+): string => {
+  return modelFormat ? [modelFormat, sourceKey, qualityMode].join("\u0000") : "";
+};
+
 export const useModelPreviewState = ({
   autoAlignToken,
   autoOrientToken,
@@ -53,9 +82,19 @@ export const useModelPreviewState = ({
   shadowsEnabled,
   surfacePreset,
 }: UseModelPreviewStateParams): UseModelPreviewStateResult => {
-  const [isLoading, setIsLoading] = React.useState<boolean>(Boolean(modelFormat));
-  const [hasLoadError, setHasLoadError] = React.useState<boolean>(false);
-  const [preparedModel, setPreparedModel] = React.useState<PreparedModelScene | null>(null);
+  const modelLoadKey = buildModelLoadKey(modelFormat, sourceKey, qualityMode);
+  const [modelLoadState, setModelLoadState] = React.useState<ModelLoadState>(
+    () =>
+      modelFormat
+        ? createLoadingModelLoadState(modelLoadKey)
+        : createIdleModelLoadState(modelLoadKey),
+  );
+  const effectiveModelLoadState = !modelFormat
+    ? createIdleModelLoadState(modelLoadKey)
+    : modelLoadState.key === modelLoadKey
+      ? modelLoadState
+      : createLoadingModelLoadState(modelLoadKey);
+  const { hasLoadError, isLoading, preparedModel } = effectiveModelLoadState;
 
   const previousAutoAlignTokenRef = React.useRef<number | undefined>(
     autoAlignToken,
@@ -84,18 +123,40 @@ export const useModelPreviewState = ({
     flipOrientationIndexRef.current = 0;
   }, []);
 
+  const updatePreparedModel = React.useCallback(
+    (
+      updater: (
+        previous: PreparedModelScene | null,
+      ) => PreparedModelScene | null,
+    ) => {
+      setModelLoadState((previousState) => {
+        const current =
+          previousState.key === modelLoadKey
+            ? previousState
+            : modelFormat
+              ? createLoadingModelLoadState(modelLoadKey)
+              : createIdleModelLoadState(modelLoadKey);
+        const nextPreparedModel = updater(current.preparedModel);
+        if (nextPreparedModel === current.preparedModel) {
+          return previousState.key === modelLoadKey ? previousState : current;
+        }
+
+        return {
+          ...current,
+          preparedModel: nextPreparedModel,
+        };
+      });
+    },
+    [modelFormat, modelLoadKey],
+  );
+
   React.useEffect(() => {
     if (!modelFormat) {
-      setIsLoading(false);
-      setHasLoadError(false);
-      setPreparedModel(null);
       resetRuntimeState();
       return;
     }
 
     let cancelled = false;
-    setIsLoading(true);
-    setHasLoadError(false);
     resetRuntimeState();
 
     void (async () => {
@@ -113,16 +174,20 @@ export const useModelPreviewState = ({
 
         flipBaseQuaternionRef.current = nextPreparedModel.object.quaternion.clone();
         flipOrientationIndexRef.current = 0;
-        setPreparedModel(nextPreparedModel);
-        setHasLoadError(false);
+        setModelLoadState({
+          key: modelLoadKey,
+          hasLoadError: false,
+          isLoading: false,
+          preparedModel: nextPreparedModel,
+        });
       } catch {
         if (!cancelled) {
-          setPreparedModel(null);
-          setHasLoadError(true);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
+          setModelLoadState({
+            key: modelLoadKey,
+            hasLoadError: true,
+            isLoading: false,
+            preparedModel: null,
+          });
         }
       }
     })();
@@ -130,7 +195,7 @@ export const useModelPreviewState = ({
     return () => {
       cancelled = true;
     };
-  }, [modelFormat, qualityMode, resetRuntimeState, sourceKey]);
+  }, [modelFormat, modelLoadKey, qualityMode, resetRuntimeState, sourceKey]);
 
   React.useEffect(() => {
     if (!preparedModel) {
@@ -173,7 +238,7 @@ export const useModelPreviewState = ({
 
     previousAutoAlignTokenRef.current = autoAlignToken;
 
-    setPreparedModel((previous) => {
+    updatePreparedModel((previous) => {
       if (!previous) {
         return previous;
       }
@@ -187,7 +252,7 @@ export const useModelPreviewState = ({
         gridDivisions: metrics.gridDivisions,
       };
     });
-  }, [autoAlignToken]);
+  }, [autoAlignToken, updatePreparedModel]);
 
   React.useEffect(() => {
     if (autoOrientToken === undefined) {
@@ -200,7 +265,7 @@ export const useModelPreviewState = ({
 
     previousAutoOrientTokenRef.current = autoOrientToken;
 
-    setPreparedModel((previous) => {
+    updatePreparedModel((previous) => {
       if (!previous) {
         return previous;
       }
@@ -217,7 +282,7 @@ export const useModelPreviewState = ({
         gridDivisions: metrics.gridDivisions,
       };
     });
-  }, [autoOrientToken]);
+  }, [autoOrientToken, updatePreparedModel]);
 
   React.useEffect(() => {
     if (flipToken === undefined) {

@@ -20,6 +20,7 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { PreviewModal } from "./PreviewModal";
+import { useModelPreviewControls } from "./hooks/useModelPreviewControls";
 import type { FileType } from "@shared/utils/fileTypes";
 
 const PdfPreview = lazy(() =>
@@ -63,24 +64,6 @@ interface FilePreviewModalProps {
   onSaved?: () => void;
 }
 
-type LightingPreset = "balanced" | "studio" | "dramatic";
-type SurfacePreset =
-  | "original"
-  | "metal"
-  | "smooth";
-
-const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
-  "balanced",
-  "studio",
-  "dramatic",
-];
-
-const SURFACE_PRESET_ORDER: ReadonlyArray<SurfacePreset> = [
-  "original",
-  "metal",
-  "smooth",
-];
-
 /**
  * Shared file preview modal component
  * Displays PDF or Text preview based on file type
@@ -100,20 +83,6 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const defaultModelColor = React.useMemo<string | null>(() => {
     return theme.palette.error.main;
   }, [theme]);
-
-  const [paletteAnchorEl, setPaletteAnchorEl] =
-    React.useState<HTMLElement | null>(null);
-  const [materialColor, setMaterialColor] = React.useState<string | null>(
-    defaultModelColor,
-  );
-  const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
-  const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
-  const [flipToken, setFlipToken] = React.useState<number>(0);
-  const [lightingPreset, setLightingPreset] =
-    React.useState<LightingPreset>("dramatic");
-  const [surfacePreset, setSurfacePreset] =
-    React.useState<SurfacePreset>("metal");
-  const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
 
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
     () => [
@@ -152,39 +121,14 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     () => (fileId ? { kind: "fileId" as const, fileId } : null),
     [fileId],
   );
-
-  const cycleLightingPreset = React.useCallback(() => {
-    setLightingPreset((currentPreset) => {
-      const currentIndex = LIGHTING_PRESET_ORDER.indexOf(currentPreset);
-      const nextIndex = (currentIndex + 1) % LIGHTING_PRESET_ORDER.length;
-      return LIGHTING_PRESET_ORDER[nextIndex];
-    });
-  }, []);
-
-  const cycleSurfacePreset = React.useCallback(() => {
-    setSurfacePreset((currentPreset) => {
-      const currentIndex = SURFACE_PRESET_ORDER.indexOf(currentPreset);
-      const nextIndex = (currentIndex + 1) % SURFACE_PRESET_ORDER.length;
-      return SURFACE_PRESET_ORDER[nextIndex];
-    });
-  }, []);
-
-  React.useEffect(() => {
-    if (!isOpen || !isModel) {
-      setPaletteAnchorEl(null);
-      setMaterialColor(defaultModelColor);
-      setLightingPreset("dramatic");
-      setSurfacePreset("metal");
-      setShadowsEnabled(true);
-      return;
-    }
-
-    setPaletteAnchorEl(null);
-    setMaterialColor(defaultModelColor);
-    setLightingPreset("dramatic");
-    setSurfacePreset("metal");
-    setShadowsEnabled(true);
-  }, [defaultModelColor, fileId, isModel, isOpen]);
+  const modelControlsKey =
+    isOpen && isModel && fileId
+      ? [fileId, defaultModelColor ?? ""].join("\u0000")
+      : "";
+  const modelControls = useModelPreviewControls({
+    stateKey: modelControlsKey,
+    defaultMaterialColor: defaultModelColor,
+  });
 
   if (!isOpen || !fileId || !fileName) {
     return null;
@@ -194,10 +138,10 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     <Stack direction="row" spacing={0.5} alignItems="center">
       <Tooltip
         title={t("preview.model.actions.cycleLighting", {
-          preset: t(`preview.model.lighting.${lightingPreset}`),
+          preset: t(`preview.model.lighting.${modelControls.lightingPreset}`),
         })}
       >
-        <IconButton onClick={cycleLightingPreset}>
+        <IconButton onClick={modelControls.cycleLightingPreset}>
           <WbSunny />
         </IconButton>
       </Tooltip>
@@ -205,15 +149,15 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       <Tooltip
         title={t("preview.model.actions.toggleShadows", {
           state: t(
-            shadowsEnabled
+            modelControls.shadowsEnabled
               ? "preview.model.states.on"
               : "preview.model.states.off",
           ),
         })}
       >
         <IconButton
-          color={shadowsEnabled ? "primary" : "default"}
-          onClick={() => setShadowsEnabled((currentState) => !currentState)}
+          color={modelControls.shadowsEnabled ? "primary" : "default"}
+          onClick={modelControls.toggleShadowsEnabled}
         >
           <FilterDrama />
         </IconButton>
@@ -221,28 +165,28 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
       <Tooltip
         title={t("preview.model.actions.cycleSurface", {
-          preset: t(`preview.model.surface.${surfacePreset}`),
+          preset: t(`preview.model.surface.${modelControls.surfacePreset}`),
         })}
       >
-        <IconButton onClick={cycleSurfacePreset}>
+        <IconButton onClick={modelControls.cycleSurfacePreset}>
           <Texture />
         </IconButton>
       </Tooltip>
 
       <Tooltip title={t("preview.model.actions.flipModel")}>
-        <IconButton onClick={() => setFlipToken((value) => value + 1)}>
+        <IconButton onClick={modelControls.requestFlip}>
           <SwapVert />
         </IconButton>
       </Tooltip>
 
       <Tooltip title={t("preview.model.actions.autoOrient")}>
-        <IconButton onClick={() => setAutoOrientToken((value) => value + 1)}>
+        <IconButton onClick={modelControls.requestAutoOrient}>
           <AutoFixHigh />
         </IconButton>
       </Tooltip>
 
       <Tooltip title={t("preview.model.actions.autoAlign")}>
-        <IconButton onClick={() => setAutoAlignToken((value) => value + 1)}>
+        <IconButton onClick={modelControls.requestAutoAlign}>
           <VerticalAlignBottom />
         </IconButton>
       </Tooltip>
@@ -250,9 +194,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       <Tooltip title={t("preview.model.actions.togglePalette")}>
         <IconButton
           onClick={(event) => {
-            setPaletteAnchorEl((current) =>
-              current ? null : event.currentTarget,
-            );
+            modelControls.togglePaletteAnchor(event.currentTarget);
           }}
         >
           <ColorLens />
@@ -305,13 +247,13 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 source={fileSource}
                 fileName={fileName}
                 fileSizeBytes={fileSizeBytes}
-                materialColor={materialColor}
-                autoAlignToken={autoAlignToken}
-                autoOrientToken={autoOrientToken}
-                flipToken={flipToken}
-                lightingPreset={lightingPreset}
-                shadowsEnabled={shadowsEnabled}
-                surfacePreset={surfacePreset}
+                materialColor={modelControls.materialColor}
+                autoAlignToken={modelControls.autoAlignToken}
+                autoOrientToken={modelControls.autoOrientToken}
+                flipToken={modelControls.flipToken}
+                lightingPreset={modelControls.lightingPreset}
+                shadowsEnabled={modelControls.shadowsEnabled}
+                surfacePreset={modelControls.surfacePreset}
               />
             </Suspense>
           </Box>
@@ -320,9 +262,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
       {isModel && (
         <Popover
-          open={Boolean(paletteAnchorEl)}
-          anchorEl={paletteAnchorEl}
-          onClose={() => setPaletteAnchorEl(null)}
+          open={Boolean(modelControls.paletteAnchorEl)}
+          anchorEl={modelControls.paletteAnchorEl}
+          onClose={modelControls.closePalette}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
           transformOrigin={{ vertical: "top", horizontal: "right" }}
           sx={{ mt: 0.5 }}
@@ -345,8 +287,8 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                   width: 34,
                 }}
                 onClick={() => {
-                  setMaterialColor(null);
-                  setPaletteAnchorEl(null);
+                  modelControls.setMaterialColor(null);
+                  modelControls.closePalette();
                 }}
               >
                 <FormatColorReset />
@@ -357,8 +299,8 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               <IconButton
                 key={paletteOption.id}
                 onClick={() => {
-                  setMaterialColor(paletteOption.color);
-                  setPaletteAnchorEl(null);
+                  modelControls.setMaterialColor(paletteOption.color);
+                  modelControls.closePalette();
                 }}
               >
                 <Box
@@ -366,7 +308,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                     backgroundColor: paletteOption.color,
                     border: 1,
                     borderColor:
-                      materialColor === paletteOption.color
+                      modelControls.materialColor === paletteOption.color
                         ? "text.primary"
                         : "divider",
                     borderRadius: "50%",

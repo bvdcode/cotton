@@ -41,6 +41,29 @@ const HlsVideoSlide = React.lazy(async () => {
   return { default: module.HlsVideoSlide };
 });
 
+type LightboxIndexState = {
+  key: string;
+  index: number;
+};
+
+type IndexOrUpdater = number | ((current: number) => number);
+
+const buildLightboxIndexKey = (
+  open: boolean,
+  initialIndex: number,
+  items: MediaLightboxProps["items"],
+): string => {
+  if (!open) {
+    return "closed";
+  }
+
+  return [initialIndex, items.length, items[initialIndex]?.id ?? ""].join("\u0000");
+};
+
+const resolveIndex = (current: number, next: IndexOrUpdater): number => {
+  return typeof next === "function" ? next(current) : next;
+};
+
 export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   items,
   open,
@@ -51,7 +74,28 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   getDownloadUrl,
 }) => {
   const { t } = useTranslation("files");
-  const [index, setIndex] = React.useState(initialIndex);
+  const indexKey = buildLightboxIndexKey(open, initialIndex, items);
+  const [indexState, setIndexState] = React.useState<LightboxIndexState>(
+    () => ({ key: indexKey, index: initialIndex }),
+  );
+  const index = indexState.key === indexKey ? indexState.index : initialIndex;
+  const setLightboxIndex = React.useCallback(
+    (next: IndexOrUpdater) => {
+      setIndexState((currentState) => {
+        const current =
+          currentState.key === indexKey
+            ? currentState
+            : { key: indexKey, index: initialIndex };
+        const nextIndex = resolveIndex(current.index, next);
+        if (nextIndex === current.index) {
+          return currentState.key === indexKey ? currentState : current;
+        }
+
+        return { key: indexKey, index: nextIndex };
+      });
+    },
+    [indexKey, initialIndex],
+  );
   const hlsNoticeText = t("preview.video.transcodeNotice");
   const hlsErrorText = t("preview.video.transcodeError");
   const preferPreview = useUserPreferencesStore(selectGalleryPreferPreview);
@@ -120,12 +164,16 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
       return;
     }
 
-    showTouchControls();
+    clearTouchControlsTimer();
+    touchControlsTimerRef.current = window.setTimeout(() => {
+      setTouchControlsVisible(false);
+      touchControlsTimerRef.current = null;
+    }, TOUCH_CONTROLS_AUTOHIDE_MS);
 
     return () => {
       clearTouchControlsTimer();
     };
-  }, [open, isTouchDevice, showTouchControls, clearTouchControlsTimer]);
+  }, [open, isTouchDevice, clearTouchControlsTimer]);
 
   const {
     slides,
@@ -177,12 +225,6 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [resolveSlideDownloadUrl],
   );
 
-  React.useLayoutEffect(() => {
-    if (open) {
-      setIndex(initialIndex);
-    }
-  }, [initialIndex, open]);
-
   React.useEffect(() => {
     if (!open) return;
     for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
@@ -216,7 +258,9 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   const lightboxEvents = React.useMemo(
     () => ({
       view: ({ index: currentIndex }: { index: number }) => {
-        setIndex((prev) => (prev === currentIndex ? prev : currentIndex));
+        setLightboxIndex((previous) =>
+          previous === currentIndex ? previous : currentIndex,
+        );
         showTouchControls();
         for (const offset of LIGHTBOX_PREFETCH_OFFSETS) {
           void ensureSlideHasOriginal(currentIndex + offset);
@@ -229,7 +273,13 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
         }, 0);
       },
     }),
-    [ensureSlideHasOriginal, isTouchDevice, showTouchControls, toggleTouchControls],
+    [
+      ensureSlideHasOriginal,
+      isTouchDevice,
+      setLightboxIndex,
+      showTouchControls,
+      toggleTouchControls,
+    ],
   );
 
   const lightboxRender = React.useMemo(
@@ -388,6 +438,11 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
     [],
   );
 
+  const handleClose = React.useCallback(() => {
+    setTouchControlsVisible(true);
+    onClose();
+  }, [onClose]);
+
   const lightboxThumbnails = React.useMemo(() => {
     if (isTouchDevice) {
       return undefined;
@@ -409,7 +464,7 @@ export const MediaLightbox: React.FC<MediaLightboxProps> = ({
   return (
     <Lightbox
       open={open}
-      close={onClose}
+      close={handleClose}
       className={lightboxClassName}
       plugins={plugins}
       slides={slides}

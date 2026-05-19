@@ -69,28 +69,27 @@ export const useMediaLightboxUrls = ({
     downloadUrlsRef.current = downloadUrls;
   }, [downloadUrls]);
 
+  const effectiveDisplayUrls = React.useMemo(() => {
+    if (Object.keys(displayUrls).length === 0) {
+      return displayUrls;
+    }
+
+    const updated: Record<string, string> = {};
+    for (const [fileId, currentUrl] of Object.entries(displayUrls)) {
+      updated[fileId] = currentUrl.startsWith("blob:")
+        ? currentUrl
+        : applyPreviewModeToUrl(currentUrl, preferPreview);
+    }
+
+    return updated;
+  }, [displayUrls, preferPreview]);
+
   React.useEffect(() => {
-    displayUrlsRef.current = displayUrls;
-  }, [displayUrls]);
+    displayUrlsRef.current = effectiveDisplayUrls;
+  }, [effectiveDisplayUrls]);
 
   React.useEffect(() => {
     requestVersionRef.current += 1;
-
-    setDisplayUrls((previous) => {
-      if (Object.keys(previous).length === 0) {
-        return previous;
-      }
-
-      const updated: Record<string, string> = {};
-      for (const [fileId, currentUrl] of Object.entries(previous)) {
-        updated[fileId] = currentUrl.startsWith("blob:")
-          ? currentUrl
-          : applyPreviewModeToUrl(currentUrl, preferPreview);
-      }
-
-      return updated;
-    });
-
     loadingRef.current.clear();
     loadedIdsRef.current.clear();
     inFlightOriginalLoadsRef.current.clear();
@@ -98,8 +97,13 @@ export const useMediaLightboxUrls = ({
   }, [preferPreview]);
 
   const slides = React.useMemo(() => {
-    return buildSlidesFromItems(items, displayUrls, signedUrls, currentItemId);
-  }, [items, displayUrls, signedUrls, currentItemId]);
+    return buildSlidesFromItems(
+      items,
+      effectiveDisplayUrls,
+      signedUrls,
+      currentItemId,
+    );
+  }, [items, effectiveDisplayUrls, signedUrls, currentItemId]);
 
   const ensureOriginalUrl = React.useCallback(
     async (item: MediaItem): Promise<string | null> => {

@@ -21,6 +21,7 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { PreviewModal, PdfPreview, ModelPreview } from "@shared/ui/preview";
+import { useModelPreviewControls } from "@shared/ui/preview/hooks/useModelPreviewControls";
 import type { FileType } from "@shared/utils/fileTypes";
 import { sharedFoldersApi } from "../../../shared/api/sharedFoldersApi";
 import { previewConfig } from "../../../shared/config/previewConfig";
@@ -37,23 +38,46 @@ interface SharedFilePreviewModalProps {
   onClose: () => void;
 }
 
-type LightingPreset = "balanced" | "studio" | "dramatic";
-type SurfacePreset =
-  | "original"
-  | "metal"
-  | "smooth";
+type SharedTextPreviewState = {
+  key: string;
+  loading: boolean;
+  error: string | null;
+  content: string | null;
+};
 
-const LIGHTING_PRESET_ORDER: ReadonlyArray<LightingPreset> = [
-  "balanced",
-  "studio",
-  "dramatic",
-];
+const createIdleTextPreviewState = (key: string): SharedTextPreviewState => ({
+  key,
+  loading: false,
+  error: null,
+  content: null,
+});
 
-const SURFACE_PRESET_ORDER: ReadonlyArray<SurfacePreset> = [
-  "original",
-  "metal",
-  "smooth",
-];
+const createLoadingTextPreviewState = (key: string): SharedTextPreviewState => ({
+  key,
+  loading: true,
+  error: null,
+  content: null,
+});
+
+const buildTextPreviewKey = (args: {
+  open: boolean;
+  token: string;
+  fileId: string | null;
+  fileName: string | null;
+  fileType: FileType | null;
+  fileSizeBytes: number | null;
+}): string => {
+  if (!args.open || args.fileType !== "text" || !args.fileId || !args.fileName) {
+    return "";
+  }
+
+  return [
+    args.token,
+    args.fileId,
+    args.fileName,
+    args.fileSizeBytes ?? "",
+  ].join("\u0000");
+};
 
 export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
   open,
@@ -72,20 +96,52 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     return theme.palette.error.main;
   }, [theme]);
 
-  const [textContent, setTextContent] = React.useState<string | null>(null);
-  const [loadingText, setLoadingText] = React.useState<boolean>(false);
-  const [textError, setTextError] = React.useState<string | null>(null);
-  const [paletteAnchorEl, setPaletteAnchorEl] = React.useState<HTMLElement | null>(null);
-  const [materialColor, setMaterialColor] = React.useState<string | null>(
-    defaultModelColor,
+  const textPreviewKey = React.useMemo(
+    () =>
+      buildTextPreviewKey({
+        open,
+        token,
+        fileId,
+        fileName,
+        fileType,
+        fileSizeBytes,
+      }),
+    [fileId, fileName, fileSizeBytes, fileType, open, token],
   );
-  const [autoAlignToken, setAutoAlignToken] = React.useState<number>(0);
-  const [autoOrientToken, setAutoOrientToken] = React.useState<number>(0);
-  const [flipToken, setFlipToken] = React.useState<number>(0);
-  const [lightingPreset, setLightingPreset] = React.useState<LightingPreset>("dramatic");
-  const [surfacePreset, setSurfacePreset] = React.useState<SurfacePreset>("metal");
-  const [shadowsEnabled, setShadowsEnabled] = React.useState<boolean>(true);
+  const textSizeError = React.useMemo(() => {
+    if (
+      !textPreviewKey ||
+      typeof fileSizeBytes !== "number" ||
+      fileSizeBytes <= previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES
+    ) {
+      return null;
+    }
 
+    const sizeMB = fileSizeBytes / 1024 / 1024;
+    const maxKB = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES / 1024;
+    return t("preview.errors.fileTooLarge", {
+      ns: "files",
+      size:
+        sizeMB >= 1
+          ? Math.round(sizeMB) + " MB"
+          : Math.round(fileSizeBytes / 1024) + " KB",
+      maxSize: Math.round(maxKB) + " KB",
+    });
+  }, [fileSizeBytes, t, textPreviewKey]);
+  const [textPreviewState, setTextPreviewState] =
+    React.useState<SharedTextPreviewState>(() =>
+      createIdleTextPreviewState(textPreviewKey),
+    );
+  const textPreview = !textPreviewKey
+    ? createIdleTextPreviewState(textPreviewKey)
+    : textSizeError
+      ? {
+          ...createIdleTextPreviewState(textPreviewKey),
+          error: textSizeError,
+        }
+      : textPreviewState.key === textPreviewKey
+        ? textPreviewState
+        : createLoadingTextPreviewState(textPreviewKey);
   const paletteColors = React.useMemo<Array<{ id: string; color: string }>>(
     () => [
       { id: "grey-300", color: theme.palette.grey[300] },
@@ -129,71 +185,21 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
       url: sharedFoldersApi.buildFileContentUrl(token, fileId, "inline"),
     };
   }, [fileId, token]);
-
-  const cycleLightingPreset = React.useCallback(() => {
-    setLightingPreset((currentPreset) => {
-      const currentIndex = LIGHTING_PRESET_ORDER.indexOf(currentPreset);
-      const nextIndex = (currentIndex + 1) % LIGHTING_PRESET_ORDER.length;
-      return LIGHTING_PRESET_ORDER[nextIndex];
-    });
-  }, []);
-
-  const cycleSurfacePreset = React.useCallback(() => {
-    setSurfacePreset((currentPreset) => {
-      const currentIndex = SURFACE_PRESET_ORDER.indexOf(currentPreset);
-      const nextIndex = (currentIndex + 1) % SURFACE_PRESET_ORDER.length;
-      return SURFACE_PRESET_ORDER[nextIndex];
-    });
-  }, []);
+  const modelControlsKey =
+    open && isModel && fileId
+      ? [fileId, defaultModelColor ?? ""].join("\u0000")
+      : "";
+  const modelControls = useModelPreviewControls({
+    stateKey: modelControlsKey,
+    defaultMaterialColor: defaultModelColor,
+  });
 
   React.useEffect(() => {
-    if (!open || !isModel) {
-      setPaletteAnchorEl(null);
-      setMaterialColor(defaultModelColor);
-      setLightingPreset("dramatic");
-      setSurfacePreset("metal");
-      setShadowsEnabled(true);
-      return;
-    }
-
-    setPaletteAnchorEl(null);
-    setMaterialColor(defaultModelColor);
-    setLightingPreset("dramatic");
-    setSurfacePreset("metal");
-    setShadowsEnabled(true);
-  }, [defaultModelColor, fileId, isModel, open]);
-
-  React.useEffect(() => {
-    if (!open || fileType !== "text" || !fileId || !fileName) {
-      setTextContent(null);
-      setTextError(null);
-      setLoadingText(false);
-      return;
-    }
-
-    if (
-      typeof fileSizeBytes === "number" &&
-      fileSizeBytes > previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES
-    ) {
-      const sizeMB = fileSizeBytes / 1024 / 1024;
-      const maxKB = previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES / 1024;
-      setTextError(
-        t("preview.errors.fileTooLarge", {
-          ns: "files",
-          size: sizeMB >= 1 ? `${Math.round(sizeMB)} MB` : `${Math.round(fileSizeBytes / 1024)} KB`,
-          maxSize: `${Math.round(maxKB)} KB`,
-        }),
-      );
-      setTextContent(null);
-      setLoadingText(false);
+    if (!textPreviewKey || textSizeError || !fileId) {
       return;
     }
 
     let cancelled = false;
-
-    setLoadingText(true);
-    setTextError(null);
-    setTextContent(null);
 
     void (async () => {
       try {
@@ -210,19 +216,26 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
           throw new Error(t("preview.errors.loadFailed", { ns: "files", error: "" }));
         }
 
-        const text = await response.text();
+        const content = await response.text();
         if (!cancelled) {
-          setTextContent(text);
-          setLoadingText(false);
+          setTextPreviewState({
+            key: textPreviewKey,
+            loading: false,
+            error: null,
+            content,
+          });
         }
       } catch (e) {
         if (!cancelled) {
-          setTextError(
-            e instanceof Error
-              ? e.message
-              : t("preview.errors.loadFailed", { ns: "files", error: "" }),
-          );
-          setLoadingText(false);
+          setTextPreviewState({
+            key: textPreviewKey,
+            loading: false,
+            error:
+              e instanceof Error
+                ? e.message
+                : t("preview.errors.loadFailed", { ns: "files", error: "" }),
+            content: null,
+          });
         }
       }
     })();
@@ -230,7 +243,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [contentType, fileId, fileName, fileSizeBytes, fileType, open, t, token]);
+  }, [fileId, t, textPreviewKey, textSizeError, token]);
 
   if (!open || !fileId || !fileName) {
     return null;
@@ -246,10 +259,10 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
         <Tooltip
           title={t("preview.model.actions.cycleLighting", {
             ns: "files",
-            preset: t(`preview.model.lighting.${lightingPreset}`, { ns: "files" }),
+            preset: t(`preview.model.lighting.${modelControls.lightingPreset}`, { ns: "files" }),
           })}
         >
-          <IconButton onClick={cycleLightingPreset}>
+          <IconButton onClick={modelControls.cycleLightingPreset}>
             <WbSunny />
           </IconButton>
         </Tooltip>
@@ -258,7 +271,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
           title={t("preview.model.actions.toggleShadows", {
             ns: "files",
             state: t(
-              shadowsEnabled
+              modelControls.shadowsEnabled
                 ? "preview.model.states.on"
                 : "preview.model.states.off",
               { ns: "files" },
@@ -266,8 +279,8 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
           })}
         >
           <IconButton
-            color={shadowsEnabled ? "primary" : "default"}
-            onClick={() => setShadowsEnabled((currentState) => !currentState)}
+            color={modelControls.shadowsEnabled ? "primary" : "default"}
+            onClick={modelControls.toggleShadowsEnabled}
           >
             <FilterDrama />
           </IconButton>
@@ -276,28 +289,28 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
         <Tooltip
           title={t("preview.model.actions.cycleSurface", {
             ns: "files",
-            preset: t(`preview.model.surface.${surfacePreset}`, { ns: "files" }),
+            preset: t(`preview.model.surface.${modelControls.surfacePreset}`, { ns: "files" }),
           })}
         >
-          <IconButton onClick={cycleSurfacePreset}>
+          <IconButton onClick={modelControls.cycleSurfacePreset}>
             <Texture />
           </IconButton>
         </Tooltip>
 
         <Tooltip title={t("preview.model.actions.flipModel", { ns: "files" })}>
-          <IconButton onClick={() => setFlipToken((value) => value + 1)}>
+          <IconButton onClick={modelControls.requestFlip}>
             <SwapVert />
           </IconButton>
         </Tooltip>
 
         <Tooltip title={t("preview.model.actions.autoOrient", { ns: "files" })}>
-          <IconButton onClick={() => setAutoOrientToken((value) => value + 1)}>
+          <IconButton onClick={modelControls.requestAutoOrient}>
             <AutoFixHigh />
           </IconButton>
         </Tooltip>
 
         <Tooltip title={t("preview.model.actions.autoAlign", { ns: "files" })}>
-          <IconButton onClick={() => setAutoAlignToken((value) => value + 1)}>
+          <IconButton onClick={modelControls.requestAutoAlign}>
             <VerticalAlignBottom />
           </IconButton>
         </Tooltip>
@@ -305,7 +318,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
         <Tooltip title={t("preview.model.actions.togglePalette", { ns: "files" })}>
           <IconButton
             onClick={(event) => {
-              setPaletteAnchorEl((current) => (current ? null : event.currentTarget));
+              modelControls.togglePaletteAnchor(event.currentTarget);
             }}
           >
             <ColorLens />
@@ -347,7 +360,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
             flexDirection: "column",
           }}
         >
-          {loadingText && (
+          {textPreview.loading && (
             <Box
               sx={{
                 flex: 1,
@@ -364,7 +377,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
             </Box>
           )}
 
-          {!loadingText && textError && (
+          {!textPreview.loading && textPreview.error && (
             <Box
               sx={{
                 flex: 1,
@@ -374,16 +387,16 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
                 px: 2,
               }}
             >
-              <Typography color="error">{textError}</Typography>
+              <Typography color="error">{textPreview.error}</Typography>
             </Box>
           )}
 
-          {!loadingText && !textError && textContent !== null && (
+          {!textPreview.loading && !textPreview.error && textPreview.content !== null && (
             <ReadOnlyTextViewer
               title={fileName}
               fileName={fileName}
               contentType={contentType}
-              textContent={textContent}
+              textContent={textPreview.content}
             />
           )}
         </Box>
@@ -397,13 +410,13 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
               fileName={fileName}
               contentType={contentType}
               fileSizeBytes={fileSizeBytes}
-              materialColor={materialColor}
-              autoAlignToken={autoAlignToken}
-              autoOrientToken={autoOrientToken}
-              flipToken={flipToken}
-              lightingPreset={lightingPreset}
-              shadowsEnabled={shadowsEnabled}
-              surfacePreset={surfacePreset}
+              materialColor={modelControls.materialColor}
+              autoAlignToken={modelControls.autoAlignToken}
+              autoOrientToken={modelControls.autoOrientToken}
+              flipToken={modelControls.flipToken}
+              lightingPreset={modelControls.lightingPreset}
+              shadowsEnabled={modelControls.shadowsEnabled}
+              surfacePreset={modelControls.surfacePreset}
             />
           </Box>
         </Box>
@@ -411,9 +424,9 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
 
       {isModel && (
         <Popover
-          open={Boolean(paletteAnchorEl)}
-          anchorEl={paletteAnchorEl}
-          onClose={() => setPaletteAnchorEl(null)}
+          open={Boolean(modelControls.paletteAnchorEl)}
+          anchorEl={modelControls.paletteAnchorEl}
+          onClose={modelControls.closePalette}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
           transformOrigin={{ vertical: "top", horizontal: "right" }}
           sx={{ mt: 0.5 }}
@@ -437,8 +450,8 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
                   width: 30,
                 }}
                 onClick={() => {
-                  setMaterialColor(null);
-                  setPaletteAnchorEl(null);
+                  modelControls.setMaterialColor(null);
+                  modelControls.closePalette();
                 }}
               >
                 <FormatColorReset fontSize="small" />
@@ -449,8 +462,8 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
               <IconButton
                 key={paletteOption.id}
                 onClick={() => {
-                  setMaterialColor(paletteOption.color);
-                  setPaletteAnchorEl(null);
+                  modelControls.setMaterialColor(paletteOption.color);
+                  modelControls.closePalette();
                 }}
               >
                 <Box
@@ -458,7 +471,7 @@ export const SharedFilePreviewModal: React.FC<SharedFilePreviewModalProps> = ({
                     backgroundColor: paletteOption.color,
                     border: 1,
                     borderColor:
-                      materialColor === paletteOption.color ? "text.primary" : "divider",
+                      modelControls.materialColor === paletteOption.color ? "text.primary" : "divider",
                     borderRadius: "50%",
                     height: 18,
                     width: 18,

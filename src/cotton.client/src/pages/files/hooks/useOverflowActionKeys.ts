@@ -7,6 +7,15 @@ type UseOverflowActionKeysParams = {
   actionButtonRefs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>;
 };
 
+type VisibleActionsState = {
+  signature: string;
+  keys: string[];
+};
+
+const sameKeys = (left: ReadonlyArray<string>, right: ReadonlyArray<string>): boolean => {
+  return left.length === right.length && left.every((key, index) => key === right[index]);
+};
+
 /**
  * Computes which header action buttons can stay visible in the available width.
  * Non-fitting actions are expected to be moved into overflow menu by caller.
@@ -16,16 +25,41 @@ export const useOverflowActionKeys = ({
   actionsContainerRef,
   actionButtonRefs,
 }: UseOverflowActionKeysParams): string[] => {
-  const [visibleActionKeys, setVisibleActionKeys] = React.useState<string[]>([]);
+  const actionKeys = React.useMemo(
+    () => actions.map((action) => action.key),
+    [actions],
+  );
+  const actionSignature = React.useMemo(() => actionKeys.join("\u0000"), [actionKeys]);
+  const [visibleActionsState, setVisibleActionsState] =
+    React.useState<VisibleActionsState>(() => ({
+      signature: actionSignature,
+      keys: actionKeys,
+    }));
+  const visibleActionKeys =
+    visibleActionsState.signature === actionSignature
+      ? visibleActionsState.keys
+      : actionKeys;
 
-  React.useEffect(() => {
-    setVisibleActionKeys(actions.map((action) => action.key));
-  }, [actions]);
+  const commitVisibleActionKeys = React.useCallback(
+    (keys: string[]) => {
+      setVisibleActionsState((current) => {
+        if (
+          current.signature === actionSignature &&
+          sameKeys(current.keys, keys)
+        ) {
+          return current;
+        }
+
+        return { signature: actionSignature, keys };
+      });
+    },
+    [actionSignature],
+  );
 
   React.useLayoutEffect(() => {
     const container = actionsContainerRef.current;
     if (!container || actions.length === 0) {
-      setVisibleActionKeys(actions.map((action) => action.key));
+      commitVisibleActionKeys(actionKeys);
       return;
     }
 
@@ -35,7 +69,7 @@ export const useOverflowActionKeys = ({
     const measure = () => {
       const available = container.clientWidth;
       if (available <= 0) {
-        setVisibleActionKeys(actions.map((action) => action.key));
+        commitVisibleActionKeys(actionKeys);
         return;
       }
 
@@ -52,7 +86,7 @@ export const useOverflowActionKeys = ({
         Math.max(0, widths.length - 1) * ACTION_GAP;
 
       if (totalWidth <= available) {
-        setVisibleActionKeys(actions.map((action) => action.key));
+        commitVisibleActionKeys(actionKeys);
         return;
       }
 
@@ -79,7 +113,7 @@ export const useOverflowActionKeys = ({
         nextVisible.push(actions[0].key);
       }
 
-      setVisibleActionKeys(nextVisible);
+      commitVisibleActionKeys(nextVisible);
     };
 
     measure();
@@ -95,7 +129,7 @@ export const useOverflowActionKeys = ({
       window.cancelAnimationFrame(rafId);
       observer.disconnect();
     };
-  }, [actions, actionsContainerRef, actionButtonRefs]);
+  }, [actionButtonRefs, actionKeys, actions, actionsContainerRef, commitVisibleActionKeys]);
 
   return visibleActionKeys;
 };

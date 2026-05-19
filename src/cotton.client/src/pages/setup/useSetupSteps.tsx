@@ -40,9 +40,8 @@ export function useSetupSteps(
     const [reqKey, reqValue] = requires.split(":");
     const currentValue = answers[reqKey];
     
-    let met = false;
     // Check if it's an array (multi-select)
-    met = answerMatchesCondition(currentValue, reqValue);
+    const met = answerMatchesCondition(currentValue, reqValue);
     
     // If not met, get the label of the required option and question title
     if (!met) {

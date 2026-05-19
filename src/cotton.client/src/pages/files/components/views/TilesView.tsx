@@ -372,22 +372,23 @@ export const TilesView: React.FC<IFileListView> = ({
         return;
       }
 
-      let delta: number | null = null;
-      switch (event.key) {
-        case "ArrowLeft":
-          delta = -1;
-          break;
-        case "ArrowRight":
-          delta = 1;
-          break;
-        case "ArrowUp":
-          delta = -columns;
-          break;
-        case "ArrowDown":
-          delta = columns;
-          break;
-        default:
-          return;
+      const delta = (() => {
+        switch (event.key) {
+          case "ArrowLeft":
+            return -1;
+          case "ArrowRight":
+            return 1;
+          case "ArrowUp":
+            return -columns;
+          case "ArrowDown":
+            return columns;
+          default:
+            return null;
+        }
+      })();
+
+      if (delta === null) {
+        return;
       }
 
       event.preventDefault();

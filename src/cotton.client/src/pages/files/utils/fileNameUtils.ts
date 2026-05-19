@@ -77,6 +77,5 @@ export function nextAvailableName(
     }
   }
 
-  // Fallback (should never happen in practice)
-  return `${baseName} (${Date.now()})${ext}`;
+  throw new Error("Could not generate an available file name.");
 }

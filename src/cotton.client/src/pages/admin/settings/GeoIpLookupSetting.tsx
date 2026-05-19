@@ -68,7 +68,6 @@ export const GeoIpLookupSetting = () => {
 
   useEffect(() => {
     let active = true;
-    setStatus("loading");
     loadGeoIpState()
       .then((next) => {
         if (!active) return;
