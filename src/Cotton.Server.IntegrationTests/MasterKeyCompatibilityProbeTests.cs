@@ -9,6 +9,7 @@ using EasyExtensions.Crypto;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Cotton.Server.IntegrationTests
@@ -39,6 +40,56 @@ namespace Cotton.Server.IntegrationTests
         {
             CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            await StoreEncryptedChunkAsync(settings);
+            var probe = CreateProbe();
+
+            MasterKeyCompatibilityResult result = await probe.ValidateAsync(
+                settings,
+                MasterKeyCompatibilityMode.RequireEvidenceForExistingData);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Success, Is.True);
+                Assert.That(result.ExistingDataFound, Is.True);
+                Assert.That(result.EvidenceFound, Is.True);
+            }
+        }
+
+        [Test]
+        public async Task ValidateAsync_Skips_Corrupt_Database_Probe_And_Accepts_Storage_Chunk()
+        {
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            DbContext.Users.Add(new User
+            {
+                Username = "corruptdb" + Guid.NewGuid().ToString("N")[..8],
+                PasswordPhc = "phc",
+                WebDavTokenPhc = "webdav",
+                Role = UserRole.Admin,
+                AvatarHashEncrypted = RandomNumberGenerator.GetBytes(48)
+            });
+            await DbContext.SaveChangesAsync();
+            await StoreEncryptedChunkAsync(settings);
+            var probe = CreateProbe();
+
+            MasterKeyCompatibilityResult result = await probe.ValidateAsync(
+                settings,
+                MasterKeyCompatibilityMode.RequireEvidenceForExistingData);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Success, Is.True);
+                Assert.That(result.ExistingDataFound, Is.True);
+                Assert.That(result.EvidenceFound, Is.True);
+            }
+        }
+
+        [Test]
+        public async Task ValidateAsync_Skips_Corrupt_Storage_Probe_And_Accepts_Later_Chunk()
+        {
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            await StoreRawChunkAsync(RandomNumberGenerator.GetBytes(12), plainSizeBytes: 12);
             await StoreEncryptedChunkAsync(settings);
             var probe = CreateProbe();
 
@@ -115,12 +166,6 @@ namespace Cotton.Server.IntegrationTests
 
         private async Task StoreEncryptedChunkAsync(CottonEncryptionSettings settings)
         {
-            byte[] hash = Hasher.HashData(Encoding.UTF8.GetBytes(Guid.NewGuid().ToString("N")));
-            string storageKey = Hasher.ToHexStringHash(hash);
-            var backend = new FileSystemStorageBackend(
-                NullLogger<FileSystemStorageBackend>.Instance,
-                _storageBasePath);
-
             byte[] plainBytes = Encoding.UTF8.GetBytes("probe plaintext");
             await using var plaintext = new MemoryStream(plainBytes, writable: false);
             using var cipher = new AesGcmStreamCipher(
@@ -128,13 +173,30 @@ namespace Cotton.Server.IntegrationTests
                 settings.MasterEncryptionKeyId,
                 settings.EncryptionThreads > 0 ? settings.EncryptionThreads : null);
             await using Stream encrypted = await cipher.EncryptAsync(plaintext);
-            await backend.WriteAsync(storageKey, encrypted);
+            await StoreChunkAsync(encrypted, plainBytes.Length);
+        }
+
+        private async Task StoreRawChunkAsync(byte[] storedBytes, long plainSizeBytes)
+        {
+            await using var stream = new MemoryStream(storedBytes, writable: false);
+            await StoreChunkAsync(stream, plainSizeBytes);
+        }
+
+        private async Task StoreChunkAsync(Stream stream, long plainSizeBytes)
+        {
+            byte[] hash = Hasher.HashData(Encoding.UTF8.GetBytes(Guid.NewGuid().ToString("N")));
+            string storageKey = Hasher.ToHexStringHash(hash);
+            var backend = new FileSystemStorageBackend(
+                NullLogger<FileSystemStorageBackend>.Instance,
+                _storageBasePath);
+
+            await backend.WriteAsync(storageKey, stream);
             long storedSize = await backend.GetSizeAsync(storageKey);
 
             DbContext.Chunks.Add(new Chunk
             {
                 Hash = hash,
-                PlainSizeBytes = plainBytes.Length,
+                PlainSizeBytes = plainSizeBytes,
                 StoredSizeBytes = storedSize,
                 CompressionAlgorithm = CompressionProcessor.Algorithm,
                 GCScheduledAfter = null

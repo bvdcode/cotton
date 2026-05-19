@@ -10,10 +10,17 @@ namespace Cotton.Server.IntegrationTests.Abstractions
     public abstract class IntegrationTestBase : IDisposable
     {
         public const string DatabaseName = "cotton_dev_tests";
+        protected string CurrentDatabaseName { get; }
         protected CottonDbContext DbContext { get; private set; }
 
         protected IntegrationTestBase()
+            : this(DatabaseName)
         {
+        }
+
+        protected IntegrationTestBase(string databaseName)
+        {
+            CurrentDatabaseName = databaseName;
             const ushort port = 5432;
             const string host = "localhost";
             const string username = "postgres";
@@ -26,7 +33,7 @@ namespace Cotton.Server.IntegrationTests.Abstractions
                 Port = port,
                 Username = username,
                 Password = password,
-                Database = DatabaseName,
+                Database = databaseName,
             };
             optionsBuilder.UseNpgsql(userBuilder.ConnectionString, x =>
             {
