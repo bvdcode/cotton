@@ -51,6 +51,7 @@ import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
+import { blurredDialogBackdropSlotProps } from "../../shared/ui/dialogBackdrop";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
@@ -651,7 +652,9 @@ export const FilesPage: React.FC = () => {
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
       emptyStateText:
-        layoutType === InterfaceLayoutType.Tiles ? t("empty.all") : undefined,
+        !error && layoutType === InterfaceLayoutType.Tiles
+          ? t("empty.all")
+          : undefined,
       newFolderName: folderOps.newFolderName,
       onNewFolderNameChange: folderOps.setNewFolderName,
       onConfirmNewFolder: folderOps.handleConfirmNewFolder,
@@ -792,6 +795,7 @@ export const FilesPage: React.FC = () => {
         onClose={handleUnlockCancel}
         fullWidth
         maxWidth="sm"
+        slotProps={blurredDialogBackdropSlotProps}
       >
         <DialogTitle>
           {activeUnlockPrompt?.kind === "current"

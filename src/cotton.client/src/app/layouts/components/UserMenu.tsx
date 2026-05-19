@@ -1,6 +1,7 @@
 import {
   Avatar,
   Box,
+  ButtonBase,
   Divider,
   IconButton,
   ListItemIcon,
@@ -89,6 +90,11 @@ export const UserMenu = () => {
     });
 
     window.open(reportUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const openProductSite = () => {
+    handleClose();
+    window.open("https://cottoncloud.dev", "_blank", "noopener,noreferrer");
   };
 
   const fullName = [user?.firstName, user?.lastName]
@@ -208,14 +214,25 @@ export const UserMenu = () => {
 
         {serverSettings?.version && <Divider />}
         {serverSettings?.version && (
-          <Box px={2}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: "block", textAlign: "center" }}
+          <Box px={2} py={0.5}>
+            <ButtonBase
+              onClick={openProductSite}
+              sx={{
+                width: "100%",
+                borderRadius: 1,
+                py: 0.5,
+                px: 1,
+                color: "text.secondary",
+                "&:hover": {
+                  color: "primary.main",
+                  bgcolor: "action.hover",
+                },
+              }}
             >
-              {serverSettings.version}
-            </Typography>
+              <Typography variant="caption">
+                {serverSettings.version}
+              </Typography>
+            </ButtonBase>
           </Box>
         )}
       </Menu>

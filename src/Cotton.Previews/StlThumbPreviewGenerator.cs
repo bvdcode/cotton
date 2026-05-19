@@ -400,6 +400,7 @@ namespace Cotton.Previews
                     process.StartInfo.ArgumentList.Add("f3d");
                 }
 
+                // In f3d 2.x, --dry-run disables reading the configuration file.
                 process.StartInfo.ArgumentList.Add("--dry-run");
                 if (includeVerboseArgument)
                 {

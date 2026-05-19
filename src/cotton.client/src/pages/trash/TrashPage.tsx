@@ -431,10 +431,13 @@ export const TrashPage: React.FC = () => {
       loading:
         layoutType === InterfaceLayoutType.List
           ? (!listContent && !listLoadError) || listLoading
-          : !hasContent && !error,
+          : loading && !hasContent && !error,
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
-      emptyStateText: layoutType === InterfaceLayoutType.Tiles ? t("empty") : undefined,
+      emptyStateText:
+        !error && !listLoadError && layoutType === InterfaceLayoutType.Tiles
+          ? t("empty")
+          : undefined,
       newFolderName: "",
       onNewFolderNameChange: () => {},
       onConfirmNewFolder: () => Promise.resolve(),
@@ -464,6 +467,7 @@ export const TrashPage: React.FC = () => {
       hasContent,
       isCreatingInThisFolder,
       layoutType,
+      loading,
       listContent,
       listLoadError,
       listLoading,
@@ -475,7 +479,7 @@ export const TrashPage: React.FC = () => {
     ],
   );
 
-  if (!hasContent && !error && layoutType !== InterfaceLayoutType.List) {
+  if (loading && !hasContent && !error && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 

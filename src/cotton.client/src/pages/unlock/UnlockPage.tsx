@@ -148,7 +148,8 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
       toast.success(response.message || t("unlocked"), {
         toastId: "unlock-success",
       });
-      window.setTimeout(() => window.location.replace("/"), 1400);
+      await unlockApi.waitUntilAppReady();
+      window.location.replace("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : t("unlockFailed");
       setError(message);
@@ -222,6 +223,22 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
                   input: {
                     endAdornment: (
                       <InputAdornment position="end">
+                        <Tooltip title={generating ? t("generating") : t("generate")}>
+                          <span>
+                            <IconButton
+                              aria-label={t("generate")}
+                              edge="end"
+                              onClick={handleGenerate}
+                              disabled={generating || submitting}
+                            >
+                              {generating ? (
+                                <CircularProgress color="inherit" size={18} thickness={5} />
+                              ) : (
+                                <Key />
+                              )}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
                         <Tooltip title={showMasterKey ? t("hideKey") : t("showKey")}>
                           <IconButton
                             aria-label={showMasterKey ? t("hideKey") : t("showKey")}
@@ -290,21 +307,6 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
                   }
                 >
                   {submitting ? t("unlocking") : t("unlock")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outlined"
-                  disabled={generating || submitting}
-                  startIcon={
-                    generating ? (
-                      <CircularProgress color="inherit" size={18} thickness={5} />
-                    ) : (
-                      <Key />
-                    )
-                  }
-                  onClick={handleGenerate}
-                >
-                  {generating ? t("generating") : t("generate")}
                 </Button>
               </Box>
             </Stack>
