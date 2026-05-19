@@ -149,6 +149,14 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
         toastId: "unlock-success",
       });
       await unlockApi.waitUntilAppReady();
+      try {
+        window.sessionStorage.setItem(
+          "cotton:just-unlocked",
+          Date.now().toString(),
+        );
+      } catch {
+        // Session storage can be unavailable in strict privacy modes.
+      }
       window.location.replace("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : t("unlockFailed");

@@ -48,4 +48,21 @@ describe("trashBreadcrumbs", () => {
     expect(isCurrentTrashWrapper([root], wrapper)).toBe(true);
     expect(isTrashWrapperNode(deletedFolder, root.id)).toBe(false);
   });
+  it("hides the wrapper even when the trash root is missing from ancestors", () => {
+    expect(buildVisibleTrashBreadcrumbs([wrapper], deletedFolder)).toEqual([
+      { id: deletedFolder.id, name: deletedFolder.name },
+    ]);
+  });
+
+  it("keeps deleted folders whose real name uses the trash wrapper prefix", () => {
+    const realFolder = {
+      ...makeNode("deleted-prefix", "trash-item-real", wrapper.id),
+      metadata: { originalParentPath: "Home" },
+    };
+
+    expect(buildVisibleTrashBreadcrumbs([root, wrapper], realFolder)).toEqual([
+      { id: root.id, name: root.name },
+      { id: realFolder.id, name: realFolder.name },
+    ]);
+  });
 });

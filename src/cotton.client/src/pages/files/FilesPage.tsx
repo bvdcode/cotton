@@ -693,6 +693,10 @@ export const FilesPage: React.FC = () => {
     ],
   );
 
+  const unlockDialogOpen =
+    activeUnlockPrompt !== null && clientEncryptionEnvelope !== null;
+  const shouldRenderFileList = !error || Boolean(effectiveContent);
+
   return (
     <>
       {fileUpload.dropPreparation.active && (
@@ -726,6 +730,12 @@ export const FilesPage: React.FC = () => {
             minHeight: 0,
             overflow: "hidden",
           }),
+          ...(unlockDialogOpen && {
+            filter: "blur(4px)",
+            pointerEvents: "none",
+            transition: "filter 160ms ease",
+            userSelect: "none",
+          }),
         }}
       >
         <PageHeader
@@ -736,17 +746,19 @@ export const FilesPage: React.FC = () => {
             <Alert severity="error">{error}</Alert>
           </Box>
         )}
-        <Box
-          sx={
-            layoutType === InterfaceLayoutType.List
-              ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
-              : {}
-          }
-        >
-          <FileListViewFactory {...fileListViewProps} />
-        </Box>
-      </Box>
+        {shouldRenderFileList && (
+          <Box
+            sx={
+              layoutType === InterfaceLayoutType.List
+                ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
+                : {}
+            }
+          >
+            <FileListViewFactory {...fileListViewProps} />
+          </Box>
+        )}
 
+      </Box>
       <FilePreviewModal
         isOpen={previewState.isOpen}
         fileId={previewState.fileId}
@@ -791,7 +803,7 @@ export const FilesPage: React.FC = () => {
       )}
 
       <Dialog
-        open={activeUnlockPrompt !== null && clientEncryptionEnvelope !== null}
+        open={unlockDialogOpen}
         onClose={handleUnlockCancel}
         fullWidth
         maxWidth="sm"
