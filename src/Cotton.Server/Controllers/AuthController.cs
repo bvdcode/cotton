@@ -31,7 +31,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
@@ -51,7 +50,8 @@ namespace Cotton.Server.Controllers
         WebDavAuthCache _webDavAuthCache,
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup,
-        DefaultUserContentSeeder _defaultUserContentSeeder) : ControllerBase
+        DefaultUserContentSeeder _defaultUserContentSeeder,
+        ApplicationStartupClock _startupClock) : ControllerBase
     {
         public const int WebDavTokenLength = 32;
         public const int RefreshTokenLength = 32;
@@ -506,8 +506,7 @@ namespace Cotton.Server.Controllers
                 return null;
             }
 
-            var uptime = DateTimeOffset.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
-            if (uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay)
+            if (_startupClock.Uptime.TotalMinutes > Constants.AdminAutocreateMinutesDelay)
             {
                 string errorMessage = $"Initial admin user creation is disabled after " +
                     Constants.AdminAutocreateMinutesDelay + " minutes of uptime. " +

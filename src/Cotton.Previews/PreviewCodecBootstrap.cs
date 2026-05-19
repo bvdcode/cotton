@@ -71,9 +71,12 @@ namespace Cotton.Previews
             public uint max_children_per_box;
         }
 
+        // DllImport is intentionally used instead of LibraryImport here. The source-generated
+        // interop path requires enabling unsafe code for the whole preview project, while this
+        // optional libheif call is tiny, non-string marshalling-free, and isolated.
+#pragma warning disable SYSLIB1054 // DllImport keeps this optional native probe simple without project-wide unsafe.
         [DllImport("heif", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-#pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
         private static extern IntPtr heif_get_global_security_limits();
-#pragma warning restore SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
+#pragma warning restore SYSLIB1054
     }
 }

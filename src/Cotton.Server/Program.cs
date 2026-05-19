@@ -127,6 +127,7 @@ namespace Cotton.Server
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
             builder.Services.AddSingleton(masterKeyRuntimeState);
             builder.Services.AddSingleton(processHardeningStatus);
+            builder.Services.AddSingleton(new ApplicationStartupClock(DateTimeOffset.UtcNow));
             builder.Services
                 .AddOptions<HlsSegmentCacheOptions>()
                 .Bind(builder.Configuration.GetSection("HlsSegmentCache"));

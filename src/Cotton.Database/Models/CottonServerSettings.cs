@@ -121,6 +121,10 @@ namespace Cotton.Database.Models
         [Column("custom_geo_ip_lookup_url")]
         public string? CustomGeoIpLookupUrl { get; set; }
 
+        /// <summary>
+        /// Returns a stable public fingerprint of <see cref="InstanceId" /> for relay and
+        /// integration contracts that must not expose the raw instance identifier.
+        /// </summary>
         public string GetInstanceIdHash()
         {
             return InstanceId.ToString().Sha256();

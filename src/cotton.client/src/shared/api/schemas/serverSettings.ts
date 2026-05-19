@@ -62,8 +62,8 @@ export const serverUsageSchema = makeEnumSchema(serverUsageValues, "Other");
 
 export const publicServerInfoSchema = z.object({
   canCreateInitialAdmin: z.boolean(),
+  instanceIdHash: z.string(),
   product: z.string(),
-  instanceIdHash: z.string().optional(),
 });
 export type PublicServerInfo = z.infer<typeof publicServerInfoSchema>;
 

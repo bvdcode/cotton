@@ -36,7 +36,7 @@ describe("settingsApi getters", () => {
       .mockResolvedValueOnce({
         data: {
           product: "Cotton",
-          instanceIdHash: "hash",
+          instanceIdHash: "server-fingerprint",
           canCreateInitialAdmin: true,
         },
       })
@@ -46,7 +46,7 @@ describe("settingsApi getters", () => {
 
     await expect(settingsApi.getPublicInfo()).resolves.toEqual({
       product: "Cotton",
-      instanceIdHash: "hash",
+      instanceIdHash: "server-fingerprint",
       canCreateInitialAdmin: true,
     });
     await expect(settingsApi.getIsSetupComplete()).resolves.toBe(false);
