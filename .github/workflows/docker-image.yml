@@ -72,11 +72,20 @@ jobs:
       - name: Install preview rendering dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends f3d libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0
+          sudo apt-get install -y --no-install-recommends ffmpeg f3d libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0
           f3d --version
+          ffmpeg -version
 
       - name: Run backend tests
-        run: dotnet test src/Cotton.sln --configuration Release --no-restore --logger trx --results-directory TestResults
+        run: dotnet test src/Cotton.sln --configuration Release --no-restore --logger "console;verbosity=normal" --logger trx --results-directory TestResults
+
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
 
       - name: Check frontend locales
         working-directory: src/cotton.client
