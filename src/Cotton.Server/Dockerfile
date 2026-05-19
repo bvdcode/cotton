@@ -63,5 +63,8 @@ WORKDIR /app
 ARG BUILD_VERSION=dev
 ENV APP_VERSION=$BUILD_VERSION
 COPY --from=publish /app/publish .
-ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
+ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false \
+    DOTNET_EnableDiagnostics=0 \
+    COMPlus_EnableDiagnostics=0 \
+    COTTON_PROCESS_HARDENING=true
 ENTRYPOINT ["dotnet", "Cotton.Server.dll"]

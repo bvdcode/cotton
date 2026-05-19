@@ -30,11 +30,13 @@ namespace Cotton.Server
         public static async Task Main(string[] args)
         {
             ConfigureProcessTimeZone();
+            ProcessHardeningStatus processHardeningStatus = LinuxProcessHardening.ApplyFromEnvironment();
 
             CottonEncryptionSettings encryptionSettings;
+            MasterKeyRuntimeState masterKeyRuntimeState;
             try
             {
-                encryptionSettings = await ResolveEncryptionSettingsAsync(args);
+                (encryptionSettings, masterKeyRuntimeState) = await ResolveEncryptionSettingsAsync(args);
             }
             catch (OperationCanceledException)
             {
@@ -47,7 +49,7 @@ namespace Cotton.Server
                         NullLogger<MasterKeyCompatibilityProbe>.Instance))
                 .EnsureValidOrThrowAsync(encryptionSettings);
 
-            await RunApplicationAsync(args, encryptionSettings);
+            await RunApplicationAsync(args, encryptionSettings, masterKeyRuntimeState, processHardeningStatus);
         }
 
         private static void ConfigureProcessTimeZone()
@@ -58,19 +60,22 @@ namespace Cotton.Server
             TimeZoneInfo.ClearCachedData();
         }
 
-        private static async Task<CottonEncryptionSettings> ResolveEncryptionSettingsAsync(string[] args)
+        private static async Task<(CottonEncryptionSettings Settings, MasterKeyRuntimeState RuntimeState)> ResolveEncryptionSettingsAsync(string[] args)
         {
             string? rootMasterKey = Environment.GetEnvironmentVariable(
                 ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable);
             if (string.IsNullOrEmpty(rootMasterKey))
             {
                 ConfigurationBuilderExtensions.ClearMasterKeyEnvironmentVariable();
-                return await MasterKeyUnlockServer.WaitForUnlockAsync(args);
+                CottonEncryptionSettings settings = await MasterKeyUnlockServer.WaitForUnlockAsync(args);
+                return (settings, MasterKeyRuntimeState.FromUnlock(IsMasterKeyEnvironmentVariablePresent()));
             }
 
             try
             {
-                return ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey);
+                return (
+                    ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey),
+                    MasterKeyRuntimeState.FromEnvironment(environmentVariablePresentAfterResolution: false));
             }
             finally
             {
@@ -78,7 +83,17 @@ namespace Cotton.Server
             }
         }
 
-        private static async Task RunApplicationAsync(string[] args, CottonEncryptionSettings encryptionSettings)
+        private static bool IsMasterKeyEnvironmentVariablePresent()
+        {
+            return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(
+                ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable));
+        }
+
+        private static async Task RunApplicationAsync(
+            string[] args,
+            CottonEncryptionSettings encryptionSettings,
+            MasterKeyRuntimeState masterKeyRuntimeState,
+            ProcessHardeningStatus processHardeningStatus)
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddCottonOptions(encryptionSettings);
@@ -110,6 +125,8 @@ namespace Cotton.Server
                 options.KnownProxies.Clear();
             });
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CottonEncryptionSettings>>().Value);
+            builder.Services.AddSingleton(masterKeyRuntimeState);
+            builder.Services.AddSingleton(processHardeningStatus);
             builder.Services
                 .AddOptions<HlsSegmentCacheOptions>()
                 .Bind(builder.Configuration.GetSection("HlsSegmentCache"));
@@ -123,6 +140,7 @@ namespace Cotton.Server
                 .AddSingleton<IStorageBackendTypeCache, StorageBackendTypeCache>()
                 .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
+                .AddSingleton<SecurityDiagnosticsService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()

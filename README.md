@@ -309,6 +309,61 @@ For deeper internals after the quick start, continue below. For benchmark detail
 
 ---
 
+## Master Key & Deployment Security
+
+Cotton's server-side master key protects storage-level encrypted data and database backup artifacts. The recommended default for new instances is to start the container **without** `COTTON_MASTER_KEY`, open `/unlock`, generate or enter the key in the browser, and keep it outside the container. In that mode the key is held only by the running Cotton process after unlock, not baked into the container environment.
+
+This is not meant to make normal self-hosting scary. If you run Cotton for yourself or your family, control the host, and prefer unattended restarts, using `COTTON_MASTER_KEY` in your deployment environment is still a reasonable operational choice. Cotton clears the variable from its own process after deriving the runtime encryption settings, but Docker and orchestration systems can still retain configured environment variables in deployment metadata or expose them to newly exec'd processes. Choose the mode that matches your threat model.
+
+Practical guidance:
+
+- **Simple trusted home server**: use `COTTON_MASTER_KEY` if unattended restarts matter more than keeping the key out of deployment metadata.
+- **Better default for exposed/self-hosted instances**: omit `COTTON_MASTER_KEY`, unlock in the browser after restarts, and store the generated key in your own password manager or offline backup.
+- **Lost key warning**: if the key is lost and no recovery path exists, encrypted Cotton data can become unrecoverable.
+
+Cotton also exposes an admin-only security diagnostics endpoint:
+
+```http
+GET /api/v1/server/security/status
+```
+
+It reports process/container hardening signals such as .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, whether the instance was unlocked from environment or browser unlock, and a small list of warnings. It is intentionally **not** public: it is an operator check, not a healthcheck endpoint.
+
+### Paranoia Mode
+
+For operators who want the cheap hardening layers, the official Docker image now disables .NET diagnostics and requests Linux `PR_SET_DUMPABLE=0` by default:
+
+```env
+DOTNET_EnableDiagnostics=0
+COMPlus_EnableDiagnostics=0
+COTTON_PROCESS_HARDENING=true
+```
+
+A stricter Docker Compose service can add host/container hardening without changing Cotton itself:
+
+```yaml
+services:
+  cotton:
+    image: bvdcode/cotton:latest
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    pids_limit: 256
+    ulimits:
+      core: 0
+    environment:
+      DOTNET_EnableDiagnostics: "0"
+      COMPlus_EnableDiagnostics: "0"
+      COTTON_PROCESS_HARDENING: "true"
+```
+
+Extra hardening such as `read_only: true`, custom seccomp/AppArmor profiles, non-root container users, encrypted swap, host `kernel.yama.ptrace_scope`, TPM/HSM/KMS, or a separate key-agent can be valuable, but those are expert choices. They can also break volume permissions, debugging, previews, or restore workflows when applied blindly. Treat them as a separate hardening pass after the basic instance works.
+
+The important boundary is honest: if an attacker can execute code inside the Cotton process, software flags cannot fully hide the in-memory key from that process. These settings mostly protect against accidental dumps, diagnostics surfaces, and neighboring processes with too much host/container privilege.
+
+---
+
 ## Database Backup & Auto-Restore
 
 - **Backups are first-class and storage-native**  
