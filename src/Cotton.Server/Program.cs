@@ -7,6 +7,7 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Hubs;
 using Cotton.Server.Mappings;
+using Cotton.Server.Models.Configuration;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -132,6 +133,9 @@ namespace Cotton.Server
                 .AddOptions<HlsSegmentCacheOptions>()
                 .Bind(builder.Configuration.GetSection("HlsSegmentCache"));
             builder.Services
+                .AddOptions<StoragePressureOptions>()
+                .Bind(builder.Configuration.GetSection("StoragePressure"));
+            builder.Services
                 .AddMediator()
                 .AddQuartzJobs()
                 .AddMemoryCache()
@@ -147,6 +151,7 @@ namespace Cotton.Server
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
                 .AddScoped<FileManifestService>()
                 .AddScoped<UserStorageQuotaService>()
+                .AddScoped<StoragePressureGuard>()
                 .AddScoped<DefaultUserContentSeeder>()
                 .AddScoped<ChunkUsageService>()
                 .AddScoped<VideoTranscoder>()

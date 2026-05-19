@@ -110,8 +110,15 @@ namespace Cotton.Server.Controllers
                 request.BirthDate,
                 request.AvatarHash);
 
-            UserDto updated = await _mediator.Send(command, cancellationToken);
-            return Ok(updated);
+            try
+            {
+                UserDto updated = await _mediator.Send(command, cancellationToken);
+                return Ok(updated);
+            }
+            catch (StoragePressureException)
+            {
+                return StatusCode(507, "Storage is running out of free space. Profile avatar uploads are temporarily paused.");
+            }
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]

@@ -92,7 +92,15 @@ namespace Cotton.Server.Controllers
             }
 
             Guid userId = User.GetUserId();
-            await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length);
+            try
+            {
+                await _chunkIngest.UpsertChunkAsync(userId, stream, file.Length);
+            }
+            catch (StoragePressureException ex)
+            {
+                _logger.LogWarning(ex, "Rejected chunk upload because storage free space is below the configured reserve.");
+                return StatusCode(507, "Storage is running out of free space. Uploads are temporarily paused.");
+            }
 
             _logger.LogDebug("Stored chunk {Hash} of size {Size} bytes", hash, file.Length);
             _perf.OnChunkCreated();

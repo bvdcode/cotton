@@ -61,6 +61,21 @@ namespace Cotton.Storage.Tests.Backends
         }
 
         [Test]
+        public void FileSystemBackend_GetCapacitySnapshot_ReturnsBackingVolumeCapacity()
+        {
+            var snapshot = _backend.GetCapacitySnapshot();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.Backend, Is.EqualTo("filesystem"));
+                Assert.That(snapshot.RootPath, Is.Not.Empty);
+                Assert.That(snapshot.TotalBytes, Is.GreaterThan(0));
+                Assert.That(snapshot.AvailableBytes, Is.GreaterThanOrEqualTo(0));
+                Assert.That(snapshot.AvailableBytes, Is.LessThanOrEqualTo(snapshot.TotalBytes));
+            });
+        }
+
+        [Test]
         public async Task FileSystemBackend_WriteAndRead_ReturnsOriginalData()
         {
             // Arrange

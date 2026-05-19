@@ -19,6 +19,7 @@ public class ChunkIngestService(
     CottonDbContext _dbContext,
     ILayoutService _layouts,
     IStoragePipeline _storage,
+    StoragePressureGuard _storagePressure,
     SettingsProvider _settingsProvider,
     ILogger<ChunkIngestService> _logger)
     : IChunkIngestService
@@ -69,6 +70,7 @@ public class ChunkIngestService(
 
         if (!existsInStorage)
         {
+            await _storagePressure.EnsureCanAcceptWriteAsync(length, ct);
             using var chunkStream = new MemoryStream(buffer, 0, length, writable: false);
             await _storage.WriteAsync(storageKey, chunkStream, new PipelineContext());
         }

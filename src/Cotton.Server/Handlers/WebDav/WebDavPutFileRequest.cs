@@ -47,7 +47,8 @@ public enum WebDavPutFileError
     Conflict,
     PreconditionFailed,
     UploadAborted,
-    QuotaExceeded
+    QuotaExceeded,
+    StoragePressure
 }
 
 /// <summary>
@@ -249,7 +250,17 @@ public class WebDavPutFileRequestHandler(
 
     private async Task<(PutContent? Content, WebDavPutFileResult? Error)> TryReadAndValidateContentAsync(WebDavPutFileRequest request, CancellationToken ct)
     {
-        var (chunks, fileHash) = await ProcessStreamInChunksAndHashAsync(request.Content, request.UserId, ct);
+        List<Chunk> chunks;
+        byte[] fileHash;
+        try
+        {
+            (chunks, fileHash) = await ProcessStreamInChunksAndHashAsync(request.Content, request.UserId, ct);
+        }
+        catch (StoragePressureException ex)
+        {
+            _logger.LogWarning(ex, "WebDAV PUT rejected because storage free space is below the configured reserve. Path: {Path}, User: {UserId}", request.Path, request.UserId);
+            return (null, new WebDavPutFileResult(false, false, WebDavPutFileError.StoragePressure));
+        }
 
         long totalBytes = 0;
         for (int i = 0; i < chunks.Count; i++)

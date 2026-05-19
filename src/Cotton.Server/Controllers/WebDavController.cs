@@ -195,6 +195,7 @@ public class WebDavController(
                 WebDavPutFileError.PreconditionFailed => StatusCode(StatusCodes.Status412PreconditionFailed, "Destination exists and Overwrite is false"),
                 WebDavPutFileError.UploadAborted => StatusCode(StatusCodes.Status408RequestTimeout, "Upload aborted"),
                 WebDavPutFileError.QuotaExceeded => StatusCode(507, "Storage quota exceeded"),
+                WebDavPutFileError.StoragePressure => StatusCode(507, "Storage is running out of free space"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }
