@@ -12,6 +12,7 @@ using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
 using Cotton.Server.Providers;
+using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
 using EasyExtensions;
@@ -49,7 +50,8 @@ namespace Cotton.Server.Controllers
         ILogger<AuthController> _logger,
         WebDavAuthCache _webDavAuthCache,
         INotificationsProvider _notifications,
-        IGeoLookupService _geoLookup) : ControllerBase
+        IGeoLookupService _geoLookup,
+        DefaultUserContentSeeder _defaultUserContentSeeder) : ControllerBase
     {
         public const int WebDavTokenLength = 32;
         public const int RefreshTokenLength = 32;
@@ -493,6 +495,7 @@ namespace Cotton.Server.Controllers
                 };
                 await _dbContext.Users.AddAsync(guest);
                 await _dbContext.SaveChangesAsync();
+                await _defaultUserContentSeeder.SeedAsync(guest.Id);
                 _logger.LogInformation("Created guest user {Username} on public instance", guest.Username);
                 return guest;
             }

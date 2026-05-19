@@ -37,6 +37,50 @@ type FlashTimers = {
   storageType: number | null;
   s3: number | null;
   storageSpace: number | null;
+  quota: number | null;
+  template: number | null;
+};
+
+const bytesPerGiB = 1024 ** 3;
+const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const formatQuotaInput = (quotaBytes: number | null): string => {
+  if (!quotaBytes || quotaBytes <= 0) {
+    return "";
+  }
+
+  return Number((quotaBytes / bytesPerGiB).toFixed(3)).toString();
+};
+
+const parseQuotaInput = (input: string): number | null => {
+  const normalized = input.trim().replace(",", ".");
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error("invalid-quota");
+  }
+
+  if (value === 0) {
+    return null;
+  }
+
+  return Math.round(value * bytesPerGiB);
+};
+
+const parseTemplateNodeIdInput = (input: string): string | null => {
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  if (!guidPattern.test(trimmed)) {
+    throw new Error("invalid-template-node-id");
+  }
+
+  return trimmed.toLowerCase();
 };
 
 const emptyS3Config: S3Config = {
@@ -82,11 +126,24 @@ export const AdminStorageSettingsPage = () => {
   const [storageSpaceModeStatus, setStorageSpaceModeStatus] =
     useState<SaveStatus>("loading");
 
+  const [defaultUserQuotaGiB, setDefaultUserQuotaGiB] = useState("");
+  const [savedDefaultUserQuotaGiB, setSavedDefaultUserQuotaGiB] = useState("");
+  const [defaultUserQuotaStatus, setDefaultUserQuotaStatus] =
+    useState<SaveStatus>("loading");
+
+  const [defaultTemplateNodeId, setDefaultTemplateNodeId] = useState("");
+  const [savedDefaultTemplateNodeId, setSavedDefaultTemplateNodeId] =
+    useState("");
+  const [defaultTemplateStatus, setDefaultTemplateStatus] =
+    useState<SaveStatus>("loading");
+
   const flashTimers = useMemo<FlashTimers>(
     () => ({
       storageType: null,
       s3: null,
       storageSpace: null,
+      quota: null,
+      template: null,
     }),
     [],
   );
@@ -99,14 +156,23 @@ export const AdminStorageSettingsPage = () => {
       setStorageTypeStatus("loading");
       setS3Status("loading");
       setStorageSpaceModeStatus("loading");
+      setDefaultUserQuotaStatus("loading");
+      setDefaultTemplateStatus("loading");
 
       try {
-        const [nextStorageType, nextS3Config, nextStorageSpaceMode] =
-          await Promise.all([
-            settingsApi.getStorageType(),
-            settingsApi.getS3Config(),
-            settingsApi.getStorageSpaceMode(),
-          ]);
+        const [
+          nextStorageType,
+          nextS3Config,
+          nextStorageSpaceMode,
+          nextDefaultUserQuotaBytes,
+          nextDefaultTemplateNodeId,
+        ] = await Promise.all([
+          settingsApi.getStorageType(),
+          settingsApi.getS3Config(),
+          settingsApi.getStorageSpaceMode(),
+          settingsApi.getDefaultUserStorageQuotaBytes(),
+          settingsApi.getDefaultUserTemplateNodeId(),
+        ]);
 
         if (!active) return;
 
@@ -115,15 +181,24 @@ export const AdminStorageSettingsPage = () => {
         setS3Config(nextS3Config);
         setStorageSpaceMode(nextStorageSpaceMode);
         setSavedStorageSpaceMode(nextStorageSpaceMode);
+        const quotaInput = formatQuotaInput(nextDefaultUserQuotaBytes);
+        setDefaultUserQuotaGiB(quotaInput);
+        setSavedDefaultUserQuotaGiB(quotaInput);
+        setDefaultTemplateNodeId(nextDefaultTemplateNodeId ?? "");
+        setSavedDefaultTemplateNodeId(nextDefaultTemplateNodeId ?? "");
         setStorageTypeStatus("idle");
         setS3Status("idle");
         setStorageSpaceModeStatus("idle");
+        setDefaultUserQuotaStatus("idle");
+        setDefaultTemplateStatus("idle");
       } catch {
         if (!active) return;
         setLoadError(t("storageSettings.errors.loadFailed"));
         setStorageTypeStatus("idle");
         setS3Status("idle");
         setStorageSpaceModeStatus("idle");
+        setDefaultUserQuotaStatus("idle");
+        setDefaultTemplateStatus("idle");
       }
     };
 
@@ -142,6 +217,14 @@ export const AdminStorageSettingsPage = () => {
       if (flashTimers.storageSpace !== null) {
         window.clearTimeout(flashTimers.storageSpace);
         flashTimers.storageSpace = null;
+      }
+      if (flashTimers.quota !== null) {
+        window.clearTimeout(flashTimers.quota);
+        flashTimers.quota = null;
+      }
+      if (flashTimers.template !== null) {
+        window.clearTimeout(flashTimers.template);
+        flashTimers.template = null;
       }
     };
   }, [flashTimers, t]);
@@ -219,6 +302,78 @@ export const AdminStorageSettingsPage = () => {
     }
   };
 
+  const saveDefaultUserQuota = async () => {
+    if (
+      defaultUserQuotaStatus === "loading"
+      || defaultUserQuotaStatus === "saving"
+    ) {
+      return;
+    }
+
+    let quotaBytes: number | null;
+    try {
+      quotaBytes = parseQuotaInput(defaultUserQuotaGiB);
+    } catch {
+      setDefaultUserQuotaStatus("error");
+      return;
+    }
+
+    const previous = savedDefaultUserQuotaGiB;
+    setDefaultUserQuotaStatus("saving");
+
+    try {
+      await settingsApi.setDefaultUserStorageQuotaBytes(quotaBytes);
+      const saved = formatQuotaInput(quotaBytes);
+      setDefaultUserQuotaGiB(saved);
+      setSavedDefaultUserQuotaGiB(saved);
+      flashStatus(setDefaultUserQuotaStatus, flashTimers, "quota");
+    } catch (error) {
+      setDefaultUserQuotaGiB(previous);
+      setDefaultUserQuotaStatus("error");
+      showApiErrorToast(
+        error,
+        t("storageSettings.errors.quotaSaveFailed"),
+        "admin-storage-settings:quota:save-failed",
+      );
+    }
+  };
+
+  const saveDefaultTemplateNode = async () => {
+    if (
+      defaultTemplateStatus === "loading"
+      || defaultTemplateStatus === "saving"
+    ) {
+      return;
+    }
+
+    let nodeId: string | null;
+    try {
+      nodeId = parseTemplateNodeIdInput(defaultTemplateNodeId);
+    } catch {
+      setDefaultTemplateStatus("error");
+      return;
+    }
+
+    const previous = savedDefaultTemplateNodeId;
+    setDefaultTemplateStatus("saving");
+
+    try {
+      await settingsApi.setDefaultUserTemplateNodeId(nodeId);
+      const saved = nodeId ?? "";
+      setDefaultTemplateNodeId(saved);
+      setSavedDefaultTemplateNodeId(saved);
+      flashStatus(setDefaultTemplateStatus, flashTimers, "template");
+    } catch (error) {
+      setDefaultTemplateNodeId(previous);
+      setDefaultTemplateStatus("error");
+      showApiErrorToast(
+        error,
+        t("storageSettings.errors.templateSaveFailed"),
+        "admin-storage-settings:template:save-failed",
+      );
+    }
+  };
+
   const handleStorageSpaceModeChange = async (
     next: StorageSpaceMode | null,
   ) => {
@@ -258,6 +413,14 @@ export const AdminStorageSettingsPage = () => {
   const s3Saving = s3Status === "saving" || storageTypeStatus === "saving";
   const storageSpaceDisabled =
     storageSpaceModeStatus === "loading" || storageSpaceModeStatus === "saving";
+  const quotaSaving = defaultUserQuotaStatus === "saving";
+  const quotaDisabled =
+    defaultUserQuotaStatus === "loading" || defaultUserQuotaStatus === "saving";
+  const quotaChanged = defaultUserQuotaGiB !== savedDefaultUserQuotaGiB;
+  const templateSaving = defaultTemplateStatus === "saving";
+  const templateDisabled =
+    defaultTemplateStatus === "loading" || defaultTemplateStatus === "saving";
+  const templateChanged = defaultTemplateNodeId !== savedDefaultTemplateNodeId;
 
   return (
     <Stack>
@@ -406,6 +569,92 @@ export const AdminStorageSettingsPage = () => {
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
+          </SettingsSection>
+
+          <SettingsSection
+            title={t("storageSettings.quota.title")}
+            description={t("storageSettings.quota.description")}
+            status={defaultUserQuotaStatus}
+          >
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              alignItems={{ xs: "stretch", sm: "flex-start" }}
+            >
+              <TextField
+                label={t("storageSettings.quota.fields.defaultUserQuotaGiB")}
+                value={defaultUserQuotaGiB}
+                onChange={(event) => {
+                  setDefaultUserQuotaGiB(event.target.value);
+                  if (defaultUserQuotaStatus === "error") {
+                    setDefaultUserQuotaStatus("idle");
+                  }
+                }}
+                disabled={quotaDisabled}
+                error={defaultUserQuotaStatus === "error"}
+                helperText={t("storageSettings.quota.help")}
+                type="number"
+                inputProps={{ min: 0, step: 0.25 }}
+                fullWidth
+              />
+              <Button
+                variant="contained"
+                onClick={() => void saveDefaultUserQuota()}
+                disabled={quotaDisabled || !quotaChanged}
+                startIcon={
+                  quotaSaving ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <SaveIcon />
+                  )
+                }
+                sx={{ minWidth: { xs: "100%", sm: 120 } }}
+              >
+                {t("settings.actions.save")}
+              </Button>
+            </Stack>
+          </SettingsSection>
+
+          <SettingsSection
+            title={t("storageSettings.template.title")}
+            description={t("storageSettings.template.description")}
+            status={defaultTemplateStatus}
+          >
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              alignItems={{ xs: "stretch", sm: "flex-start" }}
+            >
+              <TextField
+                label={t("storageSettings.template.fields.nodeId")}
+                value={defaultTemplateNodeId}
+                onChange={(event) => {
+                  setDefaultTemplateNodeId(event.target.value);
+                  if (defaultTemplateStatus === "error") {
+                    setDefaultTemplateStatus("idle");
+                  }
+                }}
+                disabled={templateDisabled}
+                error={defaultTemplateStatus === "error"}
+                helperText={t("storageSettings.template.help")}
+                fullWidth
+              />
+              <Button
+                variant="contained"
+                onClick={() => void saveDefaultTemplateNode()}
+                disabled={templateDisabled || !templateChanged}
+                startIcon={
+                  templateSaving ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <SaveIcon />
+                  )
+                }
+                sx={{ minWidth: { xs: "100%", sm: 120 } }}
+              >
+                {t("settings.actions.save")}
+              </Button>
+            </Stack>
           </SettingsSection>
         </Stack>
       </AdminPageSurface>

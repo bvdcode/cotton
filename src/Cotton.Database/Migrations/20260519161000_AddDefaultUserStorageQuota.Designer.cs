@@ -5,6 +5,7 @@ using System.Net;
 using Cotton.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cotton.Database.Migrations
 {
     [DbContext(typeof(CottonDbContext))]
-    partial class CottonDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260519161000_AddDefaultUserStorageQuota")]
+    partial class AddDefaultUserStorageQuota
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -303,10 +306,6 @@ namespace Cotton.Database.Migrations
                     b.Property<long?>("DefaultUserStorageQuotaBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("default_user_storage_quota_bytes");
-
-                    b.Property<Guid?>("DefaultUserTemplateNodeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("default_user_template_node_id");
 
                     b.Property<int>("StorageType")
                         .HasColumnType("integer")

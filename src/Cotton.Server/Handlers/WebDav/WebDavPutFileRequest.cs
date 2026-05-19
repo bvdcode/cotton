@@ -60,6 +60,7 @@ public class WebDavPutFileRequestHandler(
     IChunkIngestService _chunkIngest,
     IWebDavPathResolver _pathResolver,
     FileManifestService _fileManifestService,
+    UserStorageQuotaService _quota,
     IEventNotificationService _eventNotification,
     ILogger<WebDavPutFileRequestHandler> _logger)
     : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
@@ -118,6 +119,8 @@ public class WebDavPutFileRequestHandler(
             _logger.LogDebug("WebDAV PUT: Parent layout changed while waiting for lock: {Path}", request.Path);
             return Fail(WebDavPutFileError.ParentNotFound);
         }
+
+        await EnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
 
         var resultNodeFile = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
@@ -304,6 +307,17 @@ public class WebDavPutFileRequestHandler(
         }
 
         return fileManifest;
+    }
+
+    private async Task EnsureQuotaAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
+    {
+        if (target.Existing.Found && target.Existing.NodeFile is not null)
+        {
+            await _quota.EnsureCanChangeFileManifestAsync(request.UserId, target.Existing.NodeFile.Id, fileManifestId, ct);
+            return;
+        }
+
+        await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifestId, ct);
     }
 
     private async Task<NodeFile> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)

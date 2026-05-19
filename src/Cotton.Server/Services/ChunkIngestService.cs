@@ -48,7 +48,6 @@ public class ChunkIngestService(
 
         var chunk = await _layouts.FindChunkAsync(chunkHash);
         bool existsInStorage = await _storage.ExistsAsync(storageKey);
-
         if (chunk is not null && settings.AllowCrossUserDeduplication && existsInStorage)
         {
             if (chunk.StoredSizeBytes <= 0)

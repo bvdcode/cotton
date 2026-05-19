@@ -37,14 +37,14 @@ namespace Cotton.Server.Handlers.Users
                 })
                 .ToDictionaryAsync(x => x.UserId, x => x, cancellationToken);
 
-            Dictionary<Guid, long> storageUsage = request.CalculateStorageUsage ? await _dbContext.ChunkOwnerships
+            Dictionary<Guid, long> storageUsage = request.CalculateStorageUsage ? await _dbContext.NodeFiles
                 .AsNoTracking()
                 .Where(x => userIds.Contains(x.OwnerId))
                 .GroupBy(x => x.OwnerId)
                 .Select(g => new
                 {
                     UserId = g.Key,
-                    StorageUsedBytes = g.Sum(x => x.Chunk.StoredSizeBytes)
+                    StorageUsedBytes = g.Sum(x => x.FileManifest.SizeBytes)
                 })
                 .ToDictionaryAsync(x => x.UserId, x => x.StorageUsedBytes, cancellationToken) : [];
 

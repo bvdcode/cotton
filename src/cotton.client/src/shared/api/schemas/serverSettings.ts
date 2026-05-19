@@ -158,6 +158,18 @@ export const storageSpaceModeResponseSchema = z
   .object({ storageSpaceMode: z.unknown().optional() })
   .transform((value) => storageSpaceModeSchema.parse(value.storageSpaceMode));
 
+export const defaultUserStorageQuotaBytesSchema = z
+  .object({
+    defaultUserStorageQuotaBytes: z.number().finite().nonnegative().nullable().optional(),
+  })
+  .transform((value) => value.defaultUserStorageQuotaBytes ?? null);
+
+export const defaultUserTemplateNodeIdSchema = z
+  .object({
+    defaultUserTemplateNodeId: z.string().uuid().nullable().optional(),
+  })
+  .transform((value) => value.defaultUserTemplateNodeId ?? null);
+
 export const computionModeResponseSchema = z
   .object({ computionMode: z.unknown().optional() })
   .transform((value) => computionModeSchema.parse(value.computionMode));

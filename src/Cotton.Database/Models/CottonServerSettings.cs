@@ -84,6 +84,12 @@ namespace Cotton.Database.Models
         [Column("storage_space_mode")]
         public StorageSpaceMode StorageSpaceMode { get; set; }
 
+        [Column("default_user_storage_quota_bytes")]
+        public long? DefaultUserStorageQuotaBytes { get; set; }
+
+        [Column("default_user_template_node_id")]
+        public Guid? DefaultUserTemplateNodeId { get; set; }
+
         [Column("totp_max_failed_attempts")]
         public int TotpMaxFailedAttempts { get; set; }
 

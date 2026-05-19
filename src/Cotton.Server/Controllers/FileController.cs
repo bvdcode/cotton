@@ -43,6 +43,7 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
         NodeFileHistoryService _history,
+        UserStorageQuotaService _quota,
         VideoTranscoder _videoTranscoder,
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
@@ -429,6 +430,8 @@ namespace Cotton.Server.Controllers
                     return this.ApiConflict("A folder with the same name key already exists in this folder: " + nameKey);
                 }
             }
+
+            await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
 
             if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
             {

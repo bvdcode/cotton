@@ -1654,6 +1654,22 @@
       "fields": {
         "storageType": "Storage backend"
       },
+      "quota": {
+        "title": "Default user quota",
+        "description": "Limits how much unique uploaded content each user can own. Leave it empty for unlimited accounts.",
+        "fields": {
+          "defaultUserQuotaGiB": "Quota per user, GiB"
+        },
+        "help": "Use 0 or empty for unlimited. Public demo instances default to 1 GiB."
+      },
+      "template": {
+        "title": "Default files",
+        "description": "Copies the contents of this folder into every newly created user account.",
+        "fields": {
+          "nodeId": "Template folder node ID"
+        },
+        "help": "Leave empty to disable. Set this to a folder node ID that contains onboarding or demo files."
+      },
       "storageType": {
         "Local": "Local disk",
         "S3": "S3-compatible storage"
@@ -1680,7 +1696,9 @@
       "errors": {
         "loadFailed": "Failed to load storage settings.",
         "s3SaveFailed": "Failed to save S3 configuration.",
-        "storageSaveFailed": "Failed to switch storage mode."
+        "storageSaveFailed": "Failed to switch storage mode.",
+        "quotaSaveFailed": "Failed to save default user quota.",
+        "templateSaveFailed": "Failed to save default files template."
       }
     },
     "notificationsSettings": {

@@ -49,6 +49,7 @@ public class WebDavCopyRequestHandler(
     CottonDbContext _dbContext,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
+    UserStorageQuotaService _quota,
     IEventNotificationService _eventNotification,
     ILogger<WebDavCopyRequestHandler> _logger)
     : IRequestHandler<WebDavCopyRequest, WebDavCopyResult>
@@ -277,6 +278,8 @@ public class WebDavCopyRequestHandler(
 
         if (sourceResult.NodeFile is not null)
         {
+            await _quota.EnsureCanAddFileReferenceAsync(request.UserId, sourceResult.NodeFile.FileManifestId, ct);
+
             var newNodeFile = new NodeFile
             {
                 OwnerId = request.UserId,
@@ -341,6 +344,8 @@ public class WebDavCopyRequestHandler(
 
         foreach (var file in childFiles)
         {
+            await _quota.EnsureCanAddFileReferenceAsync(userId, file.FileManifestId, ct);
+
             var newFile = new NodeFile
             {
                 OwnerId = userId,

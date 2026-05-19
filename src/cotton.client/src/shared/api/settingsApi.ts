@@ -6,6 +6,8 @@ import {
   chunkSizeResponseSchema,
   computionModeResponseSchema,
   customGeoIpLookupUrlSchema,
+  defaultUserStorageQuotaBytesSchema,
+  defaultUserTemplateNodeIdSchema,
   emailConfigSchema,
   emailModeResponseSchema,
   geoIpLookupModeResponseSchema,
@@ -251,6 +253,33 @@ export const settingsApi = {
 
   setStorageSpaceMode: async (mode: StorageSpaceMode): Promise<void> => {
     await httpClient.patch(`server/settings/storage-space-mode/${mode}`);
+  },
+
+  getDefaultUserStorageQuotaBytes: (): Promise<number | null> =>
+    getValidated(
+      "server/settings/default-user-storage-quota-bytes",
+      defaultUserStorageQuotaBytesSchema,
+    ),
+
+  setDefaultUserStorageQuotaBytes: async (
+    quotaBytes: number | null,
+  ): Promise<void> => {
+    await httpClient.patch(
+      "server/settings/default-user-storage-quota-bytes",
+      quotaBytes,
+    );
+  },
+
+  getDefaultUserTemplateNodeId: (): Promise<string | null> =>
+    getValidated(
+      "server/settings/default-user-template-node",
+      defaultUserTemplateNodeIdSchema,
+    ),
+
+  setDefaultUserTemplateNodeId: async (
+    nodeId: string | null,
+  ): Promise<void> => {
+    await httpClient.patch("server/settings/default-user-template-node", nodeId);
   },
 
   getComputionMode: (): Promise<ComputionMode> =>

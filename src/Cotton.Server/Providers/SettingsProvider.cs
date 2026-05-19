@@ -31,6 +31,7 @@ namespace Cotton.Server.Providers
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
+        private const long publicInstanceDefaultUserStorageQuotaBytes = 1024L * 1024 * 1024;
 
         public CottonServerSettings GetServerSettings()
         {
@@ -82,6 +83,8 @@ namespace Cotton.Server.Providers
                     PublicBaseUrl = defaultPublicBaseUrl,
                     ServerUsage = [ServerUsage.Other],
                     StorageSpaceMode = StorageSpaceMode.Optimal,
+                    DefaultUserStorageQuotaBytes = GetDefaultUserStorageQuotaBytes(),
+                    DefaultUserTemplateNodeId = null,
                     GeoIpLookupMode = GeoIpLookupMode.Disabled,
                 };
                 return _cache;
@@ -491,6 +494,34 @@ namespace Cotton.Server.Providers
             return null;
         }
 
+        public string? ValidateDefaultUserStorageQuotaBytes(long? quotaBytes)
+        {
+            if (quotaBytes is null or 0)
+            {
+                return null;
+            }
+
+            return quotaBytes > 0
+                ? null
+                : "Default user storage quota must be zero, empty, or a positive byte value.";
+        }
+
+        public async Task<string?> ValidateDefaultUserTemplateNodeIdAsync(Guid? nodeId, CancellationToken cancellationToken = default)
+        {
+            if (nodeId is null || nodeId == Guid.Empty)
+            {
+                return null;
+            }
+
+            bool exists = await _dbContext.Nodes
+                .AsNoTracking()
+                .AnyAsync(x => x.Id == nodeId.Value && x.Type == NodeType.Default, cancellationToken);
+
+            return exists
+                ? null
+                : "Default user template folder was not found.";
+        }
+
         public string? ValidatePublicBaseUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out _)
@@ -555,6 +586,13 @@ namespace Cotton.Server.Providers
         public static bool TryParsePort(string? value, out int port)
         {
             return int.TryParse(value, out port) && port is >= 1 and <= 65535;
+        }
+
+        private static long? GetDefaultUserStorageQuotaBytes()
+        {
+            return Constants.IsPublicInstance
+                ? publicInstanceDefaultUserStorageQuotaBytes
+                : null;
         }
 
         private static bool IsTimezoneValid(string timezone)
@@ -627,6 +665,8 @@ namespace Cotton.Server.Providers
                 PublicBaseUrl = NormalizePublicBaseUrl(fallbackPublicBaseUrl),
                 ServerUsage = [ServerUsage.Other],
                 StorageSpaceMode = StorageSpaceMode.Optimal,
+                DefaultUserStorageQuotaBytes = GetDefaultUserStorageQuotaBytes(),
+                DefaultUserTemplateNodeId = null,
                 GeoIpLookupMode = GeoIpLookupMode.Disabled,
             };
         }
