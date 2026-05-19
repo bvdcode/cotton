@@ -22,6 +22,7 @@ import {
   tryGetTwoFactorHint,
   type ToastSeverity,
 } from "./loginUtils";
+import { getOrCreateDemoCredentials } from "./demoCredentials";
 
 interface UseLoginFormResult {
   username: string;
@@ -181,13 +182,15 @@ export const useLoginForm = (): UseLoginFormResult => {
     if (demoFillRef.current) return;
     if (searchParams.get("demo") !== "true") return;
     demoFillRef.current = true;
-    setUsername("demo");
-    setPassword("demo");
+
+    const credentials = getOrCreateDemoCredentials(window.localStorage);
+    setUsername(credentials.username);
+    setPassword(credentials.password);
   }, [searchParams]);
 
   useEffect(() => {
     if (!demoFillRef.current || demoSubmitRef.current) return;
-    if (username !== "demo" || password !== "demo") return;
+    if (username.trim().length === 0 || password.length === 0) return;
     demoSubmitRef.current = true;
     void submitLogin();
   }, [username, password, submitLogin]);
