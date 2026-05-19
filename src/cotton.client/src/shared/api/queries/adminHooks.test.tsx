@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { UserRole } from "../../../features/auth/types";
 import type { AdminUserDto } from "../adminApi";
 
-vi.mock("react-toastify", () => ({
+vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn() },
 }));
 

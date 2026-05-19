@@ -7,5 +7,17 @@ namespace Cotton.Database.Models
     public class AppVersion : BaseEntity<Guid>
     {
         public string Version { get; set; } = null!;
+
+        [Column("latest_release_version")]
+        public string? LatestReleaseVersion { get; set; }
+
+        [Column("latest_release_url")]
+        public string? LatestReleaseUrl { get; set; }
+
+        [Column("latest_release_checked_at")]
+        public DateTime? LatestReleaseCheckedAt { get; set; }
+
+        [Column("latest_release_notified_at")]
+        public DateTime? LatestReleaseNotifiedAt { get; set; }
     }
 }

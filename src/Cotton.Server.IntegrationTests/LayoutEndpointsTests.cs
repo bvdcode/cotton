@@ -154,6 +154,52 @@ public class LayoutEndpointsTests : IntegrationTestBase
         });
     }
 
+    [Test]
+    public async Task Search_ByNodeGuid_ReturnsOnlyExactNode()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var targetResponse = await _client.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new Models.Requests.CreateNodeRequest { ParentId = root!.Id, Name = "target" });
+        targetResponse.EnsureSuccessStatusCode();
+        var target = await targetResponse.Content.ReadFromJsonAsync<NodeDto>();
+        Assert.That(target, Is.Not.Null);
+
+        var textMatchResponse = await _client.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new Models.Requests.CreateNodeRequest { ParentId = root.Id, Name = "why-log" });
+        textMatchResponse.EnsureSuccessStatusCode();
+
+        var exact = await SearchAsync(root.LayoutId, target!.Id.ToString());
+        Assert.Multiple(() =>
+        {
+            Assert.That(exact.TotalCount, Is.EqualTo(1));
+            Assert.That(exact.Nodes.Single().Id, Is.EqualTo(target.Id));
+            Assert.That(exact.Files, Is.Empty);
+        });
+
+        var copiedLogLine = await SearchAsync(root.LayoutId, $"{target.Id} why");
+        Assert.Multiple(() =>
+        {
+            Assert.That(copiedLogLine.TotalCount, Is.EqualTo(1));
+            Assert.That(copiedLogLine.Nodes.Single().Id, Is.EqualTo(target.Id));
+            Assert.That(copiedLogLine.Files, Is.Empty);
+        });
+    }
+
+    private async Task<SearchLayoutsResultDto> SearchAsync(Guid layoutId, string query)
+    {
+        var response = await _client!.GetAsync(
+            $"/api/v1/layouts/{layoutId}/search?query={Uri.EscapeDataString(query)}&page=1&pageSize=20");
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<SearchLayoutsResultDto>())!;
+    }
+
     private async Task<string> LoginAsync()
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")

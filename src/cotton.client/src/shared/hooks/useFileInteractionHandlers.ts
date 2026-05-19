@@ -1,5 +1,5 @@
 import * as React from "react";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import { useTranslation } from "react-i18next";
 import { downloadFile } from "../utils/fileHandlers";
 import { shareFile } from "../utils/shareFile";

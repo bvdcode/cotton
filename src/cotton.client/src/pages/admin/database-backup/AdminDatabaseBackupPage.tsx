@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import {
   useLatestDatabaseBackupQuery,
   useTriggerDatabaseBackupMutation,

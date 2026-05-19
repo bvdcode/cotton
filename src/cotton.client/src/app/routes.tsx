@@ -1,6 +1,6 @@
 import type { RouteConfig } from "./types";
 import { RequireAdmin, RequireAuth, useAuth } from "../features/auth";
-import { lazy, Suspense, useEffect, type JSX } from "react";
+import { lazy, Suspense, useEffect, useState, type JSX } from "react";
 import {
   Routes,
   Route,
@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { AppLayout, PublicLayout } from "./layouts";
 import { Folder, Home, Delete } from "@mui/icons-material";
 import { SetupGate } from "../features/settings/SetupGate";
+import { unlockApi, type UnlockStatusResponse } from "../shared/api/unlockApi";
 
 const FilesPage = lazy(() =>
   import("../pages/files").then((module) => ({ default: module.FilesPage })),
@@ -115,6 +116,11 @@ const VerifyEmailPage = lazy(() =>
     default: module.VerifyEmailPage,
   })),
 );
+const UnlockPage = lazy(() =>
+  import("../pages/unlock/UnlockPage").then((module) => ({
+    default: module.UnlockPage,
+  })),
+);
 const SetupWizardPage = lazy(() =>
   import("../pages/setup/SetupWizardPage").then((module) => ({
     default: module.SetupWizardPage,
@@ -131,6 +137,10 @@ const RedirectSToShare = () => {
 };
 
 const publicRoutes: RouteConfig[] = [
+  {
+    path: "/unlock",
+    element: withRouteSuspense(<UnlockPage />),
+  },
   {
     path: "/login",
     element: withRouteSuspense(<LoginPage />),
@@ -154,8 +164,12 @@ const publicRoutes: RouteConfig[] = [
 ];
 
 export function AppRoutes() {
-  const { t } = useTranslation(["login"]);
+  const { t } = useTranslation(["login", "unlock"]);
   const location = useLocation();
+  const [lockStatus, setLockStatus] = useState<UnlockStatusResponse | null>(null);
+  const [lockCheckState, setLockCheckState] = useState<
+    "checking" | "locked" | "unlocked"
+  >("checking");
   const {
     hydrated,
     isInitializing,
@@ -164,6 +178,27 @@ export function AppRoutes() {
     hasChecked,
     ensureAuth,
   } = useAuth();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    unlockApi
+      .getStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setLockStatus(status);
+        setLockCheckState(status ? "locked" : "unlocked");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLockStatus(null);
+        setLockCheckState("unlocked");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isPublicRoute = publicRoutes.some((route) =>
     Boolean(
@@ -175,9 +210,40 @@ export function AppRoutes() {
   );
 
   useEffect(() => {
+    if (lockCheckState !== "unlocked") return;
     if (isPublicRoute) return;
     ensureAuth();
-  }, [ensureAuth, isPublicRoute]);
+  }, [ensureAuth, isPublicRoute, lockCheckState]);
+
+  if (lockCheckState === "checking") {
+    return (
+      <Loader
+        overlay={true}
+        title={t("checking.title", { ns: "unlock" })}
+        caption={t("checking.caption", { ns: "unlock" })}
+      />
+    );
+  }
+
+  if (lockCheckState === "locked") {
+    return (
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="/unlock" element={withRouteSuspense(<UnlockPage initialStatus={lockStatus ?? undefined} />)} />
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to="/unlock"
+                replace
+                state={{ from: location.pathname, status: lockStatus }}
+              />
+            }
+          />
+        </Route>
+      </Routes>
+    );
+  }
 
   const isAuthBootstrapPending =
     !isPublicRoute && (

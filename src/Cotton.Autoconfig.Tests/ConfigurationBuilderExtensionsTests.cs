@@ -31,6 +31,15 @@ namespace Cotton.Autoconfig.Tests
         }
 
         [Test]
+        public void AddCottonOptions_Throws_When_MasterKey_Is_Missing()
+        {
+            Environment.SetEnvironmentVariable(EnvVar, null);
+            var builder = new ConfigurationBuilder();
+            var ex = Assert.Throws<InvalidOperationException>(() => builder.AddCottonOptions());
+            Assert.That(ex!.Message, Does.Contain("COTTON_MASTER_KEY"));
+        }
+
+        [Test]
         public void AddCottonOptions_Throws_When_MasterKey_Length_Is_Not_32()
         {
             Environment.SetEnvironmentVariable(EnvVar, "too-short");
@@ -92,5 +101,24 @@ namespace Cotton.Autoconfig.Tests
                 Assert.That(masterA, Is.Not.EqualTo(masterB));
             }
         }
+
+
+        [Test]
+        public void AddCottonOptions_With_Derived_Settings_Does_Not_Require_Env_MasterKey()
+        {
+            Environment.SetEnvironmentVariable(EnvVar, null);
+            const string root = "cccccccccccccccccccccccccccccccc";
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(root);
+
+            var cfg = new ConfigurationBuilder().AddCottonOptions(settings).Build();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(cfg[nameof(CottonEncryptionSettings.Pepper)], Is.EqualTo(settings.Pepper));
+                Assert.That(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKey)], Is.EqualTo(settings.MasterEncryptionKey));
+                Assert.That(cfg[nameof(CottonEncryptionSettings.MasterEncryptionKeyId)], Is.EqualTo("1"));
+            }
+        }
+
     }
 }

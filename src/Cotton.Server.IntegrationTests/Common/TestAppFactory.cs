@@ -11,8 +11,25 @@ using Quartz;
 
 namespace Cotton.Server.IntegrationTests.Common;
 
-public class TestAppFactory(Dictionary<string, string?> _overrides) : WebApplicationFactory<Program>
+public class TestAppFactory : WebApplicationFactory<Program>
 {
+    private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
+    private readonly Dictionary<string, string?> _overrides;
+    private readonly string? _previousMasterKey;
+
+    public TestAppFactory(Dictionary<string, string?> overrides)
+    {
+        _overrides = overrides;
+        _previousMasterKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY");
+        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", TestRootMasterKey);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", _previousMasterKey);
+        base.Dispose(disposing);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         Quartz.Logging.LogProvider.IsDisabled = true;

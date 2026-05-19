@@ -228,6 +228,22 @@
                    $"Please verify your storage integrity and re-upload this file.";
         }
 
+        public static string AppUpdateAvailableTitle => "Cotton server update available";
+
+        public static string AppUpdateAvailableContent(
+            string currentVersion,
+            string latestVersion,
+            string releaseUrl)
+        {
+            return
+                $"A newer Cotton server release is available.\n\n" +
+                $"Current server version: {currentVersion}\n" +
+                $"Latest release: {latestVersion}\n\n" +
+                $"Refreshing the browser will only reload the frontend served by this instance; " +
+                $"it will not install the server update. Update the server or container when you are ready.\n\n" +
+                $"Release notes: {releaseUrl}";
+        }
+
         public static string DatabaseRestoreCompletedTitle => "Database restored automatically";
 
         public static string DatabaseRestoreCompletedContent(

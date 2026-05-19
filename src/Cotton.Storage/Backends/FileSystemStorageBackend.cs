@@ -7,12 +7,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Backends
 {
-    public class FileSystemStorageBackend(ILogger<FileSystemStorageBackend> _logger) : IStorageBackend
+    public class FileSystemStorageBackend(ILogger<FileSystemStorageBackend> _logger, string? basePath = null) : IStorageBackend
     {
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
         private const string TempDirectoryName = "tmp";
-        private readonly string _basePath = Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
+        private readonly string _basePath = basePath ?? Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
 
         private string GetTempDirectory()
         {

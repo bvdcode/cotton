@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import {
   settingsApi,
   type S3Config,

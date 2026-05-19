@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import { useAuth } from "@features/auth";
 import { authApi } from "@shared/api/authApi";
 import {

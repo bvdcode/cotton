@@ -34,7 +34,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("react-toastify", () => ({
+vi.mock("@shared/ui/notifications", () => ({
   toast: {
     error: mocks.toastError,
   },

@@ -73,14 +73,10 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
             .Where(x => x.OwnerId == request.UserId
                 && x.LayoutId == request.LayoutId);
 
-        if (hasIds && hasText)
+        if (hasIds)
         {
-            nodesBase = nodesBase.Where(x =>
-                idQueries.Contains(x.Id)
-                || EF.Functions.Like(x.NameKey, containsPattern, LikeEscape));
-        }
-        else if (hasIds)
-        {
+            // A GUID in the query is an exact lookup signal. Do not widen it with
+            // any leftover text from copied logs or notes.
             nodesBase = nodesBase.Where(x => idQueries.Contains(x.Id));
         }
         else
@@ -94,14 +90,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
             .Where(x => x.OwnerId == request.UserId
                 && x.Node.LayoutId == request.LayoutId);
 
-        if (hasIds && hasText)
-        {
-            filesBase = filesBase.Where(x =>
-                idQueries.Contains(x.Id)
-                || idQueries.Contains(x.FileManifestId)
-                || EF.Functions.Like(x.NameKey, containsPattern, LikeEscape));
-        }
-        else if (hasIds)
+        if (hasIds)
         {
             filesBase = filesBase.Where(x =>
                 idQueries.Contains(x.Id)
@@ -231,7 +220,6 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         string rawQuery = query.Normalize(NormalizationForm.FormC).Trim();
 
         var ids = ExtractGuids(rawQuery)
-            .Select(x => (Guid?)x)
             .Distinct()
             .ToArray();
 
@@ -489,7 +477,7 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         string NameKey,
         string ContainsPattern,
         string PrefixPattern,
-        Guid?[] IdQueries)
+        Guid[] IdQueries)
     {
         public bool HasText => NameKey.Length > 0;
         public bool HasIds => IdQueries.Length > 0;

@@ -1,7 +1,5 @@
 import { useEffect } from "react";
-import { ToastContainer } from "react-toastify";
 import { useEventHub } from "../features/notifications";
-import { useTheme } from "./providers";
 import i18n from "../i18n";
 import {
   clearVaultSession,
@@ -81,15 +79,5 @@ export const AppBootstrap = () => {
     });
   }, [preferredLanguage]);
 
-  const { resolvedMode } = useTheme();
-
-  return (
-    <ToastContainer
-      theme={(resolvedMode as "light" | "dark" | "colored") ?? "colored"}
-      autoClose={4500}
-      newestOnTop
-      closeOnClick
-      pauseOnHover
-    />
-  );
+  return null;
 };

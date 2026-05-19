@@ -28,8 +28,6 @@ namespace Cotton.Server.Handlers.Nodes
         ILogger<MoveNodeCommandHandler> _logger)
         : IRequestHandler<MoveNodeCommand, NodeDto>
     {
-        private const int MaxAncestorWalkDepth = 256;
-
         public async Task<NodeDto> Handle(MoveNodeCommand request, CancellationToken cancellationToken)
         {
             if (request.ParentId == Guid.Empty)
@@ -125,13 +123,13 @@ namespace Cotton.Server.Handlers.Nodes
             // Walks parent pointers upward from `candidateChildId`. If we encounter `possibleAncestorId`
             // before reaching the root, the candidate is a descendant of the ancestor.
             // Scoped to userId so a foreign tree can't pollute the walk.
-            int depth = 0;
+            HashSet<Guid> visited = [];
             Guid? currentId = candidateChildId;
             while (currentId.HasValue)
             {
-                if (depth++ >= MaxAncestorWalkDepth)
+                if (!visited.Add(currentId.Value))
                 {
-                    return true;
+                    throw new BadRequestException<Node>("Folder hierarchy contains a cycle.");
                 }
 
                 if (currentId.Value == possibleAncestorId)

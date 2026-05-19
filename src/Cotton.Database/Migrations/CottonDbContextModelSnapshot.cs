@@ -37,6 +37,22 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTime?>("LatestReleaseCheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("latest_release_checked_at");
+
+                    b.Property<DateTime?>("LatestReleaseNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("latest_release_notified_at");
+
+                    b.Property<string>("LatestReleaseUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("latest_release_url");
+
+                    b.Property<string>("LatestReleaseVersion")
+                        .HasColumnType("text")
+                        .HasColumnName("latest_release_version");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");

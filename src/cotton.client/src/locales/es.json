@@ -517,6 +517,10 @@
     "title": "Archivo compartido",
     "loading": "Cargando...",
     "unsupported": "La vista previa no está disponible para este tipo de archivo.",
+    "encryptedFile": {
+      "title": "Este archivo está cifrado de extremo a extremo",
+      "description": "Los enlaces públicos no pueden desbloquearlo en el navegador. Puedes descargar el contenedor cifrado o pedir al propietario una copia descifrada."
+    },
     "message": "Mira \"{{name}}\" en Cotton Cloud",
     "folder": {
       "title": "Carpeta compartida",
@@ -1486,6 +1490,11 @@
       "failed": "No se pudo restaurar \"{{name}}\"",
       "notRestorable": "El elemento no se puede restaurar.",
       "rootFolder": "la carpeta raíz",
+      "confirm": {
+        "title": "¿Restaurar elemento?",
+        "description": "\"{{name}}\" se restaurará en \"{{path}}\".",
+        "confirm": "Restaurar"
+      },
       "applyToAll": "Aplicar esta elección a los elementos restantes",
       "skip": "Omitir",
       "parentMissing": {
@@ -1680,5 +1689,31 @@
       "invalidToken": "El enlace de verificación no es válido o ha caducado.",
       "failed": "No se pudo verificar el correo. Inténtalo de nuevo."
     }
+  },
+  "unlock": {
+    "title": "Desbloquear Cotton",
+    "caption": "El servidor espera la clave maestra antes de iniciar la aplicación.",
+    "checking": {
+      "title": "Comprobando bloqueo",
+      "caption": "Cotton está preparando el arranque seguro."
+    },
+    "masterKey": "Clave maestra",
+    "bootstrapToken": "Token de arranque",
+    "bootstrapRequired": "El primer desbloqueo requiere el token de arranque de los registros del servidor.",
+    "bootstrapRequiredWithExpiry": "El primer desbloqueo requiere el token de arranque de los registros del servidor. Caduca a las {{expiresAt}}.",
+    "unlock": "Desbloquear",
+    "unlocking": "Desbloqueando",
+    "generate": "Generar",
+    "generating": "Generando",
+    "generated": "Generado. Guarda esta clave antes de desbloquear.",
+    "generatedToast": "Clave maestra generada",
+    "generateFailed": "No se pudo generar la clave.",
+    "unlocked": "Clave maestra aceptada. Cotton se está iniciando.",
+    "unlockFailed": "No se pudo desbloquear.",
+    "showKey": "Mostrar clave",
+    "hideKey": "Ocultar clave",
+    "copyKey": "Copiar clave",
+    "copied": "Copiado",
+    "copyFailed": "No se pudo copiar la clave"
   }
 }

@@ -529,6 +529,8 @@ export const createActionsColumn = (
       );
     }
 
+    const fileEncrypted = isFileEncrypted(row.metadata);
+
     return (
       <Box
         sx={{
@@ -554,7 +556,7 @@ export const createActionsColumn = (
         )}
         {!options.readOnly && (
           <>
-            {options.fileOperations.onShare && (
+            {options.fileOperations.onShare && !fileEncrypted && (
               <IconButton
                 size="small"
                 onClick={(e) => {

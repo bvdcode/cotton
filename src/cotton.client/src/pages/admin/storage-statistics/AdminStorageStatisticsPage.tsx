@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import { type GcTimelineBucketKind } from "@shared/api/adminApi";
 import {

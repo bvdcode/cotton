@@ -24,6 +24,8 @@ using System.Text.Json;
 
 namespace Cotton.Server.IntegrationTests;
 
+[NonParallelizable]
+[FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
 public class StartupLifecycleChainTests : IntegrationTestBase
 {
     private const string PreRestoredMigrationId = "20260427214223_AddCustomGeoIpLookupUrl";
@@ -31,6 +33,11 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
     private TestAppFactory? _factory;
     private HttpClient? _client;
+
+    public StartupLifecycleChainTests()
+        : base("cotton_dev_tests_startup_" + Guid.NewGuid().ToString("N"))
+    {
+    }
 
     private sealed record IsServerInitializedResponse(bool IsServerInitialized);
     private sealed record ProblemDetailsResponse(string? Type, string? Title, int? Status, string? Detail, string? Instance);
@@ -41,11 +48,13 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         _client = null;
         _factory = null;
 
+        NpgsqlConnection.ClearAllPools();
         ResetSettingsProviderCaches();
 
         var creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
+        NpgsqlConnection.ClearAllPools();
 
         Assert.Multiple(() =>
         {
@@ -57,7 +66,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         {
             Host = "localhost",
             Port = 5432,
-            Database = DatabaseName,
+            Database = CurrentDatabaseName,
             Username = "postgres",
             Password = "postgres"
         };
@@ -85,6 +94,9 @@ public class StartupLifecycleChainTests : IntegrationTestBase
     {
         _client?.Dispose();
         _factory?.Dispose();
+        NpgsqlConnection.ClearAllPools();
+        DbContext.GetService<IRelationalDatabaseCreator>().EnsureDeleted();
+        NpgsqlConnection.ClearAllPools();
 
         _client = null;
         _factory = null;
@@ -115,11 +127,13 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         Assert.That(creator.HasTables(), Is.False, "DB should start with no user tables in this test setup.");
 
         DbContext.GetService<IMigrator>().Migrate(PreRestoredMigrationId);
+        NpgsqlConnection.ClearAllPools();
 
         Assert.That(await MigrationAppliedAsync(PreRestoredMigrationId), Is.True);
         Assert.That(await MigrationAppliedAsync(RestoredMigrationTailId), Is.False);
         Assert.That(await ColumnExistsAsync("node_files", "is_client_encrypted"), Is.True);
         Assert.That(await ColumnExistsAsync("nodes", "metadata"), Is.False);
+        NpgsqlConnection.ClearAllPools();
 
         TokenPairResponseDto login = await LoginAsync();
         Assert.That(login.AccessToken, Is.Not.Null.And.Not.Empty);
@@ -221,7 +235,10 @@ public class StartupLifecycleChainTests : IntegrationTestBase
             "/api/v1/server/settings/timezone",
             "Mars/OlympusMons");
 
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/timezone");
+        await AssertBadRequestProblemDetailsAsync(
+            response,
+            "/api/v1/server/settings/timezone",
+            "Timezone not found: Mars/OlympusMons");
         Assert.That(await GetIsServerInitializedAsync(), Is.True);
     }
 
@@ -233,7 +250,10 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
         var response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Cloud", null);
 
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/email-mode/Cloud");
+        await AssertBadRequestProblemDetailsAsync(
+            response,
+            "/api/v1/server/settings/email-mode/Cloud",
+            "Telemetry must be enabled to use cloud email service.");
     }
 
     [Test]
@@ -244,7 +264,10 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
         var response = await _client!.PatchAsync("/api/v1/server/settings/compution-mode/Cloud", null);
 
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/compution-mode/Cloud");
+        await AssertBadRequestProblemDetailsAsync(
+            response,
+            "/api/v1/server/settings/compution-mode/Cloud",
+            "Telemetry must be enabled to use cloud AI service.");
     }
 
     [Test]
@@ -255,7 +278,10 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
         var response = await _client!.PatchAsync("/api/v1/server/settings/email-mode/Custom", null);
 
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/email-mode/Custom");
+        await AssertBadRequestProblemDetailsAsync(
+            response,
+            "/api/v1/server/settings/email-mode/Custom",
+            "SMTP settings must be configured before enabling Custom email service.");
     }
 
     [Test]
@@ -266,7 +292,10 @@ public class StartupLifecycleChainTests : IntegrationTestBase
 
         var response = await _client!.PatchAsync("/api/v1/server/settings/storage-type/S3", null);
 
-        await AssertBadRequestProblemDetailsAsync(response, "/api/v1/server/settings/storage-type/S3");
+        await AssertBadRequestProblemDetailsAsync(
+            response,
+            "/api/v1/server/settings/storage-type/S3",
+            "S3 settings must be configured before enabling S3 storage.");
     }
 
     private async Task<TokenPairResponseDto> LoginAsync(string username = "testuser", string password = "testpassword")
@@ -388,7 +417,10 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    private static async Task AssertBadRequestProblemDetailsAsync(HttpResponseMessage response, string expectedInstance)
+    private static async Task AssertBadRequestProblemDetailsAsync(
+        HttpResponseMessage response,
+        string expectedInstance,
+        string expectedDetail)
     {
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
 
@@ -396,7 +428,7 @@ public class StartupLifecycleChainTests : IntegrationTestBase
         Assert.That(payload, Is.Not.Null);
         Assert.That(payload!.Status, Is.EqualTo((int)HttpStatusCode.BadRequest));
         Assert.That(payload.Title, Is.EqualTo("Bad Request"));
-        Assert.That(payload.Detail, Is.EqualTo("Bad request"));
+        Assert.That(payload.Detail, Is.EqualTo(expectedDetail));
         Assert.That(payload.Instance, Is.EqualTo(expectedInstance));
     }
 

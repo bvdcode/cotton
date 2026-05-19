@@ -65,6 +65,7 @@ namespace Cotton.Server.Jobs
                 .Include(fm => fm.NodeFiles)
                 .Include(fm => fm.FileManifestChunks)
                 .ThenInclude(fmc => fmc.Chunk)
+                .AsSplitQuery()
                 .ToListAsync();
 
             var itemsToProcessById = itemsToProcess.ToDictionary(x => x.Id);

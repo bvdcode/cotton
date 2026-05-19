@@ -27,10 +27,7 @@ import { useTrashFolderOperations } from "./hooks/useTrashFolderOperations";
 import { useTrashFileOperations } from "./hooks/useTrashFileOperations";
 import { useTrashBulkActions, useTrashListData, useTrashRestoreActions } from "./hooks";
 import { RestoreConflictDialog } from "./components/RestoreConflictDialog";
-import {
-  buildBreadcrumbs,
-  calculateFolderStats,
-} from "../files/utils/nodeUtils";
+import { calculateFolderStats } from "../files/utils/nodeUtils";
 import { useTrashFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import {
@@ -50,6 +47,10 @@ import {
 } from "@shared/utils/viewMode";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
 import { useFileListSourceLogic } from "../files/hooks/useFileListPageLogic";
+import {
+  buildVisibleTrashBreadcrumbs,
+  isCurrentTrashWrapper,
+} from "./utils/trashBreadcrumbs";
 
 type EmptyTrashProgressDialogProps = {
   open: boolean;
@@ -162,8 +163,35 @@ export const TrashPage: React.FC = () => {
   usePageTitle(pageTitle);
 
   const breadcrumbs = useMemo(
-    () => buildBreadcrumbs(ancestors, currentNode),
+    () => buildVisibleTrashBreadcrumbs(ancestors, currentNode),
     [ancestors, currentNode],
+  );
+  const currentNodeIsWrapper = useMemo(
+    () => isCurrentTrashWrapper(ancestors, currentNode),
+    [ancestors, currentNode],
+  );
+
+  React.useEffect(() => {
+    if (routeNodeId && currentNodeIsWrapper) {
+      navigate("/trash", { replace: true });
+    }
+  }, [currentNodeIsWrapper, navigate, routeNodeId]);
+
+  const navigateToBreadcrumb = React.useCallback(
+    (breadcrumbIndex: number) => {
+      const target = breadcrumbs[breadcrumbIndex];
+      if (!target) {
+        return;
+      }
+
+      if (breadcrumbIndex === 0) {
+        navigate("/trash");
+        return;
+      }
+
+      navigate(`/trash/${target.id}`);
+    },
+    [breadcrumbs, navigate],
   );
 
   const effectiveContent =
@@ -269,13 +297,13 @@ export const TrashPage: React.FC = () => {
   );
 
   const handleGoUp = React.useCallback(() => {
-    if (ancestors.length > 0) {
-      const parent = ancestors[ancestors.length - 1];
-      navigate(`/trash/${parent.id}`);
-    } else {
+    if (breadcrumbs.length <= 1) {
       navigate("/trash");
+      return;
     }
-  }, [ancestors, navigate]);
+
+    navigateToBreadcrumb(breadcrumbs.length - 2);
+  }, [breadcrumbs.length, navigate, navigateToBreadcrumb]);
 
   const {
     emptyingTrash,
@@ -313,9 +341,10 @@ export const TrashPage: React.FC = () => {
     (): React.ComponentProps<typeof PageHeader> => ({
       loading: layoutType !== InterfaceLayoutType.List && loading,
       breadcrumbs,
+      onNavigateBreadcrumb: navigateToBreadcrumb,
       stats,
       viewMode,
-      canGoUp: ancestors.length > 0,
+      canGoUp: breadcrumbs.length > 1,
       onGoUp: handleGoUp,
       onHomeClick: goHome,
       onViewModeCycle: cycleViewMode,
@@ -348,7 +377,7 @@ export const TrashPage: React.FC = () => {
               color: "error" as const,
             },
           ]
-        ) : ancestors.length === 0 ? (
+        ) : breadcrumbs.length <= 1 ? (
           [
             {
               key: "empty-trash",
@@ -363,8 +392,8 @@ export const TrashPage: React.FC = () => {
         ) : undefined,
     }),
     [
-      ancestors.length,
       breadcrumbs,
+      navigateToBreadcrumb,
       cycleViewMode,
       emptyingTrash,
       fileSelection,

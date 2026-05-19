@@ -108,7 +108,16 @@ namespace Cotton.Server.Handlers.Files
                     inline: isInlineFile);
             }
 
-            return await CreateStreamResultAsync(downloadToken, file, entityTag, lastModified, inline: isInlineFile, ct);
+            bool isMetadataRangeProbe = IsInlineMetadataRangeProbe(request.HttpRequest, isInlineFile);
+            return await CreateStreamResultAsync(
+                downloadToken,
+                file,
+                entityTag,
+                lastModified,
+                inline: isInlineFile,
+                deleteAfterUse: downloadToken.DeleteAfterUse && !isMetadataRangeProbe,
+                notifyDownload: !isMetadataRangeProbe,
+                ct);
         }
 
         private static (bool IsHtml, bool IsInlineFile)? TryParseViewMode(string? view)
@@ -127,6 +136,17 @@ namespace Cotton.Server.Handlers.Files
         private static string BuildBaseAppUrl(HttpRequest httpRequest)
         {
             return $"{httpRequest.Scheme}://{httpRequest.Host}";
+        }
+
+        private static bool IsInlineMetadataRangeProbe(HttpRequest httpRequest, bool inline)
+        {
+            if (!inline || !HttpMethods.IsGet(httpRequest.Method))
+            {
+                return false;
+            }
+
+            string? range = httpRequest.Headers[HeaderNames.Range].FirstOrDefault();
+            return string.Equals(range?.Trim(), "bytes=0-3", StringComparison.OrdinalIgnoreCase);
         }
 
         private IQueryable<DownloadToken> BuildTokenQuery(string token, DateTime now, bool includeChunks)
@@ -204,6 +224,8 @@ namespace Cotton.Server.Handlers.Files
             EntityTagHeaderValue entityTag,
             DateTimeOffset lastModified,
             bool inline,
+            bool deleteAfterUse,
+            bool notifyDownload,
             CancellationToken ct)
         {
             string[] uids = file.FileManifestChunks.GetChunkHashes();
@@ -216,7 +238,7 @@ namespace Cotton.Server.Handlers.Files
             Stream stream = _storage.GetBlobStream(uids, context);
             string? downloadName = inline ? null : downloadToken.FileName;
 
-            if (_httpContextAccessor.HttpContext != null)
+            if (notifyDownload && _httpContextAccessor.HttpContext != null)
             {
                 await _sharedFileDownloadNotifier.NotifyOnceAsync(
                     downloadToken.NodeFile.OwnerId,
@@ -232,7 +254,7 @@ namespace Cotton.Server.Handlers.Files
                 downloadName: downloadName,
                 lastModified: lastModified,
                 entityTag: entityTag,
-                deleteAfterUse: downloadToken.DeleteAfterUse,
+                deleteAfterUse: deleteAfterUse,
                 deleteTokenId: downloadToken.Id);
         }
     }

@@ -272,9 +272,6 @@ docker run -d --name cotton-pg \
 2. Run Cotton:
 
 ```bash
-# COTTON_MASTER_KEY must be exactly 32 characters.
-# It is used to derive both the password pepper and the master encryption key.
-
 docker run -d --name cotton \
   -p 8080:8080 \
   -v /data/cotton:/app/files \
@@ -283,11 +280,28 @@ docker run -d --name cotton \
   -e COTTON_PG_DATABASE="cotton_dev" \
   -e COTTON_PG_USERNAME="postgres" \
   -e COTTON_PG_PASSWORD="postgres" \
-  -e COTTON_MASTER_KEY="devedovolovopeperepolevopopovedo" \
   bvdcode/cotton:latest
 ```
 
-On startup the app applies EF migrations automatically, serves the UI at `http://localhost:8080` (or whatever port you mapped), and walks you through the in-browser setup wizard.
+On first startup without `COTTON_MASTER_KEY`, Cotton serves a small unlock page at `http://localhost:8080/unlock`. In production, the first unlock also requires the bootstrap token printed in the container logs; it is only needed while the encrypted master-key sentinel does not exist. Enter a 32-character master key there, or generate one in the page and store it safely: losing it can make encrypted data unrecoverable. The `/app/files` volume must stay persistent because it stores both chunks and the encrypted master-key sentinel.
+
+For non-interactive startup, you can still pass the key through the environment:
+
+```bash
+export COTTON_MASTER_KEY="$(openssl rand -base64 24)"
+docker run -d --name cotton \
+  -p 8080:8080 \
+  -v /data/cotton:/app/files \
+  -e COTTON_PG_HOST="host.docker.internal" \
+  -e COTTON_PG_PORT="5432" \
+  -e COTTON_PG_DATABASE="cotton_dev" \
+  -e COTTON_PG_USERNAME="postgres" \
+  -e COTTON_PG_PASSWORD="postgres" \
+  -e COTTON_MASTER_KEY="$COTTON_MASTER_KEY" \
+  bvdcode/cotton:latest
+```
+
+After unlock the app applies EF migrations automatically, serves the UI at `http://localhost:8080` (or whatever port you mapped), and walks you through the in-browser setup wizard.
 
 Upload settings are returned by the server; the frontend (`src/cotton.client`) uses them for chunking.
 
@@ -414,7 +428,7 @@ Hashing for content addressing uses SHA-256.
   PBKDF2 service with modern PHC-style handling via `EasyExtensions`.
 
 - **Keys & settings**  
-  `Cotton.Autoconfig` derives `Pepper` and `MasterEncryptionKey` from a single `COTTON_MASTER_KEY` environment variable and exposes `CottonSettings` such as:
+  `Cotton.Autoconfig` derives `Pepper` and `MasterEncryptionKey` from either `COTTON_MASTER_KEY` or the bootstrap unlock page, then exposes `CottonSettings` such as:
   - `MasterEncryptionKeyId`
   - `EncryptionThreads`
   - `CipherChunkSizeBytes`
@@ -451,8 +465,8 @@ _See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Servic
 **Industrial-strength NameValidator**  
 Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
 
-**Autoconfig env scrubbing**  
-`Cotton.Autoconfig` derives keys from `COTTON_MASTER_KEY`, then **wipes the env var** from Process and User environment after startup. Secrets don't linger in memory dumps or child processes.
+**Autoconfig env scrubbing + unlock**  
+If `COTTON_MASTER_KEY` is provided, `Cotton.Autoconfig` derives keys from it, then **wipes the env var** from Process and User environment after startup. If it is missing, Cotton starts only a lightweight `/unlock` web page, validates or creates an encrypted sentinel in storage, and starts the main app only after a valid key is supplied. Creating the sentinel in production requires a short-lived bootstrap token from server logs; later unlocks only validate the master key. Cotton never falls back to a built-in development key.
 
 **Client-side upload pipeline**  
 Browser uploads hash chunks in a Web Worker (one pass for both chunk-hash and rolling file-hash), parallelize uploads (default 4 in-flight), send only missing chunks on retry. UI stays responsive even with 10k+ file folders.
@@ -624,9 +638,9 @@ _See: `src/pages/HomePage/components/TextPreview.tsx`_
 - Case-folded `NameKey` (diacritic-stripped + lowercase) for case-insensitive collision detection  
   _See: `src/Cotton.Validators/NameValidator.cs`, `src/Cotton.Database/Models/Node.cs`_
 
-**Autoconfig: env scrubbing**  
-Derives `Pepper` + `MasterEncryptionKey` from `COTTON_MASTER_KEY`, then **wipes** the env var from Process and User environment after startup. Secrets don't leak to child processes or memory dumps.  
-_See: `src/Cotton.Autoconfig/Extensions/ConfigurationBuilderExtensions.cs`_
+**Autoconfig: env scrubbing + unlock**  
+Accepts an explicit `COTTON_MASTER_KEY` for non-interactive boot, or starts the lightweight `/unlock` page when the env var is absent. In both paths Cotton derives `Pepper` + `MasterEncryptionKey`; env secrets are wiped after startup, and the main app is not built until the key is available. In production, first sentinel creation requires the short-lived bootstrap token printed in server logs. Cotton never uses a built-in development master key.
+_See: `src/Cotton.Autoconfig/Extensions/ConfigurationBuilderExtensions.cs`, `src/Cotton.Server/Services/MasterKeyUnlockServer.cs`_
 
 **Bootstrap & setup**  
 Auto-applies EF migrations on startup. First admin creation has time-limited window (no eternal backdoor). If `COTTON_RESTORE_DATABASE_IF_EMPTY=true` is set and the DB is empty, startup also attempts automatic restore from the latest backup manifest in storage.  

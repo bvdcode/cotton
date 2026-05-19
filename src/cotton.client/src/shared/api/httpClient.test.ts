@@ -10,7 +10,7 @@ import {
 import type { AxiosError } from "axios";
 import { z } from "zod";
 
-vi.mock("react-toastify", () => ({
+vi.mock("@shared/ui/notifications", () => ({
   toast: {
     error: vi.fn(),
     success: vi.fn(),
@@ -52,7 +52,7 @@ const {
   showApiErrorToast,
 } = await import("./httpClient");
 
-const { toast } = await import("react-toastify");
+const { toast } = await import("@shared/ui/notifications");
 const toastErrorMock = toast.error as unknown as Mock;
 
 const buildAxiosError = (

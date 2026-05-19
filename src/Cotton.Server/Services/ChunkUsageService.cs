@@ -82,7 +82,8 @@ namespace Cotton.Server.Services
             string pointerStorageKey = _backupKeyProvider.GetScopedPointerStorageKey();
             HashSet<string> protectedStorageKeys = new(StringComparer.OrdinalIgnoreCase)
             {
-                pointerStorageKey
+                pointerStorageKey,
+                MasterKeySentinelStore.SentinelStorageKey
             };
 
             if (!await _storage.ExistsAsync(pointerStorageKey))

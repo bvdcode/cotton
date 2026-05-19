@@ -20,21 +20,68 @@ using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
+        {
+            ConfigureProcessTimeZone();
+
+            CottonEncryptionSettings encryptionSettings;
+            try
+            {
+                encryptionSettings = await ResolveEncryptionSettingsAsync(args);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            await new MasterKeySentinelStore(
+                    NullLogger<MasterKeySentinelStore>.Instance,
+                    compatibilityProbe: new MasterKeyCompatibilityProbe(
+                        NullLogger<MasterKeyCompatibilityProbe>.Instance))
+                .EnsureValidOrThrowAsync(encryptionSettings);
+
+            await RunApplicationAsync(args, encryptionSettings);
+        }
+
+        private static void ConfigureProcessTimeZone()
         {
             // User timezone settings are applied per request; the process clock
             // stays UTC so platform TLS/date handling cannot drift with them.
             Environment.SetEnvironmentVariable("TZ", "UTC");
             TimeZoneInfo.ClearCachedData();
+        }
 
+        private static async Task<CottonEncryptionSettings> ResolveEncryptionSettingsAsync(string[] args)
+        {
+            string? rootMasterKey = Environment.GetEnvironmentVariable(
+                ConfigurationBuilderExtensions.MasterKeyEnvironmentVariable);
+            if (string.IsNullOrEmpty(rootMasterKey))
+            {
+                ConfigurationBuilderExtensions.ClearMasterKeyEnvironmentVariable();
+                return await MasterKeyUnlockServer.WaitForUnlockAsync(args);
+            }
+
+            try
+            {
+                return ConfigurationBuilderExtensions.DeriveEncryptionSettings(rootMasterKey);
+            }
+            finally
+            {
+                ConfigurationBuilderExtensions.ClearMasterKeyEnvironmentVariable();
+            }
+        }
+
+        private static async Task RunApplicationAsync(string[] args, CottonEncryptionSettings encryptionSettings)
+        {
             var builder = WebApplication.CreateBuilder(args);
-            builder.Configuration.AddCottonOptions();
+            builder.Configuration.AddCottonOptions(encryptionSettings);
             if (OperatingSystem.IsWindows() && !builder.Environment.IsProduction())
             {
                 builder.Logging.ClearProviders();
@@ -42,7 +89,16 @@ namespace Cotton.Server
                 builder.Logging.AddConsole();
                 builder.Logging.AddDebug();
             }
+            builder.Logging.AddFilter(
+                "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager",
+                LogLevel.Error);
             MapsterConfig.Register();
+            builder.Services.AddHttpClient(AppVersionTrackerService.GitHubHttpClientName, client =>
+            {
+                client.BaseAddress = new Uri("https://api.github.com/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Cotton/1.0");
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+            });
             builder.Services
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
@@ -114,7 +170,7 @@ namespace Cotton.Server
                 autoRestore.TryRestoreIfEmptyAsync().GetAwaiter().GetResult();
             }
             app.MapHub<EventHub>(Routes.V1.EventHub);
-            app.Run();
+            await app.RunAsync();
         }
     }
 }

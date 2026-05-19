@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import {
   settingsApi,
   type GeoIpLookupMode,

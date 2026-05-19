@@ -10,14 +10,27 @@ import type { FileSelectionState } from "@shared/hooks/useFileSelection";
 import type { FileSystemTile } from "@shared/types/FileListViewTypes";
 
 const maxPromptHops = 3;
+const originalParentPathMetadataKey = "originalParentPath";
+
+const getOriginalParentPath = (tile: FileSystemTile): string => {
+  if (tile.kind === "folder") {
+    return tile.node.metadata?.[originalParentPathMetadataKey] ?? "";
+  }
+
+  return "metadata" in tile.file
+    ? (tile.file.metadata?.[originalParentPathMetadataKey] ?? "")
+    : "";
+};
 
 export type RestorableItem = {
   id: string;
   kind: "folder" | "file";
   name: string;
+  restorePath?: string | null;
 };
 
 type PromptKind =
+  | { kind: "confirm"; restorePath: string }
   | { kind: "parentMissing"; missingPath: string }
   | { kind: "conflict"; conflictKind: RestoreConflictKind; conflictName: string };
 
@@ -59,6 +72,7 @@ export const useTrashRestoreActions = ({
   });
   const [errors, setErrors] = useState<string[]>([]);
 
+  const stickyConfirm = useRef<PromptDecision["action"] | null>(null);
   const stickyParentMissing = useRef<PromptDecision["action"] | null>(null);
   const stickyConflict = useRef<PromptDecision["action"] | null>(null);
   const restoreInFlight = useRef(false);
@@ -80,6 +94,33 @@ export const useTrashRestoreActions = ({
     resolve?.(decision);
   }, []);
 
+  const getRestorePath = useCallback(
+    (item: RestorableItem): string => {
+      if (item.restorePath !== undefined && item.restorePath !== null) {
+        return item.restorePath;
+      }
+
+      const tile = tiles.find((candidate) => {
+        if (item.kind === "folder" && candidate.kind === "folder") {
+          return candidate.node.id === item.id;
+        }
+
+        if (item.kind === "file" && candidate.kind === "file") {
+          return candidate.file.id === item.id;
+        }
+
+        return false;
+      });
+
+      if (!tile) {
+        return "";
+      }
+
+      return getOriginalParentPath(tile);
+    },
+    [tiles],
+  );
+
   const callRestore = useCallback(
     (item: RestorableItem, options: { createMissingParents: boolean; overwrite: boolean }) =>
       item.kind === "folder"
@@ -90,6 +131,25 @@ export const useTrashRestoreActions = ({
 
   const restoreSingle = useCallback(
     async (item: RestorableItem): Promise<"restored" | "skipped" | "failed"> => {
+      const restorePath = getRestorePath(item);
+
+      if (stickyConfirm.current === "skip") {
+        return "skipped";
+      }
+
+      if (stickyConfirm.current !== "apply") {
+        const decision = await requestDecision(item, {
+          kind: "confirm",
+          restorePath,
+        });
+        if (decision.applyToAll) {
+          stickyConfirm.current = decision.action;
+        }
+        if (decision.action === "skip") {
+          return "skipped";
+        }
+      }
+
       let createMissingParents = false;
       let overwrite = false;
 
@@ -164,7 +224,7 @@ export const useTrashRestoreActions = ({
       setErrors((prev) => [...prev, t("restore.failed", { name: item.name })]);
       return "failed";
     },
-    [callRestore, requestDecision, t],
+    [callRestore, getRestorePath, requestDecision, t],
   );
 
   const restoreItems = useCallback(
@@ -174,6 +234,7 @@ export const useTrashRestoreActions = ({
       }
 
       restoreInFlight.current = true;
+      stickyConfirm.current = null;
       stickyParentMissing.current = null;
       stickyConflict.current = null;
       setErrors([]);

@@ -21,12 +21,17 @@ namespace Cotton.Server.IntegrationTests;
 
 public class AuthSmokeTests : IntegrationTestBase
 {
+    private const string TestRootMasterKey = "testtesttesttesttesttesttesttest";
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
+    private string? _previousMasterKey;
 
     [SetUp]
     public void SetUp()
     {
+        _previousMasterKey = Environment.GetEnvironmentVariable("COTTON_MASTER_KEY");
+        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", TestRootMasterKey);
+
         // Reset DB to empty state
         var creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
@@ -95,6 +100,7 @@ public class AuthSmokeTests : IntegrationTestBase
     {
         _client?.Dispose();
         _factory?.Dispose();
+        Environment.SetEnvironmentVariable("COTTON_MASTER_KEY", _previousMasterKey);
     }
 
     [Test]

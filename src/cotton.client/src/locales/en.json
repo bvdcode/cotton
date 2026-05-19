@@ -458,6 +458,10 @@
     "title": "Shared file",
     "loading": "Loading...",
     "unsupported": "Preview is not available for this file type.",
+    "encryptedFile": {
+      "title": "This file is end-to-end encrypted",
+      "description": "Public links cannot unlock it in the browser. You can download the encrypted container, or ask the owner to share a decrypted copy."
+    },
     "message": "Check out \"{{name}}\" on Cotton Cloud",
     "folder": {
       "title": "Shared folder",
@@ -1464,6 +1468,11 @@
       "failed": "Failed to restore \"{{name}}\"",
       "notRestorable": "Item cannot be restored.",
       "rootFolder": "the root folder",
+      "confirm": {
+        "title": "Restore item?",
+        "description": "\"{{name}}\" will be restored to \"{{path}}\".",
+        "confirm": "Restore"
+      },
       "applyToAll": "Apply this choice to remaining items",
       "skip": "Skip",
       "parentMissing": {
@@ -1833,5 +1842,31 @@
       "invalidToken": "The verification link is invalid or has expired.",
       "failed": "Failed to verify email. Please try again."
     }
+  },
+  "unlock": {
+    "title": "Unlock Cotton",
+    "caption": "The server is waiting for the master key before starting the app.",
+    "checking": {
+      "title": "Checking lock state",
+      "caption": "Cotton is preparing the secure startup flow."
+    },
+    "masterKey": "Master key",
+    "bootstrapToken": "Bootstrap token",
+    "bootstrapRequired": "First unlock requires the bootstrap token from the server logs.",
+    "bootstrapRequiredWithExpiry": "First unlock requires the bootstrap token from the server logs. It expires at {{expiresAt}}.",
+    "unlock": "Unlock",
+    "unlocking": "Unlocking",
+    "generate": "Generate",
+    "generating": "Generating",
+    "generated": "Generated. Store this key before unlocking.",
+    "generatedToast": "Master key generated",
+    "generateFailed": "Failed to generate key.",
+    "unlocked": "Master key accepted. Cotton is starting.",
+    "unlockFailed": "Unlock failed.",
+    "showKey": "Show key",
+    "hideKey": "Hide key",
+    "copyKey": "Copy key",
+    "copied": "Copied",
+    "copyFailed": "Could not copy key"
   }
 }

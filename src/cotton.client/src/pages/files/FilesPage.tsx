@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { Alert, Box, Dialog, DialogTitle } from "@mui/material";
 import { ContentCut, ContentPaste, Delete } from "@mui/icons-material";
-import { toast } from "react-toastify";
+import { toast } from "@shared/ui/notifications";
 import {
   FileListViewFactory,
   PageHeader,
