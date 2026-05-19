@@ -9,7 +9,7 @@
 [![Github last-commit](https://img.shields.io/github/last-commit/bvdcode/cotton)](https://github.com/bvdcode/cotton/commits/main/)
 
 > **[Using Cotton? Say hi here!](https://github.com/bvdcode/cotton/discussions/3)**  
-> Live demo: [cotton.splidex.com](https://cotton.splidex.com/) - user and password: `demo` / `demo`, or whatever credentials you enter will create your user
+> Live demo: [cotton.splidex.com](https://cotton.splidex.com/login?demo=true) - opens with per-browser generated demo credentials; public instances can also create an account from any credentials you enter.
 
 <div align="center">
 
@@ -31,7 +31,7 @@ Cotton Cloud is a self-hosted file cloud designed to stay fast, storage-efficien
 
 The server core runs on a modern **ASP.NET Core + EF Core** stack and uses **Kestrel** for high-throughput HTTP streaming and API workloads.
 
-Cotton is intentionally built as one cohesive runtime: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET code inside the same ecosystem. That keeps execution flow seamless, reduces cross-environment glue, and helps the codebase behave as one coordinated system rather than many loosely-coupled runtimes. External process tooling is kept narrow on purpose: **FFmpeg/ffprobe** are used for audio/video preview extraction.
+Cotton is intentionally built as one cohesive runtime: web engine, storage pipeline, crypto core, compression, and most preview/image processing run in managed .NET code inside the same ecosystem. That keeps execution flow seamless, reduces cross-environment glue, and helps the codebase behave as one coordinated system rather than many loosely-coupled runtimes. External process tooling is kept narrow on purpose: **FFmpeg/ffprobe** are used for audio/video preview extraction, and **f3d/Xvfb** are used for 3D model thumbnails.
 
 This is not architecture for architecture's sake. Cotton is built this way because the design shows up directly in real behavior: the system is more predictable under load, easier to reason about operationally, and less likely to inherit strange edge cases from decades of layered legacy glued around older technology stacks. From web server to storage path, it is meant to behave like one platform.
 
@@ -113,16 +113,18 @@ In short: unlike systems that are mostly a filesystem wrapper, Cotton is designe
 - Upload multi-GB files and large folders from the browser while the UI stays responsive.
 - Re-send only missing chunks after interruptions instead of restarting an entire upload.
 - Inspect active sessions (device/IP/location metadata) and revoke individual sessions without terminating every login.
+- Run public/demo instances with per-browser generated credentials, default onboarding files, and default user quotas instead of a shared demo account.
 - Stream, seek, and partially download large media without reassembling the whole file first.
 - Extract previews and video frames from chunked encrypted storage without a full download, including when the backend is S3-backed.
 - Update file content while preserving previous content versions in a restore-friendly lineage.
 - Use built-in deduplication, inline compression, and streaming encryption in the main storage path.
 - Share files and folders with expiring links, share pages, previews, and native OS/browser share integration where available.
-- Generate previews for images, HEIC, PDF, text, audio, and video content.
+- Generate previews for images, SVG, HEIC, PDF, text, audio, video, and 3D model content including STL, OBJ, and 3MF.
 - Use the existing **WebDAV v1** implementation today for standard sync clients, phone auto-sync, and other protocol-level workflows while native Cotton clients are still in development. In Cotton, WebDAV is an important compatibility path for the early stage, not the long-term center of gravity for the product.
 - Run background manifest verification and storage consistency checks that surface real integrity problems.
 - Receive useful notifications for failed logins, successful logins, TOTP events, WebDAV token resets, shared-file downloads, upload verification failures, and missing storage chunks.
 - Configure the instance through a setup wizard with safe defaults, cloud email or custom SMTP, storage choices, telemetry preferences, and timezone selection.
+- Review an admin security checkup score with concrete warnings for public mode, master-key source, admin 2FA coverage, .NET diagnostics, Linux dumpability, seccomp, ptrace capability, and related hardening signals.
 - Offer email verification and a forgot-password flow as first-class product behavior.
 - Start with a simple Docker + Postgres deployment and grow into filesystem or S3-backed storage.
 - Use WebDAV in addition to the web UI when you need protocol-level access.
@@ -228,6 +230,9 @@ If you are comparing Cotton to the usual self-hosted stack, this matters: the en
 - **Storage pressure is guarded on local disks**
   On filesystem-backed storage, Cotton checks the mounted volume free space through a short-lived cache before accepting new physical chunk writes. If the configured reserve would be crossed, uploads return HTTP 507 and admins get a throttled high-priority notification. S3-compatible backends are treated as unknown-capacity unless the provider exposes a hard limit, so Cotton does not invent an expensive bucket-size scan on the hot path.
 
+- **User quotas are logical, cached, and upload-aware**
+  Public/demo instances can assign a default storage quota to newly created users. Cotton checks quota before visible file creation/update paths such as chunk-manifest assembly and WebDAV PUT, while caching per-user usage and updating it on file create/delete events so small uploads do not turn into one database aggregation per file.
+
 - **Background jobs are built into normal operation**  
   Preview generation, manifest hashing, token cleanup, temp cleanup, performance collection, MIME fixes, and storage consistency checks are all part of the system rather than manual maintenance scripts.
 
@@ -249,10 +254,13 @@ Cotton's current reclaim model is already cautious and restore-friendly. More ad
 - Preview extraction includes practical media details that quietly improve daily use: embedded cover art from audio tracks (including MP3) and attached cover art from containers like MKV when present.
 - Audio playback supports time-synced lyrics (karaoke-style) from a sidecar `.lrc` file located next to the track.
 - Search is tuned for responsiveness in normal workflows: debounced client queries with normalized key matching on the server keep lookup behavior fast and predictable.
+- Public demo links use per-browser random credentials saved in local storage, so every visitor can get an isolated view without a shared `demo/demo` account.
+- Admins can configure a default template folder whose contents are copied into each newly created user account, which is useful for demos, onboarding files, rules, or starter media.
 - WebDAV token reset is immediate in practice: auth cache versioning invalidates old token paths quickly, and failed WebDAV token attempts trigger account notifications.
 - User preferences changed in one active client are propagated to other active clients in near real time.
 - Password reset, email verification, and email delivery modes are built into setup: use your own SMTP or use Cotton Cloud mail if you do not want to run mail infrastructure (cloud mode requires internet access and telemetry enabled).
 - Notifications cover real account and storage events, including failed logins, login success, TOTP lockouts, WebDAV token resets, and shared-file downloads.
+- UI localization currently includes English, Russian, Spanish, and German, with locale parity checks in CI.
 - The first-run experience is a guided setup wizard with safe defaults and expert paths instead of a half-documented config scavenger hunt.
 
 Cotton UX is intentional down to small interactions: it is normal here to spend serious design time reducing two buttons to one when that produces a cleaner, more obvious flow.
@@ -312,6 +320,14 @@ For deeper internals after the quick start, continue below. For benchmark detail
 
 ---
 
+## Source Builds & CI
+
+The GitHub Actions pipeline restores dependencies, installs frontend packages, installs real preview tooling (`ffmpeg`, `f3d`, `xvfb`), runs backend tests, checks frontend locale parity, and runs frontend tests before the Docker image is built.
+
+SixLabors licensing is treated as build-time material. CI expects the `SIXLABORS_LICENSE` secret, writes it to a temporary `sixlabors.lic` for build/test, passes it as a Docker BuildKit secret, and removes it from the published runtime image. Local `sixlabors.lic` files are ignored by git.
+
+---
+
 ## Master Key & Deployment Security
 
 Cotton's server-side master key protects storage-level encrypted data and database backup artifacts. The recommended default for new instances is to start the container **without** `COTTON_MASTER_KEY`, open `/unlock`, generate or enter the key in the browser, and keep it outside the container. In that mode the key is held only by the running Cotton process after unlock, not baked into the container environment.
@@ -324,13 +340,13 @@ Practical guidance:
 - **Better default for exposed/self-hosted instances**: omit `COTTON_MASTER_KEY`, unlock in the browser after restarts, and store the generated key in your own password manager or offline backup.
 - **Lost key warning**: if the key is lost and no recovery path exists, encrypted Cotton data can become unrecoverable.
 
-Cotton also exposes an admin-only security diagnostics endpoint:
+Cotton also exposes an admin-only security diagnostics page in the web UI (`/admin/security`) and the backing endpoint:
 
 ```http
 GET /api/v1/server/security/status
 ```
 
-It reports process/container hardening signals such as .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, whether the instance was unlocked from environment or browser unlock, and a small list of warnings. It is intentionally **not** public: it is an operator check, not a healthcheck endpoint.
+It reports process/container hardening signals such as .NET diagnostics state, Linux dumpability, effective UID, `no-new-privileges`, seccomp mode, `CAP_SYS_PTRACE`, whether the instance was unlocked from environment or browser unlock, whether public/demo mode is enabled, and how many admin accounts still lack 2FA. The UI turns those signals into a 0-10 security score plus human-readable threat vectors. It is intentionally **not** public: it is an operator check, not a healthcheck endpoint.
 
 ### Paranoia Mode
 
@@ -413,7 +429,8 @@ Live references currently include:
 - file content through `FileManifestChunk`;
 - previews through `FileManifest.SmallFilePreviewHash` and `FileManifest.LargeFilePreviewHash`;
 - avatars through `User.AvatarHash`;
-- protected database backup artifacts: the latest backup pointer, the latest backup manifest, and the chunks listed by that manifest.
+- protected database backup artifacts: the latest backup pointer, the latest backup manifest, and the chunks listed by that manifest;
+- protected bootstrap artifacts such as the encrypted master-key sentinel.
 
 `ChunkOwnership` is an ingest/concurrency guard, not a durable retention reference. A raw object that only exists in the storage backend is not considered live. The storage consistency job may register such objects as orphan `Chunk` rows so GC can schedule them, and the garbage collector clears schedules for objects that become live again before deletion.
 
@@ -519,6 +536,18 @@ Share tokens can be single-use (`DeleteAfterUse`) and expire after configurable 
 **GC-aware chunk ingest**  
 The garbage collector coordinates with ingestion: if a chunk is currently being deleted, the ingest path will refuse/hold concurrent uploads of that same chunk until the delete completes—this prevents rare races and windows where a delete and an upload could conflict. The behavior is deliberate: safety first, then fast reconciliation.  
 _See: `src/Cotton.Server/Jobs/GarbageCollectorJob.cs`, `src/Cotton.Server/Services/ChunkUsageService.cs`, `src/Cotton.Server/Services/ChunkIngestService.cs`_
+
+**Storage pressure guard**
+Filesystem-backed storage reports mounted-volume capacity to the server. A cached guard blocks new physical chunk writes before the configured reserve is crossed, maps the condition to HTTP 507 on upload/WebDAV/avatar paths, and sends throttled admin notifications instead of allowing the host disk to run to zero.
+_See: `src/Cotton.Storage/Abstractions/IStorageCapacityReporter.cs`, `src/Cotton.Server/Services/StoragePressureGuard.cs`, `src/Cotton.Server/Models/Configuration/StoragePressureOptions.cs`_
+
+**Public demo accounts without shared credentials**
+`/login?demo=true` generates per-browser credentials and stores them client-side, while public instances can create users from arbitrary credentials. Admin settings can apply a default quota and seed a default template folder into new accounts, so demos and onboarding content reuse the same product mechanism.
+_See: `src/cotton.client/src/pages/login/demoCredentials.ts`, `src/Cotton.Server/Services/DefaultUserContentSeeder.cs`, `src/Cotton.Server/Controllers/SettingsController.cs`_
+
+**Admin security checkup**
+The admin security page consumes server diagnostics, scores the instance, and explains concrete warning vectors such as public account creation, master key in environment metadata, admins without 2FA, enabled .NET diagnostics, dumpable Linux processes, seccomp off, and effective `CAP_SYS_PTRACE`.
+_See: `src/Cotton.Server/Services/SecurityDiagnosticsService.cs`, `src/cotton.client/src/pages/admin/security/AdminSecurityDiagnosticsPage.tsx`_
 
 **Industrial-strength NameValidator**  
 Enforces Unicode normalization (NFC), grapheme cluster limits, bans zero-width/control chars, forbids `.`/`..`, blocks Windows reserved names (`CON`, `PRN`, etc.), trims trailing dots/spaces. Generates case-insensitive, diacritic-stripped `NameKey` for collision detection.
@@ -645,6 +674,11 @@ _See: `src/Cotton.Previews/PdfPreviewGenerator.cs`_
   _See: `src/Cotton.Previews/VideoPreviewGenerator.cs`, `src/Cotton.Previews/Http/RangeStreamServer.cs`._
   _See: `src/Cotton.Server/Jobs/GeneratePreviewJob.cs`_
 
+**3D model preview generator**
+
+STL, OBJ, and 3MF previews use `f3d` with Xvfb/headless fallbacks in CI and containers. 3MF files can use embedded thumbnails when available, then fall back to rendered previews.
+_See: `src/Cotton.Previews/StlThumbPreviewGenerator.cs`, `src/Cotton.Previews.Tests/StlThumbPreviewGeneratorTests.cs`_
+
 ---
 
 ### Frontend (cotton.client)
@@ -710,7 +744,7 @@ _See: `src/Cotton.Server/Program.cs`, `src/Cotton.Server/Controllers/AuthControl
 
 - Generational GC with compaction/merging of small "dust" chunks (design complete; implementation pending).
 - Adaptive defaults and auto-tuning (chunk sizes / buffers / threading) informed by opt-in performance telemetry.
-- Additional processors (cache, S3 replica, cold storage, etc.).
+- Additional processors such as S3 replica and cold storage targets.
 - Hardening auth flows and extending UI around uploads/layouts and sharing.
 - Native/mobile and desktop clients reusing the same engine.
 
@@ -728,7 +762,7 @@ _See: `src/Cotton.Server/Program.cs`, `src/Cotton.Server/Controllers/AuthControl
 - `src/Cotton.Server` — ASP.NET Core API + UI hosting.
 - `src/Cotton.Database` — EF Core models and migrations.
 - `src/Cotton.Storage` — storage pipeline and processors.
-- `src/Cotton.Previews` — preview generators (image, PDF via Docnet/MuPDF, video via FFmpeg, text).
+- `src/Cotton.Previews` — preview generators (image/SVG/HEIC, PDF via Docnet/MuPDF, text, audio, video via FFmpeg, and 3D models via f3d).
 - `src/Cotton.Topology` — layout/topology manipulation services.
 - `src/cotton.client` — TypeScript/Vite frontend.
 - **EasyExtensions.Crypto** (NuGet) — streaming AES-GCM, key derivation, hashing.
