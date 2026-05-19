@@ -2,6 +2,7 @@
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Database;
+using Cotton.Database.Models.Enums;
 using Cotton.Server.Models.Dto;
 using Cotton.Validators;
 using EasyExtensions.Mediator;
@@ -71,7 +72,8 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         var nodesBase = _dbContext.Nodes
             .AsNoTracking()
             .Where(x => x.OwnerId == request.UserId
-                && x.LayoutId == request.LayoutId);
+                && x.LayoutId == request.LayoutId
+                && x.Type == NodeType.Default);
 
         if (hasIds)
         {
@@ -88,7 +90,8 @@ public class SearchLayoutsQueryHandler(CottonDbContext _dbContext)
         var filesBase = _dbContext.NodeFiles
             .AsNoTracking()
             .Where(x => x.OwnerId == request.UserId
-                && x.Node.LayoutId == request.LayoutId);
+                && x.Node.LayoutId == request.LayoutId
+                && x.Node.Type == NodeType.Default);
 
         if (hasIds)
         {
