@@ -35,21 +35,55 @@ namespace Cotton.Storage.Tests.Backends
             public string Region { get; set; } = string.Empty;
         }
 
-        [SetUp]
-        public void Setup()
+        private static S3TestConfig? LoadTestConfig()
         {
+            S3TestConfig? environmentConfig = LoadEnvironmentConfig();
+            if (environmentConfig is not null)
+            {
+                return environmentConfig;
+            }
+
             var configPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "s3-test-config.json");
             if (!File.Exists(configPath))
             {
-                Assert.Ignore($"S3 test config not found at {configPath}. Copy s3-test-config.json.example to s3-test-config.json and fill in your credentials.");
+                return null;
             }
 
             var configJson = File.ReadAllText(configPath);
-            _testConfig = JsonSerializer.Deserialize<S3TestConfig>(configJson);
+            return JsonSerializer.Deserialize<S3TestConfig>(configJson);
+        }
 
+        private static S3TestConfig? LoadEnvironmentConfig()
+        {
+            var config = new S3TestConfig
+            {
+                AccessKey = Environment.GetEnvironmentVariable("COTTON_TEST_S3_ACCESS_KEY") ?? string.Empty,
+                SecretKey = Environment.GetEnvironmentVariable("COTTON_TEST_S3_SECRET_KEY") ?? string.Empty,
+                Endpoint = Environment.GetEnvironmentVariable("COTTON_TEST_S3_ENDPOINT") ?? string.Empty,
+                Bucket = Environment.GetEnvironmentVariable("COTTON_TEST_S3_BUCKET") ?? string.Empty,
+                Region = Environment.GetEnvironmentVariable("COTTON_TEST_S3_REGION") ?? string.Empty,
+            };
+
+            return IsComplete(config) ? config : null;
+        }
+
+        private static bool IsComplete(S3TestConfig config)
+        {
+            return !string.IsNullOrWhiteSpace(config.AccessKey)
+                && !string.IsNullOrWhiteSpace(config.SecretKey)
+                && !string.IsNullOrWhiteSpace(config.Endpoint)
+                && !string.IsNullOrWhiteSpace(config.Bucket)
+                && !string.IsNullOrWhiteSpace(config.Region);
+        }
+
+        [SetUp]
+        public void Setup()
+        {
+            _testConfig = LoadTestConfig();
             if (_testConfig == null || string.IsNullOrEmpty(_testConfig.AccessKey))
             {
-                Assert.Ignore("S3 test config is invalid or empty.");
+                Assert.Ignore(
+                    "S3 test config is missing. Provide COTTON_TEST_S3_* environment variables or copy s3-test-config.json.example to s3-test-config.json and fill in credentials.");
             }
 
             _bucketName = _testConfig.Bucket;
