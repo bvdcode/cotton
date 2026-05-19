@@ -38,7 +38,7 @@ const enBaseSet = new Set(enKeys.map(stripPlural));
 
 let exitCode = 0;
 
-for (const language of ["ru", "es"]) {
+for (const language of ["ru", "es", "de"]) {
   const flat = loadLocale(language);
   const keys = Object.keys(flat);
   const keySet = new Set(keys);
