@@ -506,7 +506,10 @@ namespace Cotton.Server.Providers
                 : "Default user storage quota must be zero, empty, or a positive byte value.";
         }
 
-        public async Task<string?> ValidateDefaultUserTemplateNodeIdAsync(Guid? nodeId, CancellationToken cancellationToken = default)
+        public async Task<string?> ValidateDefaultUserTemplateNodeIdAsync(
+            Guid? nodeId,
+            Guid ownerId,
+            CancellationToken cancellationToken = default)
         {
             if (nodeId is null || nodeId == Guid.Empty)
             {
@@ -515,7 +518,11 @@ namespace Cotton.Server.Providers
 
             bool exists = await _dbContext.Nodes
                 .AsNoTracking()
-                .AnyAsync(x => x.Id == nodeId.Value && x.Type == NodeType.Default, cancellationToken);
+                .AnyAsync(x =>
+                    x.Id == nodeId.Value
+                    && x.OwnerId == ownerId
+                    && x.Type == NodeType.Default,
+                    cancellationToken);
 
             return exists
                 ? null

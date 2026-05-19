@@ -194,7 +194,8 @@ namespace Cotton.Server.Controllers
         {
             await EnsureSettingsAsync(cancellationToken);
             Guid? normalizedNodeId = nodeId is null || nodeId == Guid.Empty ? null : nodeId;
-            ThrowIfInvalid(await _settings.ValidateDefaultUserTemplateNodeIdAsync(normalizedNodeId, cancellationToken));
+            Guid ownerId = User.GetUserId();
+            ThrowIfInvalid(await _settings.ValidateDefaultUserTemplateNodeIdAsync(normalizedNodeId, ownerId, cancellationToken));
             await _settings.SetPropertyAsync(
                 x => x.DefaultUserTemplateNodeId,
                 normalizedNodeId,

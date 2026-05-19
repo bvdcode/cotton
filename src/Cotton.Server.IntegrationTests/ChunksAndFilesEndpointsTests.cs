@@ -224,6 +224,35 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Default_Template_Node_Rejects_Another_Users_Node()
+    {
+        var adminToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "templateowner",
+            password = "templatepass",
+            role = UserRole.User
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var otherToken = await LoginAsync("templateowner", "templatepass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+
+        var otherRoot = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(otherRoot, Is.Not.Null);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var templateResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-template-node",
+            otherRoot!.Id);
+
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
+    }
+
+    [Test]
     public async Task Download_File_Works()
     {
         var token = await LoginAsync();
