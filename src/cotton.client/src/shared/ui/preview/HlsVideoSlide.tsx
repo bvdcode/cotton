@@ -123,11 +123,13 @@ export const HlsVideoSlide: React.FC<HlsVideoSlideProps> = ({
     }
 
     const timer = window.setTimeout(() => {
-      setStatusState((current) =>
-        current.key === statusKey
-          ? { ...current, noticeVisible: false }
-          : current,
-      );
+      setStatusState((current) => {
+        const base =
+          current.key === statusKey
+            ? current
+            : createHlsSlideStatusState(statusKey, active);
+        return { ...base, noticeVisible: false };
+      });
     }, TRANSCODE_NOTICE_MS);
 
     return () => {
