@@ -66,10 +66,11 @@ namespace Cotton.Server.Handlers.Files
 
             var node = await GetTargetNodeAsync(request, preLockNode.LayoutId, tracking: true, cancellationToken);
             await EnsureNoDuplicatesAsync(node.Id, request.UserId, nameKey, cancellationToken);
-            await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifest.Id, cancellationToken);
+            long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifest.Id, cancellationToken);
 
             var nodeFile = await CreateNodeFileAsync(node, fileManifest, request, cancellationToken);
             await tx.CommitAsync(cancellationToken);
+            _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
             return MapToDto(nodeFile, fileManifest);
         }
 

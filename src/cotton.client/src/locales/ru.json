@@ -1483,6 +1483,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Настройки сервера не загружены",
       "uploadFailed": "Загрузка не удалась",
+      "storageQuotaExceeded": "Недостаточно места. Доступно: {{available}}.",
       "encryptionVaultLocked": "Крипто-хранилище заблокировано",
       "encryptionFailed": "Шифрование не удалось",
       "decryptionFailed": "Расшифровка не удалась",

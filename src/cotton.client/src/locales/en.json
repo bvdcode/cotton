@@ -1391,6 +1391,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
       "uploadFailed": "Upload failed",
+      "storageQuotaExceeded": "Not enough storage space. Available: {{available}}.",
       "encryptionVaultLocked": "Encryption vault is locked",
       "encryptionFailed": "Encryption failed",
       "decryptionFailed": "Decryption failed",

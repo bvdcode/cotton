@@ -243,7 +243,6 @@ namespace Cotton.Server.Controllers
             nodeFile.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
-
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
             return Ok(mapped);
@@ -431,7 +430,7 @@ namespace Cotton.Server.Controllers
                 }
             }
 
-            await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
+            long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
 
             if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
             {
@@ -449,6 +448,7 @@ namespace Cotton.Server.Controllers
 
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
+            _quota.RecordLogicalBytesAdded(userId, addedBytes);
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();

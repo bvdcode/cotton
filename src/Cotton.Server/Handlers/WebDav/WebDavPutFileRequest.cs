@@ -9,6 +9,7 @@ using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using EasyExtensions.Quartz.Extensions;
@@ -45,7 +46,8 @@ public enum WebDavPutFileError
     InvalidName,
     Conflict,
     PreconditionFailed,
-    UploadAborted
+    UploadAborted,
+    QuotaExceeded
 }
 
 /// <summary>
@@ -84,6 +86,12 @@ public class WebDavPutFileRequestHandler(
             return targetError;
         }
 
+        var quotaPreflightError = await TryPreflightKnownLengthQuotaAsync(request, target!, ct);
+        if (quotaPreflightError != null)
+        {
+            return quotaPreflightError;
+        }
+
         var (content, contentError) = await TryReadAndValidateContentAsync(request, ct);
         if (contentError != null)
         {
@@ -120,11 +128,16 @@ public class WebDavPutFileRequestHandler(
             return Fail(WebDavPutFileError.ParentNotFound);
         }
 
-        await EnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
+        var (quotaError, addedBytes) = await TryEnsureQuotaAsync(request, finalTarget, fileManifest.Id, ct);
+        if (quotaError != null)
+        {
+            return quotaError;
+        }
 
         var resultNodeFile = await UpsertNodeFileAsync(request, finalTarget, fileManifest.Id, ct);
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
 
         await NotifyPutCompletedAsync(request, created: finalTarget.Created, chunkCount: content.Chunks.Count, nodeFileId: resultNodeFile.Id, ct);
         return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
@@ -309,15 +322,50 @@ public class WebDavPutFileRequestHandler(
         return fileManifest;
     }
 
-    private async Task EnsureQuotaAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
+    private async Task<WebDavPutFileResult?> TryPreflightKnownLengthQuotaAsync(
+        WebDavPutFileRequest request,
+        PutTarget target,
+        CancellationToken ct)
     {
-        if (target.Existing.Found && target.Existing.NodeFile is not null)
+        if (request.ContentLength is not long contentLength || contentLength < 0)
         {
-            await _quota.EnsureCanChangeFileManifestAsync(request.UserId, target.Existing.NodeFile.Id, fileManifestId, ct);
-            return;
+            return null;
         }
 
-        await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifestId, ct);
+        try
+        {
+            if (target.Existing.Found)
+            {
+                return null;
+            }
+
+            await _quota.EnsureCanAddKnownFileSizeAsync(request.UserId, contentLength, ct);
+
+            return null;
+        }
+        catch (BadRequestException<User>)
+        {
+            return Fail(WebDavPutFileError.QuotaExceeded);
+        }
+    }
+
+    private async Task<(WebDavPutFileResult? Error, long AddedBytes)> TryEnsureQuotaAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)
+    {
+        try
+        {
+            if (target.Existing.Found && target.Existing.NodeFile is not null)
+            {
+                long changedBytes = await _quota.EnsureCanChangeFileManifestAsync(request.UserId, target.Existing.NodeFile.Id, fileManifestId, ct);
+                return (null, changedBytes);
+            }
+
+            long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, fileManifestId, ct);
+            return (null, addedBytes);
+        }
+        catch (BadRequestException<User>)
+        {
+            return (Fail(WebDavPutFileError.QuotaExceeded), 0);
+        }
     }
 
     private async Task<NodeFile> UpsertNodeFileAsync(WebDavPutFileRequest request, PutTarget target, Guid fileManifestId, CancellationToken ct)

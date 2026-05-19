@@ -3,16 +3,20 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
+using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services;
 
 public class UserStorageQuotaService(
     CottonDbContext _dbContext,
-    SettingsProvider _settings)
+    SettingsProvider _settings,
+    IMemoryCache _cache)
 {
+    private static readonly TimeSpan UsedBytesCacheDuration = TimeSpan.FromMinutes(15);
     private readonly Dictionary<Guid, long> _usedBytesByUser = [];
 
     public async Task<long> GetUsedBytesAsync(Guid userId, CancellationToken ct = default)
@@ -22,6 +26,13 @@ public class UserStorageQuotaService(
             return cachedUsedBytes;
         }
 
+        string cacheKey = GetUsedBytesCacheKey(userId);
+        if (_cache.TryGetValue(cacheKey, out long processCachedUsedBytes))
+        {
+            _usedBytesByUser[userId] = processCachedUsedBytes;
+            return processCachedUsedBytes;
+        }
+
         long? usedBytes = await _dbContext.NodeFiles
             .AsNoTracking()
             .Where(x => x.OwnerId == userId)
@@ -29,10 +40,33 @@ public class UserStorageQuotaService(
 
         long resolvedUsedBytes = usedBytes ?? 0;
         _usedBytesByUser[userId] = resolvedUsedBytes;
+        _cache.Set(cacheKey, resolvedUsedBytes, UsedBytesCacheDuration);
         return resolvedUsedBytes;
     }
 
-    public async Task EnsureCanAddFileReferenceAsync(
+    public async Task<UserStorageQuotaDto> GetSnapshotAsync(Guid userId, CancellationToken ct = default)
+    {
+        long usedBytes = await GetUsedBytesAsync(userId, ct);
+        long? quotaBytes = _settings.GetServerSettings().DefaultUserStorageQuotaBytes;
+        if (quotaBytes is null or <= 0)
+        {
+            return new UserStorageQuotaDto
+            {
+                UsedBytes = usedBytes,
+                QuotaBytes = null,
+                AvailableBytes = null,
+            };
+        }
+
+        return new UserStorageQuotaDto
+        {
+            UsedBytes = usedBytes,
+            QuotaBytes = quotaBytes.Value,
+            AvailableBytes = Math.Max(0, quotaBytes.Value - usedBytes),
+        };
+    }
+
+    public async Task<long> EnsureCanAddFileReferenceAsync(
         Guid userId,
         Guid fileManifestId,
         CancellationToken ct = default)
@@ -43,10 +77,19 @@ public class UserStorageQuotaService(
             .Select(x => x.SizeBytes)
             .SingleAsync(ct);
 
-        await EnsureCanAddLogicalBytesAsync(userId, additionalBytes, ct);
+        await EnsureCanAddLogicalBytesAsync(userId, additionalBytes, reserveInRequestCache: true, ct);
+        return Math.Max(0, additionalBytes);
     }
 
-    public async Task EnsureCanChangeFileManifestAsync(
+    public Task EnsureCanAddKnownFileSizeAsync(
+        Guid userId,
+        long sizeBytes,
+        CancellationToken ct = default)
+    {
+        return EnsureCanAddLogicalBytesAsync(userId, sizeBytes, reserveInRequestCache: false, ct);
+    }
+
+    public async Task<long> EnsureCanChangeFileManifestAsync(
         Guid userId,
         Guid nodeFileId,
         Guid newFileManifestId,
@@ -64,7 +107,7 @@ public class UserStorageQuotaService(
             .SingleOrDefaultAsync(ct);
         if (current is null)
         {
-            return;
+            return 0;
         }
 
         var next = await _dbContext.FileManifests
@@ -82,12 +125,14 @@ public class UserStorageQuotaService(
                 ? 0
                 : next.SizeBytes;
 
-        await EnsureCanAddLogicalBytesAsync(userId, additionalBytes, ct);
+        await EnsureCanAddLogicalBytesAsync(userId, additionalBytes, reserveInRequestCache: true, ct);
+        return Math.Max(0, additionalBytes);
     }
 
     private async Task EnsureCanAddLogicalBytesAsync(
         Guid userId,
         long additionalBytes,
+        bool reserveInRequestCache,
         CancellationToken ct)
     {
         long? quotaBytes = _settings.GetServerSettings().DefaultUserStorageQuotaBytes;
@@ -109,6 +154,54 @@ public class UserStorageQuotaService(
                 $"Storage quota exceeded. Current usage is {usedBytes} bytes, quota is {quotaBytes.Value} bytes.");
         }
 
-        _usedBytesByUser[userId] = usedBytes + safeAdditionalBytes;
+        if (reserveInRequestCache)
+        {
+            _usedBytesByUser[userId] = usedBytes + safeAdditionalBytes;
+        }
     }
+    public void RecordLogicalBytesAdded(Guid userId, long bytes)
+    {
+        long safeBytes = Math.Max(0, bytes);
+        if (safeBytes == 0)
+        {
+            return;
+        }
+
+        string cacheKey = GetUsedBytesCacheKey(userId);
+        if (_usedBytesByUser.TryGetValue(userId, out long scopedUsedBytes))
+        {
+            _cache.Set(cacheKey, scopedUsedBytes, UsedBytesCacheDuration);
+            return;
+        }
+
+        if (_cache.TryGetValue(cacheKey, out long cachedUsedBytes))
+        {
+            _cache.Set(cacheKey, cachedUsedBytes + safeBytes, UsedBytesCacheDuration);
+        }
+    }
+
+    public void RecordLogicalBytesRemoved(Guid userId, long bytes)
+    {
+        long safeBytes = Math.Max(0, bytes);
+        if (safeBytes == 0)
+        {
+            return;
+        }
+
+        string cacheKey = GetUsedBytesCacheKey(userId);
+        if (_usedBytesByUser.TryGetValue(userId, out long scopedUsedBytes))
+        {
+            long adjustedScopedUsedBytes = Math.Max(0, scopedUsedBytes - safeBytes);
+            _usedBytesByUser[userId] = adjustedScopedUsedBytes;
+            _cache.Set(cacheKey, adjustedScopedUsedBytes, UsedBytesCacheDuration);
+            return;
+        }
+
+        if (_cache.TryGetValue(cacheKey, out long cachedUsedBytes))
+        {
+            _cache.Set(cacheKey, Math.Max(0, cachedUsedBytes - safeBytes), UsedBytesCacheDuration);
+        }
+    }
+
+    private static string GetUsedBytesCacheKey(Guid userId) => $"user-storage-quota:used:{userId:N}";
 }

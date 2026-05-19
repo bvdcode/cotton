@@ -7,6 +7,7 @@ using Cotton.Server.Handlers.Users;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
+using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -24,7 +25,8 @@ namespace Cotton.Server.Controllers
     public class UserController(
         IMediator _mediator,
         CottonDbContext _dbContext,
-        IHubContext<EventHub> _hubContext) : ControllerBase
+        IHubContext<EventHub> _hubContext,
+        UserStorageQuotaService _quota) : ControllerBase
     {
         [HttpPost("verify-email")]
         public async Task<IActionResult> ConfirmEmailVerification(
@@ -81,6 +83,15 @@ namespace Cotton.Server.Controllers
             }
             UserDto userDto = user.Adapt<UserDto>();
             return Ok(userDto);
+        }
+
+        [Authorize]
+        [HttpGet("me/storage-quota")]
+        public async Task<IActionResult> GetCurrentUserStorageQuota(CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            UserStorageQuotaDto quota = await _quota.GetSnapshotAsync(userId, cancellationToken);
+            return Ok(quota);
         }
 
         [Authorize]

@@ -187,6 +187,43 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task User_Storage_Quota_Snapshot_Tracks_Create_And_Permanent_Delete_From_Cache()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var quotaResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-storage-quota-bytes",
+            100L);
+        quotaResponse.EnsureSuccessStatusCode();
+
+        var initialQuota = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.UserStorageQuotaDto>(
+            "/api/v1/users/me/storage-quota");
+        Assert.That(initialQuota, Is.Not.Null);
+        Assert.That(initialQuota!.UsedBytes, Is.EqualTo(0));
+        Assert.That(initialQuota.AvailableBytes, Is.EqualTo(100));
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "quota-cache.txt", "12345");
+        var afterCreate = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.UserStorageQuotaDto>(
+            "/api/v1/users/me/storage-quota");
+        Assert.That(afterCreate, Is.Not.Null);
+        Assert.That(afterCreate!.UsedBytes, Is.EqualTo(5));
+        Assert.That(afterCreate.AvailableBytes, Is.EqualTo(95));
+
+        var deleteResponse = await _client.DeleteAsync($"/api/v1/files/{file.Id}?skipTrash=true");
+        deleteResponse.EnsureSuccessStatusCode();
+
+        var afterDelete = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.UserStorageQuotaDto>(
+            "/api/v1/users/me/storage-quota");
+        Assert.That(afterDelete, Is.Not.Null);
+        Assert.That(afterDelete!.UsedBytes, Is.EqualTo(0));
+        Assert.That(afterDelete.AvailableBytes, Is.EqualTo(100));
+    }
+
+    [Test]
     public async Task Admin_Created_User_Gets_Default_Template_Files()
     {
         var token = await LoginAsync();

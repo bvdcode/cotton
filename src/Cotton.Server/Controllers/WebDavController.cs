@@ -194,6 +194,7 @@ public class WebDavController(
                 WebDavPutFileError.Conflict => Conflict("Conflict with existing resource"),
                 WebDavPutFileError.PreconditionFailed => StatusCode(StatusCodes.Status412PreconditionFailed, "Destination exists and Overwrite is false"),
                 WebDavPutFileError.UploadAborted => StatusCode(StatusCodes.Status408RequestTimeout, "Upload aborted"),
+                WebDavPutFileError.QuotaExceeded => StatusCode(507, "Storage quota exceeded"),
                 _ => StatusCode(StatusCodes.Status500InternalServerError)
             };
         }

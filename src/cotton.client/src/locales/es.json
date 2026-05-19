@@ -1464,6 +1464,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Los ajustes del servidor no se han cargado",
       "uploadFailed": "La subida falló",
+      "storageQuotaExceeded": "No hay suficiente espacio. Disponible: {{available}}.",
       "encryptionVaultLocked": "La bóveda de cifrado está bloqueada",
       "encryptionFailed": "El cifrado falló",
       "decryptionFailed": "El descifrado falló",

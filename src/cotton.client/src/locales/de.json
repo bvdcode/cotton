@@ -1492,6 +1492,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Servereinstellungen sind nicht geladen",
       "uploadFailed": "Upload fehlgeschlagen",
+      "storageQuotaExceeded": "Nicht genügend Speicherplatz. Verfügbar: {{available}}.",
       "encryptionVaultLocked": "Verschlüsselungs-Tresor ist gesperrt",
       "encryptionFailed": "Verschlüsselung fehlgeschlagen",
       "decryptionFailed": "Entschlüsselung fehlgeschlagen",
