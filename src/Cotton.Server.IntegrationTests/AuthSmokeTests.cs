@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Vadim Belov <https://belov.us>
 
 using Cotton.Server.IntegrationTests.Abstractions;
@@ -14,6 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NUnit.Framework;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 
@@ -28,7 +31,6 @@ public class AuthSmokeTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
-        // Reset DB to empty state
         var creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
@@ -38,7 +40,6 @@ public class AuthSmokeTests : IntegrationTestBase
             Assert.That(creator.HasTables(), Is.False, "DB must have no user tables after Create()");
         });
 
-        // Build connection string (match IntegrationTestBase values)
         var csb = new NpgsqlConnectionStringBuilder
         {
             Host = "localhost",
@@ -68,7 +69,6 @@ public class AuthSmokeTests : IntegrationTestBase
         {
             builder.ConfigureServices(services =>
             {
-                // Replace file storage with in-memory implementation for tests
                 var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IStoragePipeline));
                 if (existing != null) services.Remove(existing);
                 services.AddSingleton<IStoragePipeline, InMemoryStorage>();
@@ -100,27 +100,55 @@ public class AuthSmokeTests : IntegrationTestBase
     {
         Assert.That(_client, Is.Not.Null);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
-        {
-            Content = JsonContent.Create(new LoginRequestDto()
-            {
-                Username = "testuser",
-                Password = "testpassword"
-            })
-        };
-        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
-        var response = await _client!.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        TokenPairResponseDto payload = await LoginAsync("testuser", "testpassword");
+        Assert.That(string.IsNullOrWhiteSpace(payload.AccessToken), Is.False, "Token must be present");
 
-        var payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
-        Assert.That(payload, Is.Not.Null);
-        Assert.That(string.IsNullOrWhiteSpace(payload!.AccessToken), Is.False, "Token must be present");
-
-        // Basic JWT structure check: three dot-separated segments
         var parts = payload.AccessToken.Split('.');
         Assert.That(parts.Length, Is.EqualTo(3), "JWT must have3 parts");
 
-        // Log a short token preview
         TestContext.Progress.WriteLine($"Login OK. Token: {payload.AccessToken[..Math.Min(16, payload.AccessToken.Length)]}...");
+    }
+
+    [Test]
+    public async Task RevokeSession_Invalidates_Current_AccessToken()
+    {
+        Assert.That(_client, Is.Not.Null);
+
+        TokenPairResponseDto login = await LoginAsync("testuser", "testpassword");
+        string sessionId = new JwtSecurityTokenHandler()
+            .ReadJwtToken(login.AccessToken)
+            .Claims
+            .First(c => c.Type == JwtRegisteredClaimNames.Sid)
+            .Value;
+
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+        using HttpResponseMessage beforeRevoke = await _client.GetAsync("/api/v1/auth/me");
+        Assert.That(beforeRevoke.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using HttpResponseMessage revoke = await _client.DeleteAsync($"/api/v1/auth/sessions/{sessionId}");
+        Assert.That(revoke.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using HttpResponseMessage afterRevoke = await _client.GetAsync("/api/v1/auth/me");
+        Assert.That(afterRevoke.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    private async Task<TokenPairResponseDto> LoginAsync(string username, string password)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        {
+            Content = JsonContent.Create(new LoginRequestDto
+            {
+                Username = username,
+                Password = password
+            })
+        };
+        request.Headers.Add("X-Forwarded-For", "8.8.8.8");
+
+        using HttpResponseMessage response = await _client!.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        TokenPairResponseDto? payload = await response.Content.ReadFromJsonAsync<TokenPairResponseDto>();
+        Assert.That(payload, Is.Not.Null);
+        return payload!;
     }
 }

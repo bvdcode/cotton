@@ -21,6 +21,11 @@ using EasyExtensions.EntityFrameworkCore.Extensions;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using EasyExtensions.Quartz.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Threading.RateLimiting;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 
 namespace Cotton.Server
@@ -44,6 +49,66 @@ namespace Cotton.Server
             }
 
             await RunApplicationAsync(args, encryptionSettings, masterKeyRuntimeState, processHardeningStatus);
+        }
+
+        private const string AuthRateLimitPolicy = "auth";
+
+        private static void ConfigureAuthRateLimiting(IServiceCollection services)
+        {
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.AddPolicy(AuthRateLimitPolicy, httpContext =>
+                {
+                    string partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey,
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 10,
+                            QueueLimit = 0,
+                            Window = TimeSpan.FromMinutes(1),
+                        });
+                });
+            });
+        }
+
+        private static void ConfigureSessionAccessTokenRevocation(IServiceCollection services)
+        {
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                JwtBearerEvents events = options.Events ?? new JwtBearerEvents();
+                Func<TokenValidatedContext, Task> existingHandler = events.OnTokenValidated;
+                events.OnTokenValidated = async context =>
+                {
+                    await existingHandler(context);
+                    if (context.Result is not null)
+                    {
+                        return;
+                    }
+
+                    string? userIdValue = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                    string? sessionId = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Sid);
+                    if (!Guid.TryParse(userIdValue, out Guid userId) || string.IsNullOrWhiteSpace(sessionId))
+                    {
+                        context.Fail("Access token is missing required session claims.");
+                        return;
+                    }
+
+                    var revocations = context.HttpContext.RequestServices
+                        .GetRequiredService<SessionAccessTokenRevocationStore>();
+                    bool isRevoked = await revocations.IsRevokedAsync(
+                        userId,
+                        sessionId,
+                        context.HttpContext.RequestAborted);
+                    if (isRevoked)
+                    {
+                        context.Fail("Session has been revoked.");
+                    }
+                };
+                options.Events = events;
+            });
         }
 
         private static void ConfigureProcessTimeZone()
@@ -139,6 +204,7 @@ namespace Cotton.Server
                 .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<SecurityDiagnosticsService>()
+                .AddScoped<SessionAccessTokenRevocationStore>()
                 .AddScoped<PasskeyService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
@@ -175,10 +241,13 @@ namespace Cotton.Server
                 .AddWebDavServices()
                 .AddWebDavAuth()
                 .AddJwt();
+            ConfigureAuthRateLimiting(builder.Services);
+            ConfigureSessionAccessTokenRevocation(builder.Services);
             builder.Services.AddHostedService<AppVersionTrackerService>();
 
             var app = builder.Build();
             app.UseForwardedHeaders();
+            app.UseRateLimiter();
             app.UseDefaultFiles();
             app.MapStaticAssets();
             app.UseAuthentication()

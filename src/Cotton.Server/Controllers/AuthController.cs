@@ -29,6 +29,7 @@ using EasyExtensions.Models.Enums;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
@@ -53,7 +54,8 @@ namespace Cotton.Server.Controllers
         IGeoLookupService _geoLookup,
         PasskeyService _passkeys,
         DefaultUserContentSeeder _defaultUserContentSeeder,
-        ApplicationStartupClock _startupClock) : ControllerBase
+        ApplicationStartupClock _startupClock,
+        SessionAccessTokenRevocationStore _sessionRevocations) : ControllerBase
     {
         public const int WebDavTokenLength = 32;
         public const int RefreshTokenLength = 32;
@@ -85,10 +87,13 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> RevokeSession([FromRoute] string sessionId)
         {
             var userId = User.GetUserId();
-            var tokens = await _dbContext.RefreshTokens
+            int revokedTokens = await _dbContext.RefreshTokens
                 .Where(x => x.UserId == userId && x.SessionId == sessionId && x.RevokedAt == null)
                 .ExecuteUpdateAsync(x => x.SetProperty(t => t.RevokedAt, t => DateTime.UtcNow));
-            // TODO: Refuse all access tokens for this sessionId
+            if (revokedTokens > 0)
+            {
+                _sessionRevocations.Revoke(userId, sessionId, _tokens.TokenLifetime);
+            }
             return Ok();
         }
 
@@ -299,7 +304,7 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        //[EnableRateLimiting("auth")]
+        [EnableRateLimiting("auth")]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
