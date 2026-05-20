@@ -29,6 +29,7 @@ import {
 } from "../../../shared/store/userPreferencesStore";
 import type { ThemeMode } from "../../../shared/theme";
 import { supportedLanguages, type SupportedLanguage } from "../../../locales";
+import { nativeLanguageNames } from "../../../locales/languageDisplayNames";
 
 export const AppearanceSettingsCard = () => {
   const { t } = useTranslation("profile");
@@ -115,7 +116,7 @@ export const AppearanceSettingsCard = () => {
           >
             {supportedLanguages.map((lng) => (
               <MenuItem key={lng} value={lng}>
-                {t(`appearance.language.${lng}`)}
+                {nativeLanguageNames[lng]}
               </MenuItem>
             ))}
           </Select>

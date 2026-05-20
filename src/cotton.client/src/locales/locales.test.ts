@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
+import { supportedLanguages } from ".";
+import { nativeLanguageNames } from "./languageDisplayNames";
 import ru from "./ru.json";
 
 type LocaleObject = Record<string, unknown>;
@@ -47,6 +49,12 @@ const findOrphans = (locale: Record<string, unknown>): string[] =>
   );
 
 describe("locale parity", () => {
+  it("keeps native display names aligned with supported languages", () => {
+    expect(Object.keys(nativeLanguageNames).sort()).toEqual(
+      [...supportedLanguages].sort(),
+    );
+  });
+
   it("keeps EN string leaves non-empty", () => {
     for (const [key, value] of Object.entries(flatEn)) {
       if (typeof value !== "string") continue;
