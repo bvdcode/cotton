@@ -519,6 +519,15 @@
       "message": "No users exist yet. The credentials you enter will create the first administrator account. This is only available shortly after startup. Restart the instance if needed.",
       "continueButton": "Continue",
       "continuing": "Creating first user..."
+    },
+    "passkey": {
+      "loginButton": "Sign in with passkey",
+      "signingIn": "Signing in...",
+      "errors": {
+        "notSupported": "This browser does not support passkeys.",
+        "cancelled": "Passkey sign-in was cancelled.",
+        "failed": "Passkey sign-in failed."
+      }
     }
   },
   "notFound": {
@@ -827,6 +836,27 @@
           "invalidEnvelope": "Saved encryption setup data cannot be read.",
           "unknown": "Could not unlock encryption."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Use a security key, biometrics or device PIN to sign in without a password.",
+      "nameLabel": "Passkey name",
+      "namePlaceholder": "YubiKey, MacBook, phone...",
+      "defaultName": "Passkey {{count}}",
+      "add": "Add passkey",
+      "adding": "Adding...",
+      "loading": "Loading passkeys...",
+      "empty": "No passkeys are registered for this account yet.",
+      "created": "Created {{date}}",
+      "lastUsed": "Last used {{date}}",
+      "delete": "Delete passkey",
+      "errors": {
+        "loadFailed": "Failed to load passkeys.",
+        "notSupported": "This browser does not support passkeys.",
+        "cancelled": "Passkey creation was cancelled.",
+        "addFailed": "Failed to add passkey.",
+        "deleteFailed": "Failed to delete passkey."
       }
     }
   },

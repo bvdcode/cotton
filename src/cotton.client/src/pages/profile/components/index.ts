@@ -8,3 +8,4 @@ export { ShareLinkSettingsCard } from "./ShareLinkSettingsCard";
 export { EditProfileCard } from "./EditProfileCard";
 export { AppearanceSettingsCard } from "./AppearanceSettingsCard";
 export { ClientEncryptionCard } from "./ClientEncryptionCard";
+export { PasskeysCard } from "./PasskeysCard";

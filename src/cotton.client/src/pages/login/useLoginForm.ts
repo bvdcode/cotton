@@ -10,6 +10,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "@shared/ui/notifications";
 import { useAuth } from "@features/auth";
 import { authApi } from "@shared/api/authApi";
+import { passkeysApi } from "@shared/api/passkeysApi";
+import {
+  isPasskeySupported,
+  serializeAssertionCredential,
+  toCredentialRequestOptions,
+} from "@shared/passkeys/webauthn";
 import {
   getApiErrorMessage,
   hasApiErrorToastBeenDispatched,
@@ -40,9 +46,11 @@ interface UseLoginFormResult {
   markUsernameBlurred: () => void;
   requiresTwoFactor: boolean;
   loading: boolean;
+  passkeyLoading: boolean;
   forgotPasswordSending: boolean;
   usernameHasError: boolean;
   handleSubmit: (e: FormEvent) => Promise<void>;
+  handlePasskeyLogin: () => Promise<void>;
   handleForgotPassword: () => Promise<void>;
 }
 
@@ -68,6 +76,7 @@ export const useLoginForm = (): UseLoginFormResult => {
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
   const autoSubmitTriggeredRef = useRef(false);
   const demoSubmitRef = useRef(false);
@@ -171,6 +180,53 @@ export const useLoginForm = (): UseLoginFormResult => {
     [submitLogin],
   );
 
+  const handlePasskeyLogin = useCallback(async () => {
+    if (!isPasskeySupported()) {
+      showToast(t("passkey.errors.notSupported"), "error");
+      return;
+    }
+
+    setPasskeyLoading(true);
+    try {
+      const optionsResponse = await passkeysApi.beginAssertion(
+        username.trim() || null,
+      );
+      const credential = await navigator.credentials.get({
+        publicKey: toCredentialRequestOptions(optionsResponse.options),
+      });
+
+      if (!(credential instanceof PublicKeyCredential)) {
+        showToast(t("passkey.errors.cancelled"), "error");
+        return;
+      }
+
+      await passkeysApi.finishAssertion(
+        optionsResponse.requestId,
+        trustDevice,
+        serializeAssertionCredential(credential),
+      );
+
+      const user = await authApi.me();
+      setAuthenticated(true, user);
+      navigate("/");
+    } catch (e) {
+      if (isAxiosError(e) && hasApiErrorToastBeenDispatched(e)) {
+        return;
+      }
+
+      showToast(t("passkey.errors.failed"), "error");
+    } finally {
+      setPasskeyLoading(false);
+    }
+  }, [
+    username,
+    trustDevice,
+    t,
+    showToast,
+    setAuthenticated,
+    navigate,
+  ]);
+
   const handleForgotPassword = useCallback(async () => {
     const trimmed = username.trim();
     if (!trimmed || !isEmail(trimmed)) {
@@ -260,9 +316,11 @@ export const useLoginForm = (): UseLoginFormResult => {
     markUsernameBlurred,
     requiresTwoFactor,
     loading,
+    passkeyLoading,
     forgotPasswordSending,
     usernameHasError,
     handleSubmit,
+    handlePasskeyLogin,
     handleForgotPassword,
   };
 };

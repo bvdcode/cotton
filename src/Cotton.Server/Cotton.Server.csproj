@@ -16,9 +16,11 @@
 		<Folder Include="wwwroot\" />
 		<PackageReference Include="EasyExtensions.Clients" Version="3.0.65" />
 		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.65" />
+		<PackageReference Include="Fido2" Version="4.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>10.0.8</Version>
 		</PackageReference>
+		<PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.4" />
 		<ProjectReference Include="..\cotton.client\cotton.client.esproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>

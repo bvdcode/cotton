@@ -9,6 +9,7 @@ import {
   ShareLinkSettingsCard,
   EditProfileCard,
   ClientEncryptionCard,
+  PasskeysCard,
 } from "./components";
 import { ChangePasswordCard } from "./components/ChangePasswordCard";
 import { useTranslation } from "react-i18next";
@@ -47,6 +48,7 @@ export const SettingsPage = () => {
         <EditProfileCard user={user} onUserUpdate={handleUserUpdate} />
         <AppearanceSettingsCard />
         <TotpSettingsCard user={user} onUserUpdate={handleUserUpdate} />
+        <PasskeysCard />
         <ClientEncryptionCard user={user} onUserUpdate={handleUserUpdate} />
         <SessionsCard />
         <ShareLinkSettingsCard />

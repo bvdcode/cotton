@@ -618,6 +618,15 @@
       "message": "Ainda não existem usuários. As credenciais informadas criarão a primeira conta de administrador. Isso só está disponível pouco depois da inicialização. Reinicie a instância se necessário.",
       "continueButton": "Continuar",
       "continuing": "Criando o primeiro usuário..."
+    },
+    "passkey": {
+      "loginButton": "Entrar com passkey",
+      "signingIn": "Entrando...",
+      "errors": {
+        "notSupported": "Este navegador não suporta passkeys.",
+        "cancelled": "Entrada com passkey cancelada.",
+        "failed": "Falha ao entrar com passkey."
+      }
     }
   },
   "notFound": {
@@ -924,6 +933,27 @@
           "invalidEnvelope": "Os dados salvos da configuração de criptografia não podem ser lidos.",
           "unknown": "Não foi possível desbloquear a criptografia."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Use uma chave de segurança, biometria ou PIN do dispositivo para entrar sem senha.",
+      "nameLabel": "Nome da passkey",
+      "namePlaceholder": "YubiKey, MacBook, telefone...",
+      "defaultName": "Passkey {{count}}",
+      "add": "Adicionar passkey",
+      "adding": "Adicionando...",
+      "loading": "Carregando passkeys...",
+      "empty": "Nenhuma passkey está registrada para esta conta ainda.",
+      "created": "Criada em {{date}}",
+      "lastUsed": "Último uso {{date}}",
+      "delete": "Excluir passkey",
+      "errors": {
+        "loadFailed": "Falha ao carregar passkeys.",
+        "notSupported": "Este navegador não suporta passkeys.",
+        "cancelled": "Criação da passkey cancelada.",
+        "addFailed": "Falha ao adicionar passkey.",
+        "deleteFailed": "Falha ao excluir passkey."
       }
     }
   },

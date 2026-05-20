@@ -605,6 +605,15 @@
       "message": "尚未有任何用户。您输入的凭据将用于创建第一个管理员账户。此功能仅在启动后的短时间内可用。如有需要，请重启实例。",
       "continueButton": "继续",
       "continuing": "正在创建第一个用户……"
+    },
+    "passkey": {
+      "loginButton": "使用通行密钥登录",
+      "signingIn": "正在登录...",
+      "errors": {
+        "notSupported": "此浏览器不支持通行密钥。",
+        "cancelled": "已取消通行密钥登录。",
+        "failed": "通行密钥登录失败。"
+      }
     }
   },
   "notFound": {
@@ -911,6 +920,27 @@
           "invalidEnvelope": "已保存的加密设置数据无法读取。",
           "unknown": "无法解锁加密。"
         }
+      }
+    },
+    "passkeys": {
+      "title": "通行密钥",
+      "description": "使用安全密钥、生物识别或设备 PIN 免密码登录。",
+      "nameLabel": "通行密钥名称",
+      "namePlaceholder": "YubiKey、MacBook、手机...",
+      "defaultName": "通行密钥 {{count}}",
+      "add": "添加通行密钥",
+      "adding": "正在添加...",
+      "loading": "正在加载通行密钥...",
+      "empty": "此账户尚未注册通行密钥。",
+      "created": "创建于 {{date}}",
+      "lastUsed": "上次使用 {{date}}",
+      "delete": "删除通行密钥",
+      "errors": {
+        "loadFailed": "无法加载通行密钥。",
+        "notSupported": "此浏览器不支持通行密钥。",
+        "cancelled": "已取消创建通行密钥。",
+        "addFailed": "无法添加通行密钥。",
+        "deleteFailed": "无法删除通行密钥。"
       }
     }
   },

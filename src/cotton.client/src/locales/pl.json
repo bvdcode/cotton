@@ -626,6 +626,15 @@
       "message": "Brak istniejących użytkowników. Wprowadzone dane logowania utworzą pierwsze konto administratora. Ta opcja jest dostępna tylko krótko po uruchomieniu. W razie potrzeby należy zrestartować instancję.",
       "continueButton": "Kontynuuj",
       "continuing": "Tworzenie pierwszego użytkownika..."
+    },
+    "passkey": {
+      "loginButton": "Zaloguj kluczem dostępu",
+      "signingIn": "Logowanie...",
+      "errors": {
+        "notSupported": "Ta przeglądarka nie obsługuje kluczy dostępu.",
+        "cancelled": "Logowanie kluczem dostępu anulowane.",
+        "failed": "Logowanie kluczem dostępu nie powiodło się."
+      }
     }
   },
   "notFound": {
@@ -934,6 +943,27 @@
           "invalidEnvelope": "Nie można odczytać zapisanych danych konfiguracji szyfrowania.",
           "unknown": "Nie udało się odblokować szyfrowania."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Klucze dostępu",
+      "description": "Użyj klucza bezpieczeństwa, biometrii albo PIN-u urządzenia, aby logować się bez hasła.",
+      "nameLabel": "Nazwa klucza",
+      "namePlaceholder": "YubiKey, MacBook, telefon...",
+      "defaultName": "Klucz dostępu {{count}}",
+      "add": "Dodaj klucz",
+      "adding": "Dodawanie...",
+      "loading": "Ładowanie kluczy...",
+      "empty": "Dla tego konta nie ma jeszcze zarejestrowanych kluczy dostępu.",
+      "created": "Utworzono {{date}}",
+      "lastUsed": "Ostatnio użyto {{date}}",
+      "delete": "Usuń klucz dostępu",
+      "errors": {
+        "loadFailed": "Nie udało się załadować kluczy dostępu.",
+        "notSupported": "Ta przeglądarka nie obsługuje kluczy dostępu.",
+        "cancelled": "Tworzenie klucza dostępu anulowane.",
+        "addFailed": "Nie udało się dodać klucza dostępu.",
+        "deleteFailed": "Nie udało się usunąć klucza dostępu."
       }
     }
   },

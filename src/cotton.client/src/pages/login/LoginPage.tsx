@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { KeyboardArrowRight } from "@mui/icons-material";
+import { KeyboardArrowRight, VpnKeyOutlined } from "@mui/icons-material";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router-dom";
@@ -217,6 +217,26 @@ export const LoginPage = () => {
                     </Box>
                   </Button>
                 </Box>
+                {!form.requiresTwoFactor && (
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    fullWidth
+                    startIcon={
+                      form.passkeyLoading ? (
+                        <CircularProgress color="inherit" size={18} />
+                      ) : (
+                        <VpnKeyOutlined />
+                      )
+                    }
+                    onClick={form.handlePasskeyLogin}
+                    disabled={form.loading || form.passkeyLoading}
+                  >
+                    {form.passkeyLoading
+                      ? t("passkey.signingIn")
+                      : t("passkey.loginButton")}
+                  </Button>
+                )}
               </Stack>
             </Box>
           </Paper>

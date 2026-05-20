@@ -630,6 +630,15 @@
       "message": "Aucun utilisateur n'existe encore. Les identifiants que vous saisirez créeront le premier compte administrateur. Ceci n'est disponible que peu de temps après le démarrage. Redémarrez l'instance si nécessaire.",
       "continueButton": "Continuer",
       "continuing": "Création du premier utilisateur..."
+    },
+    "passkey": {
+      "loginButton": "Se connecter avec une passkey",
+      "signingIn": "Connexion...",
+      "errors": {
+        "notSupported": "Ce navigateur ne prend pas en charge les passkeys.",
+        "cancelled": "La connexion par passkey a été annulée.",
+        "failed": "La connexion par passkey a échoué."
+      }
     }
   },
   "notFound": {
@@ -938,6 +947,27 @@
           "invalidEnvelope": "Les données de configuration du chiffrement enregistrées ne peuvent pas être lues.",
           "unknown": "Impossible de déverrouiller le chiffrement."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Utilisez une clé de sécurité, la biométrie ou le code PIN de l’appareil pour vous connecter sans mot de passe.",
+      "nameLabel": "Nom de la passkey",
+      "namePlaceholder": "YubiKey, MacBook, téléphone...",
+      "defaultName": "Passkey {{count}}",
+      "add": "Ajouter une passkey",
+      "adding": "Ajout...",
+      "loading": "Chargement des passkeys...",
+      "empty": "Aucune passkey n’est encore enregistrée pour ce compte.",
+      "created": "Créée le {{date}}",
+      "lastUsed": "Dernière utilisation {{date}}",
+      "delete": "Supprimer la passkey",
+      "errors": {
+        "loadFailed": "Impossible de charger les passkeys.",
+        "notSupported": "Ce navigateur ne prend pas en charge les passkeys.",
+        "cancelled": "La création de passkey a été annulée.",
+        "addFailed": "Impossible d’ajouter la passkey.",
+        "deleteFailed": "Impossible de supprimer la passkey."
       }
     }
   },
