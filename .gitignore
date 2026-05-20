@@ -38,6 +38,8 @@ msbuild.wrn
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+[Tt]est[Rr]esults/
+*.trx
 *.key
 data
 src/cotton.client/.github/instructions/main.instructions.md
