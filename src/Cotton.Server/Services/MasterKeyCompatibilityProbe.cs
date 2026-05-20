@@ -1,7 +1,6 @@
-using Cotton.Storage.Backends;
+using Cotton.Storage.Abstractions;
 using EasyExtensions.Crypto;
 using EasyExtensions.Extensions;
-using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using System.Security.Cryptography;
 
@@ -61,18 +60,32 @@ namespace Cotton.Server.Services
 
         private readonly ILogger<MasterKeyCompatibilityProbe> _logger;
         private readonly string? _connectionString;
-        private readonly FileSystemStorageBackend _fileSystemStorage;
+        private readonly IStorageBackend _storage;
 
         public MasterKeyCompatibilityProbe(
             ILogger<MasterKeyCompatibilityProbe> logger,
-            string? connectionString = null,
-            string? storageBasePath = null)
+            IStorageBackend storage,
+            string? connectionString = null)
         {
             _logger = logger;
+            _storage = storage;
             _connectionString = connectionString;
-            _fileSystemStorage = new FileSystemStorageBackend(
-                NullLogger<FileSystemStorageBackend>.Instance,
-                storageBasePath);
+        }
+
+        public static async Task<bool> HasExistingCottonDataAsync(
+            string? connectionString = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await using var connection = new NpgsqlConnection(connectionString ?? BuildConnectionStringFromEnvironment());
+                await connection.OpenAsync(cancellationToken);
+                return await HasExistingCottonDataAsync(connection, cancellationToken);
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.InvalidCatalogName)
+            {
+                return false;
+            }
         }
 
         public async Task<MasterKeyCompatibilityResult> ValidateAsync(
@@ -101,7 +114,7 @@ namespace Cotton.Server.Services
                     return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
                 }
 
-                ProbeValidationState storageProbe = await ValidateFileSystemChunkProbeAsync(
+                ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(
                     connection,
                     cipher,
                     cancellationToken);
@@ -160,7 +173,7 @@ namespace Cotton.Server.Services
             }
         }
 
-        private static string BuildConnectionStringFromEnvironment()
+        internal static string BuildConnectionStringFromEnvironment()
         {
             string postgresHost = Environment.GetEnvironmentVariable("COTTON_PG_HOST") ?? "localhost";
             string postgresPortStr = Environment.GetEnvironmentVariable("COTTON_PG_PORT") ?? "5432";
@@ -237,7 +250,7 @@ namespace Cotton.Server.Services
                 : ProbeValidationState.NoCandidates;
         }
 
-        private async Task<ProbeValidationState> ValidateFileSystemChunkProbeAsync(
+        private async Task<ProbeValidationState> ValidateStorageChunkProbeAsync(
             NpgsqlConnection connection,
             AesGcmStreamCipher cipher,
             CancellationToken cancellationToken)
@@ -252,14 +265,14 @@ namespace Cotton.Server.Services
             IReadOnlyList<string> storageKeys = await ReadCandidateChunkStorageKeysAsync(connection, cancellationToken);
             foreach (string storageKey in storageKeys)
             {
-                if (!await _fileSystemStorage.ExistsAsync(storageKey))
+                if (!await _storage.ExistsAsync(storageKey))
                 {
                     continue;
                 }
 
                 try
                 {
-                    await using Stream encrypted = await _fileSystemStorage.ReadAsync(storageKey);
+                    await using Stream encrypted = await _storage.ReadAsync(storageKey);
                     await using Stream decrypted = await cipher.DecryptAsync(encrypted);
                     await decrypted.CopyToAsync(Stream.Null, cancellationToken);
                     return ProbeValidationState.Validated;

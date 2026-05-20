@@ -31,7 +31,6 @@ namespace Cotton.Server.Providers
         private const int defaultEncryptionThreads = 2;
         private const int defaultMaxChunkSizeBytes = 4 * 1024 * 1024;
         private const int defaultCipherChunkSizeBytes = 1 * 1024 * 1024;
-        private const long publicInstanceDefaultUserStorageQuotaBytes = 1024L * 1024 * 1024;
 
         public CottonServerSettings GetServerSettings()
         {
@@ -83,7 +82,7 @@ namespace Cotton.Server.Providers
                     PublicBaseUrl = defaultPublicBaseUrl,
                     ServerUsage = [ServerUsage.Other],
                     StorageSpaceMode = StorageSpaceMode.Optimal,
-                    DefaultUserStorageQuotaBytes = GetDefaultUserStorageQuotaBytes(),
+                    DefaultUserStorageQuotaBytes = null,
                     DefaultUserTemplateNodeId = null,
                     GeoIpLookupMode = GeoIpLookupMode.Disabled,
                 };
@@ -594,14 +593,6 @@ namespace Cotton.Server.Providers
         {
             return int.TryParse(value, out port) && port is >= 1 and <= 65535;
         }
-
-        private static long? GetDefaultUserStorageQuotaBytes()
-        {
-            return Constants.IsPublicInstance
-                ? publicInstanceDefaultUserStorageQuotaBytes
-                : null;
-        }
-
         private static bool IsTimezoneValid(string timezone)
         {
             return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
@@ -672,7 +663,7 @@ namespace Cotton.Server.Providers
                 PublicBaseUrl = NormalizePublicBaseUrl(fallbackPublicBaseUrl),
                 ServerUsage = [ServerUsage.Other],
                 StorageSpaceMode = StorageSpaceMode.Optimal,
-                DefaultUserStorageQuotaBytes = GetDefaultUserStorageQuotaBytes(),
+                DefaultUserStorageQuotaBytes = null,
                 DefaultUserTemplateNodeId = null,
                 GeoIpLookupMode = GeoIpLookupMode.Disabled,
             };

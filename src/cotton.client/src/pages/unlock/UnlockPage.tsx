@@ -25,6 +25,7 @@ import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { unlockApi, type UnlockStatusResponse } from "../../shared/api/unlockApi";
 import { toast } from "@shared/ui/notifications";
+import { JUST_UNLOCKED_STORAGE_KEY } from "../../features/auth/authStorageKeys";
 
 const masterKeyLength = 32;
 
@@ -150,7 +151,7 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
       await unlockApi.waitUntilAppReady();
       try {
         window.sessionStorage.setItem(
-          "cotton:just-unlocked",
+          JUST_UNLOCKED_STORAGE_KEY,
           Date.now().toString(),
         );
       } catch {

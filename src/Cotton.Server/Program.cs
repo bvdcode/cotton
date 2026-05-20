@@ -44,10 +44,8 @@ namespace Cotton.Server
                 return;
             }
 
-            await new MasterKeySentinelStore(
-                    NullLogger<MasterKeySentinelStore>.Instance,
-                    compatibilityProbe: new MasterKeyCompatibilityProbe(
-                        NullLogger<MasterKeyCompatibilityProbe>.Instance))
+            await MasterKeyStartupStorage
+                .CreateSentinelStore(encryptionSettings, NullLoggerFactory.Instance)
                 .EnsureValidOrThrowAsync(encryptionSettings);
 
             await RunApplicationAsync(args, encryptionSettings, masterKeyRuntimeState, processHardeningStatus);

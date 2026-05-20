@@ -1768,7 +1768,7 @@
         "fields": {
           "defaultUserQuotaGiB": "Kontingent pro Benutzer, GiB"
         },
-        "help": "0 oder leer für unbegrenzt. Öffentliche Demo-Instanzen sind standardmäßig auf 1 GiB eingestellt."
+        "help": "0 oder leer für unbegrenzt."
       },
       "template": {
         "title": "Standarddateien",

@@ -36,9 +36,17 @@ public class DefaultUserContentSeeder(
             return;
         }
 
-        var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
-        var targetRoot = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default);
-        await CopyNodeContentsAsync(templateNodeId.Value, targetRoot.Id, layout.Id, userId, ct);
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+
+            var layout = await _layouts.GetOrCreateLatestUserLayoutAsync(userId);
+            var targetRoot = await _layouts.GetOrCreateRootNodeAsync(layout.Id, userId, NodeType.Default);
+            await CopyNodeContentsAsync(templateNodeId.Value, targetRoot.Id, layout.Id, userId, ct);
+
+            await transaction.CommitAsync(ct);
+        });
     }
 
     private async Task CopyNodeContentsAsync(

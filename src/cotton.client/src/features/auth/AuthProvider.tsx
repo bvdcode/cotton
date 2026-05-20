@@ -9,9 +9,9 @@ import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
 import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
 import { resetUserScopedStores } from "../../shared/store/resetUserScopedStores";
+import { JUST_UNLOCKED_STORAGE_KEY } from "./authStorageKeys";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const JUST_UNLOCKED_STORAGE_KEY = "cotton:just-unlocked";
 const AUTH_RETRY_AFTER_UNLOCK_TIMEOUT_MS = 10000;
 const AUTH_RETRY_AFTER_UNLOCK_INTERVAL_MS = 350;
 

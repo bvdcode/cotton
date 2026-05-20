@@ -11,6 +11,9 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Services;
 
+// Logical quota is enforced when file references are created or changed.
+// Raw chunk uploads are intentionally handled by storage-pressure protection,
+// because chunking is an internal storage detail rather than user-owned data.
 public class UserStorageQuotaService(
     CottonDbContext _dbContext,
     SettingsProvider _settings,

@@ -160,8 +160,8 @@ namespace Cotton.Server.IntegrationTests
                 ?? throw new InvalidOperationException("Test database connection string is not configured.");
             return new MasterKeyCompatibilityProbe(
                 NullLogger<MasterKeyCompatibilityProbe>.Instance,
-                connectionString,
-                _storageBasePath);
+                new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath),
+                connectionString);
         }
 
         private async Task StoreEncryptedChunkAsync(CottonEncryptionSettings settings)

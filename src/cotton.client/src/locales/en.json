@@ -1667,7 +1667,7 @@
         "fields": {
           "defaultUserQuotaGiB": "Quota per user, GiB"
         },
-        "help": "Use 0 or empty for unlimited. Public demo instances default to 1 GiB."
+        "help": "Use 0 or empty for unlimited."
       },
       "template": {
         "title": "Default files",
