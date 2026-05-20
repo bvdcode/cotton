@@ -1,0 +1,2083 @@
+{
+  "search": {
+    "title": "Пошук",
+    "searchPlaceholder": "Пошук файлів і тек...",
+    "error": "Пошук не вдався. Спробуйте ще раз.",
+    "enterQueryHint": "Почніть вводити для пошуку...",
+    "noResults": "Файли або теки не знайдено",
+    "open": "Пошук",
+    "modal": {
+      "placeholder": "Шукати файли, теки, налаштування...",
+      "resultsCount": "Знайдено: {{count}}"
+    },
+    "types": {
+      "folder": "Тека",
+      "file": "Файл",
+      "setting": "Налаштування"
+    },
+    "actions": {
+      "openFile": "Відкрити файл",
+      "openFolder": "Відкрити теку",
+      "openSetting": "Відкрити налаштування",
+      "downloadFile": "Завантажити файл",
+      "shareFile": "Поділитися файлом",
+      "openContainingFolder": "Відкрити теку з файлом"
+    },
+    "dictionary": [
+      {
+        "id": "privacy-deduplication",
+        "title": "Cross-user deduplication",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "deduplication",
+          "deduplicate",
+          "dedup",
+          "duplicates",
+          "privacy",
+          "security",
+          "cross-user",
+          "дедуплікація",
+          "дублікати",
+          "приватність",
+          "безпека",
+          "між користувачами"
+        ],
+        "highlightSettingId": "allowCrossUserDeduplication",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-global-indexing",
+        "title": "Global indexing",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "global indexing",
+          "indexing",
+          "deep search",
+          "search index",
+          "глобальна індексація",
+          "індексація",
+          "пошук",
+          "пошуковий індекс"
+        ],
+        "highlightSettingId": "allowGlobalIndexing",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-telemetry",
+        "title": "Telemetry",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "telemetry",
+          "diagnostics",
+          "analytics",
+          "metrics",
+          "statistics",
+          "usage analytics",
+          "crash reports",
+          "bug reports",
+          "privacy",
+          "телеметрія",
+          "діагностика",
+          "аналітика",
+          "статистика",
+          "звіти про збої"
+        ],
+        "highlightSettingId": "telemetry",
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-smtp",
+        "title": "SMTP configuration",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "smtp",
+          "mail",
+          "email",
+          "email settings",
+          "notifications",
+          "smtp server",
+          "from address",
+          "ssl",
+          "tls",
+          "пошта",
+          "сповіщення",
+          "налаштування пошти",
+          "сервер smtp"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-email-mode",
+        "title": "Notification mode",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "notifications",
+          "email mode",
+          "mail mode",
+          "cotton cloud mail",
+          "custom smtp",
+          "сповіщення",
+          "режим пошти",
+          "режим сповіщень"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-settings",
+        "title": "Storage settings",
+        "description": "Storage",
+        "path": "/admin/storage-settings",
+        "keywords": [
+          "storage",
+          "storage backend",
+          "s3",
+          "bucket",
+          "endpoint",
+          "region",
+          "access key",
+          "secret key",
+          "сховище",
+          "бекенд сховища",
+          "бакет",
+          "регіон",
+          "ключ доступу",
+          "секретний ключ"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-statistics",
+        "title": "Storage statistics",
+        "description": "Storage and statistics",
+        "path": "/admin/storage-statistics",
+        "keywords": [
+          "storage statistics",
+          "stats",
+          "gc",
+          "garbage collector",
+          "chunks",
+          "dedup saved",
+          "compression saved",
+          "статистика сховища",
+          "статистика",
+          "збирач сміття",
+          "чанки",
+          "стиснення"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "database-backup",
+        "title": "Database backup",
+        "description": "Admin",
+        "path": "/admin/database-backup",
+        "keywords": [
+          "backup",
+          "database",
+          "restore",
+          "dump",
+          "manifest",
+          "резервна копія",
+          "бекап",
+          "база даних",
+          "відновлення",
+          "дамп",
+          "маніфест"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "users",
+        "title": "Users",
+        "description": "Admin",
+        "path": "/admin/users",
+        "keywords": [
+          "users",
+          "accounts",
+          "admin users",
+          "role",
+          "sessions",
+          "користувачі",
+          "облікові записи",
+          "акаунти",
+          "ролі",
+          "сеанси"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "groups",
+        "title": "Groups",
+        "description": "Admin",
+        "path": "/admin/groups",
+        "keywords": [
+          "groups",
+          "user groups",
+          "групи",
+          "групи користувачів"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "general-settings",
+        "title": "General settings",
+        "description": "Admin",
+        "path": "/admin/general-settings",
+        "keywords": [
+          "general settings",
+          "public url",
+          "public base url",
+          "timezone",
+          "server usage",
+          "setup wizard",
+          "computation mode",
+          "загальні налаштування",
+          "публічний url",
+          "часовий пояс",
+          "майстер налаштування",
+          "режим обчислень"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "profile-settings",
+        "title": "Profile settings",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "profile",
+          "settings",
+          "account",
+          "account settings",
+          "personal information",
+          "personal info",
+          "edit profile",
+          "name",
+          "first name",
+          "last name",
+          "birth date",
+          "birthday",
+          "email",
+          "e-mail",
+          "mail",
+          "avatar",
+          "picture",
+          "профіль",
+          "налаштування",
+          "обліковий запис",
+          "акаунт",
+          "особиста інформація",
+          "ім'я",
+          "прізвище",
+          "дата народження",
+          "пошта",
+          "аватар"
+        ]
+      },
+      {
+        "id": "profile-appearance",
+        "title": "Appearance",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "appearance",
+          "theme",
+          "theme mode",
+          "dark mode",
+          "light mode",
+          "system theme",
+          "language",
+          "gallery",
+          "gallery settings",
+          "smooth transitions",
+          "prefer previews",
+          "preview",
+          "image preview",
+          "originals",
+          "colors",
+          "colour",
+          "зовнішній вигляд",
+          "тема",
+          "темна тема",
+          "світла тема",
+          "мова",
+          "галерея",
+          "прев'ю",
+          "плавні переходи",
+          "кольори"
+        ]
+      },
+      {
+        "id": "profile-security",
+        "title": "Account security",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "security",
+          "account security",
+          "password",
+          "change password",
+          "current password",
+          "new password",
+          "2fa",
+          "two factor",
+          "two-factor",
+          "totp",
+          "authenticator",
+          "verification code",
+          "sessions",
+          "devices",
+          "logout",
+          "sign out",
+          "email verification",
+          "verify email",
+          "безпека",
+          "пароль",
+          "зміна пароля",
+          "двофакторна",
+          "двоетапна",
+          "автентифікатор",
+          "код підтвердження",
+          "сеанси",
+          "пристрої",
+          "вийти",
+          "підтвердження пошти"
+        ]
+      },
+      {
+        "id": "profile-share-links",
+        "title": "Share links",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "share links",
+          "sharing",
+          "public links",
+          "links",
+          "shared files",
+          "expiration",
+          "expires",
+          "expire",
+          "invalidate",
+          "token",
+          "посилання",
+          "публічні посилання",
+          "поширення",
+          "спільний доступ",
+          "термін дії",
+          "анулювати",
+          "токен"
+        ]
+      },
+      {
+        "id": "profile-webdav",
+        "title": "WebDAV access",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "webdav",
+          "dav",
+          "webdav access",
+          "webdav token",
+          "network drive",
+          "mount",
+          "mount_webdav",
+          "davfs",
+          "davfs2",
+          "cadaver",
+          "windows webdav",
+          "macos webdav",
+          "linux webdav",
+          "credentials",
+          "one-time token",
+          "доступ webdav",
+          "мережевий диск",
+          "монтування",
+          "облікові дані",
+          "одноразовий токен"
+        ]
+      }
+    ]
+  },
+  "notifications": {
+    "title": "Сповіщення",
+    "markAllAsRead": "Позначити всі як прочитані",
+    "empty": "Немає сповіщень",
+    "viewAll": "Переглянути всі",
+    "unreadCount": "{count} непрочитаних",
+    "showOnlyUnread": "Показувати лише непрочитані",
+    "showAll": "Показати всі",
+    "muteSound": "Вимкнути звук",
+    "unmuteSound": "Увімкнути звук",
+    "notifications": {
+      "empty": "Немає сповіщень"
+    }
+  },
+  "common": {
+    "languageName": "Українська",
+    "switchToThisLanguage": "Перемкнути на українську",
+    "placeholder": "—",
+    "yes": "Так",
+    "no": "Ні",
+    "time": {
+      "justNow": "щойно",
+      "secondsAgo_one": "{{count}} секунду тому",
+      "secondsAgo_few": "{{count}} секунди тому",
+      "secondsAgo_many": "{{count}} секунд тому",
+      "secondsAgo_other": "{{count}} секунди тому",
+      "minutesAgo_one": "{{count}} хвилину тому",
+      "minutesAgo_few": "{{count}} хвилини тому",
+      "minutesAgo_many": "{{count}} хвилин тому",
+      "minutesAgo_other": "{{count}} хвилини тому",
+      "hoursAgo_one": "{{count}} годину тому",
+      "hoursAgo_few": "{{count}} години тому",
+      "hoursAgo_many": "{{count}} годин тому",
+      "hoursAgo_other": "{{count}} години тому",
+      "daysAgo_one": "{{count}} день тому",
+      "daysAgo_few": "{{count}} дні тому",
+      "daysAgo_many": "{{count}} днів тому",
+      "daysAgo_other": "{{count}} дня тому",
+      "monthsAgo_one": "{{count}} місяць тому",
+      "monthsAgo_few": "{{count}} місяці тому",
+      "monthsAgo_many": "{{count}} місяців тому",
+      "monthsAgo_other": "{{count}} місяця тому",
+      "yearsAgo_one": "{{count}} рік тому",
+      "yearsAgo_few": "{{count}} роки тому",
+      "yearsAgo_many": "{{count}} років тому",
+      "yearsAgo_other": "{{count}} року тому",
+      "durationMinutes_one": "{{count}} хв",
+      "durationMinutes_few": "{{count}} хв",
+      "durationMinutes_many": "{{count}} хв",
+      "durationMinutes_other": "{{count}} хв",
+      "durationHours_one": "{{count}} година",
+      "durationHours_few": "{{count}} години",
+      "durationHours_many": "{{count}} годин",
+      "durationHours_other": "{{count}} години",
+      "durationDays_one": "{{count}} день",
+      "durationDays_few": "{{count}} дні",
+      "durationDays_many": "{{count}} днів",
+      "durationDays_other": "{{count}} дня",
+      "lessThanMinute": "менше хвилини"
+    },
+    "actions": {
+      "confirm": "Підтвердити",
+      "cancel": "Скасувати",
+      "close": "Закрити",
+      "delete": "Видалити",
+      "rename": "Перейменувати",
+      "restore": "Відновити",
+      "download": "Завантажити",
+      "share": "Поділитися",
+      "more": "Більше дій",
+      "play": "Відтворити",
+      "pause": "Призупинити",
+      "copied": "Скопійовано!",
+      "reload": "Оновити"
+    },
+    "errors": {
+      "unexpectedTitle": "Щось пішло не так",
+      "unexpectedDescription": "Сталася неочікувана помилка. Будь ласка, перезавантажте сторінку.",
+      "showDetails": "Показати деталі",
+      "hideDetails": "Сховати деталі",
+      "schemaValidationFailed": "Сервер повернув неочікувані дані"
+    },
+    "userMenu": {
+      "profile": "Профіль",
+      "settings": "Налаштування",
+      "admin": "Адміністратор",
+      "user": "Користувач",
+      "lightMode": "Світла тема",
+      "darkMode": "Темна тема",
+      "changeLanguage": "Змінити мову",
+      "logout": "Вийти",
+      "help": "Довідка",
+      "serverVersion": "Версія сервера: {{version}}"
+    },
+    "app": {
+      "logoAlt": "Логотип Cotton"
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "Майстер налаштування",
+    "ok": "OK",
+    "telemetryDetails": {
+      "tooltip": "Які дані збираються?",
+      "title": "Що включає мінімальна телеметрія",
+      "intro": "Телеметрія навмисно мінімальна та не містить імен файлів і їхнього вмісту. Надсилається лише невеликий набір технічних діагностичних даних:",
+      "items": {
+        "instanceId": "Випадковий ідентифікатор інстансу (одноразово згенерований GUID, не прив'язаний до вас)",
+        "serverUrl": "Публічна URL-адреса сервера, щоб ми знали, чи доступна хмара",
+        "version": "Версія сервера Cotton",
+        "users": "Загальна кількість облікових записів користувачів",
+        "nodes": "Загальна кількість тек",
+        "files": "Загальна кількість файлів"
+      },
+      "outro": "Це все. Жоден вміст файлів, імена файлів, імена користувачів чи адреси email не надсилаються в даних телеметрії. Стандартні мережеві метадані (як-от IP-адреса джерела) можуть залишатися на транспортному рівні."
+    },
+    "pwa": {
+      "updateAvailable": "Готова нова версія.",
+      "updateAction": "Оновити"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "Ця тека шифрує нові вивантаження на вашому пристрої.",
+      "fileEncryptedHint": "Цей файл зашифровано на вашому пристрої.",
+      "vaultLockedForDownload": "Розблокуйте шифрування на стороні клієнта у вашому профілі, щоб завантажити цей файл.",
+      "fileTooLargeForDownload": "Цей зашифрований файл завеликий для поточного механізму завантаження у браузері. Ліміт: {{maxSize}}."
+    }
+  },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "Знайти треки в цій теці та підтеках",
+      "showQueue": "Показати чергу",
+      "hideQueue": "Сховати чергу",
+      "showLyrics": "Показати текст пісні",
+      "hideLyrics": "Сховати текст пісні",
+      "enableShuffle": "Увімкнути перемішування",
+      "disableShuffle": "Вимкнути перемішування",
+      "close": "Закрити плеєр"
+    },
+    "lyrics": {
+      "unavailable": "Текст пісні недоступний для цього треку.",
+      "notFound": "Файл .lrc не знайдено поруч із цим треком.",
+      "loadFailed": "Не вдалося завантажити текст пісні."
+    }
+  },
+  "share": {
+    "title": "Спільний файл",
+    "loading": "Завантаження...",
+    "unsupported": "Попередній перегляд недоступний для цього типу файлу.",
+    "encryptedFile": {
+      "title": "Цей файл захищено наскрізним шифруванням",
+      "description": "Публічні посилання не можуть розшифрувати його у браузері. Ви можете завантажити зашифрований контейнер або попросити власника надіслати розшифровану копію."
+    },
+    "message": "Перегляньте «{{name}}» у Cotton Cloud",
+    "folder": {
+      "title": "Спільна тека",
+      "message": "Перегляньте теку «{{name}}» у Cotton Cloud",
+      "empty": "Ця тека порожня.",
+      "kind": "Тека"
+    },
+    "toasts": {
+      "copied": "Посилання скопійовано",
+      "shared": "Посиланням поділено"
+    },
+    "errors": {
+      "invalidLink": "Недійсне посилання на спільний доступ.",
+      "notFound": "Файл не знайдено або термін дії посилання сплив.",
+      "loadFailed": "Не вдалося завантажити спільний файл.",
+      "copyLink": "Не вдалося скопіювати посилання в буфер обміну.",
+      "fileTooLargePreview": "Файл завеликий для попереднього перегляду ({{size}}). Будь ласка, завантажте файл, щоб переглянути його."
+    }
+  },
+  "login": {
+    "title": "Cotton Cloud",
+    "usernameLabel": "Ім'я користувача",
+    "passwordLabel": "Пароль",
+    "rememberMe": "Довіряти цьому пристрою",
+    "twoFactor": {
+      "title": "Двофакторна автентифікація",
+      "caption": "Введіть 6-значний код із вашого автентифікатора.",
+      "digit": "Цифра",
+      "required": "Потрібен код двофакторної автентифікації.",
+      "invalid": "Недійсний код двофакторної автентифікації.",
+      "locked": "Забагато спроб. Будь ласка, спробуйте пізніше."
+    },
+    "loginButton": "Увійти",
+    "loggingIn": "Виконується вхід...",
+    "errorMessage": "Не вдалося увійти. Перевірте облікові дані.",
+    "restoring": {
+      "title": "Відновлення сеансу...",
+      "caption": "Будь ласка, зачекайте"
+    },
+    "forgotPassword": {
+      "link": "Забули пароль?",
+      "enterEmail": "Будь ласка, введіть вашу email-адресу як ім'я користувача, щоб скинути пароль.",
+      "sent": "Якщо обліковий запис з такою email-адресою існує, посилання для скидання пароля надіслано.",
+      "sending": "Надсилання...",
+      "error": "Не вдалося надіслати посилання для скидання. Будь ласка, спробуйте пізніше."
+    },
+    "firstRun": {
+      "title": "Початкове налаштування",
+      "message": "Користувачі ще не створені. Облікові дані, які ви введете, створять перший обліковий запис адміністратора. Це доступно лише невдовзі після запуску. За потреби перезапустіть інстанс.",
+      "continueButton": "Продовжити",
+      "continuing": "Створення першого користувача..."
+    }
+  },
+  "notFound": {
+    "title": "Сторінку не знайдено",
+    "message": "Сторінки, яку ви шукаєте, не існує.",
+    "backButton": "Повернутися на головну"
+  },
+  "profile": {
+    "title": "Профіль",
+    "subtitle": "Інформація про ваш обліковий запис і стан безпеки.",
+    "notAuthenticated": "Ви не увійшли в систему.",
+    "ageYears_one": "{{count}} рік",
+    "ageYears_few": "{{count}} роки",
+    "ageYears_many": "{{count}} років",
+    "ageYears_other": "{{count}} року",
+    "roles": {
+      "user": "Користувач",
+      "admin": "Адміністратор"
+    },
+    "avatar": {
+      "upload": "Завантажити аватар",
+      "errors": {
+        "settingsNotLoaded": "Налаштування сервера ще не завантажено.",
+        "fileTooLarge": "Аватар завеликий. Максимальний розмір — {{maxSize}}.",
+        "unsupportedFormat": "Цей формат зображення не підтримується вашим браузером. Будь ласка, використовуйте JPG, PNG або WEBP.",
+        "failed": "Не вдалося оновити аватар."
+      }
+    },
+    "editProfile": {
+      "title": "Редагувати профіль",
+      "description": "Оновіть свої особисті дані.",
+      "firstName": "Ім'я",
+      "lastName": "Прізвище",
+      "email": "E-mail",
+      "birthDate": "Дата народження",
+      "save": "Зберегти",
+      "saving": "Збереження...",
+      "success": "Профіль оновлено.",
+      "emailWarning": "Зміна email-адреси скине статус підтвердження пошти.",
+      "errors": {
+        "failed": "Не вдалося оновити профіль."
+      }
+    },
+    "appearance": {
+      "title": "Зовнішній вигляд",
+      "description": "Налаштування інтерфейсу та персоналізації.",
+      "gallerySmoothTransitions": "Плавні переходи в галереї",
+      "galleryPreferPreview": "Показувати оригінали замість прев'ю",
+      "themeMode": {
+        "label": "Тема",
+        "light": "Світла",
+        "system": "Системна",
+        "dark": "Темна"
+      },
+      "language": {
+        "label": "Мова",
+        "en": "Англійська",
+        "ru": "Російська",
+        "es": "Іспанська",
+        "de": "Німецька"
+      }
+    },
+    "shareLinks": {
+      "title": "Посилання на спільний доступ",
+      "description": "Керуйте тим, як довго згенеровані посилання залишаються чинними.",
+      "current": "Поточне значення: {{days}} днів",
+      "presets": {
+        "week": "Тиждень",
+        "month": "Місяць",
+        "year": "Рік",
+        "threeMonths": "3 місяці",
+        "tenYears": "10 років",
+        "oneDay": "Один день"
+      },
+      "invalidateAll": "Анулювати всі посилання",
+      "invalidating": "Анулювання...",
+      "invalidated": "Усі посилання на спільний доступ анульовано.",
+      "invalidateConfirmTitle": "Анулювати всі посилання на спільний доступ?",
+      "invalidateConfirmDescription": "Усі активні посилання на спільний доступ негайно перестануть працювати. Це не можна скасувати.",
+      "errors": {
+        "invalidateFailed": "Не вдалося анулювати посилання."
+      }
+    },
+    "totp": {
+      "enabled": "2FA увімкнено",
+      "disabled": "2FA вимкнено",
+      "sectionTitle": "Двофакторна автентифікація",
+      "enabledMessage": "Двофакторну автентифікацію увімкнено.",
+      "enabledDescription": "Ваш обліковий запис захищено додатковим рівнем безпеки.",
+      "setup": {
+        "title": "Увімкнути двофакторну автентифікацію (TOTP)",
+        "caption": "Використовуйте автентифікатор (Google Authenticator, Authy тощо).",
+        "button": "Згенерувати QR-код",
+        "loading": "Генерація...",
+        "qrTitle": "Відскануйте цей QR-код",
+        "secretLabel": "Секретний ключ:",
+        "copySecret": "Скопіювати секрет",
+        "success": "Двофакторну автентифікацію увімкнено."
+      },
+      "confirm": {
+        "title": "Підтвердити налаштування",
+        "caption": "Введіть 6-значний код із вашого автентифікатора.",
+        "digit": "Цифра",
+        "button": "Підтвердити",
+        "loading": "Підтвердження..."
+      },
+      "disable": {
+        "button": "Вимкнути 2FA",
+        "dialogTitle": "Вимкнути двофакторну автентифікацію",
+        "dialogDescription": "Введіть свій пароль, щоб підтвердити вимкнення двофакторної автентифікації.",
+        "passwordLabel": "Пароль",
+        "confirm": "Вимкнути",
+        "confirming": "Вимкнення...",
+        "success": "Двофакторну автентифікацію вимкнено."
+      },
+      "errors": {
+        "setupFailed": "Не вдалося розпочати налаштування 2FA.",
+        "confirmFailed": "Не вдалося підтвердити 2FA.",
+        "saveFailed": "Не вдалося зберегти налаштування 2FA.",
+        "codeRequired": "Будь ласка, введіть 6-значний код.",
+        "invalidCode": "Недійсний код двофакторної автентифікації.",
+        "alreadyEnabled": "2FA вже увімкнено.",
+        "setupNotInitiated": "Налаштування 2FA не розпочато. Спершу згенеруйте QR-код.",
+        "disableFailed": "Не вдалося вимкнути 2FA.",
+        "invalidPassword": "Невірний пароль."
+      }
+    },
+    "fields": {
+      "id": "ID користувача",
+      "username": "Ім'я користувача",
+      "firstName": "Ім'я",
+      "lastName": "Прізвище",
+      "birthDate": "Дата народження",
+      "role": "Роль",
+      "twoFactor": "Двофакторна автентифікація",
+      "totpEnabledAt": "Увімкнено",
+      "totpFailedAttempts": "Невдалі спроби 2FA",
+      "email": "E-mail",
+      "emailVerified": "Підтверджено",
+      "emailNotVerified": "Не підтверджено",
+      "verify": "Підтвердити",
+      "createdAt": "Створено",
+      "updatedAt": "Оновлено"
+    },
+    "emailVerification": {
+      "title": "Підтвердження email",
+      "description": "Підтвердіть свою email-адресу, щоб увімкнути відновлення пароля та сповіщення.",
+      "verified": "Email підтверджено",
+      "notVerified": "Email не підтверджено",
+      "sendButton": "Надіслати лист для підтвердження",
+      "sending": "Надсилання...",
+      "sent": "Лист для підтвердження надіслано. Будь ласка, перевірте вашу поштову скриньку.",
+      "noEmail": "Для вашого облікового запису не вказано email-адресу.",
+      "errors": {
+        "failed": "Не вдалося надіслати лист для підтвердження. Будь ласка, спробуйте пізніше."
+      }
+    },
+    "password": {
+      "title": "Змінити пароль",
+      "description": "Оновіть пароль вашого облікового запису.",
+      "old": "Старий пароль",
+      "new": "Новий пароль",
+      "confirm": "Підтвердьте новий пароль",
+      "show": "Показати пароль",
+      "hide": "Сховати пароль",
+      "save": "Зберегти",
+      "saving": "Збереження...",
+      "success": "Пароль змінено.",
+      "errors": {
+        "mismatch": "Паролі не збігаються.",
+        "failed": "Не вдалося змінити пароль."
+      }
+    },
+    "sessions": {
+      "title": "Активні сеанси",
+      "description": "Керуйте активними сеансами на різних пристроях",
+      "noActiveSessions": "Активних сеансів немає",
+      "currentSession": "Поточний",
+      "unknownDevice": "Невідомий пристрій",
+      "revokeSession": "Завершити сеанс",
+      "elapsed": "{{duration}} минуло",
+      "revokeConfirmTitle": "Завершити сеанс?",
+      "revokeConfirmDescription": "Ви дійсно хочете завершити цей сеанс? Це призведе до виходу пристрою з системи.",
+      "revokeConfirmButton": "Завершити сеанс",
+      "revokeCancelButton": "Скасувати",
+      "errors": {
+        "loadFailed": "Не вдалося завантажити сеанси.",
+        "revokeFailed": "Не вдалося завершити сеанс."
+      }
+    },
+    "webdav": {
+      "title": "Доступ через WebDAV",
+      "description": "Згенеруйте одноразовий токен для підключення через WebDAV.",
+      "confirmTitle": "Згенерувати токен WebDAV?",
+      "confirmDescription": "Це згенерує новий токен і анулює попередній. Токен буде показано лише один раз.",
+      "confirmButton": "Згенерувати",
+      "cancelButton": "Скасувати",
+      "generateButton": "Згенерувати токен",
+      "generating": "Генерація...",
+      "tokenLabel": "Токен",
+      "usernameLabel": "Ім'я користувача",
+      "connectUrlLabel": "Кінцева точка WebDAV",
+      "modalTitle": "Облікові дані WebDAV (показані один раз)",
+      "closeButton": "Закрити",
+      "copyToken": "Скопіювати токен",
+      "copyUrl": "Скопіювати URL",
+      "copyUsername": "Скопіювати ім'я користувача",
+      "tokenWarning": "Скопіюйте цей токен зараз. Його більше не буде показано.",
+      "cardHelp": "Використовуйте ці значення для підключення WebDAV-клієнта. Згенеруйте токен, щоб отримати одноразовий пароль.",
+      "examples": {
+        "title": "Приклади",
+        "copy": "Скопіювати",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Скопіювати",
+          "caption": "Виконайте в Command Prompt з правами адміністратора або використайте підключений диск у Провіднику."
+        },
+        "windowsRegistry": {
+          "title": "Windows (зміна реєстру)",
+          "copy": "Скопіювати",
+          "caption": "Застосуйте зміни до реєстру, щоб підвищити ліміт розміру файлу для WebDAV."
+        },
+        "powershell": {
+          "title": "Windows (екранування PowerShell)",
+          "copy": "Скопіювати",
+          "caption": "Використовуйте під час запуску з PowerShell; команда екранована для зручності."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Скопіювати",
+          "caption": "Підключіть через Finder і Terminal (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Скопіювати",
+          "caption": "Використовуйте davfs2 або cadaver для підключення кінцевої точки WebDAV."
+        }
+      },
+      "placeholderPassword": "<пароль>",
+      "errors": {
+        "failed": "Не вдалося згенерувати токен WebDAV."
+      }
+    },
+    "email": {
+      "verified": "Email підтверджено"
+    },
+    "clientEncryption": {
+      "sectionTitle": "Шифрування на стороні клієнта",
+      "description": "Захистіть обрані файли ключем, що зберігається у браузері.",
+      "invalidEnvelope": "Збережені дані налаштування шифрування неможливо прочитати. Не вивантажуйте зашифровані файли, доки це не буде виправлено.",
+      "lockedHint": "Розблоковуйте, коли потрібно відкрити зашифровані теки або файли.",
+      "unlockedHint": "Зашифровані файли можна відкривати в цій вкладці браузера, доки ви не заблокуєте ключ або не вийдете.",
+      "status": {
+        "notSetUp": "Не налаштовано",
+        "locked": "Заблоковано",
+        "unlocked": "Розблоковано",
+        "invalid": "Потребує уваги"
+      },
+      "actions": {
+        "setup": "Налаштувати",
+        "unlock": "Розблокувати",
+        "lock": "Заблокувати",
+        "lockOnRefresh": "Блокувати при оновленні сторінки"
+      },
+      "setupDialog": {
+        "title": "Налаштувати шифрування на стороні клієнта",
+        "warning": "Якщо ви втратите і пароль шифрування, і резервну фразу з 24 слів, зашифровані файли неможливо буде відкрити. Сервер не може скинути цей ключ.",
+        "acknowledge": "Я розумію, що втрата обох означає безповоротну втрату даних",
+        "cancel": "Скасувати",
+        "continue": "Продовжити",
+        "back": "Назад",
+        "passwordHint": "Виберіть надійний пароль шифрування. Він відокремлений від пароля вашого облікового запису і не надсилається на сервер.",
+        "passwordLabel": "Пароль шифрування",
+        "confirmPasswordLabel": "Підтвердьте пароль шифрування",
+        "passwordTooShort": "Використовуйте щонайменше {{min}} символів.",
+        "passwordMismatch": "Паролі не збігаються.",
+        "next": "Далі",
+        "generating": "Генерація...",
+        "phraseWarning": "Збережіть ці 24 слова в надійному місці перед завершенням налаштування. Будь-хто, хто має цю фразу, може розблокувати зашифровані файли.",
+        "copy": "Скопіювати фразу",
+        "copied": "Скопійовано",
+        "download": "Завантажити фразу",
+        "phraseStored": "Я зберіг резервну фразу",
+        "saving": "Збереження...",
+        "finish": "Завершити налаштування",
+        "errors": {
+          "generateFailed": "Не вдалося згенерувати ключі шифрування.",
+          "saveFailed": "Не вдалося зберегти налаштування шифрування.",
+          "copyFailed": "Не вдалося скопіювати фразу.",
+          "downloadFailed": "Не вдалося завантажити фразу."
+        }
+      },
+      "unlockDialog": {
+        "title": "Розблокувати шифрування на стороні клієнта",
+        "passwordLabel": "Пароль шифрування",
+        "phraseLabel": "Резервна фраза з 24 слів",
+        "usePhrase": "Використати резервну фразу",
+        "usePassword": "Використати пароль",
+        "cancel": "Скасувати",
+        "submit": "Розблокувати",
+        "unlocking": "Розблокування...",
+        "errors": {
+          "wrongPassword": "Невірний пароль шифрування.",
+          "wrongPhrase": "Ця фраза не розблоковує ключ.",
+          "invalidPhrase": "Фраза недійсна або містить неправильну кількість слів.",
+          "invalidEnvelope": "Збережені дані налаштування шифрування неможливо прочитати.",
+          "unknown": "Не вдалося розблокувати шифрування."
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "Майстер налаштування сервера",
+    "subtitle": "Завершіть початкову конфігурацію сервера, щоб розпочати роботу. Це не займе багато часу і допоможе персоналізувати застосунок.",
+    "repoLink": "Проєкт на GitHub",
+    "errors": {
+      "saveFailed": "Не вдалося зберегти налаштування.",
+      "saveChoiceFailed": "Щось пішло не так. Спробуйте обрати інший варіант."
+    },
+    "status": {
+      "hasUsers": "Має користувачів",
+      "maxChunk": "Максимальний розмір чанка",
+      "hash": "Алгоритм хешу",
+      "yes": "Так",
+      "no": "Ні"
+    },
+    "actions": {
+      "start": "Почнімо",
+      "later": "Зробити пізніше",
+      "back": "Назад",
+      "next": "Далі",
+      "finish": "Готово",
+      "cancel": "Скасувати",
+      "toggleLanguage": "Змінити мову",
+      "toggleTheme": "Перемкнути тему"
+    },
+    "intro": "Вам буде задано прості запитання щодо ваших уподобань використання Cotton Cloud. Якщо ви не впевнені — не хвилюйтеся, багато налаштувань можна змінити пізніше.",
+    "onlyAdminCanSetup": "Лише адміністратори можуть налаштовувати застосунок. Будь ласка, попросіть адміністратора виконати початкове налаштування.",
+    "questions": {
+      "requiresTooltip": "Щоб увімкнути цей параметр, потрібно обрати:",
+      "inQuestion": "у запитанні",
+      "multiuser": {
+        "title": "Ви плануєте використовувати це:",
+        "subtitle": "Це впливає на оптимізацію сховища та деякі налаштування безпеки.",
+        "linkAria": "Відкрити довідку у новій вкладці",
+        "options": {
+          "family": "Для сім'ї",
+          "many": "З незнайомими людьми",
+          "unknown": "Поки не впевнений"
+        },
+        "descriptions": {
+          "family": "Дедуплікація файлів, спільний пошуковий індекс і попередньо встановлені модулі.",
+          "many": "Суворіший режим для безпеки між невідомими користувачами.",
+          "unknown": "Будуть встановлені оптимальні налаштування за замовчуванням."
+        }
+      },
+      "usage": {
+        "title": "Ви плануєте використовувати хмару для:",
+        "subtitle": "Виберіть один або кілька варіантів",
+        "options": {
+          "photos": "Фотографії",
+          "documents": "Документи",
+          "media": "Фільми та серіали",
+          "other": "Інше"
+        },
+        "descriptions": {
+          "photos": "Будуть встановлені доповнення з AI-пошуком і розпізнаванням тексту.",
+          "documents": "Оптимізація для офісних файлів і PDF для домашнього архіву",
+          "media": "Оптимізація для відеофайлів і потокового відтворення, інтеграція з базою даних фільмів.",
+          "other": "Загальні налаштування для змішаних типів файлів."
+        }
+      },
+      "storage": {
+        "title": "Де ви хочете зберігати свої дані?",
+        "subtitle": "Виберіть місце зберігання для своїх файлів. Cotton Cloud використовуватиме серверний диск як гарячий кеш незалежно від вашого вибору.",
+        "options": {
+          "local": "Локальний диск сервера",
+          "s3": "S3-сумісне сховище"
+        },
+        "descriptions": {
+          "local": "Зберігати файли в локальній файловій системі сервера.",
+          "s3": "Зберігати файли у віддаленому S3-сумісному об'єктному сховищі."
+        }
+      },
+      "s3Config": {
+        "title": "Налаштування сховища S3",
+        "subtitle": "Введіть облікові дані для свого S3-сумісного сховища.",
+        "fields": {
+          "endpoint": "URL кінцевої точки",
+          "region": "Регіон",
+          "bucket": "Назва бакета",
+          "accessKey": "Ключ доступу",
+          "secretKey": "Секретний ключ"
+        },
+        "placeholders": {
+          "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
+          "bucket": "my-bucket",
+          "accessKey": "Ваш ключ доступу",
+          "secretKey": "Ваш секретний ключ"
+        }
+      },
+      "email": {
+        "title": "Налаштування email",
+        "subtitle": "Виберіть, звідки надсилатимуться email-сповіщення.",
+        "options": {
+          "cloud": "Використовувати хмарний Cotton Mail",
+          "custom": "Використовувати власний SMTP-сервер",
+          "none": "Без email-сповіщень"
+        },
+        "descriptions": {
+          "cloud": "Буде використано публічний SMTP-сервер Cotton Cloud. Це безпечно та безкоштовно. Виберіть, якщо ви не впевнені.",
+          "custom": "Налаштуйте власний SMTP-сервер для надсилання email-сповіщень.",
+          "none": "Найпростіший варіант, але ви навіть не зможете відновити свій пароль."
+        }
+      },
+      "emailConfig": {
+        "title": "Налаштування SMTP-сервера",
+        "subtitle": "Введіть дані вашого SMTP-сервера.",
+        "fields": {
+          "smtpServer": "SMTP-сервер",
+          "port": "Порт",
+          "username": "Ім'я користувача",
+          "password": "Пароль",
+          "fromAddress": "Адреса відправника",
+          "useSSL": "Використовувати SSL/TLS"
+        },
+        "placeholders": {
+          "smtpServer": "smtp.example.com",
+          "port": "587",
+          "username": "your@email.com",
+          "password": "Ваш пароль",
+          "fromAddress": "noreply@example.com",
+          "useSSL": "Увімкнути шифрування SSL/TLS"
+        }
+      },
+      "telemetry": {
+        "title": "Дозволити надсилання статистики?",
+        "subtitle": "Ці дані допомагають нам покращувати продукт і навмисно мінімальні. Це один із небагатьох способів підтримати проєкт автоматичним зворотним зв'язком і допомогти нам зрозуміти, як Cotton Cloud працює на різних системах та конфігураціях.",
+        "options": {
+          "allow": "Так, надсилати",
+          "deny": "Ні, не надсилати"
+        },
+        "descriptions": {
+          "allow": "Надсилати мінімальні діагностичні дані для покращення ПЗ та виправлення помилок.",
+          "deny": "Це ваш вибір."
+        },
+        "disabledTooltip": "Щоб вимкнути телеметрію, потрібно вимкнути такі служби:"
+      },
+      "geoIpLookup": {
+        "title": "Визначати IP-адреси?",
+        "subtitle": "Cotton може перетворювати IP-адреси на назви міст і країн. Це можна використовувати, наприклад, у сповіщеннях про безпеку, щоб показати, звідки був виконаний вхід, і допомогти виявити незвичну активність.",
+        "options": {
+          "disabled": "Ні, залишити вимкненим",
+          "cottonCloud": "Використовувати хмарну службу",
+          "local": "Використовувати GeoIP Light локально",
+          "custom": "Використовувати власний резолвер"
+        },
+        "descriptions": {
+          "disabled": "Геолокаційний пошук не виконуватиметься. Функції, що показують місце входу, зберігатимуть лише сирі IP-адреси.",
+          "cottonCloud": "Визначати IP-адреси через провайдера Cotton. Потребує увімкненої телеметрії.",
+          "local": "Визначати IP-адреси на вашому сервері за допомогою локальної бази/пакета GeoIP Light.",
+          "custom": "Вставте URL до вашої власної служби. Cotton спробує автоматично витягти поля, пов'язані з місцезнаходженням, із JSON."
+        }
+      },
+      "customGeoIpLookupUrl": {
+        "title": "Власний резолвер IP",
+        "subtitle": "Введіть HTTP-кінцеву точку, яка повертає країну, регіон і місто у форматі JSON.",
+        "fields": {
+          "url": "URL пошуку"
+        },
+        "placeholders": {
+          "url": "https://geo.example.com/lookup/{ip}"
+        }
+      },
+      "ai": {
+        "title": "AI та обчислення",
+        "subtitle": "Виберіть, де виконуватимуться AI-обчислення для пошуку, розпізнавання та інших функцій.",
+        "options": {
+          "local": "Локальні обчислення",
+          "runner": "Власний GPU-раннер",
+          "cloud": "Обчислення Cotton Cloud"
+        },
+        "descriptions": {
+          "local": "Повільно, більшість важких функцій вимкнено, а якість моделей спрощена. Але якість все ще чудова — більш ніж достатньо для будь-яких завдань.",
+          "runner": "Підключіть окремий GPU-раннер для обчислень. Швидко, висока якість — найкращі моделі та підтримка всіх функцій.",
+          "cloud": "Оптимальний баланс, але можуть бути обмеження. Неймовірна щедрість безкоштовно. Потребує підключення до інтернету."
+        }
+      },
+      "timezone": {
+        "title": "Часовий пояс",
+        "subtitle": "Виберіть свій часовий пояс, щоб уникнути сповіщень і шуму дисків уночі. Це лише для серверних процедур — веб-інтерфейс завжди показуватиме час у вашому локальному часовому поясі."
+      },
+      "storageSpace": {
+        "title": "Скільки місця ви виділяєте застосунку?",
+        "subtitle": "Це допоможе нам оптимізувати використання диска.",
+        "options": {
+          "all": "Все, що є",
+          "economical": "Економія місця",
+          "unknown": "Не знаю, рухаємось далі",
+          "optimal": "Оптимально"
+        },
+        "descriptions": {
+          "all": "Використовувати весь доступний простір для максимальної продуктивності.",
+          "economical": "Агресивна економія місця, стиснення та дедуплікація.",
+          "unknown": "Будуть обрані оптимальні налаштування для вас."
+        }
+      },
+      "importSources": {
+        "title": "Щось імпортувати?",
+        "subtitle": "Виберіть джерела, з яких ви хочете перенести дані.",
+        "options": {
+          "webdav": "WebDAV",
+          "none": "Нічого"
+        }
+      },
+      "nextcloudConfig": {
+        "title": "Налаштування імпорту з Nextcloud",
+        "subtitle": "Введіть облікові дані для підключення до Nextcloud.",
+        "fields": {
+          "serverUrl": "URL сервера",
+          "username": "Ім'я користувача",
+          "password": "Пароль"
+        },
+        "placeholders": {
+          "serverUrl": "https://nextcloud.example.com",
+          "username": "Ваше ім'я користувача",
+          "password": "Ваш пароль"
+        }
+      },
+      "webdavConfig": {
+        "title": "Налаштування імпорту WebDAV",
+        "subtitle": "Введіть облікові дані для підключення до сервера WebDAV.",
+        "fields": {
+          "serverUrl": "URL сервера",
+          "username": "Ім'я користувача",
+          "password": "Пароль"
+        },
+        "placeholders": {
+          "serverUrl": "https://webdav.example.com",
+          "username": "Ваше ім'я користувача",
+          "password": "Ваш пароль"
+        }
+      }
+    },
+    "common": {
+      "author": "Вадим Бєлов"
+    }
+  },
+  "onboarding": {
+    "skip": "Розпочати",
+    "features": {
+      "cloud": {
+        "title": "Ваша персональна хмара",
+        "description": "Зберігайте та синхронізуйте свої файли надійно на всіх ваших пристроях"
+      },
+      "storage": {
+        "title": "Необмежене сховище",
+        "description": "Не турбуйтеся про брак місця завдяки гнучким варіантам сховища"
+      },
+      "security": {
+        "title": "Безпека банківського рівня",
+        "description": "Ваші дані зашифровані та захищені провідними технологіями безпеки"
+      },
+      "speed": {
+        "title": "Блискавична швидкість",
+        "description": "Насолоджуйтесь блискавично швидкими завантаженнями та вивантаженнями завдяки оптимізованій продуктивності"
+      }
+    }
+  },
+  "home": {
+    "title": "Головна",
+    "layoutLabelWithValue": "Розкладка: {{name}}",
+    "layoutLabelEmpty": "Розкладка: —",
+    "loading": {
+      "title": "Завантаження",
+      "caption": "Отримуємо статистику розкладки…"
+    },
+    "refreshing": "Оновлення…",
+    "cards": {
+      "folders": {
+        "title": "Теки",
+        "caption": "Загальна кількість тек у вашій хмарі",
+        "layoutTitle": "Розкладка",
+        "layoutCaption": "Поточна розкладка за замовчуванням"
+      },
+      "files": {
+        "title": "Файли",
+        "caption": "Загальна кількість файлів у всіх теках"
+      },
+      "data": {
+        "title": "Дані",
+        "caption": "Загальний розмір усіх ваших файлів"
+      },
+      "recentFiles": {
+        "title": "Нещодавні файли",
+        "empty": "Немає нещодавніх файлів"
+      }
+    }
+  },
+  "files": {
+    "title": "Файли",
+    "errors": {
+      "resolveRootFailed": "Не вдалося визначити кореневу теку",
+      "loadContentsFailed": "Не вдалося завантажити вміст теки",
+      "createFolderFailed": "Не вдалося створити теку",
+      "deleteFolderFailed": "Не вдалося видалити теку",
+      "renameFolderFailed": "Не вдалося перейменувати теку",
+      "duplicateFolderName": "Тека з такою назвою вже існує"
+    },
+    "move": {
+      "cut": "Вирізати",
+      "pasteHere_one": "Вставити {{count}} елемент сюди",
+      "pasteHere_other": "Вставити {{count}} елементи сюди",
+      "toasts": {
+        "cut_one": "{{count}} елемент вирізано",
+        "cut_other": "{{count}} елементів вирізано",
+        "moved_one": "Переміщено {{count}} елемент",
+        "moved_other": "Переміщено {{count}} елементів",
+        "failed_one": "Не вдалося перемістити {{count}} елемент",
+        "failed_other": "Не вдалося перемістити {{count}} елементів"
+      }
+    },
+    "loading": {
+      "title": "Завантаження",
+      "caption": "Отримуємо вміст теки…"
+    },
+    "uploadDrop": {
+      "scanning": {
+        "title": "Сканування файлів…"
+      },
+      "preparing": {
+        "title": "Підготовка вивантаження…",
+        "mapping": {
+          "title": "Підготовка вивантаження…"
+        },
+        "folders": {
+          "title": "Створення тек…"
+        },
+        "conflicts": {
+          "title": "Перевірка конфліктів…"
+        },
+        "enqueue": {
+          "title": "Запуск вивантаження…"
+        }
+      },
+      "caption": "Знайдено файлів: {{count}}",
+      "captionFound": "Знайдено файлів: {{count}}",
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "Жоден файл не було вивантажено (всі пропущено).",
+        "someItemsSkipped_one": "Пропущено {{count}} елемент, який не вдалося прочитати.",
+        "someItemsSkipped_few": "Пропущено {{count}} елементи, які не вдалося прочитати.",
+        "someItemsSkipped_many": "Пропущено {{count}} елементів, які не вдалося прочитати.",
+        "someItemsSkipped_other": "Пропущено {{count}} елемента, які не вдалося прочитати.",
+        "someItemsSkippedWithExamples_one": "Пропущено {{count}} елемент (напр. {{examples}}).",
+        "someItemsSkippedWithExamples_few": "Пропущено {{count}} елементи (напр. {{examples}}).",
+        "someItemsSkippedWithExamples_many": "Пропущено {{count}} елементів (напр. {{examples}}).",
+        "someItemsSkippedWithExamples_other": "Пропущено {{count}} елемента (напр. {{examples}}).",
+        "more_one": " +ще {{count}}",
+        "more_few": " +ще {{count}}",
+        "more_many": " +ще {{count}}",
+        "more_other": " +ще {{count}}",
+        "vaultLocked": "Для зашифрованих вивантажень потрібно спершу розблокувати сховище шифрування."
+      },
+      "errors": {
+        "dropFailed": "Не вдалося обробити перетягнуті елементи. Будь ласка, спробуйте ще раз."
+      }
+    },
+    "refreshing": "Оновлення…",
+    "actions": {
+      "upload": "Вивантажити",
+      "newFolder": "Нова тека",
+      "folderNamePlaceholder": "Назва теки",
+      "goToFolder": "Перейти до теки",
+      "goUp": "Вгору",
+      "dropFiles": "Перетягніть файли для вивантаження",
+      "switchToTilesView": "Перемкнути на плитки",
+      "switchToListView": "Перемкнути на список",
+      "switchToTableView": "Перемкнути на таблицю",
+      "switchToSmallTilesView": "Малі плитки",
+      "switchToMediumTilesView": "Середні плитки",
+      "switchToLargeTilesView": "Великі плитки"
+    },
+    "breadcrumbs": {
+      "ariaLabel": "Хлібні крихти",
+      "root": "Файли"
+    },
+    "empty": {
+      "all": "Ця тека порожня"
+    },
+    "selection": {
+      "enter": "Режим виділення",
+      "exit": "Вийти з режиму виділення",
+      "selectAll": "Вибрати все",
+      "deselectAll": "Зняти виділення",
+      "deleteSelected": "Видалити виділене",
+      "count_one": "{{count}} елемент виділено",
+      "count_other": "{{count}} елементів виділено"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "Видалити {{count}} елемент?",
+      "confirmTitle_other": "Видалити {{count}} елементів?",
+      "confirmDescription": "Виділені елементи буде переміщено до кошика, їх можна буде відновити пізніше."
+    },
+    "conflicts": {
+      "title": "Файл уже існує",
+      "description": "Файл із такою назвою вже існує в цій теці. Вивантажити як {{newName}}?",
+      "skip": "Пропустити",
+      "skipAll": "Пропустити всі"
+    },
+    "deleteFolder": {
+      "confirmTitle": "Видалити теку «{{name}}»?",
+      "confirmDescription": "Теку буде переміщено до кошика, її можна буде відновити пізніше."
+    },
+    "deleteFile": {
+      "confirmTitle": "Видалити файл «{{name}}»?",
+      "confirmDescription": "Його буде переміщено до кошика, його можна буде відновити пізніше."
+    },
+    "stats": {
+      "summary": "{{folders}} тек • {{files}} файлів • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "Назва файлу"
+    },
+    "share": {
+      "copied": "Посилання скопійовано: {{name}}",
+      "shared": "Поширення: {{name}}",
+      "folderCopied": "Посилання на теку скопійовано: {{name}}",
+      "folderShared": "Поширення теки: {{name}}",
+      "message": "Перегляньте «{{name}}» у Cotton Cloud",
+      "folderMessage": "Перегляньте теку «{{name}}» у Cotton Cloud",
+      "errors": {
+        "link": "Не вдалося згенерувати посилання на спільний доступ.",
+        "token": "Не вдалося отримати токен спільного доступу.",
+        "copy": "Не вдалося скопіювати посилання в буфер обміну."
+      }
+    },
+    "preview": {
+      "actions": {
+        "edit": "Редагувати",
+        "save": "Зберегти",
+        "saving": "Збереження..."
+      },
+      "editorModes": {
+        "text": {
+          "label": "Текст",
+          "description": "Звичайний текст зі збереженим форматуванням"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Markdown із попереднім переглядом"
+        },
+        "code": {
+          "label": "Код",
+          "description": "Редактор коду з підсвічуванням синтаксису"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "Отримання посилання...",
+          "download": "Завантаження PDF...",
+          "render": "Відображення PDF..."
+        }
+      },
+      "model": {
+        "loading": "Завантаження 3D-моделі...",
+        "actions": {
+          "autoAlign": "Вирівняти по землі",
+          "autoOrient": "Автоматична орієнтація",
+          "cycleLighting": "Освітлення: {{preset}}",
+          "cycleSurface": "Поверхня: {{preset}}",
+          "flipModel": "Перевернути модель",
+          "resetColor": "Використати оригінальні кольори",
+          "toggleShadows": "Тіні: {{state}}",
+          "togglePalette": "Палітра кольорів"
+        },
+        "lighting": {
+          "balanced": "Збалансоване",
+          "studio": "Студійне",
+          "dramatic": "Драматичне"
+        },
+        "surface": {
+          "original": "Оригінальна",
+          "matte": "Матова",
+          "glossy": "Глянцева",
+          "metal": "Металева",
+          "satin": "Сатинова",
+          "smooth": "Гладка"
+        },
+        "states": {
+          "on": "Увімк.",
+          "off": "Вимк."
+        }
+      },
+      "language": {
+        "label": "Мова"
+      },
+      "mediaQuality": {
+        "previewMode": "Режим: прев'ю",
+        "originalMode": "Режим: оригінал",
+        "switchToOriginal": "Перемкнути на оригінал",
+        "switchToPreview": "Перемкнути на прев'ю"
+      },
+      "video": {
+        "transcodeNotice": "Підготовка відео для відтворення у браузері. Перший запуск або перемотування може зайняти трохи часу.",
+        "transcodeError": "Цей браузер не може відтворити підготовлений відеопотік."
+      },
+      "errors": {
+        "loadFailed": "Не вдалося завантажити файл{{error}}",
+        "saveFailed": "Не вдалося зберегти вміст файлу",
+        "downloadFailed": "Завантаження не вдалося",
+        "pdfLoadFailed": "Не вдалося завантажити PDF",
+        "pdfDisplayFailed": "Не вдалося відобразити PDF",
+        "modelLoadFailed": "Не вдалося завантажити 3D-модель",
+        "modelUnsupportedType": "Цей формат 3D-файлу не підтримується для попереднього перегляду у браузері",
+        "pdfTooLarge": "PDF завеликий для попереднього перегляду ({{size}}). Максимальний розмір — {{maxSize}}. Будь ласка, завантажте файл, щоб переглянути його.",
+        "fileTooLarge": "Файл завеликий для попереднього перегляду ({{size}}). Максимальний розмір для текстового перегляду — {{maxSize}}. Будь ласка, завантажте файл, щоб переглянути його."
+      }
+    },
+    "actionsTitle": "Дії",
+    "size": "Розмір",
+    "name": "Назва",
+    "location": "Розташування",
+    "noFilesOrFolders": "Немає файлів або тек",
+    "clientEncryption": {
+      "enablePolicy": "Увімкнути E2E",
+      "disablePolicy": "Вимкнути E2E",
+      "unlockDialog": {
+        "title": "Розблокувати шифрування на стороні клієнта",
+        "currentTitle": "Ця тека зашифрована",
+        "goHome": "На головну"
+      },
+      "mixedPlain": {
+        "title": "Деякі файли не зашифровано E2E",
+        "description_one": "{{count}} наявний файл досі зберігається без E2E-шифрування.",
+        "description_other": "{{count}} наявних файлів досі зберігаються без E2E-шифрування.",
+        "toast_one": "{{count}} файл у цій теці не зашифровано E2E.",
+        "toast_other": "{{count}} файлів у цій теці не зашифровано E2E.",
+        "action": "Зашифрувати",
+        "running": "Шифрування"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} зашифрований файл переміщено до теки без автоматичного E2E.",
+        "toast_other": "{{count}} зашифрованих файлів переміщено до теки без автоматичного E2E.",
+        "action": "Розшифрувати"
+      },
+      "encryptedFilesRemain": {
+        "title": "Зашифровані файли залишаються зашифрованими",
+        "description_one": "{{count}} файл залишається зашифрованим, навіть якщо нові вивантаження більше не шифруються автоматично.",
+        "description_other": "{{count}} файлів залишаються зашифрованими, навіть якщо нові вивантаження більше не шифруються автоматично.",
+        "toast_one": "{{count}} зашифрований файл залишається в цій теці.",
+        "toast_other": "{{count}} зашифрованих файлів залишаються в цій теці.",
+        "action": "Розшифрувати"
+      },
+      "toasts": {
+        "policyEnabled": "Нові вивантаження до цієї теки шифруватимуться на цьому пристрої.",
+        "policyDisabled": "Нові вивантаження до цієї теки більше не шифруватимуться автоматично.",
+        "policyToggleFailed": "Не вдалося оновити політику шифрування.",
+        "setupRequired": "Налаштуйте шифрування на стороні клієнта перед відкриттям цієї теки.",
+        "unlockRequired": "Спершу розблокуйте шифрування на стороні клієнта.",
+        "encryptExistingComplete_one": "Зашифровано {{count}} наявний файл.",
+        "encryptExistingComplete_other": "Зашифровано {{count}} наявних файлів.",
+        "encryptExistingFailed_one": "Не вдалося зашифрувати {{count}} файл. Перевірте панель завдань.",
+        "encryptExistingFailed_other": "Не вдалося зашифрувати {{count}} файлів. Перевірте панель завдань.",
+        "decryptExistingComplete_one": "Розшифровано {{count}} файл.",
+        "decryptExistingComplete_other": "Розшифровано {{count}} файлів.",
+        "decryptExistingFailed_one": "Не вдалося розшифрувати {{count}} файл. Перевірте панель завдань.",
+        "decryptExistingFailed_other": "Не вдалося розшифрувати {{count}} файлів. Перевірте панель завдань."
+      }
+    }
+  },
+  "tasks": {
+    "title": "Завдання",
+    "error": "Помилка",
+    "errors": {
+      "serverSettingsNotLoaded": "Налаштування сервера не завантажено",
+      "uploadFailed": "Вивантаження не вдалося",
+      "storageQuotaExceeded": "Недостатньо місця у сховищі. Доступно: {{available}}.",
+      "encryptionVaultLocked": "Сховище шифрування заблоковано",
+      "encryptionFailed": "Помилка шифрування",
+      "decryptionFailed": "Помилка розшифрування",
+      "clientEncryptionFileTooLarge": "Цей файл завеликий для поточної обробки зашифрованих файлів. Ліміт: {{maxSize}}."
+    },
+    "titleWithTotal": "Завдання ({{total}})",
+    "titleWithProgress": "Завдання ({{completed}} / {{total}} - {{speed}}/с)",
+    "titleWithErrors": "Завдання ({{total}} • {{failed}} з помилками)",
+    "actions": {
+      "expand": "Розгорнути",
+      "collapse": "Згорнути",
+      "close": "Закрити",
+      "clearFinished": "Очистити завершені"
+    },
+    "status": {
+      "queued": "У черзі",
+      "running": "Виконується",
+      "finalizing": "Завершення",
+      "completed": "Завершено",
+      "failed": "Помилка"
+    }
+  },
+  "trash": {
+    "title": "Кошик",
+    "loading": {
+      "title": "Завантаження кошика...",
+      "caption": "Будь ласка, зачекайте, поки ми завантажимо вміст кошика."
+    },
+    "error": "Не вдалося завантажити вміст кошика",
+    "empty": "Кошик порожній",
+    "actions": {
+      "goUp": "Вгору",
+      "trashRoot": "Корінь кошика",
+      "switchToList": "Перемкнути на список",
+      "switchToTiles": "Перемкнути на плитки",
+      "switchToListView": "Перемкнути на список",
+      "switchToTilesView": "Перемкнути на плитки",
+      "switchToTableView": "Перемкнути на таблицю",
+      "switchToSmallTilesView": "Малі плитки",
+      "switchToMediumTilesView": "Середні плитки",
+      "switchToLargeTilesView": "Великі плитки",
+      "emptyTrash": "Очистити кошик"
+    },
+    "breadcrumbs": {
+      "root": "Кошик"
+    },
+    "stats": {
+      "summary": "{{folders}} тек, {{files}} файлів, {{size}}"
+    },
+    "deleteFolderForever": {
+      "confirmTitle": "Видалити теку «{{name}}»?",
+      "confirmDescription": "Цю дію не можна скасувати. Увесь вміст теки буде видалено."
+    },
+    "deleteFile": {
+      "confirmTitle": "Видалити файл «{{name}}»?",
+      "confirmDescription": "Цю дію не можна скасувати."
+    },
+    "deleteFileForever": {
+      "confirmTitle": "Видалити файл «{{name}}»?",
+      "confirmDescription": "Цю дію не можна скасувати."
+    },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "Видалити {{count}} елемент назавжди?",
+      "confirmTitle_other": "Видалити {{count}} елементів назавжди?",
+      "confirmDescription": "Цю дію не можна скасувати. Виділені елементи буде видалено назавжди."
+    },
+    "emptyTrash": {
+      "confirmTitle": "Очистити кошик?",
+      "confirmDescription": "Цю дію не можна скасувати. Усі елементи в кошику буде видалено назавжди.",
+      "inProgress": "Видалення {{current}} з {{total}} елементів...",
+      "completed": "Кошик успішно очищено"
+    },
+    "restore": {
+      "action": "Відновити",
+      "inProgress": "Відновлення {{current}} з {{total}}: {{name}}",
+      "failed": "Не вдалося відновити «{{name}}»",
+      "notRestorable": "Елемент неможливо відновити.",
+      "rootFolder": "кореневу теку",
+      "confirm": {
+        "title": "Відновити елемент?",
+        "description": "«{{name}}» буде відновлено до «{{path}}».",
+        "confirm": "Відновити"
+      },
+      "applyToAll": "Застосувати цей вибір до решти елементів",
+      "skip": "Пропустити",
+      "parentMissing": {
+        "title": "Місце для відновлення відсутнє",
+        "description": "«{{name}}» було видалено з «{{path}}», але цієї теки більше не існує. Створити відсутній шлях до теки і відновити там?",
+        "confirm": "Створити і відновити"
+      },
+      "conflict": {
+        "title": "Елемент уже існує",
+        "description": "«{{name}}» конфліктує з наявним {{kind}} з назвою «{{conflictName}}». Перемістити наявний елемент до кошика і відновити цей?",
+        "confirm": "Замінити",
+        "folderKind": "текою",
+        "fileKind": "файлом"
+      }
+    }
+  },
+  "admin": {
+    "title": "Адміністрування",
+    "menu": {
+      "navigate": "Розділ",
+      "users": "Користувачі",
+      "usersAndGroups": "Користувачі та групи",
+      "generalSettings": "Загальні налаштування",
+      "privacySettings": "Приватність і безпека",
+      "storageSettings": "Сховище",
+      "storageAndStatistics": "Сховище та статистика",
+      "notificationsSettings": "Сповіщення",
+      "databaseBackup": "Резервне копіювання бази даних",
+      "storageStatistics": "Статистика сховища",
+      "securityDiagnostics": "Перевірка безпеки",
+      "groups": "Групи"
+    },
+    "roles": {
+      "user": "Користувач",
+      "admin": "Адміністратор",
+      "unknown": "Невідомо"
+    },
+    "users": {
+      "title": "Користувачі",
+      "refresh": "Оновити",
+      "loading": "Завантаження користувачів...",
+      "empty": "Користувачів немає",
+      "columns": {
+        "username": "Ім'я користувача",
+        "email": "E-mail",
+        "role": "Роль",
+        "firstName": "Ім'я",
+        "lastName": "Прізвище",
+        "birthDate": "Дата народження",
+        "totp": "2FA",
+        "sessions": "Сеанси",
+        "storageUsed": "Використано сховища",
+        "lastActivity": "Остання активність",
+        "actions": "Дії"
+      },
+      "actions": {
+        "edit": "Редагувати"
+      },
+      "errors": {
+        "loadFailed": "Не вдалося завантажити користувачів.",
+        "createFailed": "Не вдалося створити користувача.",
+        "updateFailed": "Не вдалося оновити користувача."
+      },
+      "create": {
+        "title": "Створити користувача",
+        "username": "Ім'я користувача",
+        "email": "E-mail",
+        "password": "Пароль",
+        "role": "Роль",
+        "firstName": "Ім'я",
+        "lastName": "Прізвище",
+        "birthDate": "Дата народження",
+        "button": "Створити",
+        "creating": "Створення...",
+        "success": "Користувача створено."
+      },
+      "edit": {
+        "title": "Редагувати користувача",
+        "save": "Зберегти",
+        "saving": "Збереження...",
+        "success": "Користувача оновлено."
+      },
+      "storageUsage": {
+        "calculating": "Обчислення використання сховища"
+      }
+    },
+    "settings": {
+      "actions": {
+        "save": "Зберегти",
+        "saving": "Збереження...",
+        "close": "Закрити"
+      },
+      "state": {
+        "saved": "Налаштування збережено."
+      },
+      "errors": {
+        "loadFailed": "Не вдалося завантажити налаштування.",
+        "saveFailed": "Не вдалося зберегти налаштування."
+      },
+      "general": {
+        "title": "Загальні налаштування",
+        "description": "Основна поведінка сервера та геолокаційний пошук для сповіщень.",
+        "fields": {
+          "publicBaseUrl": "Публічна базова URL-адреса",
+          "timezone": "Часовий пояс",
+          "telemetry": "Телеметрія",
+          "allowDeduplication": "Дедуплікація між користувачами",
+          "allowGlobalIndexing": "Глобальна індексація",
+          "serverUsage": "Використання сервера",
+          "storageSpaceMode": "Режим використання місця",
+          "computionMode": "Режим обчислень",
+          "geoIpLookupMode": "Режим визначення IP",
+          "customGeoIpLookupUrl": "Власна URL для визначення IP"
+        },
+        "validation": {
+          "required": "Це поле обов'язкове.",
+          "publicBaseUrlInvalid": "Введіть дійсну базову URL-адресу HTTP або HTTPS без облікових даних, запиту чи хешу.",
+          "publicBaseUrlMismatch": "Поточна адреса — {{current}}, але згенеровані публічні посилання використовуватимуть {{configured}}. Будьте обережні перед збереженням цього значення.",
+          "timezoneInvalid": "Виберіть дійсний часовий пояс IANA зі списку.",
+          "customGeoIpLookupUrlInvalid": "Введіть дійсну URL-адресу HTTP або HTTPS для пошуку."
+        },
+        "help": {
+          "publicBaseUrl": "Попри це налаштування, Cotton майже скрізь визначає публічну URL автоматично. Встановлюйте його лише тоді, коли автоматичне визначення помиляється.",
+          "timezone": "Це допомагає нам не запускати фонові завдання, поки ви спите, щоб ваші диски не шуміли вночі.",
+          "telemetry": "Cotton збирає мінімальні технічні діагностичні дані, щоб розробник міг бачити помилки і виправляти їх, бо не всі повідомляють про проблеми. Увімкнення телеметрії також відкриває доступ до хмарних служб з коробки.",
+          "allowDeduplication": "Контролює, чи може один користувач дізнатися, що інший користувач уже зберігає такий самий файл. Коли вимкнено, ідентичні дані все одно дедуплікуються на сервері після вивантаження, але передаються зайво першими. Коли увімкнено, інший користувач може дізнатися, що хтось у цій хмарі вже вивантажував цей файл. Це безпечно для сім'ї та довірених друзів.",
+          "allowGlobalIndexing": "Дозволяє серверу розшифровувати файли користувачів і будувати глибокий пошуковий індекс. Без цього пошук використовує лише назви файлів і тек.",
+          "serverUsage": "Оптимізує рекомендації функцій і кілька налаштувань. Це не критичний параметр, тож обирайте те, що вам ближче."
+        },
+        "serverUsage": {
+          "Photos": "Фотографії",
+          "Documents": "Документи",
+          "Media": "Медіа",
+          "Other": "Інше"
+        },
+        "storageSpaceMode": {
+          "Optimal": "Збалансований",
+          "Limited": "Економний",
+          "Unlimited": "Необмежений"
+        },
+        "storageSpaceHelp": {
+          "open": "На що впливає режим використання місця?",
+          "title": "Режим використання місця",
+          "description": "Це контролює, наскільки агресивно Cotton використовує та вивільняє сховище: час збирання сміття, очищення даних без посилань, повторне використання кешу/даних і скільки старих версій файлів можуть залишатися доступними. Щоразу, коли файл оновлюється, Cotton зберігає тіньову копію, утримуючи посилання на попередні дані файлу, доки очищення їх не видалить. Необмежений зберігає дані довше і прибирає переважно тоді, коли потрібне місце; Економний звільняє сховище раніше. Збалансований тримається між ними."
+        },
+        "computionMode": {
+          "Local": "Локально",
+          "Remote": "Віддалений раннер",
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "Ця функція ще в розробці."
+        },
+        "geoIpLookupMode": {
+          "Disabled": "Вимкнено",
+          "CottonCloud": "Хмарна служба",
+          "MaxMindLocal": "GeoIP Light",
+          "CustomHttp": "Власний HTTP"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "Не визначати IP-адреси.",
+          "CottonCloud": "Визначати IP-адреси через провайдера Cotton. Це можуть використовувати функції на кшталт сповіщень про безпеку.",
+          "MaxMindLocal": "Визначати IP-адреси локально за допомогою бази/пакета GeoIP Light.",
+          "CustomHttp": "Вставте URL до вашої власної служби. Cotton спробує автоматично витягти поля, пов'язані з місцезнаходженням, із JSON."
+        },
+        "actions": {
+          "testGeoIpProvider": "Перевірити провайдера"
+        },
+        "state": {
+          "geoIpTestPassed": "Перевірку власного резолвера пройдено."
+        },
+        "openSetupWizard": {
+          "title": "Відкрити майстер налаштування",
+          "description": "Пройдіть майстер початкового налаштування ще раз.",
+          "button": "Відкрити"
+        }
+      },
+      "privacy": {
+        "title": "Приватність і безпека",
+        "description": "Керує тим, як дані залишають сервер і як файли користувачів можуть бути доступні для спільних функцій."
+      }
+    },
+    "storageSettings": {
+      "title": "Сховище",
+      "description": "Спершу налаштуйте облікові дані сховища, потім перемкніть активний бекенд сховища.",
+      "fields": {
+        "storageType": "Бекенд сховища"
+      },
+      "quota": {
+        "title": "Квота користувача за замовчуванням",
+        "description": "Обмежує, скільки унікального вивантаженого вмісту може мати кожен користувач. Залиште порожнім для облікових записів без обмежень.",
+        "fields": {
+          "defaultUserQuotaGiB": "Квота на користувача, ГіБ"
+        },
+        "help": "Використовуйте 0 або порожнє значення для необмежених облікових записів."
+      },
+      "template": {
+        "title": "Файли за замовчуванням",
+        "description": "Копіює вміст цієї теки в кожен щойно створений обліковий запис користувача.",
+        "fields": {
+          "nodeId": "ID вузла теки-шаблону"
+        },
+        "help": "Залиште порожнім, щоб вимкнути. Встановіть це у ID вузла теки, яка містить ознайомлювальні або демонстраційні файли."
+      },
+      "storageType": {
+        "Local": "Локальний диск",
+        "S3": "S3-сумісне сховище"
+      },
+      "s3": {
+        "title": "Конфігурація S3",
+        "fields": {
+          "endpoint": "URL кінцевої точки",
+          "region": "Регіон",
+          "bucket": "Бакет",
+          "accessKey": "Ключ доступу",
+          "secretKey": "Секретний ключ"
+        }
+      },
+      "actions": {
+        "saveS3": "Зберегти конфігурацію S3",
+        "useLocal": "Використовувати локальне сховище",
+        "useS3": "Зберегти конфігурацію і використовувати S3"
+      },
+      "state": {
+        "s3Saved": "Конфігурацію S3 збережено.",
+        "storageSaved": "Режим сховища оновлено."
+      },
+      "errors": {
+        "loadFailed": "Не вдалося завантажити налаштування сховища.",
+        "s3SaveFailed": "Не вдалося зберегти конфігурацію S3.",
+        "storageSaveFailed": "Не вдалося перемкнути режим сховища.",
+        "quotaSaveFailed": "Не вдалося зберегти квоту користувача за замовчуванням.",
+        "templateSaveFailed": "Не вдалося зберегти шаблон файлів за замовчуванням."
+      }
+    },
+    "notificationsSettings": {
+      "title": "Сповіщення",
+      "description": "Налаштуйте, як Cotton надсилає сповіщення про обліковий запис і безпеку.",
+      "fields": {
+        "emailMode": "Режим сповіщень"
+      },
+      "emailMode": {
+        "None": "Вимкнено",
+        "Cloud": "Cotton Cloud Mail",
+        "Custom": "Власний SMTP"
+      },
+      "smtp": {
+        "title": "Конфігурація SMTP",
+        "fields": {
+          "smtpServer": "SMTP-сервер",
+          "port": "Порт",
+          "username": "Ім'я користувача",
+          "password": "Пароль",
+          "fromAddress": "Адреса відправника",
+          "useSSL": "Використовувати SSL/TLS"
+        }
+      },
+      "actions": {
+        "saveSmtp": "Зберегти конфігурацію SMTP",
+        "testSmtp": "Перевірити SMTP",
+        "saveMode": "Зберегти режим пошти",
+        "saving": "Збереження...",
+        "testSmtpShort": "Перевірити"
+      },
+      "state": {
+        "smtpSaved": "Конфігурацію SMTP збережено.",
+        "testSent": "Тестовий лист надіслано.",
+        "modeSaved": "Режим сповіщень оновлено."
+      },
+      "errors": {
+        "loadFailed": "Не вдалося завантажити налаштування сповіщень.",
+        "smtpSaveFailed": "Не вдалося зберегти конфігурацію SMTP.",
+        "testFailed": "Не вдалося надіслати тестовий лист.",
+        "modeSaveFailed": "Не вдалося зберегти режим сповіщень."
+      }
+    },
+    "databaseBackup": {
+      "title": "Резервне копіювання бази даних",
+      "description": "Останній маніфест резервної копії з сервера.",
+      "actions": {
+        "refresh": "Оновити",
+        "trigger": "Запустити резервне копіювання",
+        "triggering": "Запуск..."
+      },
+      "state": {
+        "loading": "Завантаження інформації про резервні копії...",
+        "empty": "Резервних копій ще не знайдено.",
+        "triggerSuccess": "Завдання резервного копіювання запущено.",
+        "restoreIfEmptyHint": "Якщо база даних втрачена і ви хочете, щоб вона відновлювалася автоматично, встановіть COTTON_RESTORE_DATABASE_IF_EMPTY=true у середовищі контейнера. Для цього база даних має бути порожньою, без жодних таблиць."
+      },
+      "fields": {
+        "backupId": "ID резервної копії",
+        "createdAtUtc": "Створено",
+        "pointerUpdatedAtUtc": "Покажчик оновлено",
+        "dumpSizeBytes": "Розмір дампа",
+        "chunkCount": "Кількість чанків",
+        "dumpContentHash": "Хеш вмісту дампа",
+        "sourceDatabase": "Вихідна база даних",
+        "sourceHost": "Вихідний хост",
+        "sourcePort": "Вихідний порт"
+      },
+      "errors": {
+        "loadFailed": "Не вдалося завантажити інформацію про резервні копії.",
+        "triggerFailed": "Не вдалося запустити резервне копіювання."
+      }
+    },
+    "storageStatistics": {
+      "title": "Статистика сховища",
+      "description": "Поточне використання сховища та запланована шкала вивільнення GC.",
+      "actions": {
+        "refresh": "Оновити",
+        "triggerGc": "Запустити GC",
+        "triggeringGc": "Запуск..."
+      },
+      "bucket": {
+        "hour": "Година",
+        "day": "День"
+      },
+      "state": {
+        "loading": "Завантаження статистики сховища...",
+        "empty": "Немає запланованих кошиків GC за вибраний період.",
+        "triggerGcSuccess": "Завдання збирача сміття запущено."
+      },
+      "summary": {
+        "fromUtc": "Від",
+        "toUtc": "До",
+        "totalChunks": "Усього чанків до вивільнення",
+        "totalSizeBytes": "Загальний розмір до вивільнення",
+        "generatedAtUtc": "Згенеровано"
+      },
+      "storage": {
+        "title": "Загальне використання сховища",
+        "fields": {
+          "storageType": "Тип сховища",
+          "totalUniqueChunkCount": "Усього унікальних чанків",
+          "totalUniqueChunkPlainSizeBytes": "Загальний нестиснений розмір (унікальні)",
+          "totalUniqueChunkStoredSizeBytes": "Загальний збережений розмір (унікальні)",
+          "referencedUniqueChunkCount": "Унікальні чанки з посиланнями",
+          "referencedLogicalChunkCount": "Логічні чанки з посиланнями",
+          "deduplicatedUniqueChunkCount": "Дедупльовані унікальні чанки",
+          "dedupSavedBytes": "Збережено завдяки дедуплікації",
+          "compressionSavedBytes": "Збережено завдяки стисненню",
+          "pendingGcChunkCount": "Чанки в очікуванні GC",
+          "pendingGcStoredSizeBytes": "Розмір в очікуванні GC",
+          "overdueGcChunkCount": "Прострочені чанки GC",
+          "overdueGcStoredSizeBytes": "Прострочений розмір GC"
+        }
+      },
+      "timeline": {
+        "title": "Шкала вивільнення GC",
+        "columns": {
+          "bucketStartUtc": "Час вивільнення",
+          "chunkCount": "Чанки",
+          "sizeBytes": "Розмір"
+        }
+      },
+      "errors": {
+        "loadFailed": "Не вдалося завантажити статистику сховища.",
+        "triggerGcFailed": "Не вдалося запустити збирач сміття."
+      }
+    },
+    "securityDiagnostics": {
+      "title": "Перевірка безпеки",
+      "description": "Серверні перевірки гігієни облікових записів, обробки головного ключа та доступу до пам'яті процесу.",
+      "errors": {
+        "loadFailed": "Не вдалося завантажити діагностику безпеки."
+      },
+      "severity": {
+        "critical": "Критично",
+        "warning": "Попередження",
+        "info": "Інформація"
+      },
+      "levels": {
+        "strong": {
+          "title": "Надійний рівень захисту",
+          "summary": "Цей інстанс має очікуване продакшн-захищення. Він добре підходить для публічного доступу, якщо ви також довіряєте хосту та резервним копіям."
+        },
+        "good": {
+          "title": "Хороша базова конфігурація для самохостингу",
+          "summary": "Це добре для сім'ї чи невеликої команди. Решта пунктів — переважно операційне захищення та гігієна облікових записів."
+        },
+        "home": {
+          "title": "Базова конфігурація для домашнього використання",
+          "summary": "Це прийнятно для дому та повсякденного використання, але не вважайте хост ворожим. Компрометація сервера все ще може розкрити ключі або адміністративний доступ."
+        },
+        "exposed": {
+          "title": "Залишаються практичні шляхи атаки",
+          "summary": "В інстансі є проблеми, які реально може використати локальний зловмисник, скомпрометований контейнер або викрадений пароль адміністратора."
+        },
+        "unsafe": {
+          "title": "Небезпечно для чутливих даних",
+          "summary": "Виправте критичні попередження перед тим, як зберігати цінні приватні дані. На цьому рівні до головного ключа або адміністративного контролю може бути занадто легко дістатися."
+        }
+      },
+      "chips": {
+        "publicInstance": "Публічний інстанс",
+        "privateInstance": "Приватний інстанс",
+        "envKey": "Ключ із середовища",
+        "memoryUnlock": "Розблокування з пам'яті",
+        "adminTotp": "{{withTotp}}/{{total}} адміністраторів мають 2FA"
+      },
+      "sections": {
+        "risks": "Вектори загроз",
+        "instance": "Інстанс і облікові записи",
+        "masterKey": "Головний ключ",
+        "memory": "Доступ до пам'яті процесу",
+        "runtime": "Факти середовища виконання"
+      },
+      "risks": {
+        "empty": "Поточні серверні перевірки не виявили попереджень."
+      },
+      "fields": {
+        "publicInstance": "Публічна реєстрація",
+        "admins": "Адміністратори з 2FA",
+        "adminsWithoutTotp": "Адміністратори без 2FA",
+        "masterKeySource": "Джерело",
+        "envWasConfigured": "Змінну середовища налаштовано",
+        "envPresent": "Змінна середовища все ще присутня",
+        "dotnetDiagnostics": "Діагностика .NET вимкнена",
+        "processHardening": "Захищення процесу застосовано",
+        "dumpable": "Стан можливості дампа",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "Операційна система",
+        "container": "Контейнер виявлено",
+        "euid": "Ефективний UID",
+        "noNewPrivileges": "Без нових привілеїв",
+        "seccomp": "Режим seccomp",
+        "capabilities": "Ефективні можливості"
+      },
+      "values": {
+        "unknown": "Невідомо",
+        "yes": "Так",
+        "no": "Ні",
+        "notDumpable": "Без можливості дампа",
+        "dumpable": "З можливістю дампа"
+      },
+      "threatVectors": {
+        "public-instance": "Відвідувачі з інтернету можуть створювати облікові записи та зберігати вміст. Квоти, демонстраційні дані за замовчуванням і моніторинг зловживань стають частиною межі безпеки.",
+        "master-key-from-environment": "Якщо метадані розгортання, історія оболонки або інспекція контейнера розкривають змінні середовища, головний ключ може опинитися поруч із зашифрованими даними, які він захищає.",
+        "admins-without-2fa": "Пароль адміністратора стає єдиним фактором. Повторне використання пароля, фішинг або витік браузерних сеансів можуть призвести до повного контролю над інстансом.",
+        "dotnet-diagnostics-enabled": "Локальний процес із достатніми правами може запросити дампи або трасування у середовища виконання .NET, і ці дампи можуть містити живі секрети з пам'яті.",
+        "process-dumpable": "Процес із тим самим UID або налагоджувач з можливістю ptrace може зробити дамп пам'яті сервера і знайти головний ключ у пам'яті.",
+        "sys-ptrace-capability": "Налагоджувальний або привілейований контейнер може перевіряти і змінювати пам'ять процесу. Це саме та можливість, якої уникають ключі, що зберігаються лише в пам'яті.",
+        "new-privileges-allowed": "Якщо скомпрометований код знайде setuid-помічник або бінарний файл з можливостями, він має ширший шлях для отримання привілеїв усередині контейнера.",
+        "seccomp-disabled": "Поверхня системних викликів ядра ширша за звичайну продакшн-базу Docker, тому помилка втечі з контейнера отримує більше простору.",
+        "running-as-root": "Віддалене виконання коду відбуватиметься від імені root у контейнері, що збільшує шкоду для змонтованих томів і допоміжних процесів.",
+        "process-hardening-failed": "Cotton запитав захищення процесу, але процес усе одно запустився без очікуваного захисту від дампів чи ptrace."
+      }
+    },
+    "groups": {
+      "title": "Групи",
+      "description": "Керуйте групами доступу окремо від індивідуальних користувачів.",
+      "inDevelopment": "Керування групами в розробці."
+    }
+  },
+  "routes": {
+    "login": "Вхід",
+    "home": "Головна",
+    "files": "Файли",
+    "trash": "Кошик",
+    "profile": "Профіль",
+    "settings": "Налаштування",
+    "admin": "Адміністрування"
+  },
+  "resetPassword": {
+    "title": "Скинути пароль",
+    "newPassword": "Новий пароль",
+    "confirmPassword": "Підтвердьте новий пароль",
+    "submit": "Скинути пароль",
+    "submitting": "Скидання...",
+    "success": "Пароль успішно скинуто. Тепер ви можете увійти з новим паролем.",
+    "goToLogin": "Перейти до застосунку",
+    "errors": {
+      "mismatch": "Паролі не збігаються.",
+      "invalidToken": "Посилання для скидання недійсне або термін його дії сплив.",
+      "failed": "Не вдалося скинути пароль. Будь ласка, спробуйте ще раз."
+    }
+  },
+  "verifyEmail": {
+    "title": "Підтвердження email",
+    "verifying": "Перевірка вашої email-адреси...",
+    "success": "Вашу email-адресу успішно підтверджено!",
+    "goToLogin": "Перейти до застосунку",
+    "goToSettings": "Перейти до налаштувань",
+    "errors": {
+      "invalidToken": "Посилання для підтвердження недійсне або термін його дії сплив.",
+      "failed": "Не вдалося підтвердити email. Будь ласка, спробуйте ще раз."
+    }
+  },
+  "unlock": {
+    "title": "Розблокувати Cotton",
+    "caption": "Сервер очікує головний ключ, перш ніж запустити застосунок.",
+    "checking": {
+      "title": "Перевірка стану блокування",
+      "caption": "Cotton готує захищену послідовність запуску."
+    },
+    "masterKey": "Головний ключ",
+    "bootstrapToken": "Токен ініціалізації",
+    "bootstrapRequired": "Перше розблокування потребує токена ініціалізації з логів сервера.",
+    "bootstrapRequiredWithExpiry": "Перше розблокування потребує токена ініціалізації з логів сервера. Він діє до {{expiresAt}}.",
+    "unlock": "Розблокувати",
+    "unlocking": "Розблокування",
+    "generate": "Згенерувати",
+    "generating": "Генерація",
+    "generated": "Згенеровано. Збережіть цей ключ перед розблокуванням.",
+    "generatedToast": "Головний ключ згенеровано",
+    "generateFailed": "Не вдалося згенерувати ключ.",
+    "unlocked": "Головний ключ прийнято. Cotton запускається.",
+    "unlockFailed": "Розблокування не вдалося.",
+    "showKey": "Показати ключ",
+    "hideKey": "Сховати ключ",
+    "copyKey": "Скопіювати ключ",
+    "copied": "Скопійовано",
+    "copyFailed": "Не вдалося скопіювати ключ"
+  }
+}

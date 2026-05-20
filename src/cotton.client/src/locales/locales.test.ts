@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
+import cs from "./cs.json";
 import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
+import fr from "./fr.json";
+import it from "./it.json";
 import { supportedLanguages } from ".";
 import { nativeLanguageNames } from "./languageDisplayNames";
+import nl from "./nl.json";
+import pl from "./pl.json";
+import pt from "./pt.json";
 import ru from "./ru.json";
+import uk from "./uk.json";
+import zh from "./zh.json";
 
 type LocaleObject = Record<string, unknown>;
 
@@ -37,9 +45,6 @@ const flatten = (
 };
 
 const flatEn = flatten(en as LocaleObject);
-const flatRu = flatten(ru as LocaleObject);
-const flatEs = flatten(es as LocaleObject);
-const flatDe = flatten(de as LocaleObject);
 const enKeys = new Set(Object.keys(flatEn));
 const enBaseKeys = new Set([...enKeys].map(baseKey));
 
@@ -47,6 +52,20 @@ const findOrphans = (locale: Record<string, unknown>): string[] =>
   Object.keys(locale).filter(
     (key) => !enKeys.has(key) && !enBaseKeys.has(baseKey(key)),
   );
+
+const nonEnLocales: ReadonlyArray<readonly [string, LocaleObject]> = [
+  ["Czech", cs as LocaleObject],
+  ["German", de as LocaleObject],
+  ["Spanish", es as LocaleObject],
+  ["French", fr as LocaleObject],
+  ["Italian", it as LocaleObject],
+  ["Dutch", nl as LocaleObject],
+  ["Polish", pl as LocaleObject],
+  ["Portuguese", pt as LocaleObject],
+  ["Russian", ru as LocaleObject],
+  ["Ukrainian", uk as LocaleObject],
+  ["Chinese", zh as LocaleObject],
+] as const;
 
 describe("locale parity", () => {
   it("keeps native display names aligned with supported languages", () => {
@@ -66,30 +85,14 @@ describe("locale parity", () => {
     }
   });
 
-  it("keeps RU keys inside the EN namespace, modulo plural suffixes", () => {
-    const orphan = findOrphans(flatRu);
+  for (const [language, locale] of nonEnLocales) {
+    it(`keeps ${language} keys inside the EN namespace, modulo plural suffixes`, () => {
+      const orphan = findOrphans(flatten(locale));
 
-    expect(
-      orphan,
-      `Russian locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
-    ).toEqual([]);
-  });
-
-  it("keeps ES keys inside the EN namespace, modulo plural suffixes", () => {
-    const orphan = findOrphans(flatEs);
-
-    expect(
-      orphan,
-      `Spanish locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
-    ).toEqual([]);
-  });
-
-  it("keeps DE keys inside the EN namespace, modulo plural suffixes", () => {
-    const orphan = findOrphans(flatDe);
-
-    expect(
-      orphan,
-      `German locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
-    ).toEqual([]);
-  });
+      expect(
+        orphan,
+        `${language} locale contains keys without an EN counterpart: ${orphan.join(", ")}`,
+      ).toEqual([]);
+    });
+  }
 });

@@ -1,0 +1,2130 @@
+{
+  "search": {
+    "title": "Wyszukiwanie",
+    "searchPlaceholder": "Wyszukaj pliki i foldery...",
+    "error": "Wyszukiwanie nie powiodło się. Spróbuj ponownie.",
+    "enterQueryHint": "Zacznij pisać, aby wyszukać...",
+    "noResults": "Nie znaleziono plików ani folderów",
+    "open": "Wyszukaj",
+    "modal": {
+      "placeholder": "Wyszukaj pliki, foldery, ustawienia...",
+      "resultsCount": "Wyników: {{count}}"
+    },
+    "types": {
+      "folder": "Folder",
+      "file": "Plik",
+      "setting": "Ustawienie"
+    },
+    "actions": {
+      "openFile": "Otwórz plik",
+      "openFolder": "Otwórz folder",
+      "openSetting": "Otwórz ustawienia",
+      "downloadFile": "Pobierz plik",
+      "shareFile": "Udostępnij plik",
+      "openContainingFolder": "Otwórz folder zawierający"
+    },
+    "dictionary": [
+      {
+        "id": "privacy-deduplication",
+        "title": "Cross-user deduplication",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "deduplication",
+          "deduplicate",
+          "dedup",
+          "duplicates",
+          "privacy",
+          "security",
+          "cross-user",
+          "deduplikacja",
+          "duplikaty",
+          "prywatność",
+          "bezpieczeństwo",
+          "między użytkownikami"
+        ],
+        "highlightSettingId": "allowCrossUserDeduplication",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-global-indexing",
+        "title": "Global indexing",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "global indexing",
+          "indexing",
+          "deep search",
+          "search index",
+          "indeksowanie globalne",
+          "indeksowanie",
+          "głębokie wyszukiwanie",
+          "indeks wyszukiwania"
+        ],
+        "highlightSettingId": "allowGlobalIndexing",
+        "adminOnly": true
+      },
+      {
+        "id": "privacy-telemetry",
+        "title": "Telemetry",
+        "description": "Privacy and security",
+        "path": "/admin/privacy-settings",
+        "keywords": [
+          "telemetry",
+          "diagnostics",
+          "analytics",
+          "metrics",
+          "statistics",
+          "usage analytics",
+          "crash reports",
+          "bug reports",
+          "privacy",
+          "telemetria",
+          "diagnostyka",
+          "analityka",
+          "metryki",
+          "statystyki",
+          "raporty błędów",
+          "prywatność"
+        ],
+        "highlightSettingId": "telemetry",
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-smtp",
+        "title": "SMTP configuration",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "smtp",
+          "mail",
+          "email",
+          "email settings",
+          "notifications",
+          "smtp server",
+          "from address",
+          "ssl",
+          "tls",
+          "poczta",
+          "konfiguracja smtp",
+          "serwer smtp",
+          "powiadomienia",
+          "adres nadawcy"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "notifications-email-mode",
+        "title": "Notification mode",
+        "description": "Notifications",
+        "path": "/admin/notifications-settings",
+        "keywords": [
+          "notifications",
+          "email mode",
+          "mail mode",
+          "cotton cloud mail",
+          "custom smtp",
+          "powiadomienia",
+          "tryb poczty",
+          "własny smtp"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-settings",
+        "title": "Storage settings",
+        "description": "Storage",
+        "path": "/admin/storage-settings",
+        "keywords": [
+          "storage",
+          "storage backend",
+          "s3",
+          "bucket",
+          "endpoint",
+          "region",
+          "access key",
+          "secret key",
+          "magazyn",
+          "pamięć masowa",
+          "konfiguracja magazynu",
+          "kubełek",
+          "klucz dostępu",
+          "klucz tajny"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "storage-statistics",
+        "title": "Storage statistics",
+        "description": "Storage and statistics",
+        "path": "/admin/storage-statistics",
+        "keywords": [
+          "storage statistics",
+          "stats",
+          "gc",
+          "garbage collector",
+          "chunks",
+          "dedup saved",
+          "compression saved",
+          "statystyki magazynu",
+          "statystyki",
+          "odśmiecanie pamięci",
+          "fragmenty",
+          "oszczędności deduplikacji",
+          "oszczędności kompresji"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "database-backup",
+        "title": "Database backup",
+        "description": "Admin",
+        "path": "/admin/database-backup",
+        "keywords": [
+          "backup",
+          "database",
+          "restore",
+          "dump",
+          "manifest",
+          "kopia zapasowa",
+          "baza danych",
+          "przywracanie",
+          "zrzut",
+          "manifest"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "users",
+        "title": "Users",
+        "description": "Admin",
+        "path": "/admin/users",
+        "keywords": [
+          "users",
+          "accounts",
+          "admin users",
+          "role",
+          "sessions",
+          "użytkownicy",
+          "konta",
+          "administratorzy",
+          "role",
+          "sesje"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "groups",
+        "title": "Groups",
+        "description": "Admin",
+        "path": "/admin/groups",
+        "keywords": [
+          "groups",
+          "user groups",
+          "grupy",
+          "grupy użytkowników"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "general-settings",
+        "title": "General settings",
+        "description": "Admin",
+        "path": "/admin/general-settings",
+        "keywords": [
+          "general settings",
+          "public url",
+          "public base url",
+          "timezone",
+          "server usage",
+          "setup wizard",
+          "computation mode",
+          "ustawienia ogólne",
+          "publiczny url",
+          "publiczny adres",
+          "strefa czasowa",
+          "kreator konfiguracji",
+          "tryb obliczeń"
+        ],
+        "adminOnly": true
+      },
+      {
+        "id": "profile-settings",
+        "title": "Profile settings",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "profile",
+          "settings",
+          "account",
+          "account settings",
+          "personal information",
+          "personal info",
+          "edit profile",
+          "name",
+          "first name",
+          "last name",
+          "birth date",
+          "birthday",
+          "email",
+          "e-mail",
+          "mail",
+          "avatar",
+          "picture",
+          "profil",
+          "ustawienia",
+          "konto",
+          "ustawienia konta",
+          "dane osobowe",
+          "edytuj profil",
+          "imię",
+          "nazwisko",
+          "data urodzenia",
+          "poczta",
+          "awatar",
+          "zdjęcie"
+        ]
+      },
+      {
+        "id": "profile-appearance",
+        "title": "Appearance",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "appearance",
+          "theme",
+          "theme mode",
+          "dark mode",
+          "light mode",
+          "system theme",
+          "language",
+          "gallery",
+          "gallery settings",
+          "smooth transitions",
+          "prefer previews",
+          "preview",
+          "image preview",
+          "originals",
+          "colors",
+          "colour",
+          "wygląd",
+          "motyw",
+          "tryb ciemny",
+          "tryb jasny",
+          "motyw systemowy",
+          "język",
+          "galeria",
+          "płynne przejścia",
+          "podgląd",
+          "oryginały",
+          "kolory"
+        ]
+      },
+      {
+        "id": "profile-security",
+        "title": "Account security",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "security",
+          "account security",
+          "password",
+          "change password",
+          "current password",
+          "new password",
+          "2fa",
+          "two factor",
+          "two-factor",
+          "totp",
+          "authenticator",
+          "verification code",
+          "sessions",
+          "devices",
+          "logout",
+          "sign out",
+          "email verification",
+          "verify email",
+          "bezpieczeństwo",
+          "bezpieczeństwo konta",
+          "hasło",
+          "zmiana hasła",
+          "obecne hasło",
+          "nowe hasło",
+          "dwuetapowe",
+          "dwuskładnikowe",
+          "uwierzytelnianie",
+          "kod weryfikacyjny",
+          "sesje",
+          "urządzenia",
+          "wyloguj",
+          "weryfikacja e-mail",
+          "potwierdź e-mail"
+        ]
+      },
+      {
+        "id": "profile-share-links",
+        "title": "Share links",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "share links",
+          "sharing",
+          "public links",
+          "links",
+          "shared files",
+          "expiration",
+          "expires",
+          "expire",
+          "invalidate",
+          "token",
+          "linki udostępniania",
+          "udostępnianie",
+          "publiczne linki",
+          "linki",
+          "udostępnione pliki",
+          "wygaśnięcie",
+          "unieważnij",
+          "token"
+        ]
+      },
+      {
+        "id": "profile-webdav",
+        "title": "WebDAV access",
+        "description": "Profile",
+        "path": "/settings",
+        "keywords": [
+          "webdav",
+          "dav",
+          "webdav access",
+          "webdav token",
+          "network drive",
+          "mount",
+          "mount_webdav",
+          "davfs",
+          "davfs2",
+          "cadaver",
+          "windows webdav",
+          "macos webdav",
+          "linux webdav",
+          "credentials",
+          "one-time token",
+          "dostęp webdav",
+          "token webdav",
+          "dysk sieciowy",
+          "zamontuj",
+          "podłącz dysk",
+          "dane logowania",
+          "token jednorazowy"
+        ]
+      }
+    ]
+  },
+  "notifications": {
+    "title": "Powiadomienia",
+    "markAllAsRead": "Oznacz wszystkie jako przeczytane",
+    "empty": "Brak powiadomień",
+    "viewAll": "Zobacz wszystkie",
+    "unreadCount": "{count} nieprzeczytanych",
+    "showOnlyUnread": "Pokaż tylko nieprzeczytane",
+    "showAll": "Pokaż wszystkie",
+    "muteSound": "Wycisz dźwięk",
+    "unmuteSound": "Włącz dźwięk",
+    "notifications": {
+      "empty": "Brak powiadomień"
+    }
+  },
+  "common": {
+    "languageName": "Polski",
+    "switchToThisLanguage": "Przełącz na polski",
+    "placeholder": "—",
+    "yes": "Tak",
+    "no": "Nie",
+    "time": {
+      "justNow": "przed chwilą",
+      "secondsAgo_one": "{{count}} sekundę temu",
+      "secondsAgo_few": "{{count}} sekundy temu",
+      "secondsAgo_many": "{{count}} sekund temu",
+      "secondsAgo_other": "{{count}} sekundy temu",
+      "minutesAgo_one": "{{count}} minutę temu",
+      "minutesAgo_few": "{{count}} minuty temu",
+      "minutesAgo_many": "{{count}} minut temu",
+      "minutesAgo_other": "{{count}} minuty temu",
+      "hoursAgo_one": "{{count}} godzinę temu",
+      "hoursAgo_few": "{{count}} godziny temu",
+      "hoursAgo_many": "{{count}} godzin temu",
+      "hoursAgo_other": "{{count}} godziny temu",
+      "daysAgo_one": "{{count}} dzień temu",
+      "daysAgo_few": "{{count}} dni temu",
+      "daysAgo_many": "{{count}} dni temu",
+      "daysAgo_other": "{{count}} dnia temu",
+      "monthsAgo_one": "{{count}} miesiąc temu",
+      "monthsAgo_few": "{{count}} miesiące temu",
+      "monthsAgo_many": "{{count}} miesięcy temu",
+      "monthsAgo_other": "{{count}} miesiąca temu",
+      "yearsAgo_one": "{{count}} rok temu",
+      "yearsAgo_few": "{{count}} lata temu",
+      "yearsAgo_many": "{{count}} lat temu",
+      "yearsAgo_other": "{{count}} roku temu",
+      "durationMinutes_one": "{{count}} min",
+      "durationMinutes_few": "{{count}} min",
+      "durationMinutes_many": "{{count}} min",
+      "durationMinutes_other": "{{count}} min",
+      "durationHours_one": "{{count}} godzina",
+      "durationHours_few": "{{count}} godziny",
+      "durationHours_many": "{{count}} godzin",
+      "durationHours_other": "{{count}} godziny",
+      "durationDays_one": "{{count}} dzień",
+      "durationDays_few": "{{count}} dni",
+      "durationDays_many": "{{count}} dni",
+      "durationDays_other": "{{count}} dnia",
+      "lessThanMinute": "mniej niż minutę"
+    },
+    "actions": {
+      "confirm": "Potwierdź",
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "delete": "Usuń",
+      "rename": "Zmień nazwę",
+      "restore": "Przywróć",
+      "download": "Pobierz",
+      "share": "Udostępnij",
+      "more": "Więcej akcji",
+      "play": "Odtwórz",
+      "pause": "Wstrzymaj",
+      "copied": "Skopiowano!",
+      "reload": "Odśwież"
+    },
+    "errors": {
+      "unexpectedTitle": "Coś poszło nie tak",
+      "unexpectedDescription": "Wystąpił nieoczekiwany błąd. Proszę odświeżyć stronę.",
+      "showDetails": "Pokaż szczegóły",
+      "hideDetails": "Ukryj szczegóły",
+      "schemaValidationFailed": "Serwer zwrócił nieoczekiwane dane"
+    },
+    "userMenu": {
+      "profile": "Profil",
+      "settings": "Ustawienia",
+      "admin": "Administrator",
+      "user": "Użytkownik",
+      "lightMode": "Tryb jasny",
+      "darkMode": "Tryb ciemny",
+      "changeLanguage": "Zmień język",
+      "logout": "Wyloguj",
+      "help": "Pomoc",
+      "serverVersion": "Wersja serwera: {{version}}"
+    },
+    "app": {
+      "logoAlt": "Logo Cotton"
+    },
+    "title": "Cotton Cloud",
+    "subtitle": "Kreator konfiguracji",
+    "ok": "OK",
+    "telemetryDetails": {
+      "tooltip": "Jakie dane są zbierane?",
+      "title": "Co obejmuje minimalna telemetria",
+      "intro": "Telemetria jest celowo minimalna i nie zawiera nazw plików ani ich treści. Wysyłany jest tylko niewielki zestaw technicznych danych diagnostycznych:",
+      "items": {
+        "instanceId": "Losowy identyfikator instancji (jednorazowo wygenerowany GUID, nie powiązany z Tobą)",
+        "serverUrl": "Publiczny URL serwera, abyśmy wiedzieli, czy chmura jest osiągalna",
+        "version": "Wersja serwera Cotton",
+        "users": "Łączna liczba kont użytkowników",
+        "nodes": "Łączna liczba folderów",
+        "files": "Łączna liczba plików"
+      },
+      "outro": "To wszystko. W telemetrii nie są wysyłane żadne treści plików, nazwy plików, nazwy użytkowników ani adresy e-mail. Standardowe metadane sieciowe (takie jak źródłowy adres IP) mogą nadal istnieć na poziomie transportu."
+    },
+    "pwa": {
+      "updateAvailable": "Nowa wersja jest gotowa.",
+      "updateAction": "Odśwież"
+    },
+    "clientEncryption": {
+      "folderPolicyEnabledHint": "Ten folder szyfruje nowe przesyłane pliki na Twoim urządzeniu.",
+      "fileEncryptedHint": "Ten plik jest zaszyfrowany na Twoim urządzeniu.",
+      "vaultLockedForDownload": "Odblokuj szyfrowanie po stronie klienta w profilu, aby pobrać ten plik.",
+      "fileTooLargeForDownload": "Ten zaszyfrowany plik jest zbyt duży dla bieżącego potoku pobierania w przeglądarce. Limit: {{maxSize}}."
+    }
+  },
+  "audioPlayer": {
+    "actions": {
+      "scanRecursively": "Znajdź utwory w tym folderze i podfolderach",
+      "showQueue": "Pokaż kolejkę",
+      "hideQueue": "Ukryj kolejkę",
+      "showLyrics": "Pokaż tekst",
+      "hideLyrics": "Ukryj tekst",
+      "enableShuffle": "Włącz odtwarzanie losowe",
+      "disableShuffle": "Wyłącz odtwarzanie losowe",
+      "close": "Zamknij odtwarzacz"
+    },
+    "lyrics": {
+      "unavailable": "Tekst utworu jest niedostępny.",
+      "notFound": "Nie znaleziono pliku .lrc obok tego utworu.",
+      "loadFailed": "Nie udało się załadować tekstu."
+    }
+  },
+  "share": {
+    "title": "Udostępniony plik",
+    "loading": "Ładowanie...",
+    "unsupported": "Podgląd nie jest dostępny dla tego typu pliku.",
+    "encryptedFile": {
+      "title": "Ten plik jest szyfrowany end-to-end",
+      "description": "Publiczne linki nie mogą go odszyfrować w przeglądarce. Można pobrać zaszyfrowany kontener lub poprosić właściciela o udostępnienie odszyfrowanej kopii."
+    },
+    "message": "Zobacz \"{{name}}\" w Cotton Cloud",
+    "folder": {
+      "title": "Udostępniony folder",
+      "message": "Zobacz folder \"{{name}}\" w Cotton Cloud",
+      "empty": "Ten folder jest pusty.",
+      "kind": "Folder"
+    },
+    "toasts": {
+      "copied": "Skopiowano link",
+      "shared": "Link udostępniony"
+    },
+    "errors": {
+      "invalidLink": "Nieprawidłowy link udostępniania.",
+      "notFound": "Plik nie został znaleziony lub link wygasł.",
+      "loadFailed": "Nie udało się załadować udostępnionego pliku.",
+      "copyLink": "Nie udało się skopiować linku do schowka.",
+      "fileTooLargePreview": "Plik jest zbyt duży, aby wyświetlić podgląd ({{size}}). Aby go wyświetlić, należy pobrać plik."
+    }
+  },
+  "login": {
+    "title": "Cotton Cloud",
+    "usernameLabel": "Nazwa użytkownika",
+    "passwordLabel": "Hasło",
+    "rememberMe": "Zaufaj temu urządzeniu",
+    "twoFactor": {
+      "title": "Uwierzytelnianie dwuskładnikowe",
+      "caption": "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej.",
+      "digit": "Cyfra",
+      "required": "Kod uwierzytelniania dwuskładnikowego jest wymagany.",
+      "invalid": "Nieprawidłowy kod uwierzytelniania dwuskładnikowego.",
+      "locked": "Zbyt wiele prób. Spróbuj ponownie później."
+    },
+    "loginButton": "Zaloguj się",
+    "loggingIn": "Logowanie...",
+    "errorMessage": "Logowanie nie powiodło się. Sprawdź dane logowania.",
+    "restoring": {
+      "title": "Przywracanie sesji...",
+      "caption": "Proszę czekać"
+    },
+    "forgotPassword": {
+      "link": "Nie pamiętasz hasła?",
+      "enterEmail": "Wprowadź swój adres e-mail jako nazwę użytkownika, aby zresetować hasło.",
+      "sent": "Jeśli konto z podanym adresem e-mail istnieje, link do resetu hasła został wysłany.",
+      "sending": "Wysyłanie...",
+      "error": "Nie udało się wysłać linku do resetu. Spróbuj ponownie później."
+    },
+    "firstRun": {
+      "title": "Konfiguracja początkowa",
+      "message": "Brak istniejących użytkowników. Wprowadzone dane logowania utworzą pierwsze konto administratora. Ta opcja jest dostępna tylko krótko po uruchomieniu. W razie potrzeby należy zrestartować instancję.",
+      "continueButton": "Kontynuuj",
+      "continuing": "Tworzenie pierwszego użytkownika..."
+    }
+  },
+  "notFound": {
+    "title": "Strona nie znaleziona",
+    "message": "Strona, której szukasz, nie istnieje.",
+    "backButton": "Wróć do strony głównej"
+  },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Informacje o koncie i jego stan bezpieczeństwa.",
+    "notAuthenticated": "Nie zalogowano.",
+    "ageYears_one": "{{count}} rok",
+    "ageYears_few": "{{count}} lata",
+    "ageYears_many": "{{count}} lat",
+    "ageYears_other": "{{count}} roku",
+    "roles": {
+      "user": "Użytkownik",
+      "admin": "Administrator"
+    },
+    "avatar": {
+      "upload": "Wgraj awatar",
+      "errors": {
+        "settingsNotLoaded": "Ustawienia serwera nie są jeszcze załadowane.",
+        "fileTooLarge": "Awatar jest zbyt duży. Maksymalny rozmiar to {{maxSize}}.",
+        "unsupportedFormat": "Ten format obrazu nie jest obsługiwany przez przeglądarkę. Użyj JPG, PNG lub WEBP.",
+        "failed": "Nie udało się zaktualizować awatara."
+      }
+    },
+    "editProfile": {
+      "title": "Edytuj profil",
+      "description": "Zaktualizuj swoje dane osobowe.",
+      "firstName": "Imię",
+      "lastName": "Nazwisko",
+      "email": "E-mail",
+      "birthDate": "Data urodzenia",
+      "save": "Zapisz",
+      "saving": "Zapisywanie...",
+      "success": "Profil zaktualizowany.",
+      "emailWarning": "Zmiana adresu e-mail spowoduje zresetowanie statusu weryfikacji adresu e-mail.",
+      "errors": {
+        "failed": "Nie udało się zaktualizować profilu."
+      }
+    },
+    "appearance": {
+      "title": "Wygląd",
+      "description": "Preferencje interfejsu i personalizacja.",
+      "gallerySmoothTransitions": "Płynne przejścia w galerii",
+      "galleryPreferPreview": "Pokazuj oryginały zamiast podglądów",
+      "themeMode": {
+        "label": "Motyw",
+        "light": "Jasny",
+        "system": "Systemowy",
+        "dark": "Ciemny"
+      },
+      "language": {
+        "label": "Język",
+        "en": "Angielski",
+        "ru": "Rosyjski",
+        "es": "Hiszpański",
+        "de": "Niemiecki"
+      }
+    },
+    "shareLinks": {
+      "title": "Linki udostępniania",
+      "description": "Określ, jak długo wygenerowane linki udostępniania pozostają ważne.",
+      "current": "Obecnie: {{days}} dni",
+      "presets": {
+        "week": "Tydzień",
+        "month": "Miesiąc",
+        "year": "Rok",
+        "threeMonths": "3 miesiące",
+        "tenYears": "10 lat",
+        "oneDay": "Jeden dzień"
+      },
+      "invalidateAll": "Unieważnij wszystkie linki udostępniania",
+      "invalidating": "Unieważnianie...",
+      "invalidated": "Wszystkie linki udostępniania zostały unieważnione.",
+      "invalidateConfirmTitle": "Unieważnić wszystkie linki udostępniania?",
+      "invalidateConfirmDescription": "Wszystkie aktywne linki udostępniania natychmiast przestaną działać. Tej operacji nie można cofnąć.",
+      "errors": {
+        "invalidateFailed": "Nie udało się unieważnić linków udostępniania."
+      }
+    },
+    "totp": {
+      "enabled": "2FA włączone",
+      "disabled": "2FA wyłączone",
+      "sectionTitle": "Uwierzytelnianie dwuskładnikowe",
+      "enabledMessage": "Uwierzytelnianie dwuskładnikowe jest włączone.",
+      "enabledDescription": "Konto jest chronione dodatkową warstwą bezpieczeństwa.",
+      "setup": {
+        "title": "Włącz uwierzytelnianie dwuskładnikowe (TOTP)",
+        "caption": "Użyj aplikacji uwierzytelniającej (Google Authenticator, Authy itp.).",
+        "button": "Wygeneruj kod QR",
+        "loading": "Generowanie...",
+        "qrTitle": "Zeskanuj ten kod QR",
+        "secretLabel": "Klucz tajny:",
+        "copySecret": "Kopiuj klucz tajny",
+        "success": "Uwierzytelnianie dwuskładnikowe jest włączone."
+      },
+      "confirm": {
+        "title": "Potwierdź konfigurację",
+        "caption": "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej.",
+        "digit": "Cyfra",
+        "button": "Potwierdź",
+        "loading": "Potwierdzanie..."
+      },
+      "disable": {
+        "button": "Wyłącz 2FA",
+        "dialogTitle": "Wyłącz uwierzytelnianie dwuskładnikowe",
+        "dialogDescription": "Wprowadź hasło, aby potwierdzić wyłączenie uwierzytelniania dwuskładnikowego.",
+        "passwordLabel": "Hasło",
+        "confirm": "Wyłącz",
+        "confirming": "Wyłączanie...",
+        "success": "Uwierzytelnianie dwuskładnikowe zostało wyłączone."
+      },
+      "errors": {
+        "setupFailed": "Nie udało się rozpocząć konfiguracji 2FA.",
+        "confirmFailed": "Nie udało się potwierdzić 2FA.",
+        "saveFailed": "Nie udało się zapisać ustawień 2FA.",
+        "codeRequired": "Wprowadź 6-cyfrowy kod.",
+        "invalidCode": "Nieprawidłowy kod uwierzytelniania dwuskładnikowego.",
+        "alreadyEnabled": "2FA jest już włączone.",
+        "setupNotInitiated": "Konfiguracja 2FA nie została rozpoczęta. Najpierw wygeneruj kod QR.",
+        "disableFailed": "Nie udało się wyłączyć 2FA.",
+        "invalidPassword": "Nieprawidłowe hasło."
+      }
+    },
+    "fields": {
+      "id": "ID użytkownika",
+      "username": "Nazwa użytkownika",
+      "firstName": "Imię",
+      "lastName": "Nazwisko",
+      "birthDate": "Data urodzenia",
+      "role": "Rola",
+      "twoFactor": "Uwierzytelnianie dwuskładnikowe",
+      "totpEnabledAt": "Włączono",
+      "totpFailedAttempts": "Nieudane próby 2FA",
+      "email": "E-mail",
+      "emailVerified": "Zweryfikowany",
+      "emailNotVerified": "Niezweryfikowany",
+      "verify": "Zweryfikuj",
+      "createdAt": "Utworzono",
+      "updatedAt": "Zaktualizowano"
+    },
+    "emailVerification": {
+      "title": "Weryfikacja adresu e-mail",
+      "description": "Zweryfikuj swój adres e-mail, aby włączyć odzyskiwanie hasła i powiadomienia.",
+      "verified": "E-mail zweryfikowany",
+      "notVerified": "E-mail niezweryfikowany",
+      "sendButton": "Wyślij e-mail weryfikacyjny",
+      "sending": "Wysyłanie...",
+      "sent": "Wysłano e-mail weryfikacyjny. Sprawdź swoją skrzynkę.",
+      "noEmail": "Dla tego konta nie ustawiono adresu e-mail.",
+      "errors": {
+        "failed": "Nie udało się wysłać e-maila weryfikacyjnego. Spróbuj ponownie później."
+      }
+    },
+    "password": {
+      "title": "Zmień hasło",
+      "description": "Zaktualizuj hasło do swojego konta.",
+      "old": "Stare hasło",
+      "new": "Nowe hasło",
+      "confirm": "Potwierdź nowe hasło",
+      "show": "Pokaż hasło",
+      "hide": "Ukryj hasło",
+      "save": "Zapisz",
+      "saving": "Zapisywanie...",
+      "success": "Hasło zmienione.",
+      "errors": {
+        "mismatch": "Hasła nie są zgodne.",
+        "failed": "Nie udało się zmienić hasła."
+      }
+    },
+    "sessions": {
+      "title": "Aktywne sesje",
+      "description": "Zarządzaj swoimi aktywnymi sesjami na różnych urządzeniach",
+      "noActiveSessions": "Brak aktywnych sesji",
+      "currentSession": "Bieżąca",
+      "unknownDevice": "Nieznane urządzenie",
+      "revokeSession": "Zakończ sesję",
+      "elapsed": "Upłynęło: {{duration}}",
+      "revokeConfirmTitle": "Zakończyć sesję?",
+      "revokeConfirmDescription": "Czy na pewno zakończyć tę sesję? Spowoduje to wylogowanie urządzenia.",
+      "revokeConfirmButton": "Zakończ sesję",
+      "revokeCancelButton": "Anuluj",
+      "errors": {
+        "loadFailed": "Nie udało się załadować sesji.",
+        "revokeFailed": "Nie udało się zakończyć sesji."
+      }
+    },
+    "webdav": {
+      "title": "Dostęp WebDAV",
+      "description": "Wygeneruj token jednorazowy, aby połączyć się przez WebDAV.",
+      "confirmTitle": "Wygenerować token WebDAV?",
+      "confirmDescription": "Spowoduje to wygenerowanie nowego tokena i unieważnienie poprzedniego. Token zostanie pokazany tylko raz.",
+      "confirmButton": "Wygeneruj",
+      "cancelButton": "Anuluj",
+      "generateButton": "Wygeneruj token",
+      "generating": "Generowanie...",
+      "tokenLabel": "Token",
+      "usernameLabel": "Nazwa użytkownika",
+      "connectUrlLabel": "Punkt końcowy WebDAV",
+      "modalTitle": "Dane logowania WebDAV (wyświetlane jednorazowo)",
+      "closeButton": "Zamknij",
+      "copyToken": "Kopiuj token",
+      "copyUrl": "Kopiuj URL",
+      "copyUsername": "Kopiuj nazwę użytkownika",
+      "tokenWarning": "Skopiuj ten token teraz. Nie zostanie pokazany ponownie.",
+      "cardHelp": "Użyj tych wartości, aby połączyć się z klientem WebDAV. Wygeneruj token, aby uzyskać jednorazowe hasło.",
+      "examples": {
+        "title": "Przykłady",
+        "copy": "Kopiuj",
+        "windows": {
+          "title": "Windows (Command Prompt)",
+          "copy": "Kopiuj",
+          "caption": "Uruchom w Command Prompt z podwyższonymi uprawnieniami lub użyj zmapowanego dysku w Eksploratorze."
+        },
+        "windowsRegistry": {
+          "title": "Windows (modyfikacja rejestru)",
+          "copy": "Kopiuj",
+          "caption": "Zastosuj zmianę w rejestrze, aby zwiększyć limit rozmiaru pliku WebDAV."
+        },
+        "powershell": {
+          "title": "Windows (escape dla PowerShell)",
+          "copy": "Kopiuj",
+          "caption": "Użyj przy uruchamianiu z PowerShell; polecenie ma znaki ucieczki dla wygody."
+        },
+        "mac": {
+          "title": "macOS (mount_webdav)",
+          "copy": "Kopiuj",
+          "caption": "Zamontuj za pomocą Findera i Terminala (mount_webdav)."
+        },
+        "linux": {
+          "title": "Linux (davfs2)",
+          "copy": "Kopiuj",
+          "caption": "Użyj davfs2 lub cadaver, aby zamontować punkt końcowy WebDAV."
+        }
+      },
+      "placeholderPassword": "<hasło>",
+      "errors": {
+        "failed": "Nie udało się wygenerować tokena WebDAV."
+      }
+    },
+    "email": {
+      "verified": "E-mail zweryfikowany"
+    },
+    "clientEncryption": {
+      "sectionTitle": "Szyfrowanie po stronie klienta",
+      "description": "Chroń wybrane pliki kluczem przechowywanym w przeglądarce.",
+      "invalidEnvelope": "Nie można odczytać zapisanych danych konfiguracji szyfrowania. Nie przesyłaj zaszyfrowanych plików, dopóki problem nie zostanie naprawiony.",
+      "lockedHint": "Odblokuj, gdy musisz otworzyć zaszyfrowane foldery lub pliki.",
+      "unlockedHint": "Zaszyfrowane pliki można otwierać w tej karcie przeglądarki, dopóki klucz nie zostanie zablokowany lub nie nastąpi wylogowanie.",
+      "status": {
+        "notSetUp": "Nie skonfigurowano",
+        "locked": "Zablokowane",
+        "unlocked": "Odblokowane",
+        "invalid": "Wymaga uwagi"
+      },
+      "actions": {
+        "setup": "Skonfiguruj",
+        "unlock": "Odblokuj",
+        "lock": "Zablokuj",
+        "lockOnRefresh": "Blokuj przy odświeżeniu strony"
+      },
+      "setupDialog": {
+        "title": "Skonfiguruj szyfrowanie po stronie klienta",
+        "warning": "Utrata zarówno hasła szyfrowania, jak i 24-słowowej frazy odzyskiwania uniemożliwi otwarcie zaszyfrowanych plików. Serwer nie może zresetować tego klucza.",
+        "acknowledge": "Rozumiem, że utrata obu oznacza trwałą utratę danych",
+        "cancel": "Anuluj",
+        "continue": "Kontynuuj",
+        "back": "Wstecz",
+        "passwordHint": "Wybierz silne hasło szyfrowania. Jest niezależne od hasła do konta i nie jest wysyłane na serwer.",
+        "passwordLabel": "Hasło szyfrowania",
+        "confirmPasswordLabel": "Potwierdź hasło szyfrowania",
+        "passwordTooShort": "Użyj co najmniej {{min}} znaków.",
+        "passwordMismatch": "Hasła nie są zgodne.",
+        "next": "Dalej",
+        "generating": "Generowanie...",
+        "phraseWarning": "Zapisz te 24 słowa w bezpiecznym miejscu przed zakończeniem konfiguracji. Każdy, kto ma tę frazę, może odblokować zaszyfrowane pliki.",
+        "copy": "Kopiuj frazę",
+        "copied": "Skopiowano",
+        "download": "Pobierz frazę",
+        "phraseStored": "Zapisałem(-am) frazę odzyskiwania",
+        "saving": "Zapisywanie...",
+        "finish": "Zakończ konfigurację",
+        "errors": {
+          "generateFailed": "Nie udało się wygenerować kluczy szyfrowania.",
+          "saveFailed": "Nie udało się zapisać konfiguracji szyfrowania.",
+          "copyFailed": "Nie udało się skopiować frazy.",
+          "downloadFailed": "Nie udało się pobrać frazy."
+        }
+      },
+      "unlockDialog": {
+        "title": "Odblokuj szyfrowanie po stronie klienta",
+        "passwordLabel": "Hasło szyfrowania",
+        "phraseLabel": "24-słowowa fraza odzyskiwania",
+        "usePhrase": "Użyj frazy odzyskiwania",
+        "usePassword": "Użyj hasła zamiast tego",
+        "cancel": "Anuluj",
+        "submit": "Odblokuj",
+        "unlocking": "Odblokowywanie...",
+        "errors": {
+          "wrongPassword": "Nieprawidłowe hasło szyfrowania.",
+          "wrongPhrase": "Ta fraza nie odblokowuje klucza.",
+          "invalidPhrase": "Fraza jest nieprawidłowa lub zawiera niewłaściwą liczbę słów.",
+          "invalidEnvelope": "Nie można odczytać zapisanych danych konfiguracji szyfrowania.",
+          "unknown": "Nie udało się odblokować szyfrowania."
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "Kreator konfiguracji serwera",
+    "subtitle": "Wykonaj wstępną konfigurację serwera, aby rozpocząć pracę. Nie zajmie to dużo czasu i pozwoli spersonalizować aplikację.",
+    "repoLink": "Projekt na GitHubie",
+    "errors": {
+      "saveFailed": "Nie udało się zapisać ustawień.",
+      "saveChoiceFailed": "Coś poszło nie tak. Wybierz inną opcję."
+    },
+    "status": {
+      "hasUsers": "Ma użytkowników",
+      "maxChunk": "Maksymalny rozmiar fragmentu",
+      "hash": "Algorytm haszowania",
+      "yes": "Tak",
+      "no": "Nie"
+    },
+    "actions": {
+      "start": "Zaczynamy",
+      "later": "Zrobię to później",
+      "back": "Wstecz",
+      "next": "Dalej",
+      "finish": "Gotowe",
+      "cancel": "Anuluj",
+      "toggleLanguage": "Zmień język",
+      "toggleTheme": "Przełącz motyw"
+    },
+    "intro": "Zostaniesz zapytany o proste preferencje dotyczące korzystania z Cotton Cloud. Jeśli nie jesteś pewien, nie martw się — wiele ustawień można zmienić później.",
+    "onlyAdminCanSetup": "Tylko administratorzy mogą konfigurować aplikację. Poproś administratora o wykonanie konfiguracji początkowej.",
+    "questions": {
+      "requiresTooltip": "Aby włączyć tę opcję, należy wybrać:",
+      "inQuestion": "w pytaniu",
+      "multiuser": {
+        "title": "Planujesz używać tego:",
+        "subtitle": "Wpływa to na optymalizację magazynu i niektóre ustawienia bezpieczeństwa.",
+        "linkAria": "Otwórz pomoc w nowej karcie",
+        "options": {
+          "family": "W rodzinie",
+          "many": "Z obcymi osobami",
+          "unknown": "Jeszcze nie wiem"
+        },
+        "descriptions": {
+          "family": "Deduplikacja plików, wspólny indeks wyszukiwania i preinstalowane moduły.",
+          "many": "Bardziej rygorystyczny tryb bezpieczeństwa pomiędzy nieznanymi użytkownikami.",
+          "unknown": "Ustawi najlepsze optymalne wartości domyślne."
+        }
+      },
+      "usage": {
+        "title": "Planujesz używać chmury do:",
+        "subtitle": "Wybierz jedną lub więcej opcji",
+        "options": {
+          "photos": "Zdjęć",
+          "documents": "Dokumentów",
+          "media": "Filmów i seriali",
+          "other": "Inne"
+        },
+        "descriptions": {
+          "photos": "Zainstaluje dodatki do wyszukiwania AI i rozpoznawania tekstu.",
+          "documents": "Optymalizacja pod kątem plików biurowych i PDF dla domowego archiwum",
+          "media": "Optymalizacja pod kątem plików wideo i strumieniowania, integracja z bazą filmów.",
+          "other": "Ogólne ustawienia dla różnych typów plików."
+        }
+      },
+      "storage": {
+        "title": "Gdzie chcesz przechowywać dane?",
+        "subtitle": "Wybierz lokalizację magazynu dla plików. Cotton Cloud będzie używać dysku serwera jako pamięci podręcznej niezależnie od wyboru.",
+        "options": {
+          "local": "Dysk lokalny serwera",
+          "s3": "Magazyn zgodny z S3"
+        },
+        "descriptions": {
+          "local": "Przechowuj pliki w lokalnym systemie plików serwera.",
+          "s3": "Przechowuj pliki w zdalnym magazynie obiektowym zgodnym z S3."
+        }
+      },
+      "s3Config": {
+        "title": "Skonfiguruj magazyn S3",
+        "subtitle": "Wprowadź dane logowania do magazynu zgodnego z S3.",
+        "fields": {
+          "endpoint": "URL punktu końcowego",
+          "region": "Region",
+          "bucket": "Nazwa kubełka",
+          "accessKey": "Klucz dostępu",
+          "secretKey": "Klucz tajny"
+        },
+        "placeholders": {
+          "endpoint": "https://s3.example.com",
+          "region": "us-east-1",
+          "bucket": "my-bucket",
+          "accessKey": "Twój klucz dostępu",
+          "secretKey": "Twój klucz tajny"
+        }
+      },
+      "email": {
+        "title": "Konfiguracja poczty",
+        "subtitle": "Wybierz, skąd będą wysyłane powiadomienia e-mail.",
+        "options": {
+          "cloud": "Użyj Cotton Mail w chmurze",
+          "custom": "Użyj własnego serwera SMTP",
+          "none": "Bez powiadomień e-mail"
+        },
+        "descriptions": {
+          "cloud": "Zostanie użyty publiczny serwer SMTP Cotton Cloud. Jest bezpieczny i darmowy. Wybierz tę opcję, jeśli nie jesteś pewien.",
+          "custom": "Skonfiguruj własny serwer SMTP do wysyłania powiadomień e-mail.",
+          "none": "Najprostsza opcja, ale nie będzie można nawet odzyskać hasła."
+        }
+      },
+      "emailConfig": {
+        "title": "Konfiguracja serwera SMTP",
+        "subtitle": "Wprowadź dane serwera SMTP.",
+        "fields": {
+          "smtpServer": "Serwer SMTP",
+          "port": "Port",
+          "username": "Nazwa użytkownika",
+          "password": "Hasło",
+          "fromAddress": "Adres nadawcy",
+          "useSSL": "Użyj SSL/TLS"
+        },
+        "placeholders": {
+          "smtpServer": "smtp.example.com",
+          "port": "587",
+          "username": "twoj@email.com",
+          "password": "Twoje hasło",
+          "fromAddress": "noreply@example.com",
+          "useSSL": "Włącz szyfrowanie SSL/TLS"
+        }
+      },
+      "telemetry": {
+        "title": "Zezwolić na wysyłanie statystyk?",
+        "subtitle": "Te dane pomagają nam ulepszać produkt i są celowo minimalne. To jeden z niewielu sposobów na wspieranie projektu za pomocą automatycznych informacji zwrotnych i pomaga nam zrozumieć, jak Cotton Cloud działa na różnych systemach i konfiguracjach.",
+        "options": {
+          "allow": "Tak, wysyłaj",
+          "deny": "Nie, nie wysyłaj"
+        },
+        "descriptions": {
+          "allow": "Wysyła minimalne dane diagnostyczne wykorzystywane do oceny oprogramowania i naprawy błędów.",
+          "deny": "Ten wybór należy do Ciebie."
+        },
+        "disabledTooltip": "Aby wyłączyć telemetrię, należy wyłączyć następujące usługi:"
+      },
+      "geoIpLookup": {
+        "title": "Rozpoznawać adresy IP?",
+        "subtitle": "Cotton może zamieniać adresy IP na nazwy miast i krajów. Można to wykorzystać, na przykład, w powiadomieniach bezpieczeństwa, aby pokazać, skąd nastąpiło logowanie, i pomóc wykryć nietypowe próby dostępu.",
+        "options": {
+          "disabled": "Nie, pozostaw wyłączone",
+          "cottonCloud": "Użyj usługi w chmurze",
+          "local": "Użyj lokalnie GeoIP Light",
+          "custom": "Użyj własnego resolvera"
+        },
+        "descriptions": {
+          "disabled": "Nie będzie wykonywane rozpoznawanie lokalizacji. Funkcje, które mogą pokazywać lokalizację logowania, zachowają tylko surowe adresy IP.",
+          "cottonCloud": "Rozpoznawanie adresów IP przez dostawcę Cotton. Wymaga włączonej telemetrii.",
+          "local": "Rozpoznawanie adresów IP na własnym serwerze za pomocą lokalnej bazy/paczki GeoIP Light.",
+          "custom": "Wklej URL do własnej usługi. Cotton spróbuje automatycznie wyodrębnić pola związane z lokalizacją z JSON."
+        }
+      },
+      "customGeoIpLookupUrl": {
+        "title": "Własny resolver IP",
+        "subtitle": "Wprowadź punkt końcowy HTTP zwracający kraj, region i miasto jako JSON.",
+        "fields": {
+          "url": "URL zapytania"
+        },
+        "placeholders": {
+          "url": "https://geo.example.com/lookup/{ip}"
+        }
+      },
+      "ai": {
+        "title": "AI i obliczenia",
+        "subtitle": "Wybierz, gdzie będą wykonywane obliczenia AI dla wyszukiwania, rozpoznawania i innych funkcji.",
+        "options": {
+          "local": "Obliczenia lokalne",
+          "runner": "Własny runner GPU",
+          "cloud": "Obliczenia Cotton Cloud"
+        },
+        "descriptions": {
+          "local": "Wolne, najcięższe funkcje wyłączone, a jakość modelu uproszczona. Jakość jest jednak nadal dobra — wystarczająca do każdego zadania.",
+          "runner": "Podłącz oddzielny runner GPU do obliczeń. Szybko, wysokiej jakości — najlepsze modele i obsługa wszystkich funkcji.",
+          "cloud": "Optymalna równowaga, ale może mieć ograniczenia. Niewiarygodna hojność za darmo. Wymaga połączenia internetowego."
+        }
+      },
+      "timezone": {
+        "title": "Strefa czasowa",
+        "subtitle": "Wybierz strefę czasową, aby uniknąć powiadomień i hałasu dysków w nocy. Dotyczy tylko procedur serwerowych — interfejs WWW zawsze będzie pokazywać godziny w lokalnej strefie czasowej."
+      },
+      "storageSpace": {
+        "title": "Ile miejsca przeznaczasz dla aplikacji?",
+        "subtitle": "Pomoże nam to zoptymalizować wykorzystanie dysku.",
+        "options": {
+          "all": "Wszystko, co masz",
+          "economical": "Oszczędzanie miejsca",
+          "unknown": "Nie wiem, idźmy dalej",
+          "optimal": "Optymalnie"
+        },
+        "descriptions": {
+          "all": "Użyj całej dostępnej przestrzeni dla maksymalnej wydajności.",
+          "economical": "Agresywne oszczędzanie miejsca, kompresja i deduplikacja.",
+          "unknown": "Wybierze optymalne ustawienia za Ciebie."
+        }
+      },
+      "importSources": {
+        "title": "Czy coś zaimportować?",
+        "subtitle": "Wybierz źródła, z których chcesz przenieść dane.",
+        "options": {
+          "webdav": "WebDAV",
+          "none": "Nic"
+        }
+      },
+      "nextcloudConfig": {
+        "title": "Konfiguracja importu z Nextcloud",
+        "subtitle": "Wprowadź dane logowania, aby połączyć się z Nextcloud.",
+        "fields": {
+          "serverUrl": "URL serwera",
+          "username": "Nazwa użytkownika",
+          "password": "Hasło"
+        },
+        "placeholders": {
+          "serverUrl": "https://nextcloud.example.com",
+          "username": "Twoja nazwa użytkownika",
+          "password": "Twoje hasło"
+        }
+      },
+      "webdavConfig": {
+        "title": "Konfiguracja importu WebDAV",
+        "subtitle": "Wprowadź dane logowania, aby połączyć się z serwerem WebDAV.",
+        "fields": {
+          "serverUrl": "URL serwera",
+          "username": "Nazwa użytkownika",
+          "password": "Hasło"
+        },
+        "placeholders": {
+          "serverUrl": "https://webdav.example.com",
+          "username": "Twoja nazwa użytkownika",
+          "password": "Twoje hasło"
+        }
+      }
+    },
+    "common": {
+      "author": "Vadim Belov"
+    }
+  },
+  "onboarding": {
+    "skip": "Rozpocznij",
+    "features": {
+      "cloud": {
+        "title": "Twoja osobista chmura",
+        "description": "Bezpiecznie przechowuj i synchronizuj pliki na wszystkich urządzeniach"
+      },
+      "storage": {
+        "title": "Nieograniczone miejsce",
+        "description": "Nigdy nie martw się o brak miejsca dzięki elastycznym opcjom magazynowania"
+      },
+      "security": {
+        "title": "Bezpieczeństwo na poziomie bankowym",
+        "description": "Twoje dane są szyfrowane i chronione przez wiodące rozwiązania bezpieczeństwa"
+      },
+      "speed": {
+        "title": "Błyskawicznie szybkie",
+        "description": "Doświadcz superszybkiego przesyłania i pobierania dzięki zoptymalizowanej wydajności"
+      }
+    }
+  },
+  "home": {
+    "title": "Strona główna",
+    "layoutLabelWithValue": "Układ: {{name}}",
+    "layoutLabelEmpty": "Układ: —",
+    "loading": {
+      "title": "Ładowanie",
+      "caption": "Pobieranie statystyk układu…"
+    },
+    "refreshing": "Odświeżanie…",
+    "cards": {
+      "folders": {
+        "title": "Foldery",
+        "caption": "Łączna liczba folderów w chmurze",
+        "layoutTitle": "Układ",
+        "layoutCaption": "Bieżący domyślny układ"
+      },
+      "files": {
+        "title": "Pliki",
+        "caption": "Łączna liczba plików we wszystkich folderach"
+      },
+      "data": {
+        "title": "Dane",
+        "caption": "Łączny rozmiar wszystkich plików"
+      },
+      "recentFiles": {
+        "title": "Ostatnie pliki",
+        "empty": "Brak ostatnich plików"
+      }
+    }
+  },
+  "files": {
+    "title": "Pliki",
+    "errors": {
+      "resolveRootFailed": "Nie udało się ustalić folderu głównego",
+      "loadContentsFailed": "Nie udało się załadować zawartości folderu",
+      "createFolderFailed": "Nie udało się utworzyć folderu",
+      "deleteFolderFailed": "Nie udało się usunąć folderu",
+      "renameFolderFailed": "Nie udało się zmienić nazwy folderu",
+      "duplicateFolderName": "Folder o tej nazwie już istnieje"
+    },
+    "move": {
+      "cut": "Wytnij",
+      "pasteHere_one": "Wklej {{count}} element tutaj",
+      "pasteHere_few": "Wklej {{count}} elementy tutaj",
+      "pasteHere_many": "Wklej {{count}} elementów tutaj",
+      "pasteHere_other": "Wklej {{count}} elementu tutaj",
+      "toasts": {
+        "cut_one": "Wycięto {{count}} element",
+        "cut_few": "Wycięto {{count}} elementy",
+        "cut_many": "Wycięto {{count}} elementów",
+        "cut_other": "Wycięto {{count}} elementu",
+        "moved_one": "Przeniesiono {{count}} element",
+        "moved_few": "Przeniesiono {{count}} elementy",
+        "moved_many": "Przeniesiono {{count}} elementów",
+        "moved_other": "Przeniesiono {{count}} elementu",
+        "failed_one": "Nie udało się przenieść {{count}} elementu",
+        "failed_few": "Nie udało się przenieść {{count}} elementów",
+        "failed_many": "Nie udało się przenieść {{count}} elementów",
+        "failed_other": "Nie udało się przenieść {{count}} elementu"
+      }
+    },
+    "loading": {
+      "title": "Ładowanie",
+      "caption": "Pobieranie zawartości folderu…"
+    },
+    "uploadDrop": {
+      "scanning": {
+        "title": "Skanowanie plików…"
+      },
+      "preparing": {
+        "title": "Przygotowywanie przesyłania…",
+        "mapping": {
+          "title": "Przygotowywanie przesyłania…"
+        },
+        "folders": {
+          "title": "Tworzenie folderów…"
+        },
+        "conflicts": {
+          "title": "Sprawdzanie konfliktów…"
+        },
+        "enqueue": {
+          "title": "Rozpoczynanie przesyłania…"
+        }
+      },
+      "caption": "Znaleziono {{count}} plików",
+      "captionFound": "Znaleziono {{count}} plików",
+      "captionProgress": "{{processed}} / {{total}}",
+      "toasts": {
+        "noneCopied": "Nie przesłano żadnych plików (wszystkie zostały pominięte).",
+        "someItemsSkipped_one": "Pominięto {{count}} element, którego nie udało się odczytać.",
+        "someItemsSkipped_few": "Pominięto {{count}} elementy, których nie udało się odczytać.",
+        "someItemsSkipped_many": "Pominięto {{count}} elementów, których nie udało się odczytać.",
+        "someItemsSkipped_other": "Pominięto {{count}} elementu, którego nie udało się odczytać.",
+        "someItemsSkippedWithExamples_one": "Pominięto {{count}} element (np. {{examples}}).",
+        "someItemsSkippedWithExamples_few": "Pominięto {{count}} elementy (np. {{examples}}).",
+        "someItemsSkippedWithExamples_many": "Pominięto {{count}} elementów (np. {{examples}}).",
+        "someItemsSkippedWithExamples_other": "Pominięto {{count}} elementu (np. {{examples}}).",
+        "more_one": " +{{count}} więcej",
+        "more_few": " +{{count}} więcej",
+        "more_many": " +{{count}} więcej",
+        "more_other": " +{{count}} więcej",
+        "vaultLocked": "Zaszyfrowane przesyłanie wymaga uprzedniego odblokowania sejfu szyfrowania."
+      },
+      "errors": {
+        "dropFailed": "Nie udało się przetworzyć upuszczonych elementów. Spróbuj ponownie."
+      }
+    },
+    "refreshing": "Odświeżanie…",
+    "actions": {
+      "upload": "Wgraj",
+      "newFolder": "Nowy folder",
+      "folderNamePlaceholder": "Nazwa folderu",
+      "goToFolder": "Przejdź do folderu",
+      "goUp": "Wyżej",
+      "dropFiles": "Upuść pliki, aby przesłać",
+      "switchToTilesView": "Przełącz na kafelki",
+      "switchToListView": "Przełącz na widok listy",
+      "switchToTableView": "Przełącz na tabelę",
+      "switchToSmallTilesView": "Małe kafelki",
+      "switchToMediumTilesView": "Średnie kafelki",
+      "switchToLargeTilesView": "Duże kafelki"
+    },
+    "breadcrumbs": {
+      "ariaLabel": "Ścieżka nawigacji",
+      "root": "Pliki"
+    },
+    "empty": {
+      "all": "Ten folder jest pusty"
+    },
+    "selection": {
+      "enter": "Tryb wyboru",
+      "exit": "Wyjdź z trybu wyboru",
+      "selectAll": "Zaznacz wszystko",
+      "deselectAll": "Odznacz wszystko",
+      "deleteSelected": "Usuń zaznaczone",
+      "count_one": "Zaznaczono {{count}} element",
+      "count_few": "Zaznaczono {{count}} elementy",
+      "count_many": "Zaznaczono {{count}} elementów",
+      "count_other": "Zaznaczono {{count}} elementu"
+    },
+    "deleteSelected": {
+      "confirmTitle_one": "Usunąć {{count}} element?",
+      "confirmTitle_few": "Usunąć {{count}} elementy?",
+      "confirmTitle_many": "Usunąć {{count}} elementów?",
+      "confirmTitle_other": "Usunąć {{count}} elementu?",
+      "confirmDescription": "Zaznaczone elementy zostaną przeniesione do Kosza i będzie można je przywrócić później."
+    },
+    "conflicts": {
+      "title": "Plik już istnieje",
+      "description": "Plik o tej nazwie już istnieje w tym folderze. Przesłać jako {{newName}}?",
+      "skip": "Pomiń",
+      "skipAll": "Pomiń wszystko"
+    },
+    "deleteFolder": {
+      "confirmTitle": "Usunąć folder \"{{name}}\"?",
+      "confirmDescription": "Folder zostanie przeniesiony do Kosza i będzie można go przywrócić później."
+    },
+    "deleteFile": {
+      "confirmTitle": "Usunąć plik \"{{name}}\"?",
+      "confirmDescription": "Zostanie przeniesiony do Kosza i będzie można go przywrócić później."
+    },
+    "stats": {
+      "summary": "{{folders}} folderów • {{files}} plików • {{size}}"
+    },
+    "rename": {
+      "fileNamePlaceholder": "Nazwa pliku"
+    },
+    "share": {
+      "copied": "Skopiowano link udostępniania: {{name}}",
+      "shared": "Udostępnianie: {{name}}",
+      "folderCopied": "Skopiowano link do folderu: {{name}}",
+      "folderShared": "Udostępnianie folderu: {{name}}",
+      "message": "Zobacz \"{{name}}\" w Cotton Cloud",
+      "folderMessage": "Zobacz folder \"{{name}}\" w Cotton Cloud",
+      "errors": {
+        "link": "Nie udało się wygenerować linku udostępniania.",
+        "token": "Nie udało się wyodrębnić tokena udostępniania.",
+        "copy": "Nie udało się skopiować linku do schowka."
+      }
+    },
+    "preview": {
+      "actions": {
+        "edit": "Edytuj",
+        "save": "Zapisz",
+        "saving": "Zapisywanie..."
+      },
+      "editorModes": {
+        "text": {
+          "label": "Tekst",
+          "description": "Czysty tekst z zachowanym formatowaniem"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Markdown z podglądem"
+        },
+        "code": {
+          "label": "Kod",
+          "description": "Edytor kodu z podświetlaniem składni"
+        }
+      },
+      "pdf": {
+        "loading": {
+          "link": "Pobieranie linku...",
+          "download": "Pobieranie PDF...",
+          "render": "Renderowanie PDF..."
+        }
+      },
+      "model": {
+        "loading": "Ładowanie modelu 3D...",
+        "actions": {
+          "autoAlign": "Wyrównaj do podłoża",
+          "autoOrient": "Automatyczna orientacja",
+          "cycleLighting": "Oświetlenie: {{preset}}",
+          "cycleSurface": "Powierzchnia: {{preset}}",
+          "flipModel": "Odwróć model",
+          "resetColor": "Użyj oryginalnych kolorów",
+          "toggleShadows": "Cienie: {{state}}",
+          "togglePalette": "Paleta kolorów"
+        },
+        "lighting": {
+          "balanced": "Zrównoważone",
+          "studio": "Studyjne",
+          "dramatic": "Dramatyczne"
+        },
+        "surface": {
+          "original": "Oryginalna",
+          "matte": "Matowa",
+          "glossy": "Błyszcząca",
+          "metal": "Metal",
+          "satin": "Satynowa",
+          "smooth": "Gładka"
+        },
+        "states": {
+          "on": "Wł.",
+          "off": "Wył."
+        }
+      },
+      "language": {
+        "label": "Język"
+      },
+      "mediaQuality": {
+        "previewMode": "Tryb: podgląd",
+        "originalMode": "Tryb: oryginał",
+        "switchToOriginal": "Przełącz na oryginał",
+        "switchToPreview": "Przełącz na podgląd"
+      },
+      "video": {
+        "transcodeNotice": "Przygotowywanie tego wideo do odtwarzania w przeglądarce. Pierwsze uruchomienie lub przewijanie może chwilę potrwać.",
+        "transcodeError": "Ta przeglądarka nie może odtworzyć przygotowanego strumienia wideo."
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować pliku{{error}}",
+        "saveFailed": "Nie udało się zapisać zawartości pliku",
+        "downloadFailed": "Pobieranie nie powiodło się",
+        "pdfLoadFailed": "Nie udało się załadować PDF",
+        "pdfDisplayFailed": "Nie udało się wyświetlić PDF",
+        "modelLoadFailed": "Nie udało się załadować modelu 3D",
+        "modelUnsupportedType": "Ten format pliku 3D nie jest obsługiwany w podglądzie w przeglądarce",
+        "pdfTooLarge": "PDF jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar to {{maxSize}}. Aby go wyświetlić, należy pobrać plik.",
+        "fileTooLarge": "Plik jest zbyt duży, aby wyświetlić podgląd ({{size}}). Maksymalny rozmiar podglądu tekstowego to {{maxSize}}. Aby go wyświetlić, należy pobrać plik."
+      }
+    },
+    "actionsTitle": "Akcje",
+    "size": "Rozmiar",
+    "name": "Nazwa",
+    "location": "Lokalizacja",
+    "noFilesOrFolders": "Brak plików i folderów",
+    "clientEncryption": {
+      "enablePolicy": "Włącz E2E",
+      "disablePolicy": "Wyłącz E2E",
+      "unlockDialog": {
+        "title": "Odblokuj szyfrowanie po stronie klienta",
+        "currentTitle": "Ten folder jest zaszyfrowany",
+        "goHome": "Przejdź do strony głównej"
+      },
+      "mixedPlain": {
+        "title": "Niektóre pliki nie są szyfrowane E2E",
+        "description_one": "{{count}} istniejący plik jest nadal przechowywany bez szyfrowania E2E.",
+        "description_few": "{{count}} istniejące pliki są nadal przechowywane bez szyfrowania E2E.",
+        "description_many": "{{count}} istniejących plików jest nadal przechowywanych bez szyfrowania E2E.",
+        "description_other": "{{count}} istniejącego pliku jest nadal przechowywanych bez szyfrowania E2E.",
+        "toast_one": "{{count}} plik w tym folderze nie jest szyfrowany E2E.",
+        "toast_few": "{{count}} pliki w tym folderze nie są szyfrowane E2E.",
+        "toast_many": "{{count}} plików w tym folderze nie jest szyfrowanych E2E.",
+        "toast_other": "{{count}} pliku w tym folderze nie jest szyfrowanych E2E.",
+        "action": "Zaszyfruj",
+        "running": "Szyfrowanie"
+      },
+      "movedEncrypted": {
+        "toast_one": "{{count}} zaszyfrowany plik został przeniesiony do folderu bez automatycznego E2E.",
+        "toast_few": "{{count}} zaszyfrowane pliki zostały przeniesione do folderu bez automatycznego E2E.",
+        "toast_many": "{{count}} zaszyfrowanych plików zostało przeniesionych do folderu bez automatycznego E2E.",
+        "toast_other": "{{count}} zaszyfrowanego pliku zostało przeniesionych do folderu bez automatycznego E2E.",
+        "action": "Odszyfruj"
+      },
+      "encryptedFilesRemain": {
+        "title": "Zaszyfrowane pliki pozostają zaszyfrowane",
+        "description_one": "{{count}} plik pozostaje zaszyfrowany, mimo że nowe przesyłania nie są już szyfrowane automatycznie.",
+        "description_few": "{{count}} pliki pozostają zaszyfrowane, mimo że nowe przesyłania nie są już szyfrowane automatycznie.",
+        "description_many": "{{count}} plików pozostaje zaszyfrowanych, mimo że nowe przesyłania nie są już szyfrowane automatycznie.",
+        "description_other": "{{count}} pliku pozostaje zaszyfrowanych, mimo że nowe przesyłania nie są już szyfrowane automatycznie.",
+        "toast_one": "{{count}} zaszyfrowany plik pozostaje w tym folderze.",
+        "toast_few": "{{count}} zaszyfrowane pliki pozostają w tym folderze.",
+        "toast_many": "{{count}} zaszyfrowanych plików pozostaje w tym folderze.",
+        "toast_other": "{{count}} zaszyfrowanego pliku pozostaje w tym folderze.",
+        "action": "Odszyfruj"
+      },
+      "toasts": {
+        "policyEnabled": "Nowe pliki przesyłane do tego folderu będą szyfrowane na tym urządzeniu.",
+        "policyDisabled": "Nowe pliki przesyłane do tego folderu nie będą już szyfrowane automatycznie.",
+        "policyToggleFailed": "Nie udało się zaktualizować polityki szyfrowania.",
+        "setupRequired": "Skonfiguruj szyfrowanie po stronie klienta przed otwarciem tego folderu.",
+        "unlockRequired": "Najpierw odblokuj szyfrowanie po stronie klienta.",
+        "encryptExistingComplete_one": "Zaszyfrowano {{count}} istniejący plik.",
+        "encryptExistingComplete_few": "Zaszyfrowano {{count}} istniejące pliki.",
+        "encryptExistingComplete_many": "Zaszyfrowano {{count}} istniejących plików.",
+        "encryptExistingComplete_other": "Zaszyfrowano {{count}} istniejącego pliku.",
+        "encryptExistingFailed_one": "Nie udało się zaszyfrować {{count}} pliku. Sprawdź panel zadań.",
+        "encryptExistingFailed_few": "Nie udało się zaszyfrować {{count}} plików. Sprawdź panel zadań.",
+        "encryptExistingFailed_many": "Nie udało się zaszyfrować {{count}} plików. Sprawdź panel zadań.",
+        "encryptExistingFailed_other": "Nie udało się zaszyfrować {{count}} pliku. Sprawdź panel zadań.",
+        "decryptExistingComplete_one": "Odszyfrowano {{count}} plik.",
+        "decryptExistingComplete_few": "Odszyfrowano {{count}} pliki.",
+        "decryptExistingComplete_many": "Odszyfrowano {{count}} plików.",
+        "decryptExistingComplete_other": "Odszyfrowano {{count}} pliku.",
+        "decryptExistingFailed_one": "Nie udało się odszyfrować {{count}} pliku. Sprawdź panel zadań.",
+        "decryptExistingFailed_few": "Nie udało się odszyfrować {{count}} plików. Sprawdź panel zadań.",
+        "decryptExistingFailed_many": "Nie udało się odszyfrować {{count}} plików. Sprawdź panel zadań.",
+        "decryptExistingFailed_other": "Nie udało się odszyfrować {{count}} pliku. Sprawdź panel zadań."
+      }
+    }
+  },
+  "tasks": {
+    "title": "Zadania",
+    "error": "Błąd",
+    "errors": {
+      "serverSettingsNotLoaded": "Ustawienia serwera nie są załadowane",
+      "uploadFailed": "Przesyłanie nie powiodło się",
+      "storageQuotaExceeded": "Brak wystarczającego miejsca. Dostępne: {{available}}.",
+      "encryptionVaultLocked": "Sejf szyfrowania jest zablokowany",
+      "encryptionFailed": "Szyfrowanie nie powiodło się",
+      "decryptionFailed": "Odszyfrowywanie nie powiodło się",
+      "clientEncryptionFileTooLarge": "Ten plik jest zbyt duży dla bieżącego przetwarzania szyfrowanych plików. Limit: {{maxSize}}."
+    },
+    "titleWithTotal": "Zadania ({{total}})",
+    "titleWithProgress": "Zadania ({{completed}} / {{total}} - {{speed}}/s)",
+    "titleWithErrors": "Zadania ({{total}} • {{failed}} nieudanych)",
+    "actions": {
+      "expand": "Rozwiń",
+      "collapse": "Zwiń",
+      "close": "Zamknij",
+      "clearFinished": "Wyczyść zakończone"
+    },
+    "status": {
+      "queued": "W kolejce",
+      "running": "Trwa",
+      "finalizing": "Finalizowanie",
+      "completed": "Zakończone",
+      "failed": "Nieudane"
+    }
+  },
+  "trash": {
+    "title": "Kosz",
+    "loading": {
+      "title": "Ładowanie kosza...",
+      "caption": "Proszę czekać, trwa ładowanie zawartości kosza."
+    },
+    "error": "Nie udało się załadować zawartości kosza",
+    "empty": "Kosz jest pusty",
+    "actions": {
+      "goUp": "Wyżej",
+      "trashRoot": "Główny katalog kosza",
+      "switchToList": "Przełącz na widok listy",
+      "switchToTiles": "Przełącz na widok kafelków",
+      "switchToListView": "Przełącz na widok listy",
+      "switchToTilesView": "Przełącz na widok kafelków",
+      "switchToTableView": "Przełącz na tabelę",
+      "switchToSmallTilesView": "Małe kafelki",
+      "switchToMediumTilesView": "Średnie kafelki",
+      "switchToLargeTilesView": "Duże kafelki",
+      "emptyTrash": "Opróżnij kosz"
+    },
+    "breadcrumbs": {
+      "root": "Kosz"
+    },
+    "stats": {
+      "summary": "{{folders}} folderów, {{files}} plików, {{size}}"
+    },
+    "deleteFolderForever": {
+      "confirmTitle": "Usunąć folder \"{{name}}\"?",
+      "confirmDescription": "Tej operacji nie można cofnąć. Cała zawartość folderu zostanie usunięta."
+    },
+    "deleteFile": {
+      "confirmTitle": "Usunąć plik \"{{name}}\"?",
+      "confirmDescription": "Tej operacji nie można cofnąć."
+    },
+    "deleteFileForever": {
+      "confirmTitle": "Usunąć plik \"{{name}}\"?",
+      "confirmDescription": "Tej operacji nie można cofnąć."
+    },
+    "deleteSelectedForever": {
+      "confirmTitle_one": "Usunąć trwale {{count}} element?",
+      "confirmTitle_few": "Usunąć trwale {{count}} elementy?",
+      "confirmTitle_many": "Usunąć trwale {{count}} elementów?",
+      "confirmTitle_other": "Usunąć trwale {{count}} elementu?",
+      "confirmDescription": "Tej operacji nie można cofnąć. Zaznaczone elementy zostaną trwale usunięte."
+    },
+    "emptyTrash": {
+      "confirmTitle": "Opróżnić kosz?",
+      "confirmDescription": "Tej operacji nie można cofnąć. Wszystkie elementy w koszu zostaną trwale usunięte.",
+      "inProgress": "Usuwanie {{current}} z {{total}} elementów...",
+      "completed": "Kosz został pomyślnie opróżniony"
+    },
+    "restore": {
+      "action": "Przywróć",
+      "inProgress": "Przywracanie {{current}} z {{total}}: {{name}}",
+      "failed": "Nie udało się przywrócić \"{{name}}\"",
+      "notRestorable": "Elementu nie można przywrócić.",
+      "rootFolder": "folder główny",
+      "confirm": {
+        "title": "Przywrócić element?",
+        "description": "\"{{name}}\" zostanie przywrócony do \"{{path}}\".",
+        "confirm": "Przywróć"
+      },
+      "applyToAll": "Zastosuj ten wybór do pozostałych elementów",
+      "skip": "Pomiń",
+      "parentMissing": {
+        "title": "Brak lokalizacji przywracania",
+        "description": "\"{{name}}\" został usunięty z \"{{path}}\", ale ten folder już nie istnieje. Utworzyć brakującą ścieżkę folderu i przywrócić tam element?",
+        "confirm": "Utwórz i przywróć"
+      },
+      "conflict": {
+        "title": "Element już istnieje",
+        "description": "\"{{name}}\" jest w konflikcie z istniejącym elementem typu {{kind}} o nazwie \"{{conflictName}}\". Przenieść istniejący element do kosza i przywrócić ten?",
+        "confirm": "Zastąp",
+        "folderKind": "folder",
+        "fileKind": "plik"
+      }
+    }
+  },
+  "admin": {
+    "title": "Administrator",
+    "menu": {
+      "navigate": "Sekcja",
+      "users": "Użytkownicy",
+      "usersAndGroups": "Użytkownicy i grupy",
+      "generalSettings": "Ustawienia ogólne",
+      "privacySettings": "Prywatność i bezpieczeństwo",
+      "storageSettings": "Magazyn",
+      "storageAndStatistics": "Magazyn i statystyki",
+      "notificationsSettings": "Powiadomienia",
+      "databaseBackup": "Kopia zapasowa bazy danych",
+      "storageStatistics": "Statystyki magazynu",
+      "securityDiagnostics": "Przegląd bezpieczeństwa",
+      "groups": "Grupy"
+    },
+    "roles": {
+      "user": "Użytkownik",
+      "admin": "Administrator",
+      "unknown": "Nieznana"
+    },
+    "users": {
+      "title": "Użytkownicy",
+      "refresh": "Odśwież",
+      "loading": "Ładowanie użytkowników...",
+      "empty": "Brak użytkowników",
+      "columns": {
+        "username": "Nazwa użytkownika",
+        "email": "E-mail",
+        "role": "Rola",
+        "firstName": "Imię",
+        "lastName": "Nazwisko",
+        "birthDate": "Data urodzenia",
+        "totp": "2FA",
+        "sessions": "Sesje",
+        "storageUsed": "Wykorzystane miejsce",
+        "lastActivity": "Ostatnia aktywność",
+        "actions": "Akcje"
+      },
+      "actions": {
+        "edit": "Edytuj"
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować użytkowników.",
+        "createFailed": "Nie udało się utworzyć użytkownika.",
+        "updateFailed": "Nie udało się zaktualizować użytkownika."
+      },
+      "create": {
+        "title": "Utwórz użytkownika",
+        "username": "Nazwa użytkownika",
+        "email": "E-mail",
+        "password": "Hasło",
+        "role": "Rola",
+        "firstName": "Imię",
+        "lastName": "Nazwisko",
+        "birthDate": "Data urodzenia",
+        "button": "Utwórz",
+        "creating": "Tworzenie...",
+        "success": "Użytkownik utworzony."
+      },
+      "edit": {
+        "title": "Edytuj użytkownika",
+        "save": "Zapisz",
+        "saving": "Zapisywanie...",
+        "success": "Użytkownik zaktualizowany."
+      },
+      "storageUsage": {
+        "calculating": "Obliczanie wykorzystania magazynu"
+      }
+    },
+    "settings": {
+      "actions": {
+        "save": "Zapisz",
+        "saving": "Zapisywanie...",
+        "close": "Zamknij"
+      },
+      "state": {
+        "saved": "Ustawienia zapisane."
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować ustawień.",
+        "saveFailed": "Nie udało się zapisać ustawień."
+      },
+      "general": {
+        "title": "Ustawienia ogólne",
+        "description": "Podstawowe zachowanie serwera i wyszukiwanie lokalizacji dla powiadomień.",
+        "fields": {
+          "publicBaseUrl": "Publiczny bazowy URL",
+          "timezone": "Strefa czasowa",
+          "telemetry": "Telemetria",
+          "allowDeduplication": "Deduplikacja między użytkownikami",
+          "allowGlobalIndexing": "Indeksowanie globalne",
+          "serverUsage": "Wykorzystanie serwera",
+          "storageSpaceMode": "Tryb wykorzystania miejsca",
+          "computionMode": "Tryb obliczeń",
+          "geoIpLookupMode": "Tryb rozpoznawania IP",
+          "customGeoIpLookupUrl": "Własny URL rozpoznawania IP"
+        },
+        "validation": {
+          "required": "To pole jest wymagane.",
+          "publicBaseUrlInvalid": "Wprowadź prawidłowy bazowy URL HTTP lub HTTPS bez danych logowania, parametrów zapytania ani fragmentu.",
+          "publicBaseUrlMismatch": "Bieżący adres to {{current}}, ale generowane publiczne linki będą używać {{configured}}. Zachowaj ostrożność przed zapisaniem tej wartości.",
+          "timezoneInvalid": "Wybierz prawidłową strefę czasową IANA z listy.",
+          "customGeoIpLookupUrlInvalid": "Wprowadź prawidłowy URL HTTP lub HTTPS."
+        },
+        "help": {
+          "publicBaseUrl": "Mimo tego ustawienia Cotton niemal wszędzie automatycznie ustala publiczny URL. Ustaw to tylko wtedy, gdy automatyczne wykrywanie jest nieprawidłowe.",
+          "timezone": "Pomaga to uniknąć uruchamiania zadań w tle podczas snu, aby dyski nie pracowały w nocy.",
+          "telemetry": "Cotton zbiera minimalne techniczne dane diagnostyczne, dzięki którym programista może zobaczyć błędy i je naprawić, ponieważ nie wszyscy zgłaszają problemy. Włączenie telemetrii odblokowuje również usługi w chmurze od razu po instalacji.",
+          "allowDeduplication": "Określa, czy jeden użytkownik może dowiedzieć się, że inny użytkownik już przechowuje ten sam plik. Gdy opcja jest wyłączona, identyczne dane są nadal deduplikowane po stronie serwera po przesłaniu, ale są niepotrzebnie przesyłane jako pierwsze. Gdy opcja jest włączona, inny użytkownik może dowiedzieć się, że ktoś w tej chmurze przesłał wcześniej ten plik. To jest bezpieczne w gronie rodziny i zaufanych znajomych.",
+          "allowGlobalIndexing": "Pozwala serwerowi odszyfrować pliki użytkowników i zbudować głęboki indeks wyszukiwania. Bez tego wyszukiwanie używa tylko nazw plików i folderów.",
+          "serverUsage": "Optymalizuje rekomendacje funkcji i kilka ustawień. To nie jest krytyczny parametr, więc wybierz, co pasuje."
+        },
+        "serverUsage": {
+          "Photos": "Zdjęcia",
+          "Documents": "Dokumenty",
+          "Media": "Multimedia",
+          "Other": "Inne"
+        },
+        "storageSpaceMode": {
+          "Optimal": "Zrównoważony",
+          "Limited": "Oszczędzanie miejsca",
+          "Unlimited": "Bez ograniczeń"
+        },
+        "storageSpaceHelp": {
+          "open": "Na co wpływa tryb wykorzystania miejsca?",
+          "title": "Tryb wykorzystania miejsca",
+          "description": "Określa, jak agresywnie Cotton używa i zwalnia magazyn: czas odśmiecania pamięci, czyszczenie danych bez odniesień, ponowne wykorzystanie pamięci podręcznej/danych oraz to, ile starych wersji plików może pozostać dostępnych. Za każdym razem, gdy plik jest aktualizowany, Cotton zachowuje kopię cienia, utrzymując odniesienie do poprzednich danych pliku, dopóki czyszczenie ich nie usunie. Tryb bez ograniczeń przechowuje dane dłużej i czyści głównie wtedy, gdy potrzebne jest miejsce; Oszczędzanie miejsca zwalnia magazyn szybciej. Zrównoważony znajduje się pośrodku tych dwóch."
+        },
+        "computionMode": {
+          "Local": "Lokalny",
+          "Remote": "Zdalny runner",
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "Ta funkcja jest jeszcze w fazie rozwoju."
+        },
+        "geoIpLookupMode": {
+          "Disabled": "Wyłączone",
+          "CottonCloud": "Usługa w chmurze",
+          "MaxMindLocal": "GeoIP Light",
+          "CustomHttp": "Własny HTTP"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "Nie rozpoznawaj adresów IP.",
+          "CottonCloud": "Rozpoznawanie adresów IP przez dostawcę Cotton. Może być używane np. w powiadomieniach bezpieczeństwa.",
+          "MaxMindLocal": "Rozpoznawanie adresów IP lokalnie za pomocą bazy/paczki GeoIP Light.",
+          "CustomHttp": "Wklej URL do własnej usługi. Cotton spróbuje automatycznie wyodrębnić pola związane z lokalizacją z JSON."
+        },
+        "actions": {
+          "testGeoIpProvider": "Testuj dostawcę"
+        },
+        "state": {
+          "geoIpTestPassed": "Test własnego resolvera zakończony pomyślnie."
+        },
+        "openSetupWizard": {
+          "title": "Otwórz kreator konfiguracji",
+          "description": "Przejdź ponownie kreator konfiguracji pierwszego uruchomienia.",
+          "button": "Otwórz"
+        }
+      },
+      "privacy": {
+        "title": "Prywatność i bezpieczeństwo",
+        "description": "Określa, jak dane opuszczają serwer i jak pliki użytkowników mogą być dostępne dla funkcji współdzielonych."
+      }
+    },
+    "storageSettings": {
+      "title": "Magazyn",
+      "description": "Najpierw skonfiguruj dane logowania magazynu, a następnie przełącz aktywny backend magazynu.",
+      "fields": {
+        "storageType": "Backend magazynu"
+      },
+      "quota": {
+        "title": "Domyślny limit użytkownika",
+        "description": "Ogranicza ilość unikalnych przesłanych treści, które może posiadać każdy użytkownik. Pozostaw puste, aby konta były bez ograniczeń.",
+        "fields": {
+          "defaultUserQuotaGiB": "Limit na użytkownika, GiB"
+        },
+        "help": "Użyj 0 lub pozostaw puste, aby było bez ograniczeń."
+      },
+      "template": {
+        "title": "Pliki domyślne",
+        "description": "Kopiuje zawartość tego folderu do każdego nowo utworzonego konta użytkownika.",
+        "fields": {
+          "nodeId": "ID węzła folderu szablonu"
+        },
+        "help": "Pozostaw puste, aby wyłączyć. Ustaw to na ID węzła folderu zawierającego pliki wprowadzające lub demonstracyjne."
+      },
+      "storageType": {
+        "Local": "Lokalny dysk",
+        "S3": "Magazyn zgodny z S3"
+      },
+      "s3": {
+        "title": "Konfiguracja S3",
+        "fields": {
+          "endpoint": "URL punktu końcowego",
+          "region": "Region",
+          "bucket": "Kubełek",
+          "accessKey": "Klucz dostępu",
+          "secretKey": "Klucz tajny"
+        }
+      },
+      "actions": {
+        "saveS3": "Zapisz konfigurację S3",
+        "useLocal": "Użyj magazynu lokalnego",
+        "useS3": "Zapisz konfigurację i użyj S3"
+      },
+      "state": {
+        "s3Saved": "Konfiguracja S3 zapisana.",
+        "storageSaved": "Tryb magazynu zaktualizowany."
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować ustawień magazynu.",
+        "s3SaveFailed": "Nie udało się zapisać konfiguracji S3.",
+        "storageSaveFailed": "Nie udało się przełączyć trybu magazynu.",
+        "quotaSaveFailed": "Nie udało się zapisać domyślnego limitu użytkownika.",
+        "templateSaveFailed": "Nie udało się zapisać szablonu plików domyślnych."
+      }
+    },
+    "notificationsSettings": {
+      "title": "Powiadomienia",
+      "description": "Skonfiguruj, jak Cotton wysyła powiadomienia dotyczące konta i bezpieczeństwa.",
+      "fields": {
+        "emailMode": "Tryb powiadomień"
+      },
+      "emailMode": {
+        "None": "Wyłączone",
+        "Cloud": "Cotton Cloud Mail",
+        "Custom": "Własny SMTP"
+      },
+      "smtp": {
+        "title": "Konfiguracja SMTP",
+        "fields": {
+          "smtpServer": "Serwer SMTP",
+          "port": "Port",
+          "username": "Nazwa użytkownika",
+          "password": "Hasło",
+          "fromAddress": "Adres nadawcy",
+          "useSSL": "Użyj SSL/TLS"
+        }
+      },
+      "actions": {
+        "saveSmtp": "Zapisz konfigurację SMTP",
+        "testSmtp": "Testuj SMTP",
+        "saveMode": "Zapisz tryb poczty",
+        "saving": "Zapisywanie...",
+        "testSmtpShort": "Testuj"
+      },
+      "state": {
+        "smtpSaved": "Konfiguracja SMTP zapisana.",
+        "testSent": "Wysłano testową wiadomość e-mail.",
+        "modeSaved": "Tryb powiadomień zaktualizowany."
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować ustawień powiadomień.",
+        "smtpSaveFailed": "Nie udało się zapisać konfiguracji SMTP.",
+        "testFailed": "Nie udało się wysłać testowej wiadomości e-mail.",
+        "modeSaveFailed": "Nie udało się zapisać trybu powiadomień."
+      }
+    },
+    "databaseBackup": {
+      "title": "Kopia zapasowa bazy danych",
+      "description": "Najnowszy manifest kopii zapasowej z serwera.",
+      "actions": {
+        "refresh": "Odśwież",
+        "trigger": "Uruchom kopię zapasową",
+        "triggering": "Uruchamianie..."
+      },
+      "state": {
+        "loading": "Ładowanie informacji o kopii zapasowej...",
+        "empty": "Nie znaleziono jeszcze żadnych kopii zapasowych.",
+        "triggerSuccess": "Zadanie kopii zapasowej zostało uruchomione.",
+        "restoreIfEmptyHint": "Jeśli baza danych zostanie utracona i chcesz, aby została automatycznie przywrócona, ustaw COTTON_RESTORE_DATABASE_IF_EMPTY=true w środowisku kontenera. Aby to zadziałało, baza danych musi być pusta, bez żadnych tabel."
+      },
+      "fields": {
+        "backupId": "ID kopii zapasowej",
+        "createdAtUtc": "Utworzono",
+        "pointerUpdatedAtUtc": "Wskaźnik zaktualizowany",
+        "dumpSizeBytes": "Rozmiar zrzutu",
+        "chunkCount": "Liczba fragmentów",
+        "dumpContentHash": "Hash zawartości zrzutu",
+        "sourceDatabase": "Źródłowa baza danych",
+        "sourceHost": "Źródłowy host",
+        "sourcePort": "Źródłowy port"
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować informacji o kopii zapasowej.",
+        "triggerFailed": "Nie udało się uruchomić kopii zapasowej."
+      }
+    },
+    "storageStatistics": {
+      "title": "Statystyki magazynu",
+      "description": "Bieżące wykorzystanie magazynu i harmonogram zwalniania przez GC.",
+      "actions": {
+        "refresh": "Odśwież",
+        "triggerGc": "Uruchom GC",
+        "triggeringGc": "Uruchamianie..."
+      },
+      "bucket": {
+        "hour": "Godzina",
+        "day": "Dzień"
+      },
+      "state": {
+        "loading": "Ładowanie statystyk magazynu...",
+        "empty": "Brak zaplanowanych przedziałów GC w wybranym okresie.",
+        "triggerGcSuccess": "Zadanie odśmiecania pamięci zostało uruchomione."
+      },
+      "summary": {
+        "fromUtc": "Od",
+        "toUtc": "Do",
+        "totalChunks": "Łączna liczba fragmentów do zwolnienia",
+        "totalSizeBytes": "Łączny rozmiar do zwolnienia",
+        "generatedAtUtc": "Wygenerowano"
+      },
+      "storage": {
+        "title": "Łączne wykorzystanie magazynu",
+        "fields": {
+          "storageType": "Typ magazynu",
+          "totalUniqueChunkCount": "Łączna liczba unikalnych fragmentów",
+          "totalUniqueChunkPlainSizeBytes": "Łączny rozmiar surowy (unikalny)",
+          "totalUniqueChunkStoredSizeBytes": "Łączny rozmiar przechowywany (unikalny)",
+          "referencedUniqueChunkCount": "Unikalne fragmenty z odniesieniami",
+          "referencedLogicalChunkCount": "Logiczne fragmenty z odniesieniami",
+          "deduplicatedUniqueChunkCount": "Zdeduplikowane unikalne fragmenty",
+          "dedupSavedBytes": "Zaoszczędzono przez deduplikację",
+          "compressionSavedBytes": "Zaoszczędzono przez kompresję",
+          "pendingGcChunkCount": "Fragmenty oczekujące na GC",
+          "pendingGcStoredSizeBytes": "Rozmiar oczekujący na GC",
+          "overdueGcChunkCount": "Fragmenty zaległe w GC",
+          "overdueGcStoredSizeBytes": "Rozmiar zaległy w GC"
+        }
+      },
+      "timeline": {
+        "title": "Harmonogram zwalniania przez GC",
+        "columns": {
+          "bucketStartUtc": "Czas zwolnienia",
+          "chunkCount": "Fragmenty",
+          "sizeBytes": "Rozmiar"
+        }
+      },
+      "errors": {
+        "loadFailed": "Nie udało się załadować statystyk magazynu.",
+        "triggerGcFailed": "Nie udało się uruchomić odśmiecania pamięci."
+      }
+    },
+    "securityDiagnostics": {
+      "title": "Przegląd bezpieczeństwa",
+      "description": "Kontrole po stronie serwera dotyczące higieny konta, obsługi klucza głównego i ekspozycji pamięci procesu.",
+      "errors": {
+        "loadFailed": "Nie udało się załadować diagnostyki bezpieczeństwa."
+      },
+      "severity": {
+        "critical": "Krytyczne",
+        "warning": "Ostrzeżenie",
+        "info": "Informacja"
+      },
+      "levels": {
+        "strong": {
+          "title": "Silne zabezpieczenia",
+          "summary": "Ta instancja ma oczekiwane zabezpieczenia produkcyjne. Nadaje się do publicznego udostępnienia, jeśli ufasz również hostowi i kopiom zapasowym."
+        },
+        "good": {
+          "title": "Dobra baza dla samodzielnego hostingu",
+          "summary": "Jest to dobre dla rodziny lub małego zespołu. Pozostałe elementy to głównie utwardzenie operacyjne i higiena konta."
+        },
+        "home": {
+          "title": "Baza do użytku domowego",
+          "summary": "Jest to rozsądne dla użytku domowego i codziennego, ale nie traktuj hosta jako wrogiego. Kompromitacja serwera może nadal ujawnić klucze lub dostęp administratora."
+        },
+        "exposed": {
+          "title": "Pozostają realne ścieżki ataku",
+          "summary": "Instancja ma problemy, które lokalny atakujący, skompromitowany kontener lub skradzione hasło administratora mogą realnie wykorzystać."
+        },
+        "unsafe": {
+          "title": "Niebezpieczne dla danych wrażliwych",
+          "summary": "Napraw krytyczne ostrzeżenia przed przechowywaniem wartościowych danych prywatnych. Na tym poziomie klucz główny lub kontrola administratora mogą być zbyt łatwo dostępne."
+        }
+      },
+      "chips": {
+        "publicInstance": "Instancja publiczna",
+        "privateInstance": "Instancja prywatna",
+        "envKey": "Klucz ze środowiska",
+        "memoryUnlock": "Odblokowanie z pamięci",
+        "adminTotp": "{{withTotp}}/{{total}} administratorów ma 2FA"
+      },
+      "sections": {
+        "risks": "Wektory zagrożeń",
+        "instance": "Instancja i konta",
+        "masterKey": "Klucz główny",
+        "memory": "Ekspozycja pamięci procesu",
+        "runtime": "Fakty środowiska uruchomieniowego"
+      },
+      "risks": {
+        "empty": "Bieżące kontrole po stronie serwera nie wykryły żadnych ostrzeżeń."
+      },
+      "fields": {
+        "publicInstance": "Rejestracja publiczna",
+        "admins": "Administratorzy z 2FA",
+        "adminsWithoutTotp": "Administratorzy bez 2FA",
+        "masterKeySource": "Źródło",
+        "envWasConfigured": "Zmienna środowiskowa skonfigurowana",
+        "envPresent": "Zmienna środowiskowa nadal obecna",
+        "dotnetDiagnostics": "Diagnostyka .NET wyłączona",
+        "processHardening": "Zastosowano utwardzenie procesu",
+        "dumpable": "Stan dumpable",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "System operacyjny",
+        "container": "Wykryto kontener",
+        "euid": "Efektywny UID",
+        "noNewPrivileges": "Bez nowych uprawnień",
+        "seccomp": "Tryb seccomp",
+        "capabilities": "Efektywne uprawnienia"
+      },
+      "values": {
+        "unknown": "Nieznane",
+        "yes": "Tak",
+        "no": "Nie",
+        "notDumpable": "Niedumpowalny",
+        "dumpable": "Dumpowalny"
+      },
+      "threatVectors": {
+        "public-instance": "Odwiedzający z internetu mogą zakładać konta i przechowywać treści. Limity, domyślne dane demonstracyjne oraz monitorowanie nadużyć stają się częścią granicy bezpieczeństwa.",
+        "master-key-from-environment": "Jeśli metadane wdrożenia, historia powłoki lub inspekcja kontenera ujawniają zmienne środowiskowe, klucz główny może znajdować się blisko zaszyfrowanych danych, które chroni.",
+        "admins-without-2fa": "Hasło administratora staje się jedynym czynnikiem. Ponowne użycie hasła, phishing lub wyciekłe sesje przeglądarki mogą przerodzić się w pełną kontrolę nad instancją.",
+        "dotnet-diagnostics-enabled": "Lokalny proces z odpowiednimi uprawnieniami może zażądać od środowiska .NET zrzutów lub śledzeń, a te zrzuty mogą zawierać aktywne sekrety z pamięci.",
+        "process-dumpable": "Proces z tym samym UID lub debuger z możliwością ptrace może zrzucić pamięć serwera i wyszukać w niej klucz główny.",
+        "sys-ptrace-capability": "Kontener debugowania lub uprzywilejowany może sprawdzać i zmieniać pamięć procesu. To właśnie ta możliwość, której klucze wyłącznie pamięciowe próbują unikać.",
+        "new-privileges-allowed": "Jeśli skompromitowany kod znajdzie pomocnika setuid lub binarkę z uprawnieniami, ma szerszą drogę do uzyskania uprawnień wewnątrz kontenera.",
+        "seccomp-disabled": "Powierzchnia wywołań systemowych jądra jest szersza niż w normalnej produkcyjnej bazie Dockera, więc błąd ucieczki z kontenera dostaje więcej przestrzeni.",
+        "running-as-root": "Zdalne wykonanie kodu odbywałoby się jako root wewnątrz kontenera, co zwiększa szkody dla zamontowanych wolumenów i procesów pomocniczych.",
+        "process-hardening-failed": "Cotton zażądał utwardzenia procesu, ale proces nadal uruchomił się bez oczekiwanej ochrony przed zrzutami lub ptrace."
+      }
+    },
+    "groups": {
+      "title": "Grupy",
+      "description": "Zarządzaj grupami dostępu oddzielnie od poszczególnych użytkowników.",
+      "inDevelopment": "Zarządzanie grupami jest w fazie rozwoju."
+    }
+  },
+  "routes": {
+    "login": "Logowanie",
+    "home": "Strona główna",
+    "files": "Pliki",
+    "trash": "Kosz",
+    "profile": "Profil",
+    "settings": "Ustawienia",
+    "admin": "Administrator"
+  },
+  "resetPassword": {
+    "title": "Resetuj hasło",
+    "newPassword": "Nowe hasło",
+    "confirmPassword": "Potwierdź nowe hasło",
+    "submit": "Resetuj hasło",
+    "submitting": "Resetowanie...",
+    "success": "Hasło zostało pomyślnie zresetowane. Można teraz zalogować się przy użyciu nowego hasła.",
+    "goToLogin": "Przejdź do aplikacji",
+    "errors": {
+      "mismatch": "Hasła nie są zgodne.",
+      "invalidToken": "Link do resetu jest nieprawidłowy lub wygasł.",
+      "failed": "Nie udało się zresetować hasła. Spróbuj ponownie."
+    }
+  },
+  "verifyEmail": {
+    "title": "Weryfikacja adresu e-mail",
+    "verifying": "Weryfikowanie adresu e-mail...",
+    "success": "Twój adres e-mail został pomyślnie zweryfikowany!",
+    "goToLogin": "Przejdź do aplikacji",
+    "goToSettings": "Przejdź do ustawień",
+    "errors": {
+      "invalidToken": "Link weryfikacyjny jest nieprawidłowy lub wygasł.",
+      "failed": "Nie udało się zweryfikować adresu e-mail. Spróbuj ponownie."
+    }
+  },
+  "unlock": {
+    "title": "Odblokuj Cotton",
+    "caption": "Serwer oczekuje na klucz główny przed uruchomieniem aplikacji.",
+    "checking": {
+      "title": "Sprawdzanie stanu blokady",
+      "caption": "Cotton przygotowuje bezpieczny proces uruchamiania."
+    },
+    "masterKey": "Klucz główny",
+    "bootstrapToken": "Token bootstrap",
+    "bootstrapRequired": "Pierwsze odblokowanie wymaga tokena bootstrap z logów serwera.",
+    "bootstrapRequiredWithExpiry": "Pierwsze odblokowanie wymaga tokena bootstrap z logów serwera. Wygasa o {{expiresAt}}.",
+    "unlock": "Odblokuj",
+    "unlocking": "Odblokowywanie",
+    "generate": "Wygeneruj",
+    "generating": "Generowanie",
+    "generated": "Wygenerowano. Zapisz ten klucz przed odblokowaniem.",
+    "generatedToast": "Wygenerowano klucz główny",
+    "generateFailed": "Nie udało się wygenerować klucza.",
+    "unlocked": "Klucz główny zaakceptowany. Cotton się uruchamia.",
+    "unlockFailed": "Odblokowanie nie powiodło się.",
+    "showKey": "Pokaż klucz",
+    "hideKey": "Ukryj klucz",
+    "copyKey": "Kopiuj klucz",
+    "copied": "Skopiowano",
+    "copyFailed": "Nie udało się skopiować klucza"
+  }
+}
