@@ -571,7 +571,8 @@
         "label": "Language",
         "en": "English",
         "ru": "Russian",
-        "es": "Español"
+        "es": "Español",
+        "de": "Deutsch"
       }
     },
     "shareLinks": {
@@ -1390,6 +1391,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Server settings are not loaded",
       "uploadFailed": "Upload failed",
+      "storageQuotaExceeded": "Not enough storage space. Available: {{available}}.",
       "encryptionVaultLocked": "Encryption vault is locked",
       "encryptionFailed": "Encryption failed",
       "decryptionFailed": "Decryption failed",
@@ -1501,7 +1503,9 @@
       "storageAndStatistics": "Storage and statistics",
       "notificationsSettings": "Notifications",
       "databaseBackup": "Database backup",
-      "storageStatistics": "Storage statistics"
+      "storageStatistics": "Storage statistics",
+      "securityDiagnostics": "Security checkup",
+      "groups": "Groups"
     },
     "roles": {
       "user": "User",
@@ -1552,6 +1556,9 @@
         "save": "Save",
         "saving": "Saving...",
         "success": "User updated."
+      },
+      "storageUsage": {
+        "calculating": "Calculating storage usage"
       }
     },
     "settings": {
@@ -1654,6 +1661,22 @@
       "fields": {
         "storageType": "Storage backend"
       },
+      "quota": {
+        "title": "Default user quota",
+        "description": "Limits how much unique uploaded content each user can own. Leave it empty for unlimited accounts.",
+        "fields": {
+          "defaultUserQuotaGiB": "Quota per user, GiB"
+        },
+        "help": "Use 0 or empty for unlimited."
+      },
+      "template": {
+        "title": "Default files",
+        "description": "Copies the contents of this folder into every newly created user account.",
+        "fields": {
+          "nodeId": "Template folder node ID"
+        },
+        "help": "Leave empty to disable. Set this to a folder node ID that contains onboarding or demo files."
+      },
       "storageType": {
         "Local": "Local disk",
         "S3": "S3-compatible storage"
@@ -1680,7 +1703,9 @@
       "errors": {
         "loadFailed": "Failed to load storage settings.",
         "s3SaveFailed": "Failed to save S3 configuration.",
-        "storageSaveFailed": "Failed to switch storage mode."
+        "storageSaveFailed": "Failed to switch storage mode.",
+        "quotaSaveFailed": "Failed to save default user quota.",
+        "templateSaveFailed": "Failed to save default files template."
       }
     },
     "notificationsSettings": {
@@ -1709,7 +1734,8 @@
         "saveSmtp": "Save SMTP config",
         "testSmtp": "Test SMTP",
         "saveMode": "Save email mode",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "testSmtpShort": "Test"
       },
       "state": {
         "smtpSaved": "SMTP configuration saved.",
@@ -1807,6 +1833,99 @@
         "loadFailed": "Failed to load storage statistics.",
         "triggerGcFailed": "Failed to trigger garbage collector."
       }
+    },
+    "securityDiagnostics": {
+      "title": "Security checkup",
+      "description": "Server-side checks for account hygiene, master-key handling, and process-memory exposure.",
+      "errors": {
+        "loadFailed": "Failed to load security diagnostics."
+      },
+      "severity": {
+        "critical": "Critical",
+        "warning": "Warning",
+        "info": "Info"
+      },
+      "levels": {
+        "strong": {
+          "title": "Strong posture",
+          "summary": "This instance has the expected production hardening. It is a good fit for public exposure when you also trust the host and backups."
+        },
+        "good": {
+          "title": "Good self-hosted baseline",
+          "summary": "This is good for a family or small team. The remaining items are mostly operational hardening and account hygiene."
+        },
+        "home": {
+          "title": "Home-use baseline",
+          "summary": "This is reasonable for home and daily use, but do not treat the host as hostile. A server compromise may still expose keys or admin access."
+        },
+        "exposed": {
+          "title": "Practical attack paths remain",
+          "summary": "The instance has issues that a local attacker, compromised container, or stolen admin password could realistically use."
+        },
+        "unsafe": {
+          "title": "Unsafe for sensitive data",
+          "summary": "Fix the critical warnings before storing valuable private data. At this level, the master key or admin control may be too easy to reach."
+        }
+      },
+      "chips": {
+        "publicInstance": "Public instance",
+        "privateInstance": "Private instance",
+        "envKey": "Key from environment",
+        "memoryUnlock": "Memory unlock",
+        "adminTotp": "{{withTotp}}/{{total}} admins have 2FA"
+      },
+      "sections": {
+        "risks": "Threat vectors",
+        "instance": "Instance and accounts",
+        "masterKey": "Master key",
+        "memory": "Process memory exposure",
+        "runtime": "Runtime facts"
+      },
+      "risks": {
+        "empty": "No warnings were detected by the current server-side checks."
+      },
+      "fields": {
+        "publicInstance": "Public registration",
+        "admins": "Admins with 2FA",
+        "adminsWithoutTotp": "Admins without 2FA",
+        "masterKeySource": "Source",
+        "envWasConfigured": "Environment variable configured",
+        "envPresent": "Environment variable still present",
+        "dotnetDiagnostics": ".NET diagnostics disabled",
+        "processHardening": "Process hardening applied",
+        "dumpable": "Dumpable state",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "Operating system",
+        "container": "Container detected",
+        "euid": "Effective UID",
+        "noNewPrivileges": "No new privileges",
+        "seccomp": "Seccomp mode",
+        "capabilities": "Effective capabilities"
+      },
+      "values": {
+        "unknown": "Unknown",
+        "yes": "Yes",
+        "no": "No",
+        "notDumpable": "Not dumpable",
+        "dumpable": "Dumpable"
+      },
+      "threatVectors": {
+        "public-instance": "Internet visitors can create accounts and store content. Quotas, default demo data, and abuse monitoring become part of the security boundary.",
+        "master-key-from-environment": "If deployment metadata, shell history, or container inspection exposes environment variables, the master key may sit close to the encrypted data it protects.",
+        "admins-without-2fa": "An admin password becomes the only factor. Password reuse, phishing, or leaked browser sessions can turn into full instance control.",
+        "dotnet-diagnostics-enabled": "A local process with enough rights can ask the .NET runtime for dumps or traces, and those dumps may contain live secrets from memory.",
+        "process-dumpable": "A same-UID process or ptrace-capable debugger can dump the server memory and search for the in-memory master key.",
+        "sys-ptrace-capability": "A debug or privileged container can inspect and alter process memory. That is exactly the capability memory-only keys try to avoid.",
+        "new-privileges-allowed": "If compromised code finds a setuid helper or capability-bearing binary, it has a wider path to gain privileges inside the container.",
+        "seccomp-disabled": "The kernel syscall surface is wider than Docker's normal production baseline, so a container escape bug gets more room to breathe.",
+        "running-as-root": "Remote code execution would run as root inside the container, which increases damage against mounted volumes and helper processes.",
+        "process-hardening-failed": "Cotton requested process hardening, but the process still started without the expected dump or ptrace protection."
+      }
+    },
+    "groups": {
+      "title": "Groups",
+      "description": "Manage access groups separately from individual users.",
+      "inDevelopment": "Group management is in development."
     }
   },
   "routes": {

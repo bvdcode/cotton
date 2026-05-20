@@ -166,6 +166,53 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("default-user-storage-quota-bytes")]
+        public async Task<IActionResult> SetDefaultUserStorageQuotaBytes([FromBody] long? quotaBytes, CancellationToken cancellationToken)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+            ThrowIfInvalid(_settings.ValidateDefaultUserStorageQuotaBytes(quotaBytes));
+            long? normalizedQuotaBytes = quotaBytes is null or 0 ? null : quotaBytes;
+            await _settings.SetPropertyAsync(
+                x => x.DefaultUserStorageQuotaBytes,
+                normalizedQuotaBytes,
+                GetFallbackPublicBaseUrl(),
+                cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("default-user-storage-quota-bytes")]
+        public IActionResult GetDefaultUserStorageQuotaBytes()
+        {
+            long? defaultUserStorageQuotaBytes = _settings.GetServerSettings().DefaultUserStorageQuotaBytes;
+            return Ok(new { defaultUserStorageQuotaBytes });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpPatch("default-user-template-node")]
+        public async Task<IActionResult> SetDefaultUserTemplateNode([FromBody] Guid? nodeId, CancellationToken cancellationToken)
+        {
+            await EnsureSettingsAsync(cancellationToken);
+            Guid? normalizedNodeId = nodeId is null || nodeId == Guid.Empty ? null : nodeId;
+            Guid ownerId = User.GetUserId();
+            ThrowIfInvalid(await _settings.ValidateDefaultUserTemplateNodeIdAsync(normalizedNodeId, ownerId, cancellationToken));
+            await _settings.SetPropertyAsync(
+                x => x.DefaultUserTemplateNodeId,
+                normalizedNodeId,
+                GetFallbackPublicBaseUrl(),
+                cancellationToken);
+            return NoContent();
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        [HttpGet("default-user-template-node")]
+        public IActionResult GetDefaultUserTemplateNode()
+        {
+            Guid? defaultUserTemplateNodeId = _settings.GetServerSettings().DefaultUserTemplateNodeId;
+            return Ok(new { defaultUserTemplateNodeId });
+        }
+
+        [Authorize(Roles = nameof(UserRole.Admin))]
         [HttpPatch("timezone")]
         public async Task<IActionResult> SetTimezone([FromBody] string? timezone, CancellationToken cancellationToken)
         {

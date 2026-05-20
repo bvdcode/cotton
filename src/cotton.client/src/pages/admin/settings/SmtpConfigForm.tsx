@@ -125,9 +125,7 @@ export const SmtpConfigForm = ({
                 )
               }
             >
-              {t("notificationsSettings.actions.testSmtp", {
-                defaultValue: "Test",
-              })}
+              {t("notificationsSettings.actions.testSmtpShort")}
             </Button>
 
             <Button

@@ -82,6 +82,8 @@ namespace Cotton.Server.Providers
                     PublicBaseUrl = defaultPublicBaseUrl,
                     ServerUsage = [ServerUsage.Other],
                     StorageSpaceMode = StorageSpaceMode.Optimal,
+                    DefaultUserStorageQuotaBytes = null,
+                    DefaultUserTemplateNodeId = null,
                     GeoIpLookupMode = GeoIpLookupMode.Disabled,
                 };
                 return _cache;
@@ -491,6 +493,41 @@ namespace Cotton.Server.Providers
             return null;
         }
 
+        public string? ValidateDefaultUserStorageQuotaBytes(long? quotaBytes)
+        {
+            if (quotaBytes is null or 0)
+            {
+                return null;
+            }
+
+            return quotaBytes > 0
+                ? null
+                : "Default user storage quota must be zero, empty, or a positive byte value.";
+        }
+
+        public async Task<string?> ValidateDefaultUserTemplateNodeIdAsync(
+            Guid? nodeId,
+            Guid ownerId,
+            CancellationToken cancellationToken = default)
+        {
+            if (nodeId is null || nodeId == Guid.Empty)
+            {
+                return null;
+            }
+
+            bool exists = await _dbContext.Nodes
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == nodeId.Value
+                    && x.OwnerId == ownerId
+                    && x.Type == NodeType.Default,
+                    cancellationToken);
+
+            return exists
+                ? null
+                : "Default user template folder was not found.";
+        }
+
         public string? ValidatePublicBaseUrl(string? url)
         {
             return TryNormalizePublicBaseUrl(url, out _)
@@ -556,7 +593,6 @@ namespace Cotton.Server.Providers
         {
             return int.TryParse(value, out port) && port is >= 1 and <= 65535;
         }
-
         private static bool IsTimezoneValid(string timezone)
         {
             return TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _);
@@ -627,6 +663,8 @@ namespace Cotton.Server.Providers
                 PublicBaseUrl = NormalizePublicBaseUrl(fallbackPublicBaseUrl),
                 ServerUsage = [ServerUsage.Other],
                 StorageSpaceMode = StorageSpaceMode.Optimal,
+                DefaultUserStorageQuotaBytes = null,
+                DefaultUserTemplateNodeId = null,
                 GeoIpLookupMode = GeoIpLookupMode.Disabled,
             };
         }

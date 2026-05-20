@@ -27,6 +27,10 @@ export const translateError = (
     return fallback;
   }
 
-  const value = i18next.t(key, { ns: namespace, defaultValue: fallback });
+  if (!i18next.exists(key, { ns: namespace })) {
+    return fallback;
+  }
+
+  const value = i18next.t(key, { ns: namespace });
   return typeof value === "string" && value.length > 0 ? value : fallback;
 };

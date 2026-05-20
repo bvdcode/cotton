@@ -43,6 +43,7 @@ namespace Cotton.Server.Controllers
         IHubContext<EventHub> _hubContext,
         FileManifestService _fileManifestService,
         NodeFileHistoryService _history,
+        UserStorageQuotaService _quota,
         VideoTranscoder _videoTranscoder,
         HlsSegmentCache _segmentCache,
         IMemoryCache _cache,
@@ -242,7 +243,6 @@ namespace Cotton.Server.Controllers
             nodeFile.SetName(request.Name);
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
-
             var mapped = nodeFile.Adapt<NodeFileManifestDto>();
             await _hubContext.Clients.User(userId.ToString()).SendAsync("FileRenamed", mapped);
             return Ok(mapped);
@@ -430,6 +430,8 @@ namespace Cotton.Server.Controllers
                 }
             }
 
+            long addedBytes = await _quota.EnsureCanChangeFileManifestAsync(userId, nodeFile.Id, newFile.Id);
+
             if (!nodeFile.FileManifest.ProposedContentHash.SequenceEqual(proposedHash))
             {
                 await _history.SaveVersionAndUpdateManifestAsync(nodeFile, newFile.Id, userId);
@@ -446,6 +448,7 @@ namespace Cotton.Server.Controllers
 
             await _dbContext.SaveChangesAsync();
             await tx.CommitAsync();
+            _quota.RecordLogicalBytesAdded(userId, addedBytes);
 
             await _scheduler.TriggerJobAsync<ComputeManifestHashesJob>();
             await _scheduler.TriggerJobAsync<GeneratePreviewJob>();

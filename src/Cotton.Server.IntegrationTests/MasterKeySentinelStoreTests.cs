@@ -1,5 +1,6 @@
 using Cotton.Autoconfig.Extensions;
 using Cotton.Server.Services;
+using Cotton.Storage.Backends;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
@@ -80,7 +81,7 @@ namespace Cotton.Server.IntegrationTests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(result.Success, Is.False);
-                Assert.That(result.Error, Is.EqualTo("probe required"));
+                Assert.That(result.Error, Does.Contain("Existing Cotton data"));
                 Assert.That(await store.ExistsAsync(), Is.False);
             }
         }
@@ -136,7 +137,10 @@ namespace Cotton.Server.IntegrationTests
         }
 
         private MasterKeySentinelStore CreateStore(IMasterKeyCompatibilityProbe? compatibilityProbe = null) =>
-            new(NullLogger<MasterKeySentinelStore>.Instance, _storageBasePath, compatibilityProbe);
+            new(
+                NullLogger<MasterKeySentinelStore>.Instance,
+                new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, _storageBasePath),
+                compatibilityProbe);
 
         private sealed class DelegateCompatibilityProbe(
             Func<CottonEncryptionSettings, MasterKeyCompatibilityMode, MasterKeyCompatibilityResult> _validate)

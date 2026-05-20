@@ -99,6 +99,13 @@ const AdminPrivacySettingsPage = lazy(() =>
     default: module.AdminPrivacySettingsPage,
   })),
 );
+const AdminSecurityDiagnosticsPage = lazy(() =>
+  import("../pages/admin/security/AdminSecurityDiagnosticsPage").then(
+    (module) => ({
+      default: module.AdminSecurityDiagnosticsPage,
+    }),
+  ),
+);
 const AdminNotificationsSettingsPage = lazy(() =>
   import("../pages/admin/settings/AdminNotificationsSettingsPage").then(
     (module) => ({
@@ -349,6 +356,10 @@ export function AppRoutes() {
           <Route
             path="privacy-settings"
             element={withRouteSuspense(<AdminPrivacySettingsPage />)}
+          />
+          <Route
+            path="security"
+            element={withRouteSuspense(<AdminSecurityDiagnosticsPage />)}
           />
           <Route
             path="notifications-settings"

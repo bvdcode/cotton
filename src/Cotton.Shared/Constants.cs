@@ -28,11 +28,10 @@ namespace Cotton
         public const string ProductName = "Cotton Cloud";
 
         /// <summary>
-        /// Specifies the delay, in minutes, before an administrator account is automatically created.
+        /// Specifies the application-startup window, in minutes, during which the first administrator account may be created.
         /// </summary>
-        /// <remarks>Adjust this value to control the timing of automatic admin account creation.
-        /// Modifying the delay can help coordinate account provisioning in different deployment or initialization
-        /// scenarios.</remarks>
+        /// <remarks>The window starts when the main ASP.NET application starts, after any master-key unlock step.
+        /// Once it expires, the instance must be restarted before first-admin bootstrap is allowed again.</remarks>
         public const int AdminAutocreateMinutesDelay = 5;
 
         /// <summary>

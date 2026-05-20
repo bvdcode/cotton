@@ -12,7 +12,7 @@ async function blobToBytes(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
-function fillRandom(bytes: Uint8Array): void {
+function fillRandom(bytes: Uint8Array<ArrayBuffer>): void {
   const maxBytesPerCall = 65_536;
 
   for (let offset = 0; offset < bytes.length; offset += maxBytesPerCall) {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Cotton.Models
+﻿namespace Cotton.Models
 {
     /// <summary>
     /// Represents publicly available information about the Cotton Cloud server.
@@ -13,9 +11,11 @@ namespace Cotton.Models
         public string Product { get; set; } = null!;
 
         /// <summary>
-        /// Gets or sets the hashed instance identifier.
+        /// Gets or sets the stable public hash of this server instance identifier.
         /// </summary>
-        [Obsolete("This property is deprecated and should not be used. It may be removed in future versions.")]
+        /// <remarks>Relay and other public integrations use this fingerprint to recognize the
+        /// Cotton instance without exposing the raw internal <c>InstanceId</c>. The value is not
+        /// a secret and should remain stable for the lifetime of the instance.</remarks>
         public string InstanceIdHash { get; set; } = null!;
 
         /// <summary>

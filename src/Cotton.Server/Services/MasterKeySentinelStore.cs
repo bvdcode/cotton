@@ -1,6 +1,5 @@
-using Cotton.Storage.Backends;
+using Cotton.Storage.Abstractions;
 using EasyExtensions.Crypto;
-using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -15,16 +14,16 @@ namespace Cotton.Server.Services
 
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
         private readonly ILogger<MasterKeySentinelStore> _logger;
-        private readonly FileSystemStorageBackend _backend;
+        private readonly IStorageBackend _backend;
         private readonly IMasterKeyCompatibilityProbe? _compatibilityProbe;
 
         public MasterKeySentinelStore(
             ILogger<MasterKeySentinelStore> logger,
-            string? storageBasePath = null,
+            IStorageBackend backend,
             IMasterKeyCompatibilityProbe? compatibilityProbe = null)
         {
             _logger = logger;
-            _backend = new FileSystemStorageBackend(NullLogger<FileSystemStorageBackend>.Instance, storageBasePath);
+            _backend = backend;
             _compatibilityProbe = compatibilityProbe;
         }
 
@@ -46,6 +45,16 @@ namespace Cotton.Server.Services
             try
             {
                 using var cipher = CreateCipher(encryptionSettings);
+                MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
+                    encryptionSettings,
+                    MasterKeyCompatibilityMode.AllowMissingEvidence,
+                    cancellationToken);
+                if (!compatibility.Success)
+                {
+                    return MasterKeySentinelResult.Fail(
+                        compatibility.Error ?? "Master key could not be verified against existing Cotton data.");
+                }
+
                 if (await _backend.ExistsAsync(SentinelStorageKey))
                 {
                     MasterKeySentinelResult existing = await ValidateExistingOrRepairAsync(
@@ -56,31 +65,27 @@ namespace Cotton.Server.Services
                     {
                         return existing;
                     }
-
-                    return await ValidateExistingDataCompatibilityAsync(
-                        encryptionSettings,
-                        existing,
-                        cancellationToken);
+                    return existing;
                 }
 
-                MasterKeyCompatibilityMode compatibilityMode = initializationMode ==
-                    MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData
-                        ? MasterKeyCompatibilityMode.RequireEvidenceForExistingData
-                        : MasterKeyCompatibilityMode.AllowMissingEvidence;
-                MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
-                    encryptionSettings,
-                    compatibilityMode,
-                    cancellationToken);
-                if (!compatibility.Success)
+                if (initializationMode == MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData
+                    && compatibility.ExistingDataFound
+                    && !compatibility.EvidenceFound)
                 {
-                    return MasterKeySentinelResult.Fail(compatibility.Error ?? "Master key could not be verified against existing Cotton data.");
+                    return MasterKeySentinelResult.Fail(
+                        "Existing Cotton data was found, but no encrypted data could be used to verify the submitted master key. Start Cotton once with COTTON_MASTER_KEY set to the original master key so it can seed the master-key sentinel safely.");
                 }
 
                 await WriteNewAsync(cipher, cancellationToken);
                 _logger.LogInformation("Master key sentinel created. StorageKey={StorageKey}", SentinelStorageKey);
                 return MasterKeySentinelResult.Ok(created: true);
             }
-            catch (Exception ex) when (ex is FormatException or InvalidOperationException or ArgumentException)
+            catch (Exception ex) when (ex is FormatException
+                or InvalidOperationException
+                or ArgumentException
+                or IOException
+                or UnauthorizedAccessException
+                or TimeoutException)
             {
                 _logger.LogWarning(ex, "Master key sentinel validation failed.");
                 return MasterKeySentinelResult.Fail(ex.Message);
@@ -137,25 +142,6 @@ namespace Cotton.Server.Services
                 SentinelStorageKey);
             return MasterKeySentinelResult.Ok(created: true, repaired: true);
         }
-
-        private async Task<MasterKeySentinelResult> ValidateExistingDataCompatibilityAsync(
-            CottonEncryptionSettings encryptionSettings,
-            MasterKeySentinelResult sentinelResult,
-            CancellationToken cancellationToken)
-        {
-            MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
-                encryptionSettings,
-                MasterKeyCompatibilityMode.AllowMissingEvidence,
-                cancellationToken);
-            if (!compatibility.Success)
-            {
-                return MasterKeySentinelResult.Fail(
-                    compatibility.Error ?? "Master key does not match existing encrypted Cotton data.");
-            }
-
-            return sentinelResult;
-        }
-
         private async Task<MasterKeyCompatibilityResult> ValidateCompatibilityAsync(
             CottonEncryptionSettings encryptionSettings,
             MasterKeyCompatibilityMode mode,

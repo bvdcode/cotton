@@ -494,6 +494,20 @@
       "fileEncryptedHint": "Este archivo está cifrado en tu dispositivo.",
       "vaultLockedForDownload": "Desbloquea el cifrado del lado del cliente en tu perfil para descargar este archivo.",
       "fileTooLargeForDownload": "Este archivo cifrado es demasiado grande para la descarga actual en el navegador. Límite: {{maxSize}}."
+    },
+    "telemetryDetails": {
+      "tooltip": "¿Qué datos se recogen?",
+      "title": "Qué incluye la telemetría mínima",
+      "intro": "La telemetría es intencionalmente mínima y no incluye nombres ni contenidos de archivos. Solo se envía un pequeño conjunto de diagnósticos técnicos:",
+      "items": {
+        "instanceId": "Un identificador aleatorio de la instancia (un GUID generado una sola vez, no ligado a ti)",
+        "serverUrl": "URL pública del servidor, para saber si la nube es alcanzable",
+        "version": "Versión del servidor Cotton",
+        "users": "Número total de cuentas de usuario",
+        "nodes": "Número total de carpetas",
+        "files": "Número total de archivos"
+      },
+      "outro": "Eso es todo. No se envían contenidos de archivos, nombres de archivos, nombres de usuario ni correos en los datos de telemetría. Los metadatos de red estándar (como la IP de origen) pueden seguir existiendo a nivel de transporte."
     }
   },
   "audioPlayer": {
@@ -630,7 +644,8 @@
         "label": "Idioma",
         "en": "English",
         "ru": "Русский",
-        "es": "Español"
+        "es": "Español",
+        "de": "Deutsch"
       }
     },
     "shareLinks": {
@@ -684,7 +699,18 @@
         "codeRequired": "Introduce el código de 6 dígitos.",
         "invalidCode": "Código de autenticación de dos factores no válido.",
         "alreadyEnabled": "La 2FA ya está activada.",
-        "setupNotInitiated": "La configuración de 2FA no se ha iniciado. Primero genera un código QR."
+        "setupNotInitiated": "La configuración de 2FA no se ha iniciado. Primero genera un código QR.",
+        "disableFailed": "No se pudo desactivar la 2FA.",
+        "invalidPassword": "Contraseña no válida."
+      },
+      "disable": {
+        "button": "Desactivar 2FA",
+        "dialogTitle": "Desactivar la autenticación de dos factores",
+        "dialogDescription": "Introduce tu contraseña para confirmar la desactivación de la autenticación de dos factores.",
+        "passwordLabel": "Contraseña",
+        "confirm": "Desactivar",
+        "confirming": "Desactivando...",
+        "success": "Se ha desactivado la autenticación de dos factores."
       }
     },
     "fields": {
@@ -1077,6 +1103,32 @@
           "username": "Tu usuario",
           "password": "Tu contraseña"
         }
+      },
+      "geoIpLookup": {
+        "title": "¿Resolver direcciones IP?",
+        "subtitle": "Cotton puede convertir direcciones IP en nombres de ciudad y país. Esto puede usarse, por ejemplo, en notificaciones de seguridad para mostrar desde dónde se inició sesión y detectar accesos inusuales.",
+        "options": {
+          "disabled": "No, manténlo desactivado",
+          "cottonCloud": "Usar servicio en la nube",
+          "local": "GeoIP Light en local",
+          "custom": "Usar mi propio resolvedor"
+        },
+        "descriptions": {
+          "disabled": "No se realizará búsqueda de ubicación. Las funciones que muestran ubicación de inicio de sesión solo conservarán direcciones IP.",
+          "cottonCloud": "Resolver direcciones IP a través del proveedor de Cotton. Requiere telemetría activada.",
+          "local": "Resolver direcciones IP en tu servidor con una base de datos/paquete GeoIP Light local.",
+          "custom": "Pega la URL de tu servicio. Cotton intentará extraer automáticamente los campos de ubicación del JSON."
+        }
+      },
+      "customGeoIpLookupUrl": {
+        "title": "Resolvedor de IP personalizado",
+        "subtitle": "Introduce un endpoint HTTP que devuelva país, región y ciudad como JSON.",
+        "fields": {
+          "url": "URL de consulta"
+        },
+        "placeholders": {
+          "url": "https://geo.example.com/lookup/{ip}"
+        }
       }
     },
     "common": {
@@ -1412,6 +1464,7 @@
     "errors": {
       "serverSettingsNotLoaded": "Los ajustes del servidor no se han cargado",
       "uploadFailed": "La subida falló",
+      "storageQuotaExceeded": "No hay suficiente espacio. Disponible: {{available}}.",
       "encryptionVaultLocked": "La bóveda de cifrado está bloqueada",
       "encryptionFailed": "El cifrado falló",
       "decryptionFailed": "El descifrado falló",
@@ -1517,7 +1570,15 @@
       "navigate": "Sección",
       "users": "Usuarios",
       "databaseBackup": "Respaldo de base de datos",
-      "storageStatistics": "Estadísticas de almacenamiento"
+      "storageStatistics": "Estadísticas de almacenamiento",
+      "securityDiagnostics": "Revisión de seguridad",
+      "groups": "Grupos",
+      "generalSettings": "Ajustes generales",
+      "privacySettings": "Privacidad y seguridad",
+      "storageSettings": "Almacenamiento",
+      "storageAndStatistics": "Almacenamiento y estadísticas",
+      "notificationsSettings": "Notificaciones",
+      "usersAndGroups": "Usuarios y grupos"
     },
     "roles": {
       "user": "Usuario",
@@ -1568,6 +1629,9 @@
         "save": "Guardar",
         "saving": "Guardando...",
         "success": "Usuario actualizado."
+      },
+      "storageUsage": {
+        "calculating": "Calculando uso de almacenamiento"
       }
     },
     "databaseBackup": {
@@ -1653,6 +1717,287 @@
       "errors": {
         "loadFailed": "No se pudieron cargar las estadísticas de almacenamiento.",
         "triggerGcFailed": "No se pudo ejecutar GC."
+      }
+    },
+    "securityDiagnostics": {
+      "title": "Revisión de seguridad",
+      "description": "Comprobaciones del servidor para cuentas, manejo de la clave maestra y exposición de memoria del proceso.",
+      "errors": {
+        "loadFailed": "No se pudo cargar el diagnóstico de seguridad."
+      },
+      "severity": {
+        "critical": "Crítico",
+        "warning": "Advertencia",
+        "info": "Info"
+      },
+      "levels": {
+        "strong": {
+          "title": "Postura fuerte",
+          "summary": "Esta instancia tiene el endurecimiento esperado para producción. Es adecuada para exposición pública si también confías en el host y las copias de seguridad."
+        },
+        "good": {
+          "title": "Buena base self-hosted",
+          "summary": "Es adecuada para una familia o un equipo pequeño. Los puntos restantes son sobre todo endurecimiento operativo e higiene de cuentas."
+        },
+        "home": {
+          "title": "Base para uso doméstico",
+          "summary": "Es razonable para casa y tareas diarias, pero no trates el host como hostil. Una intrusión en el servidor aún podría exponer claves o acceso admin."
+        },
+        "exposed": {
+          "title": "Quedan rutas de ataque prácticas",
+          "summary": "Hay problemas que un atacante local, un contenedor comprometido o una contraseña admin robada podrían aprovechar."
+        },
+        "unsafe": {
+          "title": "No seguro para datos sensibles",
+          "summary": "Corrige primero las advertencias críticas. En este nivel, la clave maestra o el control admin pueden estar demasiado al alcance."
+        }
+      },
+      "chips": {
+        "publicInstance": "Instancia pública",
+        "privateInstance": "Instancia privada",
+        "envKey": "Clave desde entorno",
+        "memoryUnlock": "Desbloqueo en memoria",
+        "adminTotp": "{{withTotp}}/{{total}} admins con 2FA"
+      },
+      "sections": {
+        "risks": "Vectores de amenaza",
+        "instance": "Instancia y cuentas",
+        "masterKey": "Clave maestra",
+        "memory": "Exposición de memoria del proceso",
+        "runtime": "Datos de runtime"
+      },
+      "risks": {
+        "empty": "Las comprobaciones actuales del servidor no detectaron advertencias."
+      },
+      "fields": {
+        "publicInstance": "Registro público",
+        "admins": "Admins con 2FA",
+        "adminsWithoutTotp": "Admins sin 2FA",
+        "masterKeySource": "Origen",
+        "envWasConfigured": "Variable de entorno configurada",
+        "envPresent": "Variable de entorno aún presente",
+        "dotnetDiagnostics": ".NET diagnostics desactivado",
+        "processHardening": "Endurecimiento del proceso aplicado",
+        "dumpable": "Estado dumpable",
+        "sysPtrace": "CAP_SYS_PTRACE",
+        "os": "Sistema operativo",
+        "container": "Contenedor detectado",
+        "euid": "Effective UID",
+        "noNewPrivileges": "No new privileges",
+        "seccomp": "Modo seccomp",
+        "capabilities": "Effective capabilities"
+      },
+      "values": {
+        "unknown": "Desconocido",
+        "yes": "Sí",
+        "no": "No",
+        "notDumpable": "No dumpable",
+        "dumpable": "Dumpable"
+      },
+      "threatVectors": {
+        "public-instance": "Los visitantes de internet pueden crear cuentas y almacenar contenido. Las cuotas, los datos demo y la monitorización de abuso pasan a ser parte de la frontera de seguridad.",
+        "master-key-from-environment": "Si los metadatos del despliegue, el historial de shell o la inspección del contenedor exponen variables de entorno, la clave maestra puede quedar cerca de los datos que protege.",
+        "admins-without-2fa": "La contraseña admin se convierte en el único factor. Reutilización de contraseñas, phishing o sesiones robadas pueden convertirse en control total de la instancia.",
+        "dotnet-diagnostics-enabled": "Un proceso local con permisos suficientes puede pedir al runtime .NET dumps o traces, y esos dumps pueden contener secretos vivos de memoria.",
+        "process-dumpable": "Un proceso con el mismo UID o un debugger con ptrace puede volcar la memoria del servidor y buscar la clave maestra en RAM.",
+        "sys-ptrace-capability": "Un contenedor debug o privilegiado puede inspeccionar y alterar memoria del proceso. Es justo la capacidad que las claves solo en memoria intentan evitar.",
+        "new-privileges-allowed": "Si código comprometido encuentra un helper setuid o un binario con capabilities, tiene una vía más amplia para elevar privilegios dentro del contenedor.",
+        "seccomp-disabled": "La superficie de syscalls del kernel es más amplia que el baseline normal de Docker en producción, así que un bug de escape de contenedor tiene más espacio.",
+        "running-as-root": "Una RCE se ejecutaría como root dentro del contenedor, aumentando el daño contra volúmenes montados y procesos auxiliares.",
+        "process-hardening-failed": "Cotton pidió endurecimiento del proceso, pero el proceso arrancó sin la protección esperada contra dump o ptrace."
+      }
+    },
+    "groups": {
+      "title": "Grupos",
+      "description": "Gestiona grupos de acceso separados de usuarios individuales.",
+      "inDevelopment": "La gestión de grupos está en desarrollo."
+    },
+    "notificationsSettings": {
+      "actions": {
+        "testSmtpShort": "Probar",
+        "saveSmtp": "Guardar configuración de SMTP",
+        "testSmtp": "Probar SMTP",
+        "saveMode": "Guardar modo de correo",
+        "saving": "Guardando..."
+      },
+      "state": {
+        "testSent": "Correo de prueba enviado.",
+        "smtpSaved": "Configuración de SMTP guardada.",
+        "modeSaved": "Modo de notificación actualizado."
+      },
+      "errors": {
+        "testFailed": "No se pudo enviar el correo de prueba.",
+        "loadFailed": "No se pudieron cargar los ajustes de notificación.",
+        "smtpSaveFailed": "No se pudo guardar la configuración de SMTP.",
+        "modeSaveFailed": "No se pudo guardar el modo de notificación."
+      },
+      "title": "Notificaciones",
+      "description": "Configura cómo Cotton envía notificaciones de cuenta y de seguridad.",
+      "fields": {
+        "emailMode": "Modo de notificación"
+      },
+      "emailMode": {
+        "None": "Desactivado",
+        "Cloud": "Cotton Cloud Mail",
+        "Custom": "SMTP personalizado"
+      },
+      "smtp": {
+        "title": "Configuración de SMTP",
+        "fields": {
+          "smtpServer": "Servidor SMTP",
+          "port": "Puerto",
+          "username": "Usuario",
+          "password": "Contraseña",
+          "fromAddress": "Dirección del remitente",
+          "useSSL": "Usar SSL/TLS"
+        }
+      }
+    },
+    "settings": {
+      "general": {
+        "actions": {
+          "testGeoIpProvider": "Probar proveedor"
+        },
+        "state": {
+          "geoIpTestPassed": "La prueba del resolvedor personalizado pasó."
+        },
+        "title": "Ajustes generales",
+        "description": "Comportamiento principal del servidor y búsqueda de ubicación para notificaciones.",
+        "fields": {
+          "publicBaseUrl": "URL base pública",
+          "timezone": "Zona horaria",
+          "telemetry": "Telemetría",
+          "allowDeduplication": "Deduplicación entre usuarios",
+          "allowGlobalIndexing": "Indexación global",
+          "serverUsage": "Uso del servidor",
+          "storageSpaceMode": "Modo de uso de espacio",
+          "computionMode": "Modo de cómputo",
+          "geoIpLookupMode": "Modo de búsqueda de IP",
+          "customGeoIpLookupUrl": "URL de búsqueda de IP personalizada"
+        },
+        "validation": {
+          "required": "Este campo es obligatorio.",
+          "publicBaseUrlInvalid": "Introduce una URL base HTTP o HTTPS válida, sin credenciales, query ni hash.",
+          "publicBaseUrlMismatch": "La dirección actual es {{current}}, pero los enlaces públicos generados usarán {{configured}}. Ten cuidado antes de guardar este valor.",
+          "timezoneInvalid": "Elige una zona horaria IANA válida de la lista.",
+          "customGeoIpLookupUrlInvalid": "Introduce una URL de búsqueda HTTP o HTTPS válida."
+        },
+        "help": {
+          "publicBaseUrl": "A pesar de este ajuste, Cotton detecta la URL pública automáticamente casi en todas partes. Configúralo solo cuando la detección automática sea incorrecta.",
+          "timezone": "Esto nos ayuda a no ejecutar tareas en segundo plano mientras duermes, para que tus discos no hagan ruido por la noche.",
+          "telemetry": "Cotton recoge diagnósticos técnicos mínimos para que el desarrollador pueda ver errores y arreglarlos, ya que no todos los reportan. Activar la telemetría también habilita los servicios en la nube de fábrica.",
+          "allowDeduplication": "Controla si un usuario puede saber que otro ya almacena el mismo archivo. Cuando está desactivado, los datos idénticos siguen deduplicándose en el servidor tras subirse, pero se transfieren innecesariamente primero. Cuando está activado, otro usuario puede saber que alguien en esta nube ya subió ese archivo. Es seguro entre familia y amigos de confianza.",
+          "allowGlobalIndexing": "Permite que el servidor descifre archivos de usuarios y construya un índice de búsqueda profundo. Sin esto, la búsqueda solo usa los nombres de archivos y carpetas.",
+          "serverUsage": "Optimiza las recomendaciones de funciones y algunos ajustes. No es un parámetro crítico, elige lo que te parezca correcto."
+        },
+        "serverUsage": {
+          "Photos": "Fotos",
+          "Documents": "Documentos",
+          "Media": "Multimedia",
+          "Other": "Otro"
+        },
+        "storageSpaceMode": {
+          "Optimal": "Equilibrado",
+          "Limited": "Ahorro de espacio",
+          "Unlimited": "Ilimitado"
+        },
+        "storageSpaceHelp": {
+          "open": "¿Qué afecta el modo de uso de espacio?",
+          "title": "Modo de uso de espacio",
+          "description": "Esto controla con qué agresividad Cotton usa y libera el almacenamiento: el momento del recolector de basura, la limpieza de datos sin referencias, la reutilización de caché/datos y cuántas versiones antiguas de archivos pueden permanecer disponibles. Cada vez que un archivo se actualiza, Cotton guarda una copia en la sombra manteniendo una referencia a los datos previos hasta que la limpieza los elimina. Ilimitado conserva los datos más tiempo y limpia sobre todo cuando hace falta espacio; Ahorro de espacio libera antes. Equilibrado se mantiene entre ambos."
+        },
+        "computionMode": {
+          "Local": "Local",
+          "Remote": "Runner remoto",
+          "Cloud": "Cotton Cloud",
+          "inDevelopment": "Esta función todavía está en desarrollo."
+        },
+        "geoIpLookupMode": {
+          "Disabled": "Desactivado",
+          "CottonCloud": "Servicio en la nube",
+          "MaxMindLocal": "GeoIP Light",
+          "CustomHttp": "HTTP personalizado"
+        },
+        "geoIpLookupModeDescription": {
+          "Disabled": "No resolver direcciones IP.",
+          "CottonCloud": "Resolver direcciones IP a través del proveedor de Cotton. Puede usarse en funciones como notificaciones de seguridad.",
+          "MaxMindLocal": "Resolver direcciones IP localmente con una base/paquete GeoIP Light.",
+          "CustomHttp": "Pega la URL de tu servicio. Cotton intentará extraer automáticamente los campos de ubicación del JSON."
+        },
+        "openSetupWizard": {
+          "title": "Abrir asistente de configuración",
+          "description": "Recorre de nuevo el asistente de primera ejecución.",
+          "button": "Abrir"
+        }
+      },
+      "actions": {
+        "save": "Guardar",
+        "saving": "Guardando...",
+        "close": "Cerrar"
+      },
+      "state": {
+        "saved": "Ajustes guardados."
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar los ajustes.",
+        "saveFailed": "No se pudieron guardar los ajustes."
+      },
+      "privacy": {
+        "title": "Privacidad y seguridad",
+        "description": "Controla cómo salen los datos del servidor y cómo pueden accederse los archivos de los usuarios para las funciones compartidas."
+      }
+    },
+    "storageSettings": {
+      "title": "Almacenamiento",
+      "description": "Primero configura las credenciales de almacenamiento y después cambia el backend activo.",
+      "fields": {
+        "storageType": "Backend de almacenamiento"
+      },
+      "quota": {
+        "title": "Cuota por usuario por defecto",
+        "description": "Limita cuánto contenido único subido puede poseer cada usuario. Déjalo vacío para cuentas ilimitadas.",
+        "fields": {
+          "defaultUserQuotaGiB": "Cuota por usuario, GiB"
+        },
+        "help": "Usa 0 o vacío para ilimitado."
+      },
+      "template": {
+        "title": "Archivos por defecto",
+        "description": "Copia el contenido de esta carpeta en cada cuenta de usuario nueva.",
+        "fields": {
+          "nodeId": "ID de la carpeta de plantilla"
+        },
+        "help": "Déjalo vacío para desactivar. Indica el ID de una carpeta con archivos de onboarding o demo."
+      },
+      "storageType": {
+        "Local": "Disco local",
+        "S3": "Almacenamiento compatible con S3"
+      },
+      "s3": {
+        "title": "Configuración de S3",
+        "fields": {
+          "endpoint": "URL del endpoint",
+          "region": "Región",
+          "bucket": "Bucket",
+          "accessKey": "Clave de acceso",
+          "secretKey": "Clave secreta"
+        }
+      },
+      "actions": {
+        "saveS3": "Guardar configuración de S3",
+        "useLocal": "Usar almacenamiento local",
+        "useS3": "Guardar configuración y usar S3"
+      },
+      "state": {
+        "s3Saved": "Configuración de S3 guardada.",
+        "storageSaved": "Modo de almacenamiento actualizado."
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar los ajustes de almacenamiento.",
+        "s3SaveFailed": "No se pudo guardar la configuración de S3.",
+        "storageSaveFailed": "No se pudo cambiar el modo de almacenamiento.",
+        "quotaSaveFailed": "No se pudo guardar la cuota por defecto.",
+        "templateSaveFailed": "No se pudo guardar la plantilla de archivos por defecto."
       }
     }
   },

@@ -242,7 +242,7 @@ namespace Cotton.Storage.Tests.Backends
             var logger = new Mock<ILogger<FileStoragePipeline>>();
             var pipeline = new FileStoragePipeline(logger.Object, backendProvider, processors);
 
-            var originalData = new byte[5 * 1024 * 1024]; // 5 MB
+            var originalData = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
             RandomNumberGenerator.Fill(originalData);
 
             // Act
@@ -292,7 +292,7 @@ namespace Cotton.Storage.Tests.Backends
             // Arrange
             string uid = NewUid();
             _createdKeys.Add(uid);
-            var data = new byte[32 * 1024 * 1024]; // 32 MB
+            var data = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
             RandomNumberGenerator.Fill(data);
 
             // Act

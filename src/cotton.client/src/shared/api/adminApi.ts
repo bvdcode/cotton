@@ -86,6 +86,54 @@ export interface GcChunkTimelineDto {
   storage: StorageUsageStatsDto;
 }
 
+export interface SecurityDiagnosticWarningDto {
+  code: string;
+  severity: "info" | "warning" | "critical" | string;
+  message: string;
+}
+
+export interface DotNetDiagnosticsDto {
+  disabled: boolean;
+  dotNetEnableDiagnostics: string | null;
+  comPlusEnableDiagnostics: string | null;
+}
+
+export interface LinuxProcessSecurityDto {
+  hardeningRequested: boolean;
+  hardeningApplied: boolean;
+  hardeningError: string | null;
+  dumpable: number | null;
+  effectiveUserId: number | null;
+  runningAsRoot: boolean | null;
+  noNewPrivileges: number | null;
+  seccompMode: number | null;
+  seccompFilters: number | null;
+  effectiveCapabilitiesHex: string | null;
+  hasSysPtraceCapability: boolean | null;
+}
+
+export interface AdminTotpDiagnosticsDto {
+  adminCount: number;
+  adminsWithTotp: number;
+  adminsWithoutTotp: number;
+}
+
+export interface SecurityDiagnosticsDto {
+  operatingSystem: string;
+  isLinux: boolean;
+  isContainer: boolean;
+  isPublicInstance: boolean;
+  securityScore: number;
+  maxSecurityScore: number;
+  masterKeySource: string;
+  masterKeyEnvironmentVariableWasConfigured: boolean;
+  masterKeyEnvironmentVariablePresentInProcess: boolean;
+  dotNetDiagnostics: DotNetDiagnosticsDto;
+  linuxProcess: LinuxProcessSecurityDto;
+  adminTotp: AdminTotpDiagnosticsDto;
+  warnings: SecurityDiagnosticWarningDto[];
+}
+
 export interface GetGcChunksTimelineRequest {
   bucket?: GcTimelineBucketKind;
   fromUtc?: string;
@@ -149,6 +197,16 @@ export const adminApi = {
 
   triggerGarbageCollector: async (): Promise<void> => {
     await httpClient.patch("server/gc/trigger");
+  },
+
+  getSecurityDiagnostics: async (
+    signal?: AbortSignal,
+  ): Promise<SecurityDiagnosticsDto> => {
+    const response = await httpClient.get<SecurityDiagnosticsDto>(
+      "server/security/status",
+      { signal },
+    );
+    return response.data;
   },
 
   getGcChunksTimeline: async (

@@ -36,7 +36,7 @@ describe("settingsApi getters", () => {
       .mockResolvedValueOnce({
         data: {
           product: "Cotton",
-          instanceIdHash: "hash",
+          instanceIdHash: "server-fingerprint",
           canCreateInitialAdmin: true,
         },
       })
@@ -46,7 +46,7 @@ describe("settingsApi getters", () => {
 
     await expect(settingsApi.getPublicInfo()).resolves.toEqual({
       product: "Cotton",
-      instanceIdHash: "hash",
+      instanceIdHash: "server-fingerprint",
       canCreateInitialAdmin: true,
     });
     await expect(settingsApi.getIsSetupComplete()).resolves.toBe(false);
@@ -97,7 +97,11 @@ describe("settingsApi getters", () => {
       })
       .mockResolvedValueOnce({ data: { allowGlobalIndexing: true } })
       .mockResolvedValueOnce({ data: { timezone: null } })
-      .mockResolvedValueOnce({ data: { publicBaseUrl: null } });
+      .mockResolvedValueOnce({ data: { publicBaseUrl: null } })
+      .mockResolvedValueOnce({ data: { defaultUserStorageQuotaBytes: 1073741824 } })
+      .mockResolvedValueOnce({
+        data: { defaultUserTemplateNodeId: "019e2537-492b-77d3-83e4-efe942c6156c" },
+      });
 
     await expect(settingsApi.getTelemetry()).resolves.toBe(true);
     await expect(settingsApi.getAllowCrossUserDeduplication()).resolves.toBe(
@@ -106,6 +110,12 @@ describe("settingsApi getters", () => {
     await expect(settingsApi.getAllowGlobalIndexing()).resolves.toBe(true);
     await expect(settingsApi.getTimezone()).resolves.toBe("UTC");
     await expect(settingsApi.getPublicBaseUrl()).resolves.toBe("");
+    await expect(settingsApi.getDefaultUserStorageQuotaBytes()).resolves.toBe(
+      1073741824,
+    );
+    await expect(settingsApi.getDefaultUserTemplateNodeId()).resolves.toBe(
+      "019e2537-492b-77d3-83e4-efe942c6156c",
+    );
     expect(get).toHaveBeenNthCalledWith(
       1,
       "server/settings/telemetry",
@@ -129,6 +139,16 @@ describe("settingsApi getters", () => {
     expect(get).toHaveBeenNthCalledWith(
       5,
       "server/settings/public-base-url",
+      undefined,
+    );
+    expect(get).toHaveBeenNthCalledWith(
+      6,
+      "server/settings/default-user-storage-quota-bytes",
+      undefined,
+    );
+    expect(get).toHaveBeenNthCalledWith(
+      7,
+      "server/settings/default-user-template-node",
       undefined,
     );
   });
@@ -211,6 +231,10 @@ describe("settingsApi setters", () => {
     await settingsApi.setServerUsage(["Photos", "Documents"]);
     await settingsApi.setTimezone("Europe/Amsterdam");
     await settingsApi.setPublicBaseUrl("https://cotton.example");
+    await settingsApi.setDefaultUserStorageQuotaBytes(1073741824);
+    await settingsApi.setDefaultUserTemplateNodeId(
+      "019e2537-492b-77d3-83e4-efe942c6156c",
+    );
 
     expect(patch).toHaveBeenNthCalledWith(1, "server/settings/telemetry", true);
     expect(patch).toHaveBeenNthCalledWith(
@@ -237,6 +261,16 @@ describe("settingsApi setters", () => {
       6,
       "server/settings/public-base-url",
       "https://cotton.example",
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      7,
+      "server/settings/default-user-storage-quota-bytes",
+      1073741824,
+    );
+    expect(patch).toHaveBeenNthCalledWith(
+      8,
+      "server/settings/default-user-template-node",
+      "019e2537-492b-77d3-83e4-efe942c6156c",
     );
   });
 

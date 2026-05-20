@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import {
   useEffect,
-  useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -47,13 +47,10 @@ export const AdminNotificationsSettingsPage = () => {
     useSSL: false,
   });
 
-  const flashTimers = useMemo<FlashTimers>(
-    () => ({
-      mode: null,
-      smtp: null,
-    }),
-    [],
-  );
+  const flashTimersRef = useRef<FlashTimers>({
+    mode: null,
+    smtp: null,
+  });
 
   const isBusy = modeStatus === "loading" || modeStatus === "saving";
   const isSmtpBusy =
@@ -64,14 +61,14 @@ export const AdminNotificationsSettingsPage = () => {
     setStatus: Dispatch<SetStateAction<SaveStatus>>,
     key: keyof FlashTimers,
   ) => {
-    const pendingTimer = flashTimers[key];
+    const pendingTimer = flashTimersRef.current[key];
     if (pendingTimer !== null) {
       window.clearTimeout(pendingTimer);
     }
     setStatus("saved");
-    flashTimers[key] = window.setTimeout(() => {
+    flashTimersRef.current[key] = window.setTimeout(() => {
       setStatus((current) => (current === "saved" ? "idle" : current));
-      flashTimers[key] = null;
+      flashTimersRef.current[key] = null;
     }, SAVED_STATUS_VISIBLE_MS);
   };
 
@@ -108,6 +105,8 @@ export const AdminNotificationsSettingsPage = () => {
 
     void load();
 
+    const flashTimers = flashTimersRef.current;
+
     return () => {
       active = false;
       if (flashTimers.mode !== null) {
@@ -119,7 +118,7 @@ export const AdminNotificationsSettingsPage = () => {
         flashTimers.smtp = null;
       }
     };
-  }, [flashTimers, t]);
+  }, [t]);
 
   const handleEmailModeChange = async (next: EmailMode) => {
     if (next === emailMode || isBusy || isSmtpBusy) return;
@@ -178,9 +177,7 @@ export const AdminNotificationsSettingsPage = () => {
     try {
       await settingsApi.testEmailConfig();
       toast.success(
-        t("notificationsSettings.state.testSent", {
-          defaultValue: "Test email sent.",
-        }),
+        t("notificationsSettings.state.testSent"),
         {
           toastId: "admin-notifications-settings:smtp-test:sent",
         },
@@ -188,9 +185,7 @@ export const AdminNotificationsSettingsPage = () => {
     } catch (error) {
       showApiErrorToast(
         error,
-        t("notificationsSettings.errors.testFailed", {
-          defaultValue: "Failed to send test email.",
-        }),
+        t("notificationsSettings.errors.testFailed"),
         "admin-notifications-settings:smtp-test:failed",
       );
     } finally {

@@ -14,6 +14,7 @@ import BackupIcon from "@mui/icons-material/Backup";
 import GroupsIcon from "@mui/icons-material/Groups";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import PersonIcon from "@mui/icons-material/Person";
+import SecurityIcon from "@mui/icons-material/Security";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
 import StorageIcon from "@mui/icons-material/Storage";
@@ -30,6 +31,7 @@ type AdminMenuItem = {
     | "users"
     | "groups"
     | "privacySettings"
+    | "securityDiagnostics"
     | "storage"
     | "notificationsSettings"
     | "databaseBackup";
@@ -60,33 +62,31 @@ export const AdminLayoutPage = () => {
     {
       id: "groups",
       to: "/admin/groups",
-      title: t("menu.groups", {
-        defaultValue: "Groups",
-      }),
+      title: t("menu.groups"),
       icon: <GroupsIcon />,
     },
     {
       id: "privacySettings",
       to: "/admin/privacy-settings",
-      title: t("menu.privacySettings", {
-        defaultValue: "Privacy and security",
-      }),
+      title: t("menu.privacySettings"),
       icon: <ShieldIcon />,
+    },
+    {
+      id: "securityDiagnostics",
+      to: "/admin/security",
+      title: t("menu.securityDiagnostics"),
+      icon: <SecurityIcon />,
     },
     {
       id: "notificationsSettings",
       to: "/admin/notifications-settings",
-      title: t("menu.notificationsSettings", { defaultValue: "Notifications" }),
+      title: t("menu.notificationsSettings"),
       icon: <NotificationsActiveIcon />,
     },
     {
       id: "storage",
       to: "/admin/storage-statistics",
-      title: t("menu.storageAndStatistics", {
-        defaultValue: t("menu.storageStatistics", {
-          defaultValue: "Storage",
-        }),
-      }),
+      title: t("menu.storageAndStatistics"),
       icon: <StorageIcon />,
       activePaths: ["/admin/storage-statistics", "/admin/storage-settings"],
     },

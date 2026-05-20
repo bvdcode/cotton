@@ -10,7 +10,6 @@ namespace Cotton.Previews.Tests;
 public class AudioPreviewGeneratorTests
 {
     [Test]
-    [Explicit("Requires ffmpeg binary availability or download.")]
     public async Task GeneratePreviewWebPAsync_WavWithoutCover_FallsBackToWaveform_AndWritesArtifact()
     {
         var generator = new AudioPreviewGenerator();
@@ -33,7 +32,6 @@ public class AudioPreviewGeneratorTests
     }
 
     [Test]
-    [Explicit("Requires ffmpeg binary availability or download.")]
     public async Task GeneratePreviewWebPAsync_WavWithoutCover_SavesDebugFrames_ForVisualInspection()
     {
         var generator = new AudioPreviewGenerator();

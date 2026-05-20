@@ -25,9 +25,12 @@
                 .SelectMany(
                     g => g.SupportedContentTypes,
                     (g, ct) => new { ContentType = ct, Generator = g })
-                .ToDictionary(
+                .GroupBy(
                     x => x.ContentType,
-                    x => x.Generator,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.First().Generator,
                     StringComparer.OrdinalIgnoreCase);
 
         private static readonly Dictionary<string, int> GeneratorVersionsByContentType =

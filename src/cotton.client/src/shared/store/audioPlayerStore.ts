@@ -156,7 +156,6 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
 
     let page = 1;
     let fetched = 0;
-    let total = 0;
     let hasNextLevelNodes = false;
 
     while (true) {
@@ -166,7 +165,7 @@ const buildRecursiveAudioPlaylist = async (rootNodeId: string): Promise<AudioPla
         depth,
       });
 
-      total = response.totalCount;
+      const total = response.totalCount;
       fetched += response.content.nodes.length + response.content.files.length;
 
       if (response.content.nodes.length > 0) {

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
@@ -15,7 +16,7 @@ RUN set -eux \
     && echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-18 f3d libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0 \
+    && apt-get install -y --no-install-recommends postgresql-client-18 f3d xvfb xauth libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0 \
     && apt-get purge -y --auto-remove curl gnupg \
     && rm -rf /var/lib/apt/lists/*
 
@@ -48,14 +49,17 @@ COPY ["Cotton.Localization/Cotton.Localization.csproj", "Cotton.Localization/"]
 RUN dotnet restore "./Cotton.Server/Cotton.Server.csproj"
 COPY . .
 WORKDIR "/src/Cotton.Server"
-RUN dotnet build "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN --mount=type=secret,id=sixlabors_license,target=/src/sixlabors.lic,required=false \
+    dotnet build "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 ARG BUILD_VERSION=dev
 ENV APP_VERSION=$BUILD_VERSION
-RUN dotnet publish "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN --mount=type=secret,id=sixlabors_license,target=/src/sixlabors.lic,required=false \
+    dotnet publish "./Cotton.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false \
+    && rm -f /app/publish/sixlabors.lic
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
@@ -63,5 +67,8 @@ WORKDIR /app
 ARG BUILD_VERSION=dev
 ENV APP_VERSION=$BUILD_VERSION
 COPY --from=publish /app/publish .
-ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
+ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false \
+    DOTNET_EnableDiagnostics=0 \
+    COMPlus_EnableDiagnostics=0 \
+    COTTON_PROCESS_HARDENING=true
 ENTRYPOINT ["dotnet", "Cotton.Server.dll"]

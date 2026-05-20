@@ -68,7 +68,6 @@ export const GeoIpLookupSetting = () => {
 
   useEffect(() => {
     let active = true;
-    setStatus("loading");
     loadGeoIpState()
       .then((next) => {
         if (!active) return;
@@ -202,9 +201,7 @@ export const GeoIpLookupSetting = () => {
     try {
       await settingsApi.testCustomGeoIpLookupUrl();
       toast.success(
-        t("settings.general.state.geoIpTestPassed", {
-          defaultValue: "Custom resolver test passed.",
-        }),
+        t("settings.general.state.geoIpTestPassed"),
         {
           toastId: "admin-general:geoip:test-success",
         },
@@ -241,9 +238,7 @@ export const GeoIpLookupSetting = () => {
               testing ? <CircularProgress size={16} color="inherit" /> : null
             }
           >
-            {t("settings.general.actions.testGeoIpProvider", {
-              defaultValue: "Test provider",
-            })}
+            {t("settings.general.actions.testGeoIpProvider")}
           </Button>
         ) : undefined
       }

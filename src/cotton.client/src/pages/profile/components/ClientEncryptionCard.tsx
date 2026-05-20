@@ -32,6 +32,7 @@ import {
 import { ClientEncryptionSetupForm } from "./ClientEncryptionSetupForm";
 import { ClientEncryptionUnlockForm } from "./ClientEncryptionUnlockForm";
 import { ProfileAccordionCard } from "./ProfileAccordionCard";
+import { blurredDialogBackdropSlotProps } from "../../../shared/ui/dialogBackdrop";
 
 type ClientEncryptionCardProps = {
   user: User;
@@ -190,6 +191,7 @@ export const ClientEncryptionCard = ({
         onClose={() => setSetupOpen(false)}
         fullWidth
         maxWidth="sm"
+        slotProps={blurredDialogBackdropSlotProps}
       >
         <DialogTitle>{t("clientEncryption.setupDialog.title")}</DialogTitle>
         <ClientEncryptionSetupForm
@@ -207,6 +209,7 @@ export const ClientEncryptionCard = ({
         onClose={() => setUnlockOpen(false)}
         fullWidth
         maxWidth="sm"
+        slotProps={blurredDialogBackdropSlotProps}
       >
         <DialogTitle>{t("clientEncryption.unlockDialog.title")}</DialogTitle>
         {envelope && (

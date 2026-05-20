@@ -11,10 +11,22 @@ namespace Cotton.Previews.Tests;
 public class StlThumbPreviewGeneratorTests
 {
     [Test]
-    public async Task GeneratePreviewWebPAsync_StlInvalidContent_ReturnsFallbackImage()
+    public void GeneratePreviewWebPAsync_StlInvalidContent_Throws()
     {
         StlThumbPreviewGenerator generator = new();
-        using var stream = new MemoryStream("not-an-stl"u8.ToArray());
+        using var stream = new MemoryStream(Array.Empty<byte>());
+
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await generator.GeneratePreviewWebPAsync(stream, size: 128));
+
+        Assert.That(exception?.Message, Does.Contain("Failed to render .stl preview with f3d"));
+    }
+
+    [Test]
+    public async Task GeneratePreviewWebPAsync_StlValidModel_RendersWebP()
+    {
+        StlThumbPreviewGenerator generator = new();
+        using var stream = new MemoryStream(CreateValidAsciiStlBytes());
 
         byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
 
@@ -46,25 +58,54 @@ public class StlThumbPreviewGeneratorTests
     }
 
     [Test]
-    public async Task GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_ReturnsFallbackImage()
+    public void GeneratePreviewWebPAsync_ThreeMfWithoutThumbnailAndInvalidModel_Throws()
     {
         StlThumbPreviewGenerator generator = StlThumbPreviewGenerator.CreateThreeMfGenerator();
         byte[] threeMf = CreateThreeMfWithoutThumbnailWithInvalidModelBytes();
         using var stream = new MemoryStream(threeMf);
 
-        byte[] preview = await generator.GeneratePreviewWebPAsync(stream, size: 128);
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await generator.GeneratePreviewWebPAsync(stream, size: 128));
 
-        AssertWebpSignature(preview);
-        using var image = Image.Load<Rgba32>(preview);
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(image.Width, Is.EqualTo(128));
-            Assert.That(image.Height, Is.EqualTo(128));
-            Assert.That(image[0, 0].A, Is.EqualTo(255));
-            Assert.That(image[0, 0].R, Is.InRange((byte)30, (byte)40));
-            Assert.That(image[0, 0].G, Is.InRange((byte)30, (byte)40));
-            Assert.That(image[0, 0].B, Is.InRange((byte)30, (byte)45));
-        }
+        Assert.That(exception?.Message, Does.Contain("Failed to render .3mf preview with f3d"));
+    }
+
+    private static byte[] CreateValidAsciiStlBytes()
+    {
+        const string stl = """
+        solid cotton_tetrahedron
+          facet normal 0 0 -1
+            outer loop
+              vertex 0 0 0
+              vertex 1 0 0
+              vertex 0.5 0.866 0
+            endloop
+          endfacet
+          facet normal 0 -0.816 0.577
+            outer loop
+              vertex 0 0 0
+              vertex 0.5 0.866 0
+              vertex 0.5 0.289 0.816
+            endloop
+          endfacet
+          facet normal 0.707 0.408 0.577
+            outer loop
+              vertex 1 0 0
+              vertex 0.5 0.289 0.816
+              vertex 0.5 0.866 0
+            endloop
+          endfacet
+          facet normal -0.707 0.408 0.577
+            outer loop
+              vertex 0 0 0
+              vertex 0.5 0.289 0.816
+              vertex 1 0 0
+            endloop
+          endfacet
+        endsolid cotton_tetrahedron
+        """;
+
+        return Encoding.ASCII.GetBytes(stl);
     }
 
     private static byte[] CreateThreeMfWithThumbnailBytes(int width, int height)

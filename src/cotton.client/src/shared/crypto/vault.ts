@@ -60,7 +60,7 @@ export async function persistCurrentVaultSession(): Promise<boolean> {
 }
 
 export async function restoreVaultFromSession(): Promise<boolean> {
-  let encoded: string | null = null;
+  let encoded: string | null;
   try {
     encoded = sessionStorage.getItem(CLIENT_ENCRYPTION_SESSION_KEY);
   } catch {

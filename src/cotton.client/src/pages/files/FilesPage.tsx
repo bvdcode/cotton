@@ -51,6 +51,7 @@ import { useFolderFileList } from "../../shared/hooks/useFileListSource";
 import { InterfaceLayoutType } from "../../shared/api/layoutsApi";
 import { shareFolder } from "../../shared/utils/shareFolder";
 import Loader from "../../shared/ui/Loader";
+import { blurredDialogBackdropSlotProps } from "../../shared/ui/dialogBackdrop";
 import { useAudioPlayerStore } from "../../shared/store/audioPlayerStore";
 import {
   selectGallerySmoothTransitions,
@@ -651,7 +652,9 @@ export const FilesPage: React.FC = () => {
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
       emptyStateText:
-        layoutType === InterfaceLayoutType.Tiles ? t("empty.all") : undefined,
+        !error && layoutType === InterfaceLayoutType.Tiles
+          ? t("empty.all")
+          : undefined,
       newFolderName: folderOps.newFolderName,
       onNewFolderNameChange: folderOps.setNewFolderName,
       onConfirmNewFolder: folderOps.handleConfirmNewFolder,
@@ -690,6 +693,10 @@ export const FilesPage: React.FC = () => {
     ],
   );
 
+  const unlockDialogOpen =
+    activeUnlockPrompt !== null && clientEncryptionEnvelope !== null;
+  const shouldRenderFileList = !error || Boolean(effectiveContent);
+
   return (
     <>
       {fileUpload.dropPreparation.active && (
@@ -723,6 +730,12 @@ export const FilesPage: React.FC = () => {
             minHeight: 0,
             overflow: "hidden",
           }),
+          ...(unlockDialogOpen && {
+            filter: "blur(4px)",
+            pointerEvents: "none",
+            transition: "filter 160ms ease",
+            userSelect: "none",
+          }),
         }}
       >
         <PageHeader
@@ -733,17 +746,19 @@ export const FilesPage: React.FC = () => {
             <Alert severity="error">{error}</Alert>
           </Box>
         )}
-        <Box
-          sx={
-            layoutType === InterfaceLayoutType.List
-              ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
-              : {}
-          }
-        >
-          <FileListViewFactory {...fileListViewProps} />
-        </Box>
-      </Box>
+        {shouldRenderFileList && (
+          <Box
+            sx={
+              layoutType === InterfaceLayoutType.List
+                ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
+                : {}
+            }
+          >
+            <FileListViewFactory {...fileListViewProps} />
+          </Box>
+        )}
 
+      </Box>
       <FilePreviewModal
         isOpen={previewState.isOpen}
         fileId={previewState.fileId}
@@ -788,10 +803,11 @@ export const FilesPage: React.FC = () => {
       )}
 
       <Dialog
-        open={activeUnlockPrompt !== null && clientEncryptionEnvelope !== null}
+        open={unlockDialogOpen}
         onClose={handleUnlockCancel}
         fullWidth
         maxWidth="sm"
+        slotProps={blurredDialogBackdropSlotProps}
       >
         <DialogTitle>
           {activeUnlockPrompt?.kind === "current"

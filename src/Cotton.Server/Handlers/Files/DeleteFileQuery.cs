@@ -22,13 +22,15 @@ namespace Cotton.Server.Handlers.Files
         CottonDbContext _dbContext,
         ILayoutService _layouts,
         ILayoutNavigator _navigator,
-        ILogger<DeleteFileQueryHandler> _logger)
+        ILogger<DeleteFileQueryHandler> _logger,
+        UserStorageQuotaService _quota)
             : IRequestHandler<DeleteFileQuery>
     {
         public async Task Handle(DeleteFileQuery request, CancellationToken ct)
         {
             NodeFile nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
+                .Include(x => x.FileManifest)
                 .FirstOrDefaultAsync(x => x.Id == request.NodeFileId
                     && x.OwnerId == request.UserId, cancellationToken: ct)
                     ?? throw new EntityNotFoundException(nameof(FileManifest));
@@ -47,8 +49,10 @@ namespace Cotton.Server.Handlers.Files
             await _dbContext.DownloadTokens
                 .Where(t => t.CreatedByUserId == command.UserId && t.NodeFileId == nodeFile.Id)
                 .ExecuteDeleteAsync(ct);
+            long removedBytes = nodeFile.FileManifest.SizeBytes;
             _dbContext.NodeFiles.Remove(nodeFile);
             await _dbContext.SaveChangesAsync(ct);
+            _quota.RecordLogicalBytesRemoved(command.UserId, removedBytes);
             _logger.LogInformation("User {UserId} permanently deleted file {NodeFileId}.",
                 command.UserId, command.NodeFileId);
         }

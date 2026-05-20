@@ -23,7 +23,8 @@ namespace Cotton.Server.Handlers.Nodes
         ILayoutService _layouts,
         ILayoutNavigator _navigator,
         NodeSubtreeService _subtree,
-        ILogger<DeleteNodeQueryHandler> _logger)
+        ILogger<DeleteNodeQueryHandler> _logger,
+        UserStorageQuotaService _quota)
             : IRequestHandler<DeleteNodeQuery>
     {
         public async Task Handle(DeleteNodeQuery request, CancellationToken ct)
@@ -118,6 +119,10 @@ namespace Cotton.Server.Handlers.Nodes
                 .Where(t => t.CreatedByUserId == command.UserId && nodeIds.Contains(t.NodeFile.NodeId))
                 .ExecuteDeleteAsync(ct);
 
+            long removedBytes = await _dbContext.NodeFiles
+                .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
+                .SumAsync(x => (long?)x.FileManifest.SizeBytes, ct) ?? 0;
+
             var nodeFiles = await _dbContext.NodeFiles
                 .Where(x => x.OwnerId == command.UserId && nodeIds.Contains(x.NodeId))
                 .ToListAsync(ct);
@@ -134,6 +139,7 @@ namespace Cotton.Server.Handlers.Nodes
             _dbContext.Nodes.RemoveRange(nodesToDelete);
             await _dbContext.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
+            _quota.RecordLogicalBytesRemoved(command.UserId, removedBytes);
 
             _logger.LogInformation("User {UserId} permanently deleted node {NodeId} recursively ({Count} nodes, {Files} files).",
                 command.UserId, command.NodeId, nodesToDelete.Count, nodeFiles.Count);

@@ -244,6 +244,20 @@
                 $"Release notes: {releaseUrl}";
         }
 
+        public static string StoragePressureTitle => "Storage is running out of free space";
+
+        public static string StoragePressureContent(
+            string availableSpace,
+            double availablePercent,
+            string requiredReserve,
+            string rootPath)
+        {
+            return "Cotton paused new storage writes because the local storage reserve would be crossed. " +
+                   $"Free space: {availableSpace} ({availablePercent:F1}%). " +
+                   $"Required reserve: {requiredReserve}. " +
+                   $"Storage root: {rootPath}. Free disk space or expand the volume, then retry the upload.";
+        }
+
         public static string DatabaseRestoreCompletedTitle => "Database restored automatically";
 
         public static string DatabaseRestoreCompletedContent(

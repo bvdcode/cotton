@@ -34,6 +34,31 @@ import { findActiveLrcLineIndex, type LrcLine } from "../../shared/utils/lrc";
 
 type LyricsStatus = "idle" | "loading" | "ready" | "notFound" | "error";
 
+type LyricsPlaybackState = {
+  key: string;
+  activeIndex: number;
+  countdown: number | null;
+  started: boolean;
+  countdownConsumed: boolean;
+};
+
+const createLyricsPlaybackState = (key: string): LyricsPlaybackState => ({
+  key,
+  activeIndex: 0,
+  countdown: null,
+  started: false,
+  countdownConsumed: false,
+});
+
+const buildLyricsPlaybackKey = (
+  fileId: string | null,
+  lines: ReadonlyArray<LrcLine>,
+): string => {
+  const firstLineTime = lines[0]?.timeSeconds ?? "";
+  const lastLineTime = lines[lines.length - 1]?.timeSeconds ?? "";
+  return [fileId ?? "", lines.length, firstLineTime, lastLineTime].join(":");
+};
+
 export const AudioPlayerBar: React.FC = () => {
   const { t } = useTranslation(["audioPlayer"]);
 
@@ -60,12 +85,8 @@ export const AudioPlayerBar: React.FC = () => {
     [],
   );
   const [queueOpen, setQueueOpen] = React.useState<boolean>(false);
-  const [lyricsActiveIndex, setLyricsActiveIndex] = React.useState<number>(0);
-  const [lyricsCountdown, setLyricsCountdown] = React.useState<number | null>(
-    null,
-  );
-  const [lyricsStarted, setLyricsStarted] = React.useState<boolean>(false);
-  const countdownConsumedRef = React.useRef<boolean>(false);
+  const [lyricsPlaybackState, setLyricsPlaybackState] =
+    React.useState<LyricsPlaybackState>(() => createLyricsPlaybackState(""));
 
   const paperRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -117,29 +138,24 @@ export const AudioPlayerBar: React.FC = () => {
     return playlist.find((x) => x.id === currentFileId) ?? null;
   }, [playlist, currentFileId]);
 
-  const [coverFailed, setCoverFailed] = React.useState(false);
-  React.useEffect(() => {
-    setCoverFailed(false);
-  }, [currentPreviewUrl]);
-
-  React.useEffect(() => {
-    if (!open) {
-      setLyricsOpen(false);
-    }
-  }, [open]);
+  const [failedCoverPreviewUrl, setFailedCoverPreviewUrl] =
+    React.useState<string | null>(null);
+  const coverFailed =
+    currentPreviewUrl !== undefined && failedCoverPreviewUrl === currentPreviewUrl;
+  const effectiveLyricsOpen = open && lyricsOpen;
 
   const lyricsAudioFileName = currentItem?.name ?? currentFileName;
   const lyricsQuery = useTrackLyricsQuery({
     folderNodeId: currentItem?.nodeId ?? null,
     audioFileName: lyricsAudioFileName,
-    enabled: lyricsOpen,
+    enabled: effectiveLyricsOpen,
   });
   const lyricsLines = React.useMemo<ReadonlyArray<LrcLine>>(
     () => lyricsQuery.data ?? [],
     [lyricsQuery.data],
   );
   const lyricsStatus: LyricsStatus = lyricsQuery.isPending
-    ? lyricsOpen
+    ? effectiveLyricsOpen
       ? "loading"
       : "idle"
     : lyricsQuery.isError
@@ -148,20 +164,15 @@ export const AudioPlayerBar: React.FC = () => {
         ? "ready"
         : "notFound";
 
-  React.useEffect(() => {
-    setLyricsActiveIndex(0);
-    setLyricsCountdown(null);
-    setLyricsStarted(false);
-    countdownConsumedRef.current = false;
-  }, [lyricsLines]);
-
-  React.useEffect(() => {
-    setLyricsCountdown(null);
-    setLyricsStarted(false);
-    countdownConsumedRef.current = false;
-  }, [currentFileId]);
-
-  const lyricsListenEnabled = lyricsOpen && lyricsLines.length > 0;
+  const lyricsPlaybackKey = React.useMemo(
+    () => buildLyricsPlaybackKey(currentFileId, lyricsLines),
+    [currentFileId, lyricsLines],
+  );
+  const lyricsPlayback =
+    lyricsPlaybackState.key === lyricsPlaybackKey
+      ? lyricsPlaybackState
+      : createLyricsPlaybackState(lyricsPlaybackKey);
+  const lyricsListenEnabled = effectiveLyricsOpen && lyricsLines.length > 0;
 
   const handleListen = React.useCallback(
     (timeSeconds: number) => {
@@ -172,46 +183,89 @@ export const AudioPlayerBar: React.FC = () => {
         return;
       }
 
-      const started = timeSeconds >= firstTime;
-      setLyricsStarted((prev) => (prev === started ? prev : started));
+      setLyricsPlaybackState((previous) => {
+        const current =
+          previous.key === lyricsPlaybackKey
+            ? previous
+            : createLyricsPlaybackState(lyricsPlaybackKey);
+        const started = timeSeconds >= firstTime;
 
-      if (started) {
-        countdownConsumedRef.current = true;
-        setLyricsCountdown((prev) => (prev === null ? prev : null));
+        if (started) {
+          const nextActiveIndex = findActiveLrcLineIndex(lyricsLines, timeSeconds);
+          if (
+            current.started &&
+            current.countdown === null &&
+            current.countdownConsumed &&
+            current.activeIndex === nextActiveIndex
+          ) {
+            return current;
+          }
 
-        const next = findActiveLrcLineIndex(lyricsLines, timeSeconds);
-        setLyricsActiveIndex((prev) => (prev === next ? prev : next));
-        return;
-      }
+          return {
+            ...current,
+            activeIndex: nextActiveIndex,
+            countdown: null,
+            started: true,
+            countdownConsumed: true,
+          };
+        }
 
-      if (countdownConsumedRef.current) {
-        setLyricsCountdown((prev) => (prev === null ? prev : null));
-        return;
-      }
+        if (current.countdownConsumed) {
+          if (!current.started && current.countdown === null) {
+            return current;
+          }
 
-      const delta = firstTime - timeSeconds;
+          return {
+            ...current,
+            countdown: null,
+            started: false,
+          };
+        }
 
-      if (delta > 3) {
-        setLyricsCountdown((prev) => (prev === null ? prev : null));
-        return;
-      }
+        const delta = firstTime - timeSeconds;
 
-      const safeDelta = Math.max(0.0001, delta);
-      const nextCountdown = Math.ceil(safeDelta);
-      setLyricsCountdown((prev) => (prev === nextCountdown ? prev : nextCountdown));
+        if (delta > 3) {
+          if (!current.started && current.countdown === null) {
+            return current;
+          }
+
+          return {
+            ...current,
+            countdown: null,
+            started: false,
+          };
+        }
+
+        const safeDelta = Math.max(0.0001, delta);
+        const nextCountdown = Math.ceil(safeDelta);
+        if (!current.started && current.countdown === nextCountdown) {
+          return current;
+        }
+
+        return {
+          ...current,
+          countdown: nextCountdown,
+          started: false,
+        };
+      });
     },
-    [lyricsLines, lyricsListenEnabled],
+    [lyricsLines, lyricsListenEnabled, lyricsPlaybackKey],
   );
 
   const positionLabel =
     playlistTotal > 1 ? `${currentIndex + 1}/${playlistTotal}` : null;
+
+  const handleClosePlayer = React.useCallback(() => {
+    setLyricsOpen(false);
+    close();
+  }, [close]);
 
   const handleClose = (
     _: Event | React.SyntheticEvent<Element, Event>,
     reason?: SnackbarCloseReason,
   ) => {
     if (reason === "clickaway") return;
-    close();
+    handleClosePlayer();
   };
 
   if (!open || !currentFileId || !currentFileName) {
@@ -260,7 +314,7 @@ export const AudioPlayerBar: React.FC = () => {
                 component="img"
                 src={currentPreviewUrl}
                 alt=""
-                onError={() => setCoverFailed(true)}
+                onError={() => setFailedCoverPreviewUrl(currentPreviewUrl)}
                 width={28}
                 height={28}
                 borderRadius={0.5}
@@ -349,14 +403,18 @@ export const AudioPlayerBar: React.FC = () => {
 
           <Tooltip title={t("audioPlayer:actions.close")} arrow>
             <span>
-              <IconButton size="small" onClick={() => close()} aria-label={t("audioPlayer:actions.close")}>
+              <IconButton
+                size="small"
+                onClick={handleClosePlayer}
+                aria-label={t("audioPlayer:actions.close")}
+              >
                 <Close fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
         </Box>
 
-        <Collapse in={lyricsOpen} timeout="auto" unmountOnExit>
+        <Collapse in={effectiveLyricsOpen} timeout="auto" unmountOnExit>
           <Divider sx={{ mt: 1 }} />
           <Box px={2} py={1.25}>
             {!currentItem?.nodeId ? (
@@ -369,11 +427,11 @@ export const AudioPlayerBar: React.FC = () => {
               <Box position="relative" height={lyricsViewHeightPx}>
                 <AudioLyricsView
                   lines={lyricsLines}
-                  activeIndex={lyricsStarted ? lyricsActiveIndex : 0}
-                  isActivePlaying={lyricsStarted}
+                  activeIndex={lyricsPlayback.started ? lyricsPlayback.activeIndex : 0}
+                  isActivePlaying={lyricsPlayback.started}
                 />
 
-                {lyricsCountdown !== null ? (
+                {lyricsPlayback.countdown !== null ? (
                   <Box
                     position="absolute"
                     top={0}
@@ -391,7 +449,7 @@ export const AudioPlayerBar: React.FC = () => {
                       textAlign="center"
                       sx={{ opacity: 0.8 }}
                     >
-                      {lyricsCountdown}
+                      {lyricsPlayback.countdown}
                     </Typography>
                   </Box>
                 ) : null}

@@ -84,6 +84,12 @@ namespace Cotton.Database.Models
         [Column("storage_space_mode")]
         public StorageSpaceMode StorageSpaceMode { get; set; }
 
+        [Column("default_user_storage_quota_bytes")]
+        public long? DefaultUserStorageQuotaBytes { get; set; }
+
+        [Column("default_user_template_node_id")]
+        public Guid? DefaultUserTemplateNodeId { get; set; }
+
         [Column("totp_max_failed_attempts")]
         public int TotpMaxFailedAttempts { get; set; }
 
@@ -115,6 +121,10 @@ namespace Cotton.Database.Models
         [Column("custom_geo_ip_lookup_url")]
         public string? CustomGeoIpLookupUrl { get; set; }
 
+        /// <summary>
+        /// Returns a stable public fingerprint of <see cref="InstanceId" /> for relay and
+        /// integration contracts that must not expose the raw instance identifier.
+        /// </summary>
         public string GetInstanceIdHash()
         {
             return InstanceId.ToString().Sha256();

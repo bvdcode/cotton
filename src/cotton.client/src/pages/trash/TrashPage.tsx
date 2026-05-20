@@ -431,10 +431,13 @@ export const TrashPage: React.FC = () => {
       loading:
         layoutType === InterfaceLayoutType.List
           ? (!listContent && !listLoadError) || listLoading
-          : !hasContent && !error,
+          : loading && !hasContent && !error,
       loadingTitle: t("loading.title"),
       loadingCaption: t("loading.caption"),
-      emptyStateText: layoutType === InterfaceLayoutType.Tiles ? t("empty") : undefined,
+      emptyStateText:
+        !error && !listLoadError && layoutType === InterfaceLayoutType.Tiles
+          ? t("empty")
+          : undefined,
       newFolderName: "",
       onNewFolderNameChange: () => {},
       onConfirmNewFolder: () => Promise.resolve(),
@@ -464,6 +467,7 @@ export const TrashPage: React.FC = () => {
       hasContent,
       isCreatingInThisFolder,
       layoutType,
+      loading,
       listContent,
       listLoadError,
       listLoading,
@@ -475,7 +479,10 @@ export const TrashPage: React.FC = () => {
     ],
   );
 
-  if (!hasContent && !error && layoutType !== InterfaceLayoutType.List) {
+  const loadError = error ?? listLoadError;
+  const shouldRenderFileList = !loadError || hasContent;
+
+  if (loading && !hasContent && !error && layoutType !== InterfaceLayoutType.List) {
     return <Loader title={t("loading.title")} caption={t("loading.caption")} />;
   }
 
@@ -492,9 +499,9 @@ export const TrashPage: React.FC = () => {
         }}
       >
         <PageHeader {...pageHeaderProps} />
-        {(error || listLoadError) && (
+        {loadError && (
           <Box mb={1} px={1}>
-            <Alert severity="error">{error ?? listLoadError}</Alert>
+            <Alert severity="error">{loadError}</Alert>
           </Box>
         )}
         {restoreErrors.length > 0 && (
@@ -507,17 +514,19 @@ export const TrashPage: React.FC = () => {
           </Box>
         )}
 
-        <Box
-          sx={
-            layoutType === InterfaceLayoutType.List
-              ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
-              : { pb: { xs: 1, sm: 2 } }
-          }
-        >
-          <FileListViewFactory {...fileListViewProps} />
-        </Box>
-      </Box>
+        {shouldRenderFileList && (
+          <Box
+            sx={
+              layoutType === InterfaceLayoutType.List
+                ? { flex: 1, minHeight: 0, overflow: "hidden", pb: 1 }
+                : { pb: { xs: 1, sm: 2 } }
+            }
+          >
+            <FileListViewFactory {...fileListViewProps} />
+          </Box>
+        )}
 
+      </Box>
       <TrashProgressDialog
         open={emptyingTrash}
         title={t("emptyTrash.inProgress", {

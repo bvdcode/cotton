@@ -8,7 +8,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { toast } from "@shared/ui/notifications";
-import { isAxiosError } from "../../shared/api/httpClient";
 import { sharedFoldersApi } from "../../shared/api/sharedFoldersApi";
 import { useCopyFeedback } from "../../shared/hooks/useCopyFeedback";
 import { usePageTitle } from "../../shared/hooks/usePageTitle";
@@ -23,44 +22,63 @@ import {
   type ShareTargetKind,
 } from "./utils/sharePageViewState";
 
+type ShareResolutionState = {
+  token: string | null;
+  targetKind: ShareTargetKind;
+  sharedFolderInfo: {
+    nodeId: string;
+    name: string;
+  } | null;
+};
+
+const createInitialShareResolution = (
+  token: string | null,
+): ShareResolutionState => ({
+  token,
+  targetKind: token ? "resolving" : "file",
+  sharedFolderInfo: null,
+});
+
 export const SharePage: React.FC = () => {
   const { t } = useTranslation(["share", "common"]);
   const params = useParams<{ token?: string }>();
   const token = params.token ?? null;
 
-  const [targetKind, setTargetKind] = React.useState<ShareTargetKind>("resolving");
-  const [sharedFolderInfo, setSharedFolderInfo] = React.useState<{
-    nodeId: string;
-    name: string;
-  } | null>(null);
+  const [resolutionState, setResolutionState] =
+    React.useState<ShareResolutionState>(() =>
+      createInitialShareResolution(token),
+    );
+  const resolution =
+    resolutionState.token === token
+      ? resolutionState
+      : createInitialShareResolution(token);
+  const { targetKind, sharedFolderInfo } = resolution;
 
   React.useEffect(() => {
     if (!token) {
-      setTargetKind("file");
-      setSharedFolderInfo(null);
       return;
     }
 
     let cancelled = false;
-    setTargetKind("resolving");
-    setSharedFolderInfo(null);
 
     void (async () => {
       try {
         const info = await sharedFoldersApi.getInfo(token);
         if (cancelled) return;
 
-        setSharedFolderInfo({ nodeId: info.nodeId, name: info.name });
-        setTargetKind("folder");
-      } catch (error) {
+        setResolutionState({
+          token,
+          sharedFolderInfo: { nodeId: info.nodeId, name: info.name },
+          targetKind: "folder",
+        });
+      } catch {
         if (cancelled) return;
 
-        if (isAxiosError(error) && error.response?.status === 404) {
-          setTargetKind("file");
-          return;
-        }
-
-        setTargetKind("file");
+        setResolutionState({
+          token,
+          sharedFolderInfo: null,
+          targetKind: "file",
+        });
       }
     })();
 

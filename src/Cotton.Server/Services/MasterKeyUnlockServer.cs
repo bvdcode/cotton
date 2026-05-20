@@ -24,10 +24,6 @@ namespace Cotton.Server.Services
             var app = builder.Build();
             ILoggerFactory loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("Cotton.Server.Unlock");
-            var sentinel = new MasterKeySentinelStore(
-                app.Services.GetRequiredService<ILogger<MasterKeySentinelStore>>(),
-                compatibilityProbe: new MasterKeyCompatibilityProbe(
-                    loggerFactory.CreateLogger<MasterKeyCompatibilityProbe>()));
             var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             IWebHostEnvironment environment = app.Services.GetRequiredService<IWebHostEnvironment>();
 
@@ -48,7 +44,6 @@ namespace Cotton.Server.Services
             {
                 DisableCaching(context);
                 bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(
-                    sentinel,
                     environment,
                     context.RequestAborted);
                 return Results.Ok(new UnlockStatusResponse(
@@ -65,7 +60,6 @@ namespace Cotton.Server.Services
                 DisableCaching(context);
                 SubmittedUnlockRequest submitted = await ReadSubmittedUnlockRequestAsync(context);
                 IResult? bootstrapError = await ValidateBootstrapTokenAsync(
-                    sentinel,
                     environment,
                     submitted.BootstrapToken,
                     bootstrapToken,
@@ -86,6 +80,9 @@ namespace Cotton.Server.Services
                     return Results.BadRequest(new UnlockResponse(false, ex.Message));
                 }
 
+                MasterKeySentinelStore sentinel = MasterKeyStartupStorage.CreateSentinelStore(
+                    encryptionSettings,
+                    loggerFactory);
                 MasterKeySentinelResult validation = await sentinel.ValidateOrInitializeAsync(
                     encryptionSettings,
                     MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData,
@@ -110,7 +107,7 @@ namespace Cotton.Server.Services
                 () => completion.TrySetCanceled());
 
             await app.StartAsync();
-            await LogUnlockAddressesAsync(app, logger, sentinel, environment, bootstrapToken, firstUnlockExpiresAtUtc);
+            await LogUnlockAddressesAsync(app, logger, environment, bootstrapToken, firstUnlockExpiresAtUtc);
 
             try
             {
@@ -164,14 +161,13 @@ namespace Cotton.Server.Services
         }
 
         private static async Task<IResult?> ValidateBootstrapTokenAsync(
-            MasterKeySentinelStore sentinel,
             IWebHostEnvironment environment,
             string? submittedBootstrapToken,
             string expectedBootstrapToken,
             DateTimeOffset firstUnlockExpiresAtUtc,
             CancellationToken cancellationToken)
         {
-            if (!await RequiresBootstrapTokenAsync(sentinel, environment, cancellationToken))
+            if (!await RequiresBootstrapTokenAsync(environment, cancellationToken))
             {
                 return null;
             }
@@ -194,12 +190,12 @@ namespace Cotton.Server.Services
         }
 
         private static async Task<bool> RequiresBootstrapTokenAsync(
-            MasterKeySentinelStore sentinel,
             IWebHostEnvironment environment,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return !environment.IsDevelopment() && !await sentinel.ExistsAsync();
+            return !environment.IsDevelopment()
+                && !await MasterKeyStartupStorage.HasExistingCottonDataAsync(cancellationToken);
         }
 
         private static bool IsBootstrapTokenValid(string? submittedBootstrapToken, string expectedBootstrapToken)
@@ -243,13 +239,12 @@ namespace Cotton.Server.Services
         private static async Task LogUnlockAddressesAsync(
             WebApplication app,
             ILogger logger,
-            MasterKeySentinelStore sentinel,
             IWebHostEnvironment environment,
             string bootstrapToken,
             DateTimeOffset firstUnlockExpiresAtUtc)
         {
             string[] addresses = [.. app.Urls];
-            bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(sentinel, environment);
+            bool requiresBootstrapToken = await RequiresBootstrapTokenAsync(environment);
             if (addresses.Length == 0)
             {
                 if (requiresBootstrapToken)

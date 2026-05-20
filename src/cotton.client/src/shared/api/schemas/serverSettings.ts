@@ -62,8 +62,8 @@ export const serverUsageSchema = makeEnumSchema(serverUsageValues, "Other");
 
 export const publicServerInfoSchema = z.object({
   canCreateInitialAdmin: z.boolean(),
+  instanceIdHash: z.string(),
   product: z.string(),
-  instanceIdHash: z.string().optional(),
 });
 export type PublicServerInfo = z.infer<typeof publicServerInfoSchema>;
 
@@ -157,6 +157,18 @@ export const publicBaseUrlSchema = z
 export const storageSpaceModeResponseSchema = z
   .object({ storageSpaceMode: z.unknown().optional() })
   .transform((value) => storageSpaceModeSchema.parse(value.storageSpaceMode));
+
+export const defaultUserStorageQuotaBytesSchema = z
+  .object({
+    defaultUserStorageQuotaBytes: z.number().finite().nonnegative().nullable().optional(),
+  })
+  .transform((value) => value.defaultUserStorageQuotaBytes ?? null);
+
+export const defaultUserTemplateNodeIdSchema = z
+  .object({
+    defaultUserTemplateNodeId: z.string().uuid().nullable().optional(),
+  })
+  .transform((value) => value.defaultUserTemplateNodeId ?? null);
 
 export const computionModeResponseSchema = z
   .object({ computionMode: z.unknown().optional() })

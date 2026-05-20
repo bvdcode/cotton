@@ -3,6 +3,7 @@
 
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Handlers.Files;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
@@ -94,7 +95,7 @@ public class LayoutEndpointsTests : IntegrationTestBase
         Assert.That(ancestors!.Any(a => a.Id == root!.Id), Is.True);
 
         // list children for root
-        var children = await _client.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
+        var children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{root!.Id}/children");
         Assert.That(children, Is.Not.Null);
         Assert.That(children!.Nodes.Any(n => n.Id == child!.Id), Is.True);
     }
@@ -192,12 +193,129 @@ public class LayoutEndpointsTests : IntegrationTestBase
         });
     }
 
-    private async Task<SearchLayoutsResultDto> SearchAsync(Guid layoutId, string query)
+    [Test]
+    public async Task Search_ByText_ReturnsFoldersAndFilesWithPathsAndPagination()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var exactFolder = await CreateNodeAsync(root!.Id, "demo");
+        var fileParent = await CreateNodeAsync(root.Id, "file-parent");
+        var exactFile = await CreateFileAsync(fileParent.Id, "demo", "file exact");
+        var prefixFolder = await CreateNodeAsync(root.Id, "demo archive");
+        var substringFolder = await CreateNodeAsync(root.Id, "old demo backup");
+
+        var firstPage = await SearchAsync(root.LayoutId, "demo", page: 1, pageSize: 2);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstPage.TotalCount, Is.EqualTo(4));
+            Assert.That(firstPage.Nodes.Single().Id, Is.EqualTo(exactFolder.Id));
+            Assert.That(firstPage.Files.Single().Id, Is.EqualTo(exactFile.Id));
+            Assert.That(firstPage.NodePaths[exactFolder.Id], Is.EqualTo($"/{root.Name}/demo"));
+            Assert.That(firstPage.FilePaths[exactFile.Id], Is.EqualTo($"/{root.Name}/file-parent/demo"));
+        });
+
+        var secondPage = await SearchAsync(root.LayoutId, "demo", page: 2, pageSize: 2);
+        Assert.Multiple(() =>
+        {
+            Assert.That(secondPage.TotalCount, Is.EqualTo(4));
+            Assert.That(secondPage.Files, Is.Empty);
+            Assert.That(secondPage.Nodes.Select(x => x.Id), Is.EqualTo(new[]
+            {
+                prefixFolder.Id,
+                substringFolder.Id,
+            }));
+        });
+    }
+
+    [Test]
+    public async Task Search_DoesNotReturnTrashedNodesOrFiles()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var visible = await CreateNodeAsync(root!.Id, "archive-visible");
+        var trashedFolder = await CreateNodeAsync(root.Id, "archive-trash-folder");
+        _ = await CreateNodeAsync(trashedFolder.Id, "archive-trash-child");
+        var trashedFile = await CreateFileAsync(root.Id, "archive-trash-file.txt", "trash me");
+
+        (await _client.DeleteAsync($"/api/v1/layouts/nodes/{trashedFolder.Id}")).EnsureSuccessStatusCode();
+        (await _client.DeleteAsync($"/api/v1/files/{trashedFile.Id}")).EnsureSuccessStatusCode();
+
+        var visibleResult = await SearchAsync(root.LayoutId, "archive-visible");
+        var trashResult = await SearchAsync(root.LayoutId, "archive-trash");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(visibleResult.TotalCount, Is.EqualTo(1));
+            Assert.That(visibleResult.Nodes.Single().Id, Is.EqualTo(visible.Id));
+            Assert.That(trashResult.TotalCount, Is.EqualTo(0));
+            Assert.That(trashResult.Nodes, Is.Empty);
+            Assert.That(trashResult.Files, Is.Empty);
+        });
+    }
+
+    private async Task<SearchLayoutsResultDto> SearchAsync(Guid layoutId, string query, int page = 1, int pageSize = 20)
     {
         var response = await _client!.GetAsync(
-            $"/api/v1/layouts/{layoutId}/search?query={Uri.EscapeDataString(query)}&page=1&pageSize=20");
+            $"/api/v1/layouts/{layoutId}/search?query={Uri.EscapeDataString(query)}&page={page}&pageSize={pageSize}");
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SearchLayoutsResultDto>())!;
+    }
+
+    private async Task<NodeDto> CreateNodeAsync(Guid parentId, string name)
+    {
+        var response = await _client!.PutAsJsonAsync(
+            "/api/v1/layouts/nodes",
+            new Models.Requests.CreateNodeRequest { ParentId = parentId, Name = name });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<NodeDto>())!;
+    }
+
+    private async Task<NodeFileManifestDto> CreateFileAsync(Guid nodeId, string name, string body)
+    {
+        string hash = await UploadChunkAsync(body);
+        var fileReq = new CreateFileRequest
+        {
+            ChunkHashes = [hash],
+            Name = name,
+            ContentType = "application/octet-stream",
+            Hash = hash,
+            NodeId = nodeId,
+        };
+        var response = await _client!.PostAsJsonAsync("/api/v1/files/from-chunks", fileReq);
+        response.EnsureSuccessStatusCode();
+
+        var children = await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{nodeId}/children");
+        return children!.Files.Single(x => x.Name == name);
+    }
+
+    private async Task<string> UploadChunkAsync(string body)
+    {
+        byte[] content = Encoding.UTF8.GetBytes(body);
+        string hash = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") },
+                },
+                "file",
+                "chunk.bin"
+            },
+            { new StringContent(hash), "hash" },
+        };
+
+        var response = await _client!.PostAsync("/api/v1/chunks", form);
+        response.EnsureSuccessStatusCode();
+        return hash;
     }
 
     private async Task<string> LoginAsync()

@@ -25,6 +25,7 @@ import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { unlockApi, type UnlockStatusResponse } from "../../shared/api/unlockApi";
 import { toast } from "@shared/ui/notifications";
+import { JUST_UNLOCKED_STORAGE_KEY } from "../../features/auth/authStorageKeys";
 
 const masterKeyLength = 32;
 
@@ -48,8 +49,6 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
 
   useEffect(() => {
     if (initialStatus !== undefined) {
-      setStatus(initialStatus);
-      setLoaded(true);
       return;
     }
 
@@ -77,8 +76,9 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
   }, [initialStatus]);
 
   const requiresBootstrapToken = status?.requiresBootstrapToken === true;
+  const firstUnlockExpiresAtUtc = status?.firstUnlockExpiresAtUtc ?? null;
   const expiresAt = useMemo(() => {
-    if (!status?.firstUnlockExpiresAtUtc) {
+    if (!firstUnlockExpiresAtUtc) {
       return null;
     }
 
@@ -86,11 +86,11 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
       return new Intl.DateTimeFormat(undefined, {
         dateStyle: "medium",
         timeStyle: "medium",
-      }).format(new Date(status.firstUnlockExpiresAtUtc));
+      }).format(new Date(firstUnlockExpiresAtUtc));
     } catch {
-      return status.firstUnlockExpiresAtUtc;
+      return firstUnlockExpiresAtUtc;
     }
-  }, [status?.firstUnlockExpiresAtUtc]);
+  }, [firstUnlockExpiresAtUtc]);
 
   if (loaded && status === null) {
     return <Navigate to="/" replace />;
@@ -148,7 +148,16 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
       toast.success(response.message || t("unlocked"), {
         toastId: "unlock-success",
       });
-      window.setTimeout(() => window.location.replace("/"), 1400);
+      await unlockApi.waitUntilAppReady();
+      try {
+        window.sessionStorage.setItem(
+          JUST_UNLOCKED_STORAGE_KEY,
+          Date.now().toString(),
+        );
+      } catch {
+        // Session storage can be unavailable in strict privacy modes.
+      }
+      window.location.replace("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : t("unlockFailed");
       setError(message);
@@ -222,6 +231,22 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
                   input: {
                     endAdornment: (
                       <InputAdornment position="end">
+                        <Tooltip title={generating ? t("generating") : t("generate")}>
+                          <span>
+                            <IconButton
+                              aria-label={t("generate")}
+                              edge="end"
+                              onClick={handleGenerate}
+                              disabled={generating || submitting}
+                            >
+                              {generating ? (
+                                <CircularProgress color="inherit" size={18} thickness={5} />
+                              ) : (
+                                <Key />
+                              )}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
                         <Tooltip title={showMasterKey ? t("hideKey") : t("showKey")}>
                           <IconButton
                             aria-label={showMasterKey ? t("hideKey") : t("showKey")}
@@ -290,21 +315,6 @@ export const UnlockPage = ({ initialStatus }: UnlockPageProps) => {
                   }
                 >
                   {submitting ? t("unlocking") : t("unlock")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outlined"
-                  disabled={generating || submitting}
-                  startIcon={
-                    generating ? (
-                      <CircularProgress color="inherit" size={18} thickness={5} />
-                    ) : (
-                      <Key />
-                    )
-                  }
-                  onClick={handleGenerate}
-                >
-                  {generating ? t("generating") : t("generate")}
                 </Button>
               </Box>
             </Stack>

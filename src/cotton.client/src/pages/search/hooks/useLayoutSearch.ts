@@ -38,25 +38,22 @@ export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearc
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<LayoutSearchResultDto | null>(null);
 
+  const trimmedQuery = query.trim();
+  const canSearch = Boolean(layoutId && trimmedQuery);
+
   useEffect(() => {
-    // Don't search if no layout or empty query
-    if (!layoutId || !query.trim()) {
-      setLoading(false);
-      setError(null);
-      // Keep previous results, don't clear them
+    if (!canSearch || !layoutId) {
       return;
     }
 
-    setError(null);
-
     const handle = setTimeout(async () => {
-      // Set loading true when fetch starts
+      setError(null);
       setLoading(true);
 
       try {
         const response = await layoutsApi.search({
           layoutId,
-          query: query.trim(),
+          query: trimmedQuery,
           page,
           pageSize,
         });
@@ -74,15 +71,15 @@ export function useLayoutSearch(options: UseLayoutSearchOptions): UseLayoutSearc
     return () => {
       clearTimeout(handle);
     };
-  }, [layoutId, query, page, pageSize, debounceMs]);
+  }, [canSearch, debounceMs, layoutId, page, pageSize, trimmedQuery]);
 
   return {
     query,
     page,
     pageSize,
     totalCount,
-    loading,
-    error,
+    loading: canSearch ? loading : false,
+    error: canSearch ? error : null,
     results,
     setQuery,
     setPage,

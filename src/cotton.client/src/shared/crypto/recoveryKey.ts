@@ -3,7 +3,7 @@ import {
   mnemonicToEntropy,
   validateMnemonic,
 } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { InvalidRecoveryPhraseError } from "./errors";
 
 export const RECOVERY_ENTROPY_BITS = 256;

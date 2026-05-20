@@ -8,6 +8,7 @@ using Cotton.Server.Handlers.Nodes;
 using Cotton.Server.Services;
 using Cotton.Server.Services.WebDav;
 using Cotton.Validators;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +40,8 @@ public enum WebDavCopyError
     DestinationParentNotFound,
     DestinationExists,
     InvalidName,
-    CannotCopyRoot
+    CannotCopyRoot,
+    QuotaExceeded
 }
 
 /// <summary>
@@ -49,6 +51,7 @@ public class WebDavCopyRequestHandler(
     CottonDbContext _dbContext,
     IMediator _mediator,
     IWebDavPathResolver _pathResolver,
+    UserStorageQuotaService _quota,
     IEventNotificationService _eventNotification,
     ILogger<WebDavCopyRequestHandler> _logger)
     : IRequestHandler<WebDavCopyRequest, WebDavCopyResult>
@@ -112,9 +115,20 @@ public class WebDavCopyRequestHandler(
             return Fail(WebDavCopyError.DestinationExists);
         }
 
-        var (copiedNodeId, copiedNodeFileId) = await PerformCopyAsync(request, sourceResult, destParentResult, destParentResult.ParentNode!.LayoutId, ct);
+        Guid? copiedNodeId;
+        Guid? copiedNodeFileId;
+        long addedBytes;
+        try
+        {
+            (copiedNodeId, copiedNodeFileId, addedBytes) = await PerformCopyAsync(request, sourceResult, destParentResult, destParentResult.ParentNode!.LayoutId, ct);
+        }
+        catch (BadRequestException<User>)
+        {
+            return Fail(WebDavCopyError.QuotaExceeded);
+        }
         await _dbContext.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        _quota.RecordLogicalBytesAdded(request.UserId, addedBytes);
 
         await NotifyCopyCompletedAsync(
             request,
@@ -256,7 +270,7 @@ public class WebDavCopyRequestHandler(
         }
     }
 
-    private async Task<(Guid? NodeId, Guid? NodeFileId)> PerformCopyAsync(
+    private async Task<(Guid? NodeId, Guid? NodeFileId, long AddedBytes)> PerformCopyAsync(
         WebDavCopyRequest request,
         WebDavResolveResult sourceResult,
         WebDavParentResult destParentResult,
@@ -265,18 +279,20 @@ public class WebDavCopyRequestHandler(
     {
         if (sourceResult.IsCollection && sourceResult.Node is not null)
         {
-            var newNodeId = await CopyNodeRecursivelyAsync(
+            var (newNodeId, addedBytes) = await CopyNodeRecursivelyAsync(
                 sourceResult.Node.Id,
                 destParentResult.ParentNode!.Id,
                 destParentResult.ResourceName!,
                 request.UserId,
                 layoutId,
                 ct);
-            return (newNodeId, null);
+            return (newNodeId, null, addedBytes);
         }
 
         if (sourceResult.NodeFile is not null)
         {
+            long addedBytes = await _quota.EnsureCanAddFileReferenceAsync(request.UserId, sourceResult.NodeFile.FileManifestId, ct);
+
             var newNodeFile = new NodeFile
             {
                 OwnerId = request.UserId,
@@ -288,13 +304,13 @@ public class WebDavCopyRequestHandler(
             await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);
             await _dbContext.SaveChangesAsync(ct);
             newNodeFile.OriginalNodeFileId = newNodeFile.Id;
-            return (null, newNodeFile.Id);
+            return (null, newNodeFile.Id, addedBytes);
         }
 
-        return (null, null);
+        return (null, null, 0);
     }
 
-    private async Task<Guid> CopyNodeRecursivelyAsync(
+    private async Task<(Guid NodeId, long AddedBytes)> CopyNodeRecursivelyAsync(
         Guid sourceNodeId,
         Guid destParentId,
         string newName,
@@ -319,6 +335,8 @@ public class WebDavCopyRequestHandler(
         await _dbContext.Nodes.AddAsync(newNode, ct);
         await _dbContext.SaveChangesAsync(ct);
 
+        long addedBytes = 0;
+
         // Copy child nodes
         var childNodes = await _dbContext.Nodes
             .AsNoTracking()
@@ -330,7 +348,8 @@ public class WebDavCopyRequestHandler(
 
         foreach (var child in childNodes)
         {
-            await CopyNodeRecursivelyAsync(child.Id, newNode.Id, child.Name, userId, layoutId, ct);
+            var (_, childAddedBytes) = await CopyNodeRecursivelyAsync(child.Id, newNode.Id, child.Name, userId, layoutId, ct);
+            addedBytes += childAddedBytes;
         }
 
         // Copy files
@@ -341,6 +360,8 @@ public class WebDavCopyRequestHandler(
 
         foreach (var file in childFiles)
         {
+            addedBytes += await _quota.EnsureCanAddFileReferenceAsync(userId, file.FileManifestId, ct);
+
             var newFile = new NodeFile
             {
                 OwnerId = userId,
@@ -353,6 +374,6 @@ public class WebDavCopyRequestHandler(
             newFile.OriginalNodeFileId = newFile.Id;
         }
 
-        return newNode.Id;
+        return (newNode.Id, addedBytes);
     }
 }

@@ -1,6 +1,7 @@
 import type { Guid } from "../api/layoutsApi";
 import { refreshNodeContent } from "../store/nodesActions";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
+import { storageQuotaApi, type UserStorageQuotaDto } from "../api/storageQuotaApi";
 import { ClientEncryptionSizeLimitError, NoKeyError } from "../crypto";
 import { AdaptiveConcurrencyController } from "./AdaptiveConcurrencyController";
 import { uploadConfig } from "./config";
@@ -49,6 +50,7 @@ interface UploadTaskInternal extends UploadTask {
   _laneProbeConsumed?: boolean;
   _laneProbeTimeout?: ReturnType<typeof setTimeout>;
   _bytesTransferredForSpeed?: number;
+  _quotaReservationBytes?: number;
 }
 
 interface ExternalTaskInternal extends AppTask {
@@ -73,6 +75,7 @@ const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const MAX_FINISHED_TASKS = 10000;
 const FINISHED_TASK_TTL_MS = 30 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
+const QUOTA_SNAPSHOT_TTL_MS = 30 * 1000;
 const FINISHED_TASK_STATUSES = new Set<AppTaskStatus>(["completed", "failed"]);
 
 export class UploadManager {
@@ -98,6 +101,10 @@ export class UploadManager {
   };
   private readonly refreshNodeIds = new Set<Guid>();
   private refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+  private quotaSnapshot: UserStorageQuotaDto | null = null;
+  private quotaSnapshotLoadedAt = 0;
+  private quotaRefreshInFlight: Promise<void> | null = null;
+  private pendingQuotaBytes = 0;
 
   private overallBytesTotal = 0;
   private overallBytesUploaded = 0;
@@ -455,6 +462,70 @@ export class UploadManager {
     return this.tasks.some((t) => t.status === "queued" || t.status === "uploading" || t.status === "finalizing");
   }
 
+  private shouldRefreshQuotaSnapshot(): boolean {
+    return Date.now() - this.quotaSnapshotLoadedAt >= QUOTA_SNAPSHOT_TTL_MS;
+  }
+
+  private refreshQuotaSnapshot(): void {
+    if (this.quotaRefreshInFlight) {
+      return;
+    }
+
+    this.quotaRefreshInFlight = storageQuotaApi
+      .getCurrent()
+      .then((quota) => {
+        this.quotaSnapshot = quota;
+        this.quotaSnapshotLoadedAt = Date.now();
+      })
+      .catch(() => {
+        this.quotaSnapshot = null;
+        this.quotaSnapshotLoadedAt = Date.now();
+      })
+      .finally(() => {
+        this.quotaRefreshInFlight = null;
+        this.pump();
+      });
+  }
+
+  private tryReserveQuotaForTask(task: UploadTaskInternal): boolean {
+    const quota = this.quotaSnapshot;
+    if (!quota?.quotaBytes || quota.availableBytes === null) {
+      return true;
+    }
+
+    const availableBytes = Math.max(0, quota.availableBytes - this.pendingQuotaBytes);
+    if (task._file.size > availableBytes) {
+      task.status = "failed";
+      task.completedAt = Date.now();
+      task.errorKey = "storageQuotaExceeded";
+      task.errorParams = { available: formatBytes(availableBytes) };
+      return false;
+    }
+
+    task._quotaReservationBytes = task._file.size;
+    this.pendingQuotaBytes += task._quotaReservationBytes;
+    return true;
+  }
+
+  private releaseQuotaReservation(task: UploadTaskInternal, committed: boolean): void {
+    const reservationBytes = task._quotaReservationBytes ?? 0;
+    if (reservationBytes <= 0) {
+      return;
+    }
+
+    task._quotaReservationBytes = undefined;
+    this.pendingQuotaBytes = Math.max(0, this.pendingQuotaBytes - reservationBytes);
+    if (committed && this.quotaSnapshot) {
+      this.quotaSnapshot = {
+        ...this.quotaSnapshot,
+        usedBytes: this.quotaSnapshot.usedBytes + reservationBytes,
+        availableBytes: this.quotaSnapshot.availableBytes === null
+          ? null
+          : Math.max(0, this.quotaSnapshot.availableBytes - reservationBytes),
+      };
+    }
+  }
+
   private pump() {
     if (this.pumping) return;
     this.pumping = true;
@@ -474,6 +545,16 @@ export class UploadManager {
           next.status = "failed";
           next.completedAt = Date.now();
           next.errorKey = "serverSettingsNotLoaded";
+          this.emit();
+          continue;
+        }
+
+        if (this.shouldRefreshQuotaSnapshot()) {
+          this.refreshQuotaSnapshot();
+          return;
+        }
+
+        if (!this.tryReserveQuotaForTask(next)) {
           this.emit();
           continue;
         }
@@ -590,6 +671,7 @@ export class UploadManager {
         });
 
         task.status = "completed";
+        this.releaseQuotaReservation(task, true);
         task.completedAt = Date.now();
         const beforeFinalize = task.bytesUploaded;
         task.bytesUploaded = task.bytesTotal;
@@ -610,6 +692,7 @@ export class UploadManager {
 
         this.scheduleNodeRefresh(task.nodeId);
       } catch (e) {
+        this.releaseQuotaReservation(task, false);
         if (encryptionTaskRef.current && !encryptionTaskFinished) {
           encryptionTaskRef.current.fail({
             message: e instanceof Error ? e.message : undefined,

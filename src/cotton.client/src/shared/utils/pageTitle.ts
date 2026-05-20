@@ -1,6 +1,5 @@
 export const APP_TITLE = "Cotton Cloud";
 
-const LEGACY_APP_TITLE = "Cotton";
 const TITLE_SEPARATOR = " - ";
 
 const normalizeTitlePart = (title: string | null | undefined): string | null => {
@@ -18,11 +17,6 @@ export const formatPageTitle = (title: string | null | undefined): string => {
   const currentPrefix = `${APP_TITLE}${TITLE_SEPARATOR}`;
   if (normalized.startsWith(currentPrefix)) {
     return normalized;
-  }
-
-  const legacyPrefix = `${LEGACY_APP_TITLE}${TITLE_SEPARATOR}`;
-  if (normalized.startsWith(legacyPrefix)) {
-    return `${APP_TITLE}${TITLE_SEPARATOR}${normalized.slice(legacyPrefix.length)}`;
   }
 
   return `${APP_TITLE}${TITLE_SEPARATOR}${normalized}`;

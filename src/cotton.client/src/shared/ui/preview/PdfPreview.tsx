@@ -217,6 +217,7 @@ export const PdfPreview = ({ source, fileName, fileSizeBytes }: PdfPreviewProps)
           container.appendChild(pageWrapper);
 
           const renderTask = page.render({
+            canvas,
             canvasContext: context,
             viewport: renderViewport,
           });

@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Services;
 using Cotton.Validators;
 using EasyExtensions.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -27,7 +28,10 @@ namespace Cotton.Server.Handlers.Users
         public DateOnly? BirthDate { get; set; }
     }
 
-    public class AdminCreateUserRequestHandler(CottonDbContext _dbContext, IPasswordHashService _hasher) : IRequestHandler<AdminCreateUserRequest, UserDto>
+    public class AdminCreateUserRequestHandler(
+        CottonDbContext _dbContext,
+        IPasswordHashService _hasher,
+        DefaultUserContentSeeder _defaultUserContentSeeder) : IRequestHandler<AdminCreateUserRequest, UserDto>
     {
         public async Task<UserDto> Handle(AdminCreateUserRequest request, CancellationToken cancellationToken)
         {
@@ -65,6 +69,7 @@ namespace Cotton.Server.Handlers.Users
 
             await _dbContext.Users.AddAsync(user, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
+            await _defaultUserContentSeeder.SeedAsync(user.Id, cancellationToken);
             return user.Adapt<UserDto>();
         }
     }

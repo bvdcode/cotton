@@ -281,7 +281,7 @@ public class PreviewGenerationPipelineTests : IntegrationTestBase
 
         if (files.Length == 0)
         {
-            Assert.Ignore($"No supported fixtures found in '{fixturesDir}'.");
+            Assert.Fail($"No supported preview fixtures found in '{fixturesDir}'.");
         }
 
         string token = await LoginAsync();

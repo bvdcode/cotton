@@ -6,6 +6,7 @@ using Cotton.Server.Handlers.Server;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Providers;
+using Cotton.Server.Services;
 using EasyExtensions.Mediator;
 using EasyExtensions.Models.Enums;
 using EasyExtensions.Quartz.Extensions;
@@ -17,7 +18,11 @@ namespace Cotton.Server.Controllers
 {
     [ApiController]
     [Route(Routes.V1.Server)]
-    public class ServerController(IMediator _mediator, SettingsProvider _settings, ISchedulerFactory _scheduler) : ControllerBase
+    public class ServerController(
+        IMediator _mediator,
+        SettingsProvider _settings,
+        ISchedulerFactory _scheduler,
+        SecurityDiagnosticsService _securityDiagnostics) : ControllerBase
     {
         [HttpPost("emergency-shutdown")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -38,6 +43,14 @@ namespace Cotton.Server.Controllers
                 CanCreateInitialAdmin = !serverHasUsers,
                 Product = Constants.ProductName,
             });
+        }
+
+        [HttpGet("security/status")]
+        [Authorize(Roles = nameof(UserRole.Admin))]
+        public async Task<IActionResult> GetSecurityDiagnostics(CancellationToken cancellationToken)
+        {
+            SecurityDiagnosticsDto snapshot = await _securityDiagnostics.GetSnapshotAsync(cancellationToken);
+            return Ok(snapshot);
         }
 
         [HttpPatch("database-backup/trigger")]

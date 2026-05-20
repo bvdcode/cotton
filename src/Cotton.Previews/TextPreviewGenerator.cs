@@ -1,6 +1,7 @@
 ﻿using EasyExtensions.Fonts.Resources;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -79,11 +80,15 @@ namespace Cotton.Previews
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
             var font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
 
-            canvas.Mutate(ctx =>
+            canvas.Mutate(ctx => ctx.BackgroundColor(Color.White));
+            using (var drawing = canvas.Frames.RootFrame.CreateCanvas(canvas.Configuration, new DrawingOptions(), Array.Empty<IPath>()))
             {
-                ctx.Fill(Color.White);
-                ctx.DrawText(text, font, Color.Black, new PointF(padding, paddingTop));
-            });
+                drawing.DrawText(
+                    new RichTextOptions(font) { Origin = new PointF(padding, paddingTop) },
+                    text,
+                    Brushes.Solid(Color.Black),
+                    null!);
+            }
 
             using var output = canvas.Clone(x => x.Resize(new ResizeOptions
             {
@@ -183,7 +188,7 @@ namespace Cotton.Previews
 
             // Use a single glyph measure as a character cell width.
             // For a monospaced font (Consolas) this is stable and fast.
-            var m = TextMeasurer.MeasureSize("M", new RichTextOptions(font));
+            var m = TextMeasurer.MeasureAdvance("M", new TextOptions(font));
             float charWidth = Math.Max(1f, m.Width);
 
             int cols = Math.Max(1, (int)Math.Floor(wrapWidth / charWidth));
@@ -317,9 +322,9 @@ namespace Cotton.Previews
             return text[..idx].TrimEnd() + "\n…";
         }
 
-        private static string ClipTextToFitHeight(string text, RichTextOptions options, float maxHeight)
+        private static string ClipTextToFitHeight(string text, TextOptions options, float maxHeight)
         {
-            var size = TextMeasurer.MeasureSize(text, options);
+            var size = TextMeasurer.MeasureAdvance(text, options);
             if (size.Height <= maxHeight)
             {
                 return text;
@@ -348,7 +353,7 @@ namespace Cotton.Previews
                 }
 
                 string candidate = text[..cut].TrimEnd() + "\n…";
-                var s = TextMeasurer.MeasureSize(candidate, options);
+                var s = TextMeasurer.MeasureAdvance(candidate, options);
 
                 if (s.Height <= maxHeight)
                 {

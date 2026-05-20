@@ -20,6 +20,8 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
     services:
       postgres:
         image: postgres:17
@@ -36,22 +38,29 @@ jobs:
           --health-retries 5
     steps:
       - name: check repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           lfs: "true"
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: src/cotton.client/.nvmrc
           cache: npm
           cache-dependency-path: src/cotton.client/package-lock.json
+
+      - name: Validate SixLabors license secret
+        run: |
+          if [ -z "${SIXLABORS_LICENSE:-}" ]; then
+            echo "SIXLABORS_LICENSE secret is required for builds and tests." >&2
+            exit 1
+          fi
 
       - name: Restore .NET dependencies
         run: dotnet restore src/Cotton.sln
@@ -60,8 +69,24 @@ jobs:
         working-directory: src/cotton.client
         run: npm ci
 
+      - name: Install preview rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg f3d xvfb xauth libosmesa6 libgl1 libgl1-mesa-dri libegl1 libglx-mesa0
+          f3d --version
+          xvfb-run --help >/dev/null
+          ffmpeg -version
+
       - name: Run backend tests
-        run: dotnet test src/Cotton.sln --configuration Release --no-restore --logger trx --results-directory TestResults
+        run: dotnet test src/Cotton.sln --configuration Release --no-restore --logger "console;verbosity=normal" --logger trx --results-directory TestResults
+
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: backend-test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
 
       - name: Check frontend locales
         working-directory: src/cotton.client
@@ -87,7 +112,7 @@ jobs:
       packages: write
     steps:
       - name: check repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           lfs: "true"
           fetch-depth: 0
@@ -104,6 +129,17 @@ jobs:
         run: |
           echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
           echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
+
+      - name: Write SixLabors license secret for Docker build
+        env:
+          SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+        run: |
+          if [ -z "${SIXLABORS_LICENSE:-}" ]; then
+            echo "SIXLABORS_LICENSE secret is required for Docker image builds." >&2
+            exit 1
+          fi
+          install -m 600 /dev/null /tmp/sixlabors.lic
+          printf '%s' "$SIXLABORS_LICENSE" > /tmp/sixlabors.lic
 
       - name: login to Docker Hub
         uses: docker/login-action@v3
@@ -123,6 +159,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
       - name: Build and push docker image to Docker Hub (develop)
         if: github.ref == 'refs/heads/develop'
@@ -135,6 +173,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -155,6 +195,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
       - name: Build and push docker image to GitHub Container Registry (develop)
         if: github.ref == 'refs/heads/develop'
@@ -167,6 +209,8 @@ jobs:
           file: ${{ env.CONTEXT_PATH }}/${{ env.SOURCES_PATH }}/Dockerfile
           build-args: |
             BUILD_VERSION=${{ steps.gitversion.outputs.SemVer }}
+          secret-files: |
+            sixlabors_license=/tmp/sixlabors.lic
 
   release:
     name: Create Release

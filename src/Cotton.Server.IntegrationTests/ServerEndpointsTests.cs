@@ -10,9 +10,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using NUnit.Framework;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 
 namespace Cotton.Server.IntegrationTests;
 
@@ -88,6 +90,43 @@ public class ServerEndpointsTests : IntegrationTestBase
         var me = await _client.GetFromJsonAsync<Models.Dto.UserDto>("/api/v1/users/me");
         Assert.That(me, Is.Not.Null);
         Assert.That(me!.Username, Is.EqualTo("testuser"));
+    }
+
+    [Test]
+    public async Task Get_SecurityStatus_IsAdminOnly_AndReturnsDiagnostics()
+    {
+        var unauthenticatedResponse = await _client!.GetAsync("/api/v1/server/security/status");
+        Assert.That(unauthenticatedResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+
+        var token = await LoginAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/server/security/status");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client!.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        JsonElement payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload.TryGetProperty("dotNetDiagnostics", out _), Is.True);
+            Assert.That(payload.TryGetProperty("linuxProcess", out _), Is.True);
+            Assert.That(payload.TryGetProperty("warnings", out JsonElement warnings), Is.True);
+            Assert.That(payload.TryGetProperty("securityScore", out JsonElement score), Is.True);
+            Assert.That(payload.TryGetProperty("maxSecurityScore", out JsonElement maxScore), Is.True);
+            Assert.That(payload.TryGetProperty("isPublicInstance", out _), Is.True);
+            Assert.That(payload.TryGetProperty("adminTotp", out JsonElement adminTotp), Is.True);
+            Assert.That(warnings.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(score.GetInt32(), Is.InRange(0, 10));
+            Assert.That(maxScore.GetInt32(), Is.EqualTo(10));
+            Assert.That(payload.GetProperty("masterKeySource").GetString(), Is.Not.Empty);
+            Assert.That(adminTotp.GetProperty("adminCount").GetInt32(), Is.EqualTo(1));
+            Assert.That(adminTotp.GetProperty("adminsWithTotp").GetInt32(), Is.EqualTo(0));
+            Assert.That(adminTotp.GetProperty("adminsWithoutTotp").GetInt32(), Is.EqualTo(1));
+            Assert.That(
+                warnings.EnumerateArray().Any(warning =>
+                    warning.GetProperty("code").GetString() == "admins-without-2fa"),
+                Is.True);
+        });
     }
 
     [Test]

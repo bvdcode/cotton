@@ -9,8 +9,60 @@ import type { AuthContextValue, User } from "./types";
 import { useAuthStore } from "../../shared/store";
 import { useUserPreferencesStore } from "../../shared/store/userPreferencesStore";
 import { resetUserScopedStores } from "../../shared/store/resetUserScopedStores";
+import { JUST_UNLOCKED_STORAGE_KEY } from "./authStorageKeys";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const AUTH_RETRY_AFTER_UNLOCK_TIMEOUT_MS = 10000;
+const AUTH_RETRY_AFTER_UNLOCK_INTERVAL_MS = 350;
+
+const delay = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const consumeJustUnlockedMarker = (): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    const value = window.sessionStorage.getItem(JUST_UNLOCKED_STORAGE_KEY);
+    window.sessionStorage.removeItem(JUST_UNLOCKED_STORAGE_KEY);
+    return value !== null;
+  } catch {
+    return false;
+  }
+};
+
+const restoreAuthSession = async (): Promise<User | null> => {
+  const token = await authApi.refresh();
+  if (!token) {
+    return null;
+  }
+
+  return await authApi.me();
+};
+
+const waitForAuthSessionAfterUnlock = async (): Promise<User | null> => {
+  const deadline = Date.now() + AUTH_RETRY_AFTER_UNLOCK_TIMEOUT_MS;
+
+  do {
+    try {
+      const userData = await restoreAuthSession();
+      if (userData) {
+        return userData;
+      }
+    } catch {
+      // The backend can finish unlocking before auth endpoints are fully ready.
+    }
+
+    if (!useAuthStore.getState().refreshEnabled) {
+      return null;
+    }
+
+    await delay(AUTH_RETRY_AFTER_UNLOCK_INTERVAL_MS);
+  } while (Date.now() < deadline);
+
+  return null;
+};
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -73,10 +125,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setInitializing(true);
     try {
-      const token = await authApi.refresh();
-      if (token) {
-        const userData = await authApi.me();
+      const shouldRetryAfterUnlock = consumeJustUnlockedMarker();
+      const userData = shouldRetryAfterUnlock
+        ? await waitForAuthSessionAfterUnlock()
+        : await restoreAuthSession();
 
+      if (userData) {
         // Ensure stale persisted data from another identity is cleared
         // before protected routes can render for this user.
         resetUserScopedStores(userData.id);

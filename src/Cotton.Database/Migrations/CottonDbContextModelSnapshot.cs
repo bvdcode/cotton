@@ -300,6 +300,14 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("storage_space_mode");
 
+                    b.Property<long?>("DefaultUserStorageQuotaBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("default_user_storage_quota_bytes");
+
+                    b.Property<Guid?>("DefaultUserTemplateNodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_user_template_node_id");
+
                     b.Property<int>("StorageType")
                         .HasColumnType("integer")
                         .HasColumnName("storage_type");

@@ -17,6 +17,22 @@ const acceptsJson = (response: Response): boolean =>
   response.headers.get("content-type")?.toLowerCase().includes("application/json") ??
   false;
 
+const delay = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const isMainAppReady = async (): Promise<boolean> => {
+  try {
+    const response = await fetch("/api/v1/server/info", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+
+    return response.ok && acceptsJson(response);
+  } catch {
+    return false;
+  }
+};
+
 const isUnlockStatusResponse = (value: unknown): value is UnlockStatusResponse =>
   typeof value === "object" &&
   value !== null &&
@@ -67,6 +83,25 @@ export const unlockApi = {
     }
 
     return (await response.text()).trim();
+  },
+
+  waitUntilAppReady: async (options?: {
+    timeoutMs?: number;
+    intervalMs?: number;
+  }): Promise<boolean> => {
+    const timeoutMs = options?.timeoutMs ?? 20000;
+    const intervalMs = options?.intervalMs ?? 300;
+    const deadline = Date.now() + timeoutMs;
+
+    do {
+      if (await isMainAppReady()) {
+        return true;
+      }
+
+      await delay(intervalMs);
+    } while (Date.now() < deadline);
+
+    return isMainAppReady();
   },
 
   unlock: async (request: {

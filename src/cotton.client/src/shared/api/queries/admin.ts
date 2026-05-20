@@ -12,6 +12,7 @@ import {
   type GcChunkTimelineDto,
   type GcTimelineBucketKind,
   type LatestDatabaseBackupDto,
+  type SecurityDiagnosticsDto,
 } from "../adminApi";
 import { queryKeys } from "./queryKeys";
 
@@ -93,6 +94,12 @@ export const useLatestDatabaseBackupQuery = () =>
   useQuery<LatestDatabaseBackupDto | null>({
     queryKey: queryKeys.admin.latestDbBackup(),
     queryFn: ({ signal }) => adminApi.getLatestDatabaseBackup(signal),
+  });
+
+export const useSecurityDiagnosticsQuery = () =>
+  useQuery<SecurityDiagnosticsDto>({
+    queryKey: queryKeys.admin.securityDiagnostics(),
+    queryFn: ({ signal }) => adminApi.getSecurityDiagnostics(signal),
   });
 
 export const useCreateAdminUserMutation = () => {

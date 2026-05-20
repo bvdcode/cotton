@@ -4,8 +4,10 @@
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.IntegrationTests.Abstractions;
 using Cotton.Server.IntegrationTests.Common;
+using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Authorization.Models.Dto;
+using EasyExtensions.Models.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -14,10 +16,12 @@ using Npgsql;
 using NUnit.Framework;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text;
 
 namespace Cotton.Server.IntegrationTests;
 
+[NonParallelizable]
 public class ChunksAndFilesEndpointsTests : IntegrationTestBase
 {
     private TestAppFactory? _factory;
@@ -26,6 +30,8 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     [SetUp]
     public void SetUp()
     {
+        ResetSettingsProviderCaches();
+
         var creator = DbContext.GetService<IRelationalDatabaseCreator>();
         creator.EnsureDeleted();
         creator.Create();
@@ -67,6 +73,7 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
     {
         _client?.Dispose();
         _factory?.Dispose();
+        ResetSettingsProviderCaches();
     }
 
     [Test]
@@ -128,6 +135,158 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(file!.Metadata, Does.ContainKey("isClientEncrypted"));
         Assert.That(file.Metadata["isClientEncrypted"], Is.EqualTo("true"));
         Assert.That(file.Metadata["originalContentType"], Is.EqualTo("text/plain"));
+    }
+
+    [Test]
+    public async Task Create_And_Update_File_Reject_When_Default_User_Quota_Is_Exceeded()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var quotaResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-storage-quota-bytes",
+            5L);
+        quotaResponse.EnsureSuccessStatusCode();
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        string fiveByteHash = await UploadChunkAndGetHashAsync("12345");
+        var createFirstResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        {
+            ChunkHashes = [fiveByteHash],
+            Name = "five.txt",
+            ContentType = "text/plain",
+            Hash = fiveByteHash,
+            NodeId = root!.Id,
+        });
+        createFirstResponse.EnsureSuccessStatusCode();
+        var created = await createFirstResponse.Content.ReadFromJsonAsync<Cotton.Server.Models.Dto.NodeFileManifestDto>();
+        Assert.That(created, Is.Not.Null);
+
+        string sixByteHash = await UploadChunkAndGetHashAsync("abcdef");
+        var createSecondResponse = await _client.PostAsJsonAsync("/api/v1/files/from-chunks", new CreateFileRequest
+        {
+            ChunkHashes = [sixByteHash],
+            Name = "six.txt",
+            ContentType = "text/plain",
+            Hash = sixByteHash,
+            NodeId = root.Id,
+        });
+        Assert.That(createSecondResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
+
+        var updateResponse = await _client.PatchAsJsonAsync($"/api/v1/files/{created!.Id}/update-content", new CreateFileRequest
+        {
+            ChunkHashes = [sixByteHash],
+            Name = "five.txt",
+            ContentType = "text/plain",
+            Hash = sixByteHash,
+            NodeId = root.Id,
+        });
+        Assert.That(updateResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task User_Storage_Quota_Snapshot_Tracks_Create_And_Permanent_Delete_From_Cache()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var quotaResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-storage-quota-bytes",
+            100L);
+        quotaResponse.EnsureSuccessStatusCode();
+
+        var initialQuota = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.UserStorageQuotaDto>(
+            "/api/v1/users/me/storage-quota");
+        Assert.That(initialQuota, Is.Not.Null);
+        Assert.That(initialQuota!.UsedBytes, Is.EqualTo(0));
+        Assert.That(initialQuota.AvailableBytes, Is.EqualTo(100));
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+
+        var file = await UploadTextFileAsync(root!, "quota-cache.txt", "12345");
+        var afterCreate = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.UserStorageQuotaDto>(
+            "/api/v1/users/me/storage-quota");
+        Assert.That(afterCreate, Is.Not.Null);
+        Assert.That(afterCreate!.UsedBytes, Is.EqualTo(5));
+        Assert.That(afterCreate.AvailableBytes, Is.EqualTo(95));
+
+        var deleteResponse = await _client.DeleteAsync($"/api/v1/files/{file.Id}?skipTrash=true");
+        deleteResponse.EnsureSuccessStatusCode();
+
+        var afterDelete = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.UserStorageQuotaDto>(
+            "/api/v1/users/me/storage-quota");
+        Assert.That(afterDelete, Is.Not.Null);
+        Assert.That(afterDelete!.UsedBytes, Is.EqualTo(0));
+        Assert.That(afterDelete.AvailableBytes, Is.EqualTo(100));
+    }
+
+    [Test]
+    public async Task Admin_Created_User_Gets_Default_Template_Files()
+    {
+        var token = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var root = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(root, Is.Not.Null);
+        await UploadTextFileAsync(root!, "welcome.txt", "hello from the template");
+
+        var templateResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-template-node",
+            root!.Id);
+        templateResponse.EnsureSuccessStatusCode();
+
+        var createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "seededuser",
+            password = "seededpass",
+            role = UserRole.User
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var seededToken = await LoginAsync("seededuser", "seededpass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", seededToken);
+
+        var seededRoot = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(seededRoot, Is.Not.Null);
+
+        var list = await _client.GetFromJsonAsync<Cotton.Server.Models.Dto.NodeContentDto>($"/api/v1/layouts/nodes/{seededRoot!.Id}/children");
+        Assert.That(list, Is.Not.Null);
+        var seededFile = list!.Files.SingleOrDefault(x => x.Name == "welcome.txt");
+        Assert.That(seededFile, Is.Not.Null);
+        Assert.That(seededFile!.SizeBytes, Is.EqualTo("hello from the template".Length));
+    }
+
+    [Test]
+    public async Task Default_Template_Node_Rejects_Another_Users_Node()
+    {
+        var adminToken = await LoginAsync();
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        var createUserResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            username = "templateowner",
+            password = "templatepass",
+            role = UserRole.User
+        });
+        createUserResponse.EnsureSuccessStatusCode();
+
+        _client.DefaultRequestHeaders.Authorization = null;
+        var otherToken = await LoginAsync("templateowner", "templatepass");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherToken);
+
+        var otherRoot = await _client.GetFromJsonAsync<Models.Dto.NodeDto>("/api/v1/layouts/resolver");
+        Assert.That(otherRoot, Is.Not.Null);
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var templateResponse = await _client.PatchAsJsonAsync(
+            "/api/v1/server/settings/default-user-template-node",
+            otherRoot!.Id);
+
+        Assert.That(templateResponse.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -304,6 +463,43 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         Assert.That(existsAfterDownload, Is.False);
     }
 
+    private async Task<HttpResponseMessage> UploadRawChunkAsync(string text)
+    {
+        var content = Encoding.UTF8.GetBytes(text);
+        var chunkHashLower = Hasher.ToHexStringHash(Hasher.HashData(content));
+        using var form = new MultipartFormDataContent
+        {
+            {
+                new ByteArrayContent(content)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                },
+                "file",
+                "chunk.bin"
+            },
+            { new StringContent(chunkHashLower), "hash" }
+        };
+        return await _client!.PostAsync("/api/v1/chunks", form);
+    }
+
+    private async Task<string> UploadChunkAndGetHashAsync(string text)
+    {
+        var response = await UploadRawChunkAsync(text);
+        response.EnsureSuccessStatusCode();
+
+        return Hasher.ToHexStringHash(Hasher.HashData(Encoding.UTF8.GetBytes(text)));
+    }
+
+    private static void ResetSettingsProviderCaches()
+    {
+        const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+        Type settingsProviderType = typeof(SettingsProvider);
+
+        settingsProviderType.GetField("_cache", flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_isServerInitializedCache", flags)?.SetValue(null, null);
+        settingsProviderType.GetField("_serverHasUsersCache", flags)?.SetValue(null, null);
+    }
+
     private async Task<Cotton.Server.Models.Dto.NodeFileManifestDto> UploadTextFileAsync(
         Models.Dto.NodeDto root,
         string name,
@@ -373,14 +569,16 @@ public class ChunksAndFilesEndpointsTests : IntegrationTestBase
         return await DbContext.DownloadTokens.AnyAsync(x => x.Token == token);
     }
 
-    private async Task<string> LoginAsync()
+    private async Task<string> LoginAsync(
+        string username = "testuser",
+        string password = "testpassword")
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
             Content = JsonContent.Create(new LoginRequestDto()
             {
-                Username = "testuser",
-                Password = "testpassword"
+                Username = username,
+                Password = password
             })
         };
         request.Headers.Add("X-Forwarded-For", "8.8.8.8");

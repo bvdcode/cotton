@@ -7,12 +7,50 @@ using Microsoft.Extensions.Logging;
 
 namespace Cotton.Storage.Backends
 {
-    public class FileSystemStorageBackend(ILogger<FileSystemStorageBackend> _logger, string? basePath = null) : IStorageBackend
+    public class FileSystemStorageBackend(ILogger<FileSystemStorageBackend> _logger, string? basePath = null) : IStorageBackend, IStorageCapacityReporter
     {
         private const string ChunkFileExtension = ".ctn";
         private const string BaseDirectoryName = "files";
         private const string TempDirectoryName = "tmp";
         private readonly string _basePath = basePath ?? Path.Combine(AppContext.BaseDirectory, BaseDirectoryName);
+
+        public StorageCapacitySnapshot GetCapacitySnapshot()
+        {
+            Directory.CreateDirectory(_basePath);
+            string rootPath = Path.GetFullPath(_basePath);
+            var drive = ResolveDrive(rootPath);
+
+            return new StorageCapacitySnapshot(
+                Backend: "filesystem",
+                RootPath: rootPath,
+                TotalBytes: drive.TotalSize,
+                AvailableBytes: drive.AvailableFreeSpace);
+        }
+
+        private static DriveInfo ResolveDrive(string rootPath)
+        {
+            string normalizedRootPath = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            DriveInfo? drive = DriveInfo.GetDrives()
+                .Where(candidate => normalizedRootPath.StartsWith(
+                    candidate.RootDirectory.FullName,
+                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                .OrderByDescending(candidate => candidate.RootDirectory.FullName.Length)
+                .FirstOrDefault();
+
+            if (drive is not null)
+            {
+                return drive;
+            }
+
+            string? pathRoot = Path.GetPathRoot(rootPath);
+            if (string.IsNullOrWhiteSpace(pathRoot))
+            {
+                throw new InvalidOperationException($"Cannot resolve storage drive for path {rootPath}.");
+            }
+
+            return new DriveInfo(pathRoot);
+        }
 
         private string GetTempDirectory()
         {

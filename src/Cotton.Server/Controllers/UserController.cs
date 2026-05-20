@@ -7,6 +7,7 @@ using Cotton.Server.Handlers.Users;
 using Cotton.Server.Hubs;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
+using Cotton.Server.Services;
 using EasyExtensions;
 using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
@@ -24,7 +25,8 @@ namespace Cotton.Server.Controllers
     public class UserController(
         IMediator _mediator,
         CottonDbContext _dbContext,
-        IHubContext<EventHub> _hubContext) : ControllerBase
+        IHubContext<EventHub> _hubContext,
+        UserStorageQuotaService _quota) : ControllerBase
     {
         [HttpPost("verify-email")]
         public async Task<IActionResult> ConfirmEmailVerification(
@@ -84,6 +86,15 @@ namespace Cotton.Server.Controllers
         }
 
         [Authorize]
+        [HttpGet("me/storage-quota")]
+        public async Task<IActionResult> GetCurrentUserStorageQuota(CancellationToken cancellationToken)
+        {
+            Guid userId = User.GetUserId();
+            UserStorageQuotaDto quota = await _quota.GetSnapshotAsync(userId, cancellationToken);
+            return Ok(quota);
+        }
+
+        [Authorize]
         [HttpPut("me")]
         public async Task<IActionResult> UpdateCurrentUser(
             [FromBody] UpdateCurrentUserRequestDto request,
@@ -99,8 +110,15 @@ namespace Cotton.Server.Controllers
                 request.BirthDate,
                 request.AvatarHash);
 
-            UserDto updated = await _mediator.Send(command, cancellationToken);
-            return Ok(updated);
+            try
+            {
+                UserDto updated = await _mediator.Send(command, cancellationToken);
+                return Ok(updated);
+            }
+            catch (StoragePressureException)
+            {
+                return StatusCode(507, "Storage is running out of free space. Profile avatar uploads are temporarily paused.");
+            }
         }
 
         [Authorize(Roles = nameof(UserRole.Admin))]

@@ -193,73 +193,101 @@ interface UseShareFileInfoArgs {
   downloadUrl: string | null;
 }
 
+type ShareFileInfoState = ShareFileInfo & {
+  key: string;
+};
+
+const createInvalidShareFileInfo = (key: string): ShareFileInfoState => ({
+  key,
+  loading: false,
+  error: "invalidLink",
+  fileName: null,
+  contentType: null,
+  contentLength: null,
+  textContent: null,
+  resolvedInlineUrl: null,
+  encryptedContainer: false,
+});
+
+const createLoadingShareFileInfo = (key: string): ShareFileInfoState => ({
+  key,
+  loading: true,
+  error: null,
+  fileName: null,
+  contentType: null,
+  contentLength: null,
+  textContent: null,
+  resolvedInlineUrl: null,
+  encryptedContainer: false,
+});
+
+const buildShareFileInfoKey = (
+  token: string | null,
+  inlineUrl: string | null,
+  downloadUrl: string | null,
+): string => {
+  return token && inlineUrl
+    ? [token, inlineUrl, downloadUrl ?? ""].join("\u0000")
+    : "";
+};
+
 export function useShareFileInfo({
   token,
   inlineUrl,
   downloadUrl,
 }: UseShareFileInfoArgs): ShareFileInfo {
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<ShareFileInfoError | null>(null);
-
-  const [fileName, setFileName] = React.useState<string | null>(null);
-  const [contentType, setContentType] = React.useState<string | null>(null);
-  const [contentLength, setContentLength] = React.useState<number | null>(null);
-  const [textContent, setTextContent] = React.useState<string | null>(null);
-  const [resolvedInlineUrl, setResolvedInlineUrl] = React.useState<string | null>(null);
-  const [encryptedContainer, setEncryptedContainer] =
-    React.useState<boolean>(false);
+  const requestKey = React.useMemo(
+    () => buildShareFileInfoKey(token, inlineUrl, downloadUrl),
+    [downloadUrl, inlineUrl, token],
+  );
+  const [state, setState] = React.useState<ShareFileInfoState>(() =>
+    requestKey
+      ? createLoadingShareFileInfo(requestKey)
+      : createInvalidShareFileInfo(requestKey),
+  );
+  const effectiveState = !requestKey
+    ? createInvalidShareFileInfo(requestKey)
+    : state.key === requestKey
+      ? state
+      : createLoadingShareFileInfo(requestKey);
 
   React.useEffect(() => {
-    if (!token || !inlineUrl) {
-      setLoading(false);
-      setError("invalidLink");
-      setFileName(null);
-      setContentType(null);
-      setContentLength(null);
-      setTextContent(null);
-      setResolvedInlineUrl(null);
-      setEncryptedContainer(false);
+    if (!token || !inlineUrl || !requestKey) {
       return;
     }
 
     let cancelled = false;
 
-    setLoading(true);
-    setError(null);
-    setFileName(null);
-    setContentType(null);
-    setContentLength(null);
-    setTextContent(null);
-    setResolvedInlineUrl(null);
-    setEncryptedContainer(false);
-
     void (async () => {
       const result = await loadShareFileInfo({ token, inlineUrl, downloadUrl });
       if (cancelled) return;
 
-      setFileName(result.fileName);
-      setContentType(result.contentType);
-      setContentLength(result.contentLength);
-      setTextContent(result.textContent);
-      setResolvedInlineUrl(result.resolvedInlineUrl);
-      setEncryptedContainer(result.encryptedContainer);
-      setError(result.error);
-      setLoading(false);
+      setState({
+        key: requestKey,
+        loading: false,
+        error: result.error,
+        fileName: result.fileName,
+        contentType: result.contentType,
+        contentLength: result.contentLength,
+        textContent: result.textContent,
+        resolvedInlineUrl: result.resolvedInlineUrl,
+        encryptedContainer: result.encryptedContainer,
+      });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [token, inlineUrl, downloadUrl]);
+  }, [token, inlineUrl, downloadUrl, requestKey]);
 
   return {
-    loading,
-    error,
-    fileName,
-    contentType,
-    contentLength,
-    textContent,
-    resolvedInlineUrl,
-    encryptedContainer,
+    loading: effectiveState.loading,
+    error: effectiveState.error,
+    fileName: effectiveState.fileName,
+    contentType: effectiveState.contentType,
+    contentLength: effectiveState.contentLength,
+    textContent: effectiveState.textContent,
+    resolvedInlineUrl: effectiveState.resolvedInlineUrl,
+    encryptedContainer: effectiveState.encryptedContainer,
   };
 }

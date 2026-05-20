@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   layoutsApi,
   type LayoutSearchResultDto,
@@ -23,6 +23,33 @@ export interface SearchPaginationState {
   loadNextPage: () => void;
 }
 
+type SearchDataState = {
+  key: string;
+  results: LayoutSearchResultDto | null;
+  totalCount: number;
+  loadedPage: number;
+  loadingInitial: boolean;
+  loadingMore: boolean;
+  error: string | null;
+};
+
+const createEmptySearchDataState = (key: string): SearchDataState => ({
+  key,
+  results: null,
+  totalCount: 0,
+  loadedPage: 0,
+  loadingInitial: false,
+  loadingMore: false,
+  error: null,
+});
+
+const buildSearchKey = (
+  layoutId: string | undefined,
+  query: string,
+): string => {
+  return layoutId && query ? layoutId + "\u0000" + query : "";
+};
+
 export const useSearchPagination = ({
   trimmedQuery,
   layoutId,
@@ -30,22 +57,27 @@ export const useSearchPagination = ({
   const searchGenerationRef = useRef(0);
   const requestedPageRef = useRef(0);
 
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [results, setResults] = useState<LayoutSearchResultDto | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loadedPage, setLoadedPage] = useState(0);
-  const [loadingInitial, setLoadingInitial] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [debouncedQueryValue, setDebouncedQueryValue] = useState(trimmedQuery);
+  const debouncedQuery = trimmedQuery.length > 0 ? debouncedQueryValue : "";
+  const activeSearchKey = useMemo(
+    () => buildSearchKey(layoutId, debouncedQuery),
+    [debouncedQuery, layoutId],
+  );
+  const [searchDataState, setSearchDataState] = useState<SearchDataState>(() =>
+    createEmptySearchDataState(activeSearchKey),
+  );
+  const searchData =
+    searchDataState.key === activeSearchKey
+      ? searchDataState
+      : createEmptySearchDataState(activeSearchKey);
 
   useEffect(() => {
     if (!trimmedQuery) {
-      setDebouncedQuery("");
       return;
     }
 
     const handle = window.setTimeout(() => {
-      setDebouncedQuery(trimmedQuery);
+      setDebouncedQueryValue(trimmedQuery);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(handle);
@@ -55,16 +87,21 @@ export const useSearchPagination = ({
     async (
       pageToLoad: number,
       mode: "replace" | "append",
+      key = activeSearchKey,
       generation = searchGenerationRef.current,
     ) => {
-      if (!layoutId || !debouncedQuery) return;
+      if (!layoutId || !debouncedQuery || !key) return;
 
-      setError(null);
-      if (mode === "replace") {
-        setLoadingInitial(true);
-      } else {
-        setLoadingMore(true);
-      }
+      setSearchDataState((previous) => {
+        const current =
+          previous.key === key ? previous : createEmptySearchDataState(key);
+        return {
+          ...current,
+          error: null,
+          loadingInitial: mode === "replace" ? true : current.loadingInitial,
+          loadingMore: mode === "append" ? true : current.loadingMore,
+        };
+      });
 
       try {
         const response = await layoutsApi.search({
@@ -76,59 +113,69 @@ export const useSearchPagination = ({
 
         if (generation !== searchGenerationRef.current) return;
 
-        setResults((previous) =>
-          mode === "replace"
-            ? response.data
-            : mergeSearchResults(previous, response.data),
-        );
-        setTotalCount(response.totalCount);
-        setLoadedPage(pageToLoad);
+        setSearchDataState((previous) => {
+          const current =
+            previous.key === key ? previous : createEmptySearchDataState(key);
+          return {
+            ...current,
+            results:
+              mode === "replace"
+                ? response.data
+                : mergeSearchResults(current.results, response.data),
+            totalCount: response.totalCount,
+            loadedPage: pageToLoad,
+            loadingInitial: false,
+            loadingMore: false,
+            error: null,
+          };
+        });
       } catch (err) {
         if (generation !== searchGenerationRef.current) return;
         requestedPageRef.current = Math.max(0, pageToLoad - 1);
         console.error("Failed to search layouts", err);
-        setError("searchFailed");
-      } finally {
-        if (generation === searchGenerationRef.current) {
-          if (mode === "replace") {
-            setLoadingInitial(false);
-          } else {
-            setLoadingMore(false);
-          }
-        }
+        setSearchDataState((previous) => {
+          const current =
+            previous.key === key ? previous : createEmptySearchDataState(key);
+          return {
+            ...current,
+            loadingInitial: false,
+            loadingMore: false,
+            error: "searchFailed",
+          };
+        });
       }
     },
-    [debouncedQuery, layoutId],
+    [activeSearchKey, debouncedQuery, layoutId],
   );
 
   useEffect(() => {
     const generation = searchGenerationRef.current + 1;
     searchGenerationRef.current = generation;
-    setResults(null);
-    setTotalCount(0);
-    setLoadedPage(0);
     requestedPageRef.current = 0;
-    setLoadingInitial(false);
-    setLoadingMore(false);
-    setError(null);
 
-    if (!layoutId || !debouncedQuery) return;
+    if (!activeSearchKey) return;
 
     requestedPageRef.current = 1;
-    void fetchSearchPage(1, "replace", generation);
-  }, [debouncedQuery, fetchSearchPage, layoutId]);
+    void fetchSearchPage(1, "replace", activeSearchKey, generation);
+  }, [activeSearchKey, fetchSearchPage]);
 
   const loadedContentCount =
-    (results?.nodes?.length ?? 0) + (results?.files?.length ?? 0);
+    (searchData.results?.nodes?.length ?? 0) +
+    (searchData.results?.files?.length ?? 0);
   const hasMoreContent =
-    debouncedQuery.length > 0 && loadedContentCount < totalCount;
+    debouncedQuery.length > 0 && loadedContentCount < searchData.totalCount;
 
   const loadNextPage = useCallback(() => {
-    if (!hasMoreContent || loadingInitial || loadingMore || loadedPage <= 0) {
+    if (
+      !hasMoreContent ||
+      searchData.loadingInitial ||
+      searchData.loadingMore ||
+      searchData.loadedPage <= 0
+    ) {
       return;
     }
 
-    const nextPage = loadedPage + 1;
+    const nextPage = searchData.loadedPage + 1;
     if (requestedPageRef.current >= nextPage) {
       return;
     }
@@ -138,18 +185,18 @@ export const useSearchPagination = ({
   }, [
     fetchSearchPage,
     hasMoreContent,
-    loadedPage,
-    loadingInitial,
-    loadingMore,
+    searchData.loadedPage,
+    searchData.loadingInitial,
+    searchData.loadingMore,
   ]);
 
   return {
     debouncedQuery,
-    results,
-    totalCount,
-    loadingInitial,
-    loadingMore,
-    error,
+    results: searchData.results,
+    totalCount: searchData.totalCount,
+    loadingInitial: searchData.loadingInitial,
+    loadingMore: searchData.loadingMore,
+    error: searchData.error,
     loadNextPage,
   };
 };

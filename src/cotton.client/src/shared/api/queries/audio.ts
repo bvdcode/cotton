@@ -55,7 +55,6 @@ const fetchTrackLyrics = async (
 
   let page = 1;
   let fetched = 0;
-  let total = 0;
   let bestMatch: MatchedTextTrack | null = null;
   let bestRank: number = TEXT_TRACK_EXTENSIONS.length;
 
@@ -66,7 +65,7 @@ const fetchTrackLyrics = async (
       depth: 0,
     });
 
-    total = response.totalCount;
+    const total = response.totalCount;
     fetched += response.content.nodes.length + response.content.files.length;
 
     for (const file of response.content.files) {
