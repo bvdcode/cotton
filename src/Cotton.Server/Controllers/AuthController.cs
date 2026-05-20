@@ -50,6 +50,7 @@ namespace Cotton.Server.Controllers
         WebDavAuthCache _webDavAuthCache,
         INotificationsProvider _notifications,
         IGeoLookupService _geoLookup,
+        PasskeyService _passkeys,
         DefaultUserContentSeeder _defaultUserContentSeeder,
         ApplicationStartupClock _startupClock) : ControllerBase
     {
@@ -212,6 +213,91 @@ namespace Cotton.Server.Controllers
             return Ok(user.Adapt<UserDto>());
         }
 
+        [Authorize]
+        [HttpGet("passkeys")]
+        public async Task<IActionResult> GetPasskeys(CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
+            var credentials = await _passkeys.GetCredentialsAsync(userId, cancellationToken);
+            return Ok(credentials);
+        }
+
+        [Authorize]
+        [HttpPost("passkeys/registration/options")]
+        public async Task<IActionResult> BeginPasskeyRegistration(
+            [FromBody] BeginPasskeyRegistrationRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var response = await _passkeys.BeginRegistrationAsync(
+                User.GetUserId(),
+                request.Name,
+                cancellationToken);
+            return Ok(response);
+        }
+
+        [Authorize]
+        [HttpPost("passkeys/registration/verify")]
+        public async Task<IActionResult> FinishPasskeyRegistration(
+            [FromBody] FinishPasskeyRegistrationRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var response = await _passkeys.FinishRegistrationAsync(
+                User.GetUserId(),
+                request,
+                cancellationToken);
+            return Ok(response);
+        }
+
+        [Authorize]
+        [HttpPut("passkeys/{credentialId:guid}")]
+        public async Task<IActionResult> RenamePasskey(
+            [FromRoute] Guid credentialId,
+            [FromBody] RenamePasskeyRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var response = await _passkeys.RenameCredentialAsync(
+                User.GetUserId(),
+                credentialId,
+                request.Name,
+                cancellationToken);
+            return Ok(response);
+        }
+
+        [Authorize]
+        [HttpDelete("passkeys/{credentialId:guid}")]
+        public async Task<IActionResult> DeletePasskey(
+            [FromRoute] Guid credentialId,
+            CancellationToken cancellationToken)
+        {
+            await _passkeys.DeleteCredentialAsync(User.GetUserId(), credentialId, cancellationToken);
+            return Ok();
+        }
+
+        [HttpPost("passkeys/assertion/options")]
+        public async Task<IActionResult> BeginPasskeyAssertion(
+            [FromBody] BeginPasskeyAssertionRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            var response = await _passkeys.BeginAssertionAsync(request.Username, cancellationToken);
+            return Ok(response);
+        }
+
+        [HttpPost("passkeys/assertion/verify")]
+        public async Task<IActionResult> FinishPasskeyAssertion(
+            [FromBody] FinishPasskeyAssertionRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                User user = await _passkeys.FinishAssertionAsync(request, cancellationToken);
+                return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return this.ApiUnauthorized("Invalid passkey");
+            }
+        }
+
         //[EnableRateLimiting("auth")]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request)
@@ -234,22 +320,7 @@ namespace Cotton.Server.Controllers
                 return totpFailure;
             }
 
-            ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user, request.TrustDevice);
-            string accessToken = CreateAccessToken(user, dbToken.SessionId!);
-            await _dbContext.RefreshTokens.AddAsync(dbToken);
-            await _dbContext.SaveChangesAsync();
-            AddRefreshTokenToCookies(dbToken.Token, request.TrustDevice);
-            AddAccessTokenToCookies(accessToken);
-            await _notifications.SendSuccessfulLoginAsync(
-                _geoLookup,
-                user.Id,
-                GetRequestIpAddress(),
-                Request.Headers.UserAgent);
-            return Ok(new TokenPairResponseDto()
-            {
-                AccessToken = accessToken,
-                RefreshToken = dbToken.Token
-            });
+            return Ok(await CreateSignedInResponseAsync(user, request.TrustDevice));
         }
 
         private async Task<User?> GetUserOrTryGetNewAsync(LoginRequest request)
@@ -421,6 +492,27 @@ namespace Cotton.Server.Controllers
                     s => s.SetProperty(dt => dt.ExpiresAt, DateTime.UtcNow),
                     cancellationToken);
             return Ok();
+        }
+
+        private async Task<TokenPairResponseDto> CreateSignedInResponseAsync(User user, bool trustDevice)
+        {
+            ExtendedRefreshToken dbToken = await CreateRefreshTokenAsync(user, trustDevice);
+            string accessToken = CreateAccessToken(user, dbToken.SessionId!);
+            await _dbContext.RefreshTokens.AddAsync(dbToken);
+            await _dbContext.SaveChangesAsync();
+            AddRefreshTokenToCookies(dbToken.Token, trustDevice);
+            AddAccessTokenToCookies(accessToken);
+            await _notifications.SendSuccessfulLoginAsync(
+                _geoLookup,
+                user.Id,
+                GetRequestIpAddress(),
+                Request.Headers.UserAgent);
+
+            return new TokenPairResponseDto()
+            {
+                AccessToken = accessToken,
+                RefreshToken = dbToken.Token
+            };
         }
 
         private string CreateAccessToken(User user, string sessionId)

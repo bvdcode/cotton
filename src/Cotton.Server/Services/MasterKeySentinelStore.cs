@@ -45,15 +45,6 @@ namespace Cotton.Server.Services
             try
             {
                 using var cipher = CreateCipher(encryptionSettings);
-                MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
-                    encryptionSettings,
-                    MasterKeyCompatibilityMode.AllowMissingEvidence,
-                    cancellationToken);
-                if (!compatibility.Success)
-                {
-                    return MasterKeySentinelResult.Fail(
-                        compatibility.Error ?? "Master key could not be verified against existing Cotton data.");
-                }
 
                 if (await _backend.ExistsAsync(SentinelStorageKey))
                 {
@@ -66,6 +57,16 @@ namespace Cotton.Server.Services
                         return existing;
                     }
                     return existing;
+                }
+
+                MasterKeyCompatibilityResult compatibility = await ValidateCompatibilityAsync(
+                    encryptionSettings,
+                    MasterKeyCompatibilityMode.AllowMissingEvidence,
+                    cancellationToken);
+                if (!compatibility.Success)
+                {
+                    return MasterKeySentinelResult.Fail(
+                        compatibility.Error ?? "Master key could not be verified against existing Cotton data.");
                 }
 
                 if (initializationMode == MasterKeySentinelInitializationMode.RequireCompatibilityEvidenceForExistingData

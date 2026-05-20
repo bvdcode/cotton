@@ -3,12 +3,14 @@ import {
   Box,
   Button,
   CircularProgress,
+  IconButton,
   Container,
   Paper,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import { KeyboardArrowRight } from "@mui/icons-material";
+import { KeyboardArrowRight, KeyOutlined } from "@mui/icons-material";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router-dom";
@@ -158,6 +160,31 @@ export const LoginPage = () => {
                       disabled={form.loading}
                       tooltip={t("rememberMe")}
                     />
+                  )}
+                  {!form.requiresTwoFactor && (
+                    <Tooltip title={t("passkey.loginButton")}>
+                      <span>
+                        <IconButton
+                          type="button"
+                          color="primary"
+                          onClick={form.handlePasskeyLogin}
+                          disabled={form.loading || form.passkeyLoading}
+                          aria-label={t("passkey.loginButton")}
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            width: 40,
+                            height: 40,
+                          }}
+                        >
+                          {form.passkeyLoading ? (
+                            <CircularProgress color="inherit" size={18} />
+                          ) : (
+                            <KeyOutlined />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   )}
                   <Button
                     type="submit"

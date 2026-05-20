@@ -592,6 +592,15 @@
       "message": "Aún no existen usuarios. Las credenciales que introduzcas crearán la primera cuenta de administrador. Esto solo está disponible poco después del inicio. Reinicia la instancia si es necesario.",
       "continueButton": "Continue",
       "continuing": "Creando primer usuario..."
+    },
+    "passkey": {
+      "loginButton": "Iniciar sesión con passkey",
+      "signingIn": "Iniciando sesión...",
+      "errors": {
+        "notSupported": "Este navegador no admite passkeys.",
+        "cancelled": "Se canceló el inicio con passkey.",
+        "failed": "No se pudo iniciar sesión con passkey."
+      }
     }
   },
   "notFound": {
@@ -900,6 +909,39 @@
           "invalidEnvelope": "No se pueden leer los datos guardados de cifrado.",
           "unknown": "No se pudo desbloquear el cifrado."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Usa una llave de seguridad, biometría o PIN del dispositivo para entrar sin contraseña.",
+      "defaultName": "Passkey {{count}}",
+      "add": "Añadir passkey",
+      "adding": "Añadiendo...",
+      "loading": "Cargando passkeys...",
+      "empty": "Aún no hay passkeys registradas para esta cuenta.",
+      "created": "Creada {{date}}",
+      "lastUsed": "Último uso {{date}}",
+      "delete": "Eliminar passkey",
+      "errors": {
+        "loadFailed": "No se pudieron cargar las passkeys.",
+        "notSupported": "Este navegador no admite passkeys.",
+        "cancelled": "Se canceló la creación de passkey.",
+        "addFailed": "No se pudo añadir la passkey.",
+        "deleteFailed": "No se pudo eliminar la passkey.",
+        "renameFailed": "No se pudo renombrar la passkey."
+      },
+      "defaultNames": {
+        "securityKey": "Llave de seguridad",
+        "device": "Passkey del dispositivo"
+      },
+      "rename": {
+        "title": "Nombra esta passkey",
+        "description": "Elige un nombre fácil de reconocer. Cotton solo puede detectar el tipo general, no el modelo exacto del dispositivo.",
+        "nameLabel": "Nombre de passkey",
+        "button": "Renombrar passkey",
+        "save": "Guardar",
+        "saving": "Guardando...",
+        "cancel": "Ahora no"
       }
     }
   },

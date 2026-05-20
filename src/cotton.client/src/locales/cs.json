@@ -627,6 +627,15 @@
       "message": "Žádní uživatelé zatím neexistují. Údaje, které zadáte, vytvoří první administrátorský účet. Tato možnost je dostupná pouze krátce po spuštění. V případě potřeby instanci restartujte.",
       "continueButton": "Pokračovat",
       "continuing": "Vytváření prvního uživatele..."
+    },
+    "passkey": {
+      "loginButton": "Přihlásit se přístupovým klíčem",
+      "signingIn": "Přihlašování...",
+      "errors": {
+        "notSupported": "Tento prohlížeč nepodporuje přístupové klíče.",
+        "cancelled": "Přihlášení přístupovým klíčem bylo zrušeno.",
+        "failed": "Přihlášení přístupovým klíčem selhalo."
+      }
     }
   },
   "notFound": {
@@ -935,6 +944,39 @@
           "invalidEnvelope": "Uložená data nastavení šifrování nelze přečíst.",
           "unknown": "Šifrování se nepodařilo odemknout."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Přístupové klíče",
+      "description": "Použijte bezpečnostní klíč, biometriku nebo PIN zařízení pro přihlášení bez hesla.",
+      "defaultName": "Přístupový klíč {{count}}",
+      "add": "Přidat klíč",
+      "adding": "Přidávání...",
+      "loading": "Načítání klíčů...",
+      "empty": "Pro tento účet zatím nejsou zaregistrovány žádné přístupové klíče.",
+      "created": "Vytvořeno {{date}}",
+      "lastUsed": "Naposledy použito {{date}}",
+      "delete": "Odstranit přístupový klíč",
+      "errors": {
+        "loadFailed": "Nepodařilo se načíst přístupové klíče.",
+        "notSupported": "Tento prohlížeč nepodporuje přístupové klíče.",
+        "cancelled": "Vytvoření přístupového klíče bylo zrušeno.",
+        "addFailed": "Nepodařilo se přidat přístupový klíč.",
+        "deleteFailed": "Nepodařilo se odstranit přístupový klíč.",
+        "renameFailed": "Nepodařilo se přejmenovat přístupový klíč."
+      },
+      "defaultNames": {
+        "securityKey": "Bezpečnostní klíč",
+        "device": "Klíč zařízení"
+      },
+      "rename": {
+        "title": "Pojmenujte tento klíč",
+        "description": "Zvolte název, který později poznáte. Cotton umí zjistit jen obecný typ autentizátoru, ne přesný model zařízení.",
+        "nameLabel": "Název klíče",
+        "button": "Přejmenovat klíč",
+        "save": "Uložit",
+        "saving": "Ukládání...",
+        "cancel": "Teď ne"
       }
     }
   },

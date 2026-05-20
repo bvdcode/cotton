@@ -45,6 +45,26 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task ValidateOrInitializeAsync_Trusts_Valid_Sentinel_Before_Noisy_Compatibility_Probe()
+        {
+            CottonEncryptionSettings settings = ConfigurationBuilderExtensions.DeriveEncryptionSettings(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            await CreateStore().ValidateOrInitializeAsync(settings);
+
+            var probe = new DelegateCompatibilityProbe((_, _) =>
+                MasterKeyCompatibilityResult.Fail("probe should not block a valid sentinel"));
+            var store = CreateStore(probe);
+
+            MasterKeySentinelResult result = await store.ValidateOrInitializeAsync(settings);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(result.Success, Is.True);
+                Assert.That(result.Created, Is.False);
+            }
+        }
+
+        [Test]
         public async Task ValidateOrInitializeAsync_Rejects_Wrong_MasterKey()
         {
             var store = CreateStore();

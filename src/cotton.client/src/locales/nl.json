@@ -618,6 +618,15 @@
       "message": "Er bestaan nog geen gebruikers. De inloggegevens die u invoert, worden gebruikt om het eerste beheerdersaccount aan te maken. Dit is alleen kort na het opstarten beschikbaar. Herstart de instantie indien nodig.",
       "continueButton": "Doorgaan",
       "continuing": "Eerste gebruiker wordt aangemaakt..."
+    },
+    "passkey": {
+      "loginButton": "Inloggen met passkey",
+      "signingIn": "Inloggen...",
+      "errors": {
+        "notSupported": "Deze browser ondersteunt geen passkeys.",
+        "cancelled": "Inloggen met passkey is geannuleerd.",
+        "failed": "Inloggen met passkey is mislukt."
+      }
     }
   },
   "notFound": {
@@ -924,6 +933,39 @@
           "invalidEnvelope": "De opgeslagen instellingen voor versleuteling kunnen niet worden gelezen.",
           "unknown": "Versleuteling kon niet worden ontgrendeld."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Gebruik een beveiligingssleutel, biometrie of apparaat-pincode om zonder wachtwoord in te loggen.",
+      "defaultName": "Passkey {{count}}",
+      "add": "Passkey toevoegen",
+      "adding": "Toevoegen...",
+      "loading": "Passkeys laden...",
+      "empty": "Er zijn nog geen passkeys geregistreerd voor dit account.",
+      "created": "Aangemaakt {{date}}",
+      "lastUsed": "Laatst gebruikt {{date}}",
+      "delete": "Passkey verwijderen",
+      "errors": {
+        "loadFailed": "Passkeys konden niet worden geladen.",
+        "notSupported": "Deze browser ondersteunt geen passkeys.",
+        "cancelled": "Passkey aanmaken is geannuleerd.",
+        "addFailed": "Passkey toevoegen is mislukt.",
+        "deleteFailed": "Passkey verwijderen is mislukt.",
+        "renameFailed": "Passkey hernoemen is mislukt."
+      },
+      "defaultNames": {
+        "securityKey": "Beveiligingssleutel",
+        "device": "Apparaatpasskey"
+      },
+      "rename": {
+        "title": "Geef deze passkey een naam",
+        "description": "Kies een herkenbare naam. Cotton kan alleen het algemene authenticatortype detecteren, niet het exacte apparaatmodel.",
+        "nameLabel": "Passkeynaam",
+        "button": "Passkey hernoemen",
+        "save": "Opslaan",
+        "saving": "Opslaan...",
+        "cancel": "Niet nu"
       }
     }
   },

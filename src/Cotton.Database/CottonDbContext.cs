@@ -29,6 +29,7 @@ namespace Cotton.Database
         public DbSet<DownloadToken> DownloadTokens => Set<DownloadToken>();
         public DbSet<NodeShareToken> NodeShareTokens => Set<NodeShareToken>();
         public DbSet<ChunkOwnership> ChunkOwnerships => Set<ChunkOwnership>();
+        public DbSet<UserPasskeyCredential> UserPasskeyCredentials => Set<UserPasskeyCredential>();
         public DbSet<FileManifestChunk> FileManifestChunks => Set<FileManifestChunk>();
         public DbSet<ExtendedRefreshToken> RefreshTokens => Set<ExtendedRefreshToken>();
         public DbSet<CottonServerSettings> ServerSettings => Set<CottonServerSettings>();

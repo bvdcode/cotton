@@ -620,6 +620,15 @@
       "message": "Es gibt noch keine Benutzer. Die Anmeldedaten, die du eingibst, erstellen das erste Administratorkonto. Das ist nur kurz nach dem Start möglich. Starte die Instanz bei Bedarf neu.",
       "continueButton": "Weiter",
       "continuing": "Erster Benutzer wird erstellt..."
+    },
+    "passkey": {
+      "loginButton": "Mit Passkey anmelden",
+      "signingIn": "Anmeldung...",
+      "errors": {
+        "notSupported": "Dieser Browser unterstützt keine Passkeys.",
+        "cancelled": "Passkey-Anmeldung wurde abgebrochen.",
+        "failed": "Passkey-Anmeldung fehlgeschlagen."
+      }
     }
   },
   "notFound": {
@@ -928,6 +937,39 @@
           "invalidEnvelope": "Gespeicherte Verschlüsselungs-Setup-Daten können nicht gelesen werden.",
           "unknown": "Verschlüsselung konnte nicht entsperrt werden."
         }
+      }
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Melde dich mit Sicherheitsschlüssel, Biometrie oder Geräte-PIN ohne Passwort an.",
+      "defaultName": "Passkey {{count}}",
+      "add": "Passkey hinzufügen",
+      "adding": "Wird hinzugefügt...",
+      "loading": "Passkeys werden geladen...",
+      "empty": "Für dieses Konto sind noch keine Passkeys registriert.",
+      "created": "Erstellt {{date}}",
+      "lastUsed": "Zuletzt verwendet {{date}}",
+      "delete": "Passkey löschen",
+      "errors": {
+        "loadFailed": "Passkeys konnten nicht geladen werden.",
+        "notSupported": "Dieser Browser unterstützt keine Passkeys.",
+        "cancelled": "Passkey-Erstellung wurde abgebrochen.",
+        "addFailed": "Passkey konnte nicht hinzugefügt werden.",
+        "deleteFailed": "Passkey konnte nicht gelöscht werden.",
+        "renameFailed": "Passkey konnte nicht umbenannt werden."
+      },
+      "defaultNames": {
+        "securityKey": "Sicherheitsschlüssel",
+        "device": "Geräte-Passkey"
+      },
+      "rename": {
+        "title": "Passkey benennen",
+        "description": "Wähle einen Namen, den du später wiedererkennst. Cotton erkennt nur den groben Authenticator-Typ, nicht das genaue Gerätemodell.",
+        "nameLabel": "Passkey-Name",
+        "button": "Passkey umbenennen",
+        "save": "Speichern",
+        "saving": "Speichern...",
+        "cancel": "Nicht jetzt"
       }
     }
   },

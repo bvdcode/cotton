@@ -89,5 +89,6 @@ namespace Cotton.Database.Models
         public virtual ICollection<DownloadToken> DownloadTokens { get; set; } = [];
         public virtual ICollection<Notification> Notifications { get; set; } = [];
         public virtual ICollection<NodeFile> NodeFiles { get; set; } = [];
+        public virtual ICollection<UserPasskeyCredential> PasskeyCredentials { get; set; } = [];
     }
 }

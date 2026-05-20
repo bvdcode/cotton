@@ -113,14 +113,6 @@ namespace Cotton.Server.Services
                 {
                     return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
                 }
-                if (databaseProbe == ProbeValidationState.FailedCandidates
-                    && _storage is IStorageBackendUsesEncryptedConfiguration)
-                {
-                    return MasterKeyCompatibilityResult.Fail(
-                        "Master key does not match existing encrypted Cotton data.",
-                        existingDataFound: true,
-                        evidenceFound: true);
-                }
 
                 ProbeValidationState storageProbe = await ValidateStorageChunkProbeAsync(
                     connection,
@@ -131,6 +123,14 @@ namespace Cotton.Server.Services
                     return MasterKeyCompatibilityResult.Compatible(existingDataFound: true, evidenceFound: true);
                 }
                 if (storageProbe == ProbeValidationState.FailedCandidates)
+                {
+                    return MasterKeyCompatibilityResult.Fail(
+                        "Master key does not match existing encrypted Cotton data.",
+                        existingDataFound: true,
+                        evidenceFound: true);
+                }
+
+                if (databaseProbe == ProbeValidationState.FailedCandidates)
                 {
                     return MasterKeyCompatibilityResult.Fail(
                         "Master key does not match existing encrypted Cotton data.",

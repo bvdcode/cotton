@@ -144,6 +144,7 @@ namespace Cotton.Server
                 .AddSingleton<CottonPublicEmailProvider>()
                 .AddScoped<SettingsProvider>()
                 .AddScoped<SecurityDiagnosticsService>()
+                .AddScoped<PasskeyService>()
                 .AddScoped<IPostgresDumpService, PostgresDumpService>()
                 .AddScoped<IDatabaseBackupManifestService, DatabaseBackupManifestService>()
                 .AddScoped<IDatabaseAutoRestoreService, DatabaseAutoRestoreService>()
